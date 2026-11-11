@@ -43,8 +43,23 @@ class WidgetHintsOnlyTest extends SurfaceKernelTestBase {
 
   /**
    * The members and options of `x-portable-ui` that are widget hints.
+   *
+   * With every option a module's widget publishes, which the examples'
+   * widgets publish none of.
    */
-  protected const HINTS = ['widget', 'multiple', 'placeholder', 'prefix', 'suffix', 'help', 'group', 'weight', 'groups'];
+  protected const HINTS = [
+    'widget',
+    'multiple',
+    'placeholder',
+    'prefix',
+    'suffix',
+    'help',
+    'size',
+    'rows',
+    'group',
+    'weight',
+    'groups',
+  ];
 
   /**
    * {@inheritdoc}
@@ -148,7 +163,9 @@ class WidgetHintsOnlyTest extends SurfaceKernelTestBase {
       }
       $name = $definition->name();
       $operations = $registry->getOperations($name);
-      $asked = $operations === [] ? [NULL] : array_filter($operations, static fn ($operation): bool => $operation->needsNothing());
+      $asked = $operations === [] ? [
+        NULL,
+      ] : array_filter($operations, static fn ($operation): bool => $operation->needsNothing());
       foreach ($asked as $operation) {
         $context = $operation === NULL ? new OperationContext(ContractBaselines::ALONE) : $resources->operation($name, $operation->id);
         $built = $resources->build($name, $context);

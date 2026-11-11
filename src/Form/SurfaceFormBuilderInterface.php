@@ -6,8 +6,10 @@ namespace Drupal\surface\Form;
 
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\surface\Contract\ServedContract;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\ViolationSet;
+use Drupal\surface\Widget\WidgetHostInterface;
 
 /**
  * Generates, extracts, and validates Form API elements from a data surface.
@@ -244,7 +246,42 @@ interface SurfaceFormBuilderInterface {
   public const REQUIRED_KEY = '#surface_required';
 
   /**
+   * Render key on every element drawn for a value: its JSON Pointer.
+   *
+   * The pointer of the value the element posts, from the top of the data
+   * surface (`/venue`, `/third_party_settings/menu_ui/available_menus`,
+   * `/volunteers/0/name`). Extraction reads each value back at it and a
+   * violation is put on the element it names.
+   *
+   * Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
+   */
+  public const PATH_KEY = '#surface_path';
+
+  /**
+   * Render key on every element drawn for a value: the widget that drew it.
+   *
+   * Its plugin ID, so the element is read back by the widget that built
+   * it.
+   */
+  public const WIDGET_KEY = '#surface_widget';
+
+  /**
+   * Render key on the container: the values its envelope was emitted for.
+   *
+   * The envelope's own `values`, which hold no secret. Extraction finds
+   * each element's node at its pointer in the envelope drawn
+   * (DocumentNodes::at()): the one this request drew, or the one emitted
+   * for these values again where the form came from the form cache. No
+   * element carries its node.
+   */
+  public const VALUES_KEY = '#surface_values';
+
+  /**
    * Builds a container of form elements for a data surface.
+   *
+   * The data surface serves its envelope for the values (envelope()), and
+   * the form is drawn from that document (drawDocument()), with what the
+   * host answers that the document does not say (host()).
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
@@ -266,6 +303,61 @@ interface SurfaceFormBuilderInterface {
    *   a key in it is.
    */
   public function buildSurfaceForm(SurfaceInterface $surface, array $values, FormStateInterface $form_state, string $wrapper_key = 'surface', array $keys = []): array;
+
+  /**
+   * Draws a container of form elements from a served contract.
+   *
+   * The form door's reader of the envelope: its schema, emitted with the
+   * widget hints, its values and its stale pointers. A host holding an
+   * envelope draws it here; buildSurfaceForm() emits one and draws it.
+   *
+   * Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
+   *
+   * @param \Drupal\surface\Contract\ServedContract $contract
+   *   The envelope, emitted with the widget hints.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state of the containing form.
+   * @param \Drupal\surface\Widget\WidgetHostInterface|null $host
+   *   What the host answers that the document does not say, or NULL.
+   * @param string $wrapper_key
+   *   A stable identifier for the AJAX wrapper, unique within the page.
+   * @param string[] $keys
+   *   The top level keys to draw; empty to draw every key.
+   *
+   * @return array
+   *   The container, as buildSurfaceForm() returns it.
+   */
+  public function drawDocument(ServedContract $contract, FormStateInterface $form_state, ?WidgetHostInterface $host = NULL, string $wrapper_key = 'surface', array $keys = []): array;
+
+  /**
+   * Emits the envelope a form is drawn from.
+   *
+   * The data surface's served contract for the values, with the widget
+   * hints: what the HTTP door serves the React app, in process.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The data surface, as built in its context.
+   * @param array $values
+   *   The values, as buildSurfaceForm() takes them.
+   *
+   * @return \Drupal\surface\Contract\ServedContract
+   *   The envelope.
+   */
+  public function envelope(SurfaceInterface $surface, array $values): ServedContract;
+
+  /**
+   * Gets what the form door answers that a document does not say.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The data surface the envelope was emitted from.
+   * @param array $values
+   *   The values it was emitted for.
+   *
+   * @return \Drupal\surface\Widget\WidgetHostInterface
+   *   The host's answers: an entity's label, a reference key's selection
+   *   handler, a deferred key's chosen document.
+   */
+  public function host(SurfaceInterface $surface, array $values): WidgetHostInterface;
 
   /**
    * Names the in-progress input a rebuild has just invalidated.

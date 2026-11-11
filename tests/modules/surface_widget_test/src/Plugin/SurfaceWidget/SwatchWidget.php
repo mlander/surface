@@ -7,7 +7,11 @@ namespace Drupal\surface_widget_test\Plugin\SurfaceWidget;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
+use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface\Widget\WidgetContext;
+use PortableSchema\Builder\Schema;
 
 /**
  * A second widget claiming the color picker's keys, at a lower priority.
@@ -22,20 +26,27 @@ use Drupal\surface\Widget\SurfaceWidgetBase;
   claims: [['type' => 'string', 'format' => 'color']],
   priority: 5,
 )]
-final class SwatchWidget extends SurfaceWidgetBase {
+final class SwatchWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
 
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(DataDefinitionInterface $definition): bool {
+  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
     return TRUE;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
-    return $this->baseElement($definition) + [
+  public function isApplicable(Schema $node, WidgetContext $context): bool {
+    return TRUE;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
+    return $this->baseElement($node, $context) + [
       '#type' => 'textfield',
       '#default_value' => $value,
     ];

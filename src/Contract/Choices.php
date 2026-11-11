@@ -152,6 +152,70 @@ final class Choices {
   }
 
   /**
+   * Lists the choices on the way to a key that values hold.
+   *
+   * For each key with variants a pointer passes through, the value its
+   * deciding key holds in the values, or its default: what a `choose`
+   * link's template names before the key's own choice (resolve() asks for
+   * one at every such key). Read as walk() reads a pointer: through
+   * attached children, mounted maps and a collection's item, whose index
+   * names its values.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The resource or structure as the full schema is emitted from it.
+   * @param string $pointer
+   *   The key's JSON Pointer.
+   * @param array $values
+   *   The values, which the keys on the way choose by.
+   *
+   * @return list<array{0: string, 1: string}>
+   *   Each choice on the way, shallowest first: its pointer and its value.
+   *   It stops at a key it cannot pass, which resolve() then refuses.
+   */
+  public static function along(SurfaceInterface $surface, string $pointer, array $values): array {
+    $segments = static::segments($pointer);
+    $pairs = [];
+    $frame = $surface;
+    $held = $values;
+    $at = '';
+    for ($i = 0; $i < count($segments) - 1;) {
+      $name = $segments[$i];
+      $next = $segments[$i + 1];
+      $here = $at . '/' . static::escape($name);
+      $entry = $frame->getDefinitions()->entry($name);
+      if ($entry === NULL) {
+        break;
+      }
+      $inner = is_array($held) ? ($held[$name] ?? NULL) : NULL;
+      if ($entry->variants !== NULL) {
+        $by = $entry->variants->by;
+        $value = is_array($held) && isset($held[$by]) ? $held[$by] : $frame->getDefault($by);
+        if (!is_scalar($value) || !in_array((string) $value, array_map('strval', $entry->variants->variantIds()), TRUE)) {
+          break;
+        }
+        $pairs[] = [$here, (string) $value];
+        [$frame, $held, $at, $i] = [$entry->variants->variant((string) $value)->child, $inner, $here, $i + 1];
+      }
+      elseif ($entry->list !== NULL) {
+        $item = is_array($inner) ? ($inner[$next] ?? NULL) : NULL;
+        [$frame, $held, $at, $i] = [$entry->list->child(), $item, $here . '/' . $next, $i + 2];
+      }
+      elseif (isset($entry->mounted[$next])) {
+        $mounted = is_array($inner) ? ($inner[$next] ?? NULL) : NULL;
+        $where = $here . '/' . static::escape($next);
+        [$frame, $held, $at, $i] = [$entry->mounted[$next]->child, $mounted, $where, $i + 2];
+      }
+      elseif ($entry->attachment !== NULL) {
+        [$frame, $held, $at, $i] = [$entry->attachment->child, $inner, $here, $i + 1];
+      }
+      else {
+        break;
+      }
+    }
+    return $pairs;
+  }
+
+  /**
    * Answers whether nothing is chosen.
    *
    * @return bool

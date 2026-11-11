@@ -11,14 +11,17 @@ use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Render\Element;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\WidgetChoice;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
-use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\SurfaceWidgetManager;
+use Drupal\surface\Widget\WidgetContext;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -30,12 +33,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * another" button under them all. Each button rebuilds the form over
  * AJAX, and without JavaScript by a plain submit, and replaces the list
  * and nothing else; neither judges a value, since every value is still
- * mid-edit. Adding stops at the list's Count maximum and removing at its
- * minimum, and the list is drawn with at least its minimum.
+ * mid-edit. Adding stops at the list's `maxItems` and removing at its
+ * `minItems`, and the list is drawn with at least its minimum.
  *
  * Rows rather than a text area of one item per line: each item is an
- * element of its own, so what the item's definition says (a Length, a
- * Regex, an example) reaches it as it reaches any key, a refusal of one
+ * element of its own, so what the item's node says (a `maxLength`, a
+ * `pattern`) reaches it as it reaches any key, a refusal of one
  * item is shown on its row (`keywords.2`), an item may hold a comma or a
  * line break, and the form draws what the contract says, a list, as the
  * React app draws it.
@@ -55,7 +58,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
   label: new TranslatableMarkup('List'),
   weight: 8,
 )]
-final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPluginInterface {
+final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPluginInterface, DefinitionWidgetInterface {
 
   /**
    * Constructs a ListWidget.
@@ -67,16 +70,13 @@ final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPlug
    * @param mixed $plugin_definition
    *   The plugin definition.
    * @param \Drupal\surface\Widget\SurfaceWidgetManager $widgetManager
-   *   The widget manager, which draws each item.
-   * @param \Drupal\surface\Options\SurfaceOptions $options
-   *   The options service, which says whether an item offers a list.
+   *   The widget manager, whose widgets read each row back.
    */
   public function __construct(
     array $configuration,
     string $plugin_id,
     mixed $plugin_definition,
     protected readonly SurfaceWidgetManager $widgetManager,
-    protected readonly SurfaceOptions $options,
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
   }
@@ -90,7 +90,6 @@ final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPlug
       $plugin_id,
       $plugin_definition,
       $container->get('plugin.manager.surface_widget'),
-      $container->get('surface.options'),
     );
   }
 
@@ -103,16 +102,16 @@ final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPlug
    * single value a row holds, so the whole list is drawn as JSON; an item
    * the form does not draw leaves the list not drawn.
    */
-  public function isApplicable(DataDefinitionInterface $definition): bool {
+  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
     if (!$definition instanceof ListDataDefinitionInterface) {
       return FALSE;
     }
     $item = $definition->getItemDefinition();
-    if ($item instanceof ComplexDataDefinitionInterface || $item instanceof ListDataDefinitionInterface || $this->options->resolve($item) !== NULL) {
+    if ($item instanceof ComplexDataDefinitionInterface || $item instanceof ListDataDefinitionInterface || $choice->optionSet($item) !== NULL) {
       return FALSE;
     }
     try {
-      $widget = $this->widgetManager->getWidgetFor($item);
+      $widget = $choice->forDefinition($item);
       return !$widget instanceof JsonWidget && !$widget instanceof NotDrawnWidget;
     }
     catch (\InvalidArgumentException) {
@@ -122,27 +121,44 @@ final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPlug
 
   /**
    * {@inheritdoc}
+   *
+   * A list whose items are one value of a single type, offering no list:
+   * a string, a number or a boolean.
    */
-  public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
-    assert($definition instanceof ListDataDefinitionInterface);
-    $item = $definition->getItemDefinition();
-    $widget = $this->widgetManager->getWidgetFor($item);
+  public function isApplicable(Schema $node, WidgetContext $context): bool {
+    $items = $node->get('items');
+    return static::type($node) === 'array'
+      && $items instanceof Schema
+      && !$items->isBoolean()
+      && !static::offers($items)
+      && count(static::types($items)) === 1
+      && in_array(static::type($items), ['string', 'integer', 'number', 'boolean'], TRUE);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
+    $items = $node->get('items');
+    $items = $items instanceof Schema ? $items : Schema::from([]);
     $rows = static::rows($value);
-    [$min, $max] = static::bounds($definition);
+    $min = is_int($node->get('minItems')) ? $node->get('minItems') : 0;
+    $max = is_int($node->get('maxItems')) ? $node->get('maxItems') : NULL;
     while (count($rows) < $min) {
       $rows[] = '';
     }
-    $label = $definition->getLabel() ?? '';
+    $label = static::text($node->get('title')) ?? '';
     $element = [
       '#type' => 'fieldset',
       '#title' => $label,
       SurfaceFormBuilderInterface::ROWS_KEY => TRUE,
     ];
-    if ($definition->getDescription() !== NULL) {
-      $element['#description'] = $definition->getDescription();
+    $description = static::text($node->get('description'));
+    if ($description !== NULL) {
+      $element['#description'] = $description;
     }
     foreach ($rows as $delta => $held) {
-      $row = $widget->buildElement($item, $held);
+      $row = $context->at($delta)->node($items, $held);
       $row['#title'] = $this->t('@label @number', ['@label' => $label, '@number' => $delta + 1]);
       $row['#title_display'] = 'invisible';
       $row['#prefix'] = '<div class="surface-row container-inline">' . ($row['#prefix'] ?? '');
@@ -164,37 +180,37 @@ final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPlug
   /**
    * {@inheritdoc}
    *
-   * Each row is read through the item's widget, in the order drawn, and a
-   * row left empty is dropped, as accept() would drop it; the row each
-   * item kept was drawn at is remembered for the request, so a refusal of
-   * an item is shown on its row. An element that is not rows (the list
-   * was drawn by another widget, from a definition a refiner narrowed) is
-   * read the way the base class reads any element.
+   * Each row is read through the widget that drew it, in the order drawn,
+   * and a row left empty is dropped, as accept() would drop it; the row
+   * each item kept was drawn at is remembered for the request, so a
+   * refusal of an item is shown on its row.
    */
-  public function extractValue(DataDefinitionInterface $definition, array $element, FormStateInterface $form_state, array $fallback_parents): mixed {
-    if (empty($element[SurfaceFormBuilderInterface::ROWS_KEY]) || !$definition instanceof ListDataDefinitionInterface) {
-      return parent::extractValue($definition, $element, $form_state, $fallback_parents);
+  public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed {
+    if (empty($element[SurfaceFormBuilderInterface::ROWS_KEY])) {
+      return parent::extractValue($element, $form_state, $node);
     }
-    $item = $definition->getItemDefinition();
-    $widget = $this->widgetManager->getWidgetFor($item);
-    $items = [];
+    $items = $node->get('items');
+    $items = $items instanceof Schema ? $items : Schema::from([]);
+    $values = [];
     $deltas = [];
     foreach (Element::children($element) as $delta) {
       if (!is_int($delta) || !is_array($element[$delta])) {
         continue;
       }
-      $held = $widget->extractValue($item, $element[$delta], $form_state, [...$fallback_parents, $delta]);
+      $row = $element[$delta];
+      $widget = isset($row[SurfaceFormBuilderInterface::WIDGET_KEY]) ? $this->widgetManager->widget((string) $row[SurfaceFormBuilderInterface::WIDGET_KEY]) : $this;
+      $held = $widget === $this ? $this->rawValue($row, $form_state) : $widget->extractValue($row, $form_state, $items);
       if (!ValueState::isConfigured($held)) {
         continue;
       }
-      $items[] = $held;
+      $values[] = $held;
       $deltas[] = $delta;
     }
     if (isset($element['#array_parents'])) {
       $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
       $state->setTemporaryValue([SurfaceFormBuilderInterface::ROW_DELTAS, implode('][', $element['#array_parents'])], $deltas);
     }
-    return $items;
+    return $values;
   }
 
   /**
@@ -265,23 +281,6 @@ final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPlug
       return [];
     }
     return array_values(array_filter($value, static fn (mixed $row, int|string $delta): bool => is_int($delta) && (is_scalar($row) || $row === NULL), ARRAY_FILTER_USE_BOTH));
-  }
-
-  /**
-   * Reads the list's Count, as its refiners left it.
-   *
-   * @param \Drupal\Core\TypedData\ListDataDefinitionInterface $definition
-   *   The list.
-   *
-   * @return array{0: int, 1: int|null}
-   *   The fewest rows, and the most, or NULL for no maximum.
-   */
-  protected static function bounds(ListDataDefinitionInterface $definition): array {
-    $count = $definition->getConstraints()['Count'] ?? [];
-    return [
-      is_numeric($count['min'] ?? NULL) ? (int) $count['min'] : 0,
-      is_numeric($count['max'] ?? NULL) ? (int) $count['max'] : NULL,
-    ];
   }
 
   /**

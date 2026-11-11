@@ -46,7 +46,10 @@ use PortableSchema\Builder\Schema;
  *
  * A reference that leads back into a def being read is left as it is, so
  * a recursive schema ends. A def's own `title` is its id, not a label, so
- * it is not laid over a site. This is the React example's
+ * it is not laid over a site. A site's `description` wins over its def's
+ * too; a def's own is laid in only where the site states none and the
+ * def is the key's shape, never where the def is a structure with
+ * properties (follow()). This is the React example's
  * (surface_examples_react) `resolveSchema()` and `inlineSchema()`, in PHP.
  *
  * The inline reading is the emitter's own, before the placement rules of
@@ -307,6 +310,14 @@ final class SchemaResolver {
     // none (untitled()).
     if ($def->has('title')) {
       $def = array_key_exists('title', $resolved) ? $def->without('title') : $def->with('title', self::DEF_TITLE);
+    }
+    // Its description the same way: the site's wins. A def's own is laid
+    // in only where the site states none and the def is the key's own
+    // shape, a value; a def with properties is a structure the site refers
+    // to (an attached part, a variant, a field item), whose description
+    // says what the structure is, not what the key is for.
+    if ($def->has('description') && (array_key_exists('description', $resolved) || $def->get('properties') !== NULL)) {
+      $def = $def->without('description');
     }
     if (in_array($name, $followed, TRUE)) {
       return $resolved;

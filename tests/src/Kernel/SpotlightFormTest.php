@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\Session\AnonymousUserSession;
+use Drupal\surface\Contract\SiteListBudget;
 use Drupal\surface\Form\SurfaceFormBuilder;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
-use Drupal\surface\Form\Drawing;
+use Drupal\surface\Form\Document\DocumentDrawer;
+use Drupal\surface\Form\Document\DocumentNodes;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_examples\Resource\SpotlightResource;
@@ -329,11 +332,11 @@ class SpotlightFormTest extends SurfaceKernelTestBase {
     $this->assertSame(['textfield', 'true'], [$props['shown']['#type'], $props['shown']['#default_value']]);
     $this->assertSame('Enter true or false or text.', (string) $props['shown']['#description']);
     $this->assertSame('Enter a number or true or false.', (string) $props['ratio']['#description']);
-    $this->assertSame('props.features', $props['features'][Drawing::LIST_KEY]);
+    $this->assertSame('props.features', $props['features'][DocumentDrawer::LIST_KEY]);
     $feature = $props['features'][0];
     $this->assertSame(['Wide', 'Fits six'], [$feature['heading']['#default_value'], $feature['note']['#default_value']]);
     $this->assertSame('surface_props_features_add', $props['features']['@add']['#name']);
-    $this->assertSame('props.panel.links', $props['panel']['links'][Drawing::LIST_KEY], 'A list of objects inside an object is a collection too.');
+    $this->assertSame('props.panel.links', $props['panel']['links'][DocumentDrawer::LIST_KEY], 'A list of objects inside an object is a collection too.');
     $this->assertSame('https://example.com/a', $props['panel']['links'][0]['url']['#default_value']);
 
     $state = $this->save([
@@ -385,6 +388,119 @@ class SpotlightFormTest extends SurfaceKernelTestBase {
     $this->assertSame(self::TEASER, $values['component']);
     $this->assertSame(['heading' => 'Read the program', 'tone' => 'plain', 'link' => 'https://example.com/program'], $values['props'], 'The teaser\'s defaults, none of the card\'s props.');
     $this->assertSame('surface_examples:card', $this->config('surface_examples.spotlight')->get('component'), 'A dry run writes nothing.');
+  }
+
+  /**
+   * Tests a deferred variant inside a collection's item keeps its values.
+   *
+   * Past the site list limit, the components a slot holds are one items
+   * schema whose props are deferred, with no conditional tying a chosen
+   * component's props to an item. The drawer asks the host for the
+   * document the props' `choose` link serves for the item's component,
+   * draws the props from it, and saving the form unchanged gives back what
+   * is stored.
+   */
+  public function testDeferredVariantInsideAnItemIsDrawnAndKept(): void {
+    $this->config(SiteListBudget::SETTINGS)->set(SiteListBudget::LIMIT, 0)->save();
+    $resources = $this->container->get('surface.resources');
+    $surface = $resources->build(SpotlightResource::class, $resources->operation(SpotlightResource::class, 'configure'));
+    $action = [
+      'text' => 'Buy a ticket',
+      'url' => 'https://example.com/tickets',
+      'style' => 'secondary',
+      'new_window' => TRUE,
+      'tags' => [],
+    ];
+    $stored = $this->container->get('surface.pipeline')->accept($surface, [
+      'component' => 'surface_examples:hero',
+      'props' => ['title' => 'Doors open'],
+      'slots' => [
+        'actions' => [
+          'kind' => 'components',
+          'components' => [['component' => 'surface_examples:call_to_action', 'props' => $action]],
+        ],
+      ],
+    ], []);
+    $item = $stored['slots']['actions']['components'][0];
+    $this->assertSame($action, array_intersect_key($item['props'], $action));
+
+    $envelope = json_decode((string) json_encode($this->formBuilder()->envelope($surface, $stored)->document['schema']), TRUE);
+    $deferred = array_filter($envelope['$defs'] ?? [], static fn (array $def): bool => !empty($def['properties']['component']) && !empty($def['properties']['props']['x-surface']['deferred']));
+    $this->assertNotEmpty($deferred, 'The items schema leaves its props deferred.');
+
+    $form_state = (new FormState())->setFormObject(new class() extends FormBase {
+
+      // phpcs:ignore Drupal.Commenting.FunctionComment.Missing
+      public function getFormId(): string {
+        return 'surface_deferred_item';
+      }
+
+      // phpcs:ignore Drupal.Commenting.FunctionComment.Missing
+      public function buildForm(array $form, FormStateInterface $form_state): array {
+        return $form;
+      }
+
+      // phpcs:ignore Drupal.Commenting.FunctionComment.Missing
+      public function submitForm(array &$form, FormStateInterface $form_state): void {
+      }
+
+    });
+    $form = [
+      '#form_id' => 'surface_deferred_item',
+      '#build_id' => 'deferred',
+      'surface' => $this->formBuilder()->buildSurfaceForm($surface, $stored, $form_state),
+    ];
+    $text = static::elementAt($form['surface'], '/slots/actions/components/0/props/text');
+    $this->assertNotNull($text, 'The props are drawn from the document the host gave.');
+    $this->assertSame('Buy a ticket', $text['#default_value']);
+    $builder = $this->container->get('form_builder');
+    $builder->prepareForm('surface_deferred_item', $form, $form_state);
+    $form = $builder->doBuildForm('surface_deferred_item', $form, $form_state);
+    $extracted = $this->formBuilder()->extractSurfaceValues($surface, $form['surface'], $form_state, $stored);
+    $this->assertSame($item, $extracted['slots']['actions']['components'][0], 'Saved unchanged, the item keeps what it holds.');
+  }
+
+  /**
+   * Tests a slot's kind the values leave out is drawn at its default.
+   *
+   * Switched to a component, its slots hold nothing yet: each slot's kind
+   * is drawn, and posted, at the default the document states, as every
+   * other client draws it.
+   */
+  public function testSwitchedSlotKindIsDrawnAtItsDefault(): void {
+    $resources = $this->container->get('surface.resources');
+    $surface = $resources->build(SpotlightResource::class, $resources->operation(SpotlightResource::class, 'configure'));
+    $stored = $surface->getDefaultValues();
+    $values = $this->formBuilder()->refinementOverlay($surface, $stored, ['component' => 'surface_examples:hero'] + $stored);
+    $node = DocumentNodes::of($this->formBuilder()->envelope($surface, $values))->at('/slots/actions/kind');
+    $this->assertSame('text', $node?->get('default'));
+    $kind = static::elementAt($this->formBuilder()->buildSurfaceForm($surface, $values, new FormState()), '/slots/actions/kind');
+    $this->assertSame('text', $kind['#default_value']);
+    $this->assertArrayNotHasKey('#empty_option', $kind);
+  }
+
+  /**
+   * Finds the element drawn for the value at a JSON Pointer.
+   *
+   * @param array $element
+   *   The container, or an element inside it.
+   * @param string $pointer
+   *   The pointer.
+   *
+   * @return array|null
+   *   The element, or NULL where none is drawn.
+   */
+  protected static function elementAt(array $element, string $pointer): ?array {
+    if (($element[SurfaceFormBuilderInterface::PATH_KEY] ?? NULL) === $pointer && isset($element[SurfaceFormBuilderInterface::WIDGET_KEY])) {
+      return $element;
+    }
+    foreach (DocumentDrawer::elementChildren($element) as $key) {
+      $found = static::elementAt($element[$key], $pointer);
+      if ($found !== NULL) {
+        return $found;
+      }
+    }
+    return NULL;
   }
 
 }

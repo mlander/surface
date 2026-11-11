@@ -982,7 +982,7 @@ final class Conditionals {
     return Schemas::map($schema, static function (Schema $node): Schema {
       $extension = $node->get(self::EXTENSION);
       if (is_array($extension)) {
-        $extension = array_diff_key($extension, array_flip(['refined', 'stale', 'chosen']));
+        $extension = array_diff_key($extension, array_flip(['refined', 'stale', 'chosen', 'locked']));
         $node = $extension === [] ? $node->without(self::EXTENSION) : $node->with(self::EXTENSION, $extension);
       }
       $ui = $node->get(PortableKeywords::UI);

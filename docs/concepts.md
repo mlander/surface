@@ -132,6 +132,7 @@ refused.
 | `DeclaresByProperties` | `use Drupal\surface\Resource\DeclaresByProperties;` |
 | `DefinesOutputsInterface` | `use Drupal\surface\Resource\DefinesOutputsInterface;` |
 | `DefinitionMetadata` | `use Drupal\surface\DefinitionMetadata;` |
+| `DefinitionWidgetInterface` | `use Drupal\surface\Contract\DefinitionWidgetInterface;` |
 | `DeletableStorageInterface` | `use Drupal\surface\Resource\DeletableStorageInterface;` |
 | `DerivedOperation` | `use Drupal\surface\Resource\DerivedOperation;` |
 | `DerivedResource` | `use Drupal\surface\Resource\DerivedResource;` |
@@ -196,3 +197,5 @@ refused.
 | `Violation` | `use Drupal\surface\Pipeline\Violation;` |
 | `ViolationSet` | `use Drupal\surface\Pipeline\ViolationSet;` |
 | `Widget` | `use Drupal\surface\Resource\Attribute\Widget;` |
+| `WidgetChoice` | `use Drupal\surface\Contract\WidgetChoice;` |
+| `WidgetContext` | `use Drupal\surface\Widget\WidgetContext;` |

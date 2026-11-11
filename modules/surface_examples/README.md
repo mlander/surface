@@ -4746,7 +4746,7 @@ of code, counted without blank lines or comments:
 | [`src/Plugin/Validation/Constraint/ValidReferenceConstraint.php`](../../src/Plugin/Validation/Constraint/ValidReferenceConstraint.php) | the id's constraint, core's ValidReference for a key that holds one id; the main module's | 22 |
 | [`src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php`](../../src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php) | the entity type's constraint, which the filters are options of; the main module's | 17 |
 | [`src/Plugin/SurfaceOptionsResolver/ReferenceOptions.php`](../../src/Plugin/SurfaceOptionsResolver/ReferenceOptions.php) | the resolver that lists the candidates up to the limit; the main module's | 39 |
-| [`src/Plugin/SurfaceWidget/AutocompleteWidget.php`](../../src/Plugin/SurfaceWidget/AutocompleteWidget.php) | core's entity autocomplete, for a key past the limit; the main module's | 65 |
+| [`src/Plugin/SurfaceWidget/AutocompleteWidget.php`](../../src/Plugin/SurfaceWidget/AutocompleteWidget.php) | core's entity autocomplete, for a key past the limit; the main module's | 80 |
 
 ## Example 17: retitle in bulk, access borrowed
 

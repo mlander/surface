@@ -9,7 +9,11 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
+use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface\Widget\WidgetContext;
+use PortableSchema\Builder\Schema;
 
 /**
  * One text field for a list of strings, items separated by commas.
@@ -33,7 +37,7 @@ use Drupal\surface\Widget\SurfaceWidgetBase;
   label: new TranslatableMarkup('Comma-separated list'),
   weight: 0,
 )]
-final class CommaSeparatedListWidget extends SurfaceWidgetBase {
+final class CommaSeparatedListWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
 
   /**
    * The definition setting that asks for this widget.
@@ -43,7 +47,7 @@ final class CommaSeparatedListWidget extends SurfaceWidgetBase {
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(DataDefinitionInterface $definition): bool {
+  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
     return $definition instanceof ListDataDefinitionInterface
       && $definition->getSetting(self::SETTING) === TRUE
       && $definition->getItemDefinition()->getDataType() === 'string';
@@ -52,8 +56,16 @@ final class CommaSeparatedListWidget extends SurfaceWidgetBase {
   /**
    * {@inheritdoc}
    */
-  public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
-    return $this->baseElement($definition) + [
+  public function isApplicable(Schema $node, WidgetContext $context): bool {
+    $items = $node->get('items');
+    return static::type($node) === 'array' && $items instanceof Schema && !$items->isBoolean() && static::types($items) === ['string'];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
+    return $this->baseElement($node, $context) + [
       '#type' => 'textfield',
       '#default_value' => is_array($value) ? implode(', ', array_map('strval', $value)) : '',
       '#maxlength' => 1024,
@@ -66,8 +78,8 @@ final class CommaSeparatedListWidget extends SurfaceWidgetBase {
    * An empty field is the empty list, which is an answer: the field was
    * rendered, and a person who cleared it meant no items.
    */
-  public function extractValue(DataDefinitionInterface $definition, array $element, FormStateInterface $form_state, array $fallback_parents): mixed {
-    $raw = $this->rawValue($element, $form_state, $fallback_parents);
+  public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed {
+    $raw = $this->rawValue($element, $form_state);
     if (!is_string($raw)) {
       return $raw;
     }

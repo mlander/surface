@@ -5,7 +5,7 @@ import type { Extension, PortableUi, Schema, Values } from '../contract';
 import { setAt } from '../contract';
 import { ContractPanel } from '../ContractPanel';
 import { Properties } from '../widgets/Field';
-import { LookupContext, type Lookup } from '../widgets/Shell';
+import { LookupContext, wholeLockedNote, type Lookup } from '../widgets/Shell';
 
 // Each widget from a schema fragment the way the emitter writes one: the
 // hints in `x-portable-ui`, the rest in `x-surface`, each only where it
@@ -378,6 +378,15 @@ describe('computed', () => {
 });
 
 describe('locked', () => {
+  it('says the reason the root gives for a document locked whole, as the form builder does', () => {
+    const fields = object({ title: { title: 'Title', type: 'string', ...x('text') } });
+    expect(wholeLockedNote({ ...fields, readOnly: true, 'x-surface': { locked: 'The cabinet may be audited, not changed.' } } as Schema)).toBe(
+      'This may be seen and not changed: The cabinet may be audited, not changed.',
+    );
+    expect(wholeLockedNote({ ...fields, readOnly: true } as Schema)).toBe('This may be seen and not changed.');
+    expect(wholeLockedNote(fields)).toBeNull();
+  });
+
   it('renders a locked key disabled, saying why', () => {
     render(
       <Form
@@ -389,6 +398,16 @@ describe('locked', () => {
     expect(input).toBeDisabled();
     expect(input).toHaveValue('article');
     expect(input).toHaveAccessibleDescription('Unique. Fixed for this operation.');
+  });
+
+  it('says the reason the document gives for a lock, in place of the fixed note', () => {
+    render(
+      <Form
+        schema={object({ type: { title: 'Machine name', description: 'Unique.', type: 'string', readOnly: true, const: 'article', ...x('text', { locked: 'Only an administrator may rename it.' }) } }, ['type'])}
+        initial={{ type: 'article' }}
+      />,
+    );
+    expect(screen.getByLabelText(/Machine name/)).toHaveAccessibleDescription('Unique. Only an administrator may rename it.');
   });
 
   it('renders a child its access locked as a fieldset of disabled keys, holding what is stored', () => {

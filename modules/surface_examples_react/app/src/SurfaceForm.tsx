@@ -4,7 +4,7 @@ import type { Contract, Created, Narrowed, Schema, Settled, Values, Violation } 
 import { ContractRefused, inlineSchema, isSuggested, joinedFetch, narrow, narrowingStatus, watchedPaths, setAt, withoutComputed, withoutSuggested } from './contract';
 import { ContractPanel } from './ContractPanel';
 import { Properties } from './widgets/Field';
-import { LookupContext } from './widgets/Shell';
+import { LookupContext, wholeLockedNote } from './widgets/Shell';
 
 /** How long a change waits before the narrowing it asks of the server is sent: the request path only. */
 export const REFINE_DELAY = 300;
@@ -626,9 +626,7 @@ export function SurfaceForm({
       ) : null}
       {summary !== null && summary.valid ? <Outputs outputs={summary.outputs} /> : null}
       {/* Locked whole: every field is fixed, so there is nothing to submit. */}
-      {contract.schema.readOnly ? (
-        <p className="dsr-status">This may be seen and not changed.</p>
-      ) : null}
+      {contract.schema.readOnly ? <p className="dsr-status">{wholeLockedNote(contract.schema)}</p> : null}
       <LookupContext.Provider value={api.lookup}>
         <Properties schema={schema} values={values} prefix="" onChange={onChange} errors={errors} />
       </LookupContext.Provider>

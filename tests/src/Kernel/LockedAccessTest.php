@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\surface\Form\Document\DocumentDrawer;
+use Drupal\Core\Form\FormState;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\Violation;
@@ -172,13 +174,22 @@ class LockedAccessTest extends SurfaceKernelTestBase {
       'the schema for these answers' => $emitter->emit($built, self::STORED, 'tool_test.cabinet', 'update')->document['schema'],
       'the full schema' => $emitter->emitFull($this->resources()->buildStatic(CabinetResource::class, $context), 'tool_test.cabinet', 'update')->document['schema'],
     ];
+    $reason = (string) $built->lockedWhole();
+    // Why, in the schema for these answers alone: the account decides it.
+    $this->assertSame($reason, $documents['the schema for these answers']['x-surface']['locked']);
+    $this->assertArrayNotHasKey('locked', $documents['the full schema']['x-surface'], 'The full schema is for any account: `readOnly` says it, no reason.');
     foreach ($documents as $which => $schema) {
       $this->assertTrue($schema['readOnly'] ?? FALSE, $which);
-      $this->assertArrayNotHasKey('locked', $schema['x-surface'] ?? [], $which . ': `readOnly` says it.');
       foreach (['label', 'drawers', 'lock'] as $key) {
         $this->assertTrue($schema['properties'][$key]['readOnly'] ?? FALSE, "$which: $key");
       }
     }
+    // The drawer says it above the form, read from the document alone.
+    $container = $this->formBuilder()->drawDocument($emitter->emit($built, self::STORED, 'tool_test.cabinet', 'update', widgets: TRUE), new FormState());
+    $this->assertSame('This may be seen and not changed: The cabinet may be audited, not changed.', (string) $container[DocumentDrawer::LOCKED_KEY]['#markup']);
+    $this->assertSame(-100, $container[DocumentDrawer::LOCKED_KEY]['#weight']);
+    $this->assertTrue($container['drawers']['#disabled']);
+    $this->assertArrayNotHasKey('#required', $container['drawers'], 'Locked whole: nothing is asked for.');
     // The schema for these answers holds the stored values, chosen by
     // what the deciding key holds, not by its default.
     $this->assertSame(6, $documents['the schema for these answers']['properties']['drawers']['const']);

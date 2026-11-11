@@ -522,7 +522,8 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
     $license = $this->mounted($this->surface(), 'license');
     $this->assertSame('The four digits after EV- on the license, such as 2048. Required to host more than 100 people.', (string) $license->getDescription());
     $this->assertSame(['2048'], DefinitionMetadata::getExamples($license));
-    $element = $this->container->get('plugin.manager.surface_widget')->getWidgetFor($license)->buildElement($license, NULL);
+    $element = $this->container->get('surface.form_builder')->buildSurfaceForm($this->surface(), [], new FormState())['third_party_settings']['surface_examples_compliance']['license'];
+    $this->assertSame('textfield', $element['#type']);
     // The example says it in the documents, not as a placeholder: an
     // empty field showing a value reads as filled.
     $this->assertArrayNotHasKey('#placeholder', $element);

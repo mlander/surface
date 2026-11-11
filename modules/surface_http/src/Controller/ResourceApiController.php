@@ -17,6 +17,8 @@ use Drupal\surface\Contract\UnknownChoiceException;
 use Drupal\surface\Operation\OperationRun;
 use Drupal\surface\Operation\Refusal;
 use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Form\DocumentNarrowing;
+use Drupal\surface\Form\NarrowsDocumentsInterface;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
@@ -138,6 +140,9 @@ final class ResourceApiController implements ContainerInjectionInterface {
    * @param \Drupal\surface\Contract\SiteListBudget|null $budget
    *   The site list limit: a refused choice lists the values of a list no
    *   longer than it.
+   * @param \Drupal\surface\Form\NarrowsDocumentsInterface|null $narrowing
+   *   The narrowing of the document for an edit in progress, which a
+   *   form's rebuild draws from too; NULL for the form builder's own.
    */
   public function __construct(
     protected readonly ServedOperations $servedOperations,
@@ -148,6 +153,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     TranslationInterface $stringTranslation,
     protected readonly References $references,
     protected readonly ?SiteListBudget $budget = NULL,
+    protected readonly ?NarrowsDocumentsInterface $narrowing = NULL,
   ) {
     $this->stringTranslation = $stringTranslation;
   }
@@ -165,6 +171,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
       $container->get('string_translation'),
       $container->get('surface.references'),
       $container->get('surface.site_list_budget'),
+      $container->get('surface.document_narrowing'),
     );
   }
 
@@ -465,16 +472,18 @@ final class ResourceApiController implements ContainerInjectionInterface {
     // them.
     $input = array_intersect_key($body, $served->surface->getDefinitions()->toArray());
     $input = $this->servedOperations->keepStale($input, $current, $this->stalePaths($request));
-    // A key, or a dotted path to one inside an attached child or a variant,
-    // dropped the way SurfaceHostTrait::surfaceFormValues() drops it.
-    $discarded = $this->formBuilder->discardedRefinementInput($served->surface, $current, $input);
-    // And emitted from the same overlay the form is rebuilt from, settled
-    // to its fixed point: a key falling back to a stored value this edit
-    // orphaned is held unanswered, so nothing below it is refined against
-    // it, and is shown stale, standing for that value.
-    $contract = $this->emit($served, $this->formBuilder->refinementOverlay($served->surface, $current, $input));
-    return $this->respond($this->envelope($contract) + [
-      'discarded' => array_values(array_map(ResultDocument::pointer(...), $discarded)),
+    // The one narrowing a form's rebuild draws from too: a key, or a
+    // dotted path to one inside an attached child or a variant, dropped
+    // the way SurfaceHostTrait::surfaceFormValues() drops it, and the
+    // envelope emitted from the same overlay, settled to its fixed point:
+    // a key falling back to a stored value this edit orphaned is held
+    // unanswered, so nothing below it is refined against it, and is shown
+    // stale, standing for that value.
+    // Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
+    $narrowing = $this->narrowing ?? new DocumentNarrowing($this->formBuilder, $this->emitter);
+    $narrowed = $narrowing->narrow($served->surface, $current, $input, fn (array $values): ServedContract => $this->emit($served, $values));
+    return $this->respond($this->envelope($narrowed->contract()) + [
+      'discarded' => array_values(array_map(ResultDocument::pointer(...), $narrowed->discarded)),
     ]);
   }
 
