@@ -276,23 +276,24 @@ class InputCoercionMatrixTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests values the table leaves in another type, and core lets through.
+   * Tests values the table leaves in another type are refused as `type`.
    *
    * The table leaves a boolean for a string or a float, and a boolean
    * spelling filter_var() does not read, as they arrived, for validation
-   * to judge. Core's PrimitiveType check is looser than that, so they
-   * are stored as sent, at both doors alike. With the Tool API's table a
-   * boolean for an integer is no longer one of them: it is 0 or 1.
+   * to judge. The validator never coerces: each is a value of another type
+   * than the document says, refused at both doors alike. With the Tool
+   * API's table a boolean for an integer is no longer one of them: it is 0
+   * or 1.
    */
-  public function testValuesTheTableLeavesAndCoreLetsThrough(): void {
+  public function testValuesTheTableLeavesAreRefused(): void {
     foreach ([
       ['word', TRUE],
       ['ratio', TRUE],
       ['flag', '01'],
     ] as [$key, $given]) {
       $label = $key . ' = ' . var_export($given, TRUE);
-      $this->assertSame($given, $this->form(['name' => 'Specimen', $key => $given], ['name' => 'Specimen'])[$key] ?? NULL, $label . ': the form door.');
-      $this->assertSame($given, $this->tool(['name' => 'Specimen', $key => $given], ['name' => 'Specimen'])[$key] ?? NULL, $label . ': the tool door.');
+      $this->assertNull($this->form(['name' => 'Specimen', $key => $given], ['name' => 'Specimen']), $label . ': the form door.');
+      $this->assertNull($this->tool(['name' => 'Specimen', $key => $given], ['name' => 'Specimen']), $label . ': the tool door.');
     }
   }
 
@@ -311,8 +312,9 @@ class InputCoercionMatrixTest extends SurfaceKernelTestBase {
     $builder->setDefinition('stamp', DataDefinition::create('timestamp')->setLabel('Stamp'));
     $surface = $builder->seal();
     foreach ([
-      ['when', '2026-08-10 14:30:00 +0200', '2026-08-10T14:30:00+02:00'],
-      ['when', '2026-08-10T14:30:00+02:00', '2026-08-10T14:30:00+02:00'],
+      ['when', '2026-08-10 14:30:00 +0200', '2026-08-10T12:30:00'],
+      ['when', '2026-08-10T14:30:00+02:00', '2026-08-10T12:30:00'],
+      ['when', '2026-08-10T14:30:00', '2026-08-10T14:30:00'],
       ['when', '2026-08-10', '2026-08-10'],
       ['when', '2026', '2026'],
       ['day', '2026-11-14', '2026-11-14'],

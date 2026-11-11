@@ -33,11 +33,15 @@ final class TypeMismatchException extends \InvalidArgumentException {
    * @param string $actual
    *   A short name for the type that arrived, as get_debug_type() names
    *   it.
+   * @param bool $nullable
+   *   Whether the place also takes null, as its schema says: an optional
+   *   key a caller may clear.
    */
   public function __construct(
     protected readonly string $path,
     protected readonly string $expected,
     protected readonly string $actual,
+    protected readonly bool $nullable = FALSE,
   ) {
     parent::__construct(sprintf(
       'The value at "%s" must be of type %s, %s given.',
@@ -65,6 +69,26 @@ final class TypeMismatchException extends \InvalidArgumentException {
    */
   public function getExpected(): string {
     return $this->expected;
+  }
+
+  /**
+   * Answers whether the place also takes null, as its schema says.
+   *
+   * @return bool
+   *   TRUE for an optional key a caller may clear.
+   */
+  public function isNullable(): bool {
+    return $this->nullable;
+  }
+
+  /**
+   * Gets the same refusal of a place that never takes null.
+   *
+   * @return static
+   *   The refusal, for an item of a list.
+   */
+  public function withoutNull(): static {
+    return new static($this->path, $this->expected, $this->actual);
   }
 
   /**

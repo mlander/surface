@@ -310,7 +310,12 @@ class VenueResourceTest extends SurfaceKernelTestBase {
     $this->assertSame(3, $page['total']);
     $refused = $this->call('list', ['values' => ['limit' => 51]]);
     $this->assertFalse($refused['success']);
-    $limit = ['path' => '/limit', 'code' => 'not_in_range', 'message' => 'This value should be between 1 and 50.'];
+    $limit = [
+      'path' => '/limit',
+      'code' => 'maximum',
+      'message' => 'This value should be between 1 and 50.',
+      'params' => ['limit' => 50],
+    ];
     $this->assertSame([$limit], $refused['violations']);
 
     // Harbour Centre disabled: the filter finds it, and an account that
@@ -351,7 +356,7 @@ class VenueResourceTest extends SurfaceKernelTestBase {
       ['path' => '/venues/1/id', 'code' => 'not_found', 'message' => 'No venue is named concert_hall.'],
       [
         'path' => '/venues/2/id',
-        'code' => 'taken',
+        'code' => 'check.drupal:SurfaceUnique.taken',
         'message' => 'The harbour venue is named already, at position 0: a reorder names each venue once.',
       ],
     ], $refused['violations']);
@@ -374,15 +379,16 @@ class VenueResourceTest extends SurfaceKernelTestBase {
     $again = $this->call('create', ['values' => self::TOWN_HALL]);
     $taken = [
       'path' => '/id',
-      'code' => 'taken',
+      'code' => 'check.drupal:SurfaceUnique.taken',
       'message' => 'A venue named town_hall already exists. This is computed from label unless a value is sent.',
+      'params' => ['thing' => 'venue', 'id' => 'town_hall'],
     ];
     $this->assertSame([$taken], $again['violations']);
     $main = ['id' => 'riverside_main', 'label' => 'Main hall', 'seats' => 10];
     $room = $this->call('update', ['id' => 'town_hall', 'values' => ['rooms' => [$main]]]);
     $held = [
       'path' => '/rooms/0/id',
-      'code' => 'taken',
+      'code' => 'check.drupal:SurfaceUnique.taken',
       'message' => 'The room id riverside_main is held already, by riverside: a room id is held once across the venues.',
     ];
     $this->assertSame([$held], $room['violations']);
@@ -443,7 +449,7 @@ class VenueResourceTest extends SurfaceKernelTestBase {
     $this->assertSame([
       [
         'path' => '/slug',
-        'code' => 'taken',
+        'code' => 'check.drupal:SurfaceUnique.taken',
         'message' => 'The slug riverside-hall is held already, by riverside: a slug is held once across the venues. This is computed from label.',
       ],
     ], $twin['violations'], 'A refusal of a value nobody sent names the key the caller can change.');

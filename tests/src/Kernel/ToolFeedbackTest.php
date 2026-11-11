@@ -138,7 +138,7 @@ class ToolFeedbackTest extends SurfaceKernelTestBase {
    */
   protected static function fix(array $values, array $refusal, ?string $meant = NULL): array {
     [$path, $code, $sentence] = $refusal;
-    if ($code === 'no_such_choice' && preg_match('/Choose (.+)\.$/', $sentence, $list) && preg_match_all('/([^,]+?) \(([^)]+)\)/', preg_replace('/^(.*) or /', '$1, ', $list[1]), $choices, PREG_SET_ORDER)) {
+    if ($code === 'enum' && preg_match('/Choose (.+)\.$/', $sentence, $list) && preg_match_all('/([^,]+?) \(([^)]+)\)/', preg_replace('/^(.*) or /', '$1, ', $list[1]), $choices, PREG_SET_ORDER)) {
       $fixed = trim($choices[0][1]);
       foreach ($choices as [, $value, $label]) {
         if ($label === $meant) {
@@ -146,7 +146,7 @@ class ToolFeedbackTest extends SurfaceKernelTestBase {
         }
       }
     }
-    elseif (($code === 'too_low' && preg_match('/should be (\d+) or more/', $sentence, $bound)) || ($code === 'not_in_range' && preg_match('/between \d+ and (\d+)/', $sentence, $bound))) {
+    elseif (in_array($code, ['minimum', 'maximum'], TRUE) && (preg_match('/should be (\d+) or more/', $sentence, $bound) || preg_match('/between \d+ and (\d+)/', $sentence, $bound))) {
       $fixed = (int) $bound[1];
     }
     else {
@@ -363,17 +363,17 @@ class ToolFeedbackTest extends SurfaceKernelTestBase {
     $this->assertSame([
       'the venue, by name' => [
         '/venue',
-        'no_such_choice',
+        'enum',
         'The value you selected is not a valid choice. ' . self::VENUES . '.',
       ],
       'a room of another venue' => [
         '/room',
-        'no_such_choice',
+        'enum',
         'The value you selected is not a valid choice. This applies when Venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).',
       ],
       'twice the capacity' => [
         ResultDocument::pointer(self::COMPLIANCE) . '/stewards',
-        'too_low',
+        'minimum',
         'This value should be 5 or more. This applies when Capacity is 240.',
       ],
     ], $said);

@@ -166,7 +166,7 @@ class ExamplesConceptsToolTest extends SurfaceKernelTestBase {
     $this->assertStringContainsString(sprintf('values: {"venue":"library","contact":1,"page":%d,"thing":{"entity_type":"node","id":"%d"}', $nodes['article'], $nodes['article']), $answers['event.sponsorship']['valid'], 'Each id as its key keeps it: the bare key\'s a string.');
     $this->assertSame("Failed: The values were refused:\n" . sprintf('/page: This entity (node: %d) cannot be referenced.', $nodes['page']), $first($answers['event.sponsorship']['wrong_bundle']), 'A page where an article is asked for.');
     $this->assertSame("Failed: The values were refused:\n" . sprintf('/page: This entity (node: %d) cannot be referenced.', $nodes['draft']), $first($answers['event.sponsorship']['not_referenceable']), 'The draft, for an account that may not see unpublished content.');
-    $this->assertStringContainsString('/setting/entity_type: The entity type node cannot be referenced here.', $answers['event.sponsorship']['not_config']);
+    $this->assertStringContainsString('/setting/entity_type: The entity type node cannot be referenced here. Choose event_venue (Venue) or user_role (Role).', $answers['event.sponsorship']['not_config']);
     $this->assertSame("Failed: The values were refused:\n" . '/served_at: Served at is required when Show the caterer on the event page is on.', $first($answers['event.catering']['shown_without_time']), 'The rule on served_at, declared as an attribute.');
     $this->assertSame("Failed: The values were refused:\n" . '/contact/email: Email is required when Show the caterer on the event page is on.', $first($answers['event.catering']['shown_without_email']), 'The person\'s rule, through the port the contact wires to public.');
     $this->assertStringContainsString('"served_at":null', $answers['event.catering']['hidden'], 'Not shown: neither rule holds.');
@@ -174,7 +174,9 @@ class ExamplesConceptsToolTest extends SurfaceKernelTestBase {
       $this->assertSame($answers['event.catering'][$name], $answers['event.catering.method'][$name], sprintf('The same keys declared with calls answer %s the same.', $name));
     }
     $this->assertStringStartsWith('Success: Dry run of Set up the event: the values were accepted and prepared, and nothing was written.', $answers['event.setup']['set_up']);
-    $this->assertSame("Failed: The values were refused:\n" . '/date: Write the date as YYYY-MM-DD, such as 2026-10-17.', $first($answers['event.setup']['bad_date']));
+    // Refused by its pattern, in the pattern's message, and by its format.
+    $this->assertStringContainsString("\n/date: Write the date as YYYY-MM-DD, such as 2026-10-17.", $answers['event.setup']['bad_date']);
+    $this->assertStringContainsString("\n/date: This value is not a valid date.", $answers['event.setup']['bad_date']);
     $this->assertStringContainsString('"banner":"Doors open at six.","show_banner":true', $answers['event.notices']['banner']);
     $pages = $this->container->get('class_resolver')->getInstanceFromDefinition(Retitle::class)->ids();
     $this->assertStringContainsString(sprintf('titles: [{"node":%d,"old":"volunteer briefing for the night shift","new":"Volunteer Briefing for the Night Shift"},{"node":%d,"old":"WHERE TO PARK ON FESTIVAL DAYS","new":"Where to Park on Festival Days"}', $pages['one'], $pages['two']), $answers['ai.retitle']['dry_run'], 'A dry run answers each title it would write.');

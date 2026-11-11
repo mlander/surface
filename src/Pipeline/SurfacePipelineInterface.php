@@ -96,7 +96,11 @@ interface SurfacePipelineInterface {
    *
    * The data surface is refined first, so the constraints the values are
    * held to are the ones the values themselves selected: the same set the
-   * generated form rendered.
+   * generated form rendered. The values are held once to the document
+   * the data surface serves for them, by the dialect's validator, and
+   * each check the document names runs the constraint of its place
+   * (Validation\PortableValidator); a refusal the document states has the
+   * dialect's code and params.
    *
    * A value is "not configured" when it is NULL or the empty string:
    * acceptable for an optional key, and for a required key a violation

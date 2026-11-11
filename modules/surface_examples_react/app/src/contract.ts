@@ -375,11 +375,18 @@ export interface Contract {
   discarded?: string[];
 }
 
-/** One refusal or note: its dotted path ('' for the whole call), a stable code, and the message. */
+/**
+ * One refusal or note: its dotted path ('' for the whole call), a stable
+ * code, the message, and the code's params where it has any: the
+ * dialect's (`limit`, `allowed`; `property` for `required` and
+ * `unknownProperty`, which sit at the object), or a check's own. A
+ * check's refusal sits where the check named it.
+ */
 export interface Violation {
   path: string;
   code: string;
   message: string;
+  params?: Record<string, unknown>;
 }
 
 /** A stored value kept that its key no longer offers, and the value. */

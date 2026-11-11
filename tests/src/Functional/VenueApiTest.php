@@ -98,7 +98,12 @@ class VenueApiTest extends BrowserTestBase {
     $harbour = ['id' => 'harbour', 'label' => 'Harbour Centre', 'capacity' => 950, 'weight' => 2];
     $this->assertSame([$harbour], $this->decoded($this->send('GET', self::COLLECTION . '?offset=2'))['items']);
     $refused = $this->problem($this->send('GET', self::COLLECTION . '?limit=500'), 422);
-    $limit = ['path' => '/limit', 'code' => 'not_in_range', 'message' => 'This value should be between 1 and 50.'];
+    $limit = [
+      'path' => '/limit',
+      'code' => 'maximum',
+      'message' => 'This value should be between 1 and 50.',
+      'params' => ['limit' => 50],
+    ];
     $this->assertSame([$limit], $refused['errors']);
     $schema = $this->decoded($this->send('GET', self::COLLECTION . '/schema'), 200, 'application/schema+json');
     $this->assertSame(['offset', 'limit', 'status'], array_keys($schema['properties']), "The collection's schema is the listing's.");

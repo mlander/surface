@@ -533,7 +533,7 @@ structure's inputs are what it takes and its outputs what it answers
 - **An update writes what it names.** The reorder is an update over
   the collection: its storage loads every venue's id and weight, and
   its `prepare()` refuses an id that names no venue (`not_found`) or is
-  named twice (`taken`), by its place in the list, and rehearses the rest;
+  named twice (`check.drupal:SurfaceUnique.taken`), by its place in the list, and rehearses the rest;
   `commit()` saves them. The listing answers the current order, each
   venue with its weight; the resource's one read is its default update's
   (why: [decision](decisions.md#a-read-is-an-operation-of-the-resource)).

@@ -401,7 +401,7 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
       [$surface, $storage] = $this->operation($resource, 'create');
       $refused = iterator_to_array($this->pipeline()->submit($surface, $values, $storage)->violations, FALSE);
       $this->assertCount(1, $refused, $resource);
-      $this->assertSame(['id', 'taken'], [$refused[0]->key, $refused[0]->code], $resource);
+      $this->assertSame(['id', 'check.drupal:SurfaceUnique.taken'], [$refused[0]->key, $refused[0]->code], $resource);
       $this->assertStringContainsString('with the id first already exists', PlainTextOutput::renderFromHtml((string) $refused[0]->message));
     }
     $this->assertSame('First', $this->container->get('entity_type.manager')->getStorage(self::NAMED)->loadUnchanged('first')?->label());

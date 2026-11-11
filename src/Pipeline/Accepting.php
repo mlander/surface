@@ -655,7 +655,7 @@ final class Accepting {
       $raw = [$raw];
     }
     if (!is_array($raw)) {
-      throw new TypeMismatchException($path, 'list', get_debug_type($raw));
+      throw new TypeMismatchException($path, 'list', get_debug_type($raw), static::isNullable($entry->definition));
     }
     $sent = [];
     foreach (array_values($raw) as $item) {
@@ -747,7 +747,7 @@ final class Accepting {
     }
     $input = Coercion::decoded($input, FALSE);
     if (!is_array($input)) {
-      throw new TypeMismatchException($path, 'map', get_debug_type($input));
+      throw new TypeMismatchException($path, 'map', get_debug_type($input), static::isNullable($entry->definition));
     }
     if ($entry->variants !== NULL && $chosen !== NULL) {
       $owners = $entry->variants->owners($entry->variants->strangers($chosen, $input), $chosen);
@@ -852,7 +852,7 @@ final class Accepting {
     }
     $input = Coercion::decoded($input, FALSE);
     if (!is_array($input)) {
-      throw new TypeMismatchException($path, 'map', get_debug_type($input));
+      throw new TypeMismatchException($path, 'map', get_debug_type($input), static::isNullable($definition));
     }
     $unknown = array_keys(array_diff_key($input, $properties));
     if ($unknown !== []) {
@@ -947,9 +947,31 @@ final class Accepting {
       if (!ValueState::isConfigured($item)) {
         continue;
       }
-      $values[] = $this->acceptValue($item_definition, $item, NULL, $path . '.' . $delta);
+      try {
+        $values[] = $this->acceptValue($item_definition, $item, NULL, $path . '.' . $delta);
+      }
+      catch (TypeMismatchException $exception) {
+        // An item is never null.
+        throw $exception->getPath() === $path . '.' . $delta ? $exception->withoutNull() : $exception;
+      }
     }
     return $values;
+  }
+
+  /**
+   * Answers whether a key's schema also takes null.
+   *
+   * As the document says it (PropertySchema::nullable()): an optional key
+   * a caller may clear, never a key that must hold a value, nor a secret.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   *
+   * @return bool
+   *   TRUE when it does.
+   */
+  protected static function isNullable(DataDefinitionInterface $definition): bool {
+    return !DefinitionMetadata::holdsValue($definition) && !DefinitionMetadata::isSecret($definition);
   }
 
   /**
@@ -981,7 +1003,7 @@ final class Accepting {
     $type = $definition->getDataType();
     if (is_array($value)) {
       if (in_array($type, SurfacePipeline::SCALAR_TYPES, TRUE)) {
-        throw new TypeMismatchException($path, $type, get_debug_type($value));
+        throw new TypeMismatchException($path, $type, get_debug_type($value), static::isNullable($definition));
       }
       return $value;
     }
@@ -1134,14 +1156,16 @@ final class Accepting {
   public static function typeMismatchViolation(TypeMismatchException $exception, TranslationInterface $translation): Violation {
     $segments = explode('.', $exception->getPath());
     $name = array_shift($segments);
-    return new Violation(
+    return Violation::typeMismatch(
       (string) $name,
       implode('.', $segments),
       $translation->translate('This value must be of type @expected, @actual given.', [
         '@expected' => $exception->getExpected(),
         '@actual' => $exception->getActual(),
       ]),
-      Violation::TYPE_MISMATCH,
+      $exception->getExpected(),
+      $exception->getActual(),
+      $exception->isNullable(),
     );
   }
 

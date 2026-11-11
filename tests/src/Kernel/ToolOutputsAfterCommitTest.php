@@ -53,6 +53,7 @@ class ToolOutputsAfterCommitTest extends SurfaceKernelTestBase {
       new Reference('typed_data_manager'),
       new Reference('surface.options'),
       new Reference('string_translation'),
+      new Reference('surface.portable_validator'),
     ]);
     $container->register('surface.pipeline', MisreportingPipeline::class)->setArguments([new Reference('surface_test.inner_pipeline')]);
   }

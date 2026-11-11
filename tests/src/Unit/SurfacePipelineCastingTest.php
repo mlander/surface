@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Unit;
 
+use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
@@ -15,7 +16,10 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Surface;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\Validation\PortableValidator;
+use PortableSchema\Registry;
 use Drupal\surface\Pipeline\SurfacePipeline;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\TypeMismatchException;
@@ -57,11 +61,10 @@ class SurfacePipelineCastingTest extends UnitTestCase {
    * stub is there so validate() can be called for the required rules
    * without a container behind it.
    *
-   * The options service is never asked anything here, and cannot be: it
-   * is consulted only to tell a stale value from a wrong one, which
-   * happens only after a constraint has refused something, and nothing
-   * these cases validate is ever refused by the stub above. So it is
-   * handed over without running its constructor, rather than assembled
+   * The options service is asked only for a key's list, by the emitter
+   * that writes the document the validator holds the values to, and
+   * these keys hold no constraint that lists anything. So it is handed
+   * over without running its constructor, rather than assembled
    * out of a plugin manager, a constraint manager and a logger that
    * would all be stubs of things this test has no opinion about. The
    * stale rule itself is a kernel test's job, because it is only true
@@ -81,7 +84,12 @@ class SurfacePipelineCastingTest extends UnitTestCase {
     $container->set('typed_data_manager', $manager);
     \Drupal::setContainer($container);
     $options = (new \ReflectionClass(SurfaceOptions::class))->newInstanceWithoutConstructor();
-    return new SurfacePipeline($manager, $options, $this->getStringTranslationStub());
+    // Asked by the emitter for a key's list: these keys hold no constraint,
+    // so it answers none without a resolver.
+    (new \ReflectionProperty(SurfaceOptions::class, 'resolved'))->setValue($options, new \WeakMap());
+    $translation = $this->getStringTranslationStub();
+    $validator = new PortableValidator(Registry::withTypes(), new ContractEmitter($options, $translation), $manager, $translation, $options, new AnonymousUserSession());
+    return new SurfacePipeline($manager, $options, $translation, $validator);
   }
 
   /**
@@ -685,9 +693,16 @@ class SurfacePipelineCastingTest extends UnitTestCase {
    */
   #[DataProvider('requiredValues')]
   public function testRequiredMeansConfigured(mixed $value, bool $violates): void {
-    $definition = DataDefinition::create('any')->setLabel('Title')->setRequired(TRUE);
+    $pipeline = $this->pipeline();
+    // A key of the value's own type, so only whether it is configured is
+    // asked: the validator refuses a value of another type.
+    $definition = (is_array($value) ? new ListDataDefinition([], DataDefinition::create('string')) : DataDefinition::create(match (TRUE) {
+      is_bool($value) => 'boolean',
+      is_int($value) => 'integer',
+      default => 'string',
+    }))->setLabel('Title')->setRequired(TRUE);
     $surface = new Surface(DefinitionMap::fromArrays(definitions: ['value' => $definition]));
-    $errors = $this->pipeline()->validate($surface, ['value' => $value]);
+    $errors = $pipeline->validate($surface, ['value' => $value]);
 
     if (!$violates) {
       $this->assertCount(0, $errors);

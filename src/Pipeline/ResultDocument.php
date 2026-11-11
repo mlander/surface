@@ -111,16 +111,16 @@ final class ResultDocument {
    * @param bool $machine
    *   Whether its message is rendered for a machine or for a person.
    *
-   * @return array{path: string, code: string, message: string}
-   *   Its full path as a JSON Pointer, its code, and its message, as plain
-   *   text.
+   * @return array{path: string, code: string, message: string, params?: array<string, mixed>}
+   *   Its full path as a JSON Pointer, its code, its message, as plain
+   *   text, and its params where it has any.
    */
   public static function entry(Violation $violation, bool $machine = TRUE): array {
     return [
       'path' => self::pointer($violation->fullPath()),
       'code' => $violation->code,
       'message' => self::message($violation, $machine),
-    ];
+    ] + ($violation->params === [] ? [] : ['params' => $violation->params]);
   }
 
   /**
@@ -131,7 +131,7 @@ final class ResultDocument {
    * @param bool $machine
    *   Whether its message is rendered for a machine or for a person.
    *
-   * @return array{path: string, code: string, message: string, stored: mixed}
+   * @return array{path: string, code: string, message: string, params?: array<string, mixed>, stored: mixed}
    *   As entry(), and the stored value kept.
    */
   public static function staleEntry(Violation $violation, bool $machine = TRUE): array {
