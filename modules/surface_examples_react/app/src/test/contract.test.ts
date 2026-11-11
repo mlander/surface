@@ -75,6 +75,26 @@ describe('resolving a reference', () => {
     expect(inline.properties!.second.properties!.phone['x-portable-ui']).toEqual({ widget: 'text', group: 'call' });
   });
 
+  it("keeps a site's own description over its def's, and a structure's description off the key", () => {
+    const item: Schema = { title: 'field.item:node.page.field_featured_image', description: 'The Featured image field (entity_reference) of page, as one item.', type: 'object', properties: { target_id: { type: 'integer' } } };
+    const shape: Schema = { title: 'event.email', description: 'An address mail is sent to.', type: 'string', format: 'email' };
+    const root: Schema = {
+      type: 'object',
+      properties: {
+        field_featured_image: { title: 'Featured image', description: 'Include an image.', $ref: '#/$defs/item' },
+        field_media: { title: 'Media', $ref: '#/$defs/item' },
+        contact: { title: 'Contact', $ref: '#/$defs/shape' },
+        reply: { $ref: '#/$defs/shape', description: 'Where replies go.' },
+      },
+      $defs: { item, shape },
+    };
+    const inline = inlineSchema(root);
+    expect(inline.properties!.field_featured_image.description).toBe('Include an image.');
+    expect(inline.properties!.field_media).not.toHaveProperty('description');
+    expect(inline.properties!.contact.description).toBe('An address mail is sent to.');
+    expect(inline.properties!.reply.description).toBe('Where replies go.');
+  });
+
   it("joins a mixed-in structure's groups with the frame's, the frame's word standing", () => {
     const grouped: Schema = {
       type: 'object',
@@ -492,8 +512,11 @@ describe('contract 5 on the wire', () => {
       { type: 'null' },
     ]);
     expect(raw.properties?.ticket['x-surface']?.variants).toEqual({ free: '#/$defs/registration.step3.ticket.free', paid: '#/$defs/registration.step3.ticket.paid' });
+    // A def is titled by its structure's label, else its id: the def's
+    // name, never the key's, which its site titles.
+    expect(raw.$defs?.['registration.step3.ticket.free'].title).toBe('Free ticket');
     for (const [id, def] of Object.entries(raw.$defs ?? {})) {
-      expect(def.title).toBe(id);
+      expect(typeof def.title === 'string' && def.title !== '', id).toBe(true);
     }
     const inline = inlineSchema(raw);
     expect(inline.properties?.ticket).not.toHaveProperty('anyOf');

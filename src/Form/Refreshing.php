@@ -16,14 +16,14 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\OptGroup;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Render\ElementInfoManagerInterface;
-use Drupal\surface\SurfaceInterface;
-use Drupal\surface\Collection;
+use Drupal\surface\Form\Document\DocumentDrawer;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 
 /**
  * Refines a form over AJAX: the triggers, the wrappers and the response.
  *
- * Each refinement dependency is wired to the rebuild (wireRefinement()).
+ * The drawer wires each key a key depends on to the rebuild, through
+ * attachRefinementAjax() (DocumentDrawer::wired()).
  * The container's #process limits each trigger's validation to its own
  * value and wraps every element the rebuild may replace
  * (processSurfaceContainer()). The AJAX callback answers the request with
@@ -281,7 +281,7 @@ final class Refreshing {
       }
       // Rendered without the container, so a group or a fieldset placed
       // inside it is drawn here, as the container's pre-render would have.
-      $elements[$element[SurfaceFormBuilderInterface::REFRESH_ID_KEY]] = Drawing::placeMounts(Drawing::gatherGroups($element));
+      $elements[$element[SurfaceFormBuilderInterface::REFRESH_ID_KEY]] = DocumentDrawer::placeMounts(DocumentDrawer::gatherGroups($element));
     }
     $response = new AjaxResponse();
     foreach ($elements as $id => $element) {
@@ -360,7 +360,7 @@ final class Refreshing {
     $errors = $refused['#errors'] ?? NULL;
     foreach (is_array($errors) ? ($errors['#items'] ?? []) : [$errors] as $message) {
       if ($refused !== NULL && (is_string($message) || $message instanceof \Stringable) && (string) $message !== '') {
-        $sentences[] = Drawing::named($refused, $message);
+        $sentences[] = DocumentDrawer::named($refused, $message);
       }
     }
     foreach ($after as $dotted => $element) {
@@ -368,7 +368,7 @@ final class Refreshing {
       if ($was === NULL) {
         continue;
       }
-      $now = Drawing::drawing($element);
+      $now = DocumentDrawer::drawing($element);
       $label = $now['label'] ?? $was['label'];
       if ($label === NULL || trim(strip_tags((string) $label)) === '') {
         continue;
@@ -476,10 +476,10 @@ final class Refreshing {
       // Each list of free values the list widget drew, at any depth: the
       // widget cannot know where it sits, and this is the first moment
       // anything does.
-      Drawing::wireRows($element, [], $wrapper_id);
+      DocumentDrawer::wireRows($element, [], $wrapper_id);
     }
     // Before any child is processed, so before Form API checks one.
-    foreach (Drawing::elementChildren($element) as $key) {
+    foreach (DocumentDrawer::elementChildren($element) as $key) {
       $element[$key] = static::requiredHints($element[$key], \Drupal::service('element_info'));
     }
     static::limitAjax($element, $element['#parents'] ?? [], !empty($element['#tree']));
@@ -493,7 +493,7 @@ final class Refreshing {
         // The first build of a request is the form the page was rendered
         // from; a rebuild later in the same request is not.
         $state->setTemporaryValue([self::RENDERED_OPTIONS, static::containerKey($element)], static::triggerOptions($element));
-        $state->setTemporaryValue([self::DRAWN_AS, static::containerKey($element)], Drawing::drawnAs($element));
+        $state->setTemporaryValue([self::DRAWN_AS, static::containerKey($element)], DocumentDrawer::drawnAs($element));
       }
       static::wrapRefreshed($element, $wrapper_id);
       static::wrapBeside($element, $complete_form, $wrapper_id);
@@ -543,7 +543,7 @@ final class Refreshing {
         ...($element['#pre_render'] ?? $element_info->getInfo($type)['#pre_render'] ?? []),
       ];
     }
-    foreach (Drawing::elementChildren($element) as $key) {
+    foreach (DocumentDrawer::elementChildren($element) as $key) {
       $element[$key] = static::requiredHints($element[$key], $element_info);
     }
     return $element;
@@ -560,7 +560,7 @@ final class Refreshing {
    *   The element's #tree.
    */
   protected static function limitAjax(array &$element, array $parents, bool $tree): void {
-    foreach (Drawing::elementChildren($element) as $key) {
+    foreach (DocumentDrawer::elementChildren($element) as $key) {
       // The child's own value path, computed the way Form API is about
       // to compute it: a child inherits its parent's #tree, and is
       // nested under its parent only when both are trees; anything else
@@ -583,7 +583,7 @@ final class Refreshing {
    *   The container's id.
    */
   protected static function wrapRefreshed(array &$element, string $wrapper_id): void {
-    foreach (Drawing::elementChildren($element) as $key) {
+    foreach (DocumentDrawer::elementChildren($element) as $key) {
       if (isset($element[$key][self::REFRESH_KEY]) && !isset($element[$key][SurfaceFormBuilderInterface::REFRESH_ID_KEY])) {
         $element[$key] = static::wrapped($element[$key], static::refreshId($wrapper_id, (string) $element[$key][self::REFRESH_KEY]));
       }
@@ -736,7 +736,7 @@ final class Refreshing {
    */
   protected static function triggerOptions(array $element): array {
     $found = [];
-    foreach (Drawing::elementChildren($element) as $key) {
+    foreach (DocumentDrawer::elementChildren($element) as $key) {
       $child = $element[$key];
       $path = $child[SurfaceFormBuilderInterface::TRIGGER_KEY]['path'] ?? NULL;
       $signature = is_array($path) ? static::optionsSignature($child) : NULL;
@@ -812,7 +812,7 @@ final class Refreshing {
    * @return array
    *   The element, wired or left as it was.
    */
-  protected function attachRefinementAjax(array $element, string $wrapper_id, array $path, array $replaces): array {
+  public function attachRefinementAjax(array $element, string $wrapper_id, array $path, array $replaces): array {
     if (!isset($element['#type']) || in_array($element['#type'], self::GROUPING_TYPES, TRUE) || $element['#type'] === 'item') {
       // A value drawn fixed cannot change, so nothing is rebuilt on it.
       return $element;
@@ -857,7 +857,7 @@ final class Refreshing {
    *   The same, each option carrying the group's trigger.
    */
   public static function processOptionTrigger(array $element): array {
-    foreach (Drawing::elementChildren($element) as $key) {
+    foreach (DocumentDrawer::elementChildren($element) as $key) {
       foreach ([SurfaceFormBuilderInterface::TRIGGER_KEY, '#limit_validation_errors'] as $property) {
         if (isset($element[$property]) && is_array($element[$key])) {
           $element[$key][$property] = $element[$property];
@@ -865,148 +865,6 @@ final class Refreshing {
       }
     }
     return $element;
-  }
-
-  /**
-   * Marks what a rebuild may replace and wires what triggers one.
-   *
-   * One frame at a time, the data surface's own and then each child's, under
-   * the names each frame gives its keys: a child's refiners run in the
-   * child's frame, so its dependencies and its targets are the child's
-   * keys, and what one of them moves is inside that child and nowhere
-   * else.
-   *
-   * @param array $element
-   *   The container, or the element an attached child or a variant is
-   *   rendered as.
-   * @param \Drupal\surface\SurfaceInterface $surface
-   *   The data surface or built child the element renders.
-   * @param array $values
-   *   The values the frame is rendered with.
-   * @param string[] $path
-   *   The frame's path below the container.
-   * @param string $wrapper_id
-   *   The container's id.
-   *
-   * @return array
-   *   The element, marked and wired.
-   */
-  public function wireRefinement(array $element, SurfaceInterface $surface, array $values, array $path, string $wrapper_id): array {
-    $definitions = $surface->getDefinitions();
-    // One property at a time inside the mount: a key an alter refines
-    // there is a target of its own, and a key it watches there a trigger.
-    $refinements = $definitions->refinementPaths();
-    foreach (array_keys($refinements) as $target) {
-      $parents = explode('.', (string) $target);
-      if (count($parents) > 1 && is_array(NestedArray::getValue($element, $parents))) {
-        NestedArray::setValue($element, [...$parents, self::REFRESH_KEY], implode('.', [...$path, ...$parents]));
-      }
-    }
-    foreach ($definitions->entries() as $name => $entry) {
-      $name = (string) $name;
-      if (!isset($element[$name]) || !is_array($element[$name])) {
-        continue;
-      }
-      $at = [...$path, $name];
-      if (isset($refinements[$name])) {
-        // A target (a key with variants is one too, of its deciding key)
-        // has a wrapper of its own, which is what the rebuild replaces.
-        $element[$name][self::REFRESH_KEY] = implode('.', $at);
-      }
-      if ($entry->list !== NULL) {
-        // Each item is a frame of its own: what refines inside an item is
-        // wired inside it, and replaces what it moves there and nothing
-        // else.
-        $child = $entry->list->child();
-        $held = Collection::items($values[$name] ?? NULL);
-        foreach (Drawing::elementChildren($element[$name]) as $delta) {
-          if (is_int($delta) && is_array($element[$name][$delta])) {
-            $item = $held[$delta] ?? [];
-            $element[$name][$delta] = $this->wireRefinement(
-              $element[$name][$delta],
-              $child,
-              array_replace($child->getDefaultValues(), is_array($item) ? $item : []),
-              [...$at, (string) $delta],
-              $wrapper_id,
-            );
-          }
-        }
-        continue;
-      }
-      if (!$entry->isNested() || !empty($element[$name][SurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
-        continue;
-      }
-      $child = $entry->attachment?->child;
-      $held = $values[$name] ?? NULL;
-      if ($entry->variants !== NULL) {
-        // The variant the key was rendered as, from what it was rendered
-        // with: its own defaults when what is held was another's.
-        $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? $surface->getDefault($entry->variants->by));
-        $child = $chosen === NULL ? NULL : $entry->variants->variant($chosen)->child;
-        $held = $chosen !== NULL ? $entry->variants->held($chosen, $held) : NULL;
-      }
-      if ($child !== NULL) {
-        $element[$name] = $this->wireRefinement(
-          $element[$name],
-          $child,
-          array_replace($child->getDefaultValues(), is_array($held) ? $held : []),
-          $at,
-          $wrapper_id,
-        );
-      }
-    }
-    foreach ($definitions->refinementDependencies() as $dependency) {
-      $parents = explode('.', $dependency);
-      $trigger = NestedArray::getValue($element, $parents);
-      if (!is_array($trigger)) {
-        continue;
-      }
-      NestedArray::setValue($element, $parents, $this->attachRefinementAjax(
-        $trigger,
-        $wrapper_id,
-        [...$path, ...$parents],
-        array_map(
-          static fn (string $target): string => implode('.', [...$path, $target]),
-          static::dependentsOf($dependency, $refinements),
-        ),
-      ));
-    }
-    return $element;
-  }
-
-  /**
-   * Lists the keys depending on one key, directly or through others.
-   *
-   * The closure the discard cascade walks: a target of the key, then a
-   * target of that target, until nothing new is reached. A change to the
-   * key may move every one of them and nothing else.
-   *
-   * @param string $key
-   *   The key that changed.
-   * @param array<string, string[]> $refinements
-   *   The frame's refinement map, one mounted key at a time: target =>
-   *   the keys it refines against.
-   *
-   * @return string[]
-   *   The dependents, in declaration order; never the key itself.
-   */
-  protected static function dependentsOf(string $key, array $refinements): array {
-    $reached = [];
-    $queue = [$key];
-    while ($queue !== []) {
-      $moved = array_shift($queue);
-      foreach ($refinements as $target => $dependencies) {
-        $target = (string) $target;
-        if ($target !== $key && !isset($reached[$target]) && in_array($moved, $dependencies, TRUE)) {
-          $reached[$target] = TRUE;
-          $queue[] = $target;
-        }
-      }
-    }
-    return array_values(array_filter(
-      array_map('strval', array_keys($refinements)),
-      static fn (string $target): bool => isset($reached[$target]),
-    ));
   }
 
   /**
@@ -1080,7 +938,7 @@ final class Refreshing {
    *   The element, re-pointed.
    */
   protected static function retargetAjax(array $element, string $wrapper_id): array {
-    foreach (Drawing::elementChildren($element) as $key) {
+    foreach (DocumentDrawer::elementChildren($element) as $key) {
       if (isset($element[$key]['#ajax']['wrapper'])) {
         $element[$key]['#ajax']['wrapper'] = $wrapper_id;
       }
@@ -1105,7 +963,7 @@ final class Refreshing {
    */
   public static function ruledOutPaths(array $element, string $prefix = ''): array {
     $paths = [];
-    foreach (Drawing::elementChildren($element) as $key) {
+    foreach (DocumentDrawer::elementChildren($element) as $key) {
       if (!is_array($element[$key])) {
         continue;
       }
@@ -1132,7 +990,7 @@ final class Refreshing {
    */
   public static function stalePaths(array $element, string $prefix = ''): array {
     $paths = [];
-    foreach (Drawing::elementChildren($element) as $key) {
+    foreach (DocumentDrawer::elementChildren($element) as $key) {
       $path = $prefix . $key;
       if (array_key_exists(SurfaceWidgetBase::STALE_KEY, $element[$key])) {
         $paths[] = $path;
@@ -1156,7 +1014,7 @@ final class Refreshing {
     if (isset($form[self::WRAPPER_KEY])) {
       return $form;
     }
-    foreach (Drawing::elementChildren($form) as $key) {
+    foreach (DocumentDrawer::elementChildren($form) as $key) {
       if (($found = static::searchSurfaceContainer($form[$key])) !== NULL) {
         return $found;
       }

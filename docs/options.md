@@ -544,8 +544,9 @@ final class RoleExistsOptions extends SurfaceOptionsResolverBase {
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-Declare the cacheability honestly. It is what a generated form applies to
-the element it builds, and it is the difference between a select that
+Declare the cacheability honestly. It is what the served contract
+carries, and what a generated form drawn from it applies to its
+container, and it is the difference between a select that
 updates when a role is added and one that does not. The distinction
 between tags, which travel into a shared cache, and contexts, which mean
 "this answer was for one request", is in

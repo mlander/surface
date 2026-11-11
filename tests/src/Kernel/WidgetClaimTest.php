@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
+use Drupal\Core\TypedData\DataDefinition;
+use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface_widget_test\Plugin\SurfaceWidget\ColorPickerWidget;
@@ -53,8 +55,8 @@ class WidgetClaimTest extends SurfaceKernelTestBase {
    */
   public function testClaimServesTheKeyAndLosesToTheOwnersSetting(): void {
     $swatch = $this->swatch();
-    $widgets = $this->container->get('plugin.manager.surface_widget');
-    $this->assertInstanceOf(ColorPickerWidget::class, $widgets->getWidgetFor($swatch->getDefinition('accent')), 'The higher priority of two claims serves the key.');
+    $widgets = $this->container->get('surface.widget_choice');
+    $this->assertInstanceOf(ColorPickerWidget::class, $widgets->forDefinition($swatch->getDefinition('accent')), 'The higher priority of two claims serves the key.');
     $this->assertNull($widgets->claimed($swatch->getDefinition('trim')), 'A key whose owner asks for a widget is claimed by none.');
     $this->assertNull($widgets->claimed($swatch->getDefinition('caption')), 'A key no claim matches is claimed by none.');
 
@@ -99,6 +101,46 @@ class WidgetClaimTest extends SurfaceKernelTestBase {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('The widget_test_rows widget\'s claim {"type":"list"} claims a list or a map, which are drawn by what they hold: a claim names the type of one value. A claim is [\'type\' => <data type>], [\'type\' => <data type>, \'format\' => <format>] or [\'shape\' => <shape id>].');
     $this->container->get('plugin.manager.surface_widget')->processDefinition($definition, 'widget_test_rows');
+  }
+
+  /**
+   * A text input's size, a text area's rows and a published setting.
+   *
+   * Written into `x-portable-ui.options` as hints alone, on a built key
+   * that holds them, and read back by the schema reader into the settings
+   * they were written from; an option no widget the word names publishes
+   * is noted, not read.
+   */
+  public function testSettingsReachTheDocumentAsHintsAndReadBack(): void {
+    $built = (new SurfaceBuilder())
+      ->setDefinition('name', DataDefinition::create('string')->setLabel('Name')->setSetting('size', 30))
+      ->setDefinition('notes', DataDefinition::create('string')->setLabel('Notes')->setSetting('multiline', TRUE)->setSetting('rows', 4))
+      ->setDefinition('accent', DataDefinition::create('string')->setLabel('Accent')->setSetting('format', 'color')->setSetting('palette', [
+        '#336699',
+        '#ffffff',
+      ]))
+      ->seal();
+    $emitter = $this->container->get('surface.contract_emitter');
+    $hinted = $emitter->emit($built, $built->getDefaultValues(), 'test.settings', widgets: TRUE)->document['schema'];
+    $this->assertSame(['size' => 30], $hinted['properties']['name']['x-portable-ui']['options']);
+    $this->assertSame(['rows' => 4], $hinted['properties']['notes']['x-portable-ui']['options']);
+    $this->assertSame(['palette' => ['#336699', '#ffffff']], $hinted['properties']['accent']['x-portable-ui']['options']);
+    foreach ([
+      'the schema as it stands' => $emitter->emit($built, $built->getDefaultValues(), 'test.settings')->document['schema'],
+      'the full schema' => $emitter->emitFull($built, 'test.settings')->document['schema'],
+    ] as $document => $plain) {
+      foreach (['name', 'notes', 'accent'] as $key) {
+        $this->assertArrayNotHasKey('x-portable-ui', $plain['properties'][$key], $document . ': without the widget hints no option is written.');
+      }
+    }
+
+    $hinted['properties']['name']['x-portable-ui']['options']['shade'] = 'dark';
+    $reader = $this->container->get('surface.schema_reader');
+    $read = $this->container->get('surface.resources')->build($reader->structure($hinted, 'test.settings_read'), new OperationContext('configure'));
+    $this->assertSame(30, $read->getDefinition('name')->getSetting('size'));
+    $this->assertSame(4, $read->getDefinition('notes')->getSetting('rows'));
+    $this->assertSame(['#336699', '#ffffff'], $read->getDefinition('accent')->getSetting('palette'));
+    $this->assertSame('Not read: no widget the word names publishes a setting of that name.', $reader->notes($hinted)['/properties/name/x-portable-ui/options/shade'] ?? NULL);
   }
 
 }

@@ -141,6 +141,12 @@ export interface Extension {
   /** On a deciding key whose variants offer one value, its `const`: the label that value is offered as. */
   fixed?: string;
   /**
+   * In the schema for these answers, beside `readOnly`: why the access
+   * answer locked the key, at the top why the whole is locked. Absent
+   * where nothing said why.
+   */
+  locked?: string;
+  /**
    * The key's static refiners watch keys that each offer a list, and what
    * they answer for every value is stated as conditionals on the frame:
    * the page can narrow it with no request.
@@ -557,6 +563,22 @@ function untitled(def: Json): Json {
   return rest;
 }
 
+/**
+ * A def as laid over a site that may say what the key is for: the site's
+ * `description` wins, and a def's own is laid in only where the site
+ * states none and the def is the key's shape, a value. A def with
+ * properties is a structure the site refers to (an attached part, a
+ * variant, a field item), whose description says what the structure is,
+ * not what the key is for. SchemaResolver::follow() in PHP.
+ */
+function withoutDefDescription(def: Json, site: Json): Json {
+  if (!('description' in def) || !('description' in site || isObject(def.properties))) {
+    return def;
+  }
+  const { description: _description, ...rest } = def;
+  return rest;
+}
+
 /** The keywords whose subschemas restored() walks: a map of them, a list, or one. */
 const NAMED = ['properties', '$defs', 'patternProperties'];
 const LISTED = ['allOf', 'anyOf', 'oneOf'];
@@ -681,7 +703,7 @@ function resolveAt(schema: Json, root: Json, ancestors: string[]): [Json, string
       return;
     }
     followed.push(name);
-    resolved = merge(resolved, resolveAt(untitled(def), root, [...ancestors, name])[0]);
+    resolved = merge(resolved, resolveAt(withoutDefDescription(untitled(def), resolved), root, [...ancestors, name])[0]);
   };
   for (const [keyword, value] of Object.entries(schema)) {
     const name = keyword === '$ref' && typeof value === 'string' ? defName(value) : null;

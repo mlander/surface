@@ -92,8 +92,10 @@ class PlainTextDocumentsTest extends SurfaceKernelTestBase {
     }
 
     $form = $this->formBuilder()->buildSurfaceForm($surface, $surface->getDefaultValues(), new FormState());
-    $this->assertSame('Double quotation marks (&quot;)', (string) $form['scope']['#title'], 'The form renders the markup, as before.');
-    $this->assertStringContainsString('<br /><strong>', (string) $form['protect']['#description']);
+    // The form is drawn from the document, so it draws the same text.
+    // Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
+    $this->assertSame('Double quotation marks (")', (string) $form['scope']['#title'], 'The form draws the plain text the document carries.');
+    $this->assertSame("Enable it for every form.\nPage caching is disabled.", (string) $form['protect']['#description']);
   }
 
   /**

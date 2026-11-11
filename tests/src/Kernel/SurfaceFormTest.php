@@ -714,7 +714,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the options widget carries the list's cacheability.
+   * Tests that the form carries the list's cacheability.
    */
   public function testOptionsCarryTheirCacheability(): void {
     $surface = new Surface(
@@ -730,9 +730,11 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
     $form = $this->formBuilder()->buildSurfaceForm($surface, [], new FormState());
 
     // A list read from the constraint alone is permanent, and saying so
-    // is the point: the resolver's answer reaches the element instead of
-    // being computed and dropped.
-    $this->assertSame(Cache::PERMANENT, $form['badge']['#cache']['max-age']);
+    // is the point: the resolver's answer reaches the form instead of
+    // being computed and dropped. It is the served contract's, which the
+    // container carries.
+    // Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
+    $this->assertSame(Cache::PERMANENT, $form['#cache']['max-age']);
   }
 
   /**

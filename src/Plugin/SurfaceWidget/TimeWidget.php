@@ -6,8 +6,12 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface\Widget\WidgetContext;
+use PortableSchema\Builder\Schema;
 
 /**
  * A time input for a string that asks for one.
@@ -29,7 +33,7 @@ use Drupal\surface\Widget\SurfaceWidgetBase;
   label: new TranslatableMarkup('Time'),
   weight: 9,
 )]
-final class TimeWidget extends SurfaceWidgetBase {
+final class TimeWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
 
   /**
    * Answers whether a definition is drawn as a time input.
@@ -47,15 +51,22 @@ final class TimeWidget extends SurfaceWidgetBase {
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(DataDefinitionInterface $definition): bool {
+  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
     return static::draws($definition);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
-    return $this->baseElement($definition) + [
+  public function isApplicable(Schema $node, WidgetContext $context): bool {
+    return static::types($node) === ['string'] && (static::ui($node)['widget'] ?? NULL) === 'time';
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
+    return $this->baseElement($node, $context) + [
       '#type' => 'date',
       '#attributes' => ['type' => 'time'],
       '#default_value' => $value,

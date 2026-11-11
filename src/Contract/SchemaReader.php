@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Contract;
 
+use Drupal\surface\Plugin\SurfaceWidget\StringWidget;
+use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface\Widget\SurfaceWidgetManager;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -453,12 +456,16 @@ final class SchemaReader {
    *   The registry a `$ref` to a `portable:` id, and a `portable-typeBy`,
    *   is read through (surface.portable_registry); NULL for the type
    *   library alone.
+   * @param \Drupal\surface\Widget\SurfaceWidgetManager|null $widgets
+   *   The widget manager, which says which settings the widget a word
+   *   names publishes; NULL to note every option of a module's widget.
    */
   public function __construct(
     protected readonly ?ResourceRegistry $registry = NULL,
     protected readonly ?TypedDataManagerInterface $typedDataManager = NULL,
     protected readonly ?EntityTypeManagerInterface $entityTypeManager = NULL,
     protected readonly ?Registry $library = NULL,
+    protected readonly ?SurfaceWidgetManager $widgets = NULL,
   ) {}
 
   /**
@@ -504,9 +511,11 @@ final class SchemaReader {
    */
   public static function fill(BlueprintInterface $inputs, array $root, string $pointer, ?string $hash = NULL): void {
     // Called by the build, with no service of its own: the site's entity
-    // types and the registry are read from the container where there is
-    // one.
-    $reader = new static(entityTypeManager: \Drupal::hasService('entity_type.manager') ? \Drupal::entityTypeManager() : NULL, library: static::library());
+    // types, the registry and the widgets, whose published settings an
+    // option is read back into, are read from the container where there
+    // is one.
+    $widgets = \Drupal::hasService('plugin.manager.surface_widget') ? \Drupal::service('plugin.manager.surface_widget') : NULL;
+    $reader = new static(entityTypeManager: \Drupal::hasService('entity_type.manager') ? \Drupal::entityTypeManager() : NULL, library: static::library(), widgets: $widgets instanceof SurfaceWidgetManager ? $widgets : NULL);
     $reader->hashed = $hash === NULL ? NULL : [$root, $hash];
     $reader->document = $root;
     $schema = static::schemaOf($root, $hash);
@@ -3015,7 +3024,7 @@ final class SchemaReader {
       $definition->addConstraint($constraint, in_array($constraint, ['Range', 'Length', 'Count'], TRUE) ? array_replace($held, $options) : $options);
     }
     static::holdTo($definition, static::fragment(Schema::from($foreign)));
-    $this->settings($definition, Schemas::data($property->get(PortableKeywords::UI)) ?? []);
+    $this->settings($definition, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
   }
 
   /**
@@ -3365,7 +3374,7 @@ final class SchemaReader {
         $list->addConstraint($constraint, $options);
       }
       static::holdTo($list, $this->withDefs($foreign, $root));
-      $this->settings($list, Schemas::data($property->get(PortableKeywords::UI)) ?? []);
+      $this->settings($list, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
       $this->examples($list, $property);
       return [$list, $default, $read];
     }
@@ -3415,7 +3424,7 @@ final class SchemaReader {
       static::holdTo($definition, static::fragment(Schema::from($extra)));
     }
     static::holdTo($definition, $this->withDefs($foreign, $root));
-    $this->settings($definition, Schemas::data($property->get(PortableKeywords::UI)) ?? []);
+    $this->settings($definition, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
     $this->examples($definition, $property);
     return [$definition, $default, $read];
   }
@@ -3614,14 +3623,24 @@ final class SchemaReader {
   }
 
   /**
-   * Reads the widget a key's `x-portable-ui` asks for.
+   * Reads the widget a key's `x-portable-ui` asks for, and its settings.
+   *
+   * The word, where it is one a definition asks for; a text input's
+   * `size` and a text area's `rows` as the settings of those names; and
+   * each option a module's widget publishes, read back as the setting it
+   * was written from where the widget the word names lists one of that
+   * name (SurfaceWidgetBase::publishedSettings()), noted otherwise.
+   *
+   * Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    * @param array $ui
    *   The key's `x-portable-ui`.
+   * @param string $pointer
+   *   The key's pointer.
    */
-  protected function settings(DataDefinitionInterface $definition, array $ui): void {
+  protected function settings(DataDefinitionInterface $definition, array $ui, string $pointer): void {
     if (!$definition instanceof DataDefinition) {
       return;
     }
@@ -3631,6 +3650,28 @@ final class SchemaReader {
     }
     elseif ($widget === 'textarea') {
       $definition->setSetting('multiline', TRUE);
+    }
+    $options = Schemas::data($ui['options'] ?? NULL) ?? [];
+    foreach (StringWidget::SETTINGS as $setting) {
+      if (is_int($options[$setting] ?? NULL) && $options[$setting] > 0) {
+        $definition->setSetting($setting, $options[$setting]);
+      }
+    }
+    $published = [];
+    $plugin = NULL;
+    if (is_string($widget) && $this->widgets !== NULL) {
+      $plugin_id = $this->widgets->words()[$widget] ?? NULL;
+      $plugin = $plugin_id === NULL ? NULL : $this->widgets->widget($plugin_id);
+    }
+    foreach ($plugin instanceof SurfaceWidgetBase ? $plugin->publishedSettings() : [] as $setting) {
+      $published[PortableUi::optionName($setting)] = $setting;
+    }
+    foreach (array_diff_key($options, array_flip(PortableUi::OPTIONS)) as $option => $value) {
+      if (isset($published[$option])) {
+        $definition->setSetting($published[$option], $value);
+        continue;
+      }
+      $this->note(static::below($pointer, PortableKeywords::UI, 'options', (string) $option), 'Not read: no widget the word names publishes a setting of that name.');
     }
   }
 

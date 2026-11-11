@@ -518,7 +518,8 @@
         ],
         "$defs": {
             "registration.step3.ticket.free": {
-                "title": "registration.step3.ticket.free",
+                "title": "Free ticket",
+                "description": "The ticket when registration costs nothing: a note shown beside the register button.",
                 "type": "object",
                 "properties": {
                     "note": {
@@ -536,7 +537,8 @@
                 "additionalProperties": false
             },
             "registration.step3.ticket.paid": {
-                "title": "registration.step3.ticket.paid",
+                "title": "Paid ticket",
+                "description": "The ticket when registration costs money: its price and currency.",
                 "type": "object",
                 "properties": {
                     "price": {
@@ -646,7 +648,7 @@
                 }
             },
             "event.license": {
-                "title": "event.license",
+                "title": "Event license",
                 "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                 "type": [
                     "string",
@@ -952,7 +954,8 @@
             ],
             "$defs": {
                 "registration.step3.ticket.free": {
-                    "title": "registration.step3.ticket.free",
+                    "title": "Free ticket",
+                    "description": "The ticket when registration costs nothing: a note shown beside the register button.",
                     "type": "object",
                     "properties": {
                         "note": {
@@ -970,7 +973,8 @@
                     "additionalProperties": false
                 },
                 "registration.step3.ticket.paid": {
-                    "title": "registration.step3.ticket.paid",
+                    "title": "Paid ticket",
+                    "description": "The ticket when registration costs money: its price and currency.",
                     "type": "object",
                     "properties": {
                         "price": {
@@ -1086,7 +1090,7 @@
                     }
                 },
                 "event.license": {
-                    "title": "event.license",
+                    "title": "Event license",
                     "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                     "type": [
                         "string",
@@ -1427,7 +1431,8 @@
                     ],
                     "$defs": {
                         "registration.step3.ticket.free": {
-                            "title": "registration.step3.ticket.free",
+                            "title": "Free ticket",
+                            "description": "The ticket when registration costs nothing: a note shown beside the register button.",
                             "type": "object",
                             "properties": {
                                 "note": {
@@ -1445,7 +1450,8 @@
                             "additionalProperties": false
                         },
                         "registration.step3.ticket.paid": {
-                            "title": "registration.step3.ticket.paid",
+                            "title": "Paid ticket",
+                            "description": "The ticket when registration costs money: its price and currency.",
                             "type": "object",
                             "properties": {
                                 "price": {
@@ -1561,7 +1567,7 @@
                             }
                         },
                         "event.license": {
-                            "title": "event.license",
+                            "title": "Event license",
                             "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                             "type": [
                                 "string",
@@ -1956,7 +1962,8 @@
                     ],
                     "$defs": {
                         "registration.step3.ticket.free": {
-                            "title": "registration.step3.ticket.free",
+                            "title": "Free ticket",
+                            "description": "The ticket when registration costs nothing: a note shown beside the register button.",
                             "type": "object",
                             "properties": {
                                 "note": {
@@ -1974,7 +1981,8 @@
                             "additionalProperties": false
                         },
                         "registration.step3.ticket.paid": {
-                            "title": "registration.step3.ticket.paid",
+                            "title": "Paid ticket",
+                            "description": "The ticket when registration costs money: its price and currency.",
                             "type": "object",
                             "properties": {
                                 "price": {
@@ -2090,7 +2098,7 @@
                             }
                         },
                         "event.license": {
-                            "title": "event.license",
+                            "title": "Event license",
                             "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                             "type": [
                                 "string",
@@ -2496,7 +2504,8 @@
                     ],
                     "$defs": {
                         "registration.step3.ticket.free": {
-                            "title": "registration.step3.ticket.free",
+                            "title": "Free ticket",
+                            "description": "The ticket when registration costs nothing: a note shown beside the register button.",
                             "type": "object",
                             "properties": {
                                 "note": {
@@ -2514,7 +2523,8 @@
                             "additionalProperties": false
                         },
                         "registration.step3.ticket.paid": {
-                            "title": "registration.step3.ticket.paid",
+                            "title": "Paid ticket",
+                            "description": "The ticket when registration costs money: its price and currency.",
                             "type": "object",
                             "properties": {
                                 "price": {
@@ -2630,7 +2640,7 @@
                             }
                         },
                         "event.license": {
-                            "title": "event.license",
+                            "title": "Event license",
                             "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                             "type": [
                                 "string",
@@ -3033,7 +3043,8 @@
                     ],
                     "$defs": {
                         "registration.step3.ticket.free": {
-                            "title": "registration.step3.ticket.free",
+                            "title": "Free ticket",
+                            "description": "The ticket when registration costs nothing: a note shown beside the register button.",
                             "type": "object",
                             "properties": {
                                 "note": {
@@ -3051,7 +3062,8 @@
                             "additionalProperties": false
                         },
                         "registration.step3.ticket.paid": {
-                            "title": "registration.step3.ticket.paid",
+                            "title": "Paid ticket",
+                            "description": "The ticket when registration costs money: its price and currency.",
                             "type": "object",
                             "properties": {
                                 "price": {
@@ -3167,7 +3179,7 @@
                             }
                         },
                         "event.license": {
-                            "title": "event.license",
+                            "title": "Event license",
                             "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                             "type": [
                                 "string",
@@ -3494,7 +3506,8 @@
                     ],
                     "$defs": {
                         "registration.step3.ticket.free": {
-                            "title": "registration.step3.ticket.free",
+                            "title": "Free ticket",
+                            "description": "The ticket when registration costs nothing: a note shown beside the register button.",
                             "type": "object",
                             "properties": {
                                 "note": {
@@ -3512,7 +3525,8 @@
                             "additionalProperties": false
                         },
                         "registration.step3.ticket.paid": {
-                            "title": "registration.step3.ticket.paid",
+                            "title": "Paid ticket",
+                            "description": "The ticket when registration costs money: its price and currency.",
                             "type": "object",
                             "properties": {
                                 "price": {
@@ -3628,7 +3642,7 @@
                             }
                         },
                         "event.license": {
-                            "title": "event.license",
+                            "title": "Event license",
                             "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                             "type": [
                                 "string",
@@ -3944,7 +3958,8 @@
                     ],
                     "$defs": {
                         "registration.step3.ticket.free": {
-                            "title": "registration.step3.ticket.free",
+                            "title": "Free ticket",
+                            "description": "The ticket when registration costs nothing: a note shown beside the register button.",
                             "type": "object",
                             "properties": {
                                 "note": {
@@ -3962,7 +3977,8 @@
                             "additionalProperties": false
                         },
                         "registration.step3.ticket.paid": {
-                            "title": "registration.step3.ticket.paid",
+                            "title": "Paid ticket",
+                            "description": "The ticket when registration costs money: its price and currency.",
                             "type": "object",
                             "properties": {
                                 "price": {
@@ -4078,7 +4094,7 @@
                             }
                         },
                         "event.license": {
-                            "title": "event.license",
+                            "title": "Event license",
                             "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                             "type": [
                                 "string",

@@ -355,7 +355,10 @@ the record of the rework that brought the module to the pattern.
   Compute::UNLESS_SENT)` on the identity key, with core's `machine_name`
   config schema type for the pattern and length, `SurfaceUnique` added
   to the identity key of every `creates` operation (the storage answers
-  `exists()`), and core's machine name element as the widget (example 15's
+  `exists()`; on the form a taken name is that check's refusal at the
+  element, which has no `exists` callback of its own),
+  and core's machine name element as the widget, drawn for a string
+  computed unless sent whose `pattern` is a machine name's (example 15's
   id, the content type example,
   `docs/decisions.md#a-machine-name-is-a-computed-identity`).
   A key **resolved** at use is asked and stored as declared, and read
@@ -559,7 +562,9 @@ the record of the rework that brought the module to the pattern.
   a message per error code, a Regex's under `pattern` (or `not`), then
   each check's under `check.drupal:<id>`; and **`x-portable-ui`**, the
   widget hints (`Contract\PortableUi`): `widget`, `options`
-  (`multiple`, the arrangement's texts, `emptyOption`), `group` by id,
+  (`multiple`, the arrangement's texts, a text input's `size` and a text
+  area's `rows`, `emptyOption`, then each setting a module's widget
+  publishes, `publishedSettings()`, under its name in lowerCamel), `group` by id,
   `weight`, and each group declared once on its frame under `groups`,
   all but `options.emptyOption` written only when a renderer asks for
   the hints (`docs/decisions.md#the-ui-hints-are-x-portable-ui`); and
@@ -971,7 +976,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2314, Assertions: 56739, Errors: 0, Failures: 0, Skipped: 3. Classes: 323 of 323, 8 at a time, browser classes 4.
+phpunit: Tests: 2346, Assertions: 57213, Errors: 0, Failures: 0, Skipped: 3. Classes: 328 of 328, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -995,8 +1000,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2200, Assertions: 52185, Deprecations: 671, Skipped: 3. Classes:
-270, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2232, Assertions: 52659, Deprecations: 679, Skipped: 3. Classes:
+275, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -1360,7 +1365,18 @@ src/Form/                Form builder, host traits, the operation form
                          spelling, compiled (internal).
                          The form builder is SurfaceFormBuilder.php,
                          the service and its Form API callbacks, over
-                         Drawing.php, Extracting.php and Refreshing.php.
+                         Document/DocumentDrawer.php (draws the served
+                         envelope, reading no data surface) and
+                         Document/DocumentNodes.php (an envelope's nodes
+                         by pointer, which extraction reads back through),
+                         Extracting.php and Refreshing.php; FormWidgetHost
+                         (what the host answers: an entity's label, a
+                         reference key's selection handler, a deferred
+                         key's chosen document); DocumentNarrowing
+                         (NarrowsDocumentsInterface, service
+                         surface.document_narrowing: the overlay and the
+                         envelope a rebuild and POST schema share, and a
+                         deferred key's chosen document).
 src/Tool/                The Tool API door: what a tool takes and answers
                          (OperationInputs, InputDefinitions), its catalog
                          doors and the invalidator, registered by
@@ -1369,7 +1385,15 @@ src/Plugin/tool/ src/Plugin/Derivative/
                          The tool plugins, which run an operation through
                          the runner, and their deriver, found only by the
                          tool module's plugin manager.
-src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
+src/Widget/ src/Plugin/  A node of the served document to a form element
+                         (SurfaceWidgetInterface on Schema, WidgetContext,
+                         WidgetHostInterface, NodeDrawerInterface; the
+                         manager's words() table, widgetFor() and
+                         stockWord(), React's stock order); the
+                         emitter's choice from a definition is
+                         Contract/WidgetChoice.php (service
+                         surface.widget_choice) over each widget's
+                         drawsDefinition(); resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots;
                          ConfigSchemaTypes, a config schema type's.

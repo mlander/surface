@@ -67,8 +67,8 @@ class WidgetAskTest extends SurfaceKernelTestBase {
     $built = $this->built(PairsStructure::class);
     $this->assertSame('widget_test_pair', $built->getDefinition('asked')->getSetting('widget'));
     $this->assertSame('fieldset', $built->getDefinition('owned')->getSetting('widget'), 'The owner\'s ask at the key wins.');
-    $manager = $this->container->get('plugin.manager.surface_widget');
-    $this->assertInstanceOf(PairWidget::class, $manager->getWidgetFor($built->getDefinition('asked')));
+    $manager = $this->container->get('surface.widget_choice');
+    $this->assertInstanceOf(PairWidget::class, $manager->forDefinition($built->getDefinition('asked')));
 
     $form = $this->formBuilder()->buildSurfaceForm($built, ['asked' => ['left' => 'L', 'right' => 'R']], new FormState());
     $this->assertSame(['widget-test-pair'], $form['asked']['#attributes']['class']);

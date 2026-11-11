@@ -15,8 +15,12 @@ use PortableSchema\Builder\Schema;
  * - `widget`: the widget word (SurfaceWidgetManager's selection), left out
  *   where no widget claims the key;
  * - `options`: `multiple` on a list of allowed values drawn as one select,
- *   the key's `placeholder`, `prefix`, `suffix` and `help` where set, and
- *   `emptyOption` (`{show, label}`) on a select or radios of one value;
+ *   the key's `placeholder`, `prefix`, `suffix` and `help` where set, a
+ *   text input's `size` and a text area's `rows`, and `emptyOption`
+ *   (`{show, label}`) on a select or radios of one value; after those,
+ *   the settings a module's widget publishes, each under its own name in
+ *   lowerCamel (SurfaceWidgetBase::publishedSettings()): the vocabulary's
+ *   `options` is an open object;
  * - `group`: the id of the group the key is drawn in;
  * - `weight`: its weight among its frame's keys;
  * - `groups`: on the object schema whose `properties` the keys are (the
@@ -48,7 +52,16 @@ final class PortableUi {
   /**
    * The options Surface writes, in the order a node carries them.
    */
-  public const OPTIONS = ['multiple', 'placeholder', 'prefix', 'suffix', 'help', 'emptyOption'];
+  public const OPTIONS = ['multiple', 'placeholder', 'prefix', 'suffix', 'help', 'size', 'rows', 'emptyOption'];
+
+  /**
+   * Stands, in a list of names to strip, for every option but those kept.
+   *
+   * A module's widget publishes options of its own names, which no list
+   * can name ahead; each is a hint, so the hints strip them all but
+   * `emptyOption`, which says the answer for these values.
+   */
+  public const PUBLISHED = '@published';
 
   /**
    * The members and options that are widget hints, written when asked for.
@@ -56,7 +69,20 @@ final class PortableUi {
    * Everything but `options.emptyOption`, which the schema for these
    * answers carries whatever is asked.
    */
-  public const HINTS = ['widget', 'multiple', 'placeholder', 'prefix', 'suffix', 'help', 'group', 'weight', 'groups'];
+  public const HINTS = [
+    'widget',
+    'multiple',
+    'placeholder',
+    'prefix',
+    'suffix',
+    'help',
+    'size',
+    'rows',
+    self::PUBLISHED,
+    'group',
+    'weight',
+    'groups',
+  ];
 
   /**
    * Writes a key's hints, each member only where it says something.
@@ -166,6 +192,9 @@ final class PortableUi {
     $ui = array_diff_key($ui, array_flip(array_diff($names, ['options'])));
     if (is_array($ui['options'] ?? NULL)) {
       $ui['options'] = array_diff_key($ui['options'], array_flip($names));
+      if (in_array(self::PUBLISHED, $names, TRUE)) {
+        $ui['options'] = array_intersect_key($ui['options'], array_flip(self::OPTIONS));
+      }
       if ($ui['options'] === []) {
         unset($ui['options']);
       }
@@ -211,6 +240,19 @@ final class PortableUi {
       }
       return $groups === [] ? $node : self::set($node->with('properties', $properties), ['groups' => $groups]);
     });
+  }
+
+  /**
+   * Names a published widget setting as an option: lowerCamel.
+   *
+   * @param string $setting
+   *   The setting's name, as the definition holds it (`swatch_columns`).
+   *
+   * @return string
+   *   The option's name (`swatchColumns`).
+   */
+  public static function optionName(string $setting): string {
+    return lcfirst(str_replace(' ', '', ucwords(str_replace(['_', '-'], ' ', $setting))));
   }
 
   /**

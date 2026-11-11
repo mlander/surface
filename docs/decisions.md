@@ -4137,11 +4137,13 @@ Five parts, each an existing mechanism:
   question ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
 - **The widget.** A key of type `machine_name` computed unless sent from
   a key beside it is drawn as core's `machine_name` element
-  (`Form\MachineNameElement`): its source is the source key's element,
-  and its `exists` callback asks the storage what the constraint asks
-  (`UniqueConstraintValidator::taken()`). The element's own validation
-  is off, since a form keeps the first error per element and core's
-  words would replace the constraint's, which are the tool's and HTTP's.
+  (`Form\MachineNameElement`): its source is the source key's element.
+  The element's own validation is off, since a form keeps the first
+  error per element and core's words would replace the constraint's,
+  which are the tool's and HTTP's. *Amended 2026-11-11:* it has no
+  `exists` callback, which nothing called with the validation off; a
+  taken name is the constraint's refusal at the element
+  ([The form is drawn from the document](#the-form-is-drawn-from-the-document)).
   On an update the key is locked, drawn disabled with its value, as any
   locked key is. The React page draws it as a text input, shows the
   narrowing's suggestion, and sends it once the person typed it.
@@ -8068,6 +8070,15 @@ moved as they were, the examples' forms render byte for byte as they did,
 and the documents and tool definitions did not move.
 (`SurfaceFormBuilder`, `Form\Drawing`, `Form\Extracting`,
 `Form\Refreshing`)
+
+*Superseded 2026-11-11 in part by [The form is drawn from the
+document](#the-form-is-drawn-from-the-document):* `Drawing` is gone; the
+drawer, `Form\Document\DocumentDrawer`, draws the envelope the data
+surface serves, and holds the static helpers `Drawing` held
+(`elementChildren()`, `gatherGroups()`, `placeMounts()`, `named()`).
+`Extracting` reads each element back by the widget that drew it, and
+`Refreshing` wires no data surface: the drawer wires each key a key
+depends on.
 
 ### Defaults follow the definitions under a stored value
 
@@ -12030,6 +12041,175 @@ say is run by a check on the server.
 (`PortableValidator`, `DrupalCheckProvider`, `Nodes`, `Found`,
 `Location`, `Sentences::ofError()`, `Coercion::served()`,
 `PortableValidationTest`, `PortableValidatorTest`)
+
+### The form is drawn from the document
+
+The form door draws the envelope the data surface serves, as the React
+app draws it, and reads nothing else to draw.
+
+- **The drawer reads the envelope.** `buildSurfaceForm()` emits the
+  envelope for the values with the widget hints
+  (`SurfaceFormBuilderInterface::envelope()`, the `emit()` the HTTP door
+  answers `GET` with) and draws it (`drawDocument()`,
+  `Form\Document\DocumentDrawer`): the schema inline
+  (`SchemaResolver::inline()`), its `values` and its `stale` pointers.
+  It takes no data surface, no definition and no Typed Data; no class
+  under `src/Form/Document` or `src/Widget` imports them
+  (`DocumentFormIsolationTest`). It depends on the form module's own
+  helpers, which carry no data surface: `SurfaceFormBuilder`'s collection
+  button callbacks, `Refreshing`'s wiring and `MachineNameElement`. It
+  draws by the rules the React app reads the document by, one method
+  each, named as React names them where the names fit
+  (`resolveVariants()`, `arranged()`, `OptionsWidget::emptyOption()`):
+  the widget the word names; required from the owner's `required`;
+  title, description, help and the lock's note as plain text; a
+  `readOnly` key disabled, and what is inside it with it; a select's
+  empty option and its stale value; groups from the frame's
+  `x-portable-ui.groups`, by weight, a key naming no declared group
+  drawn ungrouped; a collection one details per item, padded to
+  `minItems`, adding stopped at `maxItems`; variants from the parent's
+  conditionals; a key the document leaves out of its frame, listed in
+  `x-surface.doesNotApply`, as its wrapper alone, after the first key it
+  depends on; a computed key not sent as its value, fixed; a machine
+  name computed unless sent (its `pattern` a machine name's) as core's
+  element; what a key depends on (`x-surface.dependsOn`) wired to the
+  rebuild; a document locked whole (`readOnly` at the top) with the
+  reason its root `x-surface.locked` gives, drawn above the fields
+  (`DocumentDrawer::LOCKED_KEY`), which the host form reads to draw no
+  Save. The host form keeps its own inputs: stored values, prefill, the
+  fingerprint, the stage, the flow, the buttons, the confirm and delete
+  pages, the operation's access gate, the cosmetic layer and the panel.
+- **An element carries its pointer, never its node.** Each element
+  drawn for a value carries its JSON Pointer (`#surface_path`) and the
+  widget that drew it (`#surface_widget`). The container keeps the
+  envelope's `values` (`#surface_values`), which hold no secret.
+  Extraction finds each element's node by its pointer in the envelope
+  (`Form\Document\DocumentNodes::at()`): the schema inline once, then a
+  walk from the root as the drawer draws, a list's item by its index, a
+  collection's item narrowed for its values, a key with variants by the
+  variant its frame chooses. The envelope is kept once per form build in
+  the request that drew it; a form read from the form cache emits it
+  again for the values the container keeps. Refusals are placed by the
+  violation's dotted path, which names the same element; slice 19 files
+  a check's refusal at the field it names.
+- **Widgets take a node.** `SurfaceWidgetInterface::isApplicable(Schema,
+  WidgetContext)`, `buildElement(Schema, mixed, WidgetContext)` and
+  `extractValue(array, FormStateInterface, Schema)`. The node's
+  `x-portable-ui.widget` names the widget through one table, word to
+  plugin ID (`SurfaceWidgetManager::words()`): each widget's own words,
+  and `DOCUMENT_WORDS`, the consumer's mapping of `text`, `textarea`,
+  `email` and `fixed` to the stock widgets they name. The emitter writes
+  only words that table holds (`WidgetChoice::wordOf()`, `valueWord()`
+  and `word()`). A word no widget answers to, one whose widget refuses
+  the node, and no word fall to the stock word for the node's shape, in
+  the order of React's `stockWidget()` (`SurfaceWidgetManager::stockWord()`):
+  a list whose items offer choices a multiple select, a list rows,
+  choices a select, an object a fieldset, a boolean a checkbox, an
+  integer or a number a number input, a string whose `format` is `email`
+  an email input, else a text input; a node that states no one type is
+  drawn by the module's own widgets in weight order, the JSON widget
+  last. The weights decide only among widgets answering to the same
+  word. `isApplicable()` reads the node alone, never a live
+  collaborator. The emitter's choice is the producer's side:
+  `Contract\WidgetChoice`, the old definition rule moved out of the
+  manager, each widget's own predicate `drawsDefinition()`
+  (`DefinitionWidgetInterface`); `WidgetAgreementTest` holds the two
+  sides to each other for every example key. A module's widget that the
+  emitter chooses by a setting of its own (the extras' comma separated
+  list) is named in the document, where `list` stood; a list the list
+  widget does not draw (its items lists, or of any type) is named by no
+  word, and drawn as JSON.
+- **Settings that reach the document.** `x-portable-ui.options` is an
+  open object. The emitter writes, as hints: a text input's `size` and a
+  text area's `rows`, after `help` and before `emptyOption`, and after
+  those each setting a module's widget lists in `publishedSettings()`,
+  under its name in lowerCamel. The reader reads each back into the
+  setting of that name, where the widget the word names publishes one,
+  and notes it otherwise. `match_operator` and `match_limit` are not
+  written: matching is the lookup's.
+- **Facts the document does not carry.** Why an access answer locked a
+  key is `x-surface.locked` beside its `readOnly`, and why the whole is
+  locked the same at the top, in the schema for these answers only (the
+  account and the values decide it), never in the full schema; the form
+  and the React app say it in place of "Fixed for this operation.". The
+  host answers two facts through a widget's context
+  (`WidgetHostInterface`): the label of the entity a reference holds
+  (`labelOf()`), and the selection handler and settings a reference
+  key's candidates are (`selection()`), which a reference field's
+  definition holds and the emitter does not write (its check options are
+  `{entityTypeId, bundles?}`); check options that carry `handler` and
+  `handlerSettings` (a document another host writes) win. A machine name
+  already in use is the key's own check's refusal (SurfaceUnique) at the
+  element, as at every door: core's element has no `exists` callback. A
+  key always held is one whose `type` leaves `null` out.
+- **A form carries the document's cacheability.** The container carries
+  the envelope's cacheability, the option lists' and the data surface's
+  among it. A chooser whose document holds every bundle's variant
+  carries each variant's: the content entity bundle chooser's form has a
+  max-age of 0, and every tag the document carries reaches the form.
+- **A def's description stays at its def.** A site's own `description`
+  wins over its def's, as its `title` does; a def's description is laid
+  in only where the site states none and the def is the key's own shape,
+  a value. A def with properties is a structure the site refers to (an
+  attached part, a variant, a field item), whose description says what
+  the structure is (`SchemaResolver::follow()`, React's
+  `withoutDefDescription()`).
+- **A key the values do not hold is drawn at its default.** Drawn and
+  posted at its document `default`, as the React app and the HTTP door
+  draw it: a visibility condition chosen posts its context mapping's
+  default, a component switched to posts each slot's default kind.
+- **Change means a new envelope.** A rebuild settles the edit (the
+  refinement overlay, its discard and orphan rules) and draws the
+  envelope emitted for the values it stands at, the function
+  `POST schema` answers with (`NarrowsDocumentsInterface`,
+  `surface.document_narrowing`). The drawer narrows locally in one place
+  only: the document states one `items` schema for every item of a
+  collection, so each item is narrowed by the conditionals the items'
+  schema enumerates (`DocumentDrawer::narrowedFor()`), read by values as
+  a variant is. It reads `required` and each key's `const` or `enum`
+  under `properties`, a key the item leaves out meeting them as JSON
+  Schema says unless it states a `default`, which it is read at, as it is
+  drawn; an `if` that says anything else is skipped, never held.
+  It runs no coded refiner: an item's key a coded refiner narrows is
+  wired to the rebuild. Inside an item the items' schema's empty option
+  is the answer for an empty item; an item holding a value is answered
+  for its own. A variant a frame's deciding key chooses is stated in the
+  envelope; a deferred key inside an item, which no conditional ties to
+  the item, is drawn from the document its `choose` link would serve for
+  that place and that value, which the host emits in process
+  (`WidgetHostInterface::chosen()`, `NarrowsDocumentsInterface::chosen()`:
+  the full schema with that choice, and one at each key with variants on
+  the way, `Choices::along()`). That document is narrowed for no values,
+  so each frame below the variant it gives is narrowed as it is drawn
+  and as extraction walks it, a declared rule's `if` among them held to
+  the frame's values by the JSON Schema validator, as the React app reads
+  a declared rule (a slot's kind ruling out its other keys).
+- **Extraction stays one pipeline call.** Each element is read back by
+  the widget that drew it, through the envelope's node at its pointer,
+  an object a level at a time and a collection item by item; an element
+  drawn for a variant its deciding key no longer chooses gives nothing;
+  an element standing for a stale value, left alone, gives what is
+  stored at its pointer; then `accept()`.
+- **Text is plain.** A title, a description, help, a group's label and
+  a lock's reason reach the form as the document carries them, plain
+  text in the language of the request; markup a description was written
+  with is drawn as its text. Form API's own words (Add another, Remove,
+  "- Select -", "- None -") stay `t()`.
+- **Later.** The cosmetic and panel plugins take the envelope in place
+  of the data surface. The narrowing service as a public API. Per-node
+  cacheability in the document, so a drawer adds only what it drew. A
+  per-item schema (`prefixItems`) in narrowed documents, a document
+  decision, in place of narrowing items in the drawer. A `choose` link
+  inside `items`, a document decision: links are at a site only today.
+  An autocomplete route of Surface's own that runs the lookup in
+  process, so core's element never needs the selection settings: the
+  lookup exists with `surface_http` alone, and core's element has its
+  own route.
+
+(`DocumentDrawer`, `DocumentNodes`, `WidgetContext`,
+`WidgetHostInterface`, `FormWidgetHost`, `WidgetChoice`,
+`DocumentNarrowing`, `DocumentFormIsolationTest`, `WidgetAgreementTest`,
+`DocumentFormTest`, `DocumentFormEntityTest`, `ItemConditionalsTest`)
 
 ### An OpenAPI document is one more door
 

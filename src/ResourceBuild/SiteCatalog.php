@@ -15,7 +15,7 @@ use Drupal\surface\Contract\SiteListBudget;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface\Widget\SurfaceWidgetManager;
+use Drupal\surface\Contract\WidgetChoice;
 
 /**
  * The live map of a site: what discovery found, its doors, its refusals.
@@ -90,7 +90,7 @@ final class SiteCatalog {
    * @param \Drupal\surface\Contract\SiteListBudget|null $budget
    *   How many variants of a list the site decides have their keys listed;
    *   without it, every one.
-   * @param \Drupal\surface\Widget\SurfaceWidgetManager|null $widgets
+   * @param \Drupal\surface\Contract\WidgetChoice|null $widgets
    *   The widget manager, which names the widget each key is drawn by;
    *   without it, none is named.
    * @param \Drupal\surface\ResourceBuild\OperationArguments|null $arguments
@@ -108,7 +108,7 @@ final class SiteCatalog {
     protected readonly iterable $doors,
     protected readonly string $root,
     protected readonly ?SiteListBudget $budget = NULL,
-    protected readonly ?SurfaceWidgetManager $widgets = NULL,
+    protected readonly ?WidgetChoice $widgets = NULL,
     protected readonly ?OperationArguments $arguments = NULL,
     protected readonly ?KeyPaths $keyPaths = NULL,
   ) {}
@@ -693,7 +693,7 @@ final class SiteCatalog {
       return NULL;
     }
     try {
-      return SurfaceWidgetManager::wordOf($this->widgets->getWidgetFor($definition));
+      return $this->widgets->wordOf($this->widgets->forDefinition($definition));
     }
     catch (\InvalidArgumentException) {
       return NULL;

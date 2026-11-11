@@ -7,69 +7,88 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface\Widget\WidgetContext;
+use PortableSchema\Builder\Schema;
 
 /**
- * Text input for string definitions.
+ * Text input for a string.
  *
- * Also an ISO 8601 duration (`duration_iso8601`), `P1DT2H`, which is
- * typed as the string it is stored as.
+ * The document's word says which input: `text` a text field, `textarea`
+ * a text area (a definition's `multiline` setting), `email` an email
+ * input; a string of `format: uri` is a URL input. Its size and rows are
+ * the hints `x-portable-ui.options.size` and `rows`, presentation alone.
  *
- * The 'multiline' definition setting renders a textarea — core has no
- * multiline string data type (config schema's 'text' has no typed data
- * counterpart; see PLAN.md), and a setting is the core-native spelling
- * that avoids inventing one.
- *
- * A definition marked secret renders as a password element instead, and
- * secretElement() says what that element deliberately does not carry.
+ * A node marked `writeOnly` is a secret, and renders as a password
+ * element instead: secretElement() says what that element deliberately
+ * does not carry.
  */
 #[SurfaceWidget(
   id: 'string',
   label: new TranslatableMarkup('String'),
   weight: 10,
 )]
-final class StringWidget extends SurfaceWidgetBase {
+final class StringWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+
+  /**
+   * The presentation settings a definition may give this widget.
+   *
+   * Written into the document as `x-portable-ui.options` of the same
+   * names, which buildElement() reads.
+   */
+  public const SETTINGS = ['size', 'rows'];
 
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(DataDefinitionInterface $definition): bool {
+  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
     return in_array($definition->getDataType(), ['string', 'email', 'uri', 'duration_iso8601'], TRUE);
   }
 
   /**
    * {@inheritdoc}
+   *
+   * A string, but a date and time, which the date and time widget draws.
    */
-  public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
-    if (DefinitionMetadata::isSecret($definition)) {
-      return $this->secretElement($definition);
+  public function isApplicable(Schema $node, WidgetContext $context): bool {
+    return static::types($node) === ['string'] && $node->get('format') !== 'date-time';
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
+    if ($node->get('writeOnly') === TRUE) {
+      return $this->secretElement($node, $context);
     }
-    $element = $this->baseElement($definition) + [
+    $word = static::ui($node)['widget'] ?? NULL;
+    $element = $this->baseElement($node, $context) + [
       '#type' => match (TRUE) {
-        (bool) $definition->getSetting('multiline') => 'textarea',
-        $definition->getDataType() === 'email' => 'email',
-        $definition->getDataType() === 'uri' => 'url',
+        $word === 'textarea' => 'textarea',
+        $word === 'email', $node->get('format') === 'email' => 'email',
+        $node->get('format') === 'uri' => 'url',
         default => 'textfield',
       },
       '#default_value' => $value,
     ];
     if ($element['#type'] !== 'textarea') {
-      $element = $this->lengthHint($element, $definition);
+      $element = $this->lengthHint($element, $node);
     }
     // How big the input is drawn: presentation alone, which a form
     // display's component hands over (FieldItemDerivation).
-    $size = $definition->getSetting('size');
+    $options = static::options($node);
+    $size = $options['size'] ?? NULL;
     if ($element['#type'] !== 'textarea' && is_int($size) && $size > 0) {
       $element['#size'] = $size;
     }
-    $rows = $definition->getSetting('rows');
+    $rows = $options['rows'] ?? NULL;
     if ($element['#type'] === 'textarea' && is_int($rows) && $rows > 0) {
       $element['#rows'] = $rows;
     }
     // No placeholder from the examples: an empty field showing a value
-    // reads as filled. A placeholder is declared, in the key's
-    // arrangement, and the form builder draws it.
+    // reads as filled. A placeholder is a hint the drawer draws.
     // Decision: see docs/decisions.md#arrangement-is-declared-once.
     return $element;
   }
@@ -82,73 +101,59 @@ final class StringWidget extends SurfaceWidgetBase {
    * - **No `#default_value`, and no value anywhere else.** A password
    *   element renders its default into the HTML like any other input, so
    *   a stored secret would be in the page source of every settings
-   *   form. The form builder does not hand a secret's value to a widget
-   *   either; both halves are deliberate, because one of them alone is a
-   *   line somebody deletes as redundant.
+   *   form. The document carries no value for a secret either; both
+   *   halves are deliberate.
    * - **No `#placeholder`.** Not even one the key's arrangement
    *   declares: a placeholder of an API token is either useless or a
-   *   leak, and the form builder draws none on a password.
+   *   leak, and the drawer draws none on a password.
    * - **No `#required`.** Leaving the box empty is how a person says
    *   "the stored secret is unchanged", which is a legal submission and
-   *   the usual one; a browser-enforced required attribute would make
-   *   every unrelated edit demand the secret be retyped. A required
-   *   secret is still required (validate() refuses a key that has never
-   *   been set and was left blank), but it is refused by the data surface,
-   *   with the data surface's own message, after accept() has had its say.
+   *   the usual one. A required secret is still required: the pipeline
+   *   refuses a key that has never been set and was left blank.
    *
-   * The description says what the empty box means. It says so whether or
-   * not a secret is stored, because nothing here knows: the widget is
-   * handed no value, which is the point. "Leave blank to keep the
-   * current value" reads correctly when there is one and harmlessly when
-   * there is not, and the alternative — telling the builder to find out
-   * — would mean reading the secret in order to say that it is never
-   * read.
+   * The description says what the empty box means, whether or not a
+   * secret is stored, because nothing here knows.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The secret definition.
+   * @param \PortableSchema\Builder\Schema $node
+   *   The secret's node.
+   * @param \Drupal\surface\Widget\WidgetContext $context
+   *   Where it is drawn.
    *
    * @return array
    *   The password element.
    */
-  protected function secretElement(DataDefinitionInterface $definition): array {
-    $element = $this->baseElement($definition) + ['#type' => 'password'];
+  protected function secretElement(Schema $node, WidgetContext $context): array {
+    $element = $this->baseElement($node, $context) + ['#type' => 'password'];
     $element['#required'] = FALSE;
-    $note = $this->t('Leave blank to keep the current value.');
-    $element['#description'] = isset($element['#description'])
-      ? $this->t('@description @note', [
-        '@description' => $element['#description'],
-        '@note' => $note,
-      ])
-      : $note;
-    return $this->lengthHint($element, $definition);
+    $note = (string) $this->t('Leave blank to keep the current value.');
+    $element['#description'] = isset($element['#description']) ? $element['#description'] . ' ' . $note : $note;
+    return $this->lengthHint($element, $node);
   }
 
   /**
-   * Puts a Length's maximum on the element as a hint for the browser.
+   * Puts the node's `maxLength` on the element as a hint for the browser.
    *
    * The `maxlength` attribute stops a browser at the maximum, and
    * `#maxlength` is cleared: core checks it before any form level
    * handler, a form keeps the first error per element, and its wording
    * ("cannot be longer than") would replace the rule's own message. The
-   * element type's own default (128 for a text field) goes with it, so
-   * no limit the definition does not declare is enforced on the form
-   * alone.
+   * element type's own default (128 for a text field) goes with it.
    *
    * Decision: see docs/decisions.md#an-element-hints-and-the-rule-speaks.
    *
    * @param array $element
    *   The element.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition it draws.
+   * @param \PortableSchema\Builder\Schema $node
+   *   The node it draws.
    *
    * @return array
    *   The element, with the hint.
    */
-  protected function lengthHint(array $element, DataDefinitionInterface $definition): array {
+  protected function lengthHint(array $element, Schema $node): array {
     $element['#maxlength'] = NULL;
-    $length = $this->constraint($definition, 'Length');
-    if (isset($length['max'])) {
-      $element['#attributes']['maxlength'] = (int) $length['max'];
+    $max = $node->get('maxLength');
+    if (is_int($max)) {
+      $element['#attributes']['maxlength'] = $max;
     }
     return $element;
   }

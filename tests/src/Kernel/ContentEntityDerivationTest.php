@@ -6,7 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\surface\Plugin\SurfaceWidget\AutocompleteWidget;
 use Drupal\surface\Reference\References;
-use Drupal\surface\Widget\SurfaceWidgetManager;
+use Drupal\surface\Contract\WidgetChoice;
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Resource\OperationContext;
@@ -230,7 +230,7 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $this->assertSame('autocomplete', $uid->getSetting('widget'));
     $this->assertSame('CONTAINS', $uid->getSetting('match_operator'));
     $this->assertSame(10, $uid->getSetting('match_limit'));
-    $this->assertInstanceOf(AutocompleteWidget::class, $this->container->get('class_resolver')->getInstanceFromDefinition(SurfaceWidgetManager::class)->getWidgetFor($uid));
+    $this->assertInstanceOf(AutocompleteWidget::class, $this->container->get('class_resolver')->getInstanceFromDefinition(WidgetChoice::class)->forDefinition($uid));
     $hinted = $this->container->get('surface.contract_emitter')->emitFull($this->add('page'), 'entity.content:node.page', 'create', widgets: TRUE)->document['schema'];
     $target = $hinted['$defs']['field.item:node.page.uid']['properties']['target_id'];
     $this->assertSame('autocomplete', $target['x-portable-ui']['widget']);

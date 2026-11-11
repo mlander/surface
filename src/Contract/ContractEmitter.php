@@ -30,7 +30,6 @@ use Drupal\surface\Port;
 use Drupal\surface\Entry;
 use Drupal\surface\Collection;
 use Drupal\surface\Pipeline\ResultDocument;
-use Drupal\surface\Widget\SurfaceWidgetManager;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -108,7 +107,7 @@ use PortableSchema\Builder\Schema;
  *
  * The contract carries no widget vocabulary unless a renderer asks for
  * it (emit()'s $widgets). Then `x-portable-ui.widget` mirrors
- * SurfaceWidgetManager's selection in its weight order, so a
+ * WidgetChoice's selection in its weight order, so a
  * renderer such as surface_examples_react's app draws what the operation
  * form would: a non-empty option list is a select (a list of them, a
  * multiple select, said by `options.multiple`); a map with properties is a
@@ -119,7 +118,7 @@ use PortableSchema\Builder\Schema;
  * value radios when it asks for them, by the widgets' own rule
  * (CheckboxesWidget::drawsList(), RadiosWidget::drawsOne()); a list with
  * no option list is `list`, rows to add and remove. A key a module's
- * widget claims (SurfaceWidgetManager::claimed()) is that widget's
+ * widget claims (WidgetChoice::claimed()) is that widget's
  * word, ahead of the stock rule, unless its owner asked for one with the
  * `widget` setting. One hint has no
  * Form API counterpart here: `variants`, for a key with variants, whose
@@ -208,7 +207,7 @@ final class ContractEmitter {
    * The full schema leaves them out, and PRESENT_OPTIONS
    * (Conditionals::withoutPresent()).
    */
-  protected const PRESENT = ['refined', 'stale', 'chosen'];
+  protected const PRESENT = ['refined', 'stale', 'chosen', 'locked'];
 
   /**
    * The `x-portable-ui` options only true of one moment: the empty option.
@@ -297,9 +296,9 @@ final class ContractEmitter {
    * @param \Drupal\surface\Contract\SiteListBudget|null $budget
    *   How many entries of a list the site decides are spelled out; without
    *   it, every one.
-   * @param \Drupal\surface\Widget\SurfaceWidgetManager|null $widgets
-   *   The widget manager, which says what a module's widget claims;
-   *   without it, the stock rule alone names the widget.
+   * @param \Drupal\surface\Contract\WidgetChoice|null $widgets
+   *   The widget choice, which says what a module's widget claims or
+   *   draws; without it, the stock rule alone names the widget.
    * @param \Drupal\surface\ResourceBuild\ServedPathsInterface|null $servedPaths
    *   The API's paths, which a reference key's lookup link names; NULL
    *   on a site that serves no API (surface_http is not installed), whose
@@ -310,7 +309,7 @@ final class ContractEmitter {
     TranslationInterface $string_translation,
     ?ConstraintManager $constraints = NULL,
     protected readonly ?SiteListBudget $budget = NULL,
-    ?SurfaceWidgetManager $widgets = NULL,
+    ?WidgetChoice $widgets = NULL,
     protected readonly ?ServedPathsInterface $servedPaths = NULL,
   ) {
     $this->stringTranslation = $string_translation;
@@ -390,6 +389,11 @@ final class ContractEmitter {
         $schema = $this->propertySchema->withoutWidgets($schema);
       }
       $schema = $this->documentHead->top($surface, $schema, $label, $operation, $id);
+      $whole = $surface->lockedWhole();
+      if ($whole !== NULL && PlainText::of($whole) !== '') {
+        // Locked whole, and why, for these answers alone.
+        $schema = $schema->with(self::EXTENSION, (array) $schema->get(self::EXTENSION) + ['locked' => PlainText::of($whole)]);
+      }
       $document = [
         'resource' => $resource_id,
         'operation' => $operation_id,
@@ -694,7 +698,7 @@ final class ContractEmitter {
         foreach ($entry->attachment->child->getDefinitions()->entries() as $id => $each) {
           $entries[] = ['id' => (string) $id, 'label' => (string) $each->definition->getLabel()];
         }
-        $properties[$name] = PortableUi::set($properties[$name], PortableUi::write('fieldset'));
+        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write('fieldset'), $entry->definition));
         // The fetch is a link, `{value}` an entry's id, which the entries
         // list gives; written at the site, never in a def, which several
         // sites share.
@@ -732,7 +736,7 @@ final class ContractEmitter {
         if ($locked) {
           $properties[$name] = $properties[$name]->with('readOnly', TRUE);
         }
-        $properties[$name] = PortableUi::set($properties[$name], PortableUi::write($this->propertySchema->asked($current->definition) ?? 'fieldset'));
+        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write($this->propertySchema->asked($current->definition) ?? 'fieldset'), $entry->definition));
         $properties[$name] = $properties[$name]->with(self::EXTENSION, (array) $instance->get(self::EXTENSION) + $this->propertySchema->extension($depends, $this->propertySchema->anyRefined($instance)));
         if ($ahead_of_time) {
           $enumerated = $this->conditionals->enumerate($declared, $static, $entry, $values, $properties[$name], $emission, TRUE);
@@ -768,7 +772,7 @@ final class ContractEmitter {
         if ($locked) {
           $properties[$name] = $properties[$name]->with('readOnly', TRUE);
         }
-        $properties[$name] = PortableUi::set($properties[$name], PortableUi::write($this->propertySchema->asked($current->definition) ?? 'fieldset'));
+        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write($this->propertySchema->asked($current->definition) ?? 'fieldset'), $entry->definition));
         $properties[$name] = $properties[$name]->with(self::EXTENSION, $this->propertySchema->extension($depends, $this->propertySchema->anyRefined($instance)));
         if ($ahead_of_time) {
           // A parent's refiner of an attached key says only whether it
@@ -839,6 +843,16 @@ final class ContractEmitter {
             $properties[$name] = $properties[$name]->with(PortableUi::KEYWORD, $ui);
           }
           $shown[$name] = NULL;
+        }
+        elseif (!$full && !$declaring && !$locked && !array_key_exists($name, $values) && !empty(((array) $properties[$name]->get(self::EXTENSION))['stale'])) {
+          // Nothing given: a declared default the list does not offer is
+          // no value to keep, so the empty option does not say "keep".
+          // Decision: see docs/decisions.md#the-empty-option-rule.
+          $ui = $properties[$name]->get(PortableUi::KEYWORD);
+          if (isset($ui['options']['emptyOption']) && ($ui['widget'] ?? NULL) !== 'radios') {
+            $ui['options']['emptyOption']['label'] = (string) (DefinitionMetadata::holdsValue($current->definition) ? $this->t('- Select -') : $this->t('- None -'));
+            $properties[$name] = $properties[$name]->with(PortableUi::KEYWORD, $ui);
+          }
         }
         // A key its static refiners have not refined, because something
         // they watch holds nothing yet: what they would answer, for every
@@ -911,6 +925,13 @@ final class ContractEmitter {
           // is not required.
           [$properties[$name], $requires] = $this->conditionals->mayNotApply($entry, SurfaceInterface::RUNTIME, $properties[$name], $requires);
         }
+      }
+      $because = $current->lockedBecause ?? $entry->lockedBecause;
+      if (!$full && !$declaring && $entry->locked && $because !== NULL && PlainText::of($because) !== '' && Schemas::isObjectSchema($properties[$name]) && $properties[$name]->get('readOnly') === TRUE) {
+        // Why the access answer locked the key, which only these answers
+        // say: the account and the values decide it.
+        // Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
+        $properties[$name] = static::extended($properties[$name], ['locked' => PlainText::of($because)]);
       }
       if ($requires) {
         $required[] = $name;
@@ -1547,7 +1568,7 @@ final class ContractEmitter {
       $schema = $schema->with('readOnly', TRUE);
     }
     $schema = Schemas::defaults($schema, $checks);
-    $schema = PortableUi::set($schema, PortableUi::write('list'));
+    $schema = PortableUi::set($schema, $this->propertySchema->hints(PortableUi::write('list'), $entry->definition));
     $schema = $schema->with(self::EXTENSION, $this->propertySchema->extension($depends, $this->propertySchema->signature($entry->definition) !== $this->propertySchema->signature($definition)) + ['collection' => TRUE]);
 
     $shown = NULL;
@@ -2020,7 +2041,7 @@ final class ContractEmitter {
     if ($locked) {
       $property = $property->with('readOnly', TRUE);
     }
-    $property = PortableUi::set($property, PortableUi::write('variants'));
+    $property = PortableUi::set($property, $this->propertySchema->hints(PortableUi::write('variants'), $entry->definition));
     $property = $property->with(self::EXTENSION, $this->propertySchema->extension($depends, $chosen !== NULL) + [
       'by' => $variants->by,
       'variants' => [],

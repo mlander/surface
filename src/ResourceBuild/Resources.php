@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\ResourceBuild;
 
-use Drupal\surface\Widget\SurfaceWidgetManager;
+use Drupal\surface\Contract\WidgetChoice;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -1051,9 +1051,9 @@ final class Resources implements ResourcesInterface {
     $manager = NULL;
     $walk = function (DataDefinitionInterface $key, string $path) use (&$walk, &$manager, $definition): void {
       if (is_string($key->getSetting('widget'))) {
-        $manager ??= $this->classResolver->getInstanceFromDefinition(SurfaceWidgetManager::class);
+        $manager ??= $this->classResolver->getInstanceFromDefinition(WidgetChoice::class);
         try {
-          $manager->getWidgetFor($key);
+          $manager->forDefinition($key);
         }
         catch (\InvalidArgumentException $e) {
           throw new \LogicException(sprintf('%s asks for the "%s" widget at "%s", which no widget answers to or which does not draw it: %s', $definition->id, $key->getSetting('widget'), $path, $e->getMessage()), 0, $e);

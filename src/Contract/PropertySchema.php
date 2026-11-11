@@ -19,14 +19,15 @@ use Drupal\surface\Plugin\SurfaceWidget\CheckboxesWidget;
 use Drupal\surface\Plugin\SurfaceWidget\DateWidget;
 use Drupal\surface\Plugin\SurfaceWidget\OptionsWidget;
 use Drupal\surface\Plugin\SurfaceWidget\RadiosWidget;
-use Drupal\surface\Plugin\SurfaceWidget\TimeWidget;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Options\OptionSet;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Resource\Arrangement;
 use Drupal\surface\Refinement\DoesNotApply;
-use Drupal\surface\Widget\SurfaceWidgetManager;
+use Drupal\surface\Plugin\SurfaceWidget\StringWidget;
+use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface\Widget\SurfaceWidgetInterface;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -135,15 +136,15 @@ final class PropertySchema {
    * @param \Drupal\Core\Validation\ConstraintManager|null $constraints
    *   The constraint plugin manager, for what a constraint only the server
    *   checks says it checks (its label); without it, its id.
-   * @param \Drupal\surface\Widget\SurfaceWidgetManager|null $widgets
-   *   The widget manager, which says what a module's widget claims;
-   *   without it, the stock rule alone names the widget.
+   * @param \Drupal\surface\Contract\WidgetChoice|null $widgets
+   *   The widget choice, which says what a module's widget claims or
+   *   draws; without it, the stock rule alone names the widget.
    */
   public function __construct(
     protected readonly SurfaceOptions $options,
     TranslationInterface $string_translation,
     protected readonly ?ConstraintManager $constraints,
-    protected readonly ?SurfaceWidgetManager $widgets,
+    protected readonly ?WidgetChoice $widgets,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -357,10 +358,19 @@ final class PropertySchema {
       // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
       $checkboxes = $set !== NULL && CheckboxesWidget::drawsList($definition, $set);
       $extension = $this->extension($depends, $refined);
+      // A module's widget that claims the list, or draws it by a setting
+      // of its own: the word it answers to.
+      $module = $this->widgets?->module($definition);
+      // A list the list widget does not draw, its items lists or of any
+      // type, is the JSON widget's, which no document names: a list of
+      // maps is a collection, the form builder's.
+      $json = $module === NULL && !$listed && !$item instanceof ComplexDataDefinitionInterface && $this->widgets?->wordFor($definition) === 'json';
       $ui = match (TRUE) {
-        $checkboxes => PortableUi::write('checkboxes'),
-        $listed => PortableUi::write('select', ['multiple' => TRUE]),
-        default => PortableUi::write('list'),
+        $module !== NULL => PortableUi::write($this->widgets->wordOf($module), $this->published($module, $definition)),
+        $checkboxes => PortableUi::write($this->word('checkboxes')),
+        $listed => PortableUi::write($this->word('select'), ['multiple' => TRUE]),
+        $json => [],
+        default => PortableUi::write($this->word('list')),
       };
       $shown = is_array($value) ? array_values($value) : $value;
     }
@@ -390,7 +400,7 @@ final class PropertySchema {
         $schema = $schema->with('required', $required);
       }
       $extension = $this->extension($depends, $refined || $this->anyRefined($schema));
-      $ui = PortableUi::write($this->asked($definition) ?? 'fieldset');
+      $ui = PortableUi::write($this->asked($definition) ?? $this->word('fieldset'));
       if (DefinitionMetadata::isGrouping($definition)) {
         // Only groups the fieldsets inside it, as on the form: no title
         // and no description to draw, and `group` says to draw none.
@@ -421,21 +431,21 @@ final class PropertySchema {
       // A module's widget that claims the key, unless its owner asked for
       // one by name: the word it answers to.
       // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
-      $claimed = $this->widgets?->claimed($definition);
+      $claimed = $this->widgets?->module($definition);
       $widget = match (TRUE) {
-        $claimed !== NULL => SurfaceWidgetManager::wordOf($claimed),
+        $claimed !== NULL => $this->widgets->wordOf($claimed),
         // A reference that asks for the autocomplete by its word is drawn
         // with it, listed or not (SurfaceWidgetManager::getWidgetFor()).
-        AutocompleteWidget::draws($definition) && $definition->getSetting('widget') === 'autocomplete' => 'autocomplete',
-        $fixed => 'fixed',
-        $listed => $radios ? 'radios' : 'select',
+        AutocompleteWidget::draws($definition) && $definition->getSetting('widget') === 'autocomplete' => $this->word('autocomplete'),
+        $fixed => $this->word('fixed'),
+        $listed => $this->word($radios ? 'radios' : 'select'),
         // A bare reference's id is drawn once its entity type is chosen:
         // listed, or looked up.
-        AutocompleteWidget::draws($definition), $definition->getSetting(References::TARGETS) !== NULL => 'autocomplete',
-        default => $this->widget($definition),
+        AutocompleteWidget::draws($definition), $definition->getSetting(References::TARGETS) !== NULL => $this->word('autocomplete'),
+        default => $this->word(WidgetChoice::valueWord($definition)),
       };
       $extension = $this->extension($depends, $refined);
-      $ui = PortableUi::write($widget);
+      $ui = PortableUi::write($widget, $claimed !== NULL ? $this->published($claimed, $definition) : $this->stringSettings($widget, $definition));
       if ($fixed) {
         // A deciding key whose variants offer one value, or a key its
         // context fixed to one: that value, and the label it is offered
@@ -519,12 +529,7 @@ final class PropertySchema {
     // in the dialect's keyword, before `x-surface`: its widget, its
     // arrangement and its empty option. Decision: see
     // docs/decisions.md#the-ui-hints-are-x-portable-ui.
-    $arranged = $this->arrangement($definition);
-    if (isset($arranged['options'])) {
-      $ui['options'] = ($ui['options'] ?? []) + $arranged['options'];
-      unset($arranged['options']);
-    }
-    $schema = PortableUi::set($schema, $ui + $arranged);
+    $schema = PortableUi::set($schema, $this->hints($ui, $definition));
     // Written where nothing is said, so it stands where it did before the
     // hints moved; PortableUi::settled() leaves an empty one out.
     $schema = $schema->with(self::EXTENSION, $extension);
@@ -824,28 +829,69 @@ final class PropertySchema {
   }
 
   /**
-   * Picks the widget the Form API mapping would, for a key with no list.
+   * Reads the presentation settings a module's widget publishes.
    *
+   * Each setting the widget lists (SurfaceWidgetBase::publishedSettings())
+   * that the definition holds, under its name in lowerCamel, as the
+   * widget's options: a hint, how the key is drawn.
+   *
+   * Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
+   *
+   * @param \Drupal\surface\Widget\SurfaceWidgetInterface $widget
+   *   The widget.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   *   The key.
+   *
+   * @return array
+   *   The options, by name; empty where none is held.
+   */
+  protected function published(SurfaceWidgetInterface $widget, DataDefinitionInterface $definition): array {
+    $options = [];
+    foreach ($widget instanceof SurfaceWidgetBase ? $widget->publishedSettings() : [] as $setting) {
+      $held = $definition->getSetting($setting);
+      if ($held !== NULL) {
+        $options[PortableUi::optionName($setting)] = $held;
+      }
+    }
+    return $options;
+  }
+
+  /**
+   * Reads the size or the rows a text input is drawn with.
+   *
+   * The string widget's presentation settings (StringWidget::SETTINGS),
+   * which a form display's component hands over: `size` on a one line
+   * input, `rows` on a text area, each a whole number above nothing.
+   *
+   * @param string|null $widget
+   *   The widget word.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key.
+   *
+   * @return array
+   *   The options, by name; empty where none is held.
+   */
+  protected function stringSettings(?string $widget, DataDefinitionInterface $definition): array {
+    if (!in_array($widget, ['text', 'email', 'textarea'], TRUE)) {
+      return [];
+    }
+    [$size, $rows] = StringWidget::SETTINGS;
+    $setting = $widget === 'textarea' ? $rows : $size;
+    $held = $definition->getSetting($setting);
+    return is_int($held) && $held > 0 ? [$setting => $held] : [];
+  }
+
+  /**
+   * Checks a word the emitter writes against the table of widget words.
+   *
+   * @param string|null $word
+   *   The word, or NULL for none.
    *
    * @return string|null
-   *   The widget hint, or NULL when no stock widget claims the type.
+   *   The same word (WidgetChoice::word()).
    */
-  protected function widget(DataDefinitionInterface $definition): ?string {
-    $type = $definition->getDataType();
-    return match (TRUE) {
-      TimeWidget::draws($definition) => 'time',
-      DateWidget::draws($definition) => 'date',
-      in_array($type, ['string', 'email', 'uri'], TRUE) => match (TRUE) {
-        (bool) $definition->getSetting('multiline') => 'textarea',
-        $type === 'email' => 'email',
-        default => 'text',
-      },
-      in_array($type, ['integer', 'float'], TRUE) => 'number',
-      $type === 'boolean' => 'checkbox',
-      default => NULL,
-    };
+  protected function word(?string $word): ?string {
+    return $word === NULL || $this->widgets === NULL ? $word : $this->widgets->word($word);
   }
 
   /**
@@ -1124,6 +1170,32 @@ final class PropertySchema {
     return ($options === [] ? [] : ['options' => $options])
       + ($group === NULL ? [] : ['group' => PortableUi::declaration($group->id, PlainText::of($group->label), $group->as, $group->collapsed, $group->weight, $group->description === NULL || (string) $group->description === '' ? NULL : PlainText::of((string) $group->description))])
       + ($arrangement->weight === NULL ? [] : ['weight' => $arrangement->weight]);
+  }
+
+  /**
+   * Adds a key's arrangement to its widget's hints.
+   *
+   * Every key's, whichever way it is described: a value, a map, a list,
+   * an attached structure, variants, a collection. Its options follow the
+   * widget's own.
+   *
+   * Decision: see docs/decisions.md#arrangement-is-declared-once.
+   *
+   * @param array $ui
+   *   The widget's hints (PortableUi::write()).
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key, as declared.
+   *
+   * @return array
+   *   The hints, arranged.
+   */
+  public function hints(array $ui, DataDefinitionInterface $definition): array {
+    $arranged = $this->arrangement($definition);
+    if (isset($arranged['options'])) {
+      $ui['options'] = ($ui['options'] ?? []) + $arranged['options'];
+      unset($arranged['options']);
+    }
+    return $ui + $arranged;
   }
 
   /**

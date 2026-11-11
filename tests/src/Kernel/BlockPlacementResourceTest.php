@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Core\Form\FormState;
 use Drupal\block\Entity\Block;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Reader\ConfigSchemaReader;
@@ -258,6 +259,41 @@ class BlockPlacementResourceTest extends SurfaceKernelTestBase {
     // holds itself or the provider writes.
     $this->assertSame(['id', 'negate', 'context_mapping'], array_keys($this->container->get(ConfigSchemaReader::class)->keysOf(ConditionPluginStructures::FALLBACK)));
     $this->assertSame([], array_diff(['id', 'negate', 'context_mapping'], ConditionPluginStructures::BASE));
+  }
+
+  /**
+   * Tests a condition's select is drawn for its own item, not for none.
+   *
+   * The items' schema every condition shares is narrowed for no item, so
+   * its `id` offers the empty option; an item holding a condition is a
+   * required choice made, and draws none, while an empty item added
+   * draws "- Select -".
+   */
+  public function testAnItemsSelectIsDrawnForItsOwnValue(): void {
+    $surface = $this->built();
+    $values = ['visibility' => [['id' => 'request_path', 'negate' => FALSE, 'settings' => ['pages' => '/node']], []]] + self::BRANDING + $surface->getDefaultValues();
+    $form = $this->formBuilder()->buildSurfaceForm($surface, $values, new FormState());
+    $held = $form['visibility'][0]['id'];
+    $this->assertSame('request_path', $held['#default_value']);
+    $this->assertArrayNotHasKey('#empty_option', $held, 'A valid required choice: no empty option.');
+    $this->assertSame('- Select -', (string) $form['visibility'][1]['id']['#empty_option'], 'An empty item: the document\'s answer.');
+  }
+
+  /**
+   * Tests a key the values leave out is drawn at its document default.
+   *
+   * After a condition is chosen, its context mapping holds nothing yet:
+   * it is drawn, and posted, at the default the document states, as every
+   * other client draws it.
+   */
+  public function testKeyTheValuesLeaveOutIsDrawnAtItsDefault(): void {
+    $surface = $this->built();
+    $stored = self::BRANDING + $surface->getDefaultValues();
+    $values = $this->formBuilder()->refinementOverlay($surface, $stored, ['visibility' => [['id' => 'user_role']]] + $stored);
+    $form = $this->formBuilder()->buildSurfaceForm($surface, $values, new FormState());
+    $mapping = $form['visibility'][0]['settings']['context_mapping']['user'];
+    $this->assertSame('@user.current_user_context:current_user', $mapping['#default_value']);
+    $this->assertArrayNotHasKey('#empty_option', $mapping);
   }
 
   /**

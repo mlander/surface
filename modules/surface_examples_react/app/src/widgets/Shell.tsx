@@ -32,7 +32,7 @@ export type Lookup = (href: string, variables: Record<string, unknown>) => Promi
 
 export const LookupContext = createContext<Lookup | null>(null);
 
-/** The note a locked element carries, as the form builder appends it. */
+/** The note a locked element carries where its node says no reason, as the form builder appends it. */
 export const LOCKED_NOTE = 'Fixed for this operation.';
 
 /** The note a computed key carries, by when it is computed, in place of the locked one. */
@@ -44,6 +44,19 @@ export const COMPUTED_NOTES = {
 
 /** The note a secret carries, as the string widget appends it. */
 export const SECRET_NOTE = 'Leave blank to keep the current value.';
+
+/**
+ * What a document locked whole says above its fields, as the form builder
+ * draws it: the reason its root gives (`x-surface.locked` beside
+ * `readOnly`), the way a locked key's note gives its own.
+ */
+export function wholeLockedNote(schema: Schema): string | null {
+  if (!schema.readOnly) {
+    return null;
+  }
+  const reason = schema['x-surface']?.locked;
+  return reason === undefined || reason === '' ? 'This may be seen and not changed.' : `This may be seen and not changed: ${reason}`;
+}
 
 export function isLocked(props: FieldProps): boolean {
   return Boolean(props.disabled || props.schema.readOnly);
@@ -61,11 +74,13 @@ export function RequiredMarker(): JSX.Element {
 /**
  * What is said under an element: its description, the help its
  * arrangement gives, and the locked, computed or secret note, as the form
- * builder appends them.
+ * builder appends them. A locked key's note is the reason its node gives
+ * (`x-surface.locked`), and "Fixed for this operation." where it gives
+ * none.
  */
 function notesOf(props: FieldProps): string[] {
   const computed = props.schema['x-surface']?.computed;
-  const fixed = computed !== undefined && !props.disabled ? COMPUTED_NOTES[computed.when] : isLocked(props) ? LOCKED_NOTE : undefined;
+  const fixed = computed !== undefined && !props.disabled ? COMPUTED_NOTES[computed.when] : isLocked(props) ? (props.schema['x-surface']?.locked ?? LOCKED_NOTE) : undefined;
   return [props.schema.description, props.schema['x-portable-ui']?.options?.help, fixed, props.schema.writeOnly ? SECRET_NOTE : undefined]
     .filter((note): note is string => typeof note === 'string' && note !== '');
 }
