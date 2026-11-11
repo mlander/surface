@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface_resource_test\Variants;
 
 use Drupal\surface\Resource\SiteList;
+use PortableSchema\Builder\Schema;
 use Drupal\surface\Resource\SiteListInterface;
 
 /**
@@ -16,7 +17,7 @@ final class UncacheableLayouts implements SiteListInterface {
    * {@inheritdoc}
    */
   public function list(): SiteList {
-    return (new SiteList())->add('now', 'Now', schema: ['type' => 'object', 'properties' => []])->mergeCacheMaxAge(0);
+    return (new SiteList())->add('now', 'Now', schema: Schema::from(['type' => 'object', 'properties' => []]))->mergeCacheMaxAge(0);
   }
 
 }

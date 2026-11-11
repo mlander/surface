@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * The two pages are the module's concept budget: the first builds a
  * working settings page from a resource, an operation, a storage and
- * add(), and nothing else, and every later feature has to leave it
+ * addSchema(), and nothing else, and every later feature has to leave it
  * unchanged. So the code on them is surface_examples_first's, and this fails
  * when either drifts:
  *
@@ -222,8 +222,8 @@ class FirstResourceDocsTest extends UnitTestCase {
   /**
    * Tests the first page stays inside its budget.
    *
-   * A resource, an operation, a storage and add(): the page that shows a
-   * newcomer a working settings page names nothing else, and its
+   * A resource, an operation, a storage and addSchema(): the page that
+   * shows a newcomer a working settings page names nothing else, and its
    * operation is the attribute alone, with no method. A feature that
    * cannot stay off it has to justify itself (ROADMAP item 13).
    */

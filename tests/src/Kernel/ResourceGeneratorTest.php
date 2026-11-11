@@ -16,7 +16,10 @@ use Symfony\Component\Filesystem\Filesystem;
  *
  * - The newsletter's answers write "Your first resource"'s module byte for
  *   byte: what the page quotes is what the generator writes, and the page
- *   stays the truth this holds the generator to.
+ *   stays the truth this holds the generator to. The resource's keys are
+ *   the one difference: the page states them with addSchema(), and the
+ *   generator writes them with add(), the same definitions, so the schema
+ *   entry and install file written from the class agree with the page's.
  * - A routing or permissions file that is there keeps every entry; the
  *   generated one is added, or left out where one of its name is there.
  * - node.settings and a JSON Schema document (a component's props, and a
@@ -88,6 +91,21 @@ class ResourceGeneratorTest extends ResourceGeneratorTestBase {
   }
 
   /**
+   * Leaves the keys out of a resource class: its defineInputs() body.
+   *
+   * @param string $code
+   *   The class.
+   *
+   * @return string
+   *   The same, the body of defineInputs() and the Schema builder's use
+   *   line left out.
+   */
+  protected static function withoutKeys(string $code): string {
+    $code = str_replace("use PortableSchema\\Builder\\Schema;\n", '', $code);
+    return (string) preg_replace('/(defineInputs\(BlueprintInterface \$inputs\): void \{\n).*?(\n  \}\n)/s', '$1$2', $code);
+  }
+
+  /**
    * Tests the newsletter's answers write the first page's files, byte for byte.
    *
    * The resource, the storage, the install file and the permissions file
@@ -98,8 +116,12 @@ class ResourceGeneratorTest extends ResourceGeneratorTestBase {
    */
   public function testTheNewsletterIsTheFirstPage(): void {
     $display = $this->generate(self::NEWSLETTER);
+    // The class, but for its keys: the page's addSchema() calls, the
+    // generator's add() calls.
+    // Decision: see docs/decisions.md#authoring-takes-a-schema.
+    $this->assertSame(self::withoutKeys((string) file_get_contents(self::FIRST . '/src/Resource/NewsletterResource.php')), self::withoutKeys($this->written('src/Resource/NewsletterResource.php')), 'src/Resource/NewsletterResource.php differs from the shipped module beside its keys.');
+    $this->assertStringContainsString("\$inputs->add(self::SENDER_NAME, 'string', t('Sender name'))", $this->written('src/Resource/NewsletterResource.php'));
     foreach ([
-      'src/Resource/NewsletterResource.php',
       'src/Storage/NewsletterStorage.php',
       'config/install/surface_examples_first.newsletter.yml',
       'surface_examples_first.permissions.yml',

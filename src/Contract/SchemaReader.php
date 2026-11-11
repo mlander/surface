@@ -14,16 +14,19 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\Core\Validation\ConstraintManager;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\surface\Contract\Keywords\ReadBack;
 use Drupal\surface\Reference\References;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\ResourceBuild\MapBlueprint;
 use Drupal\surface\ResourceBuild\NeedsFrame;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\Resource\Arrangement;
 use Drupal\surface\Resource\ArrangementGroup;
+use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceCallable;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
@@ -78,8 +81,9 @@ use PortableSchema\UriTemplate;
  *   those ports;
  * - a `$ref` to a type of the Portable Schema library, through the
  *   registry the reader holds: one LeafTypes::LIBRARY names that leaf
- *   type, what its document says beyond the row kept; any other read from
- *   its document, an object one as a structure;
+ *   type, what its document says beyond the row the constraint a row
+ *   reads it as, or kept; any other read from its document, an object one
+ *   as a structure;
  * - `portable-typeBy` choosing a key's schema by a sibling's value,
  *   variants that sibling chooses, where each value chooses an object
  *   schema the registry holds (typeBy());
@@ -110,6 +114,12 @@ use PortableSchema\UriTemplate;
  * tools write, are converted first (upconvert()), on the array; the walk
  * then reads the document as `PortableSchema\Builder\Schema` values, and
  * every entry point takes and answers arrays (prepared()).
+ *
+ * A key an author states as a Schema (addSchema()) is read the same way,
+ * as the author's own (authored()): its `drupal:` checks are the
+ * constraints they name, with their options, and an optional key with a
+ * default may be cleared. Decision: see
+ * docs/decisions.md#authoring-takes-a-schema.
  *
  * Decision: see docs/decisions.md#the-reader-reads-a-schema.
  *
@@ -390,6 +400,24 @@ final class SchemaReader {
   protected array $notes = [];
 
   /**
+   * The notes on an author's schema that say what was done, by pointer.
+   *
+   * What an author's schema holds and the reader does not read as it is
+   * written is the author's to fix, so addSchema() refuses it, but for
+   * these, where nothing is lost: a link, dropped, since links are the
+   * emitter's; a check the site cannot build, kept for the server to
+   * answer as unchecked; a check beside a keyword stating the same
+   * constraint, merged or kept beside it; a value no data type says,
+   * held whole to its schema; a def, or a type of the library, read in
+   * place (accept()).
+   *
+   * Decision: see docs/decisions.md#authoring-takes-a-schema.
+   *
+   * @var array<string, true>
+   */
+  protected array $accepted = [];
+
+  /**
    * The pointers of the structures the frame being read holds.
    *
    * @var string[]
@@ -437,6 +465,17 @@ final class SchemaReader {
    * The registry the reader reads without a container, the type library.
    */
   private static ?Registry $types = NULL;
+
+  /**
+   * Whether the document is an author's own, read by authored().
+   *
+   * An author's schema is the host's: a `drupal:` check in it names a
+   * constraint to run with the options it gives, and an optional key
+   * with a default may be cleared, as one declared with add() may. A
+   * document read from anywhere else is served by the server that wrote
+   * it, whose checks it describes and does not hand over.
+   */
+  protected bool $authored = FALSE;
 
   /**
    * Constructs a SchemaReader.
@@ -508,8 +547,11 @@ final class SchemaReader {
    * @param string|null $hash
    *   The document's hash, as ResourceBlueprint::readStructure() took it:
    *   handed on to each structure the frame holds, so it is taken once.
+   * @param bool $authored
+   *   TRUE for a structure of a schema an author handed addSchema(), read
+   *   as authored() reads it.
    */
-  public static function fill(BlueprintInterface $inputs, array $root, string $pointer, ?string $hash = NULL): void {
+  public static function fill(BlueprintInterface $inputs, array $root, string $pointer, ?string $hash = NULL, bool $authored = FALSE): void {
     // Called by the build, with no service of its own: the site's entity
     // types, the registry and the widgets, whose published settings an
     // option is read back into, are read from the container where there
@@ -518,8 +560,269 @@ final class SchemaReader {
     $reader = new static(entityTypeManager: \Drupal::hasService('entity_type.manager') ? \Drupal::entityTypeManager() : NULL, library: static::library(), widgets: $widgets instanceof SurfaceWidgetManager ? $widgets : NULL);
     $reader->hashed = $hash === NULL ? NULL : [$root, $hash];
     $reader->document = $root;
+    $reader->authored = $authored;
     $schema = static::schemaOf($root, $hash);
-    $reader->frame(static::at($schema, $pointer), $pointer, static::blueprintOf($inputs), $schema);
+    $blueprint = static::blueprintOf($inputs);
+    $reader->frame(static::at($schema, $pointer), $pointer, $blueprint, $schema);
+    if ($authored) {
+      $reader->refuseUnread(sprintf('The structure %s, of a schema handed to addSchema(),', $blueprint->ownerId()));
+    }
+  }
+
+  /**
+   * Reads one key an author states as a Schema into a blueprint.
+   *
+   * What BlueprintAdditionsInterface::addSchema() runs. The schema is laid
+   * in an object of one property, the key, closed, its `$defs` moved up to
+   * the object so its references find them, and the key listed in
+   * `required` where it is required; that object is read as any frame is,
+   * so one reading turns a document and an author's schema into keys.
+   * Read as the author's own (see $authored): every `drupal:<plugin id>`
+   * check of a plugin the site has, with options the plugin takes, is
+   * that constraint with those options, its `x-portable-messages` text
+   * under `check.drupal:<plugin id>` the constraint's `message`; any
+   * other check is noted and kept in the key's JsonSchema constraint, so
+   * the server answers it as a check it cannot run. An optional key with
+   * a default is one null clears, as add() declares it.
+   *
+   * The schema is the author's, so what it holds and the reader does not
+   * read as written is refused, every such part named by its pointer: an
+   * unknown widget, a fractional weight, a message for no constraint, a
+   * format on a type that is no string. What is accepted is what
+   * $accepted lists. The Schema
+   * value is read as the author made it, never through JSON, so a title
+   * or description made with t() stays a TranslatableMarkup in the
+   * definition.
+   *
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
+   *   The blueprint.
+   * @param string $key
+   *   The key.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   What it holds.
+   * @param bool|null $required
+   *   TRUE to require it, FALSE to leave it optional; NULL for the
+   *   dialect's rule: required where the schema has no `default` and
+   *   allows no null, or where it was marked `required()`.
+   *
+   * @return array<string, string>
+   *   What was read otherwise than as written and is accepted (a link
+   *   dropped, a check kept or merged), by JSON pointer into the object
+   *   the key was laid in: the key's own schema is at
+   *   `/properties/<key>`.
+   *
+   * @throws \InvalidArgumentException
+   *   For a boolean schema, for a property named by digits alone, for what
+   *   a document cannot hold, and for every part of the schema the reader
+   *   does not read as written and does not accept.
+   */
+  public static function authored(BlueprintAdditionsInterface $inputs, string $key, Schema $schema, ?bool $required = NULL): array {
+    if ($schema->isBoolean()) {
+      throw new \InvalidArgumentException(sprintf('addSchema("%s") was handed the boolean schema %s, which says only whether a value is allowed: a key is the schema of what it holds, Schema::string(), Schema::integer(), Schema::of(\'portable:email\') and the like.', $key, $schema->toDocument() === TRUE ? 'true' : 'false'));
+    }
+    static::assertNamed($schema, sprintf('addSchema("%s")', $key), '/properties/' . str_replace(['~', '/'], ['~0', '~1'], $key));
+    $required ??= $schema->isRequired() || (!$schema->has('default') && !static::allowsNull($schema));
+    $frame = Schema::any()
+      ->with('type', 'object')
+      ->with('properties', [$key => $schema->without('$defs')]);
+    if ($required) {
+      $frame = $frame->with('required', [$key]);
+    }
+    $frame = $frame->with('additionalProperties', FALSE);
+    $defs = $schema->get('$defs');
+    if (is_array($defs) && $defs !== []) {
+      $frame = $frame->with('$defs', $defs);
+    }
+    $document = Schemas::decoded($frame);
+    assert(is_array($document));
+    $widgets = \Drupal::hasService('plugin.manager.surface_widget') ? \Drupal::service('plugin.manager.surface_widget') : NULL;
+    $reader = new static(entityTypeManager: \Drupal::hasService('entity_type.manager') ? \Drupal::entityTypeManager() : NULL, library: static::library(), widgets: $widgets instanceof SurfaceWidgetManager ? $widgets : NULL);
+    $reader->authored = TRUE;
+    [$root, $read] = static::preparing($document);
+    $reader->document = $root;
+    // The author's Schema value itself, where preparing it moved nothing
+    // but naming the dialect: the same keywords, with each text as the
+    // author made it.
+    $named = array_intersect_key($root, ['$schema' => TRUE]);
+    $read = array_diff_key($root, $named) === $document ? Schema::from($named + static::withTexts($frame)) : ($read ?? static::schemaOf($root, NULL));
+    $reader->frame($read, '', $inputs, $read);
+    $reader->refuseUnread(sprintf('addSchema("%s")', $key));
+    return $reader->notes;
+  }
+
+  /**
+   * Writes an author's Schema as JSON decodes it, each text kept.
+   *
+   * As Schemas::decoded() writes it, every object an array, but a text
+   * made as a \Stringable (a TranslatableMarkup) stays that object, so a
+   * label stays one that is translated when it is shown.
+   *
+   * @param mixed $value
+   *   A Schema, or a value one holds.
+   *
+   * @return mixed
+   *   The same, every object an array but a text.
+   */
+  protected static function withTexts(mixed $value): mixed {
+    if ($value instanceof Schema) {
+      if ($value->isBoolean()) {
+        return Schemas::decoded($value);
+      }
+      $value = $value->all();
+    }
+    elseif ($value instanceof \stdClass) {
+      $value = (array) $value;
+    }
+    if (!is_array($value)) {
+      return $value;
+    }
+    foreach ($value as $name => $member) {
+      if ($member instanceof Schema || $member instanceof \stdClass || is_array($member)) {
+        $value[$name] = static::withTexts($member);
+      }
+    }
+    return $value;
+  }
+
+  /**
+   * Refuses a schema whose `properties` name a property by digits alone.
+   *
+   * PHP holds such a name as an integer key, and an object whose names
+   * are 0 to n - 1 is written as a JSON list, so the key would be served
+   * as no object at all.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema, and every schema it holds.
+   * @param string $what
+   *   Who was handed it, for the message.
+   * @param string $pointer
+   *   Its pointer.
+   *
+   * @throws \InvalidArgumentException
+   *   Naming the property and its pointer.
+   */
+  protected static function assertNamed(Schema $schema, string $what, string $pointer): void {
+    if ($schema->isBoolean()) {
+      return;
+    }
+    foreach ($schema->all() as $keyword => $value) {
+      $keyword = (string) $keyword;
+      $at = static::below($pointer, $keyword);
+      if ($keyword === 'properties' && is_array($value)) {
+        foreach (array_keys($value) as $name) {
+          if (ctype_digit((string) $name)) {
+            throw new \InvalidArgumentException(sprintf('%s was handed a schema naming the property "%s" at %s: a name of digits alone is written as a position, so the object would be served as a list. Name it with a letter in it.', $what, $name, $at));
+          }
+        }
+      }
+      if ($value instanceof Schema) {
+        static::assertNamed($value, $what, $at);
+      }
+      elseif (is_array($value)) {
+        foreach ($value as $name => $member) {
+          if ($member instanceof Schema) {
+            static::assertNamed($member, $what, static::below($at, (string) $name));
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Refuses what an author's schema holds that was not read as written.
+   *
+   * @param string $what
+   *   Who was handed the schema, for the message.
+   *
+   * @throws \InvalidArgumentException
+   *   Listing each part noted and not accepted, by pointer.
+   */
+  protected function refuseUnread(string $what): void {
+    $refused = array_diff_key($this->notes, $this->accepted);
+    if ($refused === []) {
+      return;
+    }
+    ksort($refused);
+    $parts = [];
+    foreach ($refused as $at => $note) {
+      $parts[] = $at . ': ' . $note;
+    }
+    throw new \InvalidArgumentException(sprintf('%s reads the schema as the author\'s own, and these parts of it are not read as written (by JSON pointer into the object the key is laid in, the key at /properties/<key>): %s Fix each, or leave it out.', $what, implode(' ', $parts)));
+  }
+
+  /**
+   * Notes what was done with a part of an author's schema, accepting it.
+   *
+   * @param string $pointer
+   *   The part's pointer.
+   * @param string $note
+   *   What was done.
+   */
+  protected function accept(string $pointer, string $note): void {
+    $this->note($pointer, $note);
+    if ($this->authored) {
+      $this->accepted[$pointer === '' ? '/' : $pointer] = TRUE;
+    }
+  }
+
+  /**
+   * Answers whether a schema allows null, by its type or a member.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
+   *
+   * @return bool
+   *   TRUE where its `type` names null, an `anyOf` or `oneOf` member is
+   *   null alone (`{"type": "null"}`, `{"const": null}`), or it says
+   *   nothing of what a value is (`mixed`, Schema::any()).
+   */
+  protected static function allowsNull(Schema $schema): bool {
+    if (in_array('null', (array) ($schema->get('type') ?? []), TRUE)) {
+      return TRUE;
+    }
+    $restricting = ['type', 'enum', 'const', '$ref', 'anyOf', 'oneOf', 'allOf', 'not'];
+    if (array_intersect_key($schema->all(), array_flip($restricting)) === []) {
+      return TRUE;
+    }
+    foreach (['anyOf', 'oneOf'] as $keyword) {
+      $members = $schema->get($keyword);
+      foreach (is_array($members) ? $members : [] as $member) {
+        if (Schemas::isObjectSchema($member) && ($member->get('type') === 'null' || ($member->has('const') && $member->get('const') === NULL))) {
+          return TRUE;
+        }
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Gets the blueprint a part of a schema that needs a frame is read into.
+   *
+   * A child, variants, a port, a rule, a lock or what is said of an object
+   * as a whole is a resource's or a structure's to declare. A map's keys
+   * stop at the first such part, and the map's owner attaches the map as
+   * a structure with no id (MapBlueprint); an alter's or a shape's
+   * blueprint takes none.
+   *
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
+   *   The blueprint being read into.
+   * @param string $what
+   *   What needs the frame, for the refusal.
+   *
+   * @return \Drupal\surface\ResourceBuild\ResourceBlueprint
+   *   The blueprint, where it is a resource's or a structure's.
+   *
+   * @throws \LogicException
+   *   Where it is not.
+   */
+  protected function framing(BlueprintAdditionsInterface $inputs, string $what): ResourceBlueprint {
+    if ($inputs instanceof ResourceBlueprint) {
+      return $inputs;
+    }
+    if ($inputs instanceof MapBlueprint) {
+      throw $inputs->framed(sprintf('A schema holding %s', $what));
+    }
+    throw new \LogicException(sprintf('A schema holding %s was read into %s, which declares keys that are one value, a list or a map: %s is a resource\'s or a structure\'s to declare.', $what, get_class($inputs), $what));
   }
 
   /**
@@ -1252,10 +1555,11 @@ final class SchemaReader {
         continue;
       }
       if ($link['rel'] === PortableLinks::LOOKUP && isset($link['source']) && $this->referenceOptions($property) === NULL) {
-        $this->note($at, 'Not read: a link names where a client asks, and an id whose entity type its sibling names is read as a value of its type alone.');
+        $this->accept($at, 'Not read: a link names where a client asks, and an id whose entity type its sibling names is read as a value of its type alone.');
         continue;
       }
-      $this->note($at, 'Not read: a link names where a client asks.');
+      // Links are the emitter's to write: an author's is dropped.
+      $this->accept($at, 'Not read: a link names where a client asks.');
     }
   }
 
@@ -1730,7 +2034,7 @@ final class SchemaReader {
    *   The object schema.
    * @param string $pointer
    *   Its pointer in the document.
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint its keys are declared in.
    * @param \PortableSchema\Builder\Schema $root
    *   The document.
@@ -1738,7 +2042,7 @@ final class SchemaReader {
    * @throws \InvalidArgumentException
    *   When the frame is no object.
    */
-  protected function frame(Schema $schema, string $pointer, ResourceBlueprint $inputs, Schema $root): void {
+  protected function frame(Schema $schema, string $pointer, BlueprintAdditionsInterface $inputs, Schema $root): void {
     // A def that is only a reference to another def is that def.
     if (array_keys(array_diff_key($schema->all(), ['title' => TRUE, 'description' => TRUE])) === ['$ref'] && is_string($schema->get('$ref'))) {
       [$name, $def] = $this->def($schema->get('$ref'), static::below($pointer, '$ref'), $root);
@@ -1762,7 +2066,13 @@ final class SchemaReader {
     foreach (PortableKeywords::checks($schema->all()) as $check) {
       if ($check['constraint'] === 'JsonSchema' && is_array($check['options']['schema'] ?? NULL)) {
         $at = static::below($pointer, PortableKeywords::CHECK, PortableKeywords::PROVIDER . 'JsonSchema', 'schema');
-        $inputs->constrainFrame(static::fragment($this->keptSchema(static::checked($check['options']['schema'], $at), $at)));
+        $this->framing($inputs, 'a check on the whole object')->constrainFrame(static::fragment($this->keptSchema(static::checked($check['options']['schema'], $at), $at)));
+      }
+      elseif ($this->authored) {
+        // An author's check on a whole object: no constraint of a frame
+        // runs but its JsonSchema, so the server answers it as unchecked.
+        $left[PortableKeywords::CHECK][$check['id']] = $check['options'] === [] ? new \stdClass() : $check['options'];
+        $this->accept(static::below($pointer, PortableKeywords::CHECK, $check['id']), 'Kept as a JsonSchema constraint on the frame: a check on a whole object is not run, and the server answers it as unchecked.');
       }
       else {
         $this->note(static::below($pointer, PortableKeywords::CHECK, PortableKeywords::PROVIDER . $check['constraint']), 'Not read: a constraint the server checks is known by its plugin alone.');
@@ -1828,7 +2138,7 @@ final class SchemaReader {
         $structure = $members[$name];
         if (!isset($mixed[$structure])) {
           $mixed[$structure] = TRUE;
-          $inputs->mixInRead($this->structureAt($inputs, $structure, $this->document, static::below('', '$defs', $structure)));
+          $this->framing($inputs, 'a structure mixed in')->mixInRead($this->structureAt($inputs, $structure, $this->document, static::below('', '$defs', $structure)));
         }
         $said = [ContractEmitter::EXTENSION, ...PortableKeywords::KEYWORDS];
         if (Schemas::isObjectSchema($property) && array_diff(array_keys($property->all()), $said) !== []) {
@@ -1850,7 +2160,7 @@ final class SchemaReader {
         throw new \InvalidArgumentException(sprintf('%s: a property is a schema, an object or a boolean.', $at));
       }
       if (isset($chosen[$name])) {
-        $shell = $inputs->attachReadVariants($name, $chosen[$name]['by'], $chosen[$name]['variants'], static::title($property));
+        $shell = $this->framing($inputs, 'variants')->attachReadVariants($name, $chosen[$name]['by'], $chosen[$name]['variants'], static::title($property));
         $this->describeShell($shell, $property, $name, in_array($name, $required, TRUE), $at);
       }
       elseif (isset($variants[$name])) {
@@ -1904,7 +2214,7 @@ final class SchemaReader {
       $this->note(static::below($pointer, 'readOnly'), 'Not read: a whole locked by an access answer is that answer\'s, not the structure\'s.');
     }
     if ($left !== []) {
-      $inputs->constrainFrame($this->withDefs($left, $root));
+      $this->framing($inputs, 'what is said of the object as a whole')->constrainFrame($this->withDefs($left, $root));
     }
   }
 
@@ -2086,10 +2396,10 @@ final class SchemaReader {
    *   The frame's `x-surface`.
    * @param string $pointer
    *   The frame's pointer.
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint.
    */
-  protected function frameExtension(array $extension, string $pointer, ResourceBlueprint $inputs): void {
+  protected function frameExtension(array $extension, string $pointer, BlueprintAdditionsInterface $inputs): void {
     $at = static::below($pointer, ContractEmitter::EXTENSION);
     foreach (is_array($extension['ports'] ?? NULL) ? $extension['ports'] : [] as $port => $declared) {
       if (!is_array($declared) || !is_string($declared['type'] ?? NULL)) {
@@ -2099,7 +2409,7 @@ final class SchemaReader {
       if (isset($declared['shape']) && $shape === NULL) {
         $this->note(static::below($at, 'ports', (string) $port, 'shape'), 'Read as the shape\'s type: the site has no shape of that id.');
       }
-      $inputs->reads((string) $port, $shape ?? $declared['type'], (bool) ($declared['required'] ?? FALSE));
+      $this->framing($inputs, 'a port')->reads((string) $port, $shape ?? $declared['type'], (bool) ($declared['required'] ?? FALSE));
     }
     if (is_int($extension['version'] ?? NULL) && $extension['version'] > 1) {
       $this->note(static::below($at, 'version'), 'Not read: a version counts the changes made to stored values, which are the declaring class\'s.');
@@ -2331,14 +2641,14 @@ final class SchemaReader {
    *   The frame's properties.
    * @param string $pointer
    *   The key's pointer.
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint, which registers each variant.
    *
    * @return array{by: string, variants: array<string, array{name: string, label: string|null}>}|null
    *   The deciding key and each value's variant; NULL where the keyword is
    *   not read as variants.
    */
-  protected function typeBy(string $name, Schema $property, array $properties, string $pointer, ResourceBlueprint $inputs): ?array {
+  protected function typeBy(string $name, Schema $property, array $properties, string $pointer, BlueprintAdditionsInterface $inputs): ?array {
     $at = static::below($pointer, self::TYPE_BY);
     $targets = $this->typeByTargets($name, $property->get(self::TYPE_BY), $properties, $at, $by);
     if (is_string($targets)) {
@@ -2497,16 +2807,16 @@ final class SchemaReader {
    *   Whether the frame requires it.
    * @param string $pointer
    *   The key's pointer.
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint.
    * @param \PortableSchema\Builder\Schema $root
    *   The document.
    * @param array $properties
    *   The frame's properties, for the deciding key's labels.
    */
-  protected function variantsKey(string $name, Schema $property, array $found, bool $required, string $pointer, ResourceBlueprint $inputs, Schema $root, array $properties): void {
+  protected function variantsKey(string $name, Schema $property, array $found, bool $required, string $pointer, BlueprintAdditionsInterface $inputs, Schema $root, array $properties): void {
     $labels = static::labels($properties[$found['by']] ?? NULL);
-    $owner = $inputs->ownerId();
+    $owner = $this->framing($inputs, 'variants')->ownerId();
     $variants = [];
     foreach ($found['variants'] as $value => $variant) {
       if ($variant['pointer'] !== NULL) {
@@ -2524,7 +2834,7 @@ final class SchemaReader {
         'label' => $labels[(string) $value] ?? NULL,
       ];
     }
-    $shell = $inputs->attachReadVariants($name, $found['by'], $variants, static::title($property));
+    $shell = $this->framing($inputs, 'variants')->attachReadVariants($name, $found['by'], $variants, static::title($property));
     $this->describeShell($shell, $property, $name, $required, $pointer);
   }
 
@@ -2544,9 +2854,9 @@ final class SchemaReader {
     }
     $labels = [];
     foreach (is_array($deciding->get('oneOf')) ? $deciding->get('oneOf') : [] as $choice) {
-      if (Schemas::isObjectSchema($choice) && $choice->has('const') && is_string($choice->get('title')) && $choice->get('const') !== NULL) {
+      if (Schemas::isObjectSchema($choice) && $choice->has('const') && static::text($choice->get('title')) !== NULL && $choice->get('const') !== NULL) {
         $const = $choice->get('const');
-        $labels[is_bool($const) ? ($const ? '1' : '0') : (string) $const] = $choice->get('title');
+        $labels[is_bool($const) ? ($const ? '1' : '0') : (string) $const] = (string) $choice->get('title');
       }
     }
     $fixed = static::extensionOf($deciding)['fixed'] ?? NULL;
@@ -2582,11 +2892,28 @@ final class SchemaReader {
    * @param \PortableSchema\Builder\Schema $property
    *   The key's schema.
    *
-   * @return string|null
+   * @return string|\Stringable|null
    *   The title, or NULL where it gives none.
    */
-  protected static function title(Schema $property): ?string {
-    return is_string($property->get('title')) ? $property->get('title') : NULL;
+  protected static function title(Schema $property): string|\Stringable|null {
+    return static::text($property->get('title'));
+  }
+
+  /**
+   * Reads a text a schema holds: a string, or one an author made.
+   *
+   * A document read as JSON holds strings; an author's Schema may hold a
+   * \Stringable (a TranslatableMarkup), kept so it is translated when
+   * it is shown.
+   *
+   * @param mixed $value
+   *   The value a keyword holds.
+   *
+   * @return string|\Stringable|null
+   *   The text, or NULL for a value that is none.
+   */
+  protected static function text(mixed $value): string|\Stringable|null {
+    return is_string($value) || $value instanceof \Stringable ? $value : NULL;
   }
 
   /**
@@ -2604,7 +2931,7 @@ final class SchemaReader {
    *   The key's pointer.
    */
   protected function describeShell(MapDataDefinition $shell, Schema $property, string $name, bool $required, string $pointer): void {
-    if (is_string($property->get('description'))) {
+    if (static::text($property->get('description')) !== NULL) {
       $shell->setDescription($property->get('description'));
     }
     if ($required) {
@@ -2623,15 +2950,16 @@ final class SchemaReader {
    *   Whether the frame requires it.
    * @param string $pointer
    *   Its pointer.
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint.
    * @param \PortableSchema\Builder\Schema $root
    *   The document.
    * @param string[] $keys
    *   The frame's keys, which a port may be wired to.
    */
-  protected function key(string $name, Schema $property, bool $required, string $pointer, ResourceBlueprint $inputs, Schema $root, array $keys = []): void {
+  protected function key(string $name, Schema $property, bool $required, string $pointer, BlueprintAdditionsInterface $inputs, Schema $root, array $keys = []): void {
     $property = $this->throughLibrary($property, $root);
+    [$property, $pointer] = $this->withNull($property, $pointer);
     $extension = static::extensionOf($property);
     $this->droppedExtension($extension, static::below($pointer, ContractEmitter::EXTENSION));
     $this->droppedLinks($property, $pointer);
@@ -2672,7 +3000,8 @@ final class SchemaReader {
         return;
       }
       // A scalar def the site has no shape for: the def where it stands.
-      $this->note(static::below($pointer, '$ref'), sprintf('Read in place: the site has no shape "%s", so the def is the key\'s own.', $def_name));
+      // An author's def read in place is read whole: nothing is lost.
+      $this->accept(static::below($pointer, '$ref'), sprintf('Read in place: the site has no shape "%s", so the def is the key\'s own.', $def_name));
       $keywords = SchemaResolver::inline(Schema::any()->with('$ref', $reference), $root)->all();
       foreach ($property->without('$ref')->all() as $keyword => $value) {
         $keywords[$keyword] = $value;
@@ -2702,7 +3031,7 @@ final class SchemaReader {
         $this->describeShell($shell, $property, $name, $required, $pointer);
         return;
       }
-      $shell = $inputs->attach($name, $this->structureAt($inputs, $inputs->ownerId() . '.' . $name, $this->document, $pointer), static::title($property));
+      $shell = $inputs->attach($name, $this->structureAt($inputs, $this->framing($inputs, 'a structure')->ownerId() . '.' . $name, $this->document, $pointer), static::title($property));
       $this->describeShell($shell, $property, $name, $required, $pointer);
       return;
     }
@@ -2728,7 +3057,7 @@ final class SchemaReader {
     }
     static::declareRead($inputs, $name, $this->finished($definition, $property, $required, in_array('null', $types, TRUE)), $default);
     if ($locked) {
-      $inputs->lockRead($name);
+      $this->framing($inputs, 'a locked key')->lockRead($name);
     }
   }
 
@@ -2746,11 +3075,12 @@ final class SchemaReader {
    *   reference into the library followed, for a type read in place; and
    *   whether it is an object, read as a structure. NULL for a schema
    *   that refers to no id of the library, or to one the registry does
-   *   not hold, noted.
+   *   not hold, noted. An absolute URI the registry holds (a schema a
+   *   site added to it) is read as an id of the library is.
    */
   protected function libraryOf(Schema $schema, string $pointer): ?array {
     $id = $schema->get('$ref');
-    if (!static::isLibrary($id)) {
+    if (!static::isLibrary($id) && !(is_string($id) && preg_match('/^[a-z][a-z0-9+.-]*:/i', $id) && $this->portable()->has($id))) {
       return NULL;
     }
     $flat = $this->libraryKeywords($id);
@@ -2816,15 +3146,15 @@ final class SchemaReader {
    *
    * @param string $id
    *   The schema's id in the registry, the structure's id.
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint reading the frame that holds it.
    *
    * @return string
    *   The name it is built by.
    */
-  protected function libraryStructure(string $id, ResourceBlueprint $inputs): string {
+  protected function libraryStructure(string $id, BlueprintAdditionsInterface $inputs): string {
     $document = Schemas::decoded($this->portable()->get($id));
-    return $inputs->readStructure($id, static::prepared(is_array($document) ? $document : []), '');
+    return $this->framing($inputs, 'a structure of the library')->readStructure($id, static::prepared(is_array($document) ? $document : []), '');
   }
 
   /**
@@ -2848,7 +3178,7 @@ final class SchemaReader {
    *
    * Decision: see docs/decisions.md#a-blueprint-takes-no-complex-data-types.
    *
-   * @param \Drupal\surface\Resource\BlueprintInterface $inputs
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint.
    * @param string $name
    *   The key.
@@ -2857,7 +3187,7 @@ final class SchemaReader {
    * @param mixed $default
    *   What it starts from; NULL for nothing.
    */
-  protected static function declareRead(BlueprintInterface $inputs, string $name, DataDefinitionInterface $read, mixed $default = NULL): void {
+  protected static function declareRead(BlueprintAdditionsInterface $inputs, string $name, DataDefinitionInterface $read, mixed $default = NULL): void {
     if ($read instanceof ListDataDefinitionInterface) {
       $declared = $inputs->addList($name, $read->getItemDefinition(), $read->getLabel() ?? $name, $default);
     }
@@ -2970,14 +3300,14 @@ final class SchemaReader {
    *
    * @param string $id
    *   The def's key.
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint, which knows the site's shapes.
    *
    * @return string|null
    *   The shape's class, or NULL when the site has none of that id.
    */
-  protected function shape(string $id, ResourceBlueprint $inputs): ?string {
-    return $inputs->shapeOf($id);
+  protected function shape(string $id, BlueprintAdditionsInterface $inputs): ?string {
+    return $this->framing($inputs, 'a shape')->shapeOf($id);
   }
 
   /**
@@ -2995,13 +3325,13 @@ final class SchemaReader {
    *   Whether the frame requires it.
    * @param string $pointer
    *   Its pointer.
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint.
    */
-  protected function shapedKey(string $name, Schema $property, Schema $def, string $shape, bool $required, string $pointer, ResourceBlueprint $inputs): void {
-    $definition = $inputs->add($name, $shape, is_string($property->get('title')) ? $property->get('title') : '');
+  protected function shapedKey(string $name, Schema $property, Schema $def, string $shape, bool $required, string $pointer, BlueprintAdditionsInterface $inputs): void {
+    $definition = $inputs->add($name, $shape, static::title($property) ?? '');
     $site = array_diff_key($property->all(), ['$ref' => TRUE, 'title' => TRUE]);
-    if (is_string($site['description'] ?? NULL)) {
+    if (static::text($site['description'] ?? NULL) !== NULL) {
       $definition->setDescription($site['description']);
     }
     if ($required) {
@@ -3038,12 +3368,12 @@ final class SchemaReader {
    *   Whether the frame requires it.
    * @param string $pointer
    *   Its pointer.
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint.
    * @param \PortableSchema\Builder\Schema $root
    *   The document.
    */
-  protected function collection(string $name, Schema $property, bool $required, string $pointer, ResourceBlueprint $inputs, Schema $root): void {
+  protected function collection(string $name, Schema $property, bool $required, string $pointer, BlueprintAdditionsInterface $inputs, Schema $root): void {
     $items = $property->get('items');
     assert($items instanceof Schema);
     $reference = $this->siteReference($items, static::below($pointer, 'items'));
@@ -3056,7 +3386,7 @@ final class SchemaReader {
       $child = $this->libraryStructure($library['id'], $inputs);
     }
     else {
-      $child = $this->structureAt($inputs, $inputs->ownerId() . '.' . $name, $this->document, static::below($pointer, 'items'));
+      $child = $this->structureAt($inputs, $this->framing($inputs, 'a collection')->ownerId() . '.' . $name, $this->document, static::below($pointer, 'items'));
     }
     // How many items, and whether they differ: the table's Count and
     // UniqueItems rows, on an array. A collection holds no JsonSchema
@@ -3085,7 +3415,7 @@ final class SchemaReader {
     if ($unique) {
       $list->addConstraint('UniqueItems', []);
     }
-    if (is_string($property->get('description'))) {
+    if (static::text($property->get('description')) !== NULL) {
       $list->setDescription($property->get('description'));
     }
     if ($required) {
@@ -3204,10 +3534,10 @@ final class SchemaReader {
    */
   protected function finished(DataDefinitionInterface $definition, Schema $property, bool $required, bool $nullable): DataDefinitionInterface {
     if ($definition instanceof DataDefinition) {
-      if (is_string($property->get('title'))) {
+      if (static::text($property->get('title')) !== NULL) {
         $definition->setLabel($property->get('title'));
       }
-      if (is_string($property->get('description'))) {
+      if (static::text($property->get('description')) !== NULL) {
         $definition->setDescription($property->get('description'));
       }
       if ($required) {
@@ -3217,7 +3547,9 @@ final class SchemaReader {
     if ($property->get('writeOnly') === TRUE) {
       DefinitionMetadata::setSecret($definition);
     }
-    elseif (!$required && !$nullable && $property->has('default') && $property->get('default') !== NULL && $property->get('readOnly') !== TRUE) {
+    elseif (!$this->authored && !$required && !$nullable && $property->has('default') && $property->get('default') !== NULL && $property->get('readOnly') !== TRUE) {
+      // An author's optional key with a default is one null clears, as
+      // add() declares it: the document follows the definition.
       // An optional key whose type refuses null, and that starts from a
       // value: one its storage always holds, which null cannot clear.
       // Decision: see docs/decisions.md#a-key-its-storage-always-holds.
@@ -3342,7 +3674,7 @@ final class SchemaReader {
       $read = Schema::from(array_replace($library['flat'], $property->all()));
     }
     elseif ($library !== NULL && !$library['object']) {
-      $this->note(static::below($pointer, '$ref'), sprintf('Read in place: %s, from the library, is the key\'s own.', $library['id']));
+      $this->accept(static::below($pointer, '$ref'), sprintf('Read in place: %s, from the library, is the key\'s own.', $library['id']));
       $property = Schema::from(array_replace($library['flat'], $property->without('$ref')->all()));
       $types = $this->types($property, $pointer);
       $read = $property;
@@ -3364,7 +3696,7 @@ final class SchemaReader {
       }
       else {
         [$item] = $this->value($items, static::below($pointer, 'items'), $root, $item_types === [] ? [] : array_values(array_diff($item_types, ['null'])));
-        if ($item instanceof DataDefinition && is_string($items->get('title'))) {
+        if ($item instanceof DataDefinition && static::text($items->get('title')) !== NULL) {
           $item->setLabel($items->get('title'));
         }
       }
@@ -3396,6 +3728,11 @@ final class SchemaReader {
       elseif (!isset(self::FORMAT_PATTERNS[$format]) && !ConstraintKeywords::readsFormat($format)) {
         $this->note(static::below($pointer, 'format'), sprintf('Dropped: no constraint checks the "%s" format, an annotation.', $format));
       }
+    }
+    elseif ($this->authored && $leaf === NULL && $format !== NULL && $type !== 'string') {
+      // A document's format on another type is an annotation; an
+      // author's is a rule the key would not hold.
+      $this->note(static::below($pointer, 'format'), sprintf('Not read: the "%s" format is read on a string alone, and this key is %s.', $format, $not_null[0]));
     }
     $definition = DataDefinition::create($type);
     $foreign = [];
@@ -3434,7 +3771,11 @@ final class SchemaReader {
    *
    * A `type` or a `format` that says otherwise than the type's row is
    * noted and not read: the row stands. A `format` the row states none of
-   * is kept beside the type, as what the library says beyond the row is.
+   * is kept beside the type. What the library says beyond the row is read
+   * as the constraint a row of the table reads it as, where the site
+   * states none of its keywords (`maxLength: 254` a Length, an integer's
+   * range a Range), so it is served as those keywords; the rest is kept
+   * beside the type.
    *
    * @param \PortableSchema\Builder\Schema $site
    *   What the site says, its `$ref` left out.
@@ -3465,6 +3806,17 @@ final class SchemaReader {
     elseif (is_string($format) && !isset($row['format'])) {
       $extra['format'] = $format;
       $site = $site->without('format');
+    }
+    // Decision: see docs/decisions.md#authoring-takes-a-schema.
+    $unstated = array_diff_key(array_intersect_key($extra, ConstraintKeywords::keywords()), $site->all());
+    foreach (ConstraintKeywords::read($unstated, [$row['type']]) as $back) {
+      if ($back->constraint === NULL || $back->kept !== [] || $back->consumed === []) {
+        continue;
+      }
+      foreach ($back->consumed as $keyword) {
+        $site = $site->with($keyword, $extra[$keyword]);
+        unset($extra[$keyword]);
+      }
     }
     return [$site, $extra];
   }
@@ -3517,6 +3869,61 @@ final class SchemaReader {
       return Schema::from(['$ref' => $id, 'type' => array_values(array_unique([...$stated, 'null']))] + $schema->without('anyOf')->all());
     }
     return $schema;
+  }
+
+  /**
+   * Reads an author's `anyOf` or `oneOf` of one schema and null as it.
+   *
+   * The package writes a nullable enum or class, `?Size` or a nullable
+   * #[Of], as an `anyOf` of the schema and `{"type": "null"}`; any author
+   * may write the same, in either order, with `oneOf` too, and null as
+   * `{"const": null}`. It is that schema with null allowed: its keywords
+   * beside the schema's own, and `null` added to the type it states or
+   * its values say, so the key is served as an optional key is. A `$ref`
+   * is that reference, optional. A document read from anywhere else, and
+   * a schema whose own keywords say the same as the member's, is read as
+   * it is.
+   *
+   * Decision: see docs/decisions.md#authoring-takes-a-schema.
+   *
+   * @param \PortableSchema\Builder\Schema $property
+   *   The key's schema.
+   * @param string $pointer
+   *   Its pointer.
+   *
+   * @return array{0: \PortableSchema\Builder\Schema, 1: string}
+   *   The schema as read, and the pointer of the member it was read from;
+   *   the same where it is no such union.
+   */
+  protected function withNull(Schema $property, string $pointer): array {
+    if (!$this->authored || $property->has('type') || $property->has('$ref') || $property->has(ContractEmitter::EXTENSION)) {
+      return [$property, $pointer];
+    }
+    $null = static fn (mixed $member): bool => Schemas::isObjectSchema($member) && (Schemas::same($member->all(), ['type' => 'null']) || Schemas::same($member->all(), ['type' => ['null']]) || (array_keys($member->all()) === ['const'] && $member->get('const') === NULL));
+    foreach (['anyOf', 'oneOf'] as $keyword) {
+      $members = $property->get($keyword);
+      if (!is_array($members) || count($members) !== 2 || $property->has($keyword === 'anyOf' ? 'oneOf' : 'anyOf')) {
+        continue;
+      }
+      foreach ([[0, 1], [1, 0]] as [$one, $other]) {
+        $member = $members[$one] ?? NULL;
+        if (!Schemas::isObjectSchema($member) || !$null($members[$other] ?? NULL) || $null($member)) {
+          continue;
+        }
+        $outer = $property->without($keyword)->all();
+        if (array_intersect_key($outer, $member->all()) !== []) {
+          return [$property, $pointer];
+        }
+        $at = static::below($pointer, $keyword, (string) $one);
+        $types = $this->types($member, $at);
+        $read = Schema::from($outer + $member->all());
+        if ($types !== [] && !in_array('null', $types, TRUE)) {
+          $read = $read->with('type', [...$types, 'null']);
+        }
+        return [$read, $at];
+      }
+    }
+    return [$property, $pointer];
   }
 
   /**
@@ -3579,7 +3986,10 @@ final class SchemaReader {
     $kept = $this->keptSchema(Schema::from($keywords), $pointer);
     if ($kept->all() !== []) {
       $definition->addConstraint('JsonSchema', ['schema' => $this->withDefs($kept->all(), $root)]);
-      $this->note($pointer, sprintf('Kept as a JsonSchema constraint: %s, which no data type says.', implode(', ', array_keys($kept->all()))));
+      // An author's value held whole is checked whole, so nothing of it is
+      // lost: a map of one value type (`additionalProperties` alone, and
+      // Schema::map()) is read so, each name's value held to that schema.
+      $this->accept($pointer, sprintf('Kept as a JsonSchema constraint: %s, which no data type says.', implode(', ', array_keys($kept->all()))));
     }
     $this->examples($definition, $property);
     return $definition;
@@ -3662,6 +4072,12 @@ final class SchemaReader {
     if (is_string($widget) && $this->widgets !== NULL) {
       $plugin_id = $this->widgets->words()[$widget] ?? NULL;
       $plugin = $plugin_id === NULL ? NULL : $this->widgets->widget($plugin_id);
+      $own = ['radios', 'time', 'date', 'checkboxes', 'textarea'];
+      if ($this->authored && $plugin_id === NULL && !in_array($widget, $own, TRUE)) {
+        // A document's word for a widget this site lacks falls back; an
+        // author's names one the key would not be drawn with.
+        $this->note(static::below($pointer, PortableKeywords::UI, 'widget'), sprintf('Not read: no widget of this site is named "%s", so the key is drawn with the one its type is.', $widget));
+      }
     }
     foreach ($plugin instanceof SurfaceWidgetBase ? $plugin->publishedSettings() : [] as $setting) {
       $published[PortableUi::optionName($setting)] = $setting;
@@ -3710,6 +4126,11 @@ final class SchemaReader {
     }
     $read = ConstraintKeywords::read($table, $types);
     $taken = [];
+    // The messages of an author's checks read as a constraint's message.
+    $messaged = [];
+    // An author's checks read as constraints, laid beside the keywords'
+    // once every keyword is read.
+    $checked = [];
     foreach ($read as $back) {
       foreach ($back->consumed as $keyword) {
         $taken[$keyword] = TRUE;
@@ -3770,6 +4191,26 @@ final class SchemaReader {
             elseif ($check['constraint'] === References::CONSTRAINT && $why !== NULL) {
               $this->note(static::below($at, PortableKeywords::PROVIDER . $check['constraint']), 'Not read: ' . $why . ', so the constraint the server checks is known by its plugin alone.');
             }
+            elseif ($this->authored) {
+              // An author's check: the constraint it names, with its
+              // options, where the site has the plugin and the plugin
+              // takes them; else kept, which the server answers as a
+              // check it cannot run.
+              // Decision: see docs/decisions.md#authoring-takes-a-schema.
+              $why = $this->unconstrained($check);
+              if ($why === NULL) {
+                $options = $this->withMessage($check);
+                $back = new ReadBack($check['constraint'], $options, [$keyword]);
+                $checked[] = [$back, static::below($at, $check['id'])];
+                if ($check['message'] !== NULL && ($options['message'] ?? NULL) === $check['message']) {
+                  $messaged[PortableKeywords::CHECK_CODE . $check['id']] = TRUE;
+                }
+              }
+              else {
+                $foreign[PortableKeywords::CHECK][$check['id']] = $check['options'] === [] ? new \stdClass() : $check['options'];
+                $this->accept(static::below($at, $check['id']), 'Kept as a JsonSchema constraint: ' . $why . ', so the server answers it as a check it cannot run.');
+              }
+            }
             else {
               $this->note(static::below($at, PortableKeywords::PROVIDER . $check['constraint']), 'Not read: a constraint the server checks is known by its plugin alone.');
             }
@@ -3799,6 +4240,19 @@ final class SchemaReader {
           }
       }
     }
+    foreach ($checked as [$back, $at]) {
+      $read = $this->besideKeywords($read, $back, $property, $pointer, $at, $foreign);
+    }
+    if ($this->authored) {
+      // An author's message is read where its code is one constraint's:
+      // a check's, and a Regex's under `pattern` or `not`.
+      foreach (array_keys(Schemas::data($property->get(PortableKeywords::MESSAGES)) ?? []) as $code) {
+        $code = (string) $code;
+        if (!isset($messaged[$code]) && !in_array($code, ['pattern', 'not'], TRUE)) {
+          $this->note(static::below($pointer, PortableKeywords::MESSAGES, $code), 'Not read: a message is read for a check read as its constraint, and for a pattern; this code names neither.');
+        }
+      }
+    }
     $constraints = [];
     foreach (ConstraintKeywords::ordered($read, $property->all()) as $back) {
       if ($back->constraint !== NULL) {
@@ -3806,6 +4260,131 @@ final class SchemaReader {
       }
     }
     return $constraints;
+  }
+
+  /**
+   * Lays an author's check, read as its constraint, beside the keywords'.
+   *
+   * A definition holds one constraint of each plugin, so a check naming
+   * one a keyword already reads would replace the keyword's rule. Range,
+   * Length and Count are merged: the check's options laid over the
+   * keyword's, and where both bound the same side, the stricter bound
+   * kept (the larger `min`, the smaller `max`). Any other is the
+   * check's, and the keywords that read as the same plugin are kept in
+   * the key's JsonSchema constraint, which runs them: both rules hold.
+   * Either is noted and accepted.
+   *
+   * Decision: see docs/decisions.md#authoring-takes-a-schema.
+   *
+   * @param \Drupal\surface\Contract\Keywords\ReadBack[] $read
+   *   What the keywords read.
+   * @param \Drupal\surface\Contract\Keywords\ReadBack $back
+   *   The check, read as its constraint.
+   * @param \PortableSchema\Builder\Schema $property
+   *   The value's schema.
+   * @param string $pointer
+   *   Its pointer.
+   * @param string $at
+   *   The check's pointer.
+   * @param array $foreign
+   *   Collects the keywords kept for the JsonSchema constraint.
+   *
+   * @return \Drupal\surface\Contract\Keywords\ReadBack[]
+   *   What is read, the check among it.
+   */
+  protected function besideKeywords(array $read, ReadBack $back, Schema $property, string $pointer, string $at, array &$foreign): array {
+    foreach ($read as $i => $held) {
+      if ($held->constraint !== $back->constraint) {
+        continue;
+      }
+      if (in_array($back->constraint, ['Range', 'Length', 'Count'], TRUE)) {
+        $options = $held->options;
+        $said = [];
+        foreach ($back->options as $option => $value) {
+          $mine = $options[$option] ?? NULL;
+          if (in_array($option, ['min', 'max'], TRUE) && is_numeric($mine) && is_numeric($value) && $mine != $value) {
+            $value = $option === 'min' ? max($mine, $value) : min($mine, $value);
+            $said[] = sprintf('%s %s is kept, the stricter of the keyword\'s %s and the check\'s %s', $option, json_encode($value), json_encode($mine), json_encode($back->options[$option]));
+          }
+          $options[$option] = $value;
+        }
+        $read[$i] = new ReadBack($held->constraint, $options, [...$held->consumed, ...$back->consumed], $held->kept, $held->note);
+        $this->accept($at, sprintf('Merged with the %s the keywords say%s.', $held->constraint, $said === [] ? '' : ': ' . implode('; ', $said)));
+        return $read;
+      }
+      foreach ($held->consumed as $keyword) {
+        $foreign[$keyword] = $this->kept($property->get($keyword), static::below($pointer, $keyword));
+      }
+      $read[$i] = $back;
+      $this->accept($at, sprintf('Read as the %s constraint; %s, which says one too, is kept in the key\'s JsonSchema constraint, so both hold.', $held->constraint, implode(', ', $held->consumed)));
+      return $read;
+    }
+    $read[] = $back;
+    return $read;
+  }
+
+  /**
+   * Says why an author's check is not read as its constraint, if it is.
+   *
+   * A check is read as the constraint its name says when the name is
+   * `drupal:<plugin id>`, the site has that plugin, and the plugin takes
+   * the options as given.
+   *
+   * @param array{id: string, constraint: string, options: array, message: ?string} $check
+   *   The check, as PortableKeywords::checks() read it.
+   *
+   * @return string|null
+   *   Why not, or NULL where it is read.
+   */
+  protected function unconstrained(array $check): ?string {
+    if (!str_starts_with($check['id'], PortableKeywords::PROVIDER)) {
+      return sprintf('%s is no check of this site, whose checks are named %s<plugin id>', $check['id'], PortableKeywords::PROVIDER);
+    }
+    $manager = static::constraintManager();
+    if ($manager === NULL || !$manager->hasDefinition($check['constraint'])) {
+      return sprintf('the site has no constraint %s', $check['constraint']);
+    }
+    try {
+      $manager->create($check['constraint'], $this->withMessage($check));
+    }
+    catch (\Throwable $refused) {
+      return sprintf('the constraint %s refuses these options (%s)', $check['constraint'], rtrim($refused->getMessage(), '.'));
+    }
+    return NULL;
+  }
+
+  /**
+   * Gets the site's constraint plugins, which an author's check names.
+   *
+   * @return \Drupal\Core\Validation\ConstraintManager|null
+   *   The manager, or NULL with no container.
+   */
+  protected static function constraintManager(): ?ConstraintManager {
+    $manager = \Drupal::hasService('validation.constraint') ? \Drupal::service('validation.constraint') : NULL;
+    return $manager instanceof ConstraintManager ? $manager : NULL;
+  }
+
+  /**
+   * Gives an author's check's options its message, where it has one.
+   *
+   * The text under `check.<name>` in `x-portable-messages` is the
+   * constraint's `message`, where the constraint has one and the options
+   * name none.
+   *
+   * @param array{id: string, constraint: string, options: array, message: ?string} $check
+   *   The check, as PortableKeywords::checks() read it.
+   *
+   * @return array
+   *   Its options.
+   */
+  protected function withMessage(array $check): array {
+    $options = $check['options'];
+    $manager = static::constraintManager();
+    $class = $manager !== NULL && $manager->hasDefinition($check['constraint']) ? ($manager->getDefinition($check['constraint'])['class'] ?? NULL) : NULL;
+    if ($check['message'] !== NULL && !isset($options['message']) && is_string($class) && property_exists($class, 'message')) {
+      $options['message'] = $check['message'];
+    }
+    return $options;
   }
 
   /**
@@ -3838,8 +4417,8 @@ final class SchemaReader {
           continue;
         }
         $values[] = $choice->get('const');
-        $labels[] = is_string($choice->get('title')) ? $choice->get('title') : (string) $choice->get('const');
-        $descriptions[] = is_string($choice->get('description')) ? $choice->get('description') : NULL;
+        $labels[] = static::text($choice->get('title')) ?? (string) $choice->get('const');
+        $descriptions[] = static::text($choice->get('description'));
       }
     }
     elseif ($keyword === 'enum') {
@@ -3878,9 +4457,9 @@ final class SchemaReader {
     }
     $options = [
       'choices' => $values,
-      'labels' => array_combine(array_map('strval', $values), array_map(static fn (?string $label, mixed $value): string => $label ?? (string) $value, $labels, $values)),
+      'labels' => array_combine(array_map('strval', $values), array_map(static fn (string|\Stringable|null $label, mixed $value): string|\Stringable => $label ?? (string) $value, $labels, $values)),
     ];
-    $described = array_filter(array_combine(array_map('strval', $values), $descriptions), static fn (?string $description): bool => $description !== NULL);
+    $described = array_filter(array_combine(array_map('strval', $values), $descriptions), static fn (string|\Stringable|null $description): bool => $description !== NULL);
     if ($described !== []) {
       $options['descriptions'] = $described;
     }
@@ -3896,12 +4475,12 @@ final class SchemaReader {
    *   The frame's properties.
    * @param string $pointer
    *   The frame's pointer.
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint.
    * @param array $left
    *   Collects what is left over for the frame's JsonSchema constraint.
    */
-  protected function rules(array $conditionals, array $properties, string $pointer, ResourceBlueprint $inputs, array &$left): void {
+  protected function rules(array $conditionals, array $properties, string $pointer, BlueprintAdditionsInterface $inputs, array &$left): void {
     // A key a rule rules out is required wherever no rule does: the
     // emitter states that as one more conditional, and guards each rule
     // requiring it with the same test.
@@ -3963,13 +4542,13 @@ final class SchemaReader {
   /**
    * Marks a declared key required.
    *
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint.
    * @param string $key
    *   The key.
    */
-  protected function requireKey(ResourceBlueprint $inputs, string $key): void {
-    $definition = $inputs->definitionOf($key);
+  protected function requireKey(BlueprintAdditionsInterface $inputs, string $key): void {
+    $definition = $this->framing($inputs, 'a rule')->definitionOf($key);
     if ($definition instanceof DataDefinition) {
       $definition->setRequired(TRUE);
     }
@@ -4416,7 +4995,7 @@ final class SchemaReader {
   /**
    * Registers the structure an object of the document is, to be built.
    *
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint reading the frame that holds it.
    * @param string $id
    *   Its id.
@@ -4429,12 +5008,12 @@ final class SchemaReader {
    * @return string
    *   The name it is built by.
    */
-  protected function structureAt(ResourceBlueprint $inputs, string $id, array $document, string $pointer): string {
+  protected function structureAt(BlueprintAdditionsInterface $inputs, string $id, array $document, string $pointer): string {
     $this->frames[] = $pointer;
     if ($this->hashed === NULL || $this->hashed[0] !== $document) {
       $this->hashed = [$document, ResourceBlueprint::documentHash($document)];
     }
-    return $inputs->readStructure($id, $document, $pointer, $this->hashed[1]);
+    return $this->framing($inputs, 'a structure')->readStructure($id, $document, $pointer, $this->hashed[1], $this->authored);
   }
 
 }

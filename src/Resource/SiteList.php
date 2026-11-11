@@ -6,6 +6,7 @@ namespace Drupal\surface\Resource;
 
 use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\Cache\RefinableCacheableDependencyTrait;
+use PortableSchema\Builder\Schema;
 
 /**
  * The things a site has, one entry each: what a SiteListInterface answers.
@@ -47,14 +48,14 @@ final class SiteList implements RefinableCacheableDependencyInterface {
   /**
    * The entries, by id, in order.
    *
-   * @var array<string, array{label: string|\Stringable, default: mixed, locked: bool, schema: array|null, structure: string|null}>
+   * @var array<string, array{label: string|\Stringable, default: mixed, locked: bool, schema: \PortableSchema\Builder\Schema|null, structure: string|null}>
    */
   protected array $entries = [];
 
   /**
    * The defs every entry's schema may refer to, by name.
    *
-   * @var array<string, array>
+   * @var array<string, \PortableSchema\Builder\Schema>
    */
   protected array $defs = [];
 
@@ -95,8 +96,9 @@ final class SiteList implements RefinableCacheableDependencyInterface {
    * @param bool $locked
    *   For a key: whether it is shown and held to what is stored, and not
    *   changed.
-   * @param array|null $schema
-   *   For a variant: the JSON Schema of its keys, an object.
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   For a variant: the JSON Schema of its keys, an object; one held as
+   *   an array is handed in as Schema::from($array).
    * @param class-string<\Drupal\surface\Resource\DefinesInputsInterface>|string|null $structure
    *   For a variant: the structure's class, discovered as any is, or a
    *   derived one's id, built as declared.
@@ -104,10 +106,10 @@ final class SiteList implements RefinableCacheableDependencyInterface {
    * @return $this
    *
    * @throws \InvalidArgumentException
-   *   When the id is empty or was added already, or the entry names both
-   *   a schema and a structure.
+   *   When the id is empty or was added already, the entry names both a
+   *   schema and a structure, or its schema is a boolean one.
    */
-  public function add(string $id, string|\Stringable $label, mixed $default = NULL, bool $locked = FALSE, ?array $schema = NULL, ?string $structure = NULL): static {
+  public function add(string $id, string|\Stringable $label, mixed $default = NULL, bool $locked = FALSE, ?Schema $schema = NULL, ?string $structure = NULL): static {
     if ($id === '') {
       throw new \InvalidArgumentException('An empty id cannot name an entry: it becomes a key, or the value that chooses a variant.');
     }
@@ -116,6 +118,9 @@ final class SiteList implements RefinableCacheableDependencyInterface {
     }
     if ($schema !== NULL && $structure !== NULL) {
       throw new \InvalidArgumentException(sprintf('The "%s" entry names both a schema and a structure: a variant is one of them.', $id));
+    }
+    if ($schema !== NULL) {
+      self::assertNotBoolean($schema, sprintf('SiteList::add("%s")', $id));
     }
     $this->entries[$id] = [
       'label' => $label,
@@ -135,20 +140,43 @@ final class SiteList implements RefinableCacheableDependencyInterface {
    * is that reference alone is the def; any other is read with the defs
    * beside it.
    *
-   * @param array<string, array> $defs
-   *   The defs, by name: JSON Schema, decoded with objects as arrays.
+   * @param array<string, \PortableSchema\Builder\Schema> $defs
+   *   The defs, by name.
    *
    * @return $this
+   *
+   * @throws \InvalidArgumentException
+   *   For a def that is a boolean schema.
    */
   public function addDefs(array $defs): static {
+    foreach ($defs as $name => $def) {
+      self::assertNotBoolean($def, sprintf('SiteList::addDefs() for the def "%s"', $name));
+    }
     $this->defs = $defs + $this->defs;
     return $this;
   }
 
   /**
+   * Refuses a boolean schema, as addSchema() does.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
+   * @param string $what
+   *   Who was handed it, for the message.
+   *
+   * @throws \InvalidArgumentException
+   *   For `true` or `false`, which hold no keys.
+   */
+  private static function assertNotBoolean(Schema $schema, string $what): void {
+    if ($schema->isBoolean()) {
+      throw new \InvalidArgumentException(sprintf('%s was handed the boolean schema %s, which says only whether a value is allowed: a variant is the schema of what it holds, Schema::object() with its properties and the like.', $what, $schema->toDocument() === TRUE ? 'true' : 'false'));
+    }
+  }
+
+  /**
    * Gets the defs every entry's schema may refer to.
    *
-   * @return array<string, array>
+   * @return array<string, \PortableSchema\Builder\Schema>
    *   The defs, by name.
    */
   public function defs(): array {
@@ -158,7 +186,7 @@ final class SiteList implements RefinableCacheableDependencyInterface {
   /**
    * Gets the entries.
    *
-   * @return array<string, array{label: string|\Stringable, default: mixed, locked: bool, schema: array|null, structure: string|null}>
+   * @return array<string, array{label: string|\Stringable, default: mixed, locked: bool, schema: \PortableSchema\Builder\Schema|null, structure: string|null}>
    *   Each entry's label, starting value (NULL for none), whether it is
    *   locked, and its schema or the class of its structure (NULL for
    *   none), by id, in order.

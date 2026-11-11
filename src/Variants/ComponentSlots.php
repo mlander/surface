@@ -9,6 +9,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\surface\Resource\EntrySchemasInterface;
 use Drupal\surface\Resource\SiteList;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -95,7 +96,7 @@ final class ComponentSlots implements EntrySchemasInterface, ContainerInjectionI
   /**
    * The defs written so far, by a hash of what they follow from.
    *
-   * @var array<string, array<string, array>>
+   * @var array<string, array<string, \PortableSchema\Builder\Schema>>
    */
   private static array $written = [];
 
@@ -135,8 +136,8 @@ final class ComponentSlots implements EntrySchemasInterface, ContainerInjectionI
   /**
    * {@inheritdoc}
    */
-  public function entrySchema(string $id): array {
-    return ['$ref' => '#/$defs/' . self::slotsDef($id, 1)];
+  public function entrySchema(string $id): Schema {
+    return Schema::of('#/$defs/' . self::slotsDef($id, 1));
   }
 
   /**
@@ -184,14 +185,14 @@ final class ComponentSlots implements EntrySchemasInterface, ContainerInjectionI
    * @param int $depth
    *   The depth its slots are at: 1 for the component a resource names.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The document: a reference to the def of its slots, and the defs.
    */
-  public function document(string $id, int $depth = 1): array {
+  public function document(string $id, int $depth = 1): Schema {
     $defs = [];
-    $document = ['$ref' => '#/$defs/' . $this->slots($id, $depth, $defs)];
+    $document = Schema::of('#/$defs/' . $this->slots($id, $depth, $defs));
     ksort($defs);
-    return $document + ['$defs' => $defs];
+    return $document->with('$defs', $defs);
   }
 
   /**
@@ -265,7 +266,7 @@ final class ComponentSlots implements EntrySchemasInterface, ContainerInjectionI
    *   The component's id.
    * @param int $depth
    *   The depth its slots are at.
-   * @param array<string, array> $defs
+   * @param array<string, \PortableSchema\Builder\Schema> $defs
    *   The defs, by name.
    *
    * @return string
@@ -276,15 +277,18 @@ final class ComponentSlots implements EntrySchemasInterface, ContainerInjectionI
     if (isset($defs[$name])) {
       return $name;
     }
-    $defs[$name] = [];
-    $properties = [];
+    $defs[$name] = Schema::any();
+    $def = Schema::any()->with('type', 'object')->with('properties', []);
     foreach ($this->metadata($id) as $slot => $metadata) {
-      $properties[$slot] = array_filter([
-        'title' => is_string($metadata['title'] ?? NULL) ? $metadata['title'] : NULL,
-        'description' => is_string($metadata['description'] ?? NULL) ? $metadata['description'] : NULL,
-      ]) + ['$ref' => '#/$defs/' . $this->slot($id, $slot, $metadata, $depth, $defs)];
+      $property = Schema::any();
+      foreach (['title', 'description'] as $word) {
+        if (is_string($metadata[$word] ?? NULL) && $metadata[$word] !== '' && $metadata[$word] !== '0') {
+          $property = $property->with($word, $metadata[$word]);
+        }
+      }
+      $def = $def->property($slot, $property->with('$ref', '#/$defs/' . $this->slot($id, $slot, $metadata, $depth, $defs)));
     }
-    $defs[$name] = ['type' => 'object', 'properties' => $properties, 'additionalProperties' => FALSE];
+    $defs[$name] = $def->with('additionalProperties', FALSE);
     return $name;
   }
 
@@ -299,7 +303,7 @@ final class ComponentSlots implements EntrySchemasInterface, ContainerInjectionI
    *   The slot's metadata.
    * @param int $depth
    *   Its depth.
-   * @param array<string, array> $defs
+   * @param array<string, \PortableSchema\Builder\Schema> $defs
    *   The defs, by name.
    *
    * @return string
@@ -318,48 +322,41 @@ final class ComponentSlots implements EntrySchemasInterface, ContainerInjectionI
       'components' => $words['components'],
     ];
     $properties = [
-      'kind' => [
-        'title' => $words['holds'],
-        'type' => 'string',
-        'oneOf' => array_map(static fn (string $kind): array => ['const' => $kind, 'title' => $labels[$kind]], $kinds),
-        'default' => 'text',
-      ],
-      'text' => [
-        'title' => $words['text'],
-        'type' => ['string', 'null'],
-        'x-portable-ui' => ['widget' => 'textarea'],
-      ],
+      'kind' => Schema::any()
+        ->title($words['holds'])
+        ->with('type', 'string')
+        ->with('oneOf', array_map(static fn (string $kind): Schema => Schema::any()->with('const', $kind)->title($labels[$kind]), $kinds))
+        ->default('text'),
+      'text' => Schema::any()
+        ->title($words['text'])
+        ->with('type', ['string', 'null'])
+        ->ui(widget: 'textarea'),
     ];
     if ($kinds !== ['text']) {
       $nested = $this->nested($metadata, $depth, $defs);
-      $properties['component'] = ['title' => $words['component'], '$ref' => '#/$defs/' . $nested];
+      $properties['component'] = Schema::any()->title($words['component'])->with('$ref', '#/$defs/' . $nested);
       if (in_array('components', $kinds, TRUE)) {
-        $properties['components'] = [
-          'title' => $words['components'],
-          'type' => 'array',
-          'items' => ['$ref' => '#/$defs/' . $nested],
-        ];
+        $components = Schema::any()->title($words['components'])->with('type', 'array')->items(Schema::of('#/$defs/' . $nested));
         foreach (['minItems', 'maxItems'] as $bound) {
           if (is_int($metadata[$bound] ?? NULL)) {
-            $properties['components'][$bound] = $metadata[$bound];
+            $components = $components->with($bound, $metadata[$bound]);
           }
         }
+        $properties['components'] = $components;
       }
     }
     // Each kind's key applies while the slot holds that kind.
     $rules = [];
     foreach (array_slice(array_keys($properties), 1) as $kind) {
-      $rules[] = [
-        'if' => ['not' => ['properties' => ['kind' => ['const' => $kind]], 'required' => ['kind']]],
-        'then' => ['properties' => [$kind => FALSE]],
-      ];
+      $rules[] = Schema::any()
+        ->with('if', Schema::any()->with('not', Schema::any()->property('kind', Schema::any()->with('const', $kind))->required('kind')))
+        ->with('then', Schema::any()->property($kind, FALSE));
     }
-    $defs[$name] = [
-      'type' => 'object',
-      'properties' => $properties,
-      'additionalProperties' => FALSE,
-      'allOf' => $rules,
-    ];
+    $defs[$name] = Schema::any()
+      ->with('type', 'object')
+      ->properties($properties)
+      ->with('additionalProperties', FALSE)
+      ->with('allOf', $rules);
     return $name;
   }
 
@@ -373,7 +370,7 @@ final class ComponentSlots implements EntrySchemasInterface, ContainerInjectionI
    *   The slot's metadata.
    * @param int $depth
    *   The slot's depth.
-   * @param array<string, array> $defs
+   * @param array<string, \PortableSchema\Builder\Schema> $defs
    *   The defs, by name.
    *
    * @return string
@@ -390,36 +387,31 @@ final class ComponentSlots implements EntrySchemasInterface, ContainerInjectionI
     if (isset($defs[$name])) {
       return $name;
     }
-    $defs[$name] = [];
+    $defs[$name] = Schema::any();
     $choices = [];
     $props = [];
     $slots = [];
     foreach ($this->expected($metadata) as $id) {
       $component = $this->definitions()[$id];
-      $choices[] = ['const' => $id, 'title' => (string) ($component['name'] ?? $id)];
+      $choices[] = Schema::any()->with('const', $id)->title((string) ($component['name'] ?? $id));
       $props_name = 'component.props.' . $id;
       $defs[$props_name] ??= ComponentProps::props($component['props'] ?? []);
       $props[$id] = '#/$defs/' . $props_name;
       $slots[$id] = '#/$defs/' . $this->slots($id, $depth + 1, $defs);
     }
-    $defs[$name] = [
-      'type' => 'object',
-      'properties' => [
-        'component' => ['title' => $this->words()['component'], 'type' => 'string', 'oneOf' => $choices],
-        'props' => [
-          'title' => $this->words()['props'],
-          'anyOf' => array_map(static fn (string $reference): array => ['$ref' => $reference], array_values($props)),
-          'x-surface' => ['by' => 'component', 'variants' => $props],
-        ],
-        'slots' => [
-          'title' => $this->words()['slots'],
-          'anyOf' => array_map(static fn (string $reference): array => ['$ref' => $reference], array_values($slots)),
-          'x-surface' => ['by' => 'component', 'variants' => $slots],
-        ],
-      ],
-      'required' => ['component'],
-      'additionalProperties' => FALSE,
-    ];
+    $defs[$name] = Schema::any()
+      ->with('type', 'object')
+      ->property('component', Schema::any()->title($this->words()['component'])->with('type', 'string')->with('oneOf', $choices))
+      ->property('props', Schema::any()
+        ->title($this->words()['props'])
+        ->with('anyOf', array_map(Schema::of(...), array_values($props)))
+        ->annotation('x-surface', ['by' => 'component', 'variants' => $props]))
+      ->property('slots', Schema::any()
+        ->title($this->words()['slots'])
+        ->with('anyOf', array_map(Schema::of(...), array_values($slots)))
+        ->annotation('x-surface', ['by' => 'component', 'variants' => $slots]))
+      ->required('component')
+      ->with('additionalProperties', FALSE);
     return $name;
   }
 

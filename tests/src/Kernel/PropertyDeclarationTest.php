@@ -57,8 +57,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * `any`, required and not; #[Computed] with `when:`, never required by
  * inference; #[MixIn] with `reads:`; #[Output] of a value and of a list
  * whose item is a plain class; a #[RefinesInput] method beside the
- * properties; and a block that is its own structure, #[UsesStructure]
- * with no argument.
+ * properties; a block that is its own structure, #[UsesStructure]
+ * with no argument; and keys spelled with the Portable Schema package's
+ * #[Of], #[Schema], #[Check], #[Ui] and #[Required], declared with
+ * addSchema() (SchemaAttributesTest holds that spelling's own rules).
  *
  * The reader refuses what the verbs cannot know, each naming the class,
  * the property and the fix; what a verb refuses, the verb refuses.
@@ -96,6 +98,7 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
     'property_test.computed',
     'property_test.refined',
     'property_test.note',
+    'property_test.portable',
   ];
 
   /**

@@ -8,8 +8,10 @@ use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Pipeline\PipelineGuard;
 use Drupal\surface\Resource\BlueprintInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Reads one entry of a provider's variants when a door reads it.
@@ -84,10 +86,12 @@ final class SiteEntries {
   public function document(string $from, string $value): array {
     // The build names only a provider implementing EntrySchemasInterface.
     $provider = $this->classResolver->getInstanceFromDefinition($from);
-    $schema = PipelineGuard::onBehalf(PipelineGuard::PROVIDER, $from, 'entrySchema', static fn (): array => $provider->entrySchema($value));
+    // A document is read, hashed and registered as its array.
+    $answered = PipelineGuard::onBehalf(PipelineGuard::PROVIDER, $from, 'entrySchema', static fn (): ?Schema => $provider->entrySchema($value));
+    $schema = $answered === NULL ? [] : (array) Schemas::arrayed($answered);
     $key = $from . ':' . $this->languageManager->getCurrentLanguage()->getId() . ':' . $this->languageManager->getConfigOverrideLanguage()->getId();
     if (!array_key_exists($key, self::$shared)) {
-      $defs = PipelineGuard::onBehalf(PipelineGuard::PROVIDER, $from, 'entryDefs', static fn (): array => $provider->entryDefs());
+      $defs = array_map(static fn (Schema $def): array|\stdClass|bool => Schemas::arrayed($def), PipelineGuard::onBehalf(PipelineGuard::PROVIDER, $from, 'entryDefs', static fn (): array => $provider->entryDefs()));
       $root = $defs === [] ? NULL : SchemaReader::prepared(['$defs' => $defs]);
       self::$shared[$key] = $root === NULL ? NULL : [$root, ResourceBlueprint::documentHash($root), $defs];
     }

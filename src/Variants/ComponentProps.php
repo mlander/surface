@@ -7,6 +7,7 @@ namespace Drupal\surface\Variants;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\surface\Resource\EntrySchemasInterface;
 use Drupal\surface\Resource\SiteList;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -60,7 +61,7 @@ final class ComponentProps implements EntrySchemasInterface, ContainerInjectionI
   /**
    * {@inheritdoc}
    */
-  public function entrySchema(string $id): array {
+  public function entrySchema(string $id): Schema {
     return self::props($this->components->all()[$id]['props'] ?? []);
   }
 
@@ -81,26 +82,28 @@ final class ComponentProps implements EntrySchemasInterface, ContainerInjectionI
    * @param array $props
    *   The props as the component declares them.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The schema.
    */
-  public static function props(array $props): array {
-    $props += ['type' => 'object', 'properties' => []];
-    foreach ($props['properties'] as $name => $prop) {
-      $types = (array) ($prop['type'] ?? []);
+  public static function props(array $props): Schema {
+    $schema = Schema::from($props + ['type' => 'object', 'properties' => []]);
+    $properties = $schema->get('properties');
+    foreach (is_array($properties) ? $properties : [] as $name => $prop) {
+      $types = $prop instanceof Schema ? (array) ($prop->get('type') ?? []) : [];
       $json = array_values(array_intersect($types, self::JSON_TYPES));
       if (count($json) === count($types)) {
         continue;
       }
       if ($json === []) {
-        unset($props['properties'][$name]);
-        $props['required'] = array_values(array_diff($props['required'] ?? [], [$name]));
+        unset($properties[$name]);
+        $required = $schema->get('required');
+        $schema = $schema->with('properties', $properties)->with('required', array_values(array_diff(is_array($required) ? $required : [], [$name])));
         continue;
       }
-      $props['properties'][$name]['type'] = $json;
+      $properties[$name] = $prop->with('type', $json);
+      $schema = $schema->with('properties', $properties);
     }
-    $props['additionalProperties'] = FALSE;
-    return $props;
+    return $schema->with('additionalProperties', FALSE);
   }
 
 }

@@ -806,7 +806,9 @@ final class Validating {
     // label beside it.
     $choices = [];
     foreach ($set->options as $value => $label) {
-      $choices[] = Named::value($label, (string) $value);
+      // A Choice of numbers or booleans is labeled by its values: each is
+      // named as JSON writes it.
+      $choices[] = Named::value(is_string($label) || $label instanceof \Stringable ? $label : (string) json_encode($label, JSON_PRESERVE_ZERO_FRACTION), (string) $value);
     }
     $shown = array_slice($choices, 0, SurfacePipeline::CHOICES_SHOWN);
     $more = count($choices) - count($shown);

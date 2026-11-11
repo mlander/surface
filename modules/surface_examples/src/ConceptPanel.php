@@ -19,6 +19,7 @@ use Drupal\Core\Theme\ComponentPluginManager;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\SchemaReader;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Contract\Choices;
 use Drupal\surface\Contract\SiteListBudget;
 use Drupal\surface\SurfaceInterface;
@@ -1001,7 +1002,8 @@ final class ConceptPanel {
    */
   protected function schemaRead(SurfaceInterface $declared, array $values, OperationRoute $served): array {
     $component = is_string($values['component'] ?? NULL) && $this->components->hasDefinition($values['component']) ? $values['component'] : (string) $declared->getDefault('component');
-    $props = ComponentProps::props($this->components->getDefinition($component)['props'] ?? []);
+    $props = Schemas::decoded(ComponentProps::props($this->components->getDefinition($component)['props'] ?? []));
+    assert(is_array($props));
     $full = $this->full($served);
     $state = $this->componentsListed();
     // Past the site list limit, the full schema holds no def per component:

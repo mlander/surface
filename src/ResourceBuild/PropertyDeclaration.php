@@ -32,9 +32,20 @@ use Drupal\surface\Resource\Attribute\Port;
 use Drupal\surface\Resource\Attribute\Rule;
 use Drupal\surface\Resource\Attribute\Setting;
 use Drupal\surface\Resource\Attribute\Widget;
+use Drupal\surface\Resource\Attribute\Shape;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\ShapeInterface;
+use Drupal\surface\Contract\LeafTypes;
+use PortableSchema\Builder\Attribute\Check;
+use PortableSchema\Builder\Attribute\Document;
+use PortableSchema\Builder\Attribute\Of;
+use PortableSchema\Builder\Attribute\Required;
+use PortableSchema\Builder\Attribute\Schema as SchemaAttribute;
+use PortableSchema\Builder\Attribute\Ui;
+use PortableSchema\Builder\ClassReader;
+use PortableSchema\Builder\Keywords;
+use PortableSchema\Builder\Schema;
 
 /**
  * Reads a class's properties into a blueprint.
@@ -55,13 +66,34 @@ use Drupal\surface\Resource\ShapeInterface;
  * the owner's declaration again, and this reader with it.
  *
  * The properties read are those that are not static and are public or
- * carry an attribute of the Attribute namespace, so a plugin class that
- * is its own structure keeps its protected properties to itself. The
- * order is: every property in declaration order, each one's describe()
- * right after it, then each #[MixIn] on the class, then each #[Rule],
- * in the order of the properties carrying them.
+ * carry an attribute of the Attribute namespace or of the Portable Schema
+ * package's, so a plugin class that is its own structure keeps its
+ * protected properties to itself. This is the host's reflection rule,
+ * not ClassReader's, which reads public properties alone: a protected
+ * property spelled with the package's attributes is read. A static
+ * property carrying one of the package's attributes is refused, since
+ * nothing would read it. The order is: every property in
+ * declaration order, each one's describe() right after it, then each
+ * #[MixIn] on the class, then each #[Rule], in the order of the
+ * properties carrying them.
+ *
+ * A property may be spelled with the Portable Schema package's
+ * attributes instead: #[Of], #[Schema], #[Check], #[Ui] and #[Required].
+ * Its schema is built by the package's rules (ClassReader's: the PHP type
+ * the `type`, `?T` null beside it, the initializer the `default`, #[Of]
+ * the `$ref`, #[Schema] keywords, #[Check] checks, #[Ui] hints;
+ * required with no default and no null, or with #[Required]), and
+ * declared with addSchema(). The package's attributes are a spelling of
+ * #[Input], so they combine with what #[Input] combines with and no more:
+ * #[Examples] and #[Rule]; another kind (#[Output], #[Port], #[Computed],
+ * #[Attach] and the rest) is refused as it is beside #[Input]. #[Input],
+ * #[Constraint], #[Widget], #[Describe] and #[Setting] say what the
+ * package's spelling says, and are refused beside it. A Surface shape's
+ * class, as the type or in #[Of], is that shape. On the class, a #[Ui]
+ * declares groups as #[Group] does, one of the two per class.
  *
  * Decision: see docs/decisions.md#a-class-may-declare-its-keys-as-properties.
+ * Decision: see docs/decisions.md#authoring-takes-a-schema.
  *
  * @internal
  */
@@ -81,6 +113,44 @@ final class PropertyDeclaration {
    * The namespace of the attributes a property declares itself with.
    */
   private const NAMESPACE = 'Drupal\\surface\\Resource\\Attribute\\';
+
+  /**
+   * The namespace of the Portable Schema package's attributes.
+   */
+  private const PORTABLE_NAMESPACE = 'PortableSchema\\Builder\\Attribute\\';
+
+  /**
+   * The package's attributes that spell a property as a schema.
+   */
+  private const PORTABLE = [
+    Of::class,
+    SchemaAttribute::class,
+    Check::class,
+    Ui::class,
+    Required::class,
+  ];
+
+  /**
+   * Surface's attributes that say what the package's spelling says.
+   */
+  private const SPELLED_TWICE = [
+    Input::class,
+    Constraint::class,
+    Widget::class,
+    Describe::class,
+    Setting::class,
+  ];
+
+  /**
+   * The JSON type each PHP property type stands for, as ClassReader reads it.
+   */
+  private const JSON_TYPES = [
+    'string' => 'string',
+    'int' => 'integer',
+    'float' => 'number',
+    'bool' => 'boolean',
+    'array' => 'array',
+  ];
 
   /**
    * The attributes that each say what kind of member a property is.
@@ -146,6 +216,18 @@ final class PropertyDeclaration {
     $rules = [];
     foreach (self::properties($reflection) as $property) {
       self::assertOneKind($property);
+      if (self::isPortable($property)) {
+        self::assertOneSpelling($property);
+        if ($outputs) {
+          continue;
+        }
+        $key = $property->getName();
+        self::declareSchema($property, $blueprint, $groups);
+        foreach ($property->getAttributes(Rule::class) as $rule) {
+          $rules[] = [$key, $rule->newInstance()];
+        }
+        continue;
+      }
       $is_output = $property->getAttributes(Output::class) !== [];
       if ($is_output && !$reflection->implementsInterface(DefinesOutputsInterface::class)) {
         throw new \LogicException(sprintf('%s marks the property $%s #[Output], but the class does not implement %s, so nothing reads its outputs. Implement it: the trait answers defineOutputs().', $class, $property->getName(), DefinesOutputsInterface::class));
@@ -184,18 +266,26 @@ final class PropertyDeclaration {
    *
    * @return \ReflectionProperty[]
    *   Each property that is not static and is public or carries an
-   *   attribute of the Attribute namespace.
+   *   attribute of the Attribute namespace or of the package's.
+   *
+   * @throws \LogicException
+   *   For a static property carrying one of the package's attributes.
    */
   private static function properties(\ReflectionClass $class): array {
     return array_values(array_filter($class->getProperties(), static function (\ReflectionProperty $property): bool {
       if ($property->isStatic()) {
+        foreach ($property->getAttributes() as $attribute) {
+          if (in_array($attribute->getName(), self::PORTABLE, TRUE)) {
+            throw new \LogicException(sprintf('%s::$%s is static and carries #[%s]: a key is a property of each instance, and a static one is not read. Make it an instance property, or drop the attribute.', $property->getDeclaringClass()->getName(), $property->getName(), substr($attribute->getName(), strlen(self::PORTABLE_NAMESPACE))));
+          }
+        }
         return FALSE;
       }
       if ($property->isPublic()) {
         return TRUE;
       }
       foreach ($property->getAttributes() as $attribute) {
-        if (str_starts_with($attribute->getName(), self::NAMESPACE)) {
+        if (str_starts_with($attribute->getName(), self::NAMESPACE) || str_starts_with($attribute->getName(), self::PORTABLE_NAMESPACE)) {
           return TRUE;
         }
       }
@@ -204,11 +294,262 @@ final class PropertyDeclaration {
   }
 
   /**
+   * Answers whether a property is spelled with the package's attributes.
+   *
+   * @param \ReflectionProperty $property
+   *   The property.
+   *
+   * @return bool
+   *   TRUE when it carries #[Of], #[Schema], #[Check], #[Ui] or
+   *   #[Required].
+   */
+  private static function isPortable(\ReflectionProperty $property): bool {
+    foreach ($property->getAttributes() as $attribute) {
+      if (in_array($attribute->getName(), self::PORTABLE, TRUE)) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Refuses a property spelled both ways.
+   *
+   * Another kind beside the package's spelling is assertOneKind()'s, as
+   * it is beside #[Input].
+   *
+   * @param \ReflectionProperty $property
+   *   A property spelled with the package's attributes.
+   *
+   * @throws \LogicException
+   *   Naming the property, one attribute of each spelling, and the fix.
+   */
+  private static function assertOneSpelling(\ReflectionProperty $property): void {
+    $portable = NULL;
+    foreach ($property->getAttributes() as $attribute) {
+      if (in_array($attribute->getName(), self::PORTABLE, TRUE)) {
+        $portable ??= '#[' . substr($attribute->getName(), strlen(self::PORTABLE_NAMESPACE)) . ']';
+      }
+    }
+    foreach ($property->getAttributes() as $attribute) {
+      $name = $attribute->getName();
+      if (in_array($name, self::SPELLED_TWICE, TRUE)) {
+        throw new \LogicException(sprintf('%s::$%s carries %s, the Portable Schema package\'s spelling of a key, and #[%s], Surface\'s. A key is spelled one way: with #[Of], #[Schema], #[Check], #[Ui] and #[Required], or with #[Input], #[Constraint], #[Widget], #[Setting] and #[Describe].', $property->getDeclaringClass()->getName(), $property->getName(), $portable, substr($name, strlen(self::NAMESPACE))));
+      }
+    }
+  }
+
+  /**
+   * Declares a property spelled with the package's attributes.
+   *
+   * Its schema, as ClassReader builds a property's (schema()), declared
+   * with addSchema(), required where it carries #[Required] and else by
+   * the rule addSchema() holds (no default and no null); the group its
+   * #[Ui] names is the class's, laid on with describe() as #[Describe]
+   * lays one. What addSchema() refuses is refused naming the property.
+   *
+   * @param \ReflectionProperty $property
+   *   The property.
+   * @param \Drupal\surface\Resource\BlueprintInterface $blueprint
+   *   The blueprint.
+   * @param array<string, \Drupal\surface\Resource\ArrangementGroup> $groups
+   *   The groups the class declares, by id.
+   */
+  private static function declareSchema(\ReflectionProperty $property, BlueprintInterface $blueprint, array $groups): void {
+    $key = $property->getName();
+    $ui = self::attribute($property, Ui::class);
+    $schema = self::schema($property);
+    try {
+      $blueprint->addSchema($key, $schema, self::attribute($property, Required::class) !== NULL ? TRUE : NULL);
+    }
+    catch (\InvalidArgumentException $refused) {
+      throw new \InvalidArgumentException(sprintf('%s::$%s: %s', $property->getDeclaringClass()->getName(), $key, $refused->getMessage()), 0, $refused);
+    }
+    if ($ui?->group === NULL) {
+      return;
+    }
+    $group = $groups[$ui->group] ?? throw new \LogicException(sprintf(
+      '%s::$%s is drawn in the group "%s", which no #[Ui(groups:)] on the class declares. Declare it on the class, #[Ui(groups: [\'%s\' => [\'label\' => \'<label>\']])], or name one it declares: %s.',
+      $property->getDeclaringClass()->getName(),
+      $key,
+      $ui->group,
+      $ui->group,
+      $groups === [] ? 'it declares none' : implode(', ', array_keys($groups)),
+    ));
+    $blueprint->describe($key, group: $group);
+  }
+
+  /**
+   * Builds a property's schema by the package's rules.
+   *
+   * ClassReader's rules for one property, mirrored: ClassReader reads a
+   * whole class and keeps the reading of one property to itself. The type
+   * is #[Of]'s reference, else the PHP type's (`string`, `int`, `float`,
+   * `bool`, `array`, a backed enum's values), null beside it for `?T` (a
+   * nullable #[Of] an `anyOf` of the reference and null); then the
+   * #[Schema] keywords and #[Check] checks, the initializer as `default`,
+   * and the #[Ui] hints but the group, which is the class's. A Surface
+   * shape's class, the type or #[Of]'s, is a `$ref` to a def of the
+   * shape's id, which the reader reads as that shape, in an `anyOf` with
+   * null where the type allows null. A class a keyword names (`items`) is
+   * a `$ref` to its #[Document] id, or read in place where it has none,
+   * as ClassReader reads it. #[Examples] is the `examples` keyword.
+   *
+   * @param \ReflectionProperty $property
+   *   The property.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   Its schema.
+   *
+   * @throws \LogicException
+   *   For #[Of] naming a class that is no shape and has no #[Document].
+   */
+  private static function schema(\ReflectionProperty $property): Schema {
+    $type = $property->getType();
+    $of = self::attribute($property, Of::class);
+    $nullable = $type?->allowsNull() ?? TRUE;
+    $shape = self::shapeOf($of->ref ?? ($type instanceof \ReflectionNamedType && !$type->isBuiltin() ? $type->getName() : NULL));
+    if ($shape !== NULL) {
+      $schema = Schema::of('#/$defs/' . $shape[0]);
+      if ($nullable && $type !== NULL) {
+        $schema = Schema::any()->with('anyOf', [$schema, Schema::null()]);
+      }
+      $schema = $schema->with('$defs', [$shape[0] => Schema::any()->with('type', $shape[1])]);
+    }
+    elseif ($of !== NULL) {
+      $id = class_exists($of->ref) ? self::documentId($of->ref) : $of->ref;
+      if ($id === NULL) {
+        throw new \LogicException(sprintf('%s::$%s carries #[Of(%s::class)], a class that is no shape and has no #[Document] id to refer to. Give the class #[Document] with an id, mark it a shape with #[Shape], or name a type of the library, #[Of(\'portable:email\')].', $property->getDeclaringClass()->getName(), $property->getName(), $of->ref));
+      }
+      $schema = Schema::of($id);
+      if ($nullable && $type !== NULL) {
+        $schema = Schema::any()->with('anyOf', [$schema, Schema::null()]);
+      }
+    }
+    else {
+      $schema = self::typed($property);
+    }
+    foreach ($property->getAttributes(SchemaAttribute::class) as $attribute) {
+      foreach ($attribute->newInstance()->keywords as $method => $value) {
+        $keyword = Keywords::keyword($method) ?? $method;
+        if (Keywords::shape($keyword) !== Keywords::VALUE && is_string($value) && class_exists($value)) {
+          // As ClassReader reads a class a keyword names: by its
+          // #[Document] id, or in place.
+          $id = self::documentId($value);
+          $value = $id === NULL ? ClassReader::read($value) : Schema::of($id);
+        }
+        $schema = $schema->with($keyword, $value);
+      }
+    }
+    foreach ($property->getAttributes(Check::class) as $attribute) {
+      $check = $attribute->newInstance();
+      $schema = $schema->check($check->name, $check->options);
+    }
+    if ($property->hasDefaultValue()) {
+      $default = $property->getDefaultValue();
+      $schema = $schema->with('default', $default instanceof \BackedEnum ? $default->value : $default);
+    }
+    $examples = self::attribute($property, Examples::class);
+    if ($examples !== NULL && !$schema->has('examples')) {
+      $schema = $schema->with('examples', $examples->values);
+    }
+    $ui = self::attribute($property, Ui::class);
+    if ($ui !== NULL && ($ui->widget !== NULL || $ui->options !== NULL || $ui->fallback !== NULL || $ui->weight !== NULL)) {
+      $schema = $schema->ui($ui->widget, $ui->options, $ui->fallback, NULL, $ui->weight);
+    }
+    return $schema;
+  }
+
+  /**
+   * Reads the #[Document] id of a class, as ClassReader reads it.
+   *
+   * @param class-string $class
+   *   The class.
+   *
+   * @return string|null
+   *   The id, or NULL for a class with no #[Document] id.
+   */
+  private static function documentId(string $class): ?string {
+    $document = (new \ReflectionClass($class))->getAttributes(Document::class)[0] ?? NULL;
+    return $document?->newInstance()->id;
+  }
+
+  /**
+   * Builds the type a property's PHP type says, as ClassReader does.
+   *
+   * @param \ReflectionProperty $property
+   *   A property with no #[Of].
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   Its `type`, or the `enum` of a backed enum's values.
+   *
+   * @throws \LogicException
+   *   For a type that is no schema: a class that is no shape and no enum.
+   */
+  private static function typed(\ReflectionProperty $property): Schema {
+    $type = $property->getType();
+    if ($type === NULL) {
+      return Schema::any();
+    }
+    $names = $type instanceof \ReflectionUnionType
+      ? array_map(static fn (\ReflectionType $one): string => $one instanceof \ReflectionNamedType ? $one->getName() : (string) $one, $type->getTypes())
+      : [$type instanceof \ReflectionNamedType ? $type->getName() : (string) $type];
+    $json = [];
+    $enum = NULL;
+    foreach ($names as $name) {
+      if ($name === 'mixed') {
+        return Schema::any();
+      }
+      if ($name === 'null') {
+        continue;
+      }
+      if (isset(self::JSON_TYPES[$name])) {
+        $json[] = self::JSON_TYPES[$name];
+      }
+      elseif (enum_exists($name) && is_subclass_of($name, \BackedEnum::class)) {
+        $enum = Schema::any()->with('enum', array_map(static fn (\BackedEnum $case): int|string => $case->value, $name::cases()));
+      }
+      else {
+        throw new \LogicException(sprintf('%s::$%s is typed %s, which is no schema: type it string, int, float, bool, array or a backed enum, name a type with #[Of], or type it with a shape\'s class.', $property->getDeclaringClass()->getName(), $property->getName(), $name));
+      }
+    }
+    if ($type->allowsNull()) {
+      $json[] = 'null';
+    }
+    $typed = Schema::any()->with('type', count($json) === 1 ? $json[0] : $json);
+    if ($enum === NULL) {
+      return $typed;
+    }
+    return $json === [] ? $enum : Schema::any()->with('anyOf', [$enum, $typed]);
+  }
+
+  /**
+   * Reads the shape a class named as a type is, if it is one.
+   *
+   * @param string|null $class
+   *   The class, or anything else.
+   *
+   * @return array{0: string, 1: string}|null
+   *   The shape's id and its JSON type, or NULL for no shape's class.
+   */
+  private static function shapeOf(?string $class): ?array {
+    if ($class === NULL || !class_exists($class) || !is_subclass_of($class, ShapeInterface::class)) {
+      return NULL;
+    }
+    $attribute = (new \ReflectionClass($class))->getAttributes(Shape::class)[0] ?? NULL;
+    if ($attribute === NULL) {
+      throw new \LogicException(sprintf('%s is named as a shape and carries no #[Shape] id, by which a schema refers to it.', $class));
+    }
+    $type = $class::define()->getDataType();
+    return [$attribute->newInstance()->id, LeafTypes::ROWS[$type]['type'] ?? 'string'];
+  }
+
+  /**
    * Refuses a property that carries two attributes saying what it is.
    *
    * The method declare() calls the verb of the first such attribute it
    * looks for, in a fixed order, so any other would be dropped without a
-   * word.
+   * word. The package's attributes are one such kind, an input.
    *
    * @param \ReflectionProperty $property
    *   The property.
@@ -218,10 +559,22 @@ final class PropertyDeclaration {
    */
   private static function assertOneKind(\ReflectionProperty $property): void {
     $kinds = [];
+    $portable = FALSE;
     foreach ($property->getAttributes() as $attribute) {
       if (in_array($attribute->getName(), self::KINDS, TRUE)) {
         $kinds[] = '#[' . substr($attribute->getName(), strlen(self::NAMESPACE)) . ']';
       }
+      elseif (!$portable && in_array($attribute->getName(), self::PORTABLE, TRUE)) {
+        // The package's spelling is an input, as #[Input] is: named by
+        // its first attribute.
+        $portable = TRUE;
+        $kinds[] = '#[' . substr($attribute->getName(), strlen(self::PORTABLE_NAMESPACE)) . ']';
+      }
+    }
+    if ($portable) {
+      // #[Input] beside the package's spelling says the same key twice,
+      // which assertOneSpelling() refuses in those words.
+      $kinds = array_values(array_diff($kinds, ['#[Input]']));
     }
     if (count($kinds) > 1) {
       $last = array_pop($kinds);
@@ -432,6 +785,25 @@ final class PropertyDeclaration {
    */
   private static function groups(\ReflectionClass $class): array {
     $groups = [];
+    foreach ([Of::class, SchemaAttribute::class, Check::class] as $portable) {
+      if ($class->getAttributes($portable) !== []) {
+        throw new \LogicException(sprintf('%s carries #[%s] on the class: a resource\'s or a structure\'s object is its keys, each declared on its own property. On the class, the package\'s #[Ui(groups:)] alone is read.', $class->getName(), substr($portable, strlen(self::PORTABLE_NAMESPACE))));
+      }
+    }
+    $ui = $class->getAttributes(Ui::class)[0] ?? NULL;
+    if ($ui !== NULL) {
+      if ($class->getAttributes(Group::class) !== []) {
+        throw new \LogicException(sprintf('%s declares its groups with both #[Group] and #[Ui(groups:)]. A class declares them one way: keep one of the two.', $class->getName()));
+      }
+      $hints = $ui->newInstance();
+      if ($hints->widget !== NULL || $hints->options !== NULL || $hints->fallback !== NULL || $hints->group !== NULL || $hints->weight !== NULL) {
+        throw new \LogicException(sprintf('%s carries #[Ui] with more than groups: on the class, #[Ui(groups:)] declares the groups its keys are drawn in, and nothing else is read.', $class->getName()));
+      }
+      foreach ($hints->groups ?? [] as $id => $group) {
+        $groups[(string) $id] = self::portableGroup($class->getName(), (string) $id, $group);
+      }
+      return $groups;
+    }
     foreach ($class->getAttributes(Group::class) as $attribute) {
       $group = $attribute->newInstance();
       $groups[$group->id] = $group->details
@@ -439,6 +811,41 @@ final class PropertyDeclaration {
         : ArrangementGroup::fieldset($group->id, self::label($group->label), $group->weight, self::text($group->description));
     }
     return $groups;
+  }
+
+  /**
+   * Builds a group the package's #[Ui(groups:)] declares.
+   *
+   * As the reader reads a group a frame's `x-portable-ui.groups` declares:
+   * `widget: details` a details, closed where `options.open` is FALSE,
+   * else a fieldset; its `label`, `description` and whole `weight`.
+   *
+   * @param string $class
+   *   The class, for the messages.
+   * @param string $id
+   *   The group's id.
+   * @param array<string, mixed> $group
+   *   What the class declares of it.
+   *
+   * @return \Drupal\surface\Resource\ArrangementGroup
+   *   The group.
+   */
+  private static function portableGroup(string $class, string $id, array $group): ArrangementGroup {
+    $label = $group['label'] ?? NULL;
+    if (!is_string($label) && !$label instanceof \Stringable) {
+      throw new \LogicException(sprintf('%s declares the group "%s" in #[Ui(groups:)] with no label: each group has one, [\'label\' => \'<label>\'].', $class, $id));
+    }
+    $weight = $group['weight'] ?? NULL;
+    if ($weight !== NULL && (!is_numeric($weight) || (float) $weight !== floor((float) $weight))) {
+      throw new \LogicException(sprintf('%s weighs the group "%s" %s in #[Ui(groups:)]: a group\'s weight is a whole number.', $class, $id, var_export($weight, TRUE)));
+    }
+    $weight = $weight === NULL ? NULL : (int) $weight;
+    $description = $group['description'] ?? NULL;
+    $description = is_string($description) || $description instanceof \Stringable ? self::label($description) : NULL;
+    $options = is_array($group['options'] ?? NULL) ? $group['options'] : [];
+    return ($group['widget'] ?? NULL) === ArrangementGroup::DETAILS
+      ? ArrangementGroup::details($id, self::label($label), ($options['open'] ?? TRUE) === FALSE, $weight, $description)
+      : ArrangementGroup::fieldset($id, self::label($label), $weight, $description);
   }
 
   /**

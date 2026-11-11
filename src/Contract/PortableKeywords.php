@@ -166,9 +166,9 @@ final class PortableKeywords {
    * @param array $node
    *   The node.
    *
-   * @return list<array{constraint: string, options: array, message: ?string}>
-   *   Each check: the constraint's plugin id (the check's name without
-   *   `drupal:`), its options, and its message.
+   * @return list<array{id: string, constraint: string, options: array, message: ?string}>
+   *   Each check: its name as written, the constraint's plugin id (the
+   *   name without `drupal:`), its options, and its message.
    */
   public static function checks(array $node): array {
     $checks = is_array($node[self::CHECK] ?? NULL) ? $node[self::CHECK] : [];
@@ -177,6 +177,7 @@ final class PortableKeywords {
     foreach ($checks as $id => $options) {
       $id = (string) $id;
       $read[] = [
+        'id' => $id,
         'constraint' => str_starts_with($id, self::PROVIDER) ? substr($id, strlen(self::PROVIDER)) : $id,
         'options' => is_array($options) ? $options : (array) $options,
         'message' => is_string($messages[self::CHECK_CODE . $id] ?? NULL) ? $messages[self::CHECK_CODE . $id] : NULL,

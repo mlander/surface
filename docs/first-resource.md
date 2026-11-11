@@ -24,7 +24,7 @@ This page uses four things and nothing else:
 | `#[Resource]` | what the thing is called and where it is stored |
 | `#[Operation]` | how it is asked for, what that does, and the permission that gates it |
 | a storage | the config object it lives in |
-| `defineInputs()` with `add()` | its keys: name, type, label, what each allows |
+| `defineInputs()` with `addSchema()` | its keys: name, and a schema of type, label and what each allows |
 
 Every file below is the shipped module `surface_examples_first`, word for
 word; a test fails if the page and the module differ, so what you copy
@@ -155,6 +155,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_first\Storage\NewsletterStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * The newsletter settings: a form, a tool and a schema, from this class.
@@ -179,25 +180,28 @@ final class NewsletterResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add(self::SENDER_NAME, 'string', t('Sender name'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 64]);
+    $inputs->addSchema(self::SENDER_NAME, Schema::string()
+      ->title(t('Sender name'))
+      ->maxLength(64));
 
-    $inputs->add(self::SENDER_EMAIL, 'email', t('Sender email'))
-      ->setRequired(TRUE);
+    $inputs->addSchema(self::SENDER_EMAIL, Schema::string()
+      ->title(t('Sender email'))
+      ->format('email'));
 
-    $inputs->add(self::FREQUENCY, 'string', t('Frequency'), default: 'weekly')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'weekly' => t('Weekly'),
-          'monthly' => t('Monthly'),
-        ],
-      ]);
+    $inputs->addSchema(self::FREQUENCY, Schema::options([
+      'weekly' => t('Weekly'),
+      'monthly' => t('Monthly'),
+    ])
+      ->type('string')
+      ->title(t('Frequency'))
+      ->default('weekly'), required: TRUE);
 
-    $inputs->add(self::MAX_RECIPIENTS, 'integer', t('Maximum recipients per send'), default: 500)
-      ->setDescription(t('Larger lists are sent in batches of this size.'))
-      ->addConstraint('Range', ['min' => 1, 'max' => 10000]);
+    $inputs->addSchema(self::MAX_RECIPIENTS, Schema::integer()
+      ->title(t('Maximum recipients per send'))
+      ->description(t('Larger lists are sent in batches of this size.'))
+      ->minimum(1)
+      ->maximum(10000)
+      ->default(500));
   }
 
 }
@@ -223,21 +227,27 @@ Read it top to bottom:
 - **The constants** name each key once, and every later mention is the
   constant, `self::SENDER_NAME`, so a key can be renamed or its uses
   found ([Key names](declaring-a-resource.md#key-names)).
-- **`defineInputs()`** declares the keys. `add()` takes the key, its type
-  (core's typed data types: `string`, `email`, `integer`, `boolean`,
-  ...), its label and, optionally, a `default:`, and returns core's own
-  data definition, so the rest is core API: `setRequired()`,
-  `setDescription()`, `addConstraint()`.
-- **The label** is the third argument of `add()`, and every verb that
-  declares a key takes one with the key the same way. It is the form
-  element's title, the tool's property label and the schema's `title`;
-  `setDescription()` is the text under the element and the property's
-  description.
-- **What a key allows** is a constraint. `Length` becomes a maximum
-  length, `Range` a number field bounded at 1 and 10000, and
-  `LabeledChoice` a select whose options are its labels. The form, the
-  tool and the schema all read the same constraint, and a value outside
-  it is refused with the constraint's message, wherever it came from.
+- **`defineInputs()`** declares the keys. `addSchema()` takes the key
+  and a Portable Schema of what it holds, built from `Schema::string()`,
+  `Schema::integer()`, `Schema::bool()` or `Schema::options()` with one
+  method per keyword: `title()`, `description()`, `maxLength()`,
+  `format()`, `minimum()`, `maximum()`, `default()`.
+- **The label** is `title()`. It is the form element's title, the tool's
+  property label and the served schema's `title`; `description()` is the
+  text under the element and the property's description.
+- **Required or not.** A key with no default is required. One with a
+  default is optional unless `required: TRUE` says otherwise, as for the
+  frequency, which always holds a value. An optional key with a default,
+  the maximum, may be cleared, which puts the default back, so the
+  served schema allows `null` for it.
+- **What a key allows** is a keyword. `maxLength()` becomes a maximum
+  length, `format('email')` an email address, `minimum()` and
+  `maximum()` a number field bounded at 1 and 10000, and
+  `Schema::options()` a select whose options are its labels. The module
+  reads each keyword as the Drupal type or constraint it stands for (a
+  Length, the email type, a Range, a LabeledChoice), so the form, the
+  tool and the schema all read the same rule, and a value outside it is
+  refused with the constraint's message, wherever it came from.
 - **Everything is static.** The class is never instantiated, so labels
   call the global `t()` and attribute arguments construct
   `new TranslatableMarkup()`, and the module can read the class ahead of
@@ -371,7 +381,10 @@ surface:resource --answer=surface_examples_first --answer=first.newsletter
 permissions file the module has gains the new entry and keeps every
 other. This page still shows each file in full and stays the source of
 truth: a test answers the interview as the newsletter needs and fails
-when a single byte it writes differs from the files above. The keys can
+when a single byte it writes differs from the files above, but for the
+keys, which the command writes with `add()`, the module's other
+spelling of the same keys, so the files written from them are the same.
+The keys can
 also come from a config schema entry or a JSON Schema document
 ([Generating a resource](generating.md)).
 

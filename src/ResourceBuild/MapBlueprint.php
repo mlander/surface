@@ -102,8 +102,11 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
    *
    * @return \LogicException
    *   What to throw.
+   *
+   * @internal
+   *   For this class and SchemaReader alone.
    */
-  protected function framed(string $call): \LogicException {
+  public function framed(string $call): \LogicException {
     if ($this->unframed === NULL) {
       return new NeedsFrame($this->path, $this->keys());
     }
