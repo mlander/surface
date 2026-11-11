@@ -77,10 +77,11 @@ class WidgetAskTest extends SurfaceKernelTestBase {
 
     $emitter = $this->container->get('surface.contract_emitter');
     $hinted = $emitter->emitFull($built, 'widget_test.pairs', widgets: TRUE)->document['schema']['properties'];
-    $this->assertSame('widget_test_pair', $hinted['asked']['x-surface']['widget']);
-    $this->assertSame('fieldset', $hinted['owned']['x-surface']['widget']);
+    $this->assertSame('widget_test_pair', $hinted['asked']['x-portable-ui']['widget']);
+    $this->assertSame('fieldset', $hinted['owned']['x-portable-ui']['widget']);
     $plain = $emitter->emitFull($built, 'widget_test.pairs')->document['schema']['properties'];
-    $this->assertArrayNotHasKey('x-surface', $plain['asked'], 'A hint only, and only when asked for.');
+    $this->assertArrayNotHasKey('x-portable-ui', $plain['asked'], 'A hint only, and only when asked for.');
+    $this->assertArrayNotHasKey('x-surface', $plain['asked']);
     // What is accepted is the pair's own keys, whichever widget draws it.
     $this->assertContains('asked', $this->pipeline()->validate($built, ['asked' => ['right' => 'Too long by far']])->keys());
   }

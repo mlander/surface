@@ -25,7 +25,7 @@
             "title": {
                 "title": "Public event title",
                 "type": "string",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "text"
                 }
             },
@@ -36,7 +36,7 @@
                     "null"
                 ],
                 "default": true,
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "checkbox"
                 }
             },
@@ -57,11 +57,13 @@
                         "title": "Harbour Centre"
                     }
                 ],
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select",
-                    "emptyOption": {
-                        "show": false,
-                        "label": "- Select -"
+                    "options": {
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
+                        }
                     }
                 }
             },
@@ -78,16 +80,20 @@
                         "title": "East room"
                     }
                 ],
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select",
+                    "options": {
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
+                        }
+                    }
+                },
+                "x-surface": {
                     "dependsOn": [
                         "venue"
                     ],
                     "refined": true,
-                    "emptyOption": {
-                        "show": false,
-                        "label": "- Select -"
-                    },
                     "live": true
                 }
             },
@@ -101,8 +107,10 @@
                 "minimum": 1,
                 "maximum": 100,
                 "default": 50,
+                "x-portable-ui": {
+                    "widget": "number"
+                },
                 "x-surface": {
-                    "widget": "number",
                     "dependsOn": [
                         "room",
                         "third_party_settings.surface_examples_compliance.license"
@@ -124,11 +132,13 @@
                     }
                 ],
                 "default": "free",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select",
-                    "emptyOption": {
-                        "show": false,
-                        "label": "- Select -"
+                    "options": {
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
+                        }
                     }
                 }
             },
@@ -145,8 +155,10 @@
                         "type": "null"
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "variants"
+                },
                 "x-surface": {
-                    "widget": "variants",
                     "dependsOn": [
                         "pricing"
                     ],
@@ -162,7 +174,7 @@
             "contact": {
                 "title": "Contact",
                 "$ref": "#/$defs/registration.contact",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "fieldset"
                 }
             },
@@ -184,13 +196,18 @@
                                     "stewards": {
                                         "type": "integer",
                                         "description": "At least 1 steward for 50 attendees.",
-                                        "minimum": 1
+                                        "minimum": 1,
+                                        "x-portable-ui": {
+                                            "widget": "number"
+                                        }
                                     }
                                 }
                             }
                         ],
+                        "x-portable-ui": {
+                            "widget": "fieldset"
+                        },
                         "x-surface": {
-                            "widget": "fieldset",
                             "refined": true,
                             "after": "capacity",
                             "reads": {
@@ -198,7 +215,6 @@
                             },
                             "within": {
                                 "/allOf/1/properties/stewards": {
-                                    "widget": "number",
                                     "dependsOn": [
                                         "capacity"
                                     ],
@@ -209,8 +225,10 @@
                     }
                 },
                 "additionalProperties": false,
+                "x-portable-ui": {
+                    "widget": "fieldset"
+                },
                 "x-surface": {
-                    "widget": "fieldset",
                     "dependsOn": [
                         "capacity"
                     ],
@@ -280,7 +298,7 @@
                             "string",
                             "null"
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "text"
                         }
                     }
@@ -295,7 +313,7 @@
                         "title": "Price",
                         "type": "number",
                         "minimum": 0.01,
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "number"
                         }
                     },
@@ -317,11 +335,13 @@
                             }
                         ],
                         "default": "EUR",
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select",
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
+                            "options": {
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     }
@@ -340,7 +360,7 @@
                         "title": "Email",
                         "type": "string",
                         "format": "email",
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "email"
                         }
                     },
@@ -350,7 +370,7 @@
                             "string",
                             "null"
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "text"
                         }
                     }
@@ -370,7 +390,7 @@
                         "x-portable-messages": {
                             "pattern": "A license number is four digits, such as 2048."
                         },
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "text"
                         }
                     },
@@ -378,8 +398,10 @@
                         "title": "Stewards",
                         "type": "integer",
                         "default": 1,
+                        "x-portable-ui": {
+                            "widget": "number"
+                        },
                         "x-surface": {
-                            "widget": "number",
                             "dependsOn": [
                                 "capacity"
                             ]

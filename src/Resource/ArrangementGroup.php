@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Resource;
 
+use Drupal\surface\Contract\PlainText;
+
 /**
  * A named group the keys of one frame are drawn in: a fieldset or a details.
  *
@@ -35,7 +37,8 @@ final class ArrangementGroup {
    * @param string $id
    *   The group's name in its frame: no dot, no colon, not empty.
    * @param string|\Stringable $label
-   *   The legend or summary a person reads.
+   *   The legend or summary a person reads: not empty as plain text, since
+   *   the served document needs a label for every group.
    * @param string $as
    *   self::FIELDSET or self::DETAILS.
    * @param bool $collapsed
@@ -58,6 +61,9 @@ final class ArrangementGroup {
   ) {
     if ($id === '' || strpbrk($id, '.:') !== FALSE) {
       throw new \InvalidArgumentException(sprintf('"%s" cannot name a group: a group is named in its frame, not empty and with no dot or colon.', $id));
+    }
+    if (PlainText::of($label) === '') {
+      throw new \InvalidArgumentException(sprintf('The group "%s" has no label: a group needs a label that is not empty as plain text.', $id));
     }
   }
 

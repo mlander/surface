@@ -152,7 +152,7 @@ class SiteListToolDoorTest extends SurfaceKernelTestBase {
     $emitter = $this->container->get('surface.contract_emitter');
     $full = $emitter->emitFull($this->poster(), 'resource_test.poster', 'configure', 'Configure the poster')->document['schema'];
     $this->assertCount(8, (array) $full['properties']['panels']['x-surface']['variants']);
-    $this->assertArrayNotHasKey('deferred', $full['properties']['panels']['x-surface']);
+    $this->assertArrayNotHasKey('deferred', $full['properties']['panels']['x-surface'] ?? []);
     $this->assertArrayHasKey('resource_test.poster.panels.shelf_4', $full['$defs']);
     $these = $emitter->emit($this->poster(), ['layout' => 'shelf_4'], 'resource_test.poster', 'configure', 'Configure the poster')->document['schema'];
     $this->assertSame('shelf_4', $these['properties']['panels']['x-surface']['chosen']);

@@ -209,8 +209,11 @@ and reword its texts, and it may not take any of them away, so an empty
 text where the owner gave one is refused. Nothing in an arrangement is a
 rule: no default, no requiredness and no path moves, and both schemas
 are unchanged by it, less the hint below. The served contract states it
-as `x-surface.arrangement` only when a renderer asks for the widget
-hints ([The served contract](served-contract.md#x-surface)).
+in `x-portable-ui` only when a renderer asks for the widget hints: the
+key's `group` by id, its `weight`, its texts as `options`, and each
+group declared once under its frame's `groups`
+([The served contract](served-contract.md#the-dialects-own-keywords)).
+`SchemaReader` reads it back.
 
 What stays for a [cosmetic layer](#the-cosmetic-seam) is what is truly
 one form's: a borrowed element (the content type example puts the three
@@ -223,7 +226,7 @@ A structure asks for the widget that draws it as a whole with
 `#[Structure(widget:)]`, the one word a key's `widget` setting uses
 (`setSetting('widget', 'radios')`): the build sets it on the key
 wherever the structure is attached, unless the owner set one there, and
-the hint `x-surface.widget` says it. A shape's `define()` sets the
+the hint `x-portable-ui.widget` says it. A shape's `define()` sets the
 setting on its definition, which every key of the shape starts from. A
 widget draws and reads back; what is accepted is the keys' definitions,
 which the pipeline holds every door to. Three guards hold that:

@@ -90,7 +90,7 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
     const extension = property['x-surface'];
     const path = prefix + name;
     const nested = isObject(values[name]) ? (values[name] as Values) : {};
-    const widget = extension?.widget;
+    const widget = property['x-portable-ui']?.widget;
     found.push({
       path,
       type: widget === 'variants' ? 'variants' : widget === 'fieldset' ? 'part' : extension?.collection ? 'collection' : (jsonType(property) ?? 'any'),

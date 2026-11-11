@@ -27,11 +27,12 @@ rehearsed and written.
 `surface.contract_emitter`, is the module's canonical contract: it
 reads any sealed data surface and nothing else, and `emit()` answers a
 `ServedContract` (the document, and its cacheability beside it). The
-contract names no widget. `x-surface.widget` (and `multiple`, its
-qualifier on a list of allowed values) is presentation, the Form API
-mapping said out loud for a renderer, and so is `x-surface.arrangement`,
-how a key is laid out where it is drawn; the roadmap rejects widget
-vocabulary in the contract, so they are written only when a caller asks:
+contract names no widget. `x-portable-ui.widget` (and
+`options.multiple`, its qualifier on a list of allowed values) is
+presentation, the Form API mapping said out loud for a renderer, and so
+is the rest of `x-portable-ui` but the empty option, how a key is laid
+out where it is drawn; the roadmap rejects widget vocabulary in the
+contract, so they are written only when a caller asks:
 `emit(..., widgets: TRUE)`. The HTTP door is that caller; its
 endpoints serve the contract with the hints, for a client such as the
 React example's app to draw from.
@@ -91,6 +92,7 @@ it (why: [decision](decisions.md#the-served-document-is-a-portable-schema-docume
 | `x-surface.patternMessage` | `x-portable-messages.pattern`, or `.not` for `not: {pattern}` | The dialect gives a message by the error code of the keyword it goes with |
 | `format: idn-email` | `format: email` | The profile refuses `idn-email`, whose IDNA processing differs between PHP and JavaScript; `email` is RFC 5321, ASCII only |
 | `"contract": 4`, `Contract-Version: 4` | `5` | Two keywords moved out of `x-surface` |
+| `x-surface.widget`, `multiple`, `arrangement`, `emptyOption` | `x-portable-ui`: `widget`, `options` (`multiple`, `placeholder`, `prefix`, `suffix`, `help`, `emptyOption`), `group` by id, `weight`, and each group declared once on its frame under `groups` | The dialect has a keyword for the widget hints. Moved on 2026-11-10, under the same number (why: [decision](decisions.md#the-ui-hints-are-x-portable-ui)) |
 
 The pipeline still validates through Typed Data, so what a write accepts
 is as before: an email address with a non-ASCII local part
@@ -103,8 +105,10 @@ by its number, as it would misread a key whose server check moved out
 of `x-surface` as one nothing checks. The contract diff reports a
 contract 4 baseline once, "contract version 4 to 5", and re-pins it.
 
-Later contracts of the same series move more into the dialect's
-keywords: the widget hints, a reference, the variants and the marker
+The widget hints moved into `x-portable-ui` on 2026-11-10, under the
+same number: the baselines carry no hints, and a client of the series
+reads the new keyword. Later contracts of the same series move more
+into the dialect's keywords: a reference, the variants and the marker
 `refine`.
 
 ## Contract 4
@@ -227,9 +231,10 @@ The emitter writes two documents from one data surface, by one code path.
   any values (`contract`, `version`, `computed`, `dependsOn`,
   `enumerated`, `refine`, `deferred`, `live`, `rules`, `within`,
   the `by` and `variants` of a key with variants, `group`, `after`),
-  and beside it `portable-check` and `x-portable-messages`; there is no
-  `refined`, `stale`, `emptyOption` or
-  `chosen`, and no `values` or `stale` beside the schema. A child's
+  and beside it `portable-check`, `x-portable-messages` and, with the
+  widget hints, `x-portable-ui`; there is no `refined`, `stale`,
+  `x-portable-ui.options.emptyOption` or `chosen`, and no `values` or
+  `stale` beside the schema. A child's
   frame is described from nothing, not from the child's defaults. Only
   the locked keys an operation knows are read, since no value changes
   them. It is what a validator, or an agent planning its values, or
@@ -476,7 +481,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
 | an anonymous map, `addMap()` | inline, as a map's: `type: object`, its properties, `additionalProperties: false`, and no def; a structure it holds a reference to that structure's def ([An anonymous map](declaring-a-resource.md#an-anonymous-map)) |
 | a key with variants | `anyOf` of a reference to each variant's def, and `{"type": "null"}` where it may be cleared, no `type` beside it; each variant stated exactly by a conditional on the parent ([below](#variants-are-conditionals)) |
-| a key that refers to an entity, its id with `SurfaceValidReference` | its id's type, `x-surface.reference`, the candidates as `oneOf` up to `surface.settings:reference_list_limit`, and `drupal:SurfaceValidReference` under `portable-check`; past the limit no `oneOf`, `x-surface.widget: autocomplete` ([Options](options.md#a-key-that-refers-to-an-entity)) |
+| a key that refers to an entity, its id with `SurfaceValidReference` | its id's type, `x-surface.reference`, the candidates as `oneOf` up to `surface.settings:reference_list_limit`, and `drupal:SurfaceValidReference` under `portable-check`; past the limit no `oneOf`, `x-portable-ui.widget: autocomplete` ([Options](options.md#a-key-that-refers-to-an-entity)) |
 | a reference to any entity type, a structure of `entity_type` and `id` | a reference to its def, `{entity_type, id}`: the entity types as `oneOf`, the id a string marked `reference: {by: "entity_type"}`, `enumerated`, its candidates per entity type one conditional on the def |
 | a deciding key that holds a value and whose variants offer one value, or a key its operation's context fixes to one (fixing makes it hold a value) | `const` of that value, no `oneOf`, the value's label under `x-surface.fixed`; a list the key declares itself, or a stored value no longer offered, is stated as any list (why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter), [a route that fixes a key](decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for)) |
 | a structure mixed in, `mixIn()` | a reference to its def in the frame's `allOf`, beside the frame's own `properties` (each member in its place: `true`, what differs, or `false`), the frame closed with `unevaluatedProperties: false` ([below](#a-mixed-in-structure-is-composed)) |
@@ -520,28 +525,53 @@ refers to it.
 ### The dialect's own keywords
 
 Beside the standard keywords, on the node they are about and before its
-`x-surface`, a document carries three keywords of the dialect. They are
-standard keywords of the dialect: they stay where they are written,
-below an applicator too, where `x-surface` moves to `within`.
+`x-surface`, a document carries four keywords of the dialect, in this
+order. They are keywords of the dialect: they stay where they are
+written, below an applicator too, where `x-surface` moves to `within`.
+At the top, whose `x-surface` comes first, they come last.
 
 | Keyword | Holds |
 | --- | --- |
 | `$schema` | At the top only, first: `https://portable-schema.dev/v1/schema`, the dialect. |
 | `portable-check` | The constraints no keyword states, which only the server checks: a map from `drupal:` and the constraint's plugin id to its options, an empty object, since the document says which plugin checks and not how it is configured: `{"drupal:SurfaceUnique": {}}`. A JsonSchema constraint, what a structure read from a schema kept of it, carries the schema, `{"drupal:JsonSchema": {"schema": {"contains": {"const": "news"}}}}`; on an object (the top, a def) it is what that schema says of the object as a whole ([Reading a schema](reading-a-schema.md#what-is-kept)). In the order the key declares them; a constraint named twice is one check. |
 | `x-portable-messages` | A message per error code, plain text, each one not empty. A Regex's own message first, under the code of the keyword it goes with, `pattern`, or `not` for a pattern the value must not match: how a person is told what the pattern allows, which a renderer says in place of the pattern. Then what each check checks, under `check.` and its name: the constraint's own `reason` where it was given one (the stock `SurfaceUnique`'s), else its own `message` (a Regex's), else its plugin's label, else the id: `{"check.drupal:SurfaceUnique": "Refused when a venue named this already exists."}`. |
+| `x-portable-ui` | The widget hints: how a key is drawn, never what it accepts. All of it but `options.emptyOption` only when the caller asks for widget hints (the HTTP door does). Its members, each only where it says something, in this order: `widget`, the widget's choice ([the widget mapping](#the-widget-mapping)): a module's widget that claims the key, by its plugin ID ([Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)), or a stock word, `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `date`, `fieldset`, `variants` (a key with variants; `slot` in contract 1), `list` (a list of free values, and a collection), `fixed` (a deciding key whose variants offer one value, or a key its operation's context fixes to one, drawn as its label), `autocomplete` (a key that refers to an entity and lists no candidates, past the limit, and a bare reference's id, which is a select once its entity type's conditional lists them); absent when no widget would claim the key. `options`: `multiple: true` on a list of allowed values drawn as a select (a list drawn as checkboxes says `checkboxes` and no `multiple`); the key's `placeholder`, `prefix`, `suffix` and `help` (said after the description, and no part of what the key means), plain text, where declared ([Arranging the keys](forms.md#arranging-the-keys)); and `emptyOption`, in the schema for these answers whatever is asked, on a single select or radios: `{show, label}`: always for a select that may be cleared (`- None -`), for one that holds a value (required, or always held by its storage) only while no valid choice is selected (`- Select -`) (why: [decision](decisions.md#the-empty-option-rule), [decision](decisions.md#a-key-its-storage-always-holds)); a select `stale` on a stored value says it keeps it, `- Keep riverside_main (no longer offered) -`, and an orphan of the edit says `- Select -` or `- None -`, since a save refuses it; on radios `show` is whether a `- None -` radio is drawn, only where the key may be cleared. `group`: the id of the group the key is drawn in. `weight`: its weight among its object's keys, or its group's; lighter first, declaration order between equals. `groups`, on the object whose `properties` name them (the top, a structure's def, a module's mount, a map): each group, declared once, by its id, `{label, description?, widget, options?, weight?}`, `widget` `fieldset` or `details`, `options` `{"open": false}` for a details that starts closed, in the order its keys first name them. Moved out of `x-surface` on 2026-11-10 (why: [decision](decisions.md#the-ui-hints-are-x-portable-ui)). |
+
+A grouped key and its frame, with the widget hints:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "rate": {
+      "title": "Hourly rate",
+      "type": ["integer", "null"],
+      "x-portable-ui": {
+        "widget": "number",
+        "options": {"placeholder": "For example, 40", "prefix": "$", "suffix": "per hour", "help": "Whole dollars."},
+        "group": "pricing"
+      }
+    },
+    "deposit": {
+      "title": "Deposit asked",
+      "type": "boolean",
+      "x-portable-ui": {"widget": "checkbox", "group": "pricing", "weight": -1}
+    }
+  },
+  "x-portable-ui": {
+    "groups": {"pricing": {"label": "Pricing", "widget": "details", "options": {"open": false}}}
+  }
+}
+```
 
 ### `x-surface`
 
 | Keyword | Holds |
 | --- | --- |
 | `contract` | At the top always, first: the version of the wire format the document is written in, `5` ([Contract 5](#contract-5)), which the `Contract-Version` header of every answer of the API says too. A client refuses a version it does not know ([Evolving a resource](evolution.md#the-contracts-own-version)). |
-| `widget` | Only when the caller asks for widget hints (the HTTP door does). The Form API-equivalent hint, the widget's choice ([the widget mapping](#the-widget-mapping)): a module's widget that claims the key, by its plugin ID ([Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)), or a stock word, `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `date`, `fieldset`, `variants` (a key with variants; `slot` in contract 1), `list` (a list of free values, and a collection), `fixed` (a deciding key whose variants offer one value, or a key its operation's context fixes to one, drawn as its label), `autocomplete` (a key that refers to an entity and lists no candidates, past the limit, and a bare reference's id, which is a select once its entity type's conditional lists them); `null` when no widget would claim the key. |
 | `dependsOn` | Only where it names one: the sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`); a port the frame reads, by the port's name. A client refines when one of them changes. |
 | `refined` | Only when `true`, in the schema for these answers: the key is narrowed right now, compared with what the resource or structure advertises in this operation. |
 | `stale` | Only when `true`, in the schema for these answers: the stored value is no longer offered; the key is shown on its empty option, standing for it. |
-| `emptyOption` | On a single select or radios: `{show, label}`: always for a select that may be cleared (`- None -`), for one that holds a value (required, or always held by its storage) only while no valid choice is selected (`- Select -`) (why: [decision](decisions.md#the-empty-option-rule), [decision](decisions.md#a-key-its-storage-always-holds)); a select `stale` on a stored value says it keeps it, `- Keep riverside_main (no longer offered) -`, and an orphan of the edit says `- Select -` or `- None -`, since a save refuses it. On radios: `show` is whether a `- None -` radio is drawn, only where the key may be cleared; one that holds a value shows nothing checked while no valid choice is. |
-| `multiple` | With the widget hints, on a list of allowed values drawn as a select: a multiple select. A list drawn as checkboxes says `checkboxes` and no `multiple`. |
-| `arrangement` | With the widget hints, on a key that declares one ([Arranging the keys](forms.md#arranging-the-keys)): how it is drawn, never what it accepts. Only what was declared: `group` (`{id, label, as: "fieldset" \| "details", collapsed, weight, description}`, `collapsed` only when `true`, `weight` and `description` only when declared: the keys of one object naming one `id` are drawn in one group, where the first of them is), `weight` (among the object's keys, or the group's; lighter first, declaration order between equals), `placeholder`, `prefix`, `suffix` and `help` (said after the description, and no part of what the key means), all plain text: `{"group": {"id": "pricing", "label": "Pricing", "as": "details", "collapsed": true}, "placeholder": "For example, 40", "prefix": "$"}`. Additive in contract 2: a client that does not read it draws the keys in order. |
 | `by`, `variants`, `chosen` | On a key with variants: the deciding key; a map from each value that chooses a variant to its def's pointer, `{"free": "#/$defs/registration.step3.ticket.free", "paid": "#/$defs/registration.step3.ticket.paid"}` (a list of the values in contract 1), absent where no variant is declared; and the value chosen now, absent while none is. |
 | `fixed` | On a deciding key whose variants offer one value, or a key its operation's context fixes to one, beside its `const`: the label that value is offered as, which a renderer draws in place of a select of one. Additive in contract 3. |
 | `reference` | On a key that refers to an entity, in both documents, listed or not: what it refers to, `{"entityType": "node", "bundles": ["article"]}` (`bundles` only where the key names any), or for the id of a key of any entity type `{"by": "entity_type"}`, its entity type the sibling's value. The value is the id. A client finds an id at the resource's lookup ([below](#a-lookup)). Additive in contract 3 (why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)). |
@@ -571,7 +601,9 @@ and `list` (`collection`).
 
 Moved out in contract 5 ([Contract 5](#contract-5)): `checkedOnServer`
 (`portable-check`) and `patternMessage` (`x-portable-messages`), the
-dialect's own keywords ([below](#the-dialects-own-keywords)).
+dialect's own keywords ([above](#the-dialects-own-keywords)); and on
+2026-11-10, under the same number, `widget`, `multiple`, `arrangement`
+and `emptyOption` (`x-portable-ui`).
 
 Removed on 2026-11-06, within contract 4, with `mixInVariants()`:
 `variantsMixedIn` (variants sit at a key, whose `by` and `variants` say
@@ -651,15 +683,14 @@ key declared with it refers to.
    own label is the parent's to give, beside the reference
    ([decision](decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)). Each document
    writes its own defs, the schema for these answers with its
-   `refined`, `stale` and `emptyOption` as they read for no values, the
+   `refined`, `stale` and empty option as they read for no values, the
    full schema without them; otherwise they are the same.
 3. **The site carries the instance.** Where the child is used, the
    property is `{"$ref": "#/$defs/<id>", ...}` with what is particular
    to that use beside it: the title and description the parent gives the
-   key, `readOnly` where it is locked, and the `x-surface` the parent
-   reads for it (`dependsOn` as the parent sees it, `refined`, the
-   widget hint, and
-   `reads`, which of the parent's keys
+   key, `readOnly` where it is locked, the widget hint in
+   `x-portable-ui`, and the `x-surface` the parent reads for it
+   (`dependsOn` as the parent sees it, `refined`, and `reads`, which of the parent's keys
    each port reads, with whatever depends on one stated on the parent's
    `allOf`: [a port is stated at its site](#a-port-is-stated-at-its-site)). JSON Schema 2020-12 applies keywords
    beside `$ref` as well as its target.
@@ -669,9 +700,10 @@ key declared with it refers to.
    ...}`, the narrowing holding only what differs from the def, by the
    same "only what changed" reading the [enumeration](#exact-where-it-can-be)
    uses: properties compared one by one, conditionals the def does not
-   already state, and a property's `x-surface` written whole where it
-   differs, said on the site in `x-surface.within` by its pointer, since
-   nothing below an applicator carries `x-surface`. The narrowing states
+   already state, and a property's `x-surface` and `x-portable-ui`
+   written whole where either differs, its `x-surface` said on the site
+   in `x-surface.within` by its pointer, since nothing below an
+   applicator carries `x-surface`, its `x-portable-ui` where it is. The narrowing states
    the declared `type` beside a keyword only one type reads
    (`{"type": "object", "properties": {...}}`), and its `required` lists
    only the keys it adds to its def's. Where nothing differs, the
@@ -789,7 +821,8 @@ size, how many racks fit.
   "type": ["array", "null"],
   "items": {"$ref": "#/$defs/resource_test.larder.rack"},
   "minItems": 1, "maxItems": 4,
-  "x-surface": {"widget": "list", "dependsOn": ["size"], "collection": true, "enumerated": true}
+  "x-portable-ui": {"widget": "list"},
+  "x-surface": {"dependsOn": ["size"], "collection": true, "enumerated": true}
 },
 ...
 "allOf": [
@@ -828,7 +861,8 @@ hints):
 "ticket": {
   "title": "Ticket",
   "anyOf": [{"$ref": "#/$defs/registration.step3.ticket.free"}, {"$ref": "#/$defs/registration.step3.ticket.paid"}, {"type": "null"}],
-  "x-surface": {"widget": "variants", "dependsOn": ["pricing"], "by": "pricing",
+  "x-portable-ui": {"widget": "variants"},
+  "x-surface": {"dependsOn": ["pricing"], "by": "pricing",
                 "variants": {"free": "#/$defs/registration.step3.ticket.free", "paid": "#/$defs/registration.step3.ticket.paid"},
                 "chosen": "free", ...}
 },
@@ -1022,7 +1056,8 @@ carries only what the shape checks, the message of its pattern and
 what only the server checks. Each key that
 uses it is `$ref` first, then its title, then only what it says
 differently from the def, what it checks and says (`portable-check`,
-`x-portable-messages`), and its whole `x-surface`. Example 4's
+`x-portable-messages`), its widget hints (`x-portable-ui`), and its
+whole `x-surface`. Example 4's
 compliance structure, in its def:
 
 ```json
@@ -1030,7 +1065,7 @@ compliance structure, in its def:
   "$ref": "#/$defs/event.license",
   "title": "Event license",
   "x-portable-messages": {"pattern": "A license number is four digits, such as 2048."},
-  "x-surface": {"widget": "text"}
+  "x-portable-ui": {"widget": "text"}
 }
 ```
 
@@ -1235,17 +1270,17 @@ Riverside Hall and its main hall, as `/surface-api` serves it:
     "x-surface": {"contract": 5, "operation": {"id": "configure", "kind": "update", ...}, "version": 1},
     "type": "object",
     "properties": {
-      "title": {"title": "Event title", "type": "string", "x-surface": {"widget": "text", ...}},
+      "title": {"title": "Event title", "type": "string", "x-portable-ui": {"widget": "text"}},
       "open": {"title": "Registration open", "type": ["boolean", "null"], "default": true, ...},
       "venue": {"title": "Venue", "type": "string",
                 "oneOf": [{"const": "harbour", "title": "Harbour Centre"}, {"const": "library", "title": "Old Library"}, {"const": "riverside", "title": "Riverside Hall"}],
-                "x-surface": {"widget": "select", "reference": {"entityType": "event_venue"}, ...}},
+                "x-portable-ui": {"widget": "select", ...}, "x-surface": {"reference": {"entityType": "event_venue"}}},
       "room": {"title": "Room", "type": "string",
                "oneOf": [{"const": "riverside_main", "title": "Main hall"}, {"const": "riverside_east", "title": "East room"}],
-               "x-surface": {"widget": "select", "dependsOn": ["venue"], "refined": true, ...}},
+               "x-portable-ui": {"widget": "select", ...}, "x-surface": {"dependsOn": ["venue"], "refined": true}},
       "capacity": {"title": "Capacity", "description": "Up to 400 for the Main hall.", "type": ["integer", "null"],
                    "minimum": 1, "maximum": 400, "default": 50,
-                   "x-surface": {"widget": "number", "dependsOn": ["room"], "refined": true, ...}}
+                   "x-portable-ui": {"widget": "number"}, "x-surface": {"dependsOn": ["room"], "refined": true}}
     },
     "additionalProperties": false,
     "required": ["title", "venue", "room"]
@@ -1257,7 +1292,7 @@ Riverside Hall and its main hall, as `/surface-api` serves it:
 
 ## The widget mapping
 
-What the emitter's `widget`, when asked for, mirrors is
+What the emitter's `x-portable-ui.widget`, when asked for, mirrors is
 `SurfaceWidgetManager`'s choice, in its weight order
 ([Widgets](widgets.md)): the emitter asks the stock widgets' own rule
 for which element a list of choices is, so the hint and the form never
@@ -1265,7 +1300,7 @@ disagree (why: [decision](decisions.md#a-widget-is-chosen-from-the-definition)).
 A definition asks for an element with `setSetting('widget', ...)` in
 the hint's words: `radios`, `checkboxes`, `select`, `time`.
 
-| Definition | Form API element | `x-surface.widget` | React component |
+| Definition | Form API element | `x-portable-ui.widget` | React component |
 | --- | --- | --- | --- |
 | a key a module's widget claims, unless its owner asks for a widget | that widget's element | its plugin ID | the stock field for the key's JSON type (`stockWidget()`) |
 | any key whose constraints resolve to a list, an empty one included | `select`, empty option by the rule | `select` | `SelectField` |
@@ -1274,7 +1309,7 @@ the hint's words: `radios`, `checkboxes`, `select`, `time`.
 | a key that refers to an entity, past the limit, and a bare reference's id | core's `entity_autocomplete`, its selection settings the key's; a select while its candidates are listed | `autocomplete` | `AutocompleteField`: a select while the schema lists the candidates, else a text input whose suggestions the lookup answers |
 | a key that does not apply | nothing but its wrapper | (no property) | nothing |
 | a list of such values offering at most twelve, or asking for checkboxes | `checkboxes`, never `#required` | `checkboxes` | `CheckboxesField` |
-| a list of such values offering more, or asking for a select | `select` `#multiple` | `select`, `multiple: true` | `MultipleSelectField` |
+| a list of such values offering more, or asking for a select | `select` `#multiple` | `select`, `options.multiple: true` | `MultipleSelectField` |
 | a map with properties, an attached part | `details` | `fieldset` | `FieldsetField` |
 | `third_party_settings`, which only groups each module's map | `container`, no title | `fieldset`, `group: true` | `FieldsetField`, as a plain `div` |
 | a module's map its alter placed | its `details`, drawn after the named key | `fieldset`, `after: "<key>"` | `FieldsetField`, drawn after that sibling of the group |
@@ -1290,12 +1325,12 @@ the hint's words: `radios`, `checkboxes`, `select`, `time`.
 | a collection, at any depth (inside a variant, an attached part or a map), and a list of maps no collection stands behind | a `details` of item `details`, "Add another" and "Remove" over AJAX | `list`, `collection: true` (a list of maps alone: `list`) | `ListField`, each item the child's `FieldsetField`, at least `minItems`, at most `maxItems` |
 | a locked key | `#disabled`, "Fixed for this operation." | `readOnly: true` | disabled, the same note |
 | a locked child | its fieldset `#disabled`, every element inside with it | `readOnly: true` on the fieldset and on every key inside | a fieldset of disabled keys |
-| `timestamp`, `timespan`, `decimal` | `number`, `#step` 1 (any for a decimal) | `null` | the stock field for the key's JSON type (`stockWidget()`) |
-| `datetime_iso8601` | core's `datetime` element, a date and a time input in the site's time zone, read back as the ISO 8601 string | `null` | the stock field for the key's JSON type (`stockWidget()`) |
-| `duration_iso8601` | `textfield` | `null` | the stock field for the key's JSON type (`stockWidget()`) |
-| `language`, `language_reference`, `entity_reference`, and a list of them, which no blueprint declares (only a definition handed to the engine by hand) | an `item`: "This is not drawn on this form; what it holds is kept.", posting nothing | `null` | the stock field for the key's JSON type (`stockWidget()`) |
-| an `any` key read from a schema typed as several scalar types (string, integer, number, boolean), the `scalars` widget | `textfield`, read as the first stated type the text spells: integer, number, `true` or `false`, then string | `null` | the stock field for the key's JSON type (`stockWidget()`) |
-| what no other widget draws: an `any` key with no variants whose types include an object or a list, or state none; a list of lists or of `any` | `textarea` of JSON, the `json` widget | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+| `timestamp`, `timespan`, `decimal` | `number`, `#step` 1 (any for a decimal) | none | the stock field for the key's JSON type (`stockWidget()`) |
+| `datetime_iso8601` | core's `datetime` element, a date and a time input in the site's time zone, read back as the ISO 8601 string | none | the stock field for the key's JSON type (`stockWidget()`) |
+| `duration_iso8601` | `textfield` | none | the stock field for the key's JSON type (`stockWidget()`) |
+| `language`, `language_reference`, `entity_reference`, and a list of them, which no blueprint declares (only a definition handed to the engine by hand) | an `item`: "This is not drawn on this form; what it holds is kept.", posting nothing | none | the stock field for the key's JSON type (`stockWidget()`) |
+| an `any` key read from a schema typed as several scalar types (string, integer, number, boolean), the `scalars` widget | `textfield`, read as the first stated type the text spells: integer, number, `true` or `false`, then string | none | the stock field for the key's JSON type (`stockWidget()`) |
+| what no other widget draws: an `any` key with no variants whose types include an object or a list, or state none; a list of lists or of `any` | `textarea` of JSON, the `json` widget | none | the stock field for the key's JSON type (`stockWidget()`) |
 
 The last six rows name no hint: the contract says nothing about how a
 form draws them, and the documents did not move when they were drawn.

@@ -176,7 +176,7 @@ abstract class SurfaceWidgetBase extends PluginBase implements SurfaceWidgetInte
    * a definition whose asked widget did not draw it, rather than draw it
    * as something it did not ask for. A widget answers to its plugin ID,
    * which for the stock ones is the word the served contract's
-   * `x-surface.widget` says (`select`, `fieldset`, `checkbox`).
+   * `x-portable-ui.widget` says (`select`, `fieldset`, `checkbox`).
    *
    * Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
    *

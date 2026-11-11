@@ -116,9 +116,9 @@ describe('the empty option rule, narrowed here', () => {
         copy[key] = walk(value);
       }
       const properties = copy.properties as Record<string, Schema> | undefined;
-      const room = properties?.room?.['x-surface'];
+      const room = properties?.room?.['x-portable-ui'];
       if (room !== undefined) {
-        properties!.room = { ...properties!.room, 'x-surface': { ...room, widget: 'radios' } };
+        properties!.room = { ...properties!.room, 'x-portable-ui': { ...room, widget: 'radios' } };
       }
       return copy;
     };
@@ -141,8 +141,8 @@ describe('the empty option rule, narrowed here', () => {
     if (!asSelect.local || !asRadios.local) {
       return;
     }
-    expect(asSelect.settled.schema.properties?.room['x-surface']?.emptyOption).toEqual({ show: true, label: '- Select -' });
-    expect(asRadios.settled.schema.properties?.room['x-surface']?.emptyOption).toEqual({ show: false, label: '- None -' });
+    expect(asSelect.settled.schema.properties?.room['x-portable-ui']?.options?.emptyOption).toEqual({ show: true, label: '- Select -' });
+    expect(asRadios.settled.schema.properties?.room['x-portable-ui']?.options?.emptyOption).toEqual({ show: false, label: '- None -' });
   });
 
   it('says a select keeps a stored value no longer offered under a key nobody moved (an orphan, above, says - Select -)', () => {
@@ -156,7 +156,7 @@ describe('the empty option rule, narrowed here', () => {
       return;
     }
     expect(kept.settled.stale).toContain('room');
-    expect(kept.settled.schema.properties?.room['x-surface']?.emptyOption).toEqual({ show: true, label: '- Keep library_garden (no longer offered) -' });
+    expect(kept.settled.schema.properties?.room['x-portable-ui']?.options?.emptyOption).toEqual({ show: true, label: '- Keep library_garden (no longer offered) -' });
   });
 
   it('reads a key that holds a value off its required list or its type', () => {
@@ -451,13 +451,13 @@ describe('a key deferred for its size', () => {
   });
 
   it('is open where nothing is chosen, and the server\'s for a map of keys from the site', () => {
-    const extension = (more: Partial<Extension>): Extension => ({ widget: 'fieldset', dependsOn: ['kind'], ...more });
+    const extension = (more: Partial<Extension>): Extension => ({ dependsOn: ['kind'], ...more });
     const full: Schema = {
       type: 'object',
       properties: {
-        kind: { title: 'Kind', type: ['string', 'null'], oneOf: [{ const: 'a', title: 'A' }], 'x-surface': extension({ widget: 'select', dependsOn: undefined }) },
-        detail: { title: 'Detail', type: ['object', 'null'], 'x-surface': extension({ widget: 'variants', by: 'kind', deferred: { fetch: '?choose=/detail={value}' } }) },
-        benches: { title: 'Benches', type: ['object', 'null'], 'x-surface': extension({ deferred: { fetch: '?choose=/benches={value}', entries: [{ id: 'b1', label: 'Bench 1' }] } }) },
+        kind: { title: 'Kind', type: ['string', 'null'], oneOf: [{ const: 'a', title: 'A' }], 'x-portable-ui': { widget: 'select' } },
+        detail: { title: 'Detail', type: ['object', 'null'], 'x-portable-ui': { widget: 'variants' }, 'x-surface': extension({ by: 'kind', deferred: { fetch: '?choose=/detail={value}' } }) },
+        benches: { title: 'Benches', type: ['object', 'null'], 'x-portable-ui': { widget: 'fieldset' }, 'x-surface': extension({ deferred: { fetch: '?choose=/benches={value}', entries: [{ id: 'b1', label: 'Bench 1' }] } }) },
       },
     };
     const previous: Settled = { schema: full, values: { kind: null, detail: null, benches: {} }, stale: [] };

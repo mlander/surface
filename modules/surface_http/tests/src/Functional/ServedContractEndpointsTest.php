@@ -107,7 +107,8 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertStringEndsWith('/surface-api/registration.step2/schema', $full['$id']);
     $room = $full['properties']['room'];
     $this->assertCount(6, $this->offered($room));
-    $this->assertSame(['widget' => 'select', 'dependsOn' => ['venue'], 'enumerated' => TRUE], $room['x-surface']);
+    $this->assertSame(['dependsOn' => ['venue'], 'enumerated' => TRUE], $room['x-surface']);
+    $this->assertSame(['widget' => 'select'], $room['x-portable-ui']);
     // Every listable dependency as a conditional: three venues, six rooms.
     $this->assertCount(9, $full['allOf']);
     // Cacheable: it reads nothing stored, so it is not max-age 0 as the

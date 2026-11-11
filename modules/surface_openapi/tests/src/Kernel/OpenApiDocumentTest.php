@@ -149,7 +149,7 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
     $this->assertStringContainsString('Built for no account', $document['info']['description']);
     $this->assertSame('no account', $document['x-surface']['builtFor']);
     $this->assertSame(['GET /surface-api/{resource}[/{id}]', 'GET /surface-api/{resource}[/{id}]/schema'], $document['x-surface']['perAccount']);
-    $this->assertArrayNotHasKey('withASubject', $document['x-surface'], 'An operation with a subject is a path of its own.');
+    $this->assertArrayNotHasKey('withASubject', $document['x-surface'] ?? [], 'An operation with a subject is a path of its own.');
     $this->assertSame([['url' => 'https://example.com']], $document['servers']);
 
     $schema = $this->moduleRoot() . '/' . self::FIXTURES . '/oas-3.1-schema-2022-10-07.json';
@@ -464,7 +464,7 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
     $document = $this->decoded();
     $settings = $document['components']['schemas']['block.placement.create']['properties']['settings'];
     $this->assertSame(['fetch' => '?choose=/settings={value}'], $settings['x-surface']['deferred']);
-    $this->assertArrayNotHasKey('refine', $settings['x-surface']);
+    $this->assertArrayNotHasKey('refine', $settings['x-surface'] ?? []);
     $this->assertSame('plugin', $settings['x-surface']['by']);
     $this->assertArrayNotHasKey('anyOf', $settings);
     $schema = $document['paths']['/surface-api/block.placement/schema'];

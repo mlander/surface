@@ -140,6 +140,31 @@ class ContractDiffTest extends UnitTestCase {
   }
 
   /**
+   * Tests the widget hints changed are a note, never a break.
+   */
+  public function testTheWidgetHintsChangedAreNoted(): void {
+    $ui = ['properties', 'code', 'x-portable-ui'];
+    $baseline = self::BASELINE;
+    $current = self::BASELINE;
+    $current['schema'] = self::patched($current['schema'], $ui, ['widget' => 'text', 'group' => 'about']);
+    $groups = ['about' => ['label' => 'About', 'widget' => 'fieldset']];
+    $current['schema'] = self::patched($current['schema'], ['x-portable-ui'], ['groups' => $groups]);
+    $said = static fn (ContractChange $change): array => [
+      $change->path,
+      $change->change,
+      $change->effect,
+      $change->status,
+    ];
+    $note = ['x-portable-ui changed', ContractDiff::NOTE, ContractChange::COMPATIBLE];
+    $this->assertSame([
+      ['configure#/properties/code/x-portable-ui', ...$note],
+      ['configure#/x-portable-ui', ...$note],
+    ], array_map($said, (new ContractDiff())->compare($baseline, $current)));
+    // Taken away again: a note too.
+    $this->assertSame([ContractDiff::NOTE, ContractDiff::NOTE], array_map(static fn (ContractChange $change): string => $change->effect, (new ContractDiff())->compare($current, $baseline)));
+  }
+
+  /**
    * Sets or removes one value at a path.
    *
    * @param array $schema

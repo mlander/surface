@@ -188,8 +188,10 @@ final class SchemaResolver {
    * nothing; `false`, not applying here, leaves it out, as a flat frame
    * does); the def's `required` joins the frame's, in the frame's order,
    * and its conditionals come first, as its rules and refiners run before
-   * the owner's. What the def says of itself as a whole (the ports it
-   * reads) is the structure's, not the frame's.
+   * the owner's. The groups the def declares for its keys join the
+   * frame's, the frame's word standing for a group both declare. What else
+   * the def says of itself as a whole (the ports it reads) is the
+   * structure's, not the frame's.
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
@@ -233,6 +235,11 @@ final class SchemaResolver {
     ];
     if ($conditions !== []) {
       $frame['allOf'] = $conditions;
+    }
+    $groups = is_array($def[PortableKeywords::UI]['groups'] ?? NULL) ? $def[PortableKeywords::UI]['groups'] : [];
+    if ($groups !== []) {
+      $own = is_array($frame[PortableKeywords::UI]['groups'] ?? NULL) ? $frame[PortableKeywords::UI]['groups'] : [];
+      $frame = PortableUi::set($frame, ['groups' => $own + $groups]);
     }
     return $frame;
   }
@@ -541,6 +548,16 @@ final class SchemaResolver {
         // its key: the site's word stands, with which keys of the child
         // do not apply here.
         $base[$keyword] = ['doesNotApply' => $value['doesNotApply']] + $before;
+      }
+      elseif ($keyword === PortableKeywords::UI && is_array($before) && is_array($value)) {
+        // A key's hints are replaced whole, and a frame's groups joined: a
+        // narrowing declares only the groups its own keys name, so the
+        // def's others stay, and the site's word stands for a group both
+        // declare.
+        // Decision: see docs/decisions.md#the-ui-hints-are-x-portable-ui.
+        $groups = is_array($before['groups'] ?? NULL) && is_array($value['groups'] ?? NULL) ? array_replace($before['groups'], $value['groups']) : $value['groups'] ?? $before['groups'] ?? NULL;
+        $key = array_diff_key($value, ['groups' => TRUE]);
+        $base[$keyword] = ($key !== [] ? $key : array_diff_key($before, ['groups' => TRUE])) + ($groups === NULL ? [] : ['groups' => $groups]);
       }
       else {
         $base[$keyword] = $value;

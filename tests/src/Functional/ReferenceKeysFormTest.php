@@ -147,12 +147,12 @@ class ReferenceKeysFormTest extends BrowserTestBase {
     $schema = $this->decoded($this->send('GET', 'surface-api/event.sponsorship/schema'), 200, 'application/schema+json');
     $thing = $schema['$defs']['event.sponsorship.thing'];
     $this->assertTrue($thing['properties']['id']['x-surface']['enumerated'], 'Stated per entity type, not refined on request.');
-    $this->assertArrayNotHasKey('refine', $thing['properties']['id']['x-surface']);
+    $this->assertArrayNotHasKey('refine', $thing['properties']['id']['x-surface'] ?? []);
     $node = array_values(array_filter($thing['allOf'], static fn (array $condition): bool => ($condition['if']['properties']['entity_type']['const'] ?? NULL) === 'node'));
     $article = (string) $this->nodes()['article'];
     $this->assertContains($article, array_column($node[0]['then']['properties']['id']['oneOf'], 'const'), 'The candidates of a node, for this account: what the page draws once node is chosen.');
     $this->assertNotContains((string) $this->nodes()['draft'], array_column($node[0]['then']['properties']['id']['oneOf'], 'const'));
-    $this->assertSame('select', $schema['properties']['venue']['x-surface']['widget']);
+    $this->assertSame('select', $schema['properties']['venue']['x-portable-ui']['widget']);
     $this->assertSame(['entityType' => 'event_venue'], $schema['properties']['venue']['x-surface']['reference']);
   }
 

@@ -46,8 +46,10 @@
                 "x-portable-messages": {
                     "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
                 },
+                "x-portable-ui": {
+                    "widget": "select"
+                },
                 "x-surface": {
-                    "widget": "select",
                     "reference": {
                         "entityType": "event_venue"
                     }
@@ -83,8 +85,10 @@
                 "x-portable-messages": {
                     "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
                 },
+                "x-portable-ui": {
+                    "widget": "select"
+                },
                 "x-surface": {
-                    "widget": "select",
                     "reference": {
                         "entityType": "user"
                     }
@@ -116,8 +120,10 @@
                 "x-portable-messages": {
                     "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
                 },
+                "x-portable-ui": {
+                    "widget": "select"
+                },
                 "x-surface": {
-                    "widget": "select",
                     "reference": {
                         "entityType": "node",
                         "bundles": [
@@ -130,7 +136,7 @@
                 "title": "Featured beside",
                 "description": "Any content the sponsor is featured beside.",
                 "$ref": "#/$defs/event.sponsorship.thing",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "fieldset"
                 }
             },
@@ -138,7 +144,7 @@
                 "title": "Linked to",
                 "description": "A venue or a role the sponsorship is linked to.",
                 "$ref": "#/$defs/event.sponsorship.setting",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "fieldset"
                 }
             },
@@ -146,7 +152,7 @@
                 "title": "Credited on",
                 "description": "An article or a user the sponsor is credited on.",
                 "$ref": "#/$defs/event.sponsorship.credit",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "fieldset"
                 }
             }
@@ -179,7 +185,7 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select"
                         }
                     },
@@ -190,8 +196,10 @@
                             "string",
                             "null"
                         ],
+                        "x-portable-ui": {
+                            "widget": "autocomplete"
+                        },
                         "x-surface": {
-                            "widget": "autocomplete",
                             "dependsOn": [
                                 "entity_type"
                             ],
@@ -356,7 +364,7 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select"
                         }
                     },
@@ -367,8 +375,10 @@
                             "string",
                             "null"
                         ],
+                        "x-portable-ui": {
+                            "widget": "autocomplete"
+                        },
                         "x-surface": {
-                            "widget": "autocomplete",
                             "dependsOn": [
                                 "entity_type"
                             ],
@@ -529,7 +539,7 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select"
                         }
                     },
@@ -540,8 +550,10 @@
                             "string",
                             "null"
                         ],
+                        "x-portable-ui": {
+                            "widget": "autocomplete"
+                        },
                         "x-surface": {
-                            "widget": "autocomplete",
                             "dependsOn": [
                                 "entity_type"
                             ],

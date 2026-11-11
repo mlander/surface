@@ -1,16 +1,22 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import type { Extension, Schema, Values } from '../contract';
+import type { Extension, PortableUi, Schema, Values } from '../contract';
 import { setAt } from '../contract';
 import { ContractPanel } from '../ContractPanel';
 import { Properties } from '../widgets/Field';
 import { LookupContext, type Lookup } from '../widgets/Shell';
 
-// Each widget from a schema fragment the way the emitter writes one.
+// Each widget from a schema fragment the way the emitter writes one: the
+// hints in `x-portable-ui`, the rest in `x-surface`, each only where it
+// says something.
 
-function x(widget: Extension['widget'], more: Partial<Extension> = {}): Extension {
-  return { widget, ...more };
+function x(widget: PortableUi['widget'] | null, more: Partial<Extension> = {}, ui: PortableUi = {}): Pick<Schema, 'x-portable-ui' | 'x-surface'> {
+  const hints: PortableUi = { ...(widget === null ? {} : { widget }), ...ui };
+  return {
+    ...(Object.keys(hints).length > 0 ? { 'x-portable-ui': hints } : {}),
+    ...(Object.keys(more).length > 0 ? { 'x-surface': more as Extension } : {}),
+  };
 }
 
 /** Renders an object schema's properties over values, editable. */
@@ -54,7 +60,7 @@ describe('text, textarea and email', () => {
               type: 'string',
               maxLength: 50,
               examples: ['Quarterly report'],
-              'x-surface': x('text', { arrangement: { placeholder: 'A short headline' } }),
+              ...x('text', {}, { options: { placeholder: 'A short headline' } }),
             },
           },
           ['headline'],
@@ -84,7 +90,7 @@ describe('text, textarea and email', () => {
             pattern: '^\\d{4}$',
             examples: ['2048'],
             'x-portable-messages': { pattern: message },
-            'x-surface': x('text'),
+            ...x('text'),
           },
         })}
         initial={{ license: 'EV-2048' }}
@@ -102,7 +108,7 @@ describe('text, textarea and email', () => {
   it('renders a textarea with no maxlength, and only a declared placeholder', () => {
     render(
       <Form
-        schema={object({ help: { title: 'Help', type: ['string', 'null'], maxLength: 10, examples: ['x'], 'x-surface': x('textarea') } })}
+        schema={object({ help: { title: 'Help', type: ['string', 'null'], maxLength: 10, examples: ['x'], ...x('textarea') } })}
         initial={{ help: null }}
       />,
     );
@@ -117,8 +123,8 @@ describe('text, textarea and email', () => {
     render(
       <Form
         schema={object({
-          email: { title: 'Email', type: 'string', format: 'email', 'x-surface': x('email') },
-          token: { title: 'Token', type: ['string', 'null'], writeOnly: true, 'x-surface': x('text') },
+          email: { title: 'Email', type: 'string', format: 'email', ...x('email') },
+          token: { title: 'Token', type: ['string', 'null'], writeOnly: true, ...x('text') },
         })}
         initial={{ email: 'events@example.com', token: null }}
       />,
@@ -135,7 +141,7 @@ describe('number and checkbox', () => {
     let seen: Values = {};
     render(
       <Form
-        schema={object({ capacity: { title: 'Capacity', type: ['integer', 'null'], minimum: 1, maximum: 60, 'x-surface': x('number', { dependsOn: ['room'] }) } })}
+        schema={object({ capacity: { title: 'Capacity', type: ['integer', 'null'], minimum: 1, maximum: 60, ...x('number', { dependsOn: ['room'] }) } })}
         initial={{ capacity: 50 }}
         onValues={(values) => (seen = values)}
       />,
@@ -150,7 +156,7 @@ describe('number and checkbox', () => {
   });
 
   it('steps a float by any', () => {
-    render(<Form schema={object({ price: { title: 'Price', type: 'number', minimum: 0.01, 'x-surface': x('number') } })} initial={{ price: 12.5 }} />);
+    render(<Form schema={object({ price: { title: 'Price', type: 'number', minimum: 0.01, ...x('number') } })} initial={{ price: 12.5 }} />);
     expect(screen.getByLabelText(/Price/)).toHaveAttribute('step', 'any');
   });
 
@@ -160,8 +166,8 @@ describe('number and checkbox', () => {
       <Form
         schema={object(
           {
-            capacity: { title: 'Capacity', type: ['integer', 'null'], maximum: 1000, 'x-surface': x('number', { stale: true, dependsOn: ['room'] }) },
-            code: { title: 'Code', type: 'string', 'x-surface': x('text', { stale: true }) },
+            capacity: { title: 'Capacity', type: ['integer', 'null'], maximum: 1000, ...x('number', { stale: true, dependsOn: ['room'] }) },
+            code: { title: 'Code', type: 'string', ...x('text', { stale: true }) },
           },
           ['capacity', 'code'],
         )}
@@ -182,7 +188,7 @@ describe('number and checkbox', () => {
   });
 
   it('renders a checkbox that is never marked required', () => {
-    render(<Form schema={object({ open: { title: 'Registration open', type: 'boolean', 'x-surface': x('checkbox') } }, ['open'])} initial={{ open: true }} />);
+    render(<Form schema={object({ open: { title: 'Registration open', type: 'boolean', ...x('checkbox') } }, ['open'])} initial={{ open: true }} />);
     const box = screen.getByLabelText('Registration open');
     expect(box).toBeChecked();
     expect(box).not.toBeRequired();
@@ -194,7 +200,7 @@ describe('select and the empty option rule', () => {
   it('titles its options from oneOf and shows no empty option when required and validly chosen', () => {
     render(
       <Form
-        schema={object({ venue: { title: 'Venue', type: 'string', oneOf: venues, 'x-surface': x('select', { emptyOption: { show: false, label: '- Select -' } }) } }, ['venue'])}
+        schema={object({ venue: { title: 'Venue', type: 'string', oneOf: venues, ...x('select', {}, { options: { emptyOption: { show: false, label: '- Select -' } } }) } }, ['venue'])}
         initial={{ venue: 'library' }}
       />,
     );
@@ -208,7 +214,7 @@ describe('select and the empty option rule', () => {
   it('comes up on - Select - when required and nothing is chosen', () => {
     render(
       <Form
-        schema={object({ venue: { title: 'Venue', type: 'string', oneOf: venues, 'x-surface': x('select', { emptyOption: { show: true, label: '- Select -' } }) } }, ['venue'])}
+        schema={object({ venue: { title: 'Venue', type: 'string', oneOf: venues, ...x('select', {}, { options: { emptyOption: { show: true, label: '- Select -' } } }) } }, ['venue'])}
         initial={{ venue: null }}
       />,
     );
@@ -219,7 +225,7 @@ describe('select and the empty option rule', () => {
     let seen: Values = {};
     render(
       <Form
-        schema={object({ venue: { title: 'Venue', type: ['string', 'null'], oneOf: [...venues!, { const: null }], 'x-surface': x('select', { emptyOption: { show: true, label: '- None -' } }) } })}
+        schema={object({ venue: { title: 'Venue', type: ['string', 'null'], oneOf: [...venues!, { const: null }], ...x('select', {}, { options: { emptyOption: { show: true, label: '- None -' } } }) } })}
         initial={{ venue: 'library' }}
         onValues={(values) => (seen = values)}
       />,
@@ -234,7 +240,7 @@ describe('select and the empty option rule', () => {
     render(
       <Form
         schema={object(
-          { room: { title: 'Room', type: 'string', oneOf: [{ const: 'riverside_main', title: 'Main hall' }], 'x-surface': x('select', { stale: true, dependsOn: ['venue'], emptyOption: { show: true, label: '- Select -' } }) } },
+          { room: { title: 'Room', type: 'string', oneOf: [{ const: 'riverside_main', title: 'Main hall' }], ...x('select', { stale: true, dependsOn: ['venue'] }, { options: { emptyOption: { show: true, label: '- Select -' } } }) } },
           ['room'],
         )}
         initial={{ room: null }}
@@ -251,7 +257,7 @@ describe('select and the empty option rule', () => {
     let seen: Values = {};
     render(
       <Form
-        schema={object({ preview: { title: 'Preview', type: 'integer', oneOf: [{ const: 0, title: 'Disabled' }, { const: 1, title: 'Optional' }], 'x-surface': x('select', { emptyOption: { show: false, label: '- Select -' } }) } }, ['preview'])}
+        schema={object({ preview: { title: 'Preview', type: 'integer', oneOf: [{ const: 0, title: 'Disabled' }, { const: 1, title: 'Optional' }], ...x('select', {}, { options: { emptyOption: { show: false, label: '- Select -' } } }) } }, ['preview'])}
         initial={{ preview: 1 }}
         onValues={(values) => (seen = values)}
       />,
@@ -264,7 +270,7 @@ describe('select and the empty option rule', () => {
     let seen: Values = {};
     render(
       <Form
-        schema={object({ venue: { title: 'Venue', type: 'string', oneOf: venues, 'x-surface': x('radios', { emptyOption: { show: false, label: '- Select -' } }) } }, ['venue'])}
+        schema={object({ venue: { title: 'Venue', type: 'string', oneOf: venues, ...x('radios', {}, { options: { emptyOption: { show: false, label: '- Select -' } } }) } }, ['venue'])}
         initial={{ venue: 'library' }}
         onValues={(values) => (seen = values)}
       />,
@@ -280,7 +286,7 @@ describe('checkboxes, radios, a time and a date', () => {
     title: 'Days open',
     type: 'array',
     items: { type: 'string', oneOf: [{ const: 'mon', title: 'Monday' }, { const: 'tue', title: 'Tuesday' }, { const: 'sat', title: 'Saturday' }] },
-    'x-surface': x('checkboxes'),
+    ...x('checkboxes'),
   };
 
   it('maps `checkboxes` to a box per option, checked by the list, sent in option order', async () => {
@@ -308,7 +314,7 @@ describe('checkboxes, radios, a time and a date', () => {
       title: 'Handling',
       type: ['string', 'null'],
       oneOf: [{ const: 'fragile', title: 'Fragile' }, { const: 'upright', title: 'This way up' }, { const: null }],
-      'x-surface': x('radios', { emptyOption: { show: true, label: '- None -' } }),
+      ...x('radios', {}, { options: { emptyOption: { show: true, label: '- None -' } } }),
     };
     render(<Form schema={object({ handling })} initial={{ handling: 'fragile' }} onValues={(values) => (seen = values)} />);
     expect(screen.getAllByRole('radio')).toHaveLength(3);
@@ -321,7 +327,7 @@ describe('checkboxes, radios, a time and a date', () => {
       title: 'On public holidays',
       type: 'string',
       oneOf: [{ const: 'closed', title: 'Closed' }, { const: 'open', title: 'Open as usual' }],
-      'x-surface': x('radios', { stale: true, emptyOption: { show: false, label: '- None -' } }),
+      ...x('radios', { stale: true }, { options: { emptyOption: { show: false, label: '- None -' } } }),
     };
     render(<Form schema={object({ holidays })} initial={{ holidays: null }} />);
     expect(screen.getAllByRole('radio')).toHaveLength(2);
@@ -332,14 +338,14 @@ describe('checkboxes, radios, a time and a date', () => {
   });
 
   it('maps `time` to a time input', () => {
-    render(<Form schema={object({ opens: { title: 'Opens at', type: 'string', 'x-surface': x('time') } })} initial={{ opens: '09:00' }} />);
+    render(<Form schema={object({ opens: { title: 'Opens at', type: 'string', ...x('time') } })} initial={{ opens: '09:00' }} />);
     const input = screen.getByLabelText(/Opens at/);
     expect(input).toHaveAttribute('type', 'time');
     expect(input).toHaveValue('09:00');
   });
 
   it('maps `date` to a date input', () => {
-    render(<Form schema={object({ reviewed_on: { title: 'Reviewed on', type: 'string', format: 'date', 'x-surface': x('date') } })} initial={{ reviewed_on: '2026-10-19' }} />);
+    render(<Form schema={object({ reviewed_on: { title: 'Reviewed on', type: 'string', format: 'date', ...x('date') } })} initial={{ reviewed_on: '2026-10-19' }} />);
     const input = screen.getByLabelText(/Reviewed on/);
     expect(input).toHaveAttribute('type', 'date');
     expect(input).toHaveValue('2026-10-19');
@@ -347,7 +353,7 @@ describe('checkboxes, radios, a time and a date', () => {
 
   it('maps `list` to rows to add and remove, each the item\'s own field', async () => {
     let seen: Values = {};
-    const keywords: Schema = { title: 'Keywords', type: 'array', items: { type: 'string', 'x-surface': x('text') }, 'x-surface': x('list') };
+    const keywords: Schema = { title: 'Keywords', type: 'array', items: { type: 'string', ...x('text') }, ...x('list') };
     render(<Form schema={object({ keywords })} initial={{ keywords: ['maps'] }} onValues={(values) => (seen = values)} />);
     await userEvent.click(screen.getByRole('button', { name: 'Add keywords' }));
     expect(seen.keywords).toEqual(['maps', '']);
@@ -360,7 +366,7 @@ describe('computed', () => {
   it('renders a computed key disabled, holding what the server computed, saying so', () => {
     render(
       <Form
-        schema={object({ slug: { title: 'Slug', description: 'The name in a link.', type: ['string', 'null'], readOnly: true, 'x-surface': x('text', { computed: { from: ['label'], when: 'create' } }) } }, [])}
+        schema={object({ slug: { title: 'Slug', description: 'The name in a link.', type: ['string', 'null'], readOnly: true, ...x('text', { computed: { from: ['label'], when: 'create' } }) } }, [])}
         initial={{ slug: 'town-hall' }}
       />,
     );
@@ -375,7 +381,7 @@ describe('locked', () => {
   it('renders a locked key disabled, saying why', () => {
     render(
       <Form
-        schema={object({ type: { title: 'Machine name', description: 'Unique.', type: 'string', readOnly: true, const: 'article', 'x-surface': x('text') } }, ['type'])}
+        schema={object({ type: { title: 'Machine name', description: 'Unique.', type: 'string', readOnly: true, const: 'article', ...x('text') } }, ['type'])}
         initial={{ type: 'article' }}
       />,
     );
@@ -388,12 +394,12 @@ describe('locked', () => {
   it('renders a child its access locked as a fieldset of disabled keys, holding what is stored', () => {
     // As the emitter writes a locked child: the fieldset and every key in
     // it readOnly, each holding its stored value.
-    const locked = (title: string, value: unknown, widget: Extension['widget']): Schema => ({
+    const locked = (title: string, value: unknown, widget: PortableUi['widget'] & string): Schema => ({
       title,
       type: widget === 'number' ? 'integer' : 'string',
       readOnly: true,
       const: value,
-      'x-surface': x(widget),
+      ...x(widget),
     });
     render(
       <Form
@@ -403,7 +409,7 @@ describe('locked', () => {
             type: 'object',
             readOnly: true,
             properties: { spices: locked('Spices', 7, 'number'), label: locked('Label', 'Everyday', 'text') },
-            'x-surface': x('fieldset'),
+            ...x('fieldset'),
           },
         })}
         initial={{ rack: { spices: 7, label: 'Everyday' } }}
@@ -418,11 +424,11 @@ describe('locked', () => {
 });
 
 describe('fieldset, variants and list', () => {
-  const ticketVariants: Schema = { title: 'Ticket', type: 'object', 'x-surface': x('variants', { by: 'pricing', variants: { free: '#/$defs/registration.step3.ticket.free', paid: '#/$defs/registration.step3.ticket.paid' }, dependsOn: ['pricing'] }) };
+  const ticketVariants: Schema = { title: 'Ticket', type: 'object', ...x('variants', { by: 'pricing', variants: { free: '#/$defs/registration.step3.ticket.free', paid: '#/$defs/registration.step3.ticket.paid' }, dependsOn: ['pricing'] }) };
   const branches: Schema['allOf'] = [
     {
       if: { properties: { pricing: { const: 'free' } }, required: ['pricing'] },
-      then: { properties: { ticket: { title: 'Ticket', type: 'object', properties: { note: { title: 'Note', type: ['string', 'null'], 'x-surface': x('text') } } } } },
+      then: { properties: { ticket: { title: 'Ticket', type: 'object', properties: { note: { title: 'Note', type: ['string', 'null'], ...x('text') } } } } },
     },
     {
       if: { properties: { pricing: { const: 'paid' } }, required: ['pricing'] },
@@ -432,7 +438,7 @@ describe('fieldset, variants and list', () => {
             title: 'Ticket',
             type: 'object',
             required: ['price'],
-            properties: { price: { title: 'Price', type: 'number', minimum: 0.01, 'x-surface': x('number') } },
+            properties: { price: { title: 'Price', type: 'number', minimum: 0.01, ...x('number') } },
           },
         },
       },
@@ -442,13 +448,13 @@ describe('fieldset, variants and list', () => {
     title: 'Pricing',
     type: ['string', 'null'],
     oneOf: [{ const: 'free', title: 'free' }, { const: 'paid', title: 'paid' }, { const: null }],
-    'x-surface': x('select', { emptyOption: { show: true, label: '- None -' } }),
+    ...x('select', {}, { options: { emptyOption: { show: true, label: '- None -' } } }),
   };
 
   it('renders a fieldset with its legend and its properties', () => {
     render(
       <Form
-        schema={object({ contact: { title: 'Contact', type: 'object', required: ['email'], properties: { email: { title: 'Email', type: 'string', format: 'email', 'x-surface': x('email') } }, 'x-surface': x('fieldset') } })}
+        schema={object({ contact: { title: 'Contact', type: 'object', required: ['email'], properties: { email: { title: 'Email', type: 'string', format: 'email', ...x('email') } }, ...x('fieldset') } })}
         initial={{ contact: { email: 'events@example.com' } }}
       />,
     );
@@ -461,12 +467,12 @@ describe('fieldset, variants and list', () => {
     const compliance: Schema = {
       title: 'Compliance',
       type: 'object',
-      properties: { license: { title: 'Event license', type: ['string', 'null'], 'x-surface': x('text') } },
-      'x-surface': x('fieldset'),
+      properties: { license: { title: 'Event license', type: ['string', 'null'], ...x('text') } },
+      ...x('fieldset'),
     };
     render(
       <Form
-        schema={object({ third_party_settings: { type: 'object', properties: { compliance }, 'x-surface': x('fieldset', { group: true }) } })}
+        schema={object({ third_party_settings: { type: 'object', properties: { compliance }, ...x('fieldset', { group: true }) } })}
         initial={{ third_party_settings: { compliance: { license: '2048' } } }}
       />,
     );
@@ -479,23 +485,23 @@ describe('fieldset, variants and list', () => {
     const compliance: Schema = {
       title: 'Compliance',
       type: 'object',
-      properties: { license: { title: 'Event license', type: ['string', 'null'], 'x-surface': x('text') } },
-      'x-surface': x('fieldset', { after: 'capacity' }),
+      properties: { license: { title: 'Event license', type: ['string', 'null'], ...x('text') } },
+      ...x('fieldset', { after: 'capacity' }),
     };
     const badges: Schema = {
       title: 'Badges',
       type: 'object',
-      properties: { badge: { title: 'Badge', type: ['string', 'null'], 'x-surface': x('text') } },
-      'x-surface': x('fieldset'),
+      properties: { badge: { title: 'Badge', type: ['string', 'null'], ...x('text') } },
+      ...x('fieldset'),
     };
     const seen: Values[] = [];
     render(
       <Form
         schema={object({
-          title: { title: 'Title', type: 'string', 'x-surface': x('text') },
-          capacity: { title: 'Capacity', type: 'integer', 'x-surface': x('number') },
-          pricing: { title: 'Pricing', type: 'string', 'x-surface': x('text') },
-          third_party_settings: { type: 'object', properties: { compliance, badges }, 'x-surface': x('fieldset', { group: true }) },
+          title: { title: 'Title', type: 'string', ...x('text') },
+          capacity: { title: 'Capacity', type: 'integer', ...x('number') },
+          pricing: { title: 'Pricing', type: 'string', ...x('text') },
+          third_party_settings: { type: 'object', properties: { compliance, badges }, ...x('fieldset', { group: true }) },
         })}
         initial={{ title: 'Meetup', capacity: 50, pricing: 'free', third_party_settings: { compliance: { license: '' }, badges: { badge: 'star' } } }}
         onValues={(values) => seen.push(values)}
@@ -530,8 +536,8 @@ describe('fieldset, variants and list', () => {
   });
 
   it('renders nothing for a variant that declares no keys, and the other variants as they are', async () => {
-    const schedule: Schema = { title: 'Schedule', type: ['object', 'null'], 'x-surface': x('variants', { by: 'frequency', variants: { daily: '#/$defs/schedule.daily', weekly: '#/$defs/schedule.weekly' }, dependsOn: ['frequency'] }) };
-    const frequency: Schema = { title: 'Frequency', type: 'string', oneOf: [{ const: 'daily', title: 'Daily' }, { const: 'weekly', title: 'Weekly' }], 'x-surface': x('select') };
+    const schedule: Schema = { title: 'Schedule', type: ['object', 'null'], ...x('variants', { by: 'frequency', variants: { daily: '#/$defs/schedule.daily', weekly: '#/$defs/schedule.weekly' }, dependsOn: ['frequency'] }) };
+    const frequency: Schema = { title: 'Frequency', type: 'string', oneOf: [{ const: 'daily', title: 'Daily' }, { const: 'weekly', title: 'Weekly' }], ...x('select') };
     const days: Schema['allOf'] = [
       {
         if: { properties: { frequency: { const: 'daily' } }, required: ['frequency'] },
@@ -539,7 +545,7 @@ describe('fieldset, variants and list', () => {
       },
       {
         if: { properties: { frequency: { const: 'weekly' } }, required: ['frequency'] },
-        then: { properties: { schedule: { title: 'Weekly schedule', type: 'object', properties: { send_day: { title: 'Send day', type: 'string', 'x-surface': x('text') } } } } },
+        then: { properties: { schedule: { title: 'Weekly schedule', type: 'object', properties: { send_day: { title: 'Send day', type: 'string', ...x('text') } } } } },
       },
     ];
     render(<Form schema={object({ frequency, schedule }, ['frequency'], days)} initial={{ frequency: 'daily', schedule: {} }} />);
@@ -568,7 +574,7 @@ describe('fieldset, variants and list', () => {
     let seen: Values = {};
     render(
       <Form
-        schema={object({ tags: { title: 'Tags', type: ['array', 'null'], items: { title: 'Tag', type: 'string', 'x-surface': x('text') }, 'x-surface': x('list') } })}
+        schema={object({ tags: { title: 'Tags', type: ['array', 'null'], items: { title: 'Tag', type: 'string', ...x('text') }, ...x('list') } })}
         initial={{ tags: ['one'] }}
         onValues={(values) => (seen = values)}
       />,
@@ -587,8 +593,8 @@ describe('a collection', () => {
   const rack: Schema = {
     type: 'object',
     properties: {
-      label: { title: 'Label', type: ['string', 'null'], 'x-surface': x('text') },
-      spices: { title: 'Spices', type: ['integer', 'null'], maximum: 40, 'x-surface': x('number') },
+      label: { title: 'Label', type: ['string', 'null'], ...x('text') },
+      spices: { title: 'Spices', type: ['integer', 'null'], maximum: 40, ...x('number') },
     },
     additionalProperties: false,
   };
@@ -598,7 +604,7 @@ describe('a collection', () => {
     items: rack,
     minItems: 1,
     maxItems: 3,
-    'x-surface': x('list', { collection: true, ...extension }),
+    ...x('list', { collection: true, ...extension }),
     ...more,
   });
 
@@ -644,12 +650,12 @@ describe('a collection', () => {
       items: {
         type: 'object',
         properties: {
-          label: { title: 'Aisle label', type: ['string', 'null'], 'x-surface': x('text') },
+          label: { title: 'Aisle label', type: ['string', 'null'], ...x('text') },
           racks: racks({ minItems: 0 }),
         },
         additionalProperties: false,
       },
-      'x-surface': x('list', { collection: true }),
+      ...x('list', { collection: true }),
     };
     render(<Form schema={object({ aisles })} initial={{ aisles: [{ label: 'North', racks: [{ label: 'Everyday' }] }, { label: 'South', racks: [] }] }} onValues={(values) => (seen = values)} />);
     const south = screen.getByRole('group', { name: 'Aisles 2' });
@@ -678,8 +684,8 @@ describe('the contract panel', () => {
             type: ['array', 'null'],
             minItems: 1,
             maxItems: 4,
-            items: object({ label: { title: 'Label', type: 'string', 'x-surface': x('text') } }),
-            'x-surface': x('list', { collection: true }),
+            items: object({ label: { title: 'Label', type: 'string', ...x('text') } }),
+            ...x('list', { collection: true }),
           },
         })}
         values={{}}
@@ -701,11 +707,11 @@ describe('the contract panel', () => {
             type: 'string',
             'portable-check': { 'drupal:UniqueHandle': {} },
             'x-portable-messages': { 'check.drupal:UniqueHandle': 'No other account uses this handle.' },
-            'x-surface': x('text'),
+            ...x('text'),
           },
-          email: { title: 'Email', type: 'string', format: 'idn-email', 'x-surface': x('email') },
-          mail: { title: 'Mail', type: 'string', format: 'email', 'x-surface': x('email') },
-          tag: { title: 'Tag', type: 'string', 'portable-check': { 'drupal:UniqueTag': {} }, 'x-surface': x('text') },
+          email: { title: 'Email', type: 'string', format: 'idn-email', ...x('email') },
+          mail: { title: 'Mail', type: 'string', format: 'email', ...x('email') },
+          tag: { title: 'Tag', type: 'string', 'portable-check': { 'drupal:UniqueTag': {} }, ...x('text') },
         })}
         values={{}}
       />,
@@ -729,8 +735,8 @@ describe('the contract panel', () => {
           stale: [],
           values: {},
           schema: object({
-            license: { title: 'Event license', type: 'string', pattern: '^\\d{4}$', 'x-portable-messages': { pattern: message }, 'x-surface': x('text') },
-            code: { title: 'Code', type: 'string', pattern: '^[a-z]+$', 'x-surface': x('text') },
+            license: { title: 'Event license', type: 'string', pattern: '^\\d{4}$', 'x-portable-messages': { pattern: message }, ...x('text') },
+            code: { title: 'Code', type: 'string', pattern: '^[a-z]+$', ...x('text') },
           }),
         }}
         values={{}}
@@ -745,23 +751,29 @@ describe('the contract panel', () => {
   });
 });
 
-describe('the arrangement a key declares (x-surface.arrangement)', () => {
-  const hours = { id: 'hours', label: 'Opening hours', as: 'fieldset' as const };
-  const pricing = { id: 'pricing', label: 'Pricing', as: 'details' as const, collapsed: true };
-  const studio = object({
-    name: { title: 'Studio name', type: 'string', 'x-surface': x('text', { arrangement: { placeholder: 'Riverside studio', help: 'Shown on the door.' } }) },
-    opens: { title: 'Opens at', type: 'string', 'x-surface': x('text', { arrangement: { group: hours, weight: 2 } }) },
-    closes: { title: 'Closes at', type: 'string', 'x-surface': x('text', { arrangement: { group: hours, weight: 1 } }) },
-    rate: {
-      title: 'Hourly rate',
-      description: 'What an hour costs.',
-      type: ['integer', 'null'],
-      examples: [40],
-      'x-surface': x('number', { arrangement: { group: pricing, placeholder: 'For example, 40', prefix: '$', suffix: 'per hour', help: 'Whole dollars.' } }),
-    },
-    deposit: { title: 'Deposit asked', type: 'boolean', 'x-surface': x('checkbox', { arrangement: { group: pricing, weight: -1 } }) },
-    notes: { title: 'Notes', type: ['string', 'null'], 'x-surface': x('textarea', { arrangement: { weight: -10 } }) },
-  });
+describe('the arrangement a key declares (x-portable-ui)', () => {
+  // Each group declared once, on the frame; each key names it by id.
+  const groups: PortableUi['groups'] = {
+    hours: { label: 'Opening hours', widget: 'fieldset' },
+    pricing: { label: 'Pricing', widget: 'details', options: { open: false } },
+  };
+  const studio: Schema = {
+    ...object({
+      name: { title: 'Studio name', type: 'string', ...x('text', {}, { options: { placeholder: 'Riverside studio', help: 'Shown on the door.' } }) },
+      opens: { title: 'Opens at', type: 'string', ...x('text', {}, { group: 'hours', weight: 2 }) },
+      closes: { title: 'Closes at', type: 'string', ...x('text', {}, { group: 'hours', weight: 1 }) },
+      rate: {
+        title: 'Hourly rate',
+        description: 'What an hour costs.',
+        type: ['integer', 'null'],
+        examples: [40],
+        ...x('number', {}, { options: { placeholder: 'For example, 40', prefix: '$', suffix: 'per hour', help: 'Whole dollars.' }, group: 'pricing' }),
+      },
+      deposit: { title: 'Deposit asked', type: 'boolean', ...x('checkbox', {}, { group: 'pricing', weight: -1 }) },
+      notes: { title: 'Notes', type: ['string', 'null'], ...x('textarea', {}, { weight: -10 }) },
+    }),
+    'x-portable-ui': { groups },
+  };
 
   it('draws each group where its first key is declared, its keys inside it, each by its weight', () => {
     const { container } = render(<Form schema={studio} initial={{ name: '', opens: '09:00', closes: '17:00', rate: null, deposit: false, notes: null }} />);
@@ -784,13 +796,35 @@ describe('the arrangement a key declares (x-surface.arrangement)', () => {
   });
 
   it('draws what a group says its keys are for, under its legend', () => {
-    const bandwidth = { id: 'bandwidth', label: 'Bandwidth optimization', as: 'details' as const, description: 'External resources can be optimized automatically.' };
-    const schema = object({
-      css: { title: 'Aggregate CSS files', type: 'boolean', 'x-surface': x('checkbox', { arrangement: { group: bandwidth } }) },
-    });
+    const schema: Schema = {
+      ...object({
+        css: { title: 'Aggregate CSS files', type: 'boolean', ...x('checkbox', {}, { group: 'bandwidth' }) },
+      }),
+      'x-portable-ui': { groups: { bandwidth: { label: 'Bandwidth optimization', widget: 'details', description: 'External resources can be optimized automatically.' } } },
+    };
     const { container } = render(<Form schema={schema} initial={{ css: true }} />);
     const details = container.querySelector('details') as HTMLDetailsElement;
     expect(details.querySelector(':scope > summary + .dsr-description')).toHaveTextContent('External resources can be optimized automatically.');
+  });
+
+  it('draws one details for a group its frame declares, open as its options say, its keys by weight', () => {
+    const schema: Schema = {
+      ...object({
+        title: { title: 'Title', type: 'string', ...x('text') },
+        starts: { title: 'Starts', type: 'string', ...x('time', {}, { group: 'when', weight: 3 }) },
+        ends: { title: 'Ends', type: 'string', ...x('time', {}, { group: 'when', weight: 1 }) },
+      }),
+      'x-portable-ui': { groups: { when: { label: 'When', widget: 'details', options: { open: true } } } },
+    };
+    const { container } = render(<Form schema={schema} initial={{ title: '', starts: '09:00', ends: '17:00' }} />);
+    const details = container.querySelectorAll('details');
+    expect(details).toHaveLength(1);
+    expect(details[0].querySelector('summary')).toHaveTextContent('When');
+    expect(details[0].open).toBe(true);
+    expect(Array.from(details[0].querySelectorAll('input')).map((input) => input.getAttribute('name'))).toEqual(['ends', 'starts']);
+    // The ungrouped key stays outside it.
+    expect(details[0].querySelector('input[name="title"]')).toBeNull();
+    expect(container.querySelector('input[name="title"]')).not.toBeNull();
   });
 
   it('draws the placeholder, the prefix, the suffix and the help it declares', () => {
@@ -812,13 +846,13 @@ describe('the arrangement a key declares (x-surface.arrangement)', () => {
     const booking: Schema = {
       title: 'Booking',
       type: 'object',
-      properties: { booking_fee: { title: 'Booking fee', type: ['integer', 'null'], 'x-surface': x('number') } },
-      'x-surface': x('fieldset', { after: 'deposit' }),
+      properties: { booking_fee: { title: 'Booking fee', type: ['integer', 'null'], ...x('number') } },
+      ...x('fieldset', { after: 'deposit' }),
     };
     const seen: Values[] = [];
     const { container } = render(
       <Form
-        schema={object({ ...studio.properties, third_party_settings: { type: 'object', properties: { surface_resource_test: booking }, 'x-surface': x('fieldset', { group: true }) } })}
+        schema={{ ...object({ ...studio.properties, third_party_settings: { type: 'object', properties: { surface_resource_test: booking }, ...x('fieldset', { group: true }) } }), 'x-portable-ui': studio['x-portable-ui'] }}
         initial={{ name: '', opens: '09:00', closes: '17:00', rate: null, deposit: false, notes: null, third_party_settings: { surface_resource_test: { booking_fee: 0 } } }}
         onValues={(values) => seen.push(values)}
       />,
@@ -845,7 +879,7 @@ describe('a select standing for a stale value', () => {
               title: 'Room',
               type: 'string',
               oneOf: [{ const: 'main', title: 'Main hall' }],
-              'x-surface': x('select', { stale: true, emptyOption: { show: true, label: '- Keep annex (no longer offered) -' } }),
+              ...x('select', { stale: true }, { options: { emptyOption: { show: true, label: '- Keep annex (no longer offered) -' } } }),
             },
           },
           ['room'],
@@ -874,7 +908,7 @@ describe('a value drawn fixed', () => {
               type: 'string',
               const: 'pasted',
               default: 'pasted',
-              'x-surface': x('fixed', { fixed: 'Pasted here' }),
+              ...x('fixed', { fixed: 'Pasted here' }),
             },
           },
           ['source'],
@@ -889,13 +923,13 @@ describe('a value drawn fixed', () => {
   });
 });
 
-describe('a key that refers to an entity (x-surface.widget: autocomplete)', () => {
+describe('a key that refers to an entity (x-portable-ui.widget: autocomplete)', () => {
   const reference = { entityType: 'event_venue' };
 
   it('draws the listed candidates as a select, as the form does up to the limit', () => {
     render(
       <Form
-        schema={object({ venue: { title: 'Venue', type: 'string', oneOf: venues, 'x-surface': x('autocomplete', { reference }) } })}
+        schema={object({ venue: { title: 'Venue', type: 'string', oneOf: venues, ...x('autocomplete', { reference }) } })}
         initial={{ venue: 'library' }}
       />,
     );
@@ -913,7 +947,7 @@ describe('a key that refers to an entity (x-surface.widget: autocomplete)', () =
     render(
       <LookupContext.Provider value={lookup}>
         <Form
-          schema={object({ venue: { title: 'Venue', type: 'string', 'x-surface': x('autocomplete', { reference }) } })}
+          schema={object({ venue: { title: 'Venue', type: 'string', ...x('autocomplete', { reference }) } })}
           initial={{ venue: null }}
           onValues={(values) => {
             last = values;
@@ -941,11 +975,11 @@ describe('a key that refers to an entity (x-surface.widget: autocomplete)', () =
           schema={object({
             thing: {
               ...object({
-                entity_type: { title: 'Entity type', type: 'string', 'x-surface': x('text') },
-                id: { title: 'ID', type: 'string', 'x-surface': x('autocomplete', { reference: { by: 'entity_type' } }) },
+                entity_type: { title: 'Entity type', type: 'string', ...x('text') },
+                id: { title: 'ID', type: 'string', ...x('autocomplete', { reference: { by: 'entity_type' } }) },
               }),
               title: 'Featured beside',
-              'x-surface': x('fieldset'),
+              ...x('fieldset'),
             },
           })}
           initial={{ thing: { entity_type: 'node', id: null } }}
@@ -963,10 +997,10 @@ describe("a module's widget the page has no field for", () => {
     render(
       <Form
         schema={object({
-          accent: { title: 'Accent', type: ['string', 'null'], 'x-surface': x('widget_test_color') },
-          venue: { title: 'Venue', type: 'string', oneOf: venues, 'x-surface': x('my_module_map') },
-          open: { title: 'Open', type: 'boolean', 'x-surface': x('my_module_toggle') },
-          layout: { title: 'Layout', 'x-surface': x(null) },
+          accent: { title: 'Accent', type: ['string', 'null'], ...x('widget_test_color') },
+          venue: { title: 'Venue', type: 'string', oneOf: venues, ...x('my_module_map') },
+          open: { title: 'Open', type: 'boolean', ...x('my_module_toggle') },
+          layout: { title: 'Layout', ...x(null) },
         })}
         initial={{ accent: '#336699', venue: 'library', open: true, layout: null }}
         onValues={(values) => (seen = values)}
@@ -987,8 +1021,8 @@ describe("a module's widget the page has no field for", () => {
     render(
       <Form
         schema={object({
-          mail: { title: 'Mail', type: 'string', format: 'email', 'x-surface': x('my_module_mail') },
-          old_mail: { title: 'Old mail', type: 'string', format: 'idn-email', 'x-surface': x('my_module_mail') },
+          mail: { title: 'Mail', type: 'string', format: 'email', ...x('my_module_mail') },
+          old_mail: { title: 'Old mail', type: 'string', format: 'idn-email', ...x('my_module_mail') },
         })}
         initial={{ mail: 'events@example.com', old_mail: 'events@example.com' }}
       />,
@@ -1004,7 +1038,7 @@ describe('the contract JSON', () => {
     render(
       <ContractPanel
         contract={{ resource: 'example', operation: 'configure', label: null, stale: [], values: { title }, schema: object({}) }}
-        full={object({ title: { title: 'Title', type: 'string', 'x-surface': x('text') } })}
+        full={object({ title: { title: 'Title', type: 'string', ...x('text') } })}
         values={{}}
       />,
     );

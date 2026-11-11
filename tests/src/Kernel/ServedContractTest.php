@@ -243,7 +243,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $title = $schema['properties']['title'];
     $this->assertSame('Event title', $title['title']);
     $this->assertSame('string', $title['type']);
-    $this->assertSame('text', $title['x-surface']['widget']);
+    $this->assertSame('text', $title['x-portable-ui']['widget']);
 
     $capacity = $schema['properties']['capacity'];
     $this->assertSame('Capacity', $capacity['title']);
@@ -251,10 +251,10 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertSame(1, $capacity['minimum']);
     $this->assertSame(1000, $capacity['maximum']);
     $this->assertSame(50, $capacity['default']);
-    $this->assertSame('number', $capacity['x-surface']['widget']);
-    $this->assertArrayNotHasKey('refined', $capacity['x-surface']);
+    $this->assertSame('number', $capacity['x-portable-ui']['widget']);
+    $this->assertArrayNotHasKey('refined', $capacity['x-surface'] ?? []);
 
-    $this->assertSame('checkbox', $schema['properties']['open']['x-surface']['widget']);
+    $this->assertSame('checkbox', $schema['properties']['open']['x-portable-ui']['widget']);
     $this->assertTrue($schema['properties']['open']['default']);
     $this->assertSame(['title' => 'Spring meetup', 'capacity' => 50, 'open' => TRUE], $contract['values']);
     $this->assertSame([], $contract['stale']);
@@ -280,10 +280,10 @@ class ServedContractTest extends SurfaceKernelTestBase {
     ], $this->titles($venue));
     $this->assertSame(['entityType' => 'event_venue'], $venue['x-surface']['reference']);
     $this->assertArrayNotHasKey('enum', $venue);
-    $this->assertSame('select', $venue['x-surface']['widget']);
+    $this->assertSame('select', $venue['x-portable-ui']['widget']);
     // Required, and a valid choice is stored: no empty option.
-    $this->assertSame(['show' => FALSE, 'label' => '- Select -'], $venue['x-surface']['emptyOption']);
-    $this->assertArrayNotHasKey('dependsOn', $venue['x-surface']);
+    $this->assertSame(['show' => FALSE, 'label' => '- Select -'], $venue['x-portable-ui']['options']['emptyOption']);
+    $this->assertArrayNotHasKey('dependsOn', $venue['x-surface'] ?? []);
 
     // The room depends on the venue and is narrowed to the riverside's.
     $room = $schema['properties']['room'];
@@ -315,13 +315,13 @@ class ServedContractTest extends SurfaceKernelTestBase {
     // Emitted for these values directly, the stored room is stale and its
     // empty option says it keeps it; /refine holds it as an orphan of the
     // edit instead, which a save refuses, and words it "- Select -".
-    $this->assertSame(['show' => TRUE, 'label' => '- Keep riverside_main (no longer offered) -'], $room['x-surface']['emptyOption']);
+    $this->assertSame(['show' => TRUE, 'label' => '- Keep riverside_main (no longer offered) -'], $room['x-portable-ui']['options']['emptyOption']);
     $orphaned = $this->contract('registration.step2', 'configure', [], [
       'venue' => 'library',
       SurfaceFormBuilderInterface::STANDING_KEY => ['room' => 'riverside_main'],
       'room' => NULL,
     ]);
-    $this->assertSame(['show' => TRUE, 'label' => '- Select -'], $orphaned['schema']['properties']['room']['x-surface']['emptyOption']);
+    $this->assertSame(['show' => TRUE, 'label' => '- Select -'], $orphaned['schema']['properties']['room']['x-portable-ui']['options']['emptyOption']);
     $this->assertNull($moved['values']['room']);
     $this->assertSame(['/room'], $moved['stale']);
 
@@ -350,7 +350,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertArrayNotHasKey(SurfaceFormBuilderInterface::STANDING_KEY, $contract['values']);
     $room = $contract['schema']['properties']['room'];
     $this->assertTrue($room['x-surface']['stale']);
-    $this->assertSame(['show' => TRUE, 'label' => '- Select -'], $room['x-surface']['emptyOption']);
+    $this->assertSame(['show' => TRUE, 'label' => '- Select -'], $room['x-portable-ui']['options']['emptyOption']);
     $this->assertNull($contract['values']['room']);
     $this->assertSame(['/room'], $contract['stale']);
     // Nothing caps the capacity by a room no longer on the screen.
@@ -358,7 +358,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertSame(1, $capacity['minimum']);
     $this->assertArrayNotHasKey('maximum', $capacity);
     $this->assertArrayNotHasKey('description', $capacity);
-    $this->assertArrayNotHasKey('refined', $capacity['x-surface']);
+    $this->assertArrayNotHasKey('refined', $capacity['x-surface'] ?? []);
     $this->assertSame(50, $contract['values']['capacity']);
 
     // A number standing for a stored value is stale too, and shown as
@@ -369,7 +369,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
       SurfaceFormBuilderInterface::STANDING_KEY => ['capacity' => 70],
     ]);
     $this->assertTrue($number['schema']['properties']['capacity']['x-surface']['stale']);
-    $this->assertArrayNotHasKey('emptyOption', $number['schema']['properties']['capacity']['x-surface']);
+    $this->assertSame(['widget' => 'number'], $number['schema']['properties']['capacity']['x-portable-ui'], 'A number has no empty option.');
     $this->assertNull($number['values']['capacity']);
     $this->assertSame(['/capacity'], $number['stale']);
   }
@@ -382,7 +382,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $schema = $contract['schema'];
     $ticket = $schema['properties']['ticket'];
     $this->assertSame('Ticket', $ticket['title']);
-    $this->assertSame('variants', $ticket['x-surface']['widget']);
+    $this->assertSame('variants', $ticket['x-portable-ui']['widget']);
     $this->assertSame('pricing', $ticket['x-surface']['by']);
     $this->assertSame([
       'free' => '#/$defs/registration.step3.ticket.free',
@@ -411,10 +411,10 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertSame('#/$defs/registration.contact', $schema['properties']['contact']['$ref']);
     $contact = SchemaResolver::inline($schema['properties']['contact'], $schema);
     $this->assertSame('Contact', $contact['title']);
-    $this->assertSame('fieldset', $contact['x-surface']['widget']);
+    $this->assertSame('fieldset', $contact['x-portable-ui']['widget']);
     $this->assertSame(['email'], $contact['required']);
     $this->assertSame('email', $contact['properties']['email']['format']);
-    $this->assertSame('email', $contact['properties']['email']['x-surface']['widget']);
+    $this->assertSame('email', $contact['properties']['email']['x-portable-ui']['widget']);
 
     $this->assertSame(['note' => ''], $contract['values']['ticket']);
     $this->assertSame(['email' => 'events@example.com', 'phone' => ''], $contract['values']['contact']);
@@ -441,15 +441,17 @@ class ServedContractTest extends SurfaceKernelTestBase {
    *   The schema.
    * @param string $at
    *   Where the schema sits, as a JSON pointer.
+   * @param string $keyword
+   *   The keyword collected: `x-surface`, or `x-portable-ui`.
    *
    * @return array<string, array>
    *   Each keyword, keyed by the pointer of the schema carrying it.
    */
-  protected function extensions(array $schema, string $at = ''): array {
-    $found = isset($schema['x-surface']) ? [$at => $schema['x-surface']] : [];
+  protected function extensions(array $schema, string $at = '', string $keyword = 'x-surface'): array {
+    $found = isset($schema[$keyword]) ? [$at => $schema[$keyword]] : [];
     foreach ($schema as $key => $value) {
-      if ($key !== 'x-surface' && is_array($value)) {
-        $found += $this->extensions($value, $at . '/' . $key);
+      if (!in_array($key, ['x-surface', 'x-portable-ui'], TRUE) && is_array($value)) {
+        $found += $this->extensions($value, $at . '/' . $key, $keyword);
       }
     }
     return $found;
@@ -480,8 +482,6 @@ class ServedContractTest extends SurfaceKernelTestBase {
         $this->assertSame(['contract', 'operation', 'version'], array_keys($extension), 'The top states the contract\'s version, how the operation behaves, and the version.');
         continue;
       }
-      $this->assertArrayNotHasKey('widget', $extension, $at . ' names no widget.');
-      $this->assertArrayNotHasKey('multiple', $extension, $at . ' names no widget.');
       // Written only where it says something: no lock, which `readOnly`
       // says, and no part that would be empty.
       $this->assertNotSame([], $extension, $at . ' says something.');
@@ -495,26 +495,41 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertSame(['free', 'paid'], array_keys($ticket['variants']));
     $this->assertSame('free', $ticket['chosen']);
     $this->assertSame(['venue'], $schema['properties']['room']['x-surface']['dependsOn']);
-    $this->assertArrayHasKey('emptyOption', $schema['properties']['venue']['x-surface']);
-    $this->assertSame('#/$defs/registration.step3.ticket.paid', $ticket['variants']['paid']);
-    // The hints are the only difference.
-    $hinted = $this->contract('registration.step3', 'configure');
-    $hints = ['widget' => TRUE, 'multiple' => TRUE, 'arrangement' => TRUE];
-    foreach ($this->extensions($hinted['schema']) as $at => $extension) {
-      $own = array_diff_key($extension, $hints);
-      // An `x-surface` that held only hints is not written without them.
-      $this->assertSame($own === [] ? NULL : $own, $extensions[$at] ?? NULL, $at . ' differs by its hints alone.');
-      unset($extensions[$at]);
+    // Without the hints, `x-portable-ui` says the empty option alone.
+    $uis = $this->extensions($schema, '', 'x-portable-ui');
+    $this->assertNotEmpty($uis);
+    foreach ($uis as $at => $ui) {
+      $this->assertSame(['options'], array_keys($ui), $at . ' names no widget.');
+      $this->assertSame(['emptyOption'], array_keys($ui['options']), $at . ' names no widget.');
     }
-    $this->assertSame([], $extensions, 'No `x-surface` only the canonical document writes.');
+    $this->assertSame(['show' => FALSE, 'label' => '- Select -'], $schema['properties']['venue']['x-portable-ui']['options']['emptyOption']);
+    $this->assertSame('#/$defs/registration.step3.ticket.paid', $ticket['variants']['paid']);
+    // The hints are the only difference: `x-surface` is the same, and
+    // `x-portable-ui` differs by its hints alone.
+    $hinted = $this->contract('registration.step3', 'configure');
+    $this->assertSame($extensions, $this->extensions($hinted['schema']), 'The same `x-surface` with and without the hints.');
+    $hints = array_flip(['widget', 'multiple', 'placeholder', 'prefix', 'suffix', 'help', 'group', 'weight', 'groups']);
+    foreach ($this->extensions($hinted['schema'], '', 'x-portable-ui') as $at => $ui) {
+      $own = array_diff_key($ui, $hints);
+      if (isset($own['options'])) {
+        $own['options'] = array_diff_key($own['options'], $hints);
+        if ($own['options'] === []) {
+          unset($own['options']);
+        }
+      }
+      // An `x-portable-ui` that held only hints is not written without them.
+      $this->assertSame($own === [] ? NULL : $own, $uis[$at] ?? NULL, $at . ' differs by its hints alone.');
+      unset($uis[$at]);
+    }
+    $this->assertSame([], $uis, 'No `x-portable-ui` only the canonical document writes.');
     $this->assertSame($canonical['values'], $hinted['values']);
     $this->assertWellFormed($schema);
     $this->assertTrue($this->validates($schema, $canonical['values']));
 
     // The React endpoint asks for them.
     $served = $this->servedJson('GET', '/surface-api/registration.step3');
-    $this->assertSame('variants', $served['schema']['properties']['ticket']['x-surface']['widget']);
-    $this->assertSame('select', $served['schema']['properties']['venue']['x-surface']['widget']);
+    $this->assertSame('variants', $served['schema']['properties']['ticket']['x-portable-ui']['widget']);
+    $this->assertSame('select', $served['schema']['properties']['venue']['x-portable-ui']['widget']);
     $this->assertArrayNotHasKey('x-surface', $this->conditional($served['schema'], 'pricing', 'paid', 'ticket'));
     // Served at a route, so it says where: its local references resolve
     // wherever it is embedded.
@@ -570,7 +585,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     // object, and only said. The schema keeps it where its values go,
     // inside the group, the group last.
     $this->assertSame('capacity', $mount['properties']['surface_examples_compliance']['x-surface']['after']);
-    $this->assertArrayNotHasKey('after', $mount['x-surface']);
+    $this->assertArrayNotHasKey('after', $mount['x-surface'] ?? []);
     $this->assertSame([
       'title', 'open', 'venue', 'room', 'capacity', 'pricing', 'ticket', 'contact', 'third_party_settings',
     ], array_keys($contract['schema']['properties']));
@@ -653,7 +668,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
    *   The schema in plain JSON Schema.
    */
   protected function plain(array $schema): array {
-    unset($schema['x-surface'], $schema['portable-check'], $schema['x-portable-messages']);
+    unset($schema['x-surface'], $schema['portable-check'], $schema['x-portable-messages'], $schema['x-portable-ui']);
     foreach ($schema as $keyword => $value) {
       if (is_array($value)) {
         $schema[$keyword] = $this->plain($value);
@@ -700,9 +715,9 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertWellFormed($schema);
 
     $room = $schema['properties']['room'];
-    $this->assertArrayNotHasKey('refined', $room['x-surface']);
+    $this->assertArrayNotHasKey('refined', $room['x-surface'] ?? []);
     $this->assertTrue($room['x-surface']['enumerated']);
-    $this->assertArrayNotHasKey('refine', $room['x-surface']);
+    $this->assertArrayNotHasKey('refine', $room['x-surface'] ?? []);
     $this->assertSame(Venues::rooms(), $this->titles($room));
     $rooms = [];
     foreach ($this->branches($schema, 'room') as [$when, $then]) {
@@ -723,7 +738,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertSame(array_keys(Venues::ROOMS), array_keys($capacities));
     // A bound states the declared type beside it, which cannot narrow.
     $this->assertEquals(['type' => $capacity['type'], 'description' => 'Up to 400 for the Main hall.', 'maximum' => 400], $capacities['riverside_main']);
-    $this->assertArrayNotHasKey('enumerated', $schema['properties']['venue']['x-surface']);
+    $this->assertArrayNotHasKey('enumerated', $schema['properties']['venue']['x-surface'] ?? []);
 
     $valid = [
       'title' => 'Spring meetup',
@@ -748,8 +763,8 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $refined = $this->contract('registration.step2', 'configure')['schema'];
     $this->assertArrayNotHasKey('allOf', $refined);
     foreach ($refined['properties'] as $name => $property) {
-      $this->assertArrayNotHasKey('enumerated', $property['x-surface'], $name);
-      $this->assertArrayNotHasKey('refine', $property['x-surface'], $name);
+      $this->assertArrayNotHasKey('enumerated', $property['x-surface'] ?? [], $name);
+      $this->assertArrayNotHasKey('refine', $property['x-surface'] ?? [], $name);
     }
   }
 
@@ -856,7 +871,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $capacity = $contract['schema']['properties']['capacity'];
     $this->assertSame(100, $capacity['maximum']);
     $this->assertSame('Up to 100 without an event license.', $capacity['description']);
-    $this->assertArrayNotHasKey('declared', $capacity['x-surface']);
+    $this->assertArrayNotHasKey('declared', $capacity['x-surface'] ?? []);
     $this->assertTrue($capacity['x-surface']['enumerated']);
     $ceilings = [];
     foreach ($this->branches($contract['schema'], 'capacity') as [$when, $then]) {
@@ -961,8 +976,9 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertSame(array_map(static fn (array $info): int => $info['seats'], Venues::ROOMS), $seats);
     // Nothing that is only true of a moment, anywhere.
     foreach ($this->extensions($schema) as $at => $extension) {
-      $this->assertSame([], array_intersect(['refined', 'stale', 'emptyOption', 'chosen', 'widget'], array_keys($extension)), $at);
+      $this->assertSame([], array_intersect(['refined', 'stale', 'chosen'], array_keys($extension)), $at);
     }
+    $this->assertSame([], $this->extensions($schema, '', 'x-portable-ui'), 'No empty option, and no hint, anywhere.');
 
     // A validator holding it: any venue with one of its own rooms, up to
     // that room's seats, and nothing else.
@@ -1174,9 +1190,19 @@ class ServedContractTest extends SurfaceKernelTestBase {
   protected function withoutPresent(array $schema): array {
     foreach ($schema as $keyword => $value) {
       if ($keyword === 'x-surface' && is_array($value)) {
-        $schema[$keyword] = array_diff_key($value, array_flip(['refined', 'stale', 'emptyOption', 'chosen']));
+        $schema[$keyword] = array_diff_key($value, array_flip(['refined', 'stale', 'chosen']));
         // An `x-surface` left with nothing to say is not written.
         if ($schema[$keyword] === []) {
+          unset($schema[$keyword]);
+        }
+      }
+      elseif ($keyword === 'x-portable-ui' && is_array($value)) {
+        unset($value['options']['emptyOption']);
+        if (($value['options'] ?? NULL) === []) {
+          unset($value['options']);
+        }
+        $schema[$keyword] = $value;
+        if ($value === []) {
           unset($schema[$keyword]);
         }
       }
@@ -1428,7 +1454,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertSame('^[a-z0-9_]+$', $type['pattern']);
     $this->assertSame(255, $schema['properties']['name']['maxLength']);
     $this->assertSame('Article', $edit['values']['name']);
-    $this->assertSame('textarea', $schema['properties']['description']['x-surface']['widget']);
+    $this->assertSame('textarea', $schema['properties']['description']['x-portable-ui']['widget']);
     $preview = $schema['properties']['preview_mode'];
     $this->assertSame([0, 1, 2], array_column(array_filter($preview['oneOf'], fn (array $choice): bool => isset($choice['title'])), 'const'));
     $this->assertSame('integer', $preview['type']);
@@ -1464,7 +1490,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertSame(['entity_type', 'bundle'], $schema['properties']['field']['x-surface']['dependsOn']);
     $this->assertSame(['integer'], (array) $schema['properties']['limit']['type']);
     $variants = $schema['properties']['presentation_settings'];
-    $this->assertSame('variants', $variants['x-surface']['widget']);
+    $this->assertSame('variants', $variants['x-portable-ui']['widget']);
     $this->assertSame('list', $variants['x-surface']['chosen']);
     $grid = $this->variant($schema, 'presentation', 'grid', 'presentation_settings');
     $this->assertSame(1, $grid['properties']['columns']['minimum']);

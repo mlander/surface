@@ -458,7 +458,7 @@ form, a `oneOf` in both documents and an enum in the tool listing. Past
 it, the resolver does not apply: the key takes an id, which the
 constraint's validator holds to the handler, drawn by core's
 `entity_autocomplete` element ([Widgets](widgets.md#the-stock-widgets)),
-`x-surface.widget: autocomplete` in both documents, and looked up with
+`x-portable-ui.widget: autocomplete` in both documents, and looked up with
 the resource's lookup ([The served contract](served-contract.md#a-lookup)).
 The list's cacheability is what the handler read: the entity type's list
 tags, the contexts `References::CONTEXTS` names for it

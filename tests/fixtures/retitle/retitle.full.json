@@ -30,8 +30,10 @@
                 "items": {
                     "$ref": "#/$defs/ai.retitle.item"
                 },
+                "x-portable-ui": {
+                    "widget": "list"
+                },
                 "x-surface": {
-                    "widget": "list",
                     "collection": true,
                     "live": true
                 }
@@ -61,7 +63,7 @@
                     }
                 ],
                 "default": "title",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select"
                 }
             }
@@ -99,8 +101,10 @@
                         "x-portable-messages": {
                             "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
                         },
+                        "x-portable-ui": {
+                            "widget": "select"
+                        },
                         "x-surface": {
-                            "widget": "select",
                             "reference": {
                                 "entityType": "node"
                             }
@@ -114,7 +118,7 @@
                             "null"
                         ],
                         "maxLength": 255,
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "text"
                         }
                     }

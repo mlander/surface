@@ -29,10 +29,12 @@
                     }
                 ],
                 "default": "grid",
-                "x-surface": {
-                    "emptyOption": {
-                        "show": false,
-                        "label": "- Select -"
+                "x-portable-ui": {
+                    "options": {
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
+                        }
                     }
                 }
             },
@@ -177,10 +179,12 @@
                             }
                         ],
                         "default": "small",
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     }

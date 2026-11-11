@@ -400,7 +400,7 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     $ticket = $contract['properties']['ticket']['x-surface'];
     $said = [$ticket['by'], array_keys($ticket['variants']), $ticket['chosen']];
     $this->assertSame(['pricing', ['free', 'paid'], 'free'], $said);
-    $this->assertArrayNotHasKey('widget', $ticket);
+    $this->assertArrayNotHasKey('x-portable-ui', $contract['properties']['ticket'], 'No widget hint.');
     $this->assertSame(['venue'], $contract['properties']['room']['x-surface']['dependsOn']);
 
     // Beside it, the full schema: the same keys as declared, with every

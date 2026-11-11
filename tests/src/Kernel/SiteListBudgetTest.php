@@ -232,7 +232,7 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
     $panels = $full['properties']['panels'];
     $this->assertCount(20, $panels['anyOf'], 'A def per layout, and null.');
     $this->assertCount(19, (array) $panels['x-surface']['variants']);
-    $this->assertArrayNotHasKey('deferred', $panels['x-surface']);
+    $this->assertArrayNotHasKey('deferred', $panels['x-surface'] ?? []);
     $this->assertCount(19, $full['allOf']);
     $this->assertFalse($this->validates($full, ['layout' => 'strip', 'panels' => ['columns' => 3]]));
 
@@ -266,7 +266,7 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
     // Nothing chosen: open and `deferred`, as in the full schema.
     $none = $this->these(PosterResource::class, 'resource_test.poster', ['layout' => '']);
     $this->assertArrayHasKey('fetch', $none['schema']['properties']['panels']['x-surface']['deferred']);
-    $this->assertArrayNotHasKey('refine', $none['schema']['properties']['panels']['x-surface']);
+    $this->assertArrayNotHasKey('refine', $none['schema']['properties']['panels']['x-surface'] ?? []);
     $this->assertArrayNotHasKey('anyOf', $none['schema']['properties']['panels']);
 
     // The pipeline refuses another variant's keys by name, as ever.
@@ -288,7 +288,7 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
       $this->assertSame(['object', 'null'], $map['type'], $key);
       $this->assertArrayNotHasKey('$ref', $map, $key);
       $this->assertArrayHasKey('fetch', $map['x-surface']['deferred'], $key);
-      $this->assertArrayNotHasKey('refine', $map['x-surface'], $key);
+      $this->assertArrayNotHasKey('refine', $map['x-surface'] ?? [], $key);
       $this->assertSame('?choose=/' . $key . '={value}', $map['x-surface']['deferred']['fetch'], $key);
       $this->assertCount(25, $map['x-surface']['deferred']['entries'], $key);
       $this->assertSame(['id' => 'bench_7', 'label' => 'Bench 7'], $map['x-surface']['deferred']['entries'][6], $key);
@@ -651,24 +651,51 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
    */
   protected static function withoutHints(array $schema): array {
     unset($schema['$id']);
-    $strip = static function (array $node) use (&$strip): array {
+    $hints = array_flip(['widget', 'multiple', 'placeholder', 'prefix', 'suffix', 'help', 'group', 'weight', 'groups']);
+    $strip = static function (array $node) use (&$strip, $hints): array {
       foreach ($node as $key => $value) {
-        if ($key === 'x-surface' && is_array($value)) {
-          unset($value['widget'], $value['multiple'], $value['arrangement']);
-          if (isset($value['within']) && is_array($value['within'])) {
-            $hints = array_flip(['widget', 'multiple', 'arrangement']);
-            $value['within'] = array_map(static fn (array $within): array => array_diff_key($within, $hints), $value['within']);
+        if (!is_array($value) || in_array($key, ['const', 'default', 'examples', 'enum', 'x-surface'], TRUE)) {
+          continue;
+        }
+        if ($key === 'x-portable-ui') {
+          $value = array_diff_key($value, $hints);
+          if (is_array($value['options'] ?? NULL)) {
+            $value['options'] = array_diff_key($value['options'], $hints);
+            if ($value['options'] === []) {
+              unset($value['options']);
+            }
           }
-          // An `x-surface` that held only hints is not written.
+          // An `x-portable-ui` that held only hints is not written.
           if ($value === []) {
             unset($node[$key]);
             continue;
           }
           $node[$key] = $value;
+          continue;
         }
-        elseif (is_array($value)) {
-          $node[$key] = $strip($value);
+        if ($key === 'properties') {
+          // A property below an applicator that said nothing but its hints
+          // is no property there without them.
+          foreach ($value as $name => $child) {
+            $stripped = is_array($child) ? $strip($child) : $child;
+            if ($stripped === [] && $child !== []) {
+              unset($value[$name]);
+              continue;
+            }
+            $value[$name] = $stripped;
+          }
+          if ($value === [] && $node[$key] !== []) {
+            unset($node[$key]);
+            continue;
+          }
+          $node[$key] = $value;
+          continue;
         }
+        $stripped = $strip($value);
+        // A narrowing left with nothing is `true`.
+        $node[$key] = in_array($key, ['allOf', 'anyOf', 'oneOf'], TRUE) && array_is_list($value)
+          ? array_map(static fn (mixed $member): mixed => is_array($member) && $member !== [] && $strip($member) === [] ? TRUE : (is_array($member) ? $strip($member) : $member), $value)
+          : $stripped;
       }
       return $node;
     };

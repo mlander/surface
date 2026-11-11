@@ -184,11 +184,11 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
     $this->assertSame(['select', TRUE], [$select['#type'], $select['#multiple']]);
 
     $emitter = $this->container->get('surface.contract_emitter');
-    $hint = static fn (SurfaceInterface $surface): array => $emitter->emitFull($surface, 'test', widgets: TRUE)->document['schema']['properties']['key']['x-surface'];
+    $hint = static fn (SurfaceInterface $surface): array => $emitter->emitFull($surface, 'test', widgets: TRUE)->document['schema']['properties']['key']['x-portable-ui'];
     $this->assertSame('checkboxes', $hint($this->one(static::choices(12)))['widget']);
-    $this->assertArrayNotHasKey('multiple', $hint($this->one(static::choices(12))));
+    $this->assertArrayNotHasKey('options', $hint($this->one(static::choices(12))));
     $long = $hint($this->one(static::choices(13)));
-    $this->assertSame(['select', TRUE], [$long['widget'], $long['multiple']]);
+    $this->assertSame(['select', TRUE], [$long['widget'], $long['options']['multiple']]);
     $this->assertSame('checkboxes', $hint($this->one(static::choices(13)->setSetting('widget', 'checkboxes')))['widget']);
   }
 
@@ -255,9 +255,9 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
     $this->assertSame('xl', $this->extracted($choice()->setRequired(TRUE), $stale, NULL), 'Radios left alone keep the stored value.');
 
     $schema = $this->container->get('surface.contract_emitter')->emit($parcel, ['handling' => 'fragile'] + $parcel->getDefaultValues(), 'resource_test.parcel', widgets: TRUE)->document['schema'];
-    $this->assertSame('radios', $schema['properties']['handling']['x-surface']['widget']);
-    $this->assertSame(['show' => TRUE, 'label' => '- None -'], $schema['properties']['handling']['x-surface']['emptyOption']);
-    $this->assertSame('select', $schema['properties']['service']['x-surface']['widget'], 'A choice that asks for nothing stays a select.');
+    $this->assertSame('radios', $schema['properties']['handling']['x-portable-ui']['widget']);
+    $this->assertSame(['show' => TRUE, 'label' => '- None -'], $schema['properties']['handling']['x-portable-ui']['options']['emptyOption']);
+    $this->assertSame('select', $schema['properties']['service']['x-portable-ui']['widget'], 'A choice that asks for nothing stays a select.');
   }
 
   /**
@@ -324,7 +324,7 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
       $this->assertSame(['string', 'null'], $properties['notes']['type'], $label . ': null where it can.');
     }
     $these = $emitter->emit($hours, $stored, 'resource_test.opening_hours', widgets: TRUE)->document['schema']['properties'];
-    $this->assertSame(['show' => FALSE, 'label' => '- Select -'], $these['holidays']['x-surface']['emptyOption']);
+    $this->assertSame(['show' => FALSE, 'label' => '- Select -'], $these['holidays']['x-portable-ui']['options']['emptyOption']);
   }
 
   /**
@@ -354,7 +354,7 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
     $this->assertTrue($element['remove_0']['#disabled'], 'At the minimum: nothing to remove.');
     $this->assertTrue($element['add']['#disabled'], 'At the maximum: nothing to add.');
 
-    $hint = $this->container->get('surface.contract_emitter')->emitFull($hours, 'resource_test.opening_hours', widgets: TRUE)->document['schema']['properties']['keywords']['x-surface']['widget'];
+    $hint = $this->container->get('surface.contract_emitter')->emitFull($hours, 'resource_test.opening_hours', widgets: TRUE)->document['schema']['properties']['keywords']['x-portable-ui']['widget'];
     $this->assertSame('list', $hint);
   }
 
@@ -368,7 +368,7 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
     $this->assertSame(['time', '09:00'], [$opens['#attributes']['type'], $opens['#default_value']]);
     $this->assertSame('17:30', $this->extracted($hours->getDefinition('opens'), $opens, '17:30'));
     $schema = $this->container->get('surface.contract_emitter')->emitFull($hours, 'resource_test.opening_hours', widgets: TRUE)->document['schema'];
-    $this->assertSame('time', $schema['properties']['opens']['x-surface']['widget']);
+    $this->assertSame('time', $schema['properties']['opens']['x-portable-ui']['widget']);
     $this->assertSame('^([01]\d|2[0-3]):[0-5]\d$', $schema['properties']['opens']['pattern']);
     $this->assertArrayNotHasKey('format', $schema['properties']['opens'], 'A time input posts HH:MM, which RFC 3339 time refuses.');
   }
@@ -389,7 +389,7 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
     $this->assertSame('2026-10-20', $this->extracted($day, $element, '2026-10-20'));
     $emitter = $this->container->get('surface.contract_emitter');
     $property = $emitter->emitFull($surface, 'test', widgets: TRUE)->document['schema']['properties']['key'];
-    $this->assertSame(['date', 'date'], [$property['x-surface']['widget'], $property['format']]);
+    $this->assertSame(['date', 'date'], [$property['x-portable-ui']['widget'], $property['format']]);
     $this->assertSame('date', $emitter->emitFull($surface, 'test')->document['schema']['properties']['key']['format'], 'The format is stated without the widget hints.');
   }
 

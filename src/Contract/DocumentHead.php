@@ -51,6 +51,7 @@ final class DocumentHead {
     self::EXTENSION,
     PortableKeywords::CHECK,
     PortableKeywords::MESSAGES,
+    PortableKeywords::UI,
   ];
 
   /**

@@ -245,7 +245,7 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
    * Names a widget by the word it answers to.
    *
    * The word a definition's `widget` setting asks for it by, and the word
-   * `x-surface.widget` and the catalog name it by: the first
+   * `x-portable-ui.widget` and the catalog name it by: the first
    * SurfaceWidgetBase::answersTo() gives, its plugin ID otherwise.
    *
    * @param \Drupal\surface\Widget\SurfaceWidgetInterface $widget

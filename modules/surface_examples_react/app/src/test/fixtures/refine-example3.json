@@ -22,7 +22,7 @@
             "title": {
                 "title": "Event title",
                 "type": "string",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "text"
                 }
             },
@@ -33,7 +33,7 @@
                     "null"
                 ],
                 "default": true,
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "checkbox"
                 }
             },
@@ -54,7 +54,7 @@
                         "title": "Harbour Centre"
                     }
                 ],
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select"
                 }
             },
@@ -87,8 +87,10 @@
                         "title": "Upper deck"
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "select"
+                },
                 "x-surface": {
-                    "widget": "select",
                     "dependsOn": [
                         "venue"
                     ],
@@ -103,8 +105,10 @@
                 ],
                 "minimum": 1,
                 "default": 50,
+                "x-portable-ui": {
+                    "widget": "number"
+                },
                 "x-surface": {
-                    "widget": "number",
                     "dependsOn": [
                         "room"
                     ],
@@ -125,7 +129,7 @@
                     }
                 ],
                 "default": "free",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select"
                 }
             },
@@ -142,8 +146,10 @@
                         "type": "null"
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "variants"
+                },
                 "x-surface": {
-                    "widget": "variants",
                     "dependsOn": [
                         "pricing"
                     ],
@@ -157,7 +163,7 @@
             "contact": {
                 "title": "Contact",
                 "$ref": "#/$defs/registration.contact",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "fieldset"
                 }
             }
@@ -451,7 +457,7 @@
                             "string",
                             "null"
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "text"
                         }
                     }
@@ -466,7 +472,7 @@
                         "title": "Price",
                         "type": "number",
                         "minimum": 0.01,
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "number"
                         }
                     },
@@ -488,7 +494,7 @@
                             }
                         ],
                         "default": "EUR",
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select"
                         }
                     }
@@ -507,7 +513,7 @@
                         "title": "Email",
                         "type": "string",
                         "format": "email",
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "email"
                         }
                     },
@@ -517,7 +523,7 @@
                             "string",
                             "null"
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "text"
                         }
                     }
@@ -556,7 +562,7 @@
                 "title": {
                     "title": "Event title",
                     "type": "string",
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "text"
                     }
                 },
@@ -567,7 +573,7 @@
                         "null"
                     ],
                     "default": true,
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "checkbox"
                     }
                 },
@@ -588,11 +594,13 @@
                             "title": "Harbour Centre"
                         }
                     ],
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "select",
-                        "emptyOption": {
-                            "show": false,
-                            "label": "- Select -"
+                        "options": {
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
                         }
                     }
                 },
@@ -609,16 +617,20 @@
                             "title": "East room"
                         }
                     ],
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "select",
+                        "options": {
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
+                        }
+                    },
+                    "x-surface": {
                         "dependsOn": [
                             "venue"
                         ],
-                        "refined": true,
-                        "emptyOption": {
-                            "show": false,
-                            "label": "- Select -"
-                        }
+                        "refined": true
                     }
                 },
                 "capacity": {
@@ -631,8 +643,10 @@
                     "minimum": 1,
                     "maximum": 400,
                     "default": 50,
+                    "x-portable-ui": {
+                        "widget": "number"
+                    },
                     "x-surface": {
-                        "widget": "number",
                         "dependsOn": [
                             "room"
                         ],
@@ -653,11 +667,13 @@
                         }
                     ],
                     "default": "free",
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "select",
-                        "emptyOption": {
-                            "show": false,
-                            "label": "- Select -"
+                        "options": {
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
                         }
                     }
                 },
@@ -674,8 +690,10 @@
                             "type": "null"
                         }
                     ],
+                    "x-portable-ui": {
+                        "widget": "variants"
+                    },
                     "x-surface": {
-                        "widget": "variants",
                         "dependsOn": [
                             "pricing"
                         ],
@@ -691,7 +709,7 @@
                 "contact": {
                     "title": "Contact",
                     "$ref": "#/$defs/registration.contact",
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "fieldset"
                     }
                 }
@@ -757,7 +775,7 @@
                                 "string",
                                 "null"
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         }
@@ -772,7 +790,7 @@
                             "title": "Price",
                             "type": "number",
                             "minimum": 0.01,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "number"
                             }
                         },
@@ -794,11 +812,13 @@
                                 }
                             ],
                             "default": "EUR",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         }
@@ -817,7 +837,7 @@
                             "title": "Email",
                             "type": "string",
                             "format": "email",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "email"
                             }
                         },
@@ -827,7 +847,7 @@
                                 "string",
                                 "null"
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         }
@@ -895,7 +915,7 @@
                         "title": {
                             "title": "Event title",
                             "type": "string",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         },
@@ -906,7 +926,7 @@
                                 "null"
                             ],
                             "default": true,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -927,11 +947,13 @@
                                     "title": "Harbour Centre"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -948,16 +970,20 @@
                                     "title": "East room"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
+                                }
+                            },
+                            "x-surface": {
                                 "dependsOn": [
                                     "venue"
                                 ],
-                                "refined": true,
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
-                                }
+                                "refined": true
                             }
                         },
                         "capacity": {
@@ -970,8 +996,10 @@
                             "minimum": 1,
                             "maximum": 400,
                             "default": 50,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "room"
                                 ],
@@ -992,11 +1020,13 @@
                                 }
                             ],
                             "default": "free",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -1013,8 +1043,10 @@
                                     "type": "null"
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "variants"
+                            },
                             "x-surface": {
-                                "widget": "variants",
                                 "dependsOn": [
                                     "pricing"
                                 ],
@@ -1030,7 +1062,7 @@
                         "contact": {
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         }
@@ -1096,7 +1128,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -1111,7 +1143,7 @@
                                     "title": "Price",
                                     "type": "number",
                                     "minimum": 0.01,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "number"
                                     }
                                 },
@@ -1133,11 +1165,13 @@
                                         }
                                     ],
                                     "default": "EUR",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "select",
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
+                                        "options": {
+                                            "emptyOption": {
+                                                "show": false,
+                                                "label": "- Select -"
+                                            }
                                         }
                                     }
                                 }
@@ -1156,7 +1190,7 @@
                                     "title": "Email",
                                     "type": "string",
                                     "format": "email",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "email"
                                     }
                                 },
@@ -1166,7 +1200,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -1246,7 +1280,7 @@
                         "title": {
                             "title": "Event title",
                             "type": "string",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         },
@@ -1257,7 +1291,7 @@
                                 "null"
                             ],
                             "default": true,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -1278,11 +1312,13 @@
                                     "title": "Harbour Centre"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -1299,16 +1335,20 @@
                                     "title": "East room"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
+                                }
+                            },
+                            "x-surface": {
                                 "dependsOn": [
                                     "venue"
                                 ],
-                                "refined": true,
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
-                                }
+                                "refined": true
                             }
                         },
                         "capacity": {
@@ -1321,8 +1361,10 @@
                             "minimum": 1,
                             "maximum": 400,
                             "default": 50,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "room"
                                 ],
@@ -1343,11 +1385,13 @@
                                 }
                             ],
                             "default": "free",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -1364,8 +1408,10 @@
                                     "type": "null"
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "variants"
+                            },
                             "x-surface": {
-                                "widget": "variants",
                                 "dependsOn": [
                                     "pricing"
                                 ],
@@ -1381,7 +1427,7 @@
                         "contact": {
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         }
@@ -1447,7 +1493,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -1462,7 +1508,7 @@
                                     "title": "Price",
                                     "type": "number",
                                     "minimum": 0.01,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "number"
                                     }
                                 },
@@ -1484,11 +1530,13 @@
                                         }
                                     ],
                                     "default": "EUR",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "select",
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
+                                        "options": {
+                                            "emptyOption": {
+                                                "show": false,
+                                                "label": "- Select -"
+                                            }
                                         }
                                     }
                                 }
@@ -1507,7 +1555,7 @@
                                     "title": "Email",
                                     "type": "string",
                                     "format": "email",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "email"
                                     }
                                 },
@@ -1517,7 +1565,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -1588,7 +1636,7 @@
                         "title": {
                             "title": "Event title",
                             "type": "string",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         },
@@ -1599,7 +1647,7 @@
                                 "null"
                             ],
                             "default": true,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -1620,11 +1668,13 @@
                                     "title": "Harbour Centre"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -1641,16 +1691,20 @@
                                     "title": "East room"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
+                                }
+                            },
+                            "x-surface": {
                                 "dependsOn": [
                                     "venue"
                                 ],
-                                "refined": true,
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
-                                }
+                                "refined": true
                             }
                         },
                         "capacity": {
@@ -1663,8 +1717,10 @@
                             "minimum": 1,
                             "maximum": 400,
                             "default": 50,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "room"
                                 ],
@@ -1685,11 +1741,13 @@
                                 }
                             ],
                             "default": "free",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -1706,8 +1764,10 @@
                                     "type": "null"
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "variants"
+                            },
                             "x-surface": {
-                                "widget": "variants",
                                 "dependsOn": [
                                     "pricing"
                                 ],
@@ -1723,7 +1783,7 @@
                         "contact": {
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         }
@@ -1789,7 +1849,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -1804,7 +1864,7 @@
                                     "title": "Price",
                                     "type": "number",
                                     "minimum": 0.01,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "number"
                                     }
                                 },
@@ -1826,11 +1886,13 @@
                                         }
                                     ],
                                     "default": "EUR",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "select",
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
+                                        "options": {
+                                            "emptyOption": {
+                                                "show": false,
+                                                "label": "- Select -"
+                                            }
                                         }
                                     }
                                 }
@@ -1849,7 +1911,7 @@
                                     "title": "Email",
                                     "type": "string",
                                     "format": "email",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "email"
                                     }
                                 },
@@ -1859,7 +1921,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -1931,7 +1993,7 @@
                         "title": {
                             "title": "Event title",
                             "type": "string",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         },
@@ -1942,7 +2004,7 @@
                                 "null"
                             ],
                             "default": true,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -1963,11 +2025,13 @@
                                     "title": "Harbour Centre"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -1984,16 +2048,20 @@
                                     "title": "Garden room"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
+                                "options": {
+                                    "emptyOption": {
+                                        "show": true,
+                                        "label": "- Select -"
+                                    }
+                                }
+                            },
+                            "x-surface": {
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "emptyOption": {
-                                    "show": true,
-                                    "label": "- Select -"
-                                },
                                 "stale": true
                             }
                         },
@@ -2005,8 +2073,10 @@
                             ],
                             "minimum": 1,
                             "default": 50,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "room"
                                 ],
@@ -2027,11 +2097,13 @@
                                 }
                             ],
                             "default": "free",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -2048,8 +2120,10 @@
                                     "type": "null"
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "variants"
+                            },
                             "x-surface": {
-                                "widget": "variants",
                                 "dependsOn": [
                                     "pricing"
                                 ],
@@ -2065,7 +2139,7 @@
                         "contact": {
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         }
@@ -2179,7 +2253,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -2194,7 +2268,7 @@
                                     "title": "Price",
                                     "type": "number",
                                     "minimum": 0.01,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "number"
                                     }
                                 },
@@ -2216,11 +2290,13 @@
                                         }
                                     ],
                                     "default": "EUR",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "select",
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
+                                        "options": {
+                                            "emptyOption": {
+                                                "show": false,
+                                                "label": "- Select -"
+                                            }
                                         }
                                     }
                                 }
@@ -2239,7 +2315,7 @@
                                     "title": "Email",
                                     "type": "string",
                                     "format": "email",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "email"
                                     }
                                 },
@@ -2249,7 +2325,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -2336,7 +2412,7 @@
                         "title": {
                             "title": "Event title",
                             "type": "string",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         },
@@ -2347,7 +2423,7 @@
                                 "null"
                             ],
                             "default": true,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -2368,11 +2444,13 @@
                                     "title": "Harbour Centre"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -2389,16 +2467,20 @@
                                     "title": "Garden room"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
+                                "options": {
+                                    "emptyOption": {
+                                        "show": true,
+                                        "label": "- Select -"
+                                    }
+                                }
+                            },
+                            "x-surface": {
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "emptyOption": {
-                                    "show": true,
-                                    "label": "- Select -"
-                                },
                                 "stale": true
                             }
                         },
@@ -2410,8 +2492,10 @@
                             ],
                             "minimum": 1,
                             "default": 50,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "room"
                                 ],
@@ -2432,11 +2516,13 @@
                                 }
                             ],
                             "default": "free",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -2453,8 +2539,10 @@
                                     "type": "null"
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "variants"
+                            },
                             "x-surface": {
-                                "widget": "variants",
                                 "dependsOn": [
                                     "pricing"
                                 ],
@@ -2470,7 +2558,7 @@
                         "contact": {
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         }
@@ -2584,7 +2672,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -2599,7 +2687,7 @@
                                     "title": "Price",
                                     "type": "number",
                                     "minimum": 0.01,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "number"
                                     }
                                 },
@@ -2621,11 +2709,13 @@
                                         }
                                     ],
                                     "default": "EUR",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "select",
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
+                                        "options": {
+                                            "emptyOption": {
+                                                "show": false,
+                                                "label": "- Select -"
+                                            }
                                         }
                                     }
                                 }
@@ -2644,7 +2734,7 @@
                                     "title": "Email",
                                     "type": "string",
                                     "format": "email",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "email"
                                     }
                                 },
@@ -2654,7 +2744,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -2735,7 +2825,7 @@
                         "title": {
                             "title": "Event title",
                             "type": "string",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         },
@@ -2746,7 +2836,7 @@
                                 "null"
                             ],
                             "default": true,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -2767,11 +2857,13 @@
                                     "title": "Harbour Centre"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -2788,16 +2880,20 @@
                                     "title": "Garden room"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
+                                }
+                            },
+                            "x-surface": {
                                 "dependsOn": [
                                     "venue"
                                 ],
-                                "refined": true,
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
-                                }
+                                "refined": true
                             }
                         },
                         "capacity": {
@@ -2810,8 +2906,10 @@
                             "minimum": 1,
                             "maximum": 60,
                             "default": 50,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "room"
                                 ],
@@ -2832,11 +2930,13 @@
                                 }
                             ],
                             "default": "free",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -2853,8 +2953,10 @@
                                     "type": "null"
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "variants"
+                            },
                             "x-surface": {
-                                "widget": "variants",
                                 "dependsOn": [
                                     "pricing"
                                 ],
@@ -2870,7 +2972,7 @@
                         "contact": {
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         }
@@ -2936,7 +3038,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -2951,7 +3053,7 @@
                                     "title": "Price",
                                     "type": "number",
                                     "minimum": 0.01,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "number"
                                     }
                                 },
@@ -2973,11 +3075,13 @@
                                         }
                                     ],
                                     "default": "EUR",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "select",
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
+                                        "options": {
+                                            "emptyOption": {
+                                                "show": false,
+                                                "label": "- Select -"
+                                            }
                                         }
                                     }
                                 }
@@ -2996,7 +3100,7 @@
                                     "title": "Email",
                                     "type": "string",
                                     "format": "email",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "email"
                                     }
                                 },
@@ -3006,7 +3110,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -3075,7 +3179,7 @@
                         "title": {
                             "title": "Event title",
                             "type": "string",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         },
@@ -3086,7 +3190,7 @@
                                 "null"
                             ],
                             "default": true,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -3107,11 +3211,13 @@
                                     "title": "Harbour Centre"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -3128,16 +3234,20 @@
                                     "title": "East room"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
+                                }
+                            },
+                            "x-surface": {
                                 "dependsOn": [
                                     "venue"
                                 ],
-                                "refined": true,
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
-                                }
+                                "refined": true
                             }
                         },
                         "capacity": {
@@ -3150,8 +3260,10 @@
                             "minimum": 1,
                             "maximum": 400,
                             "default": 50,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "room"
                                 ],
@@ -3172,11 +3284,13 @@
                                 }
                             ],
                             "default": "free",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -3193,8 +3307,10 @@
                                     "type": "null"
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "variants"
+                            },
                             "x-surface": {
-                                "widget": "variants",
                                 "dependsOn": [
                                     "pricing"
                                 ],
@@ -3210,7 +3326,7 @@
                         "contact": {
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         }
@@ -3276,7 +3392,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -3291,7 +3407,7 @@
                                     "title": "Price",
                                     "type": "number",
                                     "minimum": 0.01,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "number"
                                     }
                                 },
@@ -3313,11 +3429,13 @@
                                         }
                                     ],
                                     "default": "EUR",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "select",
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
+                                        "options": {
+                                            "emptyOption": {
+                                                "show": false,
+                                                "label": "- Select -"
+                                            }
                                         }
                                     }
                                 }
@@ -3336,7 +3454,7 @@
                                     "title": "Email",
                                     "type": "string",
                                     "format": "email",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "email"
                                     }
                                 },
@@ -3346,7 +3464,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }

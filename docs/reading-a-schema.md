@@ -108,14 +108,15 @@ has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
 | `reads` | the wiring of a child's ports, where the wired key is a key of the object holding the child |
 | `by`, `variants` | variants, and the def each value chooses; `by` beside `deferred` with no union and no `variants`, a list the site decides past its budget (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)), is an object like any other, the marker noted: no variant is in the document to read |
 | `collection` | a collection (`list` in contract 3) |
-| `widget` `radios`, `time`, `date`, `checkboxes`; `textarea` | the widget it asks for; a multiline string |
 | `group`, `after` | a map that only groups, a map placed after a key |
 | `rules`, `within` | where the emitter moved its markers, put back first (`SchemaResolver::restored()`) |
 
-Two keywords of the dialect are read too ([The dialect's own keywords](served-contract.md#the-dialects-own-keywords)):
+Three keywords of the dialect are read too ([The dialect's own keywords](served-contract.md#the-dialects-own-keywords)):
 
 | Keyword | Read as |
 | --- | --- |
+| `x-portable-ui` `widget` `radios`, `time`, `date`, `checkboxes`; `textarea` | the widget it asks for; a multiline string |
+| `x-portable-ui` `group`, with the frame's `groups`; `weight`; `options.placeholder`, `prefix`, `suffix`, `help` | the key's arrangement, described as an author describes it (`describe(group:, weight:, placeholder:, prefix:, suffix:, help:)`): a group's `widget` `details` is `ArrangementGroup::details()`, closed where its `options.open` is `false`, any other `fieldset()`, noted where it is neither; a key naming a group its frame does not declare, or one with no label, is noted and read ungrouped; a weight that is no whole number and a text that is no string are noted and not read; the keys of a map or a module's mount are read with the map's own `groups`. `options.emptyOption` and `options.multiple` are noted and not read: the options resolver decides them |
 | `x-portable-messages` | under `pattern`, or `not` for `not: {pattern}`: the `Regex`'s message |
 | `portable-check` `drupal:JsonSchema` | that constraint, from its `schema`; with keywords the value keeps besides, one constraint, the `allOf` of both. Any other check is noted and not read: what the emitter names there, and why, is in [What the keywords leave to the server](served-contract.md#what-the-keywords-leave-to-the-server) |
 
@@ -124,6 +125,10 @@ A document contract 4 wrote said both under `x-surface`: its
 `portable-check`, and its `patternMessage` as `x-portable-messages`
 under the code of the node's `pattern` or `not`
 (`SchemaReader::respelled()`), so the document is checked as it was.
+A document served before 2026-11-10 said the widget hints under
+`x-surface` (`widget`, `multiple`, `arrangement` with the whole group on
+each key, `emptyOption`): they are read as `x-portable-ui` says them
+now, each group declared once on its frame (`SchemaReader::hinted()`).
 
 Below the root, `$id`, `$schema`, `$anchor` and `$dynamicAnchor` are
 dropped, each noted, wherever they stand, in a schema kept for a
@@ -132,7 +137,7 @@ again under `portable-check`, below the root, where a Portable Schema
 document holds no `$id` and no `$schema`.
 
 The rest says what is true of one moment (`refined`, `stale`,
-`emptyOption`, `chosen`, `doesNotApply`), of an account or an access
+`chosen`, `doesNotApply`), of an account or an access
 answer (`readOnly` on a whole), or follows from what is read
 (`dependsOn`, `enumerated`): read for nothing. `refine` and `live` say a
 rule or an access answer only the server knows: not read, noted.

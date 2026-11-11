@@ -58,7 +58,7 @@ in an `X-CSRF-Token` header.
 
 The contract is the base module's: the HTTP door, `surface_http`, asks
 `surface.contract_emitter` for it with the widget hints
-(`x-surface.widget`) this app draws from, which the canonical contract
+(`x-portable-ui.widget`) this app draws from, which the canonical contract
 leaves out. The contract format, the API's bodies and headers and the
 widget mapping are in [the served contract](../../docs/served-contract.md).
 
@@ -166,7 +166,7 @@ request after it
   shown, the panel's rows) reads the result. The panel's JSON is the
   document as served. The main module's
   `Contract\SchemaResolver` is the same resolver in PHP.
-- **Renders** one component per `x-surface.widget`, mirroring the Form
+- **Renders** one component per `x-portable-ui.widget`, mirroring the Form
   API mapping: select and radios with the empty option rule, checkboxes
   and a multiple select for a list of choices, checkbox, number with
   its bounds and step, text with its maxlength, a time input, a date input, textarea,

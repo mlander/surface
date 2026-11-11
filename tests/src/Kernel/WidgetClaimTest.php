@@ -75,12 +75,12 @@ class WidgetClaimTest extends SurfaceKernelTestBase {
       'the full schema' => $emitter->emitFull($swatch, 'widget_test.swatch', widgets: TRUE)->document['schema'],
       'the schema as it stands' => $emitter->emit($swatch, $swatch->getDefaultValues(), 'widget_test.swatch', widgets: TRUE)->document['schema'],
     ] as $document => $schema) {
-      $this->assertSame('widget_test_color', $schema['properties']['accent']['x-surface']['widget'], $document);
-      $this->assertSame('radios', $schema['properties']['trim']['x-surface']['widget'], $document);
-      $this->assertSame('text', $schema['properties']['caption']['x-surface']['widget'], $document);
+      $this->assertSame('widget_test_color', $schema['properties']['accent']['x-portable-ui']['widget'], $document);
+      $this->assertSame('radios', $schema['properties']['trim']['x-portable-ui']['widget'], $document);
+      $this->assertSame('text', $schema['properties']['caption']['x-portable-ui']['widget'], $document);
     }
     $plain = $emitter->emitFull($swatch, 'widget_test.swatch')->document['schema'];
-    $this->assertArrayNotHasKey('widget', $plain['properties']['accent']['x-surface'] ?? [], 'Without the widget hints, no widget is named.');
+    $this->assertArrayNotHasKey('x-portable-ui', $plain['properties']['accent'], 'Without the widget hints, no widget is named.');
   }
 
   /**

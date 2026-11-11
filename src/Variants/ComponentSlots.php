@@ -327,7 +327,7 @@ final class ComponentSlots implements EntrySchemasInterface, ContainerInjectionI
       'text' => [
         'title' => $words['text'],
         'type' => ['string', 'null'],
-        'x-surface' => ['widget' => 'textarea'],
+        'x-portable-ui' => ['widget' => 'textarea'],
       ],
     ];
     if ($kinds !== ['text']) {

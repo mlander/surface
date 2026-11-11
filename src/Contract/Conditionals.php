@@ -859,9 +859,9 @@ final class Conditionals {
    *   The unrefined schema.
    *
    * @return array
-   *   The keywords that differ, without `x-surface`, `portable-check` and
-   *   `x-portable-messages`, which the property itself carries; empty
-   *   when none do.
+   *   The keywords that differ, without `x-surface`, `portable-check`,
+   *   `x-portable-messages` and `x-portable-ui`, which the property itself
+   *   carries; empty when none do.
    */
   protected function narrowed(array $schema, array $base): array {
     $narrowed = [];
@@ -907,17 +907,20 @@ final class Conditionals {
    *   A schema this emitter wrote.
    *
    * @return array
-   *   The schema, its `x-surface` keywords without `refined`, `stale`,
-   *   `emptyOption` and the variants' `chosen`, and with no `x-surface`
-   *   where nothing else was said.
+   *   The schema, its `x-surface` keywords without `refined`, `stale` and
+   *   the variants' `chosen`, its `x-portable-ui` without
+   *   `options.emptyOption`, and with no `x-surface`, no `x-portable-ui`
+   *   and no `options` where nothing else was said.
    */
   public function withoutPresent(array $schema): array {
     foreach ($schema as $key => $value) {
       if (!is_array($value)) {
         continue;
       }
-      if ($key === self::EXTENSION) {
-        unset($value['refined'], $value['stale'], $value['emptyOption'], $value['chosen']);
+      if ($key === self::EXTENSION || $key === PortableKeywords::UI) {
+        $value = $key === self::EXTENSION
+          ? array_diff_key($value, array_flip(['refined', 'stale', 'chosen']))
+          : PortableUi::without($value, ['emptyOption']);
         if ($value === []) {
           unset($schema[$key]);
           continue;

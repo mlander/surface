@@ -32,8 +32,10 @@
                 "x-portable-messages": {
                     "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
                 },
+                "x-portable-ui": {
+                    "widget": "autocomplete"
+                },
                 "x-surface": {
-                    "widget": "autocomplete",
                     "reference": {
                         "entityType": "event_venue"
                     }
@@ -52,8 +54,10 @@
                 "x-portable-messages": {
                     "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
                 },
+                "x-portable-ui": {
+                    "widget": "autocomplete"
+                },
                 "x-surface": {
-                    "widget": "autocomplete",
                     "reference": {
                         "entityType": "user"
                     }
@@ -72,8 +76,10 @@
                 "x-portable-messages": {
                     "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
                 },
+                "x-portable-ui": {
+                    "widget": "autocomplete"
+                },
                 "x-surface": {
-                    "widget": "autocomplete",
                     "reference": {
                         "entityType": "node",
                         "bundles": [
@@ -96,8 +102,10 @@
                         }
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "fieldset"
+                },
                 "x-surface": {
-                    "widget": "fieldset",
                     "within": {
                         "/allOf/1": {
                             "doesNotApply": {
@@ -123,8 +131,10 @@
                         }
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "fieldset"
+                },
                 "x-surface": {
-                    "widget": "fieldset",
                     "within": {
                         "/allOf/1": {
                             "doesNotApply": {
@@ -150,8 +160,10 @@
                         }
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "fieldset"
+                },
                 "x-surface": {
-                    "widget": "fieldset",
                     "within": {
                         "/allOf/1": {
                             "doesNotApply": {
@@ -192,11 +204,13 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select",
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- None -"
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- None -"
+                                }
                             }
                         }
                     },
@@ -207,8 +221,10 @@
                             "string",
                             "null"
                         ],
+                        "x-portable-ui": {
+                            "widget": "autocomplete"
+                        },
                         "x-surface": {
-                            "widget": "autocomplete",
                             "dependsOn": [
                                 "entity_type"
                             ],
@@ -303,11 +319,13 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select",
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- None -"
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- None -"
+                                }
                             }
                         }
                     },
@@ -318,8 +336,10 @@
                             "string",
                             "null"
                         ],
+                        "x-portable-ui": {
+                            "widget": "autocomplete"
+                        },
                         "x-surface": {
-                            "widget": "autocomplete",
                             "dependsOn": [
                                 "entity_type"
                             ],
@@ -414,11 +434,13 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select",
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- None -"
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- None -"
+                                }
                             }
                         }
                     },
@@ -429,8 +451,10 @@
                             "string",
                             "null"
                         ],
+                        "x-portable-ui": {
+                            "widget": "autocomplete"
+                        },
                         "x-surface": {
-                            "widget": "autocomplete",
                             "dependsOn": [
                                 "entity_type"
                             ],

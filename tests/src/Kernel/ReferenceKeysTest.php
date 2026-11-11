@@ -302,7 +302,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
     $under = $all['under']['full']['schema'];
     $past = $all['past']['full']['schema'];
     // Under the limit: a select of the candidates with their labels.
-    $this->assertSame('select', $under['properties']['venue']['x-surface']['widget']);
+    $this->assertSame('select', $under['properties']['venue']['x-portable-ui']['widget']);
     $this->assertSame([
       ['const' => 'harbour', 'title' => 'Harbour Centre'],
       ['const' => 'library', 'title' => 'Old Library'],
@@ -315,7 +315,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
     ], $under['properties']['page']['oneOf'], 'Articles only, sorted by label: the page is another bundle.');
     // Past it: an id, looked up.
     $this->assertArrayNotHasKey('oneOf', $past['properties']['venue']);
-    $this->assertSame('autocomplete', $past['properties']['venue']['x-surface']['widget']);
+    $this->assertSame('autocomplete', $past['properties']['venue']['x-portable-ui']['widget']);
     $this->assertEquals(['drupal:SurfaceValidReference' => new \stdClass()], $past['properties']['venue']['portable-check']);
     $this->assertSame(['check.drupal:SurfaceValidReference' => 'Refers to an entity the account may reference'], $past['properties']['venue']['x-portable-messages']);
     // The marker, in both documents and either way.
@@ -510,7 +510,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
       ['thing', 'fieldset', '—'],
     ], array_map(static fn (array $row): array => [$row[0], $row[2], $row[3]], array_slice($concept['keys']['#rows'], 0, 4)));
     $past = json_decode((string) $concept['past']['content']['#code'], TRUE);
-    $this->assertSame('autocomplete', $past['venue']['x-surface']['widget']);
+    $this->assertSame('autocomplete', $past['venue']['x-portable-ui']['widget']);
     $this->assertArrayNotHasKey('oneOf', $past['contact']);
     $listing = json_decode((string) $concept['listing']['content']['#code'], TRUE);
     $this->assertSame([1, 2], $listing['now']['contact']['enum'], 'Derived as the anonymous account: the active users, admin and the sponsor.');
