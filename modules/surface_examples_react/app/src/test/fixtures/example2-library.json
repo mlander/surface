@@ -58,7 +58,9 @@
                     }
                 ],
                 "portable-check": {
-                    "drupal:SurfaceValidReference": {}
+                    "drupal:SurfaceValidReference": {
+                        "entityTypeId": "event_venue"
+                    }
                 },
                 "x-portable-messages": {
                     "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
@@ -72,11 +74,12 @@
                         }
                     }
                 },
-                "x-surface": {
-                    "reference": {
-                        "entityType": "event_venue"
+                "x-portable-links": [
+                    {
+                        "rel": "lookup",
+                        "href": "http://localhost/surface-api/registration.step2:lookup?key=/venue{&q,limit}"
                     }
-                }
+                ]
             },
             "room": {
                 "title": "Room",

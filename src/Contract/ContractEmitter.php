@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Drupal\surface\Contract;
 
 use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface\ResourceBuild\ServedPathsInterface;
+use Drupal\surface\Reference\References;
 use Drupal\Component\Utility\NestedArray;
+use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
@@ -156,7 +159,8 @@ final class ContractEmitter {
    *
    * Portable Schema, a dialect of JSON Schema 2020-12: its profile of the
    * standard keywords and its own vocabulary, of which the documents use
-   * `portable-check` and `x-portable-messages` (PortableKeywords).
+   * `portable-check`, `x-portable-messages`, `x-portable-ui` and
+   * `x-portable-links` (PortableKeywords).
    * Decision: see
    * docs/decisions.md#the-served-document-is-a-portable-schema-document.
    */
@@ -235,22 +239,34 @@ final class ContractEmitter {
   protected ?Choices $choices = NULL;
 
   /**
-   * The URL of the full schema, which a deferred key's `fetch` adds to.
+   * The URL of the full schema, which a deferred key's `choose` link adds to.
    *
-   * NULL while a document no route serves is written: `fetch` is then
+   * NULL while a document no route serves is written: the link is then
    * only its query, read against the full schema's URL.
    */
   protected ?string $fetchBase = NULL;
 
   /**
+   * The lookup for the operation's keys, which a key's `lookup` link names.
+   *
+   * NULL while a document no lookup answers is written: no HTTP door
+   * (surface_http), no operation, an operation `GET` does not serve at its
+   * path, an id the registry does not know, or a lookup whose path takes a
+   * parameter no URL was given for (lookup()).
+   */
+  protected ?string $lookup = NULL;
+
+  /**
    * Where the frame being described is.
    *
-   * Its pointer, and the choices on the way to it, each a pointer and a
-   * value.
+   * Its pointer, the choices on the way to it, each a pointer and a
+   * value, and whether the lookup finds a key of it: through attached
+   * children alone, as References::definitionAt() walks, never into a
+   * collection's item, a module's mount or a variant.
    *
-   * @var array{pointer: string, steps: list<array{0: string, 1: string}>}
+   * @var array{pointer: string, steps: list<array{0: string, 1: string}>, reached: bool}
    */
-  protected array $site = ['pointer' => '', 'steps' => []];
+  protected array $site = ['pointer' => '', 'steps' => [], 'reached' => TRUE];
 
   /**
    * Describes one key as a property, and a child's site as a reference.
@@ -283,6 +299,10 @@ final class ContractEmitter {
    * @param \Drupal\surface\Widget\SurfaceWidgetManager|null $widgets
    *   The widget manager, which says what a module's widget claims;
    *   without it, the stock rule alone names the widget.
+   * @param \Drupal\surface\ResourceBuild\ServedPathsInterface|null $servedPaths
+   *   The API's paths, which a reference key's lookup link names; NULL
+   *   on a site that serves no API (surface_http is not installed), whose
+   *   documents carry no lookup link.
    */
   public function __construct(
     SurfaceOptions $options,
@@ -290,6 +310,7 @@ final class ContractEmitter {
     ?ConstraintManager $constraints = NULL,
     protected readonly ?SiteListBudget $budget = NULL,
     ?SurfaceWidgetManager $widgets = NULL,
+    protected readonly ?ServedPathsInterface $servedPaths = NULL,
   ) {
     $this->stringTranslation = $string_translation;
     $this->propertySchema = new PropertySchema($options, $string_translation, $constraints, $widgets);
@@ -337,19 +358,25 @@ final class ContractEmitter {
    *   has none.
    * @param string|null $schema_url
    *   The URL the operation's full schema is served at, which a deferred
-   *   key's `fetch` template is written against; NULL writes the template
+   *   key's `choose` link is written against; NULL writes the template
    *   as its query alone.
+   * @param string|null $lookup_url
+   *   The URL of the lookup for the operation's keys, the request's
+   *   parameters in it, which a reference key's `lookup` link is written
+   *   against; NULL writes the lookup's path where it takes no parameter,
+   *   and no link where it does (lookup()).
    *
    * @return \Drupal\surface\Contract\ServedContract
    *   The contract, and what it depends on.
    */
-  public function emit(SurfaceInterface $surface, array $values, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL, ?string $schema_url = NULL): ServedContract {
+  public function emit(SurfaceInterface $surface, array $values, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL, ?string $schema_url = NULL, ?string $lookup_url = NULL): ServedContract {
     // Refined surfaces are remembered for this one document.
     // Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
-    $was = [$this->conditionals->remember(new \WeakMap()), $this->choices, $this->fetchBase, $this->site];
+    $was = [$this->conditionals->remember(new \WeakMap()), $this->choices, $this->fetchBase, $this->site, $this->lookup];
     $this->choices = NULL;
     $this->fetchBase = $schema_url;
-    $this->site = ['pointer' => '', 'steps' => []];
+    $this->site = ['pointer' => '', 'steps' => [], 'reached' => TRUE];
+    $this->lookup = $this->lookup($resource_id, $operation_id, $lookup_url);
     try {
       $cacheability = new CacheableMetadata();
       $standing = $values[SurfaceFormBuilderInterface::STANDING_KEY] ?? [];
@@ -379,7 +406,7 @@ final class ContractEmitter {
       return new ServedContract($document, $cacheability);
     }
     finally {
-      [$refined, $this->choices, $this->fetchBase, $this->site] = $was;
+      [$refined, $this->choices, $this->fetchBase, $this->site, $this->lookup] = $was;
       $this->conditionals->remember($refined);
     }
   }
@@ -412,17 +439,19 @@ final class ContractEmitter {
    *   answers leave it, marked `live`, as a key a runtime refiner narrows
    *   is; the schema for these answers settles it;
    * - a list the site decides past the site list limit is `deferred`:
-   *   open, its `deferred` object holding a `fetch` template naming the
-   *   choice that states one of its entries; with choices, each one chosen
+   *   open, `deferred` (`true`, or the entries of a map of keys from the
+   *   site), its `choose` link a template naming the choice that states
+   *   one of its entries; with choices, each one chosen
    *   is stated in full at its key, as under the limit, and every other
    *   entry is still left out;
    * - `x-surface` carries only what holds for any values: `dependsOn`,
    *   `enumerated`, `deferred`, `refine`, `live`, the variants' `by` and
    *   `variants`, `group`, `after`, each only where it says something;
-   *   `portable-check`, `x-portable-messages` and, when asked for, the
-   *   widget hints in `x-portable-ui` beside it hold for any values too.
-   *   What is only true of a moment (`refined`, `stale`, the variants'
-   *   `chosen`, and `x-portable-ui.options.emptyOption`) is not written,
+   *   `portable-check`, `x-portable-messages`, `x-portable-links` and,
+   *   when asked for, the widget hints in `x-portable-ui` beside it hold
+   *   for any values too. What is only true of a moment (`refined`,
+   *   `stale`, the variants' `chosen`, and
+   *   `x-portable-ui.options.emptyOption`) is not written,
    *   and there is no `values` and no `stale` beside the schema.
    *
    * Decision: see
@@ -449,8 +478,10 @@ final class ContractEmitter {
    *   The choices to state in full (`?choose=`), resolved against the same
    *   data surface; NULL or none for the plain full schema.
    * @param string|null $schema_url
-   *   The URL of the plain full schema, which a deferred key's `fetch`
+   *   The URL of the plain full schema, which a deferred key's `choose`
    *   template is written against; NULL for `$id`.
+   * @param string|null $lookup_url
+   *   The URL of the lookup, as for emit().
    *
    * @return \Drupal\surface\Contract\ServedContract
    *   The document (`resource`, `operation`, `label`, `schema` and, when
@@ -458,13 +489,14 @@ final class ContractEmitter {
    *   on: the data surface and every option list read, never a stored
    *   value.
    */
-  public function emitFull(SurfaceInterface $surface, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL, ?Choices $choices = NULL, ?string $schema_url = NULL): ServedContract {
+  public function emitFull(SurfaceInterface $surface, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL, ?Choices $choices = NULL, ?string $schema_url = NULL, ?string $lookup_url = NULL): ServedContract {
     // Refined surfaces are remembered for this one document.
     // Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
-    $was = [$this->conditionals->remember(new \WeakMap()), $this->choices, $this->fetchBase, $this->site];
+    $was = [$this->conditionals->remember(new \WeakMap()), $this->choices, $this->fetchBase, $this->site, $this->lookup];
     $this->choices = $choices === NULL || $choices->isEmpty() ? NULL : $choices;
     $this->fetchBase = $schema_url ?? $id;
-    $this->site = ['pointer' => '', 'steps' => []];
+    $this->site = ['pointer' => '', 'steps' => [], 'reached' => TRUE];
+    $this->lookup = $this->lookup($resource_id, $operation_id, $lookup_url);
     try {
       $cacheability = new CacheableMetadata();
       $ui = [...self::PRESENT_OPTIONS, ...($widgets ? [] : self::WIDGET_HINTS)];
@@ -490,7 +522,7 @@ final class ContractEmitter {
       return new ServedContract($document, $cacheability);
     }
     finally {
-      [$refined, $this->choices, $this->fetchBase, $this->site] = $was;
+      [$refined, $this->choices, $this->fetchBase, $this->site, $this->lookup] = $was;
       $this->conditionals->remember($refined);
     }
   }
@@ -662,11 +694,14 @@ final class ContractEmitter {
           $entries[] = ['id' => (string) $id, 'label' => (string) $each->definition->getLabel()];
         }
         $properties[$name] = PortableUi::set($properties[$name], PortableUi::write('fieldset'));
+        // The fetch is a link, `{value}` an entry's id, which the entries
+        // list gives; written at the site, never in a def, which several
+        // sites share.
+        if (!$declaring) {
+          $properties[$name] = PortableLinks::set($properties[$name], PortableLinks::choose($this->fetch($pointer), NULL));
+        }
         $properties[$name][self::EXTENSION] = $this->propertySchema->extension($depends, FALSE) + [
-          'deferred' => [
-            'fetch' => $this->fetch($pointer),
-            'entries' => $entries,
-          ],
+          'deferred' => ['entries' => $entries],
         ];
         $shown[$name] = new \stdClass();
         if ($ahead_of_time) {
@@ -778,6 +813,7 @@ final class ContractEmitter {
           default => $values[$name] ?? $declared->getDefault($name),
         };
         [$properties[$name], $shown[$name]] = $this->propertySchema->property($current->definition, $entry->definition, $value, $prefix . $name, $locked, $depends, $emission);
+        $properties[$name] = $this->linked($properties[$name], $current->definition, $name, $declaring);
         if ($declaring && $entry->locked) {
           // What the context fixed it to is the instance's, not the
           // declaration's: the reference site says it.
@@ -1581,7 +1617,9 @@ final class ContractEmitter {
    * Describes a child as it is at one site: its instance.
    *
    * In the full schema a child with nothing locked anywhere inside it is
-   * its own def, so its def is read back rather than described twice.
+   * its own def, so its def is read back rather than described twice;
+   * unless a link is written below it (linksBelow()), which a def never
+   * holds: the site's narrowing carries it.
    *
    * @param \Drupal\surface\SurfaceInterface $child
    *   The child.
@@ -1601,7 +1639,7 @@ final class ContractEmitter {
   protected function instance(SurfaceInterface $child, string $key, array $values, Emission $emission): array {
     $def = $emission->subschemas->get($key);
     $bound = array_filter($child->getPortValues(), ValueState::isConfigured(...)) !== [];
-    if ($emission->full() && $def !== NULL && !$emission->frozen && !$bound && !$this->locks($child)) {
+    if ($emission->full() && $def !== NULL && !$emission->frozen && !$bound && !$this->locks($child) && !$this->linksBelow($child, $this->site['reached'], $emission->cacheability)) {
       return [$def, new \stdClass()];
     }
     return $this->frame($child, $values, $emission);
@@ -1676,7 +1714,7 @@ final class ContractEmitter {
    * @param string|null $chosen
    *   The variant the next frame is, reached by choosing it at the key.
    *
-   * @return array{pointer: string, steps: list<array{0: string, 1: string}>}
+   * @return array{pointer: string, steps: list<array{0: string, 1: string}>, reached: bool}
    *   Where the frame was, to put back once the next one is described.
    */
   protected function enter(string $name, ?string $below = NULL, ?string $chosen = NULL): array {
@@ -1689,8 +1727,140 @@ final class ContractEmitter {
     $this->site = [
       'pointer' => $below === NULL ? $pointer : $pointer . '/' . Choices::escape($below),
       'steps' => $steps,
+      'reached' => $was['reached'] && $below === NULL && $chosen === NULL,
     ];
     return $was;
+  }
+
+  /**
+   * Names the lookup a document's reference keys link to, where one answers.
+   *
+   * The URL the caller gives, the request's parameters in it, as the full
+   * schema's is given for a `choose` link; without one, the lookup's path,
+   * where it takes no parameter, since a variable the document does not
+   * explain is never written.
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
+   *
+   * @param string $resource_id
+   *   The id the document is written for.
+   * @param string|null $operation_id
+   *   Its operation, or NULL for none.
+   * @param string|null $url
+   *   The lookup's URL for the request, or NULL.
+   *
+   * @return string|null
+   *   The URL or path; NULL with no HTTP door, no operation, an operation
+   *   `GET` does not serve at its path (ServedPathsInterface::lookupPath()),
+   *   an id the registry does not know (a data surface built in place, a
+   *   document read back), or a path that takes a parameter and no URL.
+   */
+  protected function lookup(string $resource_id, ?string $operation_id, ?string $url): ?string {
+    if ($this->servedPaths === NULL || $operation_id === NULL) {
+      return NULL;
+    }
+    try {
+      $path = $this->servedPaths->lookupPath($resource_id, $operation_id);
+    }
+    catch (\InvalidArgumentException | RouteNotFoundException) {
+      return NULL;
+    }
+    if ($path === NULL) {
+      return NULL;
+    }
+    if ($url !== NULL) {
+      return $url;
+    }
+    return str_contains($path, '{') ? NULL : $path;
+  }
+
+  /**
+   * Answers whether a child holds a key a link is written at.
+   *
+   * A key that refers to an entity, where the lookup reaches it, or a list
+   * deferred for its size, whose `choose` link names its site. A def holds
+   * neither, so the site's narrowing does.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The child.
+   * @param bool $reached
+   *   Whether the lookup reaches its keys.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   What the budget's answer depends on.
+   *
+   * @return bool
+   *   TRUE when a link is written below it.
+   */
+  protected function linksBelow(SurfaceInterface $surface, bool $reached, CacheableMetadata $cacheability): bool {
+    foreach ($surface->getDefinitions()->entries() as $entry) {
+      foreach ($entry->mounted as $mount) {
+        if ($this->linksBelow($mount->child, FALSE, $cacheability)) {
+          return TRUE;
+        }
+      }
+      if ($entry->variants !== NULL) {
+        if ($this->budget?->variantsOver($entry->variants, $cacheability)) {
+          return TRUE;
+        }
+        foreach ($entry->variants->variants as $variant) {
+          if ($this->linksBelow($variant->child, FALSE, $cacheability)) {
+            return TRUE;
+          }
+        }
+      }
+      elseif ($entry->list !== NULL) {
+        if ($this->linksBelow($entry->list->item->child, FALSE, $cacheability)) {
+          return TRUE;
+        }
+      }
+      elseif ($entry->attachment !== NULL) {
+        if ($this->budget?->over($entry, $cacheability) || $this->linksBelow($entry->attachment->child, $reached, $cacheability)) {
+          return TRUE;
+        }
+      }
+      elseif ($reached && $this->lookup !== NULL && (References::target($entry->definition) !== NULL || $entry->definition->getSetting(References::TARGETS) !== NULL)) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Adds the lookup link to a key that refers to an entity.
+   *
+   * Every such key the lookup finds, listed or not: one that names its
+   * entity type by its pointer, and an id whose entity type a sibling
+   * names with `type` read from that sibling. Nothing where no lookup is
+   * served or the lookup does not reach the frame, and nothing in a def:
+   * the pointer is a site's, and several sites share a def, so the site's
+   * narrowing carries the link.
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
+   *
+   * @param array $property
+   *   The key's schema.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key as it stands.
+   * @param string $name
+   *   The key.
+   * @param bool $declaring
+   *   Whether the frame is a def.
+   *
+   * @return array
+   *   The schema, with the link where it has one.
+   */
+  protected function linked(array $property, DataDefinitionInterface $definition, string $name, bool $declaring): array {
+    if ($this->lookup === NULL || !$this->site['reached'] || $declaring) {
+      return $property;
+    }
+    $pointer = $this->site['pointer'] . '/' . Choices::escape($name);
+    return match (TRUE) {
+      $definition->getSetting(References::TARGETS) !== NULL => PortableLinks::set($property, PortableLinks::lookup($this->lookup, $pointer, References::TYPE_KEY)),
+      References::target($definition) !== NULL => PortableLinks::set($property, PortableLinks::lookup($this->lookup, $pointer)),
+      default => $property,
+    };
   }
 
   /**
@@ -1699,7 +1869,8 @@ final class ContractEmitter {
    * An RFC 6570 template: the full schema's URL with `choose` added for
    * every variant on the way to the key and one for the key itself, its
    * value the expression `{value}`, which a client fills with the
-   * deciding key's value or the entry's id.
+   * deciding key's value or the entry's id: the `href` of the key's
+   * `choose` link (PortableLinks::choose()).
    *
    * Decision: see
    * docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
@@ -1858,7 +2029,12 @@ final class ContractEmitter {
       // docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
       if ($full || $declaring || $blank || $chosen === NULL) {
         $pointer = $this->site['pointer'] . '/' . Choices::escape($entry->name);
-        $property[self::EXTENSION]['deferred'] = ['fetch' => $this->fetch($pointer)];
+        // The fetch is a link, `{value}` the deciding sibling's value;
+        // written at the site, never in a def, which several sites share.
+        $property[self::EXTENSION]['deferred'] = TRUE;
+        if (!$declaring) {
+          $property = PortableLinks::set($property, PortableLinks::choose($this->fetch($pointer), $variants->by));
+        }
         $picked = $this->choices?->variants($variants, $pointer) ?? [];
         if ($picked === []) {
           unset($property[self::EXTENSION]['variants']);

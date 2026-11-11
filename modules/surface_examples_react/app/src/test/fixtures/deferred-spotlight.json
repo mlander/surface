@@ -389,14 +389,21 @@
         "x-portable-ui": {
           "widget": "variants"
         },
+        "x-portable-links": [
+          {
+            "rel": "choose",
+            "href": "/surface-api/event.spotlight/schema?choose=/props={value}",
+            "source": {
+              "value": "1/component"
+            }
+          }
+        ],
         "x-surface": {
           "dependsOn": [
             "component"
           ],
           "by": "component",
-          "deferred": {
-            "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
-          }
+          "deferred": true
         }
       },
       "slots": {
@@ -408,14 +415,21 @@
         "x-portable-ui": {
           "widget": "variants"
         },
+        "x-portable-links": [
+          {
+            "rel": "choose",
+            "href": "/surface-api/event.spotlight/schema?choose=/slots={value}",
+            "source": {
+              "value": "1/component"
+            }
+          }
+        ],
         "x-surface": {
           "dependsOn": [
             "component"
           ],
           "by": "component",
-          "deferred": {
-            "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
-          }
+          "deferred": true
         }
       }
     },
@@ -480,6 +494,15 @@
           "x-portable-ui": {
             "widget": "variants"
           },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/props={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
             "dependsOn": [
               "component"
@@ -488,9 +511,7 @@
             "variants": {
               "surface_examples:hero": "#/$defs/event.spotlight.props.surface_examples:hero"
             },
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
-            }
+            "deferred": true
           }
         },
         "slots": {
@@ -502,14 +523,21 @@
           "x-portable-ui": {
             "widget": "variants"
           },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/slots={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
             "dependsOn": [
               "component"
             ],
             "by": "component",
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
-            }
+            "deferred": true
           }
         }
       },
@@ -661,6 +689,15 @@
           "x-portable-ui": {
             "widget": "variants"
           },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/props={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
             "dependsOn": [
               "component"
@@ -669,9 +706,7 @@
             "variants": {
               "surface_examples:hero": "#/$defs/event.spotlight.props.surface_examples:hero"
             },
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
-            }
+            "deferred": true
           }
         },
         "slots": {
@@ -683,6 +718,15 @@
           "x-portable-ui": {
             "widget": "variants"
           },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/slots={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
             "dependsOn": [
               "component"
@@ -691,9 +735,7 @@
             "variants": {
               "surface_examples:hero": "#/$defs/event.spotlight.slots.surface_examples:hero"
             },
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
-            }
+            "deferred": true
           }
         }
       },
@@ -1207,6 +1249,15 @@
           "x-portable-ui": {
             "widget": "variants"
           },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/props={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
             "dependsOn": [
               "component"
@@ -1215,9 +1266,7 @@
             "variants": {
               "surface_examples:card": "#/$defs/event.spotlight.props.surface_examples:card"
             },
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
-            }
+            "deferred": true
           }
         },
         "slots": {
@@ -1229,14 +1278,21 @@
           "x-portable-ui": {
             "widget": "variants"
           },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/slots={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
             "dependsOn": [
               "component"
             ],
             "by": "component",
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
-            }
+            "deferred": true
           }
         }
       },
@@ -1394,6 +1450,15 @@
           "x-portable-ui": {
             "widget": "variants"
           },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/props={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
             "dependsOn": [
               "component"
@@ -1402,9 +1467,7 @@
             "variants": {
               "surface_examples:card": "#/$defs/event.spotlight.props.surface_examples:card"
             },
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
-            }
+            "deferred": true
           }
         },
         "slots": {
@@ -1416,6 +1479,15 @@
           "x-portable-ui": {
             "widget": "variants"
           },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/slots={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
             "dependsOn": [
               "component"
@@ -1424,9 +1496,7 @@
             "variants": {
               "surface_examples:card": "#/$defs/event.spotlight.slots.surface_examples:card"
             },
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
-            }
+            "deferred": true
           }
         }
       },

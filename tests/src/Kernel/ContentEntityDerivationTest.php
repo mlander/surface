@@ -234,7 +234,8 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $hinted = $this->container->get('surface.contract_emitter')->emitFull($this->add('page'), 'entity.content:node.page', 'create', widgets: TRUE)->document['schema'];
     $target = $hinted['$defs']['field.item:node.page.uid']['properties']['target_id'];
     $this->assertSame('autocomplete', $target['x-portable-ui']['widget']);
-    $this->assertSame(['entityType' => 'user'], $target['x-surface']['reference']);
+    $this->assertSame(['entityTypeId' => 'user'], $target['portable-check']['drupal:SurfaceValidReference']);
+    $this->assertArrayNotHasKey('x-portable-links', $target, 'No lookup without the HTTP door.');
     $terms = $this->options()->resolve(static::child($surface, 'field_term')->getDefinition('target_id'));
     $this->assertNotNull($terms);
     $this->assertSame(['Larder', 'Pantry'], array_values(array_map('strval', $terms->options)));

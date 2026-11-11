@@ -23,11 +23,12 @@ export interface FieldProps {
 }
 
 /**
- * Looks candidates of a reference key up, by the key's dotted path and
- * the text their labels contain; for a bare reference's id, of the entity
- * type its sibling holds. Null where no page provides one.
+ * Looks candidates of a reference key up at its `lookup` link: the link's
+ * template, and its variables (`q`, the text their labels contain; for a
+ * bare reference's id, `type`, the entity type its sibling holds). Null
+ * where no page provides one.
  */
-export type Lookup = (path: string, text: string, type?: string) => Promise<{ id: string | number; label: string }[]>;
+export type Lookup = (href: string, variables: Record<string, unknown>) => Promise<{ id: string | number; label: string }[]>;
 
 export const LookupContext = createContext<Lookup | null>(null);
 

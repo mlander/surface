@@ -400,7 +400,8 @@ final class RegistrationStep2Resource implements ResourceInterface {
 The venue refers to one of example 15's venue entities, a string with
 `SurfaceValidReference` naming `event_venue`: it holds the venue's machine name, its
 candidates are core's entity reference selection handler's for the
-account, and both documents mark it `x-surface.reference`. This module
+account, and both documents state it as its check's options,
+`{"entityTypeId": "event_venue"}`, with a `lookup` link. This module
 writes no code for it. The list differs from the one example 2 had
 before the venue was a reference: core's selection for a config entity
 type lists every venue, enabled or not, sorted by name, where the old
@@ -2499,7 +2500,7 @@ tests show every component spelled out. A site whose themes provide
 more is past it, as the development site this page was written on is,
 with 312: the full schema then lists each component by id and label,
 and states the props and slots open, marked `deferred`, with no def and
-no conditional per component and a `fetch` template in each `deferred`;
+no conditional per component and a `choose` link on each `deferred` key;
 the full schema fetched with a component chosen,
 `GET /surface-api/event.spotlight/schema?choose=/props={component}`,
 states that component's defs exactly, and so does the schema for these
@@ -2521,8 +2522,9 @@ The props in the full schema, past the limit:
 
 ```json
 "props": {"title": "Props", "type": ["object", "null"],
-          "x-surface": {"dependsOn": ["component"], "by": "component",
-                        "deferred": {"fetch": "https://example.com/surface-api/event.spotlight/schema?choose=/props={value}"}}}
+          "x-portable-links": [{"rel": "choose", "href": "https://example.com/surface-api/event.spotlight/schema?choose=/props={value}",
+                                "source": {"value": "1/component"}}],
+          "x-surface": {"dependsOn": ["component"], "by": "component", "deferred": true}}
 ```
 
 The form still swaps the props over AJAX, and the React page fetches
@@ -4651,9 +4653,14 @@ documents, and a sentence in the tool listing naming where to look one
 up: the resource's lookup, `GET
 /surface-api/event.sponsorship:lookup?key=/contact&q=adm`, which answers
 ids and labels through the same handler, for the same account. Both
-documents mark every reference key `x-surface.reference`, `{"entityType":
-"node", "bundles": ["article"]}`, or for the id of a reference of any type `{"by":
-"entity_type"}`. The page shows the keys as the full schema states them
+documents state what every reference key refers to as its check's
+options, `"portable-check": {"drupal:SurfaceValidReference": {"entityTypeId":
+"node", "bundles": ["article"]}}`, and name the lookup as its `lookup`
+link, `{"rel": "lookup", "href":
+"/surface-api/event.sponsorship:lookup?key=/page{&q,limit}"}`; the id
+of a reference of any type has no check and a link that reads its
+entity type from its sibling, `"source": {"type": "1/entity_type"}`,
+written where the structure is used, never in its def. The page shows the keys as the full schema states them
 now, and again with the limit held at 1 for its own request, as
 `ddev drush config:set surface.settings reference_list_limit 1`
 would set it, without saving it.
@@ -4734,7 +4741,7 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples_references/surface_examples_references.install`](../surface_examples_references/surface_examples_references.install) | deletes them when it is uninstalled | 3 |
 | [`modules/surface_examples_references/src/Sponsorship.php`](../surface_examples_references/src/Sponsorship.php) | the three nodes: an article, a draft article and a page, their ids kept in State | 40 |
 | [`modules/surface_examples_references/surface_examples_references.post_update.php`](../surface_examples_references/surface_examples_references.post_update.php) | stores as uuids the ids a site stored before the object stored uuids | 6 |
-| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 287 |
+| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 291 |
 | [`src/Reference/ReferenceStorageLayout.php`](../../src/Reference/ReferenceStorageLayout.php) | how a config storage keeps a reference to content: by uuid, read back as the id; the main module's | 373 |
 | [`src/Plugin/Validation/Constraint/ValidReferenceConstraint.php`](../../src/Plugin/Validation/Constraint/ValidReferenceConstraint.php) | the id's constraint, core's ValidReference for a key that holds one id; the main module's | 22 |
 | [`src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php`](../../src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php) | the entity type's constraint, which the filters are options of; the main module's | 17 |

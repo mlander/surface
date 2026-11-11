@@ -924,12 +924,16 @@ describe('a value drawn fixed', () => {
 });
 
 describe('a key that refers to an entity (x-portable-ui.widget: autocomplete)', () => {
-  const reference = { entityType: 'event_venue' };
+  // What it refers to is its check's options; where to look one up, its link.
+  const reference: Pick<Schema, 'portable-check' | 'x-portable-links'> = {
+    'portable-check': { 'drupal:SurfaceValidReference': { entityTypeId: 'event_venue' } },
+    'x-portable-links': [{ rel: 'lookup', href: '/surface-api/event.sponsorship:lookup?key=/venue{&q,limit}' }],
+  };
 
   it('draws the listed candidates as a select, as the form does up to the limit', () => {
     render(
       <Form
-        schema={object({ venue: { title: 'Venue', type: 'string', oneOf: venues, ...x('autocomplete', { reference }) } })}
+        schema={object({ venue: { title: 'Venue', type: 'string', oneOf: venues, ...reference, ...x('autocomplete') } })}
         initial={{ venue: 'library' }}
       />,
     );
@@ -938,16 +942,16 @@ describe('a key that refers to an entity (x-portable-ui.widget: autocomplete)', 
   });
 
   it('past the limit, looks the typed text up and takes the id of the candidate chosen', async () => {
-    const asked: [string, string, string | undefined][] = [];
-    const lookup: Lookup = async (path, text, type) => {
-      asked.push([path, text, type]);
+    const asked: [string, Record<string, unknown>][] = [];
+    const lookup: Lookup = async (href, variables) => {
+      asked.push([href, variables]);
       return [{ id: 'riverside', label: 'Riverside Hall' }];
     };
     let last: Values = {};
     render(
       <LookupContext.Provider value={lookup}>
         <Form
-          schema={object({ venue: { title: 'Venue', type: 'string', ...x('autocomplete', { reference }) } })}
+          schema={object({ venue: { title: 'Venue', type: 'string', ...reference, ...x('autocomplete') } })}
           initial={{ venue: null }}
           onValues={(values) => {
             last = values;
@@ -959,16 +963,17 @@ describe('a key that refers to an entity (x-portable-ui.widget: autocomplete)', 
     expect(input.tagName).toBe('INPUT');
     await userEvent.type(input, 'r');
     await userEvent.click(await screen.findByRole('button', { name: 'Riverside Hall (riverside)' }));
-    expect(asked[0]).toEqual(['venue', 'r', undefined]);
+    expect(asked[0]).toEqual(['/surface-api/event.sponsorship:lookup?key=/venue{&q,limit}', { q: 'r' }]);
     expect(last).toEqual({ venue: 'riverside' });
   });
 
   it("looks a bare reference's id up of the entity type its sibling holds", async () => {
-    const asked: [string, string, string | undefined][] = [];
-    const lookup: Lookup = async (path, text, type) => {
-      asked.push([path, text, type]);
+    const asked: [string, Record<string, unknown>][] = [];
+    const lookup: Lookup = async (href, variables) => {
+      asked.push([href, variables]);
       return [];
     };
+    const bare = '/surface-api/event.sponsorship:lookup?key=/thing/id&type={type}{&q,limit}';
     render(
       <LookupContext.Provider value={lookup}>
         <Form
@@ -976,7 +981,7 @@ describe('a key that refers to an entity (x-portable-ui.widget: autocomplete)', 
             thing: {
               ...object({
                 entity_type: { title: 'Entity type', type: 'string', ...x('text') },
-                id: { title: 'ID', type: 'string', ...x('autocomplete', { reference: { by: 'entity_type' } }) },
+                id: { title: 'ID', type: 'string', 'x-portable-links': [{ rel: 'lookup', href: bare, source: { type: '1/entity_type' } }], ...x('autocomplete', { dependsOn: ['entity_type'] }) },
               }),
               title: 'Featured beside',
               ...x('fieldset'),
@@ -987,7 +992,58 @@ describe('a key that refers to an entity (x-portable-ui.widget: autocomplete)', 
       </LookupContext.Provider>,
     );
     await userEvent.type(screen.getByRole('combobox', { name: 'ID' }), '5');
-    expect(asked[0]).toEqual(['thing.id', '5', 'node']);
+    expect(asked[0]).toEqual([bare, { type: 'node', q: '5' }]);
+  });
+
+  it('sends no lookup for a bare reference while its sibling holds no entity type', async () => {
+    const asked: string[] = [];
+    const lookup: Lookup = async (href) => {
+      asked.push(href);
+      return [];
+    };
+    const bare = '/surface-api/event.sponsorship:lookup?key=/thing/id&type={type}{&q,limit}';
+    render(
+      <LookupContext.Provider value={lookup}>
+        <Form
+          schema={object({
+            thing: {
+              ...object({
+                entity_type: { title: 'Entity type', type: 'string', ...x('text') },
+                id: { title: 'ID', type: 'string', 'x-portable-links': [{ rel: 'lookup', href: bare, source: { type: '1/entity_type' } }], ...x('autocomplete', { dependsOn: ['entity_type'] }) },
+              }),
+              title: 'Featured beside',
+              ...x('fieldset'),
+            },
+          })}
+          initial={{ thing: { entity_type: null, id: null } }}
+        />
+      </LookupContext.Provider>,
+    );
+    await userEvent.type(screen.getByRole('combobox', { name: 'ID' }), '5');
+    expect(asked).toEqual([]);
+  });
+
+  it('takes an id typed alone where the key has no lookup link', async () => {
+    const asked: string[] = [];
+    const lookup: Lookup = async (href) => {
+      asked.push(href);
+      return [];
+    };
+    let last: Values = {};
+    render(
+      <LookupContext.Provider value={lookup}>
+        <Form
+          schema={object({ venue: { title: 'Venue', type: 'string', 'portable-check': reference['portable-check'], ...x('autocomplete') } })}
+          initial={{ venue: null }}
+          onValues={(values) => {
+            last = values;
+          }}
+        />
+      </LookupContext.Provider>,
+    );
+    await userEvent.type(screen.getByRole('combobox', { name: 'Venue' }), 'library');
+    expect(asked).toEqual([]);
+    expect(last).toEqual({ venue: 'library' });
   });
 });
 

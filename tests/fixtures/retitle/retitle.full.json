@@ -96,18 +96,15 @@
                             }
                         ],
                         "portable-check": {
-                            "drupal:SurfaceValidReference": {}
+                            "drupal:SurfaceValidReference": {
+                                "entityTypeId": "node"
+                            }
                         },
                         "x-portable-messages": {
                             "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
                         },
                         "x-portable-ui": {
                             "widget": "select"
-                        },
-                        "x-surface": {
-                            "reference": {
-                                "entityType": "node"
-                            }
                         }
                     },
                     "new_title": {

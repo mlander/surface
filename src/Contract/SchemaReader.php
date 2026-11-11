@@ -11,7 +11,9 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\surface\Contract\Keywords\ReadBack;
+use Drupal\surface\Reference\References;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\ResourceBuild\NeedsFrame;
@@ -83,8 +85,9 @@ use Drupal\surface\ResourceBuild\ResourceRegistry;
  * named under `portable-check`. A keyword that only annotates (`$comment`,
  * `deprecated`, `contentMediaType`, another vendor's `x-` keyword) is
  * dropped, and so is what only the server knew (`refine`, `live`, any
- * other check of `portable-check`) and a list left out for its
- * size (`deferred`); each is noted, by its JSON
+ * check of `portable-check` but a reference's, which is read as what the
+ * key refers to), a list left out for its size (`deferred`) and every
+ * link of `x-portable-links`; each is noted, by its JSON
  * pointer. A document the reader cannot read at all (no object at its
  * root or at a def, a key holding a dot, a reference to a def it does not
  * hold, a type JSON Schema does not have) is refused, naming the pointer.
@@ -204,6 +207,7 @@ final class SchemaReader {
     PortableKeywords::CHECK,
     PortableKeywords::MESSAGES,
     PortableKeywords::UI,
+    PortableKeywords::LINKS,
     'readOnly',
   ];
 
@@ -228,6 +232,7 @@ final class SchemaReader {
     PortableKeywords::CHECK,
     PortableKeywords::MESSAGES,
     PortableKeywords::UI,
+    PortableKeywords::LINKS,
   ];
 
   /**
@@ -246,6 +251,7 @@ final class SchemaReader {
     PortableKeywords::CHECK,
     PortableKeywords::MESSAGES,
     PortableKeywords::UI,
+    PortableKeywords::LINKS,
   ];
 
   /**
@@ -264,6 +270,7 @@ final class SchemaReader {
     PortableKeywords::CHECK,
     PortableKeywords::MESSAGES,
     PortableKeywords::UI,
+    PortableKeywords::LINKS,
   ];
 
   /**
@@ -302,6 +309,7 @@ final class SchemaReader {
     ContractEmitter::EXTENSION,
     PortableKeywords::MESSAGES,
     PortableKeywords::UI,
+    PortableKeywords::LINKS,
   ];
 
   /**
@@ -335,10 +343,15 @@ final class SchemaReader {
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface|null $typedDataManager
    *   The typed data manager, for the blueprints a whole document is
    *   surveyed into (notes()); NULL for a reader that only fills one.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface|null $entityTypeManager
+   *   The entity type manager, which says whether an entity type a
+   *   reference's check names is one the site has; NULL to read it as
+   *   named.
    */
   public function __construct(
     protected readonly ?ResourceRegistry $registry = NULL,
     protected readonly ?TypedDataManagerInterface $typedDataManager = NULL,
+    protected readonly ?EntityTypeManagerInterface $entityTypeManager = NULL,
   ) {}
 
   /**
@@ -367,7 +380,8 @@ final class SchemaReader {
    * Fills the blueprint of a structure read from a document.
    *
    * The inputs of what ResourceRegistry::defineRead() registers: the
-   * object at the pointer, read as a frame.
+   * object at the pointer, read as a frame, against the entity types the
+   * site has, which a reference's check names.
    *
    * @param \Drupal\surface\Resource\BlueprintInterface $inputs
    *   The structure's blueprint.
@@ -380,7 +394,9 @@ final class SchemaReader {
    *   handed on to each structure the frame holds, so it is taken once.
    */
   public static function fill(BlueprintInterface $inputs, array $root, string $pointer, ?string $hash = NULL): void {
-    $reader = new static();
+    // Called by the build, with no service of its own: the site's entity
+    // types are read from the container where there is one.
+    $reader = new static(entityTypeManager: \Drupal::hasService('entity_type.manager') ? \Drupal::entityTypeManager() : NULL);
     $reader->hashed = $hash === NULL ? NULL : [$root, $hash];
     $reader->frame(static::at($root, $pointer), $pointer, static::blueprintOf($inputs), $root);
   }
@@ -750,7 +766,8 @@ final class SchemaReader {
    * a document is checked as it was. Applied at every depth, after the
    * markers are back in place (SchemaResolver::restored()). The widget
    * hints a document served before them said under `x-surface` are read
-   * as `x-portable-ui` says them now (hinted()).
+   * as `x-portable-ui` says them now (hinted()), and a reference and a
+   * deferred list as their check's options and links say them (linked()).
    *
    * Decision: see
    * docs/decisions.md#the-served-document-is-a-portable-schema-document.
@@ -794,7 +811,141 @@ final class SchemaReader {
       }
       $schema = PortableKeywords::before($schema, $said);
     }
+    $schema = static::linked($schema);
     return static::eachSubschema($schema, static::respelled(...));
+  }
+
+  /**
+   * Reads what a document served before the links said under `x-surface`.
+   *
+   * A key that refers to an entity said what it refers to as
+   * `x-surface.reference: {entityType, bundles?}`, read now as its check's
+   * options, the plugin's own names `{entityTypeId, bundles?}`; an id
+   * whose entity type a sibling names said `{by}`, which is
+   * left out, since its lookup link names a path the document does not
+   * give. A deferred list said its fetch as `x-surface.deferred.fetch`,
+   * read now as its `choose` link, `deferred` left `true` or its entries.
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
+   *
+   * @param array $schema
+   *   A subschema.
+   *
+   * @return array
+   *   The same, in this spelling.
+   */
+  protected static function linked(array $schema): array {
+    $extension = $schema[ContractEmitter::EXTENSION] ?? NULL;
+    if (!is_array($extension)) {
+      return $schema;
+    }
+    $reference = $extension['reference'] ?? NULL;
+    $deferred = $extension['deferred'] ?? NULL;
+    $fetch = is_array($deferred) && is_string($deferred['fetch'] ?? NULL) ? $deferred['fetch'] : NULL;
+    if (!is_array($reference) && $fetch === NULL) {
+      return $schema;
+    }
+    $said = [];
+    if (is_array($reference)) {
+      unset($extension['reference']);
+      if (is_string($reference['entityType'] ?? NULL) && $reference['entityType'] !== '') {
+        // Bundles as they were said: a value that is no list of names is
+        // noted where the check is read (referenceOptions()).
+        $bundles = $reference['bundles'] ?? [];
+        $checks = is_array($schema[PortableKeywords::CHECK] ?? NULL) ? $schema[PortableKeywords::CHECK] : [];
+        $checks[PortableKeywords::PROVIDER . References::CONSTRAINT] = ['entityTypeId' => $reference['entityType']] + ($bundles === [] ? [] : ['bundles' => $bundles]);
+        $said[PortableKeywords::CHECK] = $checks;
+      }
+    }
+    $link = NULL;
+    if ($fetch !== NULL) {
+      $entries = $deferred['entries'] ?? NULL;
+      $extension['deferred'] = is_array($entries) ? ['entries' => $entries] : TRUE;
+      $by = is_string($extension['by'] ?? NULL) && !is_array($entries) ? $extension['by'] : NULL;
+      $link = PortableLinks::choose($fetch, $by);
+    }
+    $schema[ContractEmitter::EXTENSION] = $extension;
+    if ($extension === []) {
+      unset($schema[ContractEmitter::EXTENSION]);
+    }
+    $schema = PortableKeywords::before($schema, $said);
+    return $link === NULL ? $schema : PortableLinks::set($schema, $link);
+  }
+
+  /**
+   * Notes the links a key carries, which are not read.
+   *
+   * A link names where a client asks the server, and the server writes
+   * its own again. A key that refers to an entity is read from its check
+   * (constraints()); an id whose entity type a sibling names, known only
+   * by its `lookup` link's `source`, is read as a value of its type.
+   *
+   * @param array $property
+   *   The key's schema.
+   * @param string $pointer
+   *   Where it stands.
+   */
+  protected function droppedLinks(array $property, string $pointer): void {
+    if (!array_key_exists(PortableKeywords::LINKS, $property)) {
+      return;
+    }
+    $links = $property[PortableKeywords::LINKS];
+    if (!is_array($links) || !array_is_list($links)) {
+      $this->note(static::below($pointer, PortableKeywords::LINKS), 'Not read: not a link.');
+      return;
+    }
+    foreach ($links as $i => $link) {
+      $at = static::below($pointer, PortableKeywords::LINKS, $i);
+      $link = $link instanceof \stdClass ? (array) $link : $link;
+      if (PortableLinks::all([PortableKeywords::LINKS => [$link]]) === []) {
+        // No `rel` and `href` to read it by.
+        $this->note($at, 'Not read: not a link.');
+        continue;
+      }
+      if ($link['rel'] === PortableLinks::LOOKUP && isset($link['source']) && $this->referenceOptions($property) === NULL) {
+        $this->note($at, 'Not read: a link names where a client asks, and an id whose entity type its sibling names is read as a value of its type alone.');
+        continue;
+      }
+      $this->note($at, 'Not read: a link names where a client asks.');
+    }
+  }
+
+  /**
+   * Reads what a key's reference check says it refers to.
+   *
+   * The check's options are the plugin's own, `{entityTypeId, bundles?}`.
+   * An entity type this site does not have, or bundles that are no list
+   * of names, are not read: the check is then known by its plugin alone,
+   * and the key is read as a value of its type.
+   *
+   * @param array $property
+   *   The key's schema.
+   * @param string|null $why
+   *   Set to why the options are not read, where the check names an
+   *   entity type they cannot be read for; NULL otherwise.
+   *
+   * @return array{entityTypeId: string, bundles?: string[]}|null
+   *   The constraint's options, as an author declares them; NULL where its
+   *   check names no entity type, or one that is not read.
+   */
+  protected function referenceOptions(array $property, ?string &$why = NULL): ?array {
+    $why = NULL;
+    $options = $property[PortableKeywords::CHECK][PortableKeywords::PROVIDER . References::CONSTRAINT] ?? NULL;
+    $options = $options instanceof \stdClass ? (array) $options : $options;
+    if (!is_array($options) || !is_string($options['entityTypeId'] ?? NULL) || $options['entityTypeId'] === '') {
+      return NULL;
+    }
+    if ($this->entityTypeManager !== NULL && !$this->entityTypeManager->hasDefinition($options['entityTypeId'])) {
+      $why = sprintf('it refers to %s, an entity type this site does not have', $options['entityTypeId']);
+      return NULL;
+    }
+    $bundles = $options['bundles'] ?? [];
+    if (!is_array($bundles) || !array_is_list($bundles) || array_filter($bundles, static fn (mixed $bundle): bool => !is_string($bundle) || $bundle === '') !== []) {
+      $why = 'its bundles are not a list of names';
+      return NULL;
+    }
+    return ['entityTypeId' => $options['entityTypeId']] + ($bundles === [] ? [] : ['bundles' => $bundles]);
   }
 
   /**
@@ -1693,7 +1844,7 @@ final class SchemaReader {
         ];
       }
     }
-    if ($variants === [] && $union === NULL && is_array($extension['deferred'] ?? NULL)) {
+    if ($variants === [] && $union === NULL && (($extension['deferred'] ?? NULL) === TRUE || is_array($extension['deferred'] ?? NULL))) {
       // Variants a site lists past its budget, deferred: no variant is in
       // the document to read, so the key is an object like any other.
       // Decision: see
@@ -1839,6 +1990,7 @@ final class SchemaReader {
   protected function key(string $name, array $property, bool $required, string $pointer, ResourceBlueprint $inputs, array $root, array $keys = []): void {
     $extension = is_array($property[ContractEmitter::EXTENSION] ?? NULL) ? $property[ContractEmitter::EXTENSION] : [];
     $this->droppedExtension($extension, static::below($pointer, ContractEmitter::EXTENSION));
+    $this->droppedLinks($property, $pointer);
     $reference = $this->siteReference($property, $pointer);
 
     // A child: an object def it refers to, or an object of its own.
@@ -2239,6 +2391,7 @@ final class SchemaReader {
         }
       }
       $this->droppedExtension(is_array($property[ContractEmitter::EXTENSION] ?? NULL) ? $property[ContractEmitter::EXTENSION] : [], static::below($at, ContractEmitter::EXTENSION));
+      $this->droppedLinks($property, $at);
       // Each key of the map is arranged in it, among the map's groups.
       $arrangement = $this->arranged($property, $groups, $at, $pointer);
       if ($arrangement !== NULL) {
@@ -2303,7 +2456,7 @@ final class SchemaReader {
     if (($extension['live'] ?? FALSE) === TRUE) {
       $this->note(static::below($pointer, 'live'), 'Not read: settled per request, by a rule or an access answer only the server knows, which the key is as wide as without.');
     }
-    if (is_array($extension['deferred'] ?? NULL)) {
+    if (($extension['deferred'] ?? NULL) === TRUE || is_array($extension['deferred'] ?? NULL)) {
       $this->note(static::below($pointer, 'deferred'), 'Not read: a list the site decides, left out of this document for its size, so the key is read open.');
     }
   }
@@ -2589,6 +2742,12 @@ final class SchemaReader {
         case 'oneOf':
         case 'enum':
         case 'const':
+          if ($keyword === 'oneOf' && $this->referenceOptions($property) !== NULL) {
+            // A reference's candidates are the site's, listed from its
+            // check under the limit.
+            $this->note($at, 'Read from the reference: the site lists its candidates.');
+            break;
+          }
           $choice = $this->choice($property, $keyword);
           if ($choice === NULL) {
             if ($keyword !== 'const' || ($property['readOnly'] ?? FALSE) !== TRUE) {
@@ -2606,8 +2765,18 @@ final class SchemaReader {
 
         case PortableKeywords::CHECK:
           foreach (PortableKeywords::checks($property) as $check) {
+            $why = NULL;
             if ($check['constraint'] === 'JsonSchema' && is_array($check['options']['schema'] ?? NULL)) {
               $read[] = new ReadBack('JsonSchema', ['schema' => $this->kept($check['options']['schema'], static::below($at, PortableKeywords::PROVIDER . 'JsonSchema', 'schema'))], [$keyword]);
+            }
+            elseif ($check['constraint'] === References::CONSTRAINT && ($refers = $this->referenceOptions($property, $why)) !== NULL) {
+              // What a key refers to, as its author declares it.
+              // Decision: see
+              // docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
+              $read[] = new ReadBack(References::CONSTRAINT, $refers, [$keyword]);
+            }
+            elseif ($check['constraint'] === References::CONSTRAINT && $why !== NULL) {
+              $this->note(static::below($at, PortableKeywords::PROVIDER . $check['constraint']), 'Not read: ' . $why . ', so the constraint the server checks is known by its plugin alone.');
             }
             else {
               $this->note(static::below($at, PortableKeywords::PROVIDER . $check['constraint']), 'Not read: a constraint the server checks is known by its plugin alone.');
@@ -3058,13 +3227,14 @@ final class SchemaReader {
    *
    * @return mixed
    *   The same, with no `x-surface`, `portable-check`,
-   *   `x-portable-messages`, `x-portable-ui` or identifier at any depth.
+   *   `x-portable-messages`, `x-portable-ui`, `x-portable-links` or
+   *   identifier at any depth.
    */
   protected static function plain(mixed $schema, ?array &$dropped = NULL, string $pointer = ''): mixed {
     if (!is_array($schema)) {
       return $schema;
     }
-    unset($schema[ContractEmitter::EXTENSION], $schema[PortableKeywords::CHECK], $schema[PortableKeywords::MESSAGES], $schema[PortableKeywords::UI]);
+    unset($schema[ContractEmitter::EXTENSION], $schema[PortableKeywords::CHECK], $schema[PortableKeywords::MESSAGES], $schema[PortableKeywords::UI], $schema[PortableKeywords::LINKS]);
     foreach (self::IDENTIFIERS as $identifier) {
       if (is_string($schema[$identifier] ?? NULL)) {
         unset($schema[$identifier]);

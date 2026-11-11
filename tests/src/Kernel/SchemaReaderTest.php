@@ -786,6 +786,112 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests a reference and a deferred list said under the extension read as now.
+   *
+   * A document served before the links said what a key refers to as
+   * `x-surface.reference` and a deferred list's fetch as
+   * `x-surface.deferred.fetch`: prepared, it is the document as the emitter
+   * writes it now, but for an id whose entity type a sibling names, whose
+   * lookup link names a path the document does not give. A link is noted,
+   * not read.
+   *
+   * @see docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links
+   */
+  public function testTheReferenceAndTheFetchUnderTheExtensionReadAsTheLinks(): void {
+    $old = static::json(<<<'JSON'
+      {"type": "object", "additionalProperties": false, "properties": {
+        "contact": {"type": ["integer", "null"], "oneOf": [{"const": 1, "title": "admin"}, {"const": null}],
+          "portable-check": {"drupal:SurfaceValidReference": {}}, "x-portable-messages": {"check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"},
+          "x-surface": {"reference": {"entityType": "user"}}},
+        "author": {"type": ["integer", "null"],
+          "portable-check": {"drupal:SurfaceValidReference": {}}, "x-portable-messages": {"check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"},
+          "x-surface": {"reference": {"entityType": "user", "bundles": ["user"]}}},
+        "thing": {"type": "object", "additionalProperties": false, "properties": {
+          "entity_type": {"type": ["string", "null"]},
+          "id": {"type": ["string", "null"], "x-surface": {"dependsOn": ["entity_type"], "reference": {"by": "entity_type"}}}}},
+        "layout": {"type": ["string", "null"], "oneOf": [{"const": "grid", "title": "Grid"}, {"const": null}]},
+        "panels": {"type": ["object", "null"], "x-surface": {"dependsOn": ["layout"], "by": "layout", "deferred": {"fetch": "?choose=/panels={value}"}}},
+        "lights": {"type": ["object", "null"], "x-surface": {"deferred": {"fetch": "?choose=/lights={value}", "entries": [{"id": "bench_1", "label": "Bench 1"}]}}}
+      }}
+      JSON);
+    $new = static::json(<<<'JSON'
+      {"type": "object", "additionalProperties": false, "properties": {
+        "contact": {"type": ["integer", "null"], "oneOf": [{"const": 1, "title": "admin"}, {"const": null}],
+          "portable-check": {"drupal:SurfaceValidReference": {"entityTypeId": "user"}}, "x-portable-messages": {"check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"}},
+        "author": {"type": ["integer", "null"],
+          "portable-check": {"drupal:SurfaceValidReference": {"entityTypeId": "user", "bundles": ["user"]}}, "x-portable-messages": {"check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"}},
+        "thing": {"type": "object", "additionalProperties": false, "properties": {
+          "entity_type": {"type": ["string", "null"]},
+          "id": {"type": ["string", "null"], "x-surface": {"dependsOn": ["entity_type"]}}}},
+        "layout": {"type": ["string", "null"], "oneOf": [{"const": "grid", "title": "Grid"}, {"const": null}]},
+        "panels": {"type": ["object", "null"], "x-portable-links": [{"rel": "choose", "href": "?choose=/panels={value}", "source": {"value": "1/layout"}}], "x-surface": {"dependsOn": ["layout"], "by": "layout", "deferred": true}},
+        "lights": {"type": ["object", "null"], "x-portable-links": [{"rel": "choose", "href": "?choose=/lights={value}"}], "x-surface": {"deferred": {"entries": [{"id": "bench_1", "label": "Bench 1"}]}}}
+      }}
+      JSON);
+    $this->assertSame(SchemaReader::prepared($new), SchemaReader::prepared($old), 'Prepared, the old spelling is the new one.');
+    $read = [$this->read($old, 'test.old'), $this->read($new, 'test.new')];
+    foreach ($read as $surface) {
+      $this->assertSame(['entityTypeId' => 'user'], $surface->getDefinition('contact')->getConstraints()['SurfaceValidReference']);
+      $this->assertSame('integer', $surface->getDefinition('contact')->getDataType());
+      $this->assertArrayNotHasKey('Choice', $surface->getDefinition('contact')->getConstraints(), 'Its candidates are the site\'s, not a list read.');
+      $this->assertSame(['entityTypeId' => 'user', 'bundles' => ['user']], $surface->getDefinition('author')->getConstraints()['SurfaceValidReference'], 'The bundles, respelled as the plugin\'s option.');
+    }
+
+    // The bare id's link, as the emitter writes it with the HTTP door.
+    $new['properties']['thing']['properties']['id']['x-portable-links'] = [
+      [
+        'rel' => 'lookup',
+        'href' => '/surface-api/test:lookup?key=/thing/id&type={type}{&q,limit}',
+        'source' => ['type' => '1/entity_type'],
+      ],
+    ];
+    // A keyed key's link, as the emitter writes it with the HTTP door.
+    $new['properties']['contact']['x-portable-links'] = [
+      ['rel' => 'lookup', 'href' => '/surface-api/test:lookup?key=/contact{&q,limit}'],
+    ];
+    $notes = $this->reader()->notes($new);
+    $this->assertSame('Not read: a link names where a client asks.', $notes['/properties/contact/x-portable-links/0'] ?? NULL, json_encode($notes));
+    $this->assertSame('Not read: a link names where a client asks, and an id whose entity type its sibling names is read as a value of its type alone.', $notes['/properties/thing/properties/id/x-portable-links/0'] ?? NULL, json_encode($notes));
+    $this->assertSame('Not read: a link names where a client asks.', $notes['/properties/panels/x-portable-links/0'] ?? NULL);
+    $this->assertSame('Not read: a link names where a client asks.', $notes['/properties/lights/x-portable-links/0'] ?? NULL);
+    $this->assertSame('Read from the reference: the site lists its candidates.', $notes['/properties/contact/oneOf'] ?? NULL);
+    $this->assertArrayNotHasKey('/properties/contact/portable-check/drupal:SurfaceValidReference', $notes, 'A reference\'s check is read.');
+  }
+
+  /**
+   * Tests a reference check the site cannot read, and a malformed link, noted.
+   *
+   * An entity type the site does not have, or bundles that are no list of
+   * names, are not read: the key is read as a value of its type, with no
+   * reference, and its check is known by its plugin alone, which the note
+   * says with why. `x-portable-links` that is no list, and an entry with no
+   * `rel` and `href`, are noted as no link.
+   *
+   * @see docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links
+   */
+  public function testReferenceTheSiteCannotReadAndMalformedLinkAreNoted(): void {
+    $document = static::json(<<<'JSON'
+      {"type": "object", "additionalProperties": false, "properties": {
+        "ghost": {"type": ["integer", "null"], "portable-check": {"drupal:SurfaceValidReference": {"entityTypeId": "no_such_type"}}},
+        "loose": {"type": ["integer", "null"], "portable-check": {"drupal:SurfaceValidReference": {"entityTypeId": "user", "bundles": "user"}}},
+        "odd": {"type": ["string", "null"], "x-portable-links": "nope"},
+        "half": {"type": ["string", "null"], "x-portable-links": [{"rel": "lookup"}, {"rel": "lookup", "href": "/x"}]}
+      }}
+      JSON);
+    $surface = $this->read($document);
+    foreach (['ghost', 'loose'] as $key) {
+      $this->assertSame('integer', $surface->getDefinition($key)->getDataType(), $key);
+      $this->assertArrayNotHasKey('SurfaceValidReference', $surface->getDefinition($key)->getConstraints(), $key . ': no reference read.');
+    }
+    $notes = $this->reader()->notes($document);
+    $this->assertSame('Not read: it refers to no_such_type, an entity type this site does not have, so the constraint the server checks is known by its plugin alone.', $notes['/properties/ghost/portable-check/drupal:SurfaceValidReference'] ?? NULL, json_encode($notes));
+    $this->assertSame('Not read: its bundles are not a list of names, so the constraint the server checks is known by its plugin alone.', $notes['/properties/loose/portable-check/drupal:SurfaceValidReference'] ?? NULL, json_encode($notes));
+    $this->assertSame('Not read: not a link.', $notes['/properties/odd/x-portable-links'] ?? NULL, json_encode($notes));
+    $this->assertSame('Not read: not a link.', $notes['/properties/half/x-portable-links/0'] ?? NULL, json_encode($notes));
+    $this->assertSame('Not read: a link names where a client asks.', $notes['/properties/half/x-portable-links/1'] ?? NULL, json_encode($notes));
+  }
+
+  /**
    * Tests the keys of an object a key holds read their arrangement too.
    *
    * The object is a plain map; its own `x-portable-ui` declares the groups

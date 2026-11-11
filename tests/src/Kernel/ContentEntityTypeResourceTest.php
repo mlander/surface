@@ -84,6 +84,11 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
   protected UserInterface $editor;
 
   /**
+   * How many lookup links the bundles' own resources carried (rootFields()).
+   */
+  protected int $linked = 0;
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
@@ -149,7 +154,7 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
             $wide = $operation === 'create' ? $this->resources()->operation($type, 'create') : new OperationContext($operation);
             $root = $emitter->emitFull($this->resources()->buildStatic($own, $context), $own, $operation)->document['schema'];
             $whole = $emitter->emitFull($this->resources()->buildStatic($type, $wide), $type, $operation)->document['schema'];
-            $this->assertSame(static::encode(static::rootFields($root)), static::encode(static::variantAtSite($whole, $entity_type_id, $bundle)), sprintf('%s narrowed by %s is %s, the full schema of %s, for %s.', $type, $bundle, $own, $operation, $account->getAccountName()));
+            $this->assertSame(static::encode($this->rootFields($root, $own, $operation)), static::encode($this->variantAtSite($whole, $entity_type_id, $bundle)), sprintf('%s narrowed by %s is %s, the full schema of %s, for %s.', $type, $bundle, $own, $operation, $account->getAccountName()));
             $compared++;
           }
           // The schema for empty values: a new one of the bundle.
@@ -164,12 +169,13 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
             $this->assertNotContains('kitchen', array_column($whole['properties']['bundle']['oneOf'] ?? [], 'const'));
             continue;
           }
-          $this->assertSame(static::encode(static::rootFields($root)), static::encode(static::variantAtSite($whole, $entity_type_id, $bundle)), sprintf('%s narrowed by %s is %s, the schema for empty values, for %s.', $type, $bundle, $own, $account->getAccountName()));
+          $this->assertSame(static::encode($this->rootFields($root, $own, 'create')), static::encode($this->variantAtSite($whole, $entity_type_id, $bundle)), sprintf('%s narrowed by %s is %s, the schema for empty values, for %s.', $type, $bundle, $own, $account->getAccountName()));
           $compared++;
         }
       }
     }
     $this->assertSame(22, $compared);
+    $this->assertGreaterThan(0, $this->linked, 'A bundle\'s own resource links its reference keys to its lookup.');
 
     // And for one that exists, its stored values.
     $this->setCurrentUser($this->admin);
@@ -178,7 +184,7 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
     [$whole_surface, $whole_storage] = $this->operation(self::RESOURCE, 'update', ['id' => $node->id()]);
     $root = $emitter->emit($own_surface, array_replace($own_surface->getDefaultValues(), $own_storage->load($own_surface)), 'entity.content:node.page', 'update')->document;
     $whole = $emitter->emit($whole_surface, array_replace($whole_surface->getDefaultValues(), $whole_storage->load($whole_surface)), self::RESOURCE, 'update')->document;
-    $this->assertSame(static::encode(static::rootFields($root['schema'])), static::encode(static::variantAtSite($whole['schema'], 'node', 'page')));
+    $this->assertSame(static::encode($this->rootFields($root['schema'], 'entity.content:node.page', 'update')), static::encode($this->variantAtSite($whole['schema'], 'node', 'page')));
     $identity = ['entity_type' => TRUE, 'bundle' => TRUE, 'id' => TRUE];
     $this->assertSame(array_diff_key($root['values'], $identity), $whole['values'][ContentEntityResources::FIELDS], 'The same stored values, under fields.');
     $this->assertSame(array_intersect_key($root['values'], $identity), array_intersect_key($whole['values'], $identity));
@@ -192,7 +198,7 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
     [$whole_surface, $whole_storage] = $this->operation(self::RESOURCE, 'read', ['id' => $node->id()]);
     $root = $emitter->emit($own_surface, array_replace($own_surface->getDefaultValues(), $own_storage->load($own_surface)), 'entity.content:node.page', 'read')->document;
     $whole = $emitter->emit($whole_surface, array_replace($whole_surface->getDefaultValues(), $whole_storage->load($whole_surface)), self::RESOURCE, 'read')->document;
-    $this->assertSame(static::encode(static::rootFields($root['schema'])), static::encode(static::variantAtSite($whole['schema'], 'node', 'page')));
+    $this->assertSame(static::encode($this->rootFields($root['schema'], 'entity.content:node.page', 'read')), static::encode($this->variantAtSite($whole['schema'], 'node', 'page')));
     $this->assertSame(array_diff_key($root['values'], $identity), $whole['values'][ContentEntityResources::FIELDS]);
     $read = function (string $resource) use ($node): array {
       $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:' . $resource . ':read');
@@ -299,7 +305,7 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
     $this->assertArrayHasKey('deferred', $fields['x-surface'] ?? [], 'The variants are left out for their count.');
     $this->assertSame(['kitchen', 'page'], array_values(array_filter(array_column($full['properties']['bundle']['oneOf'], 'const'), 'is_string')), 'The bundles are named.');
     $this->assertSame([], preg_grep('/^(field\.item|entity\.content):/', array_keys($full['$defs'] ?? [])), 'Nothing of the fields is stated.');
-    $this->assertSame(static::encode(static::rootFields($own)), static::encode(static::variantAtSite($chosen, 'node', 'kitchen')), 'The schema call with a bundle states its fields.');
+    $this->assertSame(static::encode($this->rootFields($own, 'entity.content:node.kitchen', 'create')), static::encode($this->variantAtSite($chosen, 'node', 'kitchen')), 'The schema call with a bundle states its fields.');
     $this->assertInstanceOf(SiteListBudget::class, $budget);
   }
 
@@ -500,15 +506,34 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
   /**
    * Reads a bundle's root as the fields it holds, less its identity.
    *
+   * Its lookup links are asserted and taken off: the bundle's own resource
+   * links each reference key the lookup reaches to its lookup, where the
+   * lookup's path takes no parameter, and the entity type's variant for
+   * the bundle, which the lookup does not reach, links none
+   * (variantAtSite()).
+   *
    * @param array $schema
    *   The bundle resource's schema.
+   * @param string $resource
+   *   The bundle resource.
+   * @param string $operation
+   *   The operation the schema is for.
    *
    * @return array
    *   Its properties, the required ones, whether others are allowed, its
-   *   conditionals and its defs, each less the identity keys.
+   *   conditionals and its defs, each less the identity keys, with no
+   *   lookup link (withoutLookups()).
    */
-  protected static function rootFields(array $schema): array {
-    $schema = SchemaResolver::restored($schema);
+  protected function rootFields(array $schema, string $resource, string $operation): array {
+    $links = [];
+    $schema = static::withoutLookups(SchemaResolver::restored($schema), '', $links);
+    $path = $this->container->get('Drupal\surface\ResourceBuild\ServedPathsInterface')->lookupPath($resource, $operation);
+    foreach ($links as $at => $href) {
+      $this->assertTrue($path !== NULL && !str_contains($path, '{'), $resource . ' ' . $operation . ' ' . $at . ': a link only where the lookup\'s path is whole.');
+      $key = str_replace('/properties/', '/', str_replace('/allOf/1/', '/', $at));
+      $this->assertSame($path . '?key=' . $key . '{&q,limit}', $href, $resource . ' ' . $operation . ' ' . $at);
+    }
+    $this->linked += count($links);
     $identity = ['entity_type' => TRUE, 'bundle' => TRUE, 'id' => TRUE];
     return [
       'properties' => array_diff_key($schema['properties'], $identity),
@@ -543,11 +568,12 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
    *   What rootFields() reads of a bundle's root, read off the variant;
    *   the defs, those the bundle's root names, from the whole document.
    */
-  protected static function variantAtSite(array $schema, string $entity_type_id, string $bundle): array {
+  protected function variantAtSite(array $schema, string $entity_type_id, string $bundle): array {
     $schema = SchemaResolver::restored($schema);
     $name = $entity_type_id . '.' . $bundle . ContentEntityResources::FIELDS_SUFFIX;
     $def = $schema['$defs'][ContentEntityResources::BASE . ':' . $name] ?? NULL;
     \assert(is_array($def), $name);
+    $this->assertStringNotContainsString('x-portable-links', (string) json_encode($def), $name . ': the lookup does not reach into a variant.');
     $site = [];
     foreach ($schema['allOf'] ?? [] as $branch) {
       if (($branch['if']['properties']['bundle']['const'] ?? NULL) === $bundle) {
@@ -586,6 +612,59 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
    */
   protected static function encode(array $part): string {
     return (string) json_encode($part, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+  }
+
+  /**
+   * Takes a schema's lookup links off, and a narrowing that said only them.
+   *
+   * @param array $schema
+   *   The schema, or a node of it.
+   * @param string $at
+   *   Its JSON Pointer.
+   * @param array<string, mixed> $links
+   *   Collects each lookup link's href, by the pointer of its node.
+   *
+   * @return array
+   *   The same, with no lookup link; a site whose narrowing carried links
+   *   alone is its `$ref` again, where the `allOf` stood.
+   */
+  protected static function withoutLookups(array $schema, string $at, array &$links): array {
+    if (is_array($schema['x-portable-links'] ?? NULL)) {
+      $kept = [];
+      foreach ($schema['x-portable-links'] as $link) {
+        if (($link['rel'] ?? NULL) === 'lookup') {
+          $links[$at] = $link['href'];
+          continue;
+        }
+        $kept[] = $link;
+      }
+      if ($kept === []) {
+        unset($schema['x-portable-links']);
+      }
+      else {
+        $schema['x-portable-links'] = $kept;
+      }
+    }
+    foreach ($schema as $keyword => $value) {
+      if (is_array($value)) {
+        $schema[$keyword] = static::withoutLookups($value, $at . '/' . $keyword, $links);
+      }
+    }
+    $narrowing = $schema['allOf'][1] ?? NULL;
+    $said = static fn (mixed $property): bool => $property !== [];
+    $links_alone = is_array($narrowing) && array_diff(array_keys($narrowing), ['type', 'properties']) === [] && array_filter((array) ($narrowing['properties'] ?? []), $said) === [];
+    if (isset($schema['allOf'][0]['$ref']) && count($schema['allOf']) === 2 && $links_alone) {
+      $collapsed = [];
+      foreach ($schema as $keyword => $value) {
+        if ($keyword === 'allOf') {
+          $collapsed['$ref'] = $value[0]['$ref'];
+          continue;
+        }
+        $collapsed[$keyword] = $value;
+      }
+      $schema = $collapsed;
+    }
+    return $schema;
   }
 
 }

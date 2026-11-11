@@ -27,7 +27,9 @@
                 "type": "string",
                 "default": "riverside",
                 "portable-check": {
-                    "drupal:SurfaceValidReference": {}
+                    "drupal:SurfaceValidReference": {
+                        "entityTypeId": "event_venue"
+                    }
                 },
                 "x-portable-messages": {
                     "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
@@ -35,11 +37,12 @@
                 "x-portable-ui": {
                     "widget": "autocomplete"
                 },
-                "x-surface": {
-                    "reference": {
-                        "entityType": "event_venue"
+                "x-portable-links": [
+                    {
+                        "rel": "lookup",
+                        "href": "/surface-api/event.sponsorship:lookup?key=/venue{&q,limit}"
                     }
-                }
+                ]
             },
             "contact": {
                 "title": "Contact",
@@ -49,7 +52,9 @@
                     "null"
                 ],
                 "portable-check": {
-                    "drupal:SurfaceValidReference": {}
+                    "drupal:SurfaceValidReference": {
+                        "entityTypeId": "user"
+                    }
                 },
                 "x-portable-messages": {
                     "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
@@ -57,11 +62,12 @@
                 "x-portable-ui": {
                     "widget": "autocomplete"
                 },
-                "x-surface": {
-                    "reference": {
-                        "entityType": "user"
+                "x-portable-links": [
+                    {
+                        "rel": "lookup",
+                        "href": "/surface-api/event.sponsorship:lookup?key=/contact{&q,limit}"
                     }
-                }
+                ]
             },
             "page": {
                 "title": "Announcement",
@@ -71,7 +77,12 @@
                     "null"
                 ],
                 "portable-check": {
-                    "drupal:SurfaceValidReference": {}
+                    "drupal:SurfaceValidReference": {
+                        "entityTypeId": "node",
+                        "bundles": [
+                            "article"
+                        ]
+                    }
                 },
                 "x-portable-messages": {
                     "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
@@ -79,14 +90,12 @@
                 "x-portable-ui": {
                     "widget": "autocomplete"
                 },
-                "x-surface": {
-                    "reference": {
-                        "entityType": "node",
-                        "bundles": [
-                            "article"
-                        ]
+                "x-portable-links": [
+                    {
+                        "rel": "lookup",
+                        "href": "/surface-api/event.sponsorship:lookup?key=/page{&q,limit}"
                     }
-                }
+                ]
             },
             "thing": {
                 "title": "Featured beside",
@@ -228,9 +237,6 @@
                             "dependsOn": [
                                 "entity_type"
                             ],
-                            "reference": {
-                                "by": "entity_type"
-                            },
                             "enumerated": true
                         }
                     }
@@ -343,9 +349,6 @@
                             "dependsOn": [
                                 "entity_type"
                             ],
-                            "reference": {
-                                "by": "entity_type"
-                            },
                             "enumerated": true
                         }
                     }
@@ -458,9 +461,6 @@
                             "dependsOn": [
                                 "entity_type"
                             ],
-                            "reference": {
-                                "by": "entity_type"
-                            },
                             "enumerated": true
                         }
                     }

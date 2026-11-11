@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createApi, dottedToPointer, lookupOf, pageOf, pointerToDotted, STAGE_HEADER, startedPaths, startingValues, type Endpoints, type Settings } from '../api';
+import { createApi, dottedToPointer, pageOf, pointerToDotted, STAGE_HEADER, startedPaths, startingValues, type Endpoints, type Settings } from '../api';
 import type { Contract, Schema } from '../contract';
 import { ContractRefused, getAt } from '../contract';
 import { outputText, SurfaceForm } from '../SurfaceForm';
@@ -931,17 +931,26 @@ describe('contract 5 only', () => {
 });
 
 describe('the lookup', () => {
-  it("is the page's, or the read path's custom read, an operation named in it taken off", () => {
-    expect(lookupOf({ read: '/surface-api/event.sponsorship', schema: '', write: { method: 'PATCH', url: '' } })).toBe('/surface-api/event.sponsorship:lookup');
-    expect(lookupOf({ read: '/surface-api/node.type/recipe?x=1', schema: '', write: { method: 'PATCH', url: '' } })).toBe('/surface-api/node.type/recipe:lookup');
-    expect(lookupOf({ read: '/surface-api/event.venue:create', schema: '', write: { method: 'POST', url: '' }, lookup: null })).toBeNull();
+  it("is the key's lookup link, concrete, expanded with its variables alone", async () => {
+    const { calls, fetcher } = server({
+      'GET /surface-api/node.page/7:lookup': () => ({ items: [{ id: 3, label: 'Ada' }] }),
+    });
+    // A page parameter named as a variable fills nothing: the server wrote
+    // the link concrete, and the variables are what its `source` names.
+    const api = createApi({ ...settings, parameters: { id: 7, limit: 2 } }, fetcher);
+    await expect(api.lookup('/surface-api/node.page/7:lookup?key=/uid/target_id{&q,limit}', { q: 'a d' })).resolves.toEqual([{ id: 3, label: 'Ada' }]);
+    await api.lookup('/surface-api/node.page/7:lookup?key=/thing/id&type={type}{&q,limit}', { type: 'node', q: 'x', limit: 5 });
+    expect(calls.map((call) => call.url)).toEqual([
+      '/surface-api/node.page/7:lookup?key=/uid/target_id&q=a%20d',
+      '/surface-api/node.page/7:lookup?key=/thing/id&type=node&q=x&limit=5',
+    ]);
   });
 });
 
 describe('a key deferred for its size', () => {
   // Example 12 on a site with more components than the site list limit:
   // the full schema states the props and slots open, `deferred`, each with
-  // a `fetch` template; the mocked server answers the full schema with the
+  // a `choose` link; the mocked server answers the full schema with the
   // choices named in the query, as GET .../schema?choose= does, and 404
   // for any other set.
   const resource = 'event.spotlight';
@@ -1122,14 +1131,14 @@ describe('a page under a stage', () => {
       [step2.write]: () => json({ ...nothing, committed: true, changed: true, contract: example2 }, { headers: { ETag: '"staged-2"' } }),
       'GET /surface-api/registration.step2:lookup': () => ({ items: [] }),
     });
-    const api = createApi({ ...staged, endpoints: { ...staged.endpoints, lookup: '/surface-api/registration.step2:lookup' } }, fetcher);
+    const api = createApi(staged, fetcher);
     const loaded = await api.contract();
     await api.schema();
     await api.chosen('/surface-api/registration.step2/schema?choose=%2Fvenue');
     await api.narrow(loaded.document.values, []);
     await api.validate(loaded.document.values, [], loaded.etag);
     await api.submit(loaded.document.values, [], loaded.etag);
-    await api.lookup('venue', 'riv');
+    await api.lookup('/surface-api/registration.step2:lookup?key=/venue{&q,limit}', { q: 'riv' });
     const token = calls.filter((call) => call.url === '/session/token');
     const others = calls.filter((call) => call.url !== '/session/token');
     expect(token).toHaveLength(1);

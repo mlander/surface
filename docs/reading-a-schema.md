@@ -111,14 +111,16 @@ has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
 | `group`, `after` | a map that only groups, a map placed after a key |
 | `rules`, `within` | where the emitter moved its markers, put back first (`SchemaResolver::restored()`) |
 
-Three keywords of the dialect are read too ([The dialect's own keywords](served-contract.md#the-dialects-own-keywords)):
+Four keywords of the dialect are read too ([The dialect's own keywords](served-contract.md#the-dialects-own-keywords)):
 
 | Keyword | Read as |
 | --- | --- |
 | `x-portable-ui` `widget` `radios`, `time`, `date`, `checkboxes`; `textarea` | the widget it asks for; a multiline string |
 | `x-portable-ui` `group`, with the frame's `groups`; `weight`; `options.placeholder`, `prefix`, `suffix`, `help` | the key's arrangement, described as an author describes it (`describe(group:, weight:, placeholder:, prefix:, suffix:, help:)`): a group's `widget` `details` is `ArrangementGroup::details()`, closed where its `options.open` is `false`, any other `fieldset()`, noted where it is neither; a key naming a group its frame does not declare, or one with no label, is noted and read ungrouped; a weight that is no whole number and a text that is no string are noted and not read; the keys of a map or a module's mount are read with the map's own `groups`. `options.emptyOption` and `options.multiple` are noted and not read: the options resolver decides them |
 | `x-portable-messages` | under `pattern`, or `not` for `not: {pattern}`: the `Regex`'s message |
-| `portable-check` `drupal:JsonSchema` | that constraint, from its `schema`; with keywords the value keeps besides, one constraint, the `allOf` of both. Any other check is noted and not read: what the emitter names there, and why, is in [What the keywords leave to the server](served-contract.md#what-the-keywords-leave-to-the-server) |
+| `portable-check` `drupal:JsonSchema` | that constraint, from its `schema`; with keywords the value keeps besides, one constraint, the `allOf` of both |
+| `portable-check` `drupal:SurfaceValidReference` with `entityTypeId` | a key that refers to an entity, as its author declares it, the check's options the plugin's own: `addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']])` on a key of the id's type ([Options](options.md#a-key-that-refers-to-an-entity)); its `oneOf` is not read, noted: the site lists its candidates, under the limit, and the widget follows as for a declared key. An entity type the site does not have, or `bundles` that is no list of names, is noted and not read: the key is read as a value of its type, the check known by its plugin alone. Any other check is noted and not read: what the emitter names there, and why, is in [What the keywords leave to the server](served-contract.md#what-the-keywords-leave-to-the-server) |
+| `x-portable-links` | not read, each link noted: a link names where a client asks, and the server writes its own; an entry with no `rel` and `href`, or a keyword that is no list, is noted as no link. The id of a key of any entity type, known only by its `lookup` link's `source`, is read as a value of its type alone (why: [decision](decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)) |
 
 A document contract 4 wrote said both under `x-surface`: its
 `checkedOnServer`, a list of `{constraint, message, schema}`, is read as
@@ -129,6 +131,13 @@ A document served before 2026-11-10 said the widget hints under
 `x-surface` (`widget`, `multiple`, `arrangement` with the whole group on
 each key, `emptyOption`): they are read as `x-portable-ui` says them
 now, each group declared once on its frame (`SchemaReader::hinted()`).
+The same documents said what a key refers to as `x-surface.reference:
+{entityType, bundles?}` and a deferred list's fetch as
+`x-surface.deferred.fetch`: they are read as the check's options,
+`{entityTypeId, bundles?}`, and a `choose` link
+(`SchemaReader::linked()`); the id of a key of any entity type said
+`{by}`, which is left out, since its `lookup` link names a path the
+document does not give.
 
 Below the root, `$id`, `$schema`, `$anchor` and `$dynamicAnchor` are
 dropped, each noted, wherever they stand, in a schema kept for a
@@ -208,7 +217,7 @@ refused."
 Dropped, each noted: `$comment`, `deprecated`, `contentMediaType`,
 `contentEncoding`, `contentSchema`, `$anchor`, another vendor's `x-`
 keywords, a `default` or `examples` of a whole object, a `portable-check`
-check other than `drupal:JsonSchema` (known by its plugin alone), and what a site narrows of a child (a lock its context made).
+check other than `drupal:JsonSchema` and a reference's (known by its plugin alone), the links, and what a site narrows of a child (a lock its context made).
 
 ## What is refused
 

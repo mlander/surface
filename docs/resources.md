@@ -2466,9 +2466,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   most `surface.settings:site_list_limit` variants (20 as shipped),
   both documents state each. Past it, the full schema states the key
   open, marked `deferred`, the deciding key still listing every value;
-  the full schema fetched with a value chosen,
-  `GET .../schema?choose=/props=<value>`, and the schema for these
-  answers state the variant chosen
+  the full schema fetched with a value chosen, which the key names as
+  its `choose` link, `GET .../schema?choose=/props=<value>`, and the
+  schema for these answers state the variant chosen
   (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 - **Never spelled out in a tool's listing.** Whatever the limit, the
   tool listing states the keys of the variant the stored values choose
@@ -2749,8 +2749,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   `surface.settings:site_list_limit` (20 as shipped) is stated open
   in the full schema and the tool listing, marked `deferred`, its keys
   named under `x-surface.deferred.entries` by id and label; the full schema
-  fetched with an entry chosen, `GET .../schema?choose=/limits=<id>`,
-  states that key, the schema for these answers states every key, and
+  fetched with an entry chosen, `GET .../schema?choose=/limits=<id>`
+  (the map's `choose` link, `{value}` an entry's id), states that key, the schema for these answers states every key, and
   the narrowing tool answers it to an agent
   (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
   The limit only moves a long list out of the documents; a provider that

@@ -60,17 +60,6 @@ export type Widget =
   | 'fixed'
   | 'autocomplete';
 
-/**
- * What a key that refers to an entity refers to (`x-surface.reference`):
- * one entity type, and the bundles it is narrowed to; or, for a bare
- * reference's id, the sibling whose value is its entity type.
- */
-export interface Reference {
-  entityType?: string;
-  bundles?: string[];
-  by?: string;
-}
-
 export interface EmptyOption {
   show: boolean;
   label: string;
@@ -136,8 +125,6 @@ export interface Extension {
   variants?: Record<string, string>;
   /** On a key with variants: the variant the deciding key chose; absent while none is. */
   chosen?: string;
-  /** On a key that refers to an entity: what it refers to. Its value is the id. */
-  reference?: Reference;
   /**
    * On a computed key, beside `readOnly`: the keys it is computed from, and
    * whether once, when the thing is created, or again whenever one of them
@@ -166,16 +153,12 @@ export interface Extension {
   refine?: boolean;
   /**
    * Static and stated, but left out for its size: a list the site decides
-   * with more entries than the site's limit. `fetch` names the full schema
-   * with one choice stated; the page fetches it for the value chosen, once,
-   * and narrows from it.
+   * with more entries than the site's limit, `true` for variants and the
+   * entries of a map of keys from the site. The key's `choose` link names
+   * the full schema with one choice stated; the page fetches it for the
+   * value chosen, once, and narrows from it.
    */
-  deferred?: {
-    /**
-     * An RFC 6570 template, the full schema's URL with `choose` for this
-     * key, its value `{value}`: the deciding key's value, or an entry's id.
-     */
-    fetch: string;
+  deferred?: true | {
     /** On a map of keys from the site: each key it holds. */
     entries?: { id: string; label: string }[];
   };
@@ -291,7 +274,82 @@ export interface Schema {
   'x-portable-messages'?: Record<string, string>;
   /** The dialect's: the widget hints. */
   'x-portable-ui'?: PortableUi;
+  /** The dialect's: where a client asks for what the document leaves out. */
+  'x-portable-links'?: PortableLink[];
   'x-surface'?: Extension;
+}
+
+/**
+ * A link of the dialect's `x-portable-links`: where a client asks the
+ * server for what the document leaves out. `href` is an RFC 6570
+ * template; `source` says where a variable of it is read from, by a
+ * Relative JSON Pointer from the key's value. Surface writes two link relations:
+ * `lookup` on a key that refers to an entity, `choose` on a list left out
+ * for its size.
+ */
+export interface PortableLink {
+  rel: 'lookup' | 'choose' | (string & {});
+  href: string;
+  source?: Record<string, string>;
+}
+
+/** A schema's first link of a rel, or undefined. */
+export function linkOf(schema: Schema, rel: string): PortableLink | undefined {
+  return (schema['x-portable-links'] ?? []).find((link) => link.rel === rel);
+}
+
+/**
+ * Expands an RFC 6570 template of the forms Surface writes.
+ *
+ * `{var}`, simple expansion, the value percent-encoded but for unreserved
+ * characters; `{?a,b}` and `{&a,b}`, a query and its continuation, each
+ * variable as `name=value`. A variable that is undefined or null is left
+ * out; `{var}` then expands to nothing. Any other operator (`+`, `#`, `.`,
+ * `/`, `;`) or modifier (`*`, `:n`), and a value that is not a string, a
+ * number or a boolean, throws: a wrong URL is worse than none.
+ */
+export function expanded(template: string, variables: Record<string, unknown>): string {
+  const encode = (value: unknown): string => encodeURIComponent(String(value)).replace(/[!'()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
+  return template.replace(/\{([^}]*)\}/g, (_match, expression: string) => {
+    const form = /^([?&]?)([A-Za-z0-9_]+(?:,[A-Za-z0-9_]+)*)$/.exec(expression);
+    if (form === null) {
+      throw new Error(`The template expression {${expression}} is not one this client expands.`);
+    }
+    const [, operator, list] = form;
+    const defined = list.split(',').filter((name) => variables[name] !== undefined && variables[name] !== null);
+    for (const name of defined) {
+      if (!['string', 'number', 'boolean'].includes(typeof variables[name])) {
+        throw new Error(`The template variable ${name} holds a value this client does not expand.`);
+      }
+    }
+    if (operator === '') {
+      return defined.map((name) => encode(variables[name])).join(',');
+    }
+    const pairs = defined.map((name) => `${name}=${encode(variables[name])}`);
+    return pairs.length === 0 ? '' : (operator === '?' ? '?' : '&') + pairs.join('&');
+  });
+}
+
+/**
+ * Reads the value a Relative JSON Pointer names, from a key's value.
+ *
+ * Levels up from the key at the dotted path, then a JSON Pointer from
+ * there: `0` is the key's own value, `1/entity_type` its sibling's.
+ * Undefined for a pointer that climbs past the values or ends in `#`.
+ */
+export function relativeValue(pointer: string, values: Values, path: string): unknown {
+  const match = /^(0|[1-9][0-9]*)((?:\/(?:[^~/]|~[01])*)*)$/.exec(pointer);
+  if (match === null) {
+    return undefined;
+  }
+  const segments = path === '' ? [] : path.split('.');
+  const up = Number(match[1]);
+  if (up > segments.length) {
+    return undefined;
+  }
+  const below = match[2] === '' ? [] : match[2].slice(1).split('/').map((segment) => segment.replace(/~1/g, '/').replace(/~0/g, '~'));
+  const at = [...segments.slice(0, segments.length - up), ...below];
+  return at.length === 0 ? values : getAt(values, at.join('.'));
 }
 
 export type Values = Record<string, unknown>;
@@ -1490,8 +1548,11 @@ function markedIn(frame: Schema, names: string[], prefix: string, values: Values
       if (isEmpty(value)) {
         return 'open';
       }
+      const choose = linkOf(schema, 'choose');
       if (extension.variants?.[String(value)] === undefined) {
-        return { key: at + name, marker: 'deferred', fetch: filled(extension.deferred.fetch, value) };
+        // `{value}` read where the link's `source` says: the deciding key.
+        const chosen = choose?.source?.value === undefined ? value : relativeValue(choose.source.value, values, at + name);
+        return { key: at + name, marker: 'deferred', ...(choose === undefined ? {} : { fetch: expanded(choose.href, { value: chosen }) }) };
       }
     }
     return null;
@@ -1540,13 +1601,8 @@ function markedIn(frame: Schema, names: string[], prefix: string, values: Values
   return null;
 }
 
-/** Fills a deferred key's `fetch` template (RFC 6570, simple expansion) with a value. */
-export function filled(template: string, value: unknown): string {
-  return template.replace('{value}', encodeURIComponent(String(value)));
-}
-
 /**
- * Joins the choices of several filled `fetch` templates into one URL.
+ * Joins the choices of several expanded `choose` links into one URL.
  *
  * Each template is the full schema's URL with the `choose` that states one
  * key, and those of the variants on the way to it; the server takes any
@@ -2247,9 +2303,10 @@ function present(schema: Schema, full: Schema, values: Values, path: string, map
       if (extension.deferred && id !== null) {
         // A key deferred for its size, its variant chosen and stated: the
         // server's narrowing states that variant exactly, open no longer.
-        const { type: _open, ...exact } = properties[name];
+        const { type: _open, 'x-portable-links': links, ...exact } = properties[name];
         const { deferred: _deferred, ...said } = exact['x-surface'] as Extension;
-        properties[name] = { ...exact, 'x-surface': said };
+        const kept = (links ?? []).filter((link) => link.rel !== 'choose');
+        properties[name] = { ...exact, ...(kept.length === 0 ? {} : { 'x-portable-links': kept }), 'x-surface': said };
       }
       shown[name] = held;
       for (const branch of branches) {

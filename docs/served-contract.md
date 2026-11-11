@@ -93,6 +93,8 @@ it (why: [decision](decisions.md#the-served-document-is-a-portable-schema-docume
 | `format: idn-email` | `format: email` | The profile refuses `idn-email`, whose IDNA processing differs between PHP and JavaScript; `email` is RFC 5321, ASCII only |
 | `"contract": 4`, `Contract-Version: 4` | `5` | Two keywords moved out of `x-surface` |
 | `x-surface.widget`, `multiple`, `arrangement`, `emptyOption` | `x-portable-ui`: `widget`, `options` (`multiple`, `placeholder`, `prefix`, `suffix`, `help`, `emptyOption`), `group` by id, `weight`, and each group declared once on its frame under `groups` | The dialect has a keyword for the widget hints. Moved on 2026-11-10, under the same number (why: [decision](decisions.md#the-ui-hints-are-x-portable-ui)) |
+| `x-surface.reference`: `{entityType, bundles?}`, or `{by: "entity_type"}` on the id of a key of any entity type | The check's options, the plugin's own, `portable-check: {"drupal:SurfaceValidReference": {"entityTypeId": "node", "bundles": ["article"]}}`, and a `lookup` link in `x-portable-links`; the bare id's link reads its entity type from its sibling (`source`) | What a key refers to is what its check holds a value to, and where to find an id is a link. Moved on 2026-11-10, under the same number (why: [decision](decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)) |
+| `x-surface.deferred: {fetch, entries?}` | `deferred: true`, or `{entries}` on a map of keys from the site, and a `choose` link in `x-portable-links`, its `href` the template `fetch` was | The fetch is a link. Moved on 2026-11-10, under the same number |
 
 The pipeline still validates through Typed Data, so what a write accepts
 is as before: an email address with a non-ASCII local part
@@ -107,9 +109,12 @@ contract 4 baseline once, "contract version 4 to 5", and re-pins it.
 
 The widget hints moved into `x-portable-ui` on 2026-11-10, under the
 same number: the baselines carry no hints, and a client of the series
-reads the new keyword. Later contracts of the same series move more
-into the dialect's keywords: a reference, the variants and the marker
-`refine`.
+reads the new keyword. A reference and a deferred list's fetch moved the
+same day, under the same number, into the check's options and
+`x-portable-links`: the lint reports each moved node as a note, and a
+client of the series reads the new keywords. Later contracts of the same
+series move more into the dialect's keywords: the variants and the
+marker `refine`.
 
 ## Contract 4
 
@@ -216,7 +221,7 @@ The emitter writes two documents from one data surface, by one code path.
   [the same rules and cap](#exact-where-it-can-be), and a key whose
   dependency cannot be listed keeps its declared schema with
   `x-surface.refine: true`; a list the site decides, past its limit, is
-  open with `x-surface.deferred`, an object holding a `fetch` template
+  open with `x-surface.deferred`, its `choose` link a template
   ([below](#a-list-the-site-decides)). A runtime refiner is never run for it: the
   key keeps the width its static refiners give it and carries
   `x-surface.live: true`. Access in it is the account's: it is
@@ -231,8 +236,8 @@ The emitter writes two documents from one data surface, by one code path.
   any values (`contract`, `version`, `computed`, `dependsOn`,
   `enumerated`, `refine`, `deferred`, `live`, `rules`, `within`,
   the `by` and `variants` of a key with variants, `group`, `after`),
-  and beside it `portable-check`, `x-portable-messages` and, with the
-  widget hints, `x-portable-ui`; there is no `refined`, `stale`,
+  and beside it `portable-check`, `x-portable-messages`,
+  `x-portable-links` and, with the widget hints, `x-portable-ui`; there is no `refined`, `stale`,
   `x-portable-ui.options.emptyOption` or `chosen`, and no `values` or
   `stale` beside the schema. A child's
   frame is described from nothing, not from the child's defaults. Only
@@ -338,10 +343,10 @@ trusted for a key, and what to do about the rest
 | Marker | What it says | What to do |
 | --- | --- | --- |
 | `enumerated` | Stated in full: every answer of the key's static refiners is a conditional on its frame. | Narrow locally: evaluate the conditionals for the values. |
-| `deferred` | Static, and left out for its size: a list the site decides with more entries than `site_list_limit`, open here, its `fetch` naming the full schema with one entry stated. | Fetch per choice, `GET .../schema?choose=<pointer>=<value>`, and cache the answer until the site's list changes (its `ETag`, its cache tags); or ask the narrowing with values; or send the values and be refused by name. |
+| `deferred` | Static, and left out for its size: a list the site decides with more entries than `site_list_limit`, open here, its `choose` link naming the full schema with one entry stated. | Fetch per choice, `GET .../schema?choose=<pointer>=<value>`, and cache the answer until the site's list changes (its `ETag`, its cache tags); or ask the narrowing with values; or send the values and be refused by name. |
 | `refine` | Static, but not writable: a coded refiner over a value with no list (a number, free text), or more combinations than `ENUMERATION_CAP`. | Ask the narrowing with values, `POST .../schema` or the `:schema` tool, when a key it depends on changes. |
 | `live` | Runtime: a rule no schema states (a lookup, uniqueness, the account, the time), or an access answer only the subject settles. | Ask the narrowing per request; never cache its answer. |
-| `portable-check` | A constraint only the server checks, named beside `x-surface` with what it checks (`x-portable-messages`). | Send, or rehearse with `?dryRun=true`, and read the refusal. |
+| `portable-check` | A constraint only the server checks, named beside `x-surface` with what it checks (`x-portable-messages`). A reference's check, `drupal:SurfaceValidReference`, states what the key refers to as its options, the plugin's own, `{"entityTypeId": "event_venue"}`. | Send, or rehearse with `?dryRun=true`, and read the refusal; for a reference past the limit, look an id up at the key's `lookup` link. |
 
 Example 2's full schema, abbreviated:
 
@@ -481,8 +486,8 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
 | an anonymous map, `addMap()` | inline, as a map's: `type: object`, its properties, `additionalProperties: false`, and no def; a structure it holds a reference to that structure's def ([An anonymous map](declaring-a-resource.md#an-anonymous-map)) |
 | a key with variants | `anyOf` of a reference to each variant's def, and `{"type": "null"}` where it may be cleared, no `type` beside it; each variant stated exactly by a conditional on the parent ([below](#variants-are-conditionals)) |
-| a key that refers to an entity, its id with `SurfaceValidReference` | its id's type, `x-surface.reference`, the candidates as `oneOf` up to `surface.settings:reference_list_limit`, and `drupal:SurfaceValidReference` under `portable-check`; past the limit no `oneOf`, `x-portable-ui.widget: autocomplete` ([Options](options.md#a-key-that-refers-to-an-entity)) |
-| a reference to any entity type, a structure of `entity_type` and `id` | a reference to its def, `{entity_type, id}`: the entity types as `oneOf`, the id a string marked `reference: {by: "entity_type"}`, `enumerated`, its candidates per entity type one conditional on the def |
+| a key that refers to an entity, its id with `SurfaceValidReference` | its id's type, the candidates as `oneOf` up to `surface.settings:reference_list_limit`, `drupal:SurfaceValidReference` under `portable-check` with what it refers to as its options, `{"entityTypeId": "node", "bundles": ["article"]}`, and its `lookup` link under `x-portable-links`; past the limit no `oneOf`, `x-portable-ui.widget: autocomplete` ([Options](options.md#a-key-that-refers-to-an-entity)) |
+| a reference to any entity type, a structure of `entity_type` and `id` | a reference to its def, `{entity_type, id}`: the entity types as `oneOf`, the id a string with a `lookup` link whose `source` reads `entity_type`, written at each site's narrowing, `enumerated`, its candidates per entity type one conditional on the def; the id refined to one entity type carries both the check with its options and that link |
 | a deciding key that holds a value and whose variants offer one value, or a key its operation's context fixes to one (fixing makes it hold a value) | `const` of that value, no `oneOf`, the value's label under `x-surface.fixed`; a list the key declares itself, or a stored value no longer offered, is stated as any list (why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter), [a route that fixes a key](decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for)) |
 | a structure mixed in, `mixIn()` | a reference to its def in the frame's `allOf`, beside the frame's own `properties` (each member in its place: `true`, what differs, or `false`), the frame closed with `unevaluatedProperties: false` ([below](#a-mixed-in-structure-is-composed)) |
 | a list | `type: array`, `items`, never null: an empty item is dropped before anything reads the list (why: [decision](decisions.md#an-item-is-never-null)) |
@@ -525,7 +530,7 @@ refers to it.
 ### The dialect's own keywords
 
 Beside the standard keywords, on the node they are about and before its
-`x-surface`, a document carries four keywords of the dialect, in this
+`x-surface`, a document carries five keywords of the dialect, in this
 order. They are keywords of the dialect: they stay where they are
 written, below an applicator too, where `x-surface` moves to `within`.
 At the top, whose `x-surface` comes first, they come last.
@@ -536,6 +541,7 @@ At the top, whose `x-surface` comes first, they come last.
 | `portable-check` | The constraints no keyword states, which only the server checks: a map from `drupal:` and the constraint's plugin id to its options, an empty object, since the document says which plugin checks and not how it is configured: `{"drupal:SurfaceUnique": {}}`. A JsonSchema constraint, what a structure read from a schema kept of it, carries the schema, `{"drupal:JsonSchema": {"schema": {"contains": {"const": "news"}}}}`; on an object (the top, a def) it is what that schema says of the object as a whole ([Reading a schema](reading-a-schema.md#what-is-kept)). In the order the key declares them; a constraint named twice is one check. |
 | `x-portable-messages` | A message per error code, plain text, each one not empty. A Regex's own message first, under the code of the keyword it goes with, `pattern`, or `not` for a pattern the value must not match: how a person is told what the pattern allows, which a renderer says in place of the pattern. Then what each check checks, under `check.` and its name: the constraint's own `reason` where it was given one (the stock `SurfaceUnique`'s), else its own `message` (a Regex's), else its plugin's label, else the id: `{"check.drupal:SurfaceUnique": "Refused when a venue named this already exists."}`. |
 | `x-portable-ui` | The widget hints: how a key is drawn, never what it accepts. All of it but `options.emptyOption` only when the caller asks for widget hints (the HTTP door does). Its members, each only where it says something, in this order: `widget`, the widget's choice ([the widget mapping](#the-widget-mapping)): a module's widget that claims the key, by its plugin ID ([Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)), or a stock word, `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `date`, `fieldset`, `variants` (a key with variants; `slot` in contract 1), `list` (a list of free values, and a collection), `fixed` (a deciding key whose variants offer one value, or a key its operation's context fixes to one, drawn as its label), `autocomplete` (a key that refers to an entity and lists no candidates, past the limit, and a bare reference's id, which is a select once its entity type's conditional lists them); absent when no widget would claim the key. `options`: `multiple: true` on a list of allowed values drawn as a select (a list drawn as checkboxes says `checkboxes` and no `multiple`); the key's `placeholder`, `prefix`, `suffix` and `help` (said after the description, and no part of what the key means), plain text, where declared ([Arranging the keys](forms.md#arranging-the-keys)); and `emptyOption`, in the schema for these answers whatever is asked, on a single select or radios: `{show, label}`: always for a select that may be cleared (`- None -`), for one that holds a value (required, or always held by its storage) only while no valid choice is selected (`- Select -`) (why: [decision](decisions.md#the-empty-option-rule), [decision](decisions.md#a-key-its-storage-always-holds)); a select `stale` on a stored value says it keeps it, `- Keep riverside_main (no longer offered) -`, and an orphan of the edit says `- Select -` or `- None -`, since a save refuses it; on radios `show` is whether a `- None -` radio is drawn, only where the key may be cleared. `group`: the id of the group the key is drawn in. `weight`: its weight among its object's keys, or its group's; lighter first, declaration order between equals. `groups`, on the object whose `properties` name them (the top, a structure's def, a module's mount, a map): each group, declared once, by its id, `{label, description?, widget, options?, weight?}`, `widget` `fieldset` or `details`, `options` `{"open": false}` for a details that starts closed, in the order its keys first name them. Moved out of `x-surface` on 2026-11-10 (why: [decision](decisions.md#the-ui-hints-are-x-portable-ui)). |
+| `x-portable-links` | Where a client asks the server for what the document leaves out: a list of links, each `{rel, href, source?}`, `href` an RFC 6570 template and `source` where a variable of it is read from, by a Relative JSON Pointer from the key's value (levels up, then a JSON Pointer). Never a widget hint: written whether or not the hints are asked for. Two link relations, Surface's own names, since the vocabulary registers none, `lookup` before `choose`. `lookup`, on a key that refers to an entity, listed or not, where the HTTP door serves the resource's lookup for the operation (one `GET` serves at its path) and the lookup finds the key (through attached children, never inside a collection's item, a module's mount or a variant): `<lookup URL>?key=<pointer>{&q,limit}`, the URL concrete as the schema URL is, `{"rel": "lookup", "href": "/surface-api/event.sponsorship:lookup?key=/venue{&q,limit}"}`; for the id of a key of any entity type, its entity type the sibling's value, `&type={type}` before the braces and `"source": {"type": "1/entity_type"}` ([A lookup](#a-lookup)). `choose`, on a key `deferred` for its size: the full schema with one entry stated, the template `deferred.fetch` was, `{value}` the deciding key's value on variants, `"source": {"value": "1/component"}`, `{"rel": "choose", "href": "https://example.com/surface-api/event.spotlight/schema?choose=/props={value}", "source": {"value": "1/component"}}`, and an entry's id, which `deferred.entries` lists, on a map of keys from the site, with no `source` ([The fetch per choice](#the-fetch-per-choice)). A link is a site's, never a def's: a key inside a def carries it at each site's narrowing, `properties.<site>.allOf[1].properties.<key>`, the narrowing carrying the link alone where nothing else differs. A relative `href` resolves against the document's `$id`, JSON Schema's base URI, so a query-only `choose` href resolves against the schema's URL inside an envelope too. Added on 2026-11-10, under contract 5 (why: [decision](decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)). |
 
 A grouped key and its frame, with the widget hints:
 
@@ -574,13 +580,12 @@ A grouped key and its frame, with the widget hints:
 | `stale` | Only when `true`, in the schema for these answers: the stored value is no longer offered; the key is shown on its empty option, standing for it. |
 | `by`, `variants`, `chosen` | On a key with variants: the deciding key; a map from each value that chooses a variant to its def's pointer, `{"free": "#/$defs/registration.step3.ticket.free", "paid": "#/$defs/registration.step3.ticket.paid"}` (a list of the values in contract 1), absent where no variant is declared; and the value chosen now, absent while none is. |
 | `fixed` | On a deciding key whose variants offer one value, or a key its operation's context fixes to one, beside its `const`: the label that value is offered as, which a renderer draws in place of a select of one. Additive in contract 3. |
-| `reference` | On a key that refers to an entity, in both documents, listed or not: what it refers to, `{"entityType": "node", "bundles": ["article"]}` (`bundles` only where the key names any), or for the id of a key of any entity type `{"by": "entity_type"}`, its entity type the sibling's value. The value is the id. A client finds an id at the resource's lookup ([below](#a-lookup)). Additive in contract 3 (why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)). |
 | `computed` | On a computed key, in both documents, beside `readOnly: true`: the keys it is computed from and when, `{"from": ["label"], "when": "create"}`, `create` for once, while storage holds nothing for it, `change` for again on every write that changes one of them. Nobody types it: a client shows it, narrows with `POST .../schema` when a key in `from` changes, which answers the value it would compute, and leaves it out of a write; a value sent equal to what it holds is noted, code `computed`, and any other refused. Additive in contract 3 (why: [decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)). `unless_sent`, with no `readOnly`, for a key computed as `create` computes it only when a write leaves it out or sends it empty: a client shows the narrowing's value as a suggestion, sends it once the person typed over it, and a value sent is kept (why: [decision](decisions.md#a-machine-name-is-a-computed-identity)). |
 | `group` | Only when `true`, on `third_party_settings`: the object only groups one object per contributing module, each that module's fieldset, so it has no `title` or `description` and a renderer draws nothing around them, as the form does. |
 | `after` | On a module's object inside a `group`, when its alter placed it (`describe(..., after:)`): draw this fieldset after the named property of the object that contains its group. Only where it is drawn: its properties stay in the group, where its values are sent, and the schema's order and nesting do not move. |
 | `enumerated` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). Captured exactly: the schema is exact for this key with no round trip, less what `live` adds. |
 | `refine` | Only when `true` (`dynamic` in contract 1): the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower (why: [decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
-| `deferred` | On a key whose list the site decides and has more entries than the site list limit, in [the full schema](#two-documents) and in the schema for these answers while nothing is chosen: the key is an open object, variants with `by` beside it and no def per variant, or a map of keys from the site ([a list the site decides](#a-list-the-site-decides)). Static and stated, left out for its size. An object: `fetch`, an RFC 6570 template, the full schema's URL with `choose=<pointer>={value}` for the key and a `choose` for each variant on the way to it, `{value}` the deciding key's value or an entry's id, its query alone in a document no route serves, read against the full schema's URL; and, on a map of keys from the site only, `entries`, each key the map holds, `{"id": "bench_7", "label": "Bench 7"}`, in order, whose keys the schema for these answers states, and `fetch` one at a time. `refine` until 2026-10-24; `deferred: true` with `fetch` and `entries` beside it in contract 3 (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)). |
+| `deferred` | On a key whose list the site decides and has more entries than the site list limit, in [the full schema](#two-documents) and in the schema for these answers while nothing is chosen: the key is an open object, variants with `by` beside it and no def per variant, or a map of keys from the site ([a list the site decides](#a-list-the-site-decides)). Static and stated, left out for its size. `true` on variants; on a map of keys from the site an object, `entries`, each key the map holds, `{"id": "bench_7", "label": "Bench 7"}`, in order, whose keys the schema for these answers states, and its `choose` link one at a time. How to fetch one entry is the key's `choose` link ([`x-portable-links`](#the-dialects-own-keywords)): an RFC 6570 template, the full schema's URL with `choose=<pointer>={value}` for the key and a `choose` for each variant on the way to it, `{value}` the deciding key's value or an entry's id, its query alone in a document no route serves, read against the full schema's URL. `refine` until 2026-10-24; `deferred: true` with `fetch` and `entries` beside it in contract 3; `{fetch, entries?}` until 2026-11-10 (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined), [decision](decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)). |
 | `collection` | Only when `true`, on a collection: an array whose every item is a child, its `items` a reference to the child's def. A renderer draws each item as that def's fieldset, adds and removes items within `minItems` and `maxItems`, and reads `dependsOn` inside each item under its delta (`shelves.1.unit`). `list` in contract 3. |
 | `rules` | On an object owning an `allOf` (the top frame, a def), in [the full schema](#two-documents) and in a def: the indexes in that `allOf` of the conditionals that state a declared rule ([refinement](refinement.md#declaring-a-rule)), `"rules": [9]`, each stated as written, after the key's enumerated ones; the key a rule narrows is the one its `then` names, and carries no marker of its own (`declared: true` in contract 3). Exact: a client evaluates each `if` and tightens the key by its `then` (the lower maximum, the values both lists offer), whatever the keys it reads hold, and an enumerated conditional only once every key it watches holds a value, so it tells them apart by this list. The schema for these answers evaluates the rules for its values and writes none. Contract 1 wrote `x-surface: {"declared": true}` on the conditional itself. |
 | `within` | On an object owning an applicator (a site, a frame, a def): what a schema below the applicator says under `x-surface`, as a map from its JSON pointer, relative to the object, to that `x-surface`. On the compliance mount, in the schema for these answers, whose narrowing refines the stewards: `{"/allOf/1/properties/stewards": {"dependsOn": ["capacity"], "refined": true}}`. Nothing below an applicator carries `x-surface` ([Contract 2](#contract-2)); `SchemaResolver::restored()` and the app's `inlineSchema()` put each entry back where it points. |
@@ -597,7 +602,9 @@ resource locked whole is `readOnly: true` at the top, where a submit is
 refused and a renderer offers none; why:
 [decision](decisions.md#locked-at-the-top)), `declared` (the frame's
 `rules`), `access` (`live`), `fetch` and `entries` (inside `deferred`)
-and `list` (`collection`).
+and `list` (`collection`). Moved on 2026-11-10, under contract 5:
+`reference` (the check's options and the `lookup` link) and
+`deferred.fetch` (the `choose` link).
 
 Moved out in contract 5 ([Contract 5](#contract-5)): `checkedOnServer`
 (`portable-check`) and `patternMessage` (`x-portable-messages`), the
@@ -1193,11 +1200,12 @@ the key is `deferred`: static, and left out for its size
 - **A map of keys from the site** is an open object, `deferred`, its
   keys named under `deferred.entries` by id and label. The schema for these
   answers states every key.
-- **Each states how to fetch one entry.** `x-surface.deferred.fetch` is an RFC
-  6570 template, the full schema's URL with a `choose` for the key, its
-  value the expression `{value}`, and a `choose` for each variant on the
-  way to it. A client fills `{value}` with the deciding key's value, or
-  an entry's id, and fetches the full schema with that entry stated
+- **Each states how to fetch one entry.** Its `choose` link, under
+  `x-portable-links`, is an RFC 6570 template, the full schema's URL
+  with a `choose` for the key, its value the expression `{value}`, and a
+  `choose` for each variant on the way to it. A client fills `{value}`
+  with the deciding key's value, which the link's `source` names, or an
+  entry's id, and fetches the full schema with that entry stated
   ([the fetch per choice](#the-fetch-per-choice)).
 - **Each key counts at its own level.** A component in a slot is
   variants of its own, read from the schema its provider wrote, and
@@ -1207,8 +1215,9 @@ Example 12's props on a site with 312 components, in the full schema:
 
 ```json
 "props": {"title": "Props", "type": ["object", "null"],
-          "x-surface": {"dependsOn": ["component"], "by": "component",
-                        "deferred": {"fetch": "https://example.com/surface-api/event.spotlight/schema?choose=/props={value}"}}}
+          "x-portable-links": [{"rel": "choose", "href": "https://example.com/surface-api/event.spotlight/schema?choose=/props={value}",
+                                "source": {"value": "1/component"}}],
+          "x-surface": {"dependsOn": ["component"], "by": "component", "deferred": true}}
 ```
 
 A placed block's settings are variants per block plugin, and the
@@ -1274,7 +1283,9 @@ Riverside Hall and its main hall, as `/surface-api` serves it:
       "open": {"title": "Registration open", "type": ["boolean", "null"], "default": true, ...},
       "venue": {"title": "Venue", "type": "string",
                 "oneOf": [{"const": "harbour", "title": "Harbour Centre"}, {"const": "library", "title": "Old Library"}, {"const": "riverside", "title": "Riverside Hall"}],
-                "x-portable-ui": {"widget": "select", ...}, "x-surface": {"reference": {"entityType": "event_venue"}}},
+                "portable-check": {"drupal:SurfaceValidReference": {"entityTypeId": "event_venue"}}, ...,
+                "x-portable-ui": {"widget": "select", ...},
+                "x-portable-links": [{"rel": "lookup", "href": "https://example.com/surface-api/registration.step2:lookup?key=/venue{&q,limit}"}]},
       "room": {"title": "Room", "type": "string",
                "oneOf": [{"const": "riverside_main", "title": "Main hall"}, {"const": "riverside_east", "title": "East room"}],
                "x-portable-ui": {"widget": "select", ...}, "x-surface": {"dependsOn": ["venue"], "refined": true}},
@@ -1489,8 +1500,41 @@ The create's envelope moves to its custom method too,
 A key that refers to an entity lists its candidates while there are at
 most `surface.settings:reference_list_limit`; past that it lists
 none, and a client finds an id with the lookup, a custom read every
-resource path answers
-(why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)):
+resource path answers, which the key names as its `lookup` link
+(why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up),
+[decision](decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)):
+
+```json
+"venue": {"type": "string", ...,
+          "x-portable-links": [{"rel": "lookup", "href": "/surface-api/event.sponsorship:lookup?key=/venue{&q,limit}"}]}
+```
+
+A client expands the template with `q`, the text typed, and `limit`
+if it wants another count; a variable it leaves out is left out of the
+URL. The id of a key of any entity type reads `type` from its sibling,
+the link's `source` a Relative JSON Pointer from the id's value:
+`{"rel": "lookup", "href": "/surface-api/event.sponsorship:lookup?key=/thing/id&type={type}{&q,limit}", "source": {"type": "1/entity_type"}}`,
+written at the site's narrowing of the structure that holds the id. While
+the sibling holds no entity type, `{type}` expands to nothing and the URL
+ends in `type=`, as RFC 6570 says; a client sends no request then, since
+the lookup needs the type. The id refined to one entity type carries both
+the check with its options and this link.
+
+In a document the HTTP door serves, the link is concrete, as the schema
+URL is: an operation whose parameters name identity has the request's
+identity in the path,
+`https://example.com/surface-api/node.page/7:lookup?key=/uid/target_id{&q,limit}`.
+A document no route serves (a baseline, the contract panel) names the
+lookup's path where it takes no parameter, and no link where it does: a
+template variable the document does not explain is never written. The
+link is written only where the HTTP door is installed, and only on a key
+the lookup finds: none inside a collection's item, a module's mount or a
+variant, and none in a document emitted for no operation (a structure's
+baseline). The lookup answers for the operation `GET` serves at the path,
+so an operation served at its own custom method (`:{operation}`) has no
+lookup link. A key inside a def carries its link at each site's
+narrowing, never in the def, which several sites share. The expanded
+link:
 
 ```
 GET /surface-api/event.sponsorship:lookup?key=/venue&q=riv&limit=10
@@ -1515,7 +1559,8 @@ operation is, its permission then its access class, and answered
 `no-store`. A key that refers to no entity, or a type the key does not
 allow, is 404. The React app's autocomplete calls it; the tool listing
 names it in the description of a key with too many to list; the OpenAPI
-document describes it for every operation with a reference key. The
+document describes it for every operation with a reference key, found by
+the check's options and by a `lookup` link with a `source`. The
 lookup serves the keys of the operation `GET` serves at the path, so a
 custom method's own keys have none.
 
@@ -1598,9 +1643,10 @@ document moved, and refuses it, as the form's Save does.
 
 ### The fetch per choice
 
-A key `deferred` for its size names, under `x-surface.deferred.fetch`, the full
-schema with one of its entries stated
-(why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+A key `deferred` for its size names, as its `choose` link under
+`x-portable-links`, the full schema with one of its entries stated
+(why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined),
+[decision](decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)).
 `GET .../schema?choose=<pointer>=<value>` answers it: the full schema,
 built for the account as the plain one is, with each choice stated in
 full at its key, as the full schema states it under the limit, and the
@@ -1644,8 +1690,9 @@ ETag: "0726633d342c2ec5df9f4a31e50e8746d3c2d6da4fac829e5a602937692ed27b"
 
 {"$id":"https://example.com/surface-api/event.spotlight/schema?choose=/props=surface_examples:card",
  "properties":{"props":{"title":"Props","type":["object","null"],
+   "x-portable-links":[{"rel":"choose","href":"https://example.com/surface-api/event.spotlight/schema?choose=/props={value}","source":{"value":"1/component"}}],
    "x-surface":{"by":"component","variants":{"surface_examples:card":"#/$defs/event.spotlight.props.surface_examples:card"},
-                "deferred":{"fetch":"https://example.com/surface-api/event.spotlight/schema?choose=/props={value}"},...}},...},
+                "deferred":true,...}},...},
  "allOf":[{"if":{"properties":{"component":{"const":"surface_examples:card"}},"required":["component"]},
            "then":{"properties":{"props":{"title":"Props","$ref":"#/$defs/event.spotlight.props.surface_examples:card"}}}}],
  "$defs":{"event.spotlight.props.surface_examples:card":{...}}, ...}
@@ -2089,7 +2136,8 @@ applies it:
   as the server keeps it, and the pipeline refuses it on submit.
 - **Fetch when a dependent is `deferred`.** A key left out for its size
   is stated by the full schema fetched with the value chosen: the client
-  fills the key's `fetch` with its deciding key's value, joins the
+  expands the key's `choose` link with its deciding key's value, which
+  the link's `source` names, joins the
   choices of every deferred key the change reaches into one URL (the
   props, then the slots the props' answer still leaves out), keeps each
   answer for the page's life, and narrows from it, then from it for the

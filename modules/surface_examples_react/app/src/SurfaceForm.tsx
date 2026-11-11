@@ -182,7 +182,7 @@ function StageBar({ settings }: { settings: Settings }): JSX.Element | null {
  * from the full schema's conditionals when every key that depends on the
  * change is stated there, by the rules the server's narrowing applies,
  * with no request. A key `deferred` for its size is stated by the full
- * schema fetched for the value chosen (its `fetch`, with the choices of
+ * schema fetched for the value chosen (its `choose` link, with the choices of
  * every other deferred key the change reaches joined in), kept in memory
  * for the page's life, and the form narrows from that, then from it for
  * the changes after. When one is not stated (`refine`, `live`, a stale value only

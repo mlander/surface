@@ -673,7 +673,8 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
     Cache::invalidateTags([PosterLayouts::TAG]);
     $poster = $this->build('resource_test.poster');
     $full = $this->decoded($this->container->get('surface.contract_emitter')->emitFull($poster, 'resource_test.poster')->document);
-    $this->assertSame(['fetch' => '?choose=/panels={value}'], $full['schema']['properties']['panels']['x-surface']['deferred']);
+    $this->assertTrue($full['schema']['properties']['panels']['x-surface']['deferred']);
+    $this->assertSame([['rel' => 'choose', 'href' => '?choose=/panels={value}', 'source' => ['value' => '1/layout']]], $full['schema']['properties']['panels']['x-portable-links']);
     $this->assertTable('resource_test.poster', $poster, $this->stored('resource_test.poster'), [
       'as stored' => [[], TRUE],
       'the strip with a caption' => [['layout' => 'strip', 'panels' => ['caption' => 'Spring']], TRUE],

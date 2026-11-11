@@ -850,14 +850,21 @@ final class ServedPaths implements ServedPathsInterface {
    * {@inheritdoc}
    *
    * `/surface-api/{resource}:lookup`, or for an operation whose parameters
-   * name identity `/surface-api/{resource}/{<key>}/...:lookup`.
+   * name identity `/surface-api/{resource}/{<key>}/...:lookup`; NULL for
+   * an operation `GET` does not serve at its plain path, whose keys the
+   * lookup there does not answer for (lookupTarget()).
    *
    * Decision: see
-   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up,
+   * docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
    */
-  public function lookupPath(string $resource, string $operation): string {
+  public function lookupPath(string $resource, string $operation): ?string {
     $definition = $this->registry->getDefinition($resource);
-    [$path] = $this->lookupTemplate($definition, $this->registry->getOperation($definition->id, $operation));
+    $served = $this->registry->getOperation($definition->id, $operation);
+    if (!$this->readsPlain($definition, $served)) {
+      return NULL;
+    }
+    [$path] = $this->lookupTemplate($definition, $served);
     return $path;
   }
 

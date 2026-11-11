@@ -851,7 +851,8 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $page = $this->thirteen();
     $contract = json_decode((string) $page['parts']['contract']['content']['#code'], TRUE);
     $this->assertSame(self::COMPONENTS, array_column($contract['component']['oneOf'], 'const'), 'The chooser keeps its options.');
-    $this->assertArrayHasKey('fetch', $contract['props'][ContractEmitter::EXTENSION]['deferred']);
+    $this->assertTrue($contract['props'][ContractEmitter::EXTENSION]['deferred']);
+    $this->assertSame('choose', $contract['props']['x-portable-links'][0]['rel']);
     $this->assertArrayNotHasKey('anyOf', $contract['props']);
     $this->assertSame([], $contract['allOf']);
     $this->assertStringContainsString('more than 2, the site list limit', (string) $page['parts']['contract']['note']['#markup']);
@@ -867,7 +868,8 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $read = json_decode((string) $panel['read']['content']['#code'], TRUE);
     $this->assertSame('event.spotlight.props.surface_examples:card', $read['structure']['title'], 'The chosen component\'s def, from the full schema fetched with it chosen.');
     $contract = json_decode((string) $panel['contract']['content']['#code'], TRUE);
-    $this->assertSame(['fetch' => '?choose=/props={value}'], $contract['props'][ContractEmitter::EXTENSION]['deferred'], 'Its query alone: the panel shows a document no route serves.');
+    $this->assertTrue($contract['props'][ContractEmitter::EXTENSION]['deferred']);
+    $this->assertSame([['rel' => 'choose', 'href' => '?choose=/props={value}', 'source' => ['value' => '1/component']]], $contract['props']['x-portable-links'], 'Its query alone: the panel shows a document no route serves.');
     $this->assertSame('surface_examples:card', $contract['allOf'][0]['if']['properties']['component']['const']);
     $this->assertCount(2, $contract['allOf'], 'The card\'s two conditionals, one per key.');
   }

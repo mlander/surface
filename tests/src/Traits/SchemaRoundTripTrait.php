@@ -187,7 +187,7 @@ trait SchemaRoundTripTrait {
       return FALSE;
     }
     $extension = $schema[ContractEmitter::EXTENSION] ?? NULL;
-    if (is_array($extension) && is_array($extension['deferred'] ?? NULL) && (isset($extension['deferred']['entries']) || (isset($extension['by']) && !isset($schema['anyOf'])))) {
+    if (is_array($extension) && (($extension['deferred'] ?? NULL) === TRUE || is_array($extension['deferred'] ?? NULL)) && (isset($extension['deferred']['entries']) || (isset($extension['by']) && !isset($schema['anyOf'])))) {
       return TRUE;
     }
     foreach ($schema as $value) {

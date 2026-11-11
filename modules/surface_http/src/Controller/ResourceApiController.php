@@ -378,13 +378,17 @@ final class ResourceApiController implements ContainerInjectionInterface {
     $choices = $this->choices($request, $definition->id, $declared);
     $url = $id->getGeneratedUrl();
     $chosen = $choices->isEmpty() ? $url : $url . (str_contains($url, '?') ? '&' : '?') . Choices::query($choices->all());
-    $full = $this->emitter->emitFull($declared, $definition->id, $operation->id, $operation->label, widgets: TRUE, operation: $operation->facts(), id: $chosen, choices: $choices, schema_url: $url);
+    $lookup = $this->lookupAt($definition, $operation, $target->parameters);
+    $full = $this->emitter->emitFull($declared, $definition->id, $operation->id, $operation->label, widgets: TRUE, operation: $operation->facts(), id: $chosen, choices: $choices, schema_url: $url, lookup_url: $lookup?->getGeneratedUrl());
     $response = new CacheableJsonResponse($full->document['schema']);
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     $response->headers->set('Content-Type', self::SCHEMA_TYPE);
     $response->headers->set(self::VERSION_HEADER, (string) ContractEmitter::CONTRACT);
     $response->addCacheableDependency($full);
     $response->addCacheableDependency($id);
+    if ($lookup !== NULL) {
+      $response->addCacheableDependency($lookup);
+    }
     $response->addCacheableDependency($gated->access());
     $response->getCacheableMetadata()->addCacheContexts(['url.query_args', 'languages:language_interface']);
     return $response;
@@ -765,12 +769,43 @@ final class ResourceApiController implements ContainerInjectionInterface {
    */
   protected function emit(ServedOperation $served, array $values): ServedContract {
     $id = $this->location($served->definition, $served->operation, $served->parameters);
-    // A deferred key's `fetch` is written against the full schema's URL.
+    // A deferred key's `choose` link is written against the full schema's URL.
     $schema = $this->location($served->definition, $served->operation, $served->parameters, TRUE);
-    $contract = $this->emitter->emit($served->surface, $values, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts(), id: $id->getGeneratedUrl(), schema_url: $schema->getGeneratedUrl());
+    // A reference key's `lookup` link is written against the lookup's URL.
+    $lookup = $this->lookupAt($served->definition, $served->operation, $served->parameters);
+    $contract = $this->emitter->emit($served->surface, $values, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts(), id: $id->getGeneratedUrl(), schema_url: $schema->getGeneratedUrl(), lookup_url: $lookup?->getGeneratedUrl());
     $contract->cacheability->addCacheableDependency($id);
     $contract->cacheability->addCacheableDependency($schema);
+    if ($lookup !== NULL) {
+      $contract->cacheability->addCacheableDependency($lookup);
+    }
     return $contract;
+  }
+
+  /**
+   * Names the URL of the lookup for a served operation's keys.
+   *
+   * Concrete, as its schema's URL is: the request's parameters in it.
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
+   *
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
+   *   The operation it is served as.
+   * @param array $parameters
+   *   The operation's parameters, as the request gave them.
+   *
+   * @return \Drupal\Core\GeneratedUrl|null
+   *   The URL, absolute; NULL for an operation `GET` does not serve at its
+   *   path, whose keys the lookup there does not answer for.
+   */
+  protected function lookupAt(ResourceDefinition $definition, OperationDefinition $operation, array $parameters): ?GeneratedUrl {
+    if (!$this->servedPaths->readsPlain($definition, $operation)) {
+      return NULL;
+    }
+    return $this->servedPaths->lookupUrl($definition, $operation, array_filter($parameters, 'is_scalar'), ['absolute' => TRUE]);
   }
 
   /**

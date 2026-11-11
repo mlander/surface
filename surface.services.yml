@@ -152,7 +152,7 @@ services:
   # widget hints only when a renderer asks for them.
   surface.contract_emitter:
     class: Drupal\surface\Contract\ContractEmitter
-    arguments: ['@surface.options', '@string_translation', '@validation.constraint', '@surface.site_list_budget', '@plugin.manager.surface_widget']
+    arguments: ['@surface.options', '@string_translation', '@validation.constraint', '@surface.site_list_budget', '@plugin.manager.surface_widget', '@?Drupal\surface\ResourceBuild\ServedPathsInterface']
   # How many entries of a list the site decides (variants from the site,
   # keys from the site) the documents and the tool listing spell out.
   surface.site_list_budget:
@@ -165,7 +165,7 @@ services:
   # caller with a document of its own registers it here to build it.
   surface.schema_reader:
     class: Drupal\surface\Contract\SchemaReader
-    arguments: ['@surface.resource_registry', '@typed_data_manager']
+    arguments: ['@surface.resource_registry', '@typed_data_manager', '@entity_type.manager']
   Drupal\surface\Contract\SchemaReader: '@surface.schema_reader'
   # Writes a config schema type as JSON Schema, for the schema reader: a
   # plugin's settings (surface_examples_block), a config object a resource is
