@@ -27,6 +27,7 @@ use Drupal\surface\Reference\References;
 use Drupal\surface\Resource\Arrangement;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Widget\SurfaceWidgetManager;
+use PortableSchema\Builder\Schema;
 
 /**
  * Describes one key as a JSON Schema property, with its `x-surface`.
@@ -69,7 +70,24 @@ final class PropertySchema {
    * and turns the key into a reference to it with what the key says
    * differently. Never in a document.
    */
-  protected const SHAPED = self::EXTENSION . '-shape';
+  public const SHAPED = self::EXTENSION . '-shape';
+
+  /**
+   * The keyword holding, while a key is described, what only the server checks.
+   *
+   * Each constraint no keyword states, as checked() writes it; property()
+   * writes them as `portable-check` and `x-portable-messages`
+   * (PortableKeywords::write()) and drops this. Never in a document.
+   */
+  protected const CHECKED = self::EXTENSION . '-checked';
+
+  /**
+   * The keyword holding, while a key is described, a Regex's own message.
+   *
+   * By the code of its keyword; written as `x-portable-messages` with the
+   * checks' and dropped. Never in a document.
+   */
+  protected const PATTERN_MESSAGE = self::EXTENSION . '-pattern-message';
 
   /**
    * The constraints a list of values is read from, by the options resolvers.
@@ -136,16 +154,17 @@ final class PropertySchema {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The list, as the parent says it.
    *
-   * @return array{0: array, 1: array}
+   * @return array{0: \PortableSchema\Builder\Schema, 1: array}
    *   Its title, description, `type` and keywords (`minItems`,
    *   `maxItems`); and the constraints no keyword states, as
    *   `portable-check` and their messages, which go right before its
    *   `x-surface` (PortableKeywords::before()).
    */
   public function listKeywords(DataDefinitionInterface $definition): array {
-    $schema = $this->describe($definition) + ['type' => $this->nullable('array', $definition)] + $this->keywords($definition, 'array');
-    $checks = PortableKeywords::write($schema[self::EXTENSION . '-checked'] ?? []);
-    unset($schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message']);
+    $keywords = $this->keywords($definition, 'array');
+    $checks = PortableKeywords::write($keywords[self::CHECKED] ?? []);
+    unset($keywords[self::CHECKED], $keywords[self::PATTERN_MESSAGE]);
+    $schema = Schemas::defaults($this->describe($definition), ['type' => $this->nullable('array', $definition)] + $keywords);
     return [$schema, $checks];
   }
 
@@ -161,29 +180,30 @@ final class PropertySchema {
    *
    * @param string $key
    *   The def's key.
-   * @param array|null $instance
+   * @param \PortableSchema\Builder\Schema|null $instance
    *   The child's schema at this site, or NULL to refer to the def alone.
    * @param \Drupal\surface\Contract\Subschemas|null $subschemas
    *   The document's defs, to compare the instance with.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   `$ref`, or `allOf` of it and the narrowing.
    */
-  public function reference(string $key, ?array $instance = NULL, ?Subschemas $subschemas = NULL): array {
-    $reference = ['$ref' => ContractEmitter::DEFS . ContractEmitter::pointer($key)];
+  public function reference(string $key, ?Schema $instance = NULL, ?Subschemas $subschemas = NULL): Schema {
+    $reference = Schema::any()->with('$ref', ContractEmitter::DEFS . ContractEmitter::pointer($key));
     // A def written open, for an owner to mix it in, is closed where it is
     // used whole. Decision: see docs/decisions.md#a-mixin-is-merged-flat.
     $closed = $subschemas !== NULL && $subschemas->isOpen($key) ? ['unevaluatedProperties' => FALSE] : [];
     $def = $subschemas?->get($key);
     if ($instance === NULL || $def === NULL) {
-      return $reference + $closed;
+      return Schemas::defaults($reference, $closed);
     }
     if ($closed !== []) {
       // The site closes it: the narrowing says only what differs.
-      unset($instance['additionalProperties'], $instance['unevaluatedProperties']);
+      $instance = $instance->without('additionalProperties')->without('unevaluatedProperties');
     }
     $narrowing = $this->narrowing($instance, $def, $subschemas->transient, $subschemas->ui);
-    return ($narrowing === [] ? $reference : ['allOf' => [$reference, $narrowing]]) + $closed;
+    $composed = $narrowing->all() === [] ? $reference : Schema::any()->with('allOf', [$reference, $narrowing]);
+    return Schemas::defaults($composed, $closed);
   }
 
   /**
@@ -199,35 +219,36 @@ final class PropertySchema {
    * `x-portable-links` are compared on their own and written where they
    * differ: a def holds none, a site's key its own.
    *
-   * @param array $instance
+   * @param \PortableSchema\Builder\Schema $instance
    *   The instance.
-   * @param array $def
+   * @param \PortableSchema\Builder\Schema $def
    *   The def.
    * @param string[] $transient
    *   The `x-surface` keywords not compared.
    * @param string[] $ui
    *   The `x-portable-ui` members and options not compared.
    *
-   * @return array
-   *   The keywords that differ; empty when none do.
+   * @return \PortableSchema\Builder\Schema
+   *   The keywords that differ; the empty schema when none do.
    */
-  public function narrowing(array $instance, array $def, array $transient, array $ui = []): array {
+  public function narrowing(Schema $instance, Schema $def, array $transient, array $ui = []): Schema {
     $narrowing = [];
     // A property's `x-surface`, its hints, and what it names only the
     // server checks and the messages it gives, are one: written whole
     // where any differs.
     $said = array_merge(PortableKeywords::KEYWORDS, [self::EXTENSION]);
     $checked = array_flip([PortableKeywords::CHECK, PortableKeywords::MESSAGES]);
-    $whole = static fn (array $schema): array => array_intersect_key($schema, $checked) + [
-      PortableUi::KEYWORD => PortableUi::without((array) ($schema[PortableUi::KEYWORD] ?? []), $ui),
-      self::EXTENSION => array_diff_key((array) ($schema[self::EXTENSION] ?? []), array_flip($transient)),
+    $whole = static fn (Schema $schema): array => array_intersect_key($schema->all(), $checked) + [
+      PortableUi::KEYWORD => PortableUi::without((array) ($schema->get(PortableUi::KEYWORD) ?? []), $ui),
+      self::EXTENSION => array_diff_key((array) ($schema->get(self::EXTENSION) ?? []), array_flip($transient)),
     ];
-    $differs = !Subschemas::same($whole($instance), $whole($def));
+    $differs = !Schemas::same($whole($instance), $whole($def));
     // A link names a site, so it is the site's alone: no BC reason ties it
     // to the rest. Decision: see
     // docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
-    $linked = !Subschemas::same($instance[PortableKeywords::LINKS] ?? NULL, $def[PortableKeywords::LINKS] ?? NULL);
-    foreach ($instance as $keyword => $value) {
+    $linked = !Schemas::same($instance->get(PortableKeywords::LINKS), $def->get(PortableKeywords::LINKS));
+    $declared = $def->get('properties');
+    foreach ($instance->all() as $keyword => $value) {
       if ($keyword === PortableKeywords::LINKS) {
         if ($linked) {
           $narrowing[$keyword] = $value;
@@ -240,26 +261,25 @@ final class PropertySchema {
         }
         continue;
       }
-      if ($keyword === 'properties' && (is_array($value) || $value instanceof \stdClass) && is_array($def['properties'] ?? NULL)) {
-        // A frame with no key left that applies writes its properties as
-        // an empty object.
-        $value = (array) $value;
+      // A def whose frame has no key compares its properties whole.
+      if ($keyword === 'properties' && is_array($value) && is_array($declared) && $declared !== []) {
         $properties = [];
-        foreach ($def['properties'] + $value as $name => $property) {
+        foreach ($declared + $value as $name => $property) {
           if (!array_key_exists($name, $value)) {
             // Ruled out at this site: it must not be there.
             $properties[$name] = FALSE;
             continue;
           }
-          if (!is_array($value[$name]) || !is_array($def['properties'][$name] ?? [])) {
+          $stated = $declared[$name] ?? NULL;
+          if ($value[$name]->isBoolean() || $stated?->isBoolean()) {
             // A mixed-in structure's member, `true` or `false`, said whole.
-            if (!Subschemas::same($value[$name], $def['properties'][$name] ?? NULL)) {
+            if (!Schemas::same($value[$name], $stated)) {
               $properties[$name] = $value[$name];
             }
             continue;
           }
-          $changed = $this->narrowing($value[$name], $def['properties'][$name] ?? [], $transient, $ui);
-          if ($changed !== []) {
+          $changed = $this->narrowing($value[$name], $stated ?? Schema::any(), $transient, $ui);
+          if ($changed->all() !== []) {
             $properties[$name] = $changed;
           }
         }
@@ -268,27 +288,28 @@ final class PropertySchema {
         }
         continue;
       }
-      if ($keyword === 'allOf' && is_array($value) && is_array($def['allOf'] ?? NULL)) {
-        $added = array_values(array_filter($value, static fn (mixed $condition): bool => array_filter($def['allOf'], static fn (mixed $stated): bool => Subschemas::same($stated, $condition)) === []));
+      if ($keyword === 'allOf' && is_array($value) && is_array($def->get('allOf'))) {
+        $stated = $def->get('allOf');
+        $added = array_values(array_filter($value, static fn (Schema $condition): bool => array_filter($stated, static fn (Schema $said): bool => Schemas::same($said, $condition)) === []));
         if ($added !== []) {
           $narrowing['allOf'] = $added;
         }
         continue;
       }
-      if ($keyword === 'required' && is_array($value) && is_array($def['required'] ?? NULL)) {
+      if ($keyword === 'required' && is_array($value) && is_array($def->get('required'))) {
         // JSON Schema holds a document to every `required` it meets: the
         // def's already holds, so the narrowing says what it adds.
-        $added = array_values(array_diff($value, $def['required']));
+        $added = array_values(array_diff($value, $def->get('required')));
         if ($added !== []) {
           $narrowing['required'] = $added;
         }
         continue;
       }
-      if (!array_key_exists($keyword, $def) || !Subschemas::same($def[$keyword], $value)) {
+      if (!$def->has($keyword) || !Schemas::same($def->get($keyword), $value)) {
         $narrowing[$keyword] = $value;
       }
     }
-    return $narrowing;
+    return Schema::keywords($narrowing);
   }
 
   /**
@@ -312,7 +333,7 @@ final class PropertySchema {
    *   The walk: its cacheability collects what the description depends
    *   on, and its stale paths the dotted paths of stale values.
    *
-   * @return array{0: array, 1: mixed}
+   * @return array{0: \PortableSchema\Builder\Schema, 1: mixed}
    *   The property schema, and its value as shown.
    */
   public function property(DataDefinitionInterface $definition, ?DataDefinitionInterface $advertised, mixed $value, string $path, bool $locked, array $depends, Emission $emission): array {
@@ -328,7 +349,11 @@ final class PropertySchema {
     if ($definition instanceof ListDataDefinitionInterface) {
       $item = $definition->getItemDefinition();
       [$items] = $this->property($item, NULL, NULL, $path . '.*', FALSE, [], $emission->withoutStale());
-      $schema += ['type' => $this->nullable('array', $definition), 'items' => static::neverNull($items)] + $this->keywords($definition, 'array');
+      $list = [
+        'type' => $this->nullable('array', $definition),
+        'items' => static::neverNull($items),
+      ];
+      $schema = Schemas::defaults($schema, $list + $this->keywords($definition, 'array'));
       // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
       $checkboxes = $set !== NULL && CheckboxesWidget::drawsList($definition, $set);
       $extension = $this->extension($depends, $refined);
@@ -355,21 +380,21 @@ final class PropertySchema {
           $required[] = $name;
         }
       }
-      $schema += [
+      $schema = Schemas::defaults($schema, [
         'type' => $this->nullable('object', $definition),
         // Every key ruled out leaves an object still.
-        'properties' => $properties === [] ? new \stdClass() : $properties,
+        'properties' => $properties,
         'additionalProperties' => FALSE,
-      ];
+      ]);
       if ($required !== []) {
-        $schema['required'] = $required;
+        $schema = $schema->with('required', $required);
       }
       $extension = $this->extension($depends, $refined || $this->anyRefined($schema));
       $ui = PortableUi::write($this->asked($definition) ?? 'fieldset');
       if (DefinitionMetadata::isGrouping($definition)) {
         // Only groups the fieldsets inside it, as on the form: no title
         // and no description to draw, and `group` says to draw none.
-        unset($schema['title'], $schema['description']);
+        $schema = $schema->without('title')->without('description');
         $extension['group'] = TRUE;
       }
       $after = DefinitionMetadata::getPlacedAfter($definition);
@@ -387,7 +412,7 @@ final class PropertySchema {
       if (isset($type['type'])) {
         $type['type'] = $this->nullable($type['type'], $definition);
       }
-      $schema += $this->keywords($definition, $type['type'] ?? NULL, $type, $listed);
+      $schema = Schemas::defaults($schema, $this->keywords($definition, $type['type'] ?? NULL, $type, $listed));
       $radios = $listed && RadiosWidget::drawsOne($definition);
       $fixed = $listed && OptionsWidget::drawsFixed($definition, $set, $value);
       // A reference with too many candidates to list is looked up.
@@ -420,11 +445,11 @@ final class PropertySchema {
         // Decision: see
         // docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
         $only = $this->choices($set, $definition)[0];
-        $schema['const'] = $only['const'];
-        $extension['fixed'] = $only['title'];
+        $schema = $schema->with('const', $only->get('const'));
+        $extension['fixed'] = $only->get('title');
       }
       elseif ($listed) {
-        $schema['oneOf'] = $this->choices($set, $definition);
+        $schema = $schema->with('oneOf', $this->choices($set, $definition));
         // Decision: see docs/decisions.md#the-empty-option-rule.
         $configured = ValueState::isConfigured($value);
         $chosen = $configured && $set->allows($value);
@@ -454,22 +479,22 @@ final class PropertySchema {
     }
 
     if (DefinitionMetadata::isSecret($definition)) {
-      $schema['writeOnly'] = TRUE;
+      $schema = $schema->with('writeOnly', TRUE);
     }
     elseif (!$definition instanceof ComplexDataDefinitionInterface) {
       $default = DefinitionMetadata::hasDefaultValue($definition) ? DefinitionMetadata::getDefaultValue($definition) : NULL;
       if ($default !== NULL) {
-        $schema['default'] = $default;
+        $schema = $schema->with('default', $default);
       }
       $examples = DefinitionMetadata::getExamples($definition);
       if ($examples !== []) {
-        $schema['examples'] = array_values($examples);
+        $schema = $schema->with('examples', array_values($examples));
       }
     }
     if ($locked) {
-      $schema['readOnly'] = TRUE;
+      $schema = $schema->with('readOnly', TRUE);
       if (ValueState::isConfigured($value)) {
-        $schema['const'] = $value;
+        $schema = $schema->with('const', $value);
       }
     }
     $computed = Computed::of($definition);
@@ -480,7 +505,7 @@ final class PropertySchema {
       // Decision: see
       // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
       if (!$computed->takesSent()) {
-        $schema['readOnly'] = TRUE;
+        $schema = $schema->with('readOnly', TRUE);
       }
       $extension['computed'] = $computed->marker();
     }
@@ -488,9 +513,8 @@ final class PropertySchema {
     // keywords, after the standard ones and before `x-surface`.
     // Decision: see
     // docs/decisions.md#the-served-document-is-a-portable-schema-document.
-    $checks = PortableKeywords::write($schema[self::EXTENSION . '-checked'] ?? [], $schema[self::EXTENSION . '-pattern-message'] ?? []);
-    unset($schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message']);
-    $schema += $checks;
+    $checks = PortableKeywords::write($schema->get(self::CHECKED) ?? [], $schema->get(self::PATTERN_MESSAGE) ?? []);
+    $schema = Schemas::defaults($schema->without(self::CHECKED)->without(self::PATTERN_MESSAGE), $checks);
     // The widget hints, how the key is drawn and never what it accepts,
     // in the dialect's keyword, before `x-surface`: its widget, its
     // arrangement and its empty option. Decision: see
@@ -503,16 +527,16 @@ final class PropertySchema {
     $schema = PortableUi::set($schema, $ui + $arranged);
     // Written where nothing is said, so it stands where it did before the
     // hints moved; PortableUi::settled() leaves an empty one out.
-    $schema[self::EXTENSION] = $extension;
+    $schema = $schema->with(self::EXTENSION, $extension);
     $shape = DefinitionMetadata::shapeDefinition($definition);
-    if ($shape !== NULL && !isset($schema['properties']) && !isset($schema['items'])) {
+    if ($shape !== NULL && !$schema->has('properties') && !$schema->has('items')) {
       // Written whole here, so a conditional, a site and a def compare it
       // keyword by keyword as any key; named() refers to the shape at the
       // end. Decision: see docs/decisions.md#a-shape-is-a-named-definition.
-      $schema[self::SHAPED] = [
+      $schema = $schema->with(self::SHAPED, [
         'id' => (string) DefinitionMetadata::shapeOf($definition),
         'def' => $this->shapeDef($this->property($shape, NULL, NULL, $path, FALSE, [], $emission->withoutStale())[0]),
-      ];
+      ]);
     }
     return [$schema, $shown];
   }
@@ -528,15 +552,14 @@ final class PropertySchema {
    * `x-portable-ui` go: the widget, the lock and what a key depends on are
    * each key's.
    *
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   The shape, described as a key.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   Its def.
    */
-  protected function shapeDef(array $schema): array {
-    unset($schema[self::EXTENSION], $schema[PortableUi::KEYWORD], $schema[PortableKeywords::LINKS]);
-    return $schema;
+  protected function shapeDef(Schema $schema): Schema {
+    return $schema->without(self::EXTENSION)->without(PortableUi::KEYWORD)->without(PortableKeywords::LINKS);
   }
 
   /**
@@ -555,61 +578,60 @@ final class PropertySchema {
    *
    * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
    *
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   The document's schema, its `$defs` written.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The schema, each shape a def.
    */
-  public function named(array $schema): array {
-    $defs = is_array($schema['$defs'] ?? NULL) ? $schema['$defs'] : [];
+  public function named(Schema $schema): Schema {
+    $defs = $schema->get('$defs');
+    $taken = is_array($defs) ? array_map('strval', array_keys($defs)) : [];
     $named = [];
-    $schema = $this->referToShapes($schema, $named, array_keys($defs));
+    $schema = Schemas::map($schema, static function (Schema $node) use (&$named, $taken): Schema {
+      return self::referToShape($node, $named, $taken);
+    });
     if ($named !== []) {
-      $schema['$defs'] = (is_array($schema['$defs'] ?? NULL) ? $schema['$defs'] : []) + $named;
+      $defs = $schema->get('$defs');
+      $schema = $schema->with('$defs', (is_array($defs) ? $defs : []) + $named);
     }
     return $schema;
   }
 
   /**
-   * Refers the keys declared with a shape, at any depth, to its def.
+   * Refers one key declared with a shape to the shape's def.
    *
-   * @param array $schema
-   *   A schema, or any array inside one.
-   * @param array<string, array> $named
+   * @param \PortableSchema\Builder\Schema $node
+   *   A schema in the document.
+   * @param array<string, \PortableSchema\Builder\Schema> $named
    *   The shapes' defs filed so far, by key.
    * @param string[] $taken
    *   The keys the document's other defs hold.
    *
-   * @return array
-   *   The same, each such key a reference.
+   * @return \PortableSchema\Builder\Schema
+   *   The same, or the reference it becomes.
    */
-  protected function referToShapes(array $schema, array &$named, array $taken): array {
-    foreach ($schema as $keyword => $value) {
-      if (is_array($value) && $keyword !== self::SHAPED) {
-        $schema[$keyword] = $this->referToShapes($value, $named, $taken);
-      }
-    }
-    $shape = $schema[self::SHAPED] ?? NULL;
-    if (!is_array($shape) || !is_string($shape['id'] ?? NULL) || !is_array($shape['def'] ?? NULL)) {
-      return $schema;
+  protected static function referToShape(Schema $node, array &$named, array $taken): Schema {
+    $shape = $node->get(self::SHAPED);
+    if (!is_array($shape) || !is_string($shape['id'] ?? NULL) || !($shape['def'] ?? NULL) instanceof Schema) {
+      return $node;
     }
     ['id' => $id, 'def' => $def] = $shape;
-    unset($schema[self::SHAPED]);
+    $node = $node->without(self::SHAPED);
     $key = $id;
-    for ($n = 2; in_array($key, $taken, TRUE) || (isset($named[$key]) && !Subschemas::same($named[$key], $def)); $n++) {
+    for ($n = 2; in_array($key, $taken, TRUE) || (isset($named[$key]) && !Schemas::same($named[$key], $def)); $n++) {
       $key = $id . '@' . $n;
     }
     $named[$key] ??= $def;
     $site = ['$ref' => ContractEmitter::DEFS . ContractEmitter::pointer($key)];
-    foreach ($schema as $keyword => $value) {
+    foreach ($node->all() as $keyword => $value) {
       // The key's own `x-surface`, and what it checks and says, stay
       // with it, as they stood before the dialect spelled the last two.
-      if ($keyword === 'title' || $keyword === self::EXTENSION || in_array($keyword, PortableKeywords::KEYWORDS, TRUE) || !array_key_exists($keyword, $def) || !Subschemas::same($def[$keyword], $value)) {
+      if ($keyword === 'title' || $keyword === self::EXTENSION || in_array($keyword, PortableKeywords::KEYWORDS, TRUE) || !$def->has($keyword) || !Schemas::same($def->get($keyword), $value)) {
         $site[$keyword] = $value;
       }
     }
-    return $site;
+    return Schema::keywords($site);
   }
 
   /**
@@ -672,19 +694,19 @@ final class PropertySchema {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   `title` and `description`, each only when the definition has one,
    *   as plain text (PlainText).
    */
-  public function describe(DataDefinitionInterface $definition): array {
-    $described = [];
+  public function describe(DataDefinitionInterface $definition): Schema {
+    $described = Schema::any();
     $label = $definition->getLabel();
     if ($label !== NULL && (string) $label !== '') {
-      $described['title'] = PlainText::of($label);
+      $described = $described->with('title', PlainText::of($label));
     }
     $description = $definition->getDescription();
     if ($description !== NULL && (string) $description !== '') {
-      $described['description'] = PlainText::of($description);
+      $described = $described->with('description', PlainText::of($description));
     }
     return $described;
   }
@@ -779,21 +801,23 @@ final class PropertySchema {
    *
    * Decision: see docs/decisions.md#an-item-is-never-null.
    *
-   * @param array $item
+   * @param \PortableSchema\Builder\Schema $item
    *   The item, as a key would be said.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The same, never null.
    */
-  protected static function neverNull(array $item): array {
-    if (is_array($item['type'] ?? NULL)) {
-      $types = array_values(array_diff($item['type'], ['null']));
-      $item['type'] = count($types) === 1 ? $types[0] : $types;
+  protected static function neverNull(Schema $item): Schema {
+    $type = $item->get('type');
+    if (is_array($type)) {
+      $types = array_values(array_diff($type, ['null']));
+      $item = $item->with('type', count($types) === 1 ? $types[0] : $types);
     }
-    if (isset($item['oneOf'])) {
-      $choices = array_values(array_filter($item['oneOf'], static fn (mixed $choice): bool => $choice !== ['const' => NULL]));
+    $choices = $item->get('oneOf');
+    if (is_array($choices)) {
+      $choices = array_values(array_filter($choices, static fn (Schema $choice): bool => $choice->all() !== ['const' => NULL]));
       if ($choices !== []) {
-        $item['oneOf'] = $choices;
+        $item = $item->with('oneOf', $choices);
       }
     }
     return $item;
@@ -954,7 +978,7 @@ final class PropertySchema {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key.
    *
-   * @return array
+   * @return list<\PortableSchema\Builder\Schema>
    *   The entries.
    */
   protected function choices(OptionSet $set, DataDefinitionInterface $definition): array {
@@ -962,9 +986,9 @@ final class PropertySchema {
     foreach ($set->options as $value => $label) {
       // A Choice of numbers is labeled by them, as numbers.
       $title = PlainText::of(is_int($label) || is_float($label) ? (string) $label : $label);
-      $choice = ['const' => $this->cast($value, $definition), 'title' => $title];
+      $choice = Schema::any()->with('const', $this->cast($value, $definition))->with('title', $title);
       if (isset($set->descriptions[$value])) {
-        $choice['description'] = PlainText::of($set->descriptions[$value]);
+        $choice = $choice->with('description', PlainText::of($set->descriptions[$value]));
       }
       $choices[] = $choice;
     }
@@ -972,7 +996,7 @@ final class PropertySchema {
       // Null clears an optional key that may be cleared. A list of no
       // values offers it alone, which a required key's type refuses too:
       // nothing is allowed.
-      $choices[] = ['const' => NULL];
+      $choices[] = Schema::any()->with('const', NULL);
     }
     return $choices;
   }
@@ -1051,19 +1075,19 @@ final class PropertySchema {
   /**
    * Answers whether anything inside an object schema is narrowed now.
    *
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   An object schema this emitter wrote.
    *
    * @return bool
    *   TRUE when a property says it is refined.
    */
-  public function anyRefined(array $schema): bool {
-    // An object with no properties holds an empty object here, which
-    // iterates as nothing.
-    foreach ($schema['properties'] ?? [] as $property) {
+  public function anyRefined(Schema $schema): bool {
+    $properties = $schema->get('properties');
+    foreach (is_array($properties) ? $properties : [] as $property) {
       // A mixed-in structure's member the owner says nothing more of is
-      // `true`, and one ruled out `false`.
-      if (is_array($property) && !empty($property[self::EXTENSION]['refined'])) {
+      // `true`, and one ruled out `false`, which say nothing.
+      $extension = $property->get(self::EXTENSION);
+      if (is_array($extension) && !empty($extension['refined'])) {
         return TRUE;
       }
     }
@@ -1109,39 +1133,23 @@ final class PropertySchema {
    * a key gets is read from the same definition and option list as its
    * shape; taking them out afterwards keeps that one pass.
    *
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   A schema this emitter wrote.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The schema, its `x-portable-ui` without the hints (PortableUi::HINTS:
-   *   all but `options.emptyOption`), and with no
-   *   `x-portable-ui` and no `x-surface` where nothing else was said; a
-   *   subschema left with nothing is `{}`, a \stdClass.
+   *   all but `options.emptyOption`), and with no `x-portable-ui` and no
+   *   `x-surface` where nothing else was said.
    */
-  public function withoutWidgets(array $schema): array {
-    foreach ($schema as $key => $value) {
-      if (!is_array($value)) {
-        continue;
+  public function withoutWidgets(Schema $schema): Schema {
+    return Schemas::map($schema, static function (Schema $node): Schema {
+      $ui = $node->get(PortableUi::KEYWORD);
+      if (is_array($ui)) {
+        $ui = PortableUi::without($ui, PortableUi::HINTS);
+        $node = $ui === [] ? $node->without(PortableUi::KEYWORD) : $node->with(PortableUi::KEYWORD, $ui);
       }
-      if ($key === self::EXTENSION || $key === PortableUi::KEYWORD) {
-        if ($key === PortableUi::KEYWORD) {
-          $value = PortableUi::without($value, PortableUi::HINTS);
-        }
-        if ($value === []) {
-          unset($schema[$key]);
-          continue;
-        }
-        $schema[$key] = $value;
-      }
-      else {
-        // A schema that said nothing but its hints (the items of a list
-        // of anything) is the empty schema, an object: an empty JSON
-        // array is no schema.
-        $stripped = $this->withoutWidgets($value);
-        $schema[$key] = $stripped === [] && $value !== [] ? new \stdClass() : $stripped;
-      }
-    }
-    return $schema;
+      return $node->get(self::EXTENSION) === [] ? $node->without(self::EXTENSION) : $node;
+    });
   }
 
   /**
@@ -1152,20 +1160,21 @@ final class PropertySchema {
    * output and a narrowing compared through this say only of the keys
    * themselves.
    *
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   The schema.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The schema in plain JSON Schema.
    */
-  public function withoutExtension(array $schema): array {
-    unset($schema[self::EXTENSION], $schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message'], $schema[self::SHAPED], $schema[PortableKeywords::CHECK], $schema[PortableKeywords::MESSAGES], $schema[PortableKeywords::UI], $schema[PortableKeywords::LINKS]);
-    foreach ($schema as $key => $value) {
-      if (is_array($value)) {
-        $schema[$key] = $this->withoutExtension($value);
+  public function withoutExtension(Schema $schema): Schema {
+    return Schemas::map($schema, static function (Schema $node): Schema {
+      foreach ([self::EXTENSION, self::CHECKED, self::PATTERN_MESSAGE, self::SHAPED, ...PortableKeywords::KEYWORDS] as $keyword) {
+        if ($node->has($keyword)) {
+          $node = $node->without($keyword);
+        }
       }
-    }
-    return $schema;
+      return $node;
+    }, FALSE);
   }
 
 }

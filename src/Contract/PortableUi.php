@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Contract;
 
+use PortableSchema\Builder\Schema;
+
 /**
  * Writes the widget hints as the dialect's `x-portable-ui`.
  *
@@ -55,32 +57,6 @@ final class PortableUi {
    * answers carries whatever is asked.
    */
   public const HINTS = ['widget', 'multiple', 'placeholder', 'prefix', 'suffix', 'help', 'group', 'weight', 'groups'];
-
-  /**
-   * The keywords whose value is a map of subschemas.
-   */
-  protected const MAPS = ['properties', '$defs', 'patternProperties', 'dependentSchemas'];
-
-  /**
-   * The keywords whose value is a list of subschemas.
-   */
-  protected const LISTS = ['allOf', 'anyOf', 'oneOf', 'prefixItems'];
-
-  /**
-   * The keywords whose value is one subschema.
-   */
-  protected const SINGLE = [
-    'items',
-    'additionalProperties',
-    'unevaluatedProperties',
-    'unevaluatedItems',
-    'contains',
-    'propertyNames',
-    'not',
-    'if',
-    'then',
-    'else',
-  ];
 
   /**
    * Writes a key's hints, each member only where it says something.
@@ -151,23 +127,31 @@ final class PortableUi {
   /**
    * Adds hints to a node's `x-portable-ui`, placed before its `x-surface`.
    *
-   * @param array $node
-   *   The node.
+   * @param array|\PortableSchema\Builder\Schema $node
+   *   The node: the emitter's `Schema`, or the schema reader's array.
    * @param array $ui
    *   The hints: members, and options merged into the node's own.
    *
-   * @return array
-   *   The node.
+   * @return array|\PortableSchema\Builder\Schema
+   *   The node, in the form given.
+   *
+   * @phpstan-template T of array|\PortableSchema\Builder\Schema
+   * @phpstan-param T $node
+   * @phpstan-return T
    */
-  public static function set(array $node, array $ui): array {
+  public static function set(array|Schema $node, array $ui): array|Schema {
     if ($ui === []) {
       return $node;
     }
-    $had = is_array($node[self::KEYWORD] ?? NULL) ? $node[self::KEYWORD] : [];
+    $had = $node instanceof Schema ? $node->get(self::KEYWORD) : $node[self::KEYWORD] ?? NULL;
+    $had = is_array($had) ? $had : [];
     if (is_array($had['options'] ?? NULL) && is_array($ui['options'] ?? NULL)) {
       $ui['options'] = $ui['options'] + $had['options'];
     }
     $merged = self::ordered($ui + $had);
+    if ($node instanceof Schema) {
+      return $node->has(self::KEYWORD) ? $node->with(self::KEYWORD, $merged) : PortableKeywords::before($node, [self::KEYWORD => $merged]);
+    }
     if (array_key_exists(self::KEYWORD, $node)) {
       $node[self::KEYWORD] = $merged;
       return $node;
@@ -209,55 +193,35 @@ final class PortableUi {
    * own members. An `x-surface` that said nothing else than what moved
    * here (a key's widget) is left out.
    *
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   The document's schema.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The same, settled.
    */
-  public static function settled(array $schema): array {
-    // A subschema that said nothing but an `x-surface` left empty is the
-    // empty schema, an object: an empty JSON array is no schema.
-    $inside = static fn (array $member): array|\stdClass => ($settled = self::settled($member)) === [] && $member !== [] ? new \stdClass() : $settled;
-    foreach ($schema as $keyword => $value) {
-      if (!is_array($value)) {
-        continue;
+  public static function settled(Schema $schema): Schema {
+    return Schemas::map($schema, static function (Schema $node): Schema {
+      if ($node->get(ContractEmitter::EXTENSION) === []) {
+        $node = $node->without(ContractEmitter::EXTENSION);
       }
-      if (in_array($keyword, self::MAPS, TRUE)) {
-        foreach ($value as $name => $member) {
-          if (is_array($member)) {
-            $schema[$keyword][$name] = $inside($member);
-          }
+      $properties = $node->get('properties');
+      if (!is_array($properties)) {
+        return $node;
+      }
+      $groups = [];
+      foreach ($properties as $name => $member) {
+        $ui = $member instanceof Schema ? $member->get(self::KEYWORD) : NULL;
+        $group = is_array($ui) ? ($ui['group'] ?? NULL) : NULL;
+        if (is_array($group) && is_string($group['id'] ?? NULL)) {
+          $id = $group['id'];
+          unset($group['id']);
+          $groups[$id] ??= $group;
+          $ui['group'] = $id;
+          $properties[$name] = $member->with(self::KEYWORD, $ui);
         }
       }
-      elseif (in_array($keyword, self::LISTS, TRUE) && array_is_list($value)) {
-        foreach ($value as $i => $member) {
-          if (is_array($member)) {
-            $schema[$keyword][$i] = $inside($member);
-          }
-        }
-      }
-      elseif (in_array($keyword, self::SINGLE, TRUE)) {
-        $schema[$keyword] = $inside($value);
-      }
-    }
-    if (($schema[ContractEmitter::EXTENSION] ?? NULL) === []) {
-      unset($schema[ContractEmitter::EXTENSION]);
-    }
-    if (!is_array($schema['properties'] ?? NULL)) {
-      return $schema;
-    }
-    $groups = [];
-    foreach ($schema['properties'] as $name => $member) {
-      $group = is_array($member) ? ($member[self::KEYWORD]['group'] ?? NULL) : NULL;
-      if (is_array($group) && is_string($group['id'] ?? NULL)) {
-        $id = $group['id'];
-        unset($group['id']);
-        $groups[$id] ??= $group;
-        $schema['properties'][$name][self::KEYWORD]['group'] = $id;
-      }
-    }
-    return $groups === [] ? $schema : self::set($schema, ['groups' => $groups]);
+      return $groups === [] ? $node : self::set($node->with('properties', $properties), ['groups' => $groups]);
+    });
   }
 
   /**

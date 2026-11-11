@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Contract;
 
-use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -19,6 +18,7 @@ use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\ResourceBuild\RefinesInputRefiner;
 use Drupal\surface\Entry;
+use PortableSchema\Builder\Schema;
 
 /**
  * Writes what a key's refiners answer as `if`/`then` on its frame.
@@ -162,16 +162,16 @@ final class Conditionals {
    * @param int $runtime
    *   The kind of refiner not run: SurfaceInterface::RUNTIME, or
    *   CODED when their answers cannot be listed.
-   * @param array $property
+   * @param \PortableSchema\Builder\Schema $property
    *   Its property schema.
    * @param bool $requires
    *   Whether the frame requires it so far.
    *
-   * @return array{0: array, 1: bool}
+   * @return array{0: \PortableSchema\Builder\Schema, 1: bool}
    *   The property, with what may not apply inside it no longer required,
    *   and whether the frame still requires the key.
    */
-  public function mayNotApply(Entry $entry, int $runtime, array $property, bool $requires): array {
+  public function mayNotApply(Entry $entry, int $runtime, Schema $property, bool $requires): array {
     $paths = $entry->mayNotApply($runtime);
     $inside = array_values(array_filter($paths, static fn (string $path): bool => $path !== ''));
     return [static::requiringNone($property, $inside), $requires && !in_array('', $paths, TRUE)];
@@ -219,9 +219,9 @@ final class Conditionals {
    *   The key.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key as the document states it.
-   * @param array $property
+   * @param \PortableSchema\Builder\Schema $property
    *   Its property schema.
-   * @param array $branches
+   * @param \PortableSchema\Builder\Schema[] $branches
    *   The conditionals the coded refiners state for it.
    * @param bool $requires
    *   Whether the frame requires it so far.
@@ -232,14 +232,14 @@ final class Conditionals {
    *   site that wires it states it, and a key it may rule out is not
    *   required here.
    *
-   * @return array{0: array, 1: array, 2: bool}
+   * @return array{0: \PortableSchema\Builder\Schema, 1: \PortableSchema\Builder\Schema[], 2: bool}
    *   The property, the key's conditionals, the coded ones first, and
    *   whether the frame still requires the key.
    */
-  public function rules(Entry $entry, DataDefinitionInterface $definition, array $property, array $branches, bool $requires, Emission $emission, array $ports = []): array {
+  public function rules(Entry $entry, DataDefinitionInterface $definition, Schema $property, array $branches, bool $requires, Emission $emission, array $ports = []): array {
     $name = $entry->name;
     $applicability = $entry->isNested();
-    $base = $applicability ? [] : $this->stated($entry, $definition, $emission);
+    $base = $applicability ? Schema::any() : $this->stated($entry, $definition, $emission);
     $declared = [];
     $ruling = [];
     foreach ($entry->refiners as $chain) {
@@ -269,14 +269,14 @@ final class Conditionals {
           $if = $condition->schema($paths);
           if ($rule->rulesOut()) {
             $ruling[$below][] = $if;
-            $declared[] = [$below, FALSE, ['if' => $if, 'then' => static::falseAt($name, $below)]];
+            $declared[] = [$below, FALSE, Schema::any()->with('if', $if)->with('then', static::falseAt($name, $below))];
             continue;
           }
           $then = [];
           if (!$applicability) {
             $answer = static::appliedAt(Surface::deepClone($definition), $below, $rule);
             $narrowed = static::onlyAdded($this->narrowed($this->stated($entry, $answer, $emission), $base), $base);
-            if ($narrowed !== []) {
+            if ($narrowed->all() !== []) {
               $then['properties'] = [$name => $narrowed];
             }
           }
@@ -284,55 +284,57 @@ final class Conditionals {
             $then['required'] = [$name];
           }
           if ($then !== []) {
-            $declared[] = [$below, $rule->requires(), ['if' => $if, 'then' => $then]];
+            $conditional = Schema::any()->with('if', $if)->with('then', Schema::keywords($then));
+            $declared[] = [$below, $rule->requires(), $conditional];
           }
         }
       }
     }
 
     // Required only where no rule rules it out.
-    $unless = array_map(static fn (array $ifs): array => static::negated(count($ifs) === 1 ? $ifs[0] : ['anyOf' => $ifs]), $ruling);
-    $guard = static function (array $branch, string $below) use ($unless): array {
+    $unless = array_map(static fn (array $ifs): Schema => static::negated(count($ifs) === 1 ? $ifs[0] : Schema::any()->with('anyOf', $ifs)), $ruling);
+    $guard = static function (Schema $branch, string $below) use ($unless): Schema {
       if (isset($unless[$below])) {
-        $branch['if'] = ['allOf' => [$branch['if'], $unless[$below]]];
+        $branch = $branch->with('if', Schema::any()->with('allOf', [$branch->get('if'), $unless[$below]]));
       }
       return $branch;
     };
     foreach ($branches as $i => $branch) {
-      if (in_array($name, $branch['then']['required'] ?? [], TRUE)) {
+      $then = $branch->get('then');
+      if ($then instanceof Schema && in_array($name, $then->get('required') ?? [], TRUE)) {
         $branches[$i] = $guard($branch, '');
       }
     }
     foreach ($declared as [$below, $requiring, $branch]) {
-      $branches[] = ($requiring ? $guard($branch, $below) : $branch) + [self::EXTENSION => ['declared' => TRUE]];
+      $branches[] = Schemas::defaults($requiring ? $guard($branch, $below) : $branch, [self::EXTENSION => ['declared' => TRUE]]);
     }
     foreach ($unless as $below => $not) {
       if ($below === '') {
         if ($requires) {
           $requires = FALSE;
-          $branches[] = ['if' => $not, 'then' => ['required' => [$name]], self::EXTENSION => ['declared' => TRUE]];
+          $branches[] = Schema::keywords([
+            'if' => $not,
+            'then' => ['required' => [$name]],
+            self::EXTENSION => ['declared' => TRUE],
+          ]);
         }
         continue;
       }
       // A key an alter mounted, inside its map.
       $parents = explode('.', (string) $below);
       $key = (string) array_pop($parents);
-      $at = [];
-      foreach ($parents as $parent) {
-        array_push($at, 'properties', $parent);
-      }
-      $object = $at === [] ? $property : NestedArray::getValue($property, $at);
-      if (is_array($object) && in_array($key, $object['required'] ?? [], TRUE)) {
+      $object = static::objectAt($property, $parents);
+      if ($object !== NULL && in_array($key, $object->get('required') ?? [], TRUE)) {
         $property = static::requiringNone($property, [(string) $below]);
         $then = ['required' => [$key]];
         foreach (array_reverse($parents) as $parent) {
           $then = ['properties' => [$parent => $then]];
         }
-        $branches[] = [
+        $branches[] = Schema::keywords([
           'if' => $not,
           'then' => ['properties' => [$name => $then]],
           self::EXTENSION => ['declared' => TRUE],
-        ];
+        ]);
       }
     }
     return [$property, $branches, $requires];
@@ -346,14 +348,15 @@ final class Conditionals {
    * requiring the key wherever no rule rules it out then states the
    * condition itself rather than its double negation.
    *
-   * @param array $if
+   * @param \PortableSchema\Builder\Schema $if
    *   The `if`.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   Its negation.
    */
-  protected static function negated(array $if): array {
-    return array_keys($if) === ['not'] && is_array($if['not']) ? $if['not'] : ['not' => $if];
+  protected static function negated(Schema $if): Schema {
+    $not = $if->get('not');
+    return array_keys($if->all()) === ['not'] && $not instanceof Schema && !$not->isBoolean() ? $not : Schema::any()->with('not', $if);
   }
 
   /**
@@ -364,18 +367,15 @@ final class Conditionals {
    * @param string $below
    *   The dotted path of a key below it, or '' for the key itself.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The `then`.
    */
-  protected static function falseAt(string $name, string $below): array {
-    if ($below === '') {
-      return ['properties' => [$name => FALSE]];
-    }
+  protected static function falseAt(string $name, string $below): Schema {
     $schema = FALSE;
-    foreach (array_reverse(explode('.', $below)) as $segment) {
-      $schema = ['properties' => [$segment => $schema]];
+    foreach ($below === '' ? [] : array_reverse(explode('.', $below)) as $segment) {
+      $schema = Schema::any()->with('properties', [$segment => $schema]);
     }
-    return ['properties' => [$name => $schema]];
+    return Schema::any()->with('properties', [$name => $schema]);
   }
 
   /**
@@ -419,28 +419,31 @@ final class Conditionals {
    * conditional that requires one more key says that key alone; restating
    * the rest would require again what the frame stopped requiring.
    *
-   * @param array $narrowed
+   * @param \PortableSchema\Builder\Schema $narrowed
    *   What a conditional says about a key.
-   * @param array $base
+   * @param \PortableSchema\Builder\Schema $base
    *   The key as the document states it.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The same, each `required` holding only what it adds.
    */
-  protected static function onlyAdded(array $narrowed, array $base): array {
-    if (isset($narrowed['required']) && is_array($narrowed['required'])) {
-      $added = array_values(array_diff($narrowed['required'], is_array($base['required'] ?? NULL) ? $base['required'] : []));
-      if ($added === []) {
-        unset($narrowed['required']);
-      }
-      else {
-        $narrowed['required'] = $added;
-      }
+  protected static function onlyAdded(Schema $narrowed, Schema $base): Schema {
+    $required = $narrowed->get('required');
+    if (is_array($required)) {
+      $had = $base->get('required');
+      $added = array_values(array_diff($required, is_array($had) ? $had : []));
+      $narrowed = $added === [] ? $narrowed->without('required') : $narrowed->with('required', $added);
     }
-    foreach (is_array($narrowed['properties'] ?? NULL) ? $narrowed['properties'] : [] as $key => $property) {
-      if (is_array($property)) {
-        $narrowed['properties'][$key] = static::onlyAdded($property, is_array($base['properties'][$key] ?? NULL) ? $base['properties'][$key] : []);
+    $properties = $narrowed->get('properties');
+    if (is_array($properties)) {
+      $stated = $base->get('properties');
+      foreach ($properties as $key => $property) {
+        if (!$property->isBoolean()) {
+          $inside = is_array($stated) ? ($stated[$key] ?? NULL) : NULL;
+          $properties[$key] = static::onlyAdded($property, $inside instanceof Schema && !$inside->isBoolean() ? $inside : Schema::any());
+        }
       }
+      $narrowed = $narrowed->with('properties', $properties);
     }
     return $narrowed;
   }
@@ -479,7 +482,7 @@ final class Conditionals {
    *   The key, unrefined.
    * @param array $values
    *   The values of the frame.
-   * @param array $base
+   * @param \PortableSchema\Builder\Schema $base
    *   The key's schema as emitted, unrefined.
    * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the key's frame: its cacheability collects what every
@@ -492,7 +495,7 @@ final class Conditionals {
    *   Whether only whether the key applies is stated: a key holding a
    *   child, whose parent may say nothing else about it.
    *
-   * @return array{branches: array, base: array, required: bool}|null
+   * @return array{branches: \PortableSchema\Builder\Schema[], base: \PortableSchema\Builder\Schema, required: bool}|null
    *   The conditionals, none for a combination that changes nothing; the
    *   key's schema with what may not apply inside it no longer required;
    *   and whether the frame may require the key, which it may not where
@@ -501,7 +504,7 @@ final class Conditionals {
    *   key with no list of values, or it would take more than
    *   ENUMERATION_CAP combinations.
    */
-  public function enumerate(SurfaceInterface $declared, SurfaceInterface $refined, Entry $entry, array $values, array $base, Emission $emission, bool $applicability = FALSE): ?array {
+  public function enumerate(SurfaceInterface $declared, SurfaceInterface $refined, Entry $entry, array $values, Schema $base, Emission $emission, bool $applicability = FALSE): ?array {
     $cacheability = $emission->cacheability;
     $kinds = $emission->kinds();
     $order = array_flip($declared->getDefinitions()->names());
@@ -576,8 +579,8 @@ final class Conditionals {
         $then['properties'] = [$entry->name => FALSE];
       }
       else {
-        $narrowed = $applicability ? [] : $this->narrowed($schema, $base);
-        if ($narrowed !== []) {
+        $narrowed = $applicability ? Schema::any() : $this->narrowed($schema, $base);
+        if ($narrowed->all() !== []) {
           $then['properties'] = [$entry->name => $narrowed];
         }
         if (PropertySchema::required($definition) && !$required) {
@@ -592,13 +595,13 @@ final class Conditionals {
       foreach ($combination as $key => $value) {
         $conditions[$key] = ['const' => $value];
       }
-      $branches[] = [
+      $branches[] = Schema::keywords([
         'if' => [
           'properties' => $conditions,
           'required' => array_keys($combination),
         ],
         'then' => $then,
-      ];
+      ]);
     }
     return ['branches' => $branches, 'base' => $base, 'required' => $required];
   }
@@ -616,22 +619,22 @@ final class Conditionals {
    *   Whether only whether it applies is asked: a key holding a child,
    *   whose parent may say nothing else about it.
    *
-   * @return array|false
+   * @return \PortableSchema\Builder\Schema|false
    *   The key's schema, FALSE where it does not apply.
    */
-  protected function answer(Entry $entry, DataDefinitionInterface $definition, Emission $emission, bool $applicability = FALSE): array|false {
+  protected function answer(Entry $entry, DataDefinitionInterface $definition, Emission $emission, bool $applicability = FALSE): Schema|false {
     if (DoesNotApply::marks($definition)) {
       return FALSE;
     }
-    return $applicability ? [] : $this->stated($entry, $definition, $emission);
+    return $applicability ? Schema::any() : $this->stated($entry, $definition, $emission);
   }
 
   /**
    * Lists the properties a base states that an answer leaves out.
    *
-   * @param array $base
+   * @param \PortableSchema\Builder\Schema $base
    *   The key's schema, unrefined.
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   What one combination answered.
    * @param string $prefix
    *   The path so far, as property names joined by dots.
@@ -639,16 +642,18 @@ final class Conditionals {
    * @return string[]
    *   The dotted paths of the properties the answer ruled out.
    */
-  protected static function vanished(array $base, array $schema, string $prefix = ''): array {
+  protected static function vanished(Schema $base, Schema $schema, string $prefix = ''): array {
     $vanished = [];
-    $properties = is_array($schema['properties'] ?? NULL) ? $schema['properties'] : [];
-    foreach (is_array($base['properties'] ?? NULL) ? $base['properties'] : [] as $name => $property) {
+    $properties = $schema->get('properties');
+    $properties = is_array($properties) ? $properties : [];
+    $stated = $base->get('properties');
+    foreach (is_array($stated) ? $stated : [] as $name => $property) {
       $path = $prefix . $name;
       if (!array_key_exists($name, $properties)) {
         $vanished[] = $path;
         continue;
       }
-      if (is_array($property) && is_array($properties[$name])) {
+      if (!$property->isBoolean() && !$properties[$name]->isBoolean()) {
         array_push($vanished, ...static::vanished($property, $properties[$name], $path . '.'));
       }
     }
@@ -662,35 +667,73 @@ final class Conditionals {
    * conditionals where it applies; required everywhere, the schema would
    * refuse it absent where the pipeline does not ask for it.
    *
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   A key's schema.
    * @param string[] $paths
    *   Dotted paths of properties below it.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The schema, none of them in a `required`.
    */
-  public static function requiringNone(array $schema, array $paths): array {
+  public static function requiringNone(Schema $schema, array $paths): Schema {
     foreach (array_unique($paths) as $path) {
       $parents = explode('.', $path);
       $name = array_pop($parents);
-      $at = [];
-      foreach ($parents as $parent) {
-        array_push($at, 'properties', $parent);
-      }
-      $object = $at === [] ? $schema : NestedArray::getValue($schema, $at);
-      if (!is_array($object) || !is_array($object['required'] ?? NULL)) {
+      $object = static::objectAt($schema, $parents);
+      $had = $object?->get('required');
+      if (!is_array($had)) {
         continue;
       }
-      $required = array_values(array_diff($object['required'], [$name]));
-      if ($required === []) {
-        NestedArray::unsetValue($schema, [...$at, 'required']);
-      }
-      else {
-        NestedArray::setValue($schema, [...$at, 'required'], $required);
-      }
+      $required = array_values(array_diff($had, [$name]));
+      $schema = static::replacedAt($schema, $parents, $required === [] ? $object->without('required') : $object->with('required', $required));
     }
     return $schema;
+  }
+
+  /**
+   * Reads the object a path of property names leads to.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
+   * @param string[] $parents
+   *   The property names, outermost first; none for the schema itself.
+   *
+   * @return \PortableSchema\Builder\Schema|null
+   *   The object, or NULL where the path leads to none.
+   */
+  protected static function objectAt(Schema $schema, array $parents): ?Schema {
+    foreach ($parents as $parent) {
+      $properties = $schema->get('properties');
+      $inside = is_array($properties) ? ($properties[$parent] ?? NULL) : NULL;
+      if (!$inside instanceof Schema || $inside->isBoolean()) {
+        return NULL;
+      }
+      $schema = $inside;
+    }
+    return $schema;
+  }
+
+  /**
+   * Replaces the object a path of property names leads to.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema, which holds the path (objectAt()).
+   * @param string[] $parents
+   *   The property names, outermost first.
+   * @param \PortableSchema\Builder\Schema $object
+   *   What stands there now.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The schema, each object on the path in its place.
+   */
+  protected static function replacedAt(Schema $schema, array $parents, Schema $object): Schema {
+    if ($parents === []) {
+      return $object;
+    }
+    $parent = array_shift($parents);
+    $properties = $schema->get('properties');
+    $properties[$parent] = static::replacedAt($properties[$parent], $parents, $object);
+    return $schema->with('properties', $properties);
   }
 
   /**
@@ -703,11 +746,11 @@ final class Conditionals {
    * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the key's frame.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   A collection's own keywords, its items being the child's, which no
    *   parent's refiner reaches; any other key's property schema.
    */
-  public function stated(Entry $entry, DataDefinitionInterface $definition, Emission $emission): array {
+  public function stated(Entry $entry, DataDefinitionInterface $definition, Emission $emission): Schema {
     return $entry->list !== NULL
       ? $this->propertySchema->listKeywords($definition)[0]
       : $this->propertySchema->property($definition, NULL, NULL, $emission->at($entry->name), FALSE, [], $emission->withoutStale())[0];
@@ -775,7 +818,7 @@ final class Conditionals {
    *   The key, unrefined.
    * @param array $values
    *   The values of the frame with the combination laid over them.
-   * @param array|false $schema
+   * @param \PortableSchema\Builder\Schema|false $schema
    *   What the first refinement answered for the key; FALSE where it does
    *   not apply.
    * @param \Drupal\surface\Contract\Emission $emission
@@ -790,7 +833,7 @@ final class Conditionals {
    * @throws \LogicException
    *   Naming the key's static refiners and the values.
    */
-  protected function answersAgain(SurfaceInterface $declared, Entry $entry, array $values, array|false $schema, Emission $emission, bool $applicability = FALSE): bool {
+  protected function answersAgain(SurfaceInterface $declared, Entry $entry, array $values, Schema|false $schema, Emission $emission, bool $applicability = FALSE): bool {
     $again = $this->answer($entry, $declared->refine($values, $emission->kinds())->getDefinition($entry->name) ?? $entry->definition, $emission, $applicability);
     if (json_encode($again === FALSE ? FALSE : $this->propertySchema->withoutExtension($again)) === json_encode($schema === FALSE ? FALSE : $this->propertySchema->withoutExtension($schema))) {
       return TRUE;
@@ -853,33 +896,36 @@ final class Conditionals {
    * `oneOf`, the lower `maximum`, the description naming the reason. A
    * map's properties are compared one by one.
    *
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   The refined schema.
-   * @param array $base
+   * @param \PortableSchema\Builder\Schema $base
    *   The unrefined schema.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The keywords that differ, without `x-surface`, `portable-check`,
    *   `x-portable-messages` and `x-portable-ui`, which the property itself
-   *   carries; empty when none do.
+   *   carries; the empty schema when none do.
    */
-  protected function narrowed(array $schema, array $base): array {
+  protected function narrowed(Schema $schema, Schema $base): Schema {
     $narrowed = [];
-    foreach ($schema as $keyword => $value) {
+    $stated = $base->get('properties');
+    foreach ($schema->all() as $keyword => $value) {
       if ($keyword === self::EXTENSION || in_array($keyword, PortableKeywords::KEYWORDS, TRUE)) {
         continue;
       }
-      if ($keyword === 'properties' && is_array($value) && is_array($base['properties'] ?? NULL)) {
+      // A map with no key, refined or not, is compared whole.
+      if ($keyword === 'properties' && is_array($value) && $value !== [] && is_array($stated) && $stated !== []) {
         $properties = [];
-        foreach ($base['properties'] + $value as $name => $property) {
+        foreach ($stated + $value as $name => $property) {
           if (!array_key_exists($name, $value)) {
             // Ruled out for this combination: it must not be there.
             // Decision: see docs/decisions.md#a-key-that-does-not-apply.
             $properties[$name] = FALSE;
             continue;
           }
-          $changed = $this->narrowed($value[$name], $base['properties'][$name] ?? []);
-          if ($changed !== []) {
+          $inside = $stated[$name] ?? NULL;
+          $changed = $this->narrowed($value[$name], $inside instanceof Schema && !$inside->isBoolean() ? $inside : Schema::any());
+          if ($changed->all() !== []) {
             $properties[$name] = $changed;
           }
         }
@@ -888,11 +934,31 @@ final class Conditionals {
         }
         continue;
       }
-      if (!array_key_exists($keyword, $base) || $base[$keyword] !== $value) {
-        $narrowed[$keyword] = is_array($value) ? $this->propertySchema->withoutExtension($value) : $value;
+      if (!$base->has($keyword) || !Schemas::same($base->get($keyword), $value)) {
+        $narrowed[$keyword] = $this->plain($value);
       }
     }
-    return $narrowed;
+    return Schema::keywords($narrowed);
+  }
+
+  /**
+   * Strips what a keyword's value says beside what a value must hold.
+   *
+   * @param mixed $value
+   *   The value: a schema, a list or map of them, or data, which may hold
+   *   a schema among its members (`x-surface-shape`'s def).
+   *
+   * @return mixed
+   *   The same, each schema in it plain (PropertySchema::withoutExtension()).
+   */
+  protected function plain(mixed $value): mixed {
+    if ($value instanceof Schema) {
+      return $this->propertySchema->withoutExtension($value);
+    }
+    if (is_array($value)) {
+      return array_map(fn (mixed $member): mixed => $member instanceof Schema ? $this->propertySchema->withoutExtension($member) : $member, $value);
+    }
+    return $value;
   }
 
   /**
@@ -903,35 +969,29 @@ final class Conditionals {
    * values it was run with, here none. Taken out afterwards, as the
    * widget hints are, that pass stays the one place a key is described.
    *
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   A schema this emitter wrote.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The schema, its `x-surface` keywords without `refined`, `stale` and
    *   the variants' `chosen`, its `x-portable-ui` without
    *   `options.emptyOption`, and with no `x-surface`, no `x-portable-ui`
    *   and no `options` where nothing else was said.
    */
-  public function withoutPresent(array $schema): array {
-    foreach ($schema as $key => $value) {
-      if (!is_array($value)) {
-        continue;
+  public function withoutPresent(Schema $schema): Schema {
+    return Schemas::map($schema, static function (Schema $node): Schema {
+      $extension = $node->get(self::EXTENSION);
+      if (is_array($extension)) {
+        $extension = array_diff_key($extension, array_flip(['refined', 'stale', 'chosen']));
+        $node = $extension === [] ? $node->without(self::EXTENSION) : $node->with(self::EXTENSION, $extension);
       }
-      if ($key === self::EXTENSION || $key === PortableKeywords::UI) {
-        $value = $key === self::EXTENSION
-          ? array_diff_key($value, array_flip(['refined', 'stale', 'chosen']))
-          : PortableUi::without($value, ['emptyOption']);
-        if ($value === []) {
-          unset($schema[$key]);
-          continue;
-        }
-        $schema[$key] = $value;
+      $ui = $node->get(PortableKeywords::UI);
+      if (is_array($ui)) {
+        $ui = PortableUi::without($ui, ['emptyOption']);
+        $node = $ui === [] ? $node->without(PortableKeywords::UI) : $node->with(PortableKeywords::UI, $ui);
       }
-      else {
-        $schema[$key] = $this->withoutPresent($value);
-      }
-    }
-    return $schema;
+      return $node;
+    });
   }
 
 }

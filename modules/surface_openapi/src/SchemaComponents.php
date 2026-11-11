@@ -334,8 +334,8 @@ final class SchemaComponents {
       if ($key === '$ref' && is_string($value)) {
         $found[] = $value;
       }
-      elseif ($key === 'variants' && is_array($value)) {
-        foreach ($value as $pointer) {
+      elseif ($key === 'variants' && (is_array($value) || $value instanceof \stdClass)) {
+        foreach ((array) $value as $pointer) {
           if (is_string($pointer)) {
             $found[] = $pointer;
           }
@@ -387,11 +387,13 @@ final class SchemaComponents {
       if ($key === '$ref' && is_string($value)) {
         $schema[$key] = static::moved($value, $names, $root);
       }
-      elseif ($key === 'variants' && is_array($value)) {
-        foreach ($value as $choice => $pointer) {
-          $value[$choice] = is_string($pointer) ? static::moved($pointer, $names, $root) : $pointer;
+      elseif ($key === 'variants' && (is_array($value) || $value instanceof \stdClass)) {
+        // A map named by numeric ids is a \stdClass (Schemas::arrayed()).
+        $map = (array) $value;
+        foreach ($map as $choice => $pointer) {
+          $map[$choice] = is_string($pointer) ? static::moved($pointer, $names, $root) : $pointer;
         }
-        $schema[$key] = $value;
+        $schema[$key] = $value instanceof \stdClass ? (object) $map : $map;
       }
       else {
         $schema[$key] = $this->rewritten($value, $names, $root);

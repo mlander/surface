@@ -523,7 +523,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     // Both documents state the components as variants.
     $full = $this->full(SpotlightResource::class);
     $this->assertSame('component', $full['properties']['props'][ContractEmitter::EXTENSION]['by']);
-    $this->assertSame('#/$defs/event.spotlight.props.surface_examples:card', $full['properties']['props'][ContractEmitter::EXTENSION]['variants']->{'surface_examples:card'});
+    $this->assertSame('#/$defs/event.spotlight.props.surface_examples:card', $full['properties']['props'][ContractEmitter::EXTENSION]['variants']['surface_examples:card']);
     $this->assertSame(['heading'], $full['$defs']['event.spotlight.props.surface_examples:card']['required']);
     $this->assertSame('component', $full['properties']['slots'][ContractEmitter::EXTENSION]['by']);
     $this->assertSame('#/$defs/component.slot.text', $full['$defs']['event.spotlight.slots.surface_examples:card']['properties']['body']['$ref']);
