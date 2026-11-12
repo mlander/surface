@@ -90,6 +90,10 @@ configuration override languages. It is tagged with:
 - `config:core.extension`, `config:surface.settings` and
   `config:surface.defaults`.
 
+No tag names the code: the bin holds serialized objects whose shape
+follows the code, so a deploy that changes the module rebuilds caches,
+as `drush deploy` and `drush cr` do.
+
 Stored with it are the structures it built that were read from a schema
 or made for a reference key, so a request that reads it can name them. A
 variant the site lists is stored as what builds it: the variant's name,

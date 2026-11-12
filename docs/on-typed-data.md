@@ -168,10 +168,14 @@ sealed one. The form, the pipeline and the contract emitter
   plugins (`Range`, `Length`, `Regex`). The module's own, such as
   `LabeledChoice` and `UniqueItems`, are constraint plugins of the same
   kind, in `src/Plugin/Validation/Constraint/`.
-- **Validation.** The pipeline makes typed data with
-  `TypedDataManager::create()` and calls `validate()`
-  (`src/Pipeline/Validating.php`). It hands core a copy of the
-  definition carrying a digest among its settings, so that core's
+- **Validation.** One class makes typed data to run a constraint on a
+  data surface's definition, `ConstraintRunner`, with `TypedDataManager::create()`: one constraint
+  on one value for each check a document names, or `validate()` on a
+  whole definition for an output, a watched value and a site's default
+  (`src/Validation/ConstraintRunner.php`,
+  [decision](decisions.md#one-adapter-runs-a-constraint-the-typed-data-footprint-is-pinned)).
+  It hands core a copy of the definition carrying a digest among its
+  settings, so that core's
   prototype cache tells two definitions apart
   (`src/DefinitionTypedData.php`,
   [1.1](core-gaps.md#11-a-typed-data-prototype-keyed-by-its-definition)).

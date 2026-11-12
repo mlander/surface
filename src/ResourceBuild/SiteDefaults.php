@@ -6,8 +6,8 @@ namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\Validation\ConstraintRunner;
 
 /**
  * The defaults a site sets on a resource's keys, over the declared ones.
@@ -41,12 +41,12 @@ final class SiteDefaults {
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
    *   The config factory.
-   * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
-   *   The typed data manager, which holds a value to its key's definition.
+   * @param \Drupal\surface\Validation\ConstraintRunner $constraintRunner
+   *   The constraint runner, which holds a value to its key's definition.
    */
   public function __construct(
     protected readonly ConfigFactoryInterface $configFactory,
-    protected readonly TypedDataManagerInterface $typedDataManager,
+    protected readonly ConstraintRunner $constraintRunner,
   ) {}
 
   /**
@@ -111,7 +111,7 @@ final class SiteDefaults {
       'verb' => 'sets',
     ];
     $children = [];
-    foreach ((new KeyPaths($this->typedDataManager))->writeDefaults($builder, $where, $defaults['values'], $kinds) as $key => $values) {
+    foreach ((new KeyPaths($this->constraintRunner))->writeDefaults($builder, $where, $defaults['values'], $kinds) as $key => $values) {
       $children[$key] = [
         'resource' => $defaults['resource'],
         'at' => $defaults['at'] . $key . '.',

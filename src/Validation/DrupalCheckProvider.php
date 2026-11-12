@@ -13,13 +13,10 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\Core\TypedData\Validation\RecursiveContextualValidator;
-use Drupal\Core\TypedData\Validation\RecursiveValidator;
+use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Contract\ConstraintKeywords;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\DefinitionTypedData;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\ValueState;
@@ -41,9 +38,9 @@ use Symfony\Component\Validator\ConstraintViolationInterface;
  * (Location::definitionAt(), on the data surface refined against the
  * values), and the constraint of that plugin id on that place's own
  * definition runs, with the options the definition holds (storage, key,
- * handler, theme, ...), through Typed Data for that one definition with
- * that one constraint. The options the document publishes describe the
- * check; they are never what runs. A frame's `drupal:JsonSchema` is each
+ * handler, theme, ...), alone, by ConstraintRunner::check() with that
+ * definition. The options the document publishes describe the check;
+ * they are never what runs. A frame's `drupal:JsonSchema` is each
  * schema read into that frame, held to the frame's values as the pipeline
  * writes them (SurfacePipelineInterface::document()).
  *
@@ -168,8 +165,11 @@ final class DrupalCheckProvider implements CheckProvider {
   /**
    * Constructs a DrupalCheckProvider.
    *
-   * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
-   *   The typed data manager, which runs a constraint.
+   * @param \Drupal\surface\Validation\ConstraintRunner $runner
+   *   The constraint runner, which runs a check's constraint.
+   * @param \Drupal\Core\Validation\ConstraintManager $constraints
+   *   The constraint plugin manager, which says whether the site has a
+   *   check's plugin.
    * @param \Drupal\surface\Pipeline\SurfacePipelineInterface $pipeline
    *   The pipeline, whose document() a frame's schema is held to.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $translation
@@ -183,7 +183,8 @@ final class DrupalCheckProvider implements CheckProvider {
    *   The accepted values of the top.
    */
   public function __construct(
-    private readonly TypedDataManagerInterface $typedDataManager,
+    private readonly ConstraintRunner $runner,
+    private readonly ConstraintManager $constraints,
     private readonly SurfacePipelineInterface $pipeline,
     private readonly TranslationInterface $translation,
     private readonly SurfaceOptions $options,
@@ -417,7 +418,7 @@ final class DrupalCheckProvider implements CheckProvider {
       if (!array_key_exists($id, $constraints)) {
         continue;
       }
-      foreach ($this->violations($definition, $id, $constraints[$id], $place->value) as $violation) {
+      foreach ($this->runner->check($id, $constraints[$id], $place->value, $definition) as $violation) {
         if ((string) $violation->getPropertyPath() === '') {
           return ViolationMessage::of($violation);
         }
@@ -442,8 +443,7 @@ final class DrupalCheckProvider implements CheckProvider {
       return CheckResult::unchecked('noProvider');
     }
     $id = substr($name, strlen(self::PREFIX));
-    $constraints = $this->typedDataManager->getValidationConstraintManager();
-    if (!$constraints->hasDefinition($id)) {
+    if (!$this->constraints->hasDefinition($id)) {
       return CheckResult::unchecked('noProvider');
     }
     $location = $this->at($request->location);
@@ -480,7 +480,7 @@ final class DrupalCheckProvider implements CheckProvider {
         }
       }
       $ran = TRUE;
-      foreach ($this->violations($definition, $id, $options, $location->value) as $violation) {
+      foreach ($this->runner->check($id, $options, $location->value, $definition) as $violation) {
         $error = $this->error($request, $name, $violation, $definition);
         // One error per location, code and params; said() joins their
         // messages.
@@ -530,7 +530,7 @@ final class DrupalCheckProvider implements CheckProvider {
           $map->setPropertyDefinition((string) $key, $entry->definition);
         }
         $options = json_decode((string) json_encode($checks[$name]), TRUE);
-        foreach ($this->violations($map, $id, is_array($options) ? $options : [], $location->value) as $violation) {
+        foreach ($this->runner->check($id, is_array($options) ? $options : [], $location->value, $map) as $violation) {
           $error = $this->error($request, $name, $violation, $map);
           $errors[json_encode($error)] = $error;
         }
@@ -538,32 +538,6 @@ final class DrupalCheckProvider implements CheckProvider {
       }
     }
     return $ran ? new CheckResult(array_values($errors)) : CheckResult::unchecked('noProvider');
-  }
-
-  /**
-   * Runs one constraint of a definition on a value, alone.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
-   * @param string $id
-   *   The constraint's plugin id.
-   * @param mixed $options
-   *   Its options, as the definition holds them.
-   * @param mixed $value
-   *   The value.
-   *
-   * @return \Symfony\Component\Validator\ConstraintViolationInterface[]
-   *   What it refused.
-   */
-  private function violations(DataDefinitionInterface $definition, string $id, mixed $options, mixed $value): array {
-    $constraint = $this->typedDataManager->getValidationConstraintManager()->create($id, $options);
-    $typed = DefinitionTypedData::create($this->typedDataManager, $definition, $value, '');
-    $validator = $this->typedDataManager->getValidator();
-    assert($validator instanceof RecursiveValidator);
-    $context = $validator->startContext($typed);
-    assert($context instanceof RecursiveContextualValidator);
-    // Not a root call: the constraint alone, never the properties' own.
-    return iterator_to_array($context->validate($typed, [$constraint], NULL, FALSE)->getViolations(), FALSE);
   }
 
   /**

@@ -13,11 +13,13 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Surface;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\Validation\ConstraintRunner;
 use Drupal\surface\Validation\PortableValidator;
 use PortableSchema\Registry;
 use Drupal\surface\Pipeline\SurfacePipeline;
@@ -88,8 +90,9 @@ class SurfacePipelineCastingTest extends UnitTestCase {
     // so it answers none without a resolver.
     (new \ReflectionProperty(SurfaceOptions::class, 'resolved'))->setValue($options, new \WeakMap());
     $translation = $this->getStringTranslationStub();
-    $validator = new PortableValidator(Registry::withTypes(), new ContractEmitter($options, $translation), $manager, $translation, $options, new AnonymousUserSession());
-    return new SurfacePipeline($manager, $options, $translation, $validator);
+    $runner = new ConstraintRunner($manager);
+    $validator = new PortableValidator(Registry::withTypes(), new ContractEmitter($options, $translation), $runner, $this->createMock(ConstraintManager::class), $translation, $options, new AnonymousUserSession());
+    return new SurfacePipeline($runner, $options, $translation, $validator);
   }
 
   /**

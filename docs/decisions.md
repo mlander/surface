@@ -2388,7 +2388,9 @@ properties' rules.
 
 Every place the module turns a definition into typed data, the
 pipeline's validation of inputs, collections and outputs, and the
-watched value check, goes through `DefinitionTypedData::create()`,
+watched value check, goes through `DefinitionTypedData::create()`
+(since 2026-11-11 from `ConstraintRunner` alone, [One adapter runs a
+constraint](#one-adapter-runs-a-constraint-the-typed-data-footprint-is-pinned)),
 which hands core a copy of the root carrying a digest of what the
 definition says that validation reads, its type, class, required,
 settings and constraints at every depth, among its settings (a list's
@@ -2407,6 +2409,108 @@ were handed. *Changed after the compliance
 example's stewards were found leaking between tool calls in one
 process; see `docs/core-gaps.md`.* (`DefinitionTypedData`,
 `SurfacePipeline`, `Refinement\WatchedValueCheck`)
+
+### One adapter runs a constraint; the Typed Data footprint is pinned
+
+Decided 2026-11-11, revised 2026-11-12 after review. Surface builds a
+typed value to run a constraint in one class, and the files that use
+Typed Data are listed by role, a list that only shrinks. No served
+document, refusal or stored value changed.
+
+- **One adapter.** `Validation\ConstraintRunner`
+  (`surface.constraint_runner`) is the one place Surface builds a typed
+  value to run a constraint on a definition a data surface holds, and
+  the only code that calls `DefinitionTypedData::create()`. Host storage
+  validates its own typed config and entities, and host readers build
+  typed objects to read them; neither goes through the runner.
+  `check($id, $options, $value, $definition)` runs one constraint plugin
+  on one value, alone, never the definition's own constraints or its
+  properties': the check provider asks it for every `drupal:<id>`
+  check. `conforms($definition, $value)` holds a value to a whole
+  definition, the constraints it implies (`PrimitiveType`, `NotNull`,
+  `ComplexData`) included: outputs (`Conforming`), a watched value
+  (`WatchedValueCheck`) and a site's or a route's value (`KeyPaths`) ask
+  it. Nothing else takes the typed data manager to validate such a
+  value: `PortableValidator`, `DrupalCheckProvider`, `SurfacePipeline`,
+  `SiteDefaults` and the build step's declaring phase hold the runner,
+  and the provider asks core's constraint manager whether the site has a
+  check's plugin. The runner stays when the model moves to `Schema`,
+  because core's constraint plugins expect a typed value: some
+  validators read the context object (`ValidKeys`,
+  `EntityBundleExists`, `AllowedValues` with a callback), and the
+  implied constraints always do.
+- **Surface's own constraints read the value.** The seven plugins the
+  module ships (`JsonSchema`, `LabeledChoice`, `LanguageExists`,
+  `SurfaceReferenceableType`, `SurfaceUnique`, `UniqueItems`,
+  `SurfaceValidReference`) give a plain Symfony validator, on plain PHP
+  values with the option sets the examples use, the violations the
+  runner gives: the same message template, parameters, property path
+  and code, the same message with its class and words, and the same
+  sentence a door says (`ViolationMessage::of()`).
+  `ValueOnlyConstraintsTest` holds this, and fails when the module
+  ships an eighth. A plain validator says what Typed Data's says only
+  when two rules hold: it words messages with core's `DrupalTranslator`
+  (as core's `BasicRecursiveValidatorFactory` builds it), which turns a
+  `{{ name }}` parameter into `%name`, where Symfony's own translator
+  leaves `%value` unfilled in `UniqueItems`' message; and it runs a
+  constraint in the constraint's own groups, so a constraint runs
+  whatever its groups, as on a typed value, which Typed Data validates
+  with no group. `UniqueItemsConstraintValidator` keeps its unwrap of a
+  typed value: it is a Drupal constraint plugin, and Typed Data's
+  validator hands a plugin the list object where the item type does not
+  unwrap (a field item list), so accepting a typed value is part of
+  being usable there. On a plain array it needs no typed value, which
+  is what value-only means here.
+- **The footprint is pinned.** `TypedDataFootprintTest` lists every
+  file that names `Drupal\Core\TypedData` (an alias and a fully
+  qualified name match, and the escaped spelling in a string),
+  `typed_data_manager`, `typedDataManager(`, `config.typed`,
+  `TypedConfigManager`, `DefinitionMetadata`, `DefinitionTypedData` or
+  `DefinitionMap`. It reads the `.php`, `.module`, `.install` and `.inc`
+  files at the module's root, under `src` and under `modules/<module>`
+  (`tests` directories left out), and the `.services.yml` files of the
+  module and its submodules, which count when they name one of the two
+  service ids. Each file has one line in
+  `tests/fixtures/typed-data-footprint.txt` with its role (`model`,
+  `constraints`, `emitter`, `reader`, `pipeline`, `storage`, `door`,
+  `shape`, `example`, or `edge` for a file that stays on Typed Data on
+  purpose). The edge files are named in the test, each with its reason:
+  the host readers `TypedDataReader`, `ConfigSchemaReader` and
+  `FieldItemDerivation`; host storage that validates its own typed
+  values, `SchemaViolations`, `ConfigObjectStorage` and
+  `ConfigEntityStorage`; the runner; the Tool API's `InputDefinitions`;
+  and `ConfigSchemaGenerator`. The test fails on a file that uses Typed
+  Data and is not listed, on a listed file that no longer does, on a
+  line with no role or a repeated path, on an `edge` line the test does
+  not name, and when the lines outside the edges are not exactly
+  `OUTSIDE_THE_EDGES` (156 on 2026-11-12), so a file that leaves lowers
+  the constant in the same change. `SURFACE_FOOTPRINT_WRITE=1` rewrites
+  the list, each file keeping its role and a new one `unassigned`,
+  which the test refuses. It counts files, not uses: a listed file can
+  gain uses, a method call on a definition handed in carries no token, a
+  subclass of a listed class inherits its use, one file taken off and
+  another listed in the same change keeps the count, and the Field API's
+  own names (a field item list, an entity's `validate()`) are not
+  tokens, so the example `ContentEntityStorage`, which validates an
+  entity, is not listed.
+- **A deploy rebuilds caches.** The build cache holds serialized objects
+  whose shape follows the code: a sealed build holds its watched value
+  check, which names its service by the property that holds it. A row
+  written before this change fails when read after it, and the reverse,
+  so a deploy that changes the module rebuilds caches, as `drush
+  deploy` and `drush cr` do.
+
+Later: Surface's own constraints run on plain values, through a plain
+validator built by the two rules above, with the runner kept for
+core's; the built schema, a `Schema` node holding a check's real
+options, which the check provider runs from instead of a definition; a
+build format in the build cache's id.
+
+(`Validation\ConstraintRunner`, `DrupalCheckProvider`,
+`PortableValidator`, `Pipeline\Conforming`,
+`Refinement\WatchedValueCheck`, `ResourceBuild\KeyPaths`,
+`UniqueItemsConstraintValidator`, `ConstraintRunnerTest`,
+`ValueOnlyConstraintsTest`, `TypedDataFootprintTest`)
 
 ### A key that does not apply
 
@@ -8302,7 +8406,10 @@ the numbers). Four choices, and why:
   defaults), each discovery entry it built from, discovery's index, and
   `config:core.extension`, `config:surface.settings` and
   `config:surface.defaults`, which every build depends on. One
-  that expires or varies by a cache context is not kept. The request's
+  that expires or varies by a cache context is not kept. The bin holds
+  serialized objects whose shape follows the code, so a deploy that
+  changes the module rebuilds caches, as `drush deploy` and `drush cr`
+  do. The request's
   memo stays in front of it. A build for the account alone
   (`buildStatic()`) or with every answer (`build()`) is not derived
   from the kept one: its access answers lock or leave out keys while it

@@ -86,7 +86,8 @@ constraints validate against whichever was built first in the process,
 and two unsaved `FieldConfig` objects of one field type share one item,
 so the second writes to the first one's entity.
 
-**Here today.** Every place the module turns a definition into typed data
+**Here today.** The one place the module turns a data surface's
+definition into typed data to run a constraint, `ConstraintRunner`,
 goes through `DefinitionTypedData::create()`, which hands core a copy of
 the root carrying a digest of the definition in its settings, so the
 cache key names the definition (`src/DefinitionTypedData.php`; why: [decision](decisions.md#a-definition-is-validated-as-itself)).

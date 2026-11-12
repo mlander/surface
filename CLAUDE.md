@@ -632,6 +632,22 @@ the record of the rework that brought the module to the pattern.
   (`OperationDefinition::staticPermission()`); narrowing a key's values
   by account is a runtime refiner, not access
   (`docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability`).
+- **Constraint runner**: `Validation\ConstraintRunner`
+  (`surface.constraint_runner`), the one place a typed value is built to
+  run a constraint on a definition a data surface holds: `check()`, one
+  plugin on one value, alone, for every `drupal:<id>` check the provider
+  answers; `conforms()`, a value against a whole definition with the
+  constraints it implies, for outputs, a watched value and a site's or a
+  route's value. Nothing else takes the typed data manager to validate
+  such a value; host storage validates its own typed config and
+  entities, and host readers build typed objects to read them. Surface's
+  own seven constraint plugins read the plain value
+  (`ValueOnlyConstraintsTest`, through a plain validator with core's
+  `DrupalTranslator` that runs a constraint whatever its groups), and
+  `TypedDataFootprintTest` pins every file that uses Typed Data, by
+  role, a list that only shrinks: the lines outside the edges equal
+  `OUTSIDE_THE_EDGES`, and the edge files are named in the test
+  (`docs/decisions.md#one-adapter-runs-a-constraint-the-typed-data-footprint-is-pinned`).
 - **Runner**: the one service that runs an operation,
   `Operation\OperationRunner` (`surface.runner`, typed
   `OperationRunnerInterface`), modeled on the Tool API's `ToolRunner`:
@@ -955,9 +971,9 @@ test errored or failed and every gate passed.
   itself, so the full lane has no `--order-by=defects` and no result
   cache; it orders classes slowest first.
 
-On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-11: the
-full lane takes 10m05s at the defaults (phpunit 9m18s) and the fast
-lane 5m51s (phpunit 5m41s). As of 2026-10-23, with a smaller suite, the
+On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-12: the
+full lane takes 10m33s at the defaults (phpunit 9m53s) and the fast
+lane 6m07s (phpunit 6m01s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -988,7 +1004,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2388, Assertions: 57776, Errors: 0, Failures: 0, Skipped: 3. Classes: 332 of 332, 8 at a time, browser classes 4.
+phpunit: Tests: 2396, Assertions: 57905, Errors: 0, Failures: 0, Skipped: 3. Classes: 335 of 335, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1012,8 +1028,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2274, Assertions: 53222, Deprecations: 687, Skipped: 3. Classes:
-279, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2282, Assertions: 53351, Deprecations: 687, Skipped: 3. Classes:
+282, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 
@@ -1263,7 +1279,11 @@ so the rule is this sentence. `npm test` is not part of
   official OpenAPI 3.1 schema beside it is vendored, not generated), and
   the React app's fixtures,
   `modules/surface_examples_react/app/src/test/fixtures/`, by
-  `ReactFixturesTest` with `SURFACE_REACT_FIXTURES_WRITE=1`.
+  `ReactFixturesTest` with `SURFACE_REACT_FIXTURES_WRITE=1`, and the
+  list of files that use Typed Data,
+  `tests/fixtures/typed-data-footprint.txt`, by `TypedDataFootprintTest`
+  with `SURFACE_FOOTPRINT_WRITE=1` (a file new to it is written
+  `unassigned`, and its role is the one word written by hand).
   Never edit any of them by hand.
 - Commit messages are one line.
 
@@ -1324,7 +1344,9 @@ src/Validation/          A request's values held to their document by the
                          validate(), compiled validators kept by the
                          document's hash), DrupalCheckProvider (every
                          `drupal:<plugin id>` check, run from the place's
-                         own definition), Nodes (the document's nodes at
+                         own definition, by ConstraintRunner, the one
+                         class that builds a typed value to run a
+                         constraint), Nodes (the document's nodes at
                          each place of the data), Found (one refusal,
                          said). ResourceBuild/Location.php reads a JSON
                          Pointer back to its definition and value.

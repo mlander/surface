@@ -7,7 +7,7 @@ namespace Drupal\surface\Validation;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Schemas;
@@ -126,8 +126,11 @@ final class PortableValidator {
    *   The site's registry: the type library and what a site adds.
    * @param \Drupal\surface\Contract\ContractEmitter $emitter
    *   The emitter, which writes the document for the values.
-   * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
-   *   The typed data manager, which runs a check's constraint.
+   * @param \Drupal\surface\Validation\ConstraintRunner $runner
+   *   The constraint runner, which runs a check's constraint.
+   * @param \Drupal\Core\Validation\ConstraintManager $constraints
+   *   The constraint plugin manager, which says whether the site has a
+   *   check's plugin.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $translation
    *   The string translation service, for the messages.
    * @param \Drupal\surface\Options\SurfaceOptions $options
@@ -138,7 +141,8 @@ final class PortableValidator {
   public function __construct(
     private readonly Registry $registry,
     private readonly ContractEmitter $emitter,
-    private readonly TypedDataManagerInterface $typedDataManager,
+    private readonly ConstraintRunner $runner,
+    private readonly ConstraintManager $constraints,
     private readonly TranslationInterface $translation,
     private readonly SurfaceOptions $options,
     private readonly AccountInterface $account,
@@ -160,7 +164,7 @@ final class PortableValidator {
    *   The provider, for validate().
    */
   public function provider(SurfaceInterface $surface, array $values, SurfacePipelineInterface $pipeline): DrupalCheckProvider {
-    return new DrupalCheckProvider($this->typedDataManager, $pipeline, $this->translation, $this->options, $surface, $values);
+    return new DrupalCheckProvider($this->runner, $this->constraints, $pipeline, $this->translation, $this->options, $surface, $values);
   }
 
   /**

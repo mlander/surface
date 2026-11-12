@@ -8,15 +8,14 @@ use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Computed;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\DefinitionTypedData;
 use Drupal\surface\Pipeline\Coercion;
 use Drupal\surface\Pipeline\SurfacePipeline;
 use Drupal\surface\Pipeline\ValueState;
+use Drupal\surface\Validation\ConstraintRunner;
 
 /**
  * Finds the key a dotted path names in a frame, and holds a value to it.
@@ -57,11 +56,11 @@ final class KeyPaths {
   /**
    * Constructs the key paths.
    *
-   * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
-   *   The typed data manager, which holds a value to its key's definition.
+   * @param \Drupal\surface\Validation\ConstraintRunner $constraintRunner
+   *   The constraint runner, which holds a value to its key's definition.
    */
   public function __construct(
-    protected readonly TypedDataManagerInterface $typedDataManager,
+    protected readonly ConstraintRunner $constraintRunner,
   ) {}
 
   /**
@@ -612,7 +611,7 @@ final class KeyPaths {
       // Decision: see docs/decisions.md#required-means-must-hold-a-value.
       $definition = (clone $definition)->setRequired(FALSE);
     }
-    foreach (DefinitionTypedData::create($this->typedDataManager, $definition, $value)->validate() as $violation) {
+    foreach ($this->constraintRunner->conforms($definition, $value) as $violation) {
       $at = (string) $violation->getPropertyPath();
       return ($at === '' ? '' : $at . ': ') . strip_tags((string) $violation->getMessage());
     }

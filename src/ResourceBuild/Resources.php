@@ -25,6 +25,7 @@ use Drupal\surface\SettledCacheability;
 use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
+use Drupal\surface\Validation\ConstraintRunner;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceStorageInterface;
 use Drupal\surface\Staging\Stage;
@@ -282,6 +283,9 @@ final class Resources implements ResourcesInterface {
    * @param \Drupal\surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
    *   What a watched value passes before a refiner is handed it, sealed
    *   into every data surface and every child this step builds.
+   * @param \Drupal\surface\Validation\ConstraintRunner $constraintRunner
+   *   The constraint runner, which holds a context's value to its key's
+   *   definition.
    * @param \Drupal\Core\Session\PermissionsHashGeneratorInterface|null $permissionsHashGenerator
    *   What tells two accounts' permissions apart, which a static access
    *   answer is kept by; NULL keeps none.
@@ -303,6 +307,7 @@ final class Resources implements ResourcesInterface {
     protected readonly AccountInterface $currentUser,
     protected readonly OperationArguments $operationArguments,
     protected readonly WatchedValueCheckInterface $watchedValueCheck,
+    protected readonly ConstraintRunner $constraintRunner,
     protected readonly ?PermissionsHashGeneratorInterface $permissionsHashGenerator = NULL,
     protected readonly ?SiteDefaults $siteDefaults = NULL,
     protected readonly ?CacheBackendInterface $buildCache = NULL,
@@ -319,7 +324,7 @@ final class Resources implements ResourcesInterface {
    * one holds the references it was handed.
    */
   protected function phases(): void {
-    $this->declaring = new Declaring($this->registry, $this->typedDataManager, $this->classResolver, $this->watchedValueCheck, $this->siteDefaults, $this->heldReferences, $this, $this->typedConfig);
+    $this->declaring = new Declaring($this->registry, $this->typedDataManager, $this->classResolver, $this->watchedValueCheck, $this->constraintRunner, $this->siteDefaults, $this->heldReferences, $this, $this->typedConfig);
     $this->binding = new Binding($this->typedDataManager, $this->declaring);
     $this->gating = new Gating($this->registry, $this->typedDataManager, $this->classResolver, $this->currentUser, $this->permissionsHashGenerator, $this->declaring, $this);
     $this->attaching = new Attaching($this->registry, $this->typedDataManager, $this->watchedValueCheck, $this->declaring, $this->binding, $this->gating, $this, $this->buildResource(...), $this->buildRead(...));
@@ -349,7 +354,7 @@ final class Resources implements ResourcesInterface {
    * @see \Drupal\surface\Storage\ConfigSchemaGenerator::including()
    */
   public function withRegistry(ResourceRegistry $registry, ClassResolverInterface $classResolver, ?References $references = NULL): static {
-    $resources = new static($registry, $this->typedDataManager, $classResolver, $this->currentUser, $this->operationArguments, $this->watchedValueCheck, $this->permissionsHashGenerator, $this->siteDefaults, typedConfig: $this->typedConfig);
+    $resources = new static($registry, $this->typedDataManager, $classResolver, $this->currentUser, $this->operationArguments, $this->watchedValueCheck, $this->constraintRunner, $this->permissionsHashGenerator, $this->siteDefaults, typedConfig: $this->typedConfig);
     $resources->heldReferences = $references;
     $resources->phases();
     return $resources;

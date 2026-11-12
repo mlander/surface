@@ -10,12 +10,12 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\SurfaceAccess;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\ResourceBuild\OutputsStorageInterface;
+use Drupal\surface\Validation\ConstraintRunner;
 use Drupal\surface\Validation\PortableValidator;
 
 /**
@@ -98,8 +98,8 @@ final class SurfacePipeline implements SurfacePipelineInterface {
   /**
    * Constructs a SurfacePipeline, and the three verbs over its services.
    *
-   * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
-   *   The typed data manager, used to run the data surface's constraints.
+   * @param \Drupal\surface\Validation\ConstraintRunner $constraintRunner
+   *   The constraint runner, which holds an output to its definition.
    * @param \Drupal\surface\Options\SurfaceOptions $options
    *   The options service, asked one question and only when a value has
    *   already been refused: is this value among the ones its key offers?
@@ -117,7 +117,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
    *   with.
    */
   public function __construct(
-    protected readonly TypedDataManagerInterface $typedDataManager,
+    protected readonly ConstraintRunner $constraintRunner,
     protected readonly SurfaceOptions $options,
     TranslationInterface $string_translation,
     PortableValidator $validator,
@@ -125,7 +125,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
     $this->stringTranslation = $string_translation;
     $this->accepting = new Accepting($options, $string_translation);
     $this->validating = new Validating($validator, $options, $string_translation, $this->accepting, $this);
-    $this->conforming = new Conforming($typedDataManager, $string_translation);
+    $this->conforming = new Conforming($constraintRunner, $string_translation);
   }
 
   /**

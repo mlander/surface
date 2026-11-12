@@ -9,9 +9,8 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionTypedData;
+use Drupal\surface\Validation\ConstraintRunner;
 
 /**
  * The conform verb of the pipeline: outputs held to their declared shape.
@@ -19,7 +18,7 @@ use Drupal\surface\DefinitionTypedData;
  * What SurfacePipelineInterface::conformOutput() does: every key sent
  * as NotEmitted stripped, every key no output declares refused at any
  * depth, every leaf held to its type's PHP type with nothing coerced, and
- * then the constraints, through typed data.
+ * then the constraints, through typed data (ConstraintRunner::conforms()).
  *
  * Decision: see docs/decisions.md#the-pipeline-is-read-by-verb.
  *
@@ -40,13 +39,13 @@ final class Conforming {
   /**
    * Constructs the conform verb.
    *
-   * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
-   *   The typed data manager, used to run the outputs' constraints.
+   * @param \Drupal\surface\Validation\ConstraintRunner $constraintRunner
+   *   The constraint runner, which runs the outputs' constraints.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service, for the sentences a refusal says.
    */
   public function __construct(
-    protected readonly TypedDataManagerInterface $typedDataManager,
+    protected readonly ConstraintRunner $constraintRunner,
     TranslationInterface $string_translation,
   ) {
     $this->stringTranslation = $string_translation;
@@ -102,8 +101,7 @@ final class Conforming {
         // shape refusal has not already said more precisely.
         continue;
       }
-      $typed_data = DefinitionTypedData::create($this->typedDataManager, $definition, $output[$name], $name);
-      foreach ($typed_data->validate() as $violation) {
+      foreach ($this->constraintRunner->conforms($definition, $output[$name], $name) as $violation) {
         $errors[] = Violation::fromConstraint($name, (string) $violation->getPropertyPath(), $violation);
       }
     }

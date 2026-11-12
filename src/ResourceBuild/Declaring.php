@@ -17,6 +17,7 @@ use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Pipeline\PipelineGuard;
 use Drupal\surface\Plugin\Validation\Constraint\UniqueConstraint;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
+use Drupal\surface\Validation\ConstraintRunner;
 use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\AltersStorageLayoutInterface;
 use Drupal\surface\Resource\OperationAccessInterface;
@@ -101,6 +102,9 @@ final class Declaring {
    *   class as the autowired service discovery registered.
    * @param \Drupal\surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
    *   What a watched value passes before a refiner is handed it.
+   * @param \Drupal\surface\Validation\ConstraintRunner $constraintRunner
+   *   The constraint runner, which holds a context's or a site's value to
+   *   its key's definition (keyPaths()).
    * @param \Drupal\surface\ResourceBuild\SiteDefaults|null $siteDefaults
    *   The defaults the site sets over the declared ones; NULL reads none.
    * @param \Drupal\surface\Reference\References|null $heldReferences
@@ -118,6 +122,7 @@ final class Declaring {
     protected readonly TypedDataManagerInterface $typedDataManager,
     protected readonly ClassResolverInterface $classResolver,
     protected readonly WatchedValueCheckInterface $watchedValueCheck,
+    protected readonly ConstraintRunner $constraintRunner,
     protected readonly ?SiteDefaults $siteDefaults,
     protected readonly ?References $heldReferences,
     protected readonly Resources $resources,
@@ -617,7 +622,7 @@ final class Declaring {
    *   The key paths.
    */
   protected function keyPaths(): KeyPaths {
-    return $this->keyPaths ??= new KeyPaths($this->typedDataManager);
+    return $this->keyPaths ??= new KeyPaths($this->constraintRunner);
   }
 
   /**
