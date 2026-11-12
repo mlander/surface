@@ -18,6 +18,7 @@ use Drupal\surface\Contract\BuiltNodes;
 use Drupal\surface\Contract\ConstraintKeywords;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\PortableKeywords;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\ValueState;
@@ -257,6 +258,9 @@ final class DrupalCheckProvider implements CheckProvider {
   /**
    * Answers whether the place is a secret, as its built node says.
    *
+   * The node's own `writeOnly` (Secrets::marked()): the node of a secret
+   * definition says it.
+   *
    * @param string $pointer
    *   The place's JSON Pointer.
    *
@@ -264,7 +268,8 @@ final class DrupalCheckProvider implements CheckProvider {
    *   TRUE when it is.
    */
   public function isSecret(string $pointer): bool {
-    return (DefinitionSchema::model($this->at($pointer)['node'] ?? NULL)['secret'] ?? FALSE) === TRUE;
+    $node = $this->at($pointer)['node'] ?? NULL;
+    return $node !== NULL && Secrets::marked($node);
   }
 
   /**

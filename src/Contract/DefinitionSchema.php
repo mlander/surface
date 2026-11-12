@@ -30,11 +30,13 @@ use PortableSchema\Builder\Schema;
  *   the keywords its constraints state, a map's properties and a list's
  *   items (each the built node of that definition), what only the server
  *   checks (`portable-check`, with each check's options as the definition
- *   holds them) and the messages (`x-portable-messages`), and MODEL. What
- *   depends on a request (an option set's `oneOf` and empty option, a
- *   stale value, a lock, links, the widget hints, what a key depends on,
- *   sharing a node as a def, naming it) is the emitter's
- *   (PropertySchema, ContractEmitter), which decorates the projection.
+ *   holds them) and the messages (`x-portable-messages`), `writeOnly`
+ *   for a secret, which is how a reader of the node knows it is one
+ *   (Secrets::marked()), and MODEL. What depends on a request (an option
+ *   set's `oneOf` and empty option, a stale value, a lock, links, the
+ *   widget hints, what a key depends on, sharing a node as a def, naming
+ *   it) is the emitter's (PropertySchema, ContractEmitter), which
+ *   decorates the projection.
  * - Text stays as the definition holds it: a title, a description and a
  *   message that are a TranslatableMarkup stay one, so a node is the same
  *   in every language until it is projected.
@@ -80,9 +82,6 @@ use PortableSchema\Builder\Schema;
  * no reference to its definition: a reader that needs the definition takes
  * it from where it found the node (BuiltNodes::place()). Its members are a
  * closed list, MEMBERS, and each has a reader:
- * - `secret`: whether it is a secret (DefinitionMetadata::isSecret()),
- *   read by the check provider (DrupalCheckProvider::isSecret()); it
- *   goes when the node's `writeOnly` says it for the provider.
  * - `constraints`: every constraint the definition declares, by plugin
  *   id, with its options as held, the ones a keyword states included,
  *   read by the check provider through declares() and options(), and to
@@ -108,7 +107,7 @@ final class DefinitionSchema {
   /**
    * The members MODEL holds, a closed list.
    */
-  public const MEMBERS = ['secret', 'constraints'];
+  public const MEMBERS = ['constraints'];
 
   /**
    * A placeholder the server fills in a check's message.
@@ -386,7 +385,7 @@ final class DefinitionSchema {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    *
-   * @return array{secret: bool, constraints: array<string, mixed>}
+   * @return array{constraints: array<string, mixed>}
    *   The members, MEMBERS.
    */
   protected function annotation(DataDefinitionInterface $definition): array {
@@ -395,7 +394,6 @@ final class DefinitionSchema {
       $constraints[(string) $id] = $options;
     }
     return [
-      'secret' => DefinitionMetadata::isSecret($definition),
       'constraints' => $constraints,
     ];
   }
@@ -856,7 +854,7 @@ final class DefinitionSchema {
    * @param \PortableSchema\Builder\Schema|null $node
    *   A built node, or NULL.
    *
-   * @return array{secret?: bool, constraints?: array<string, mixed>}
+   * @return array{constraints?: array<string, mixed>}
    *   The members; empty for no node, or a node no definition was read
    *   into.
    */

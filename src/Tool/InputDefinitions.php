@@ -17,6 +17,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attachment;
 use Drupal\surface\Contract\Choices;
 use Drupal\surface\Contract\PlainText;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Contract\SiteListBudget;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\Outbound;
@@ -98,7 +99,7 @@ final class InputDefinitions {
   /**
    * The key of a secrets tree that holds what is secret inside each item.
    */
-  public const EACH = Outbound::EACH;
+  public const EACH = Secrets::EACH;
 
   use StringTranslationTrait;
 

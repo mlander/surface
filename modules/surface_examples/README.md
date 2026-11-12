@@ -886,14 +886,13 @@ final class License implements ShapeInterface {
   /**
    * {@inheritdoc}
    */
-  public static function define(): DataDefinition {
-    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => t('A license number is four digits, such as 2048.')];
-    $license = DataDefinition::create('string')
-      ->setLabel(t('Event license'))
-      ->setDescription(t('The four digits after EV- on the license, such as 2048. Required to host more than 100 people.'))
-      ->addConstraint('Regex', $pattern);
-    DefinitionMetadata::setExamples($license, ['2048']);
-    return $license;
+  public static function schema(): Schema {
+    return Schema::string()
+      ->title(t('Event license'))
+      ->description(t('The four digits after EV- on the license, such as 2048. Required to host more than 100 people.'))
+      ->pattern('^\d{4}$')
+      ->message('pattern', t('A license number is four digits, such as 2048.'))
+      ->examples(['2048']);
   }
 
 }
@@ -1051,7 +1050,7 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples_compliance/surface_examples_compliance.info.yml`](../surface_examples_compliance/surface_examples_compliance.info.yml) | the module: a second one, which example 3 does not know | 9 |
 | [`modules/surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php`](../surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php) | the alter: attaches the structure, rewords the title, caps the capacity without a license, and leaves closed rooms out | 32 |
 | [`modules/surface_examples_compliance/src/Structure/ComplianceStructure.php`](../surface_examples_compliance/src/Structure/ComplianceStructure.php) | the structure it attaches: a license and the stewards, which read the capacity through a port | 19 |
-| [`modules/surface_examples_compliance/src/Shape/License.php`](../surface_examples_compliance/src/Shape/License.php) | the license: a named shape, four digits | 12 |
+| [`modules/surface_examples_compliance/src/Shape/License.php`](../surface_examples_compliance/src/Shape/License.php) | the license: a named shape, four digits | 11 |
 | [`modules/surface_examples_compliance/config/schema/surface_examples_compliance.schema.yml`](../surface_examples_compliance/config/schema/surface_examples_compliance.schema.yml), entry `surface_examples.registration_step3.third_party.surface_examples_compliance` | the config schema of what it stores on example 3 | 18 |
 
 ## Example 5: same contract, no form
@@ -1419,16 +1418,13 @@ final class PhoneNumber implements ShapeInterface {
   /**
    * {@inheritdoc}
    */
-  public static function define(): DataDefinition {
-    $phone = DataDefinition::create('string')
-      ->setLabel(t('Phone'))
-      ->setDescription(t('Digits, with spaces if you like, and a leading + for a country code.'))
-      ->addConstraint('Regex', [
-        'pattern' => '/^\+?[0-9 ]{7,20}$/D',
-        'message' => t('Write the number in digits, such as +1 555 0100.'),
-      ]);
-    DefinitionMetadata::setExamples($phone, ['+1 555 0100']);
-    return $phone;
+  public static function schema(): Schema {
+    return Schema::string()
+      ->title(t('Phone'))
+      ->description(t('Digits, with spaces if you like, and a leading + for a country code.'))
+      ->pattern('^\+?[0-9 ]{7,20}$')
+      ->message('pattern', t('Write the number in digits, such as +1 555 0100.'))
+      ->examples(['+1 555 0100']);
   }
 
 }
@@ -1587,7 +1583,7 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples/src/Structure/PersonStructure.php`](src/Structure/PersonStructure.php) | the person: three keys, and a rule that reads a port, listed | 14 |
-| [`modules/surface_examples/src/Shape/PhoneNumber.php`](src/Shape/PhoneNumber.php) | the phone: a named shape | 14 |
+| [`modules/surface_examples/src/Shape/PhoneNumber.php`](src/Shape/PhoneNumber.php) | the phone: a named shape | 11 |
 | [`modules/surface_examples/src/Structure/ReviewStructure.php`](src/Structure/ReviewStructure.php) | the review: two keys and a rule, mixed into the press page | 17 |
 | [`modules/surface_examples/src/Resource/PressResource.php`](src/Resource/PressResource.php) | the press page: one key, the person attached, the review mixed in | 13 |
 | [`modules/surface_examples/src/Storage/PressStorage.php`](src/Storage/PressStorage.php) | its storage: names the config object | 3 |

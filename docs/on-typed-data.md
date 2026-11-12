@@ -159,7 +159,8 @@ sealed one. The form, the pipeline and the contract emitter
 
 - **The definitions.** `add()`, `addList()`, `addMap()` and `attach()`
   return core's `DataDefinition`, `ListDataDefinition` and
-  `MapDataDefinition`; a shape's `define()` returns a `DataDefinition`.
+  `MapDataDefinition`; a shape's `schema()` is read into a
+  `DataDefinition`, as `addSchema()` reads a key's.
   A definition an author builds by hand is one value, handed to
   `addDefinition()`; a map or a list is built by the blueprint, so every
   object it holds is a method that is one JSON Schema construct

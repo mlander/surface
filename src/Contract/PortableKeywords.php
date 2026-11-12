@@ -166,9 +166,10 @@ final class PortableKeywords {
    * @param array $node
    *   The node.
    *
-   * @return list<array{id: string, constraint: string, options: array, message: ?string}>
+   * @return list<array{id: string, constraint: string, options: array, message: string|\Stringable|null}>
    *   Each check: its name as written, the constraint's plugin id (the
-   *   name without `drupal:`), its options, and its message.
+   *   name without `drupal:`), its options, and its message. A message an
+   *   author made with t() is that object, as message() answers it.
    */
   public static function checks(array $node): array {
     $checks = is_array($node[self::CHECK] ?? NULL) ? $node[self::CHECK] : [];
@@ -180,7 +181,7 @@ final class PortableKeywords {
         'id' => $id,
         'constraint' => str_starts_with($id, self::PROVIDER) ? substr($id, strlen(self::PROVIDER)) : $id,
         'options' => is_array($options) ? $options : (array) $options,
-        'message' => is_string($messages[self::CHECK_CODE . $id] ?? NULL) ? $messages[self::CHECK_CODE . $id] : NULL,
+        'message' => static::message([self::MESSAGES => $messages], self::CHECK_CODE . $id),
       ];
     }
     return $read;
@@ -194,12 +195,13 @@ final class PortableKeywords {
    * @param string $code
    *   The keyword's error code: `pattern`, `not`.
    *
-   * @return string|null
-   *   The message, or NULL.
+   * @return string|\Stringable|null
+   *   The message, or NULL. A message an author made with t() is that
+   *   object, translated where it is said.
    */
-  public static function message(array $node, string $code): ?string {
+  public static function message(array $node, string $code): string|\Stringable|null {
     $message = $node[self::MESSAGES][$code] ?? NULL;
-    return is_string($message) ? $message : NULL;
+    return is_string($message) || $message instanceof \Stringable ? $message : NULL;
   }
 
 }

@@ -260,6 +260,12 @@ blueprint's verbs spelled as properties
 no blueprint method and no interface, since the trait calls the verbs
 there are. The pins below are 27 attributes and 112 arguments since.
 
+*Changed 2026-11-12,* with no count moved: `ShapeInterface` declares
+`schema(): Schema` in place of `define(): DataDefinition`
+([A shape is a Schema; secrecy is read from a node](#a-shape-is-a-schema-secrecy-is-read-from-a-node)).
+`PublicSurfaceTest` pins the shape's contract by method and return type
+from this date.
+
 *Grown 2026-11-05,* by one blueprint method, `mixInVariants()`, and its
 attribute, `#[MixInVariants(by:, from:, arguments:)]`
 ([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key)):
@@ -565,6 +571,11 @@ code names the third, `#[Shape]`. (`ResourceBlueprint`,
 `ResourceBlueprintAdditions`, `BlueprintAdapterBase`)
 
 ### A shape is a named definition
+
+Since 2026-11-12 a shape declares `schema()`, the `Schema` of its value,
+in place of `define()`: [A shape is a Schema; secrecy is read from a
+node](#a-shape-is-a-schema-secrecy-is-read-from-a-node). The rules
+below hold as written for the definition the schema reads into.
 
 A scalar asked for at many keys (a license, a stock code) was written
 inline at each: its type, its pattern and the words that explain it,
@@ -2540,11 +2551,13 @@ document, refusal or stored value changed.
   holds a value to) is a `NodeMessage`, which is translated each time it
   is rendered, so a node kept for the process says each document's
   language. `x-surface-model` holds what a node knows that no document
-  says, a closed list of two members, each added for the reader that
-  reads it: `secret`, read by the check provider (slice 25 replaces it
-  with `writeOnly` on the node), and `constraints`, every declared
-  constraint with its options, the ones a keyword states included, read
-  by the check provider (a bridge until the model is the source). A
+  says, a closed list of members, each added for the reader that reads
+  it: `constraints`, every declared constraint with its options, the ones
+  a keyword states included, read by the check provider (a bridge until
+  the model is the source). It held a second member, `secret`, until
+  [A shape is a Schema; secrecy is read from a
+  node](#a-shape-is-a-schema-secrecy-is-read-from-a-node): the node's own
+  `writeOnly` says it. A
   node holds no reference to its definition: a reader that needs the
   definition takes it from the place it found the node at. The data
   type is no member, since no reader reads it. The emitter's transient keywords for checks and pattern
@@ -2605,8 +2618,8 @@ document, refusal or stored value changed.
   `place()` hands out the definition beside the node, the frame and the
   value; `at()` is the node alone. `DrupalCheckProvider` takes the
   check's options (`DefinitionSchema::options()`: the check's own under
-  `portable-check`, else the declared list), the secret flag and the
-  declared list from the node, and hands `ConstraintRunner::check()` the
+  `portable-check`, else the declared list), whether it is secret (its
+  `writeOnly`) and the declared list from the node, and hands `ConstraintRunner::check()` the
   definition from the place; `FormWidgetHost::selection()` reads a
   reference's handler from the node the same way. Neither calls
   `Location::definitionAt()`, and the provider calls no
@@ -2644,6 +2657,189 @@ the declared constraint list going when the model is the source.
 `DrupalCheckProvider`, `ConstraintRunner`, `FormWidgetHost`,
 `DefinitionSchemaTest`, `BuiltNodesTest`, `CheckOptionsTest`,
 `ValueOnlyConstraintsTest`)
+
+### A shape is a Schema; secrecy is read from a node
+
+Decided 2026-11-12. Two public contracts take their final form: a shape
+is declared as the `Schema` of its one value, and whether a value is
+secret is read from a node by one class that holds no definition.
+Within one language no served document, refusal or stored value changed
+against 20ef965. Across languages an `addSchema()` text now says the
+served language, and two spellings are read that were refused: a
+check's message made with `t()` on `addSchema()`, and a shape's
+`schema()` in place of `define()`.
+
+- **A shape declares `schema()`.** `ShapeInterface` declares `public
+  static function schema(): Schema` in place of `define():
+  DataDefinition`, now and not at the flip: the reader already turns
+  each shipped shape's schema into the definition `define()` gave, so
+  the change is provable now, and a second interface beside the first
+  would be renamed again later. Discovery refuses a `schema()` that is
+  an instance method, naming it. The two other calls that read a shape
+  for its type (a port that reads one, a property typed with one) go
+  through `Shapes::dataType()`.
+- **One reading of a shape.** `Shapes::declared()` reads the schema as
+  an author's schema is read (`SchemaReader::authored()`, at a key of a
+  blueprint of its own, not required), so a shape and `addSchema()`
+  share one interpretation, and a part the reader does not read as
+  written is refused in the reader's words. The definition is said in
+  the order a definition is written by hand (type, label, description
+  first), and a shape with no title has no label. What follows the
+  reading is unchanged: the shape's alters, then the copy marked with
+  the shape for each key.
+- **A shape is read once per class in a process.** Its reading depends
+  on its class and on the library's types, both code, and on no request
+  or language, since every text stays lazy. `Shapes` keeps the
+  definition the reading gave, before any alter and before it is marked,
+  and never hands it out: each use gets a copy, its texts copied with
+  it, so nothing one key writes or renders reaches the kept one or
+  another key's. `Shapes::dataType()` reads the kept one. A kept
+  definition is never held by a data surface, so the memo's
+  precondition (a definition a surface holds is not written after its
+  node is built) is untouched.
+- **What a shape may say, checked where it is first read.** A shape is
+  one scalar value: a schema of type object or array, or one holding
+  properties or items, is refused before it is read, and so is one that
+  reads as a map or a list. A schema that reads as no one scalar type
+  (through `allOf`, `anyOf`, `oneOf` or a `$ref`, or with no type and
+  `additionalProperties`, `prefixItems` or a `const` that is no scalar) is
+  refused with a text that says so and names the keyword. A shape states no default, and
+  `default: null` is one, and so is `readOnly` beside `const`, which
+  reads as a key locked at the value it starts from. A shape is never
+  required: the `required()` marker is refused before reading, since the
+  reader applies its own rule to it. A shape is not locked: `readOnly`
+  is refused, since a key is locked where it is declared; at 20ef965 a
+  `define()` that called `setReadOnly(TRUE)` changed nothing a key
+  served, accepted, validated or handed a tool. A shape is authored, so
+  every note the reader makes of it is refused, saying the note: a link
+  dropped, and a check merged with its keyword or kept for the server
+  too. After the reading the blueprint it was read in holds the one
+  definition and nothing else, compared with a blueprint handed only
+  the definition, or the shape is refused naming what else it holds, so
+  a reader feature added later cannot drop what a shape says without a
+  word. What the reader or that blueprint refuses without naming the
+  shape is said again as the shape's, naming `<Class>::schema()` and
+  keeping the reason. The texts are the ones `define()` was refused
+  with; none named `define()`. The checks stay where a key is declared
+  with the shape, not at discovery, which builds nothing.
+- **Text stays lazy through the reader.** Reading never renders an
+  object the author holds, for a shape's `schema()` and an
+  `addSchema()` argument alike: a `TranslatableMarkup` keeps the first
+  language it is rendered in. Every text the reader takes (a title, a
+  description, each `x-portable-messages` entry, `check.<name>` among
+  them, and the title and description of each option of a `oneOf` list
+  of values) reaches the definition as the author's own object, at any
+  depth of the schema, and option labels in a `LabeledChoice` are the
+  author's objects, as a hand-written definition held them. Whatever is
+  written out as a document is a deep copy: a text is copied with its
+  arguments, at any depth, so rendering the copy reaches nothing the
+  author holds. Each text is put back by its JSON pointer in the frame;
+  after preparing the document changed it, a text is put back where its
+  place still holds the string its copy rendered to. The shape's copy
+  for a key holds a message's source string, as a message `define()`
+  made did, so the validator and the document translate it in the
+  language they speak.
+- **A text preparing moves stays a string.** The limit: a text whose
+  place preparing moved, or whose string it rewrote, stays the string
+  its copy rendered to in the language of the build, as every
+  `addSchema()` text was read before. The spellings that reach it are
+  contract 4's messages under `x-surface` (`patternMessage`, a
+  `checkedOnServer` entry's `message`), which are respelled into
+  `x-portable-messages`; a schema `x-surface.within` places; and a rule
+  a container states for a child that reads ports, which is moved into
+  the child's def. A draft's keywords never reach it, since a `Schema`
+  value cannot hold them. A structure inside an `addSchema()` key is
+  read from the document form, so its texts are strings, as at
+  20ef965.
+- **An `addSchema()` text is lazy as a shape's is.** At 20ef965 the
+  reader rendered an `addSchema()` key's title, description and
+  messages while reading, so they kept the language of the build. They
+  now stay lazy: a build in one language served in another says the
+  served language's text. Within one language nothing served moves: a
+  pattern message made with `t()` is an object where it was a string
+  while the key is read, and the data surface holds its source string
+  when it is sealed, as it held a shape's, so the published node (a
+  message holding a placeholder the server fills in is left to the
+  refusal, as before), the refusal at each door and the source
+  `ConstraintMessages::source()` gives are what they were.
+- **A check's message may be made with `t()`.** A `\Stringable` under
+  `check.<name>` is read as the check's constraint's message and stays
+  lazy, so a shape's check says what `define()`'s constraint said. The
+  same spelling on `addSchema()` was refused, with a reason that named
+  the wrong cause; it is read now.
+- **A shape's alters stay a definition in, a definition out.** An alter
+  narrows and rewords the definition the shape's schema reads into. Its
+  `Schema` form comes when rules and narrowing work on nodes.
+- **One class answers what is secret.** `Contract\Secrets` reads
+  schemas only. `marked()`: a node says `writeOnly: true`. `at()`: a
+  place in a document is secret where any schema that applies there is
+  marked, through `$ref` (any JSON pointer into the document, such as
+  a def inside a def, or a type of the library), `allOf`, `anyOf`,
+  `oneOf`, `then`, `else` and each of `dependentSchemas`, reached
+  through `properties`, `patternProperties` (each pattern the name
+  matches), `additionalProperties`, `items` and `prefixItems`, never
+  through `default`, `examples`, `const` or `enum`; `if`, `not` and
+  `contains` test a value and describe no place, so they are not
+  entered; a list is not secret because its items are. An answer leans
+  to secret where a schema cannot be read: a `$ref` that resolves to
+  nothing (a pointer to no schema, an id the registry does not hold) is
+  secret where it stands. `within()`: the tree of secret places
+  `Outbound::secrets()` builds from a data surface, keyed by
+  `Secrets::EACH` inside a list's items (`Outbound::EACH` and
+  `InputDefinitions::EACH` take its value). A place the tree has no
+  form for is secret whole: a list whose `prefixItems` are or hold a
+  secret, and an object whose `additionalProperties` or
+  `patternProperties` schema is or holds one. `absent()`: the reader's
+  margin for a door that need not build what holds no secret, moved
+  from `SchemaReader` unchanged; a `$ref` it cannot resolve adds nothing
+  to it, so for such a `$ref` it answers no secret where `at()` answers
+  secret. Secret in any branch is the rule, since a client that reads
+  the document cannot know which branch a server will choose.
+- **The built node says it.** A secret definition's built node carries
+  `writeOnly: true`, so the check provider asks `Secrets::marked()` of
+  the node at the place, and the model annotation's `secret` member is
+  gone: `x-surface-model` holds `constraints` alone. The reader marks a
+  definition secret where `Secrets::marked()` says so of the node it
+  reads, and the string widget and a widget that declines secrets ask
+  the same.
+- **A served document cannot answer for what it does not carry.** A
+  deferred variant is not in the document, and the document says
+  secret in any branch where a definition answers for the chosen one.
+  `SecretsParityTest` covers every declaration of every example module
+  (19, each installable in a kernel test), in each operation that needs
+  no subject and is no default read, built for an administrator: for
+  each value set, every place the full document and the document for
+  those values hold where `Location::definitionAt()` finds a definition
+  agrees, and `within()` of each document equals `Outbound::secrets()`.
+  It lists the two families as the only ones a disagreement may be in;
+  the shipped examples hold none, and the test builds one member of
+  each. So kept secrets, outbound projection and storage read built
+  nodes, never a served document.
+- **`writeOnly` beside a reference to a shape is not read.** A key
+  declared with a shape is secret only where the shape is. An author's
+  schema that says `writeOnly` beside the `$ref` is refused, as every
+  part not read as written is, at the pointer of the schema that holds
+  the keyword (the union with null, for `anyOf: [{$ref}, null]` with
+  `writeOnly` outside it); a document read from elsewhere is read with a
+  note (`SchemaReader::SHAPED_SECRET`), where it was dropped without
+  one. No shipped document says it.
+- **The footprint.** `ShapeInterface` and the example shapes
+  `PhoneNumber` and `License` name no Typed Data and left the list:
+  `OUTSIDE_THE_EDGES` is 153. `Secrets` names none.
+
+Later, by slice: `Outbound`'s secret trees, `Accepting`'s secret reads,
+`SurfacePipeline`'s, `Validating`'s, `Variants::keptSecrets()` and the
+stage's kept secrets read built nodes through `Secrets` in slice 26;
+`EncryptedStorageLayout`, `ConfigSchemaGenerator`,
+`HeldToConfigSchemaTrait`, `InputDefinitions`, `ResourceCode`,
+`SiteCatalog` and `FlatVariantsLayout` in slice 27; `KeyPaths`,
+`Binding` and the emitter's own write of `writeOnly` at the flip, with
+a shape's alters as a `Schema` in, a `Schema` out.
+
+(`Resource\ShapeInterface`, `ResourceBuild\Shapes`,
+`Contract\Secrets`, `SchemaReader`, `DefinitionSchema`,
+`DrupalCheckProvider`, `StringWidget`, `ShapesTest`, `ShapeTextsTest`,
+`SecretsTest`, `SecretsParityTest`, `AddSchemaTest`, `PublicSurfaceTest`)
 
 ### A key that does not apply
 
@@ -8056,7 +8252,9 @@ Decided 2026-11-01. `#[Structure(widget:)]` names the widget that draws
 the structure as a whole, by the one word a key's `widget` setting
 uses; the build sets it on the key wherever the structure is attached,
 unless the owner set one there. A shape's `define()` already sets the
-setting on its definition. A module's claim on a structure by its
+setting on its definition. *Changed 2026-11-12:* a shape declares
+`schema()`, whose `x-portable-ui` sets it ([A shape is a Schema; secrecy
+is read from a node](#a-shape-is-a-schema-secrecy-is-read-from-a-node)). A module's claim on a structure by its
 class, beside the claim on a shape, is not built: the structure asking
 covers the case, and a claim is a second place to look.
 
@@ -12625,7 +12823,10 @@ they served.
   shape's `#[Shape]` id, which the reader reads as the shape. An
   absolute URI the reader's registry holds is read as an id of the
   library is; one it does not hold is kept, as any reference to another
-  document. A shape keeps `define(): DataDefinition`.
+  document. A shape keeps `define(): DataDefinition`. *Changed
+  2026-11-12:* a shape declares `schema(): Schema` ([A shape is a
+  Schema; secrecy is read from a
+  node](#a-shape-is-a-schema-secrecy-is-read-from-a-node)).
 - **The provider contracts.** `EntrySchemasInterface::entrySchema()`
   answers `?Schema` and `entryDefs()` `array<string, Schema>`;
   `SiteList::add(..., ?Schema $schema)` and `addDefs(array<string,

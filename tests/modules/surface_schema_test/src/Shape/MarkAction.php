@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\surface_schema_test\Shape;
 
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Resource\Attribute\Shape;
 use Drupal\surface\Resource\ShapeInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * What the alias cleaner does with one punctuation mark.
@@ -32,17 +32,12 @@ final class MarkAction implements ShapeInterface {
   /**
    * {@inheritdoc}
    */
-  public static function define(): DataDefinition {
-    return DataDefinition::create('integer')
-      ->setLabel(t('Punctuation action'))
-      ->addConstraint('LabeledChoice', [
-        'choices' => [self::REMOVE, self::REPLACE, self::KEEP],
-        'labels' => [
-          self::REMOVE => t('Remove'),
-          self::REPLACE => t('Replace by separator'),
-          self::KEEP => t('No action (do not replace)'),
-        ],
-      ]);
+  public static function schema(): Schema {
+    return Schema::options([
+      self::REMOVE => t('Remove'),
+      self::REPLACE => t('Replace by separator'),
+      self::KEEP => t('No action (do not replace)'),
+    ])->type('integer')->title(t('Punctuation action'));
   }
 
 }

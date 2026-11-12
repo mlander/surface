@@ -60,22 +60,26 @@ trait ExampleSurfacesTrait {
   }
 
   /**
-   * Builds each pinned declaration in each operation its baseline holds.
+   * Builds each declaration in each operation its baseline would hold.
    *
    * @param bool $declared
    *   TRUE to build each for no account (buildDeclared()), as the build
    *   cache keeps it; FALSE for the account that asks (buildStatic()).
+   * @param string[]|null $modules
+   *   The modules whose declarations are built; NULL for the pinned ones
+   *   ($pinned). A test that walks more installs more.
    *
    * @return \Generator<int, array{0: string, 1: string|null, 2: \Drupal\surface\SurfaceInterface, 3: int}>
    *   The declaration's id, the operation's id (NULL for one built
    *   alone), the data surface, and the index of its document in the
    *   baseline.
    */
-  protected function examples(bool $declared = FALSE): \Generator {
+  protected function examples(bool $declared = FALSE, ?array $modules = NULL): \Generator {
+    $modules ??= static::$pinned;
     $registry = $this->container->get('surface.resource_registry');
     $resources = $this->container->get('surface.resources');
     foreach ($registry->getDefinitions() as $definition) {
-      if ($definition->isDerived() || !in_array($definition->module, static::$pinned, TRUE)) {
+      if ($definition->isDerived() || !in_array($definition->module, $modules, TRUE)) {
         continue;
       }
       $name = $definition->name();

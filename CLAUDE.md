@@ -41,8 +41,10 @@ the record of the rework that brought the module to the pattern.
   (`docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for`).
 - **Shape**: a named type (Smithy's word), of three kinds: resources,
   structures, and named scalar shapes. The third is `#[Shape(id)]` on a
-  class in `src/Shape/` whose static `define()` returns one scalar
-  `DataDefinition` (no default, not required), used as
+  class in `src/Shape/` whose static `schema()` returns the Portable
+  Schema of one scalar value (no default, not required, not locked, read
+  once per class by `Shapes::declared()` through
+  `SchemaReader::authored()`, each use a copy), used as
   `$inputs->add('license', License::class, t('Event license'))`: the key
   may only narrow it (checked at build), a port may read it
   (`reads('code', Sku::class)`, wired only to a key of that shape), an
@@ -655,9 +657,8 @@ the record of the rework that brought the module to the pattern.
   `Schema`, answers for one definition at one site: its keywords,
   `portable-check` with each check's options as the definition holds
   them, titles and messages as held (lazy text kept), and
-  `x-surface-model`, a closed list of two members, each with its reader:
-  `secret` (read by the check provider, until `writeOnly` on the node
-  says it) and `constraints` (every declared constraint
+  `writeOnly` for a secret, and `x-surface-model`, a closed list of
+  members, each with its reader: `constraints` (every declared constraint
   with its options, read by the check provider; the bridge until the
   model is the source). A node holds no reference to its definition.
   `published()` is the one place it becomes a document node
@@ -673,6 +674,25 @@ the record of the rework that brought the module to the pattern.
   resolver is asked for the place), beside the definition, the frame and
   the value; never a node of the served document
   (`docs/decisions.md#a-definition-is-read-once-into-a-built-node`).
+- **Secrets**: `Contract\Secrets`, the one reader of what is secret,
+  from a schema node or a document, holding no definition: `marked()`
+  (the node says `writeOnly: true`; the reader, the check provider and
+  the string widget ask it), `at()` (a place is secret where any schema
+  that applies there is, through `$ref` (any pointer into the document,
+  or an id of the registry), `allOf`, `anyOf`, `oneOf`, `then`, `else`,
+  `dependentSchemas`, reached through `properties`,
+  `patternProperties`, `additionalProperties`, `items`, `prefixItems`;
+  never through `default`, `examples`, `const`, `enum`, `if`, `not`,
+  `contains`; a list is not secret because its items are; a `$ref` that
+  resolves to nothing is secret), `within()` (the tree
+  `Outbound::secrets()` builds, keyed by `Secrets::EACH`; a place it has
+  no form for, `prefixItems` or a map's members, is secret whole) and
+  `absent()` (the margin a door skips a build by,
+  `SchemaReader::holdsNoSecret()`'s). A served document holds no variant
+  it does not carry (a deferred one), so what needs every variant's
+  secrets reads built nodes; `SecretsParityTest` holds the documents of
+  every example module's declarations to the definitions
+  (`docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-node`).
 - **Runner**: the one service that runs an operation,
   `Operation\OperationRunner` (`surface.runner`, typed
   `OperationRunnerInterface`), modeled on the Tool API's `ToolRunner`:
@@ -997,8 +1017,8 @@ test errored or failed and every gate passed.
   cache; it orders classes slowest first.
 
 On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-12: the
-full lane takes 9m49s at the defaults (phpunit 9m02s) and the fast
-lane 5m48s (phpunit 5m41s). As of 2026-10-23, with a smaller suite, the
+full lane takes 12m09s at the defaults (phpunit 11m00s) and the fast
+lane 8m02s (phpunit 7m51s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1029,7 +1049,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2422, Assertions: 112613, Errors: 0, Failures: 0, Skipped: 3. Classes: 338 of 338, 8 at a time, browser classes 4.
+phpunit: Tests: 2488, Assertions: 115530, Errors: 0, Failures: 0, Skipped: 3. Classes: 341 of 341, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1053,8 +1073,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2308, Assertions: 108059, Deprecations: 687, Skipped: 3. Classes:
-285, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2374, Assertions: 110976, Deprecations: 698, Skipped: 3. Classes:
+288, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 
@@ -1274,8 +1294,7 @@ so the rule is this sentence. `npm test` is not part of
   constraint's options.
 - No closures anywhere a form array or a data surface carries: both are
   serialized. Use a service, a callable string, or a class.
-- House style for `defineInputs()`, `defineOutputs()` and a shape's
-  `define()`: one blank line between key groups (a key's add, its chained
+- House style for `defineInputs()` and `defineOutputs()`: one blank line between key groups (a key's add, its chained
   setters and its `describe()`), shared helpers computed at the top, a
   one-line `//` topic comment only where a long method turns, key
   constants one line each with no docblock
@@ -1397,7 +1416,9 @@ src/Contract/            The served contract's emitter (a Portable Schema
                          (published(), CheckOptions the check options a
                          document says, NodeMessage a message it holds);
                          BuiltNodes finds the node at a place for the
-                         check provider and the form; ContractEmitter
+                         check provider and the form; Secrets answers
+                         what is secret from a node or a document;
+                         ContractEmitter
                          walks the frames, PropertySchema writes each key
                          from its projected node,
                          Conditionals the if/then, DocumentHead the top,

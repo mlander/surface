@@ -5,7 +5,6 @@ example modules/surface_examples/src/Resource/DoorsResource.php
 example modules/surface_examples/src/Resource/RegistrationStep2Resource.php
 example modules/surface_examples/src/Resource/RegistrationStep3Resource.php
 example modules/surface_examples/src/Resource/WebhookResource.php
-example modules/surface_examples/src/Shape/PhoneNumber.php
 example modules/surface_examples/src/Slugify.php
 example modules/surface_examples/src/Storage/VenueStorage.php
 example modules/surface_examples/src/Structure/PastedCredentialStructure.php
@@ -17,7 +16,6 @@ example modules/surface_examples_block/src/Plugin/SurfaceOptionsResolver/ThemeRe
 example modules/surface_examples_block/src/Resource/BlockPlacementResource.php
 example modules/surface_examples_block/src/Storage/BlockPlacementStorage.php
 example modules/surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php
-example modules/surface_examples_compliance/src/Shape/License.php
 example modules/surface_examples_compliance/src/Structure/ComplianceStructure.php
 edge modules/surface_examples_entity/src/FieldItemDerivation.php
 example modules/surface_examples_entity/src/Plugin/SurfaceOptionsResolver/CreatableBundleOptions.php
@@ -124,7 +122,6 @@ model src/Resource/BlueprintAdditionsInterface.php
 model src/Resource/BlueprintInterface.php
 pipeline src/Resource/ComputesValueInterface.php
 model src/Resource/KnowsClearableKeysInterface.php
-shape src/Resource/ShapeInterface.php
 model src/ResourceBuild/Attaching.php
 model src/ResourceBuild/Binding.php
 model src/ResourceBuild/BlueprintAdapterBase.php

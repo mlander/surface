@@ -9,6 +9,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
@@ -41,7 +42,7 @@ final class ColorPickerWidget extends SurfaceWidgetBase implements DefinitionWid
    * {@inheritdoc}
    */
   public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return $node->get('writeOnly') !== TRUE;
+    return !Secrets::marked($node);
   }
 
   /**

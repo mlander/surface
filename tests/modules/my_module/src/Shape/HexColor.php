@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\my_module\Shape;
 
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Shape;
 use Drupal\surface\Resource\ShapeInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A color as # and six hexadecimal digits, declared once.
@@ -22,16 +21,13 @@ final class HexColor implements ShapeInterface {
   /**
    * {@inheritdoc}
    */
-  public static function define(): DataDefinition {
-    $color = DataDefinition::create('string')
-      ->setLabel(t('Color'))
-      ->setDescription(t('A # and six hexadecimal digits, such as #0969DA.'))
-      ->addConstraint('Regex', [
-        'pattern' => '/^#[0-9A-Fa-f]{6}$/D',
-        'message' => t('Write the color as # and six hexadecimal digits, such as #0969DA.'),
-      ]);
-    DefinitionMetadata::setExamples($color, ['#0969DA']);
-    return $color;
+  public static function schema(): Schema {
+    return Schema::string()
+      ->title(t('Color'))
+      ->description(t('A # and six hexadecimal digits, such as #0969DA.'))
+      ->pattern('^#[0-9A-Fa-f]{6}$')
+      ->message('pattern', t('Write the color as # and six hexadecimal digits, such as #0969DA.'))
+      ->examples(['#0969DA']);
   }
 
 }

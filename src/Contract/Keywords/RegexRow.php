@@ -92,7 +92,7 @@ final class RegexRow implements ConstraintRowInterface {
       return new ReadBack(NULL, kept: ['pattern' => $schema['pattern'], 'not' => $schema['not']], note: 'Kept as a JsonSchema constraint: a pattern and a pattern it must not match are two Regex constraints, and a definition holds one.');
     }
     $message = PortableKeywords::message($schema, $has_pattern ? 'pattern' : 'not');
-    $message = is_string($message) ? ['message' => $message] : [];
+    $message = $message === NULL ? [] : ['message' => $message];
     if ($has_pattern) {
       $regex = is_string($schema['pattern']) ? static::regex($schema['pattern']) : NULL;
       return $regex === NULL

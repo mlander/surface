@@ -7,7 +7,10 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\ConstraintMessages;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaReader;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
@@ -495,6 +498,84 @@ class AddSchemaTest extends SurfaceKernelTestBase {
       $codes[] = $violation->code;
     }
     return $codes;
+  }
+
+  /**
+   * Tests `writeOnly` beside a reference to a shape: refused, or noted.
+   *
+   * A key declared with a shape is secret only where the shape is. An
+   * author's schema that says it beside the reference is refused, as
+   * every part not read as written is; a document read from elsewhere is
+   * read with a note.
+   */
+  public function testSecretBesideShapeIsNotRead(): void {
+    $at = '/properties/code/writeOnly';
+    $code = static fn (): Schema => Schema::of('#/$defs/property_test.code');
+    // Each spelling a property typed with a shape is written in, refused
+    // at the schema that says writeOnly.
+    foreach ([
+      'beside the reference' => [$code()->writeOnly(TRUE), $at],
+      'outside a union with null' => [Schema::anyOf([$code(), Schema::null()])->writeOnly(TRUE), $at],
+      'on the reference inside a union with null' => [
+        Schema::anyOf([$code()->writeOnly(TRUE), Schema::null()]),
+        '/properties/code/anyOf/0/writeOnly',
+      ],
+      'beside an allOf of the reference' => [Schema::allOf([$code()])->writeOnly(TRUE), $at],
+    ] as $case => [$authored, $pointer]) {
+      $blueprint = new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'), FALSE, $this->container->get('surface.resource_registry'));
+      try {
+        SchemaReader::authored($blueprint, 'code', $authored->def('property_test.code', Schema::string()), FALSE);
+        $this->fail($case . ': a secret beside a shape was read.');
+      }
+      catch (\InvalidArgumentException $e) {
+        $this->assertStringContainsString($pointer . ': ' . SchemaReader::SHAPED_SECRET, $e->getMessage(), $case);
+        $this->assertSame(1, substr_count($e->getMessage(), SchemaReader::SHAPED_SECRET), $case);
+      }
+    }
+    $notes = $this->container->get('surface.schema_reader')->notes([
+      'type' => 'object',
+      'properties' => ['code' => ['$ref' => '#/$defs/property_test.code', 'writeOnly' => TRUE]],
+      '$defs' => ['property_test.code' => ['type' => 'string']],
+    ]);
+    $this->assertSame(SchemaReader::SHAPED_SECRET, $notes[$at] ?? NULL, 'A document read from elsewhere is noted.');
+  }
+
+  /**
+   * Tests a message made with t() is served and said as a string one was.
+   *
+   * An addSchema() key's message made with t() stays that object when it
+   * is read, and the data surface holds its source string, as it held a
+   * shape's at 20ef965. Within one language nothing served moves: the
+   * published node, the refusal and the source are what they were when
+   * the reader rendered the message as it read it. A message holding a
+   * placeholder the server fills in is said by the refusal alone.
+   *
+   * @see docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-node
+   */
+  public function testMessageMadeWithTranslationIsSaidAsBefore(): void {
+    foreach ([
+      'a placeholder' => ['The value {{ value }} is not lowercase.', NULL, 'The value "ABC" is not lowercase.'],
+      'none' => ['Lowercase letters only.', ['pattern' => 'Lowercase letters only.'], 'Lowercase letters only.'],
+    ] as $case => [$source, $messages, $refusal]) {
+      $builder = new SurfaceBuilder();
+      $blueprint = new ResourceBlueprint($builder, $this->container->get('typed_data_manager'));
+      // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
+      $blueprint->addSchema('code', Schema::string()->title('Code')->pattern('^[a-z]+$')->message('pattern', new TranslatableMarkup($source)), FALSE);
+      $this->assertInstanceOf(TranslatableMarkup::class, $blueprint->definitionOf('code')?->getConstraints()['Regex']['message'], $case);
+      $surface = $builder->seal();
+      $definition = $surface->getDefinition('code');
+      $this->assertSame($source, $definition->getConstraints()['Regex']['message'], $case);
+      $this->assertSame($source, ConstraintMessages::source($definition->getConstraints()['Regex']['message']), $case);
+      $node = (array) Schemas::decoded(DefinitionSchema::published($this->container->get('surface.definition_schema')->of($definition, FALSE)));
+      $this->assertSame($messages, $node['x-portable-messages'] ?? NULL, $case);
+      $served = json_decode((string) json_encode($this->container->get('surface.contract_emitter')->emitFull($surface, 'test.code', 'configure')->document['schema']), TRUE);
+      $this->assertSame($messages, $served['properties']['code']['x-portable-messages'] ?? NULL, $case);
+      $said = [];
+      foreach ($this->pipeline()->validate($surface, $this->pipeline()->accept($surface, ['code' => 'ABC'], []), []) as $violation) {
+        $said[$violation->fullPath()] = html_entity_decode(strip_tags((string) $violation->message), ENT_QUOTES);
+      }
+      $this->assertSame(['code' => $refusal], $said, $case);
+    }
   }
 
   /**

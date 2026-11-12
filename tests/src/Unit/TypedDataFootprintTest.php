@@ -130,9 +130,11 @@ class TypedDataFootprintTest extends UnitTestCase {
    * Set on 2026-11-12 at 156: the 141 files outside the edges that the
    * namespace alone found, UniqueItemsConstraintValidator, which keeps
    * its unwrap of a typed list, 11 files that the service ids and typed
-   * config found, and 3 services files.
+   * config found, and 3 services files. Lowered on 2026-11-12 to 153: a
+   * shape is a Schema, so ShapeInterface and the two example shapes,
+   * PhoneNumber and License, name no Typed Data.
    */
-  public const OUTSIDE_THE_EDGES = 156;
+  public const OUTSIDE_THE_EDGES = 153;
 
   /**
    * Finds the files that use Typed Data.

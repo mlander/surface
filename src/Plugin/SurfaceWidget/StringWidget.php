@@ -8,6 +8,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
@@ -60,7 +61,7 @@ final class StringWidget extends SurfaceWidgetBase implements DefinitionWidgetIn
    * {@inheritdoc}
    */
   public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    if ($node->get('writeOnly') === TRUE) {
+    if (Secrets::marked($node)) {
       return $this->secretElement($node, $context);
     }
     $word = static::ui($node)['widget'] ?? NULL;

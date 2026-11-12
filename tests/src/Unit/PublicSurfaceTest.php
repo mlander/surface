@@ -6,6 +6,7 @@ namespace Drupal\Tests\surface\Unit;
 
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\ShapeInterface;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -122,6 +123,13 @@ use PHPUnit\Framework\Attributes\Group;
  * or interface was added. EntrySchemasInterface and SiteList take a
  * Schema where they took an array: no count changed.
  *
+ * Changed on 2026-11-12, no count moved: ShapeInterface declares
+ * `schema(): Schema` in place of `define(): DataDefinition`, a shape
+ * stated as the schema of its one value and read by the schema reader
+ * (docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-node).
+ * The shape's contract is pinned by method and return type from this
+ * date.
+ *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
 #[Group('surface')]
@@ -145,6 +153,13 @@ class PublicSurfaceTest extends UnitTestCase {
     'attribute arguments' => 114,
     'blueprint methods' => 18,
     'interfaces' => 22,
+  ];
+
+  /**
+   * What a shape declares: each method of ShapeInterface and its return type.
+   */
+  protected const SHAPE = [
+    'schema' => 'PortableSchema\\Builder\\Schema',
   ];
 
   /**
@@ -235,6 +250,18 @@ class PublicSurfaceTest extends UnitTestCase {
         implode(', ', $counted[$kind]),
       ));
     }
+  }
+
+  /**
+   * Tests a shape declares its value as a schema, and nothing else.
+   */
+  public function testTheShapeContractIsPinned(): void {
+    $found = [];
+    foreach ((new \ReflectionClass(ShapeInterface::class))->getMethods() as $method) {
+      $this->assertTrue($method->isStatic(), $method->getName());
+      $found[$method->getName()] = (string) $method->getReturnType();
+    }
+    $this->assertSame(self::SHAPE, $found, 'Say why the shape contract changed, and pin it here and in docs/decisions.md#the-surface-was-counted-and-cut.');
   }
 
   /**

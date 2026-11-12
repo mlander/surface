@@ -8,7 +8,7 @@ module has a say in a resource it does not own.
 Three classes. `Shape\License` is what an event license is wherever it
 is asked for, a shape (`#[Shape('event.license')]`): a string of four
 digits, its pattern explained by a message, its description and its
-example, declared once in a static `define()`. `Structure\ComplianceStructure`
+example, declared once in a static `schema()`. `Structure\ComplianceStructure`
 is what compliance asks of any event: a license of that shape,
 `$inputs->add('license', License::class, t('Event license'))`, and a
 number of stewards, one per fifty people. The served contract writes the

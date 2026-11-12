@@ -7,6 +7,8 @@ namespace Drupal\surface\Contract;
 use Drupal\surface\Plugin\SurfaceWidget\StringWidget;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\SurfaceWidgetManager;
+use Drupal\Component\Render\FormattableMarkup;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -393,6 +395,11 @@ final class SchemaReader {
   ];
 
   /**
+   * The note on `writeOnly` beside a reference to a shape, not read.
+   */
+  public const SHAPED_SECRET = 'Not read: a key declared with a shape is secret only where the shape is, so writeOnly beside the reference to the shape is not read. Declare a secret as a key of its own.';
+
+  /**
    * What was noted while reading, by JSON pointer.
    *
    * @var array<string, string>
@@ -594,6 +601,34 @@ final class SchemaReader {
    * or description made with t() stays a TranslatableMarkup in the
    * definition.
    *
+   * Reading never renders a text the author holds: a TranslatableMarkup
+   * keeps the first language it is rendered in. What is written out as a
+   * document, to be prepared, decoded or kept, is a copy (copiedTexts()),
+   * and every text the reader takes (a title, a description, an
+   * `x-portable-messages` entry, `check.<name>` among them, and the title
+   * and description of each option of a `oneOf` list of values) reaches
+   * the definition as the author's own object, at any depth of the frame.
+   * Each is found by its place: where preparing the document moved
+   * nothing, the author's schema is read itself; where it moved something
+   * (a draft spelling upconverted, such as a boolean `exclusiveMinimum`),
+   * each text is put back at its JSON pointer in the frame while that
+   * place holds the string its copy rendered to. The limit: a text whose
+   * place preparing moved, or whose string it rewrote, stays the string
+   * its copy rendered to in the language of the build, as every text
+   * read here was before 2026-11-12. The spellings that reach it are the
+   * ones preparing moves a text for: contract 4's messages under
+   * `x-surface` (`patternMessage`, a `checkedOnServer` entry's
+   * `message`), which respelled() moves to `x-portable-messages`; a
+   * schema `x-surface.within` places, which SchemaResolver::restored()
+   * moves; and a rule a container states for a child that reads ports,
+   * which localized() moves into the child's def. A draft's keywords
+   * (`definitions`, `dependencies`, `nullable`, an `items` list) never
+   * reach it: a Schema value cannot hold them. So does the label of a
+   * variant a deciding key's `oneOf` names, which is a string. A
+   * structure inside the key (an object, read as a structure of its own
+   * from the document) reads its texts as the document's strings, as at
+   * 20ef965: a structure is read from the document form.
+   *
    * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint.
    * @param string $key
@@ -604,6 +639,9 @@ final class SchemaReader {
    *   TRUE to require it, FALSE to leave it optional; NULL for the
    *   dialect's rule: required where the schema has no `default` and
    *   allows no null, or where it was marked `required()`.
+   * @param string|null $what
+   *   Who was handed the schema, for the messages; NULL for
+   *   `addSchema("<key>")`.
    *
    * @return array<string, string>
    *   What was read otherwise than as written and is accepted (a link
@@ -616,11 +654,12 @@ final class SchemaReader {
    *   a document cannot hold, and for every part of the schema the reader
    *   does not read as written and does not accept.
    */
-  public static function authored(BlueprintAdditionsInterface $inputs, string $key, Schema $schema, ?bool $required = NULL): array {
+  public static function authored(BlueprintAdditionsInterface $inputs, string $key, Schema $schema, ?bool $required = NULL, ?string $what = NULL): array {
+    $what ??= sprintf('addSchema("%s")', $key);
     if ($schema->isBoolean()) {
-      throw new \InvalidArgumentException(sprintf('addSchema("%s") was handed the boolean schema %s, which says only whether a value is allowed: a key is the schema of what it holds, Schema::string(), Schema::integer(), Schema::of(\'portable:email\') and the like.', $key, $schema->toDocument() === TRUE ? 'true' : 'false'));
+      throw new \InvalidArgumentException(sprintf('%s was handed the boolean schema %s, which says only whether a value is allowed: a key is the schema of what it holds, Schema::string(), Schema::integer(), Schema::of(\'portable:email\') and the like.', $what, $schema->toDocument() === TRUE ? 'true' : 'false'));
     }
-    static::assertNamed($schema, sprintf('addSchema("%s")', $key), '/properties/' . str_replace(['~', '/'], ['~0', '~1'], $key));
+    static::assertNamed($schema, $what, '/properties/' . str_replace(['~', '/'], ['~0', '~1'], $key));
     $required ??= $schema->isRequired() || (!$schema->has('default') && !static::allowsNull($schema));
     $frame = Schema::any()
       ->with('type', 'object')
@@ -633,8 +672,15 @@ final class SchemaReader {
     if (is_array($defs) && $defs !== []) {
       $frame = $frame->with('$defs', $defs);
     }
-    $document = Schemas::decoded($frame);
-    assert(is_array($document));
+    // Decoded from copies of the author's texts: a TranslatableMarkup
+    // keeps the first language it is rendered in, and the author's own
+    // objects are kept unrendered for the definition. Each is known by its
+    // place in the frame, and by the string its copy was decoded to.
+    $own = static::withTexts($frame);
+    $document = Schemas::decoded(Schema::from(static::copiedTexts($own)));
+    assert(is_array($own) && is_array($document));
+    $texts = [];
+    static::textsAt($own, $document, '', $texts);
     $widgets = \Drupal::hasService('plugin.manager.surface_widget') ? \Drupal::service('plugin.manager.surface_widget') : NULL;
     $reader = new static(entityTypeManager: \Drupal::hasService('entity_type.manager') ? \Drupal::entityTypeManager() : NULL, library: static::library(), widgets: $widgets instanceof SurfaceWidgetManager ? $widgets : NULL);
     $reader->authored = TRUE;
@@ -642,11 +688,17 @@ final class SchemaReader {
     $reader->document = $root;
     // The author's Schema value itself, where preparing it moved nothing
     // but naming the dialect: the same keywords, with each text as the
-    // author made it.
+    // author made it. Where preparing moved something, the document as
+    // prepared, each text put back where it still stands as its copy read.
     $named = array_intersect_key($root, ['$schema' => TRUE]);
-    $read = array_diff_key($root, $named) === $document ? Schema::from($named + static::withTexts($frame)) : ($read ?? static::schemaOf($root, NULL));
+    $read = match (TRUE) {
+      array_diff_key($root, $named) === $document => Schema::from($named + $own),
+      $texts === [] => $read ?? static::schemaOf($root, NULL),
+      default => static::restoredTexts($read ?? static::schemaOf($root, NULL), '', $texts, static::ancestors($texts)),
+    };
+    assert($read instanceof Schema);
     $reader->frame($read, '', $inputs, $read);
-    $reader->refuseUnread(sprintf('addSchema("%s")', $key));
+    $reader->refuseUnread($what);
     return $reader->notes;
   }
 
@@ -679,6 +731,188 @@ final class SchemaReader {
     foreach ($value as $name => $member) {
       if ($member instanceof Schema || $member instanceof \stdClass || is_array($member)) {
         $value[$name] = static::withTexts($member);
+      }
+    }
+    return $value;
+  }
+
+  /**
+   * Copies each text in a value, leaving the rest.
+   *
+   * A copy shares nothing a cast renders: a text's arguments are copied
+   * too, at any depth, and a TranslatableMarkup copy holds no rendering.
+   * So rendering a copy never fixes the language of an object the author
+   * holds.
+   *
+   * @param mixed $value
+   *   A text, or an array that holds texts at any depth, such as what
+   *   withTexts() wrote or a definition's toArray().
+   *
+   * @return mixed
+   *   The same, each \Stringable a copy.
+   *
+   * @internal
+   *   For the reader and Shapes.
+   */
+  public static function copiedTexts(mixed $value): mixed {
+    if ($value instanceof \Stringable) {
+      return static::copiedText($value);
+    }
+    if (!is_array($value)) {
+      return $value;
+    }
+    foreach ($value as $name => $member) {
+      if ($member instanceof \Stringable || is_array($member)) {
+        $value[$name] = static::copiedTexts($member);
+      }
+    }
+    return $value;
+  }
+
+  /**
+   * Copies one text, its arguments with it, with no rendering.
+   *
+   * @param \Stringable $text
+   *   The text.
+   *
+   * @return \Stringable
+   *   A copy.
+   */
+  protected static function copiedText(\Stringable $text): \Stringable {
+    $copy = clone $text;
+    if ($copy instanceof FormattableMarkup) {
+      \Closure::bind(function (): void {
+        $this->arguments = SchemaReader::copiedTexts($this->arguments);
+      }, $copy, FormattableMarkup::class)();
+    }
+    if ($copy instanceof TranslatableMarkup) {
+      // The copy holds no rendering of its own until it is cast.
+      (new \ReflectionProperty(TranslatableMarkup::class, 'translatedMarkup'))->setValue($copy, NULL);
+    }
+    return $copy;
+  }
+
+  /**
+   * Copies each text in a schema value, leaving the rest.
+   *
+   * As copiedTexts() copies them, inside a Schema too, for what the reader
+   * writes out as a document (a schema kept for a JsonSchema constraint)
+   * or compares.
+   *
+   * @param mixed $value
+   *   A Schema, a list or a map of them, or a value.
+   *
+   * @return mixed
+   *   The same, each \Stringable a copy.
+   */
+  protected static function copied(mixed $value): mixed {
+    if ($value instanceof Schema) {
+      return $value->isBoolean() ? $value : Schema::from(static::copiedTexts(static::withTexts($value)));
+    }
+    if ($value instanceof \Stringable || is_array($value)) {
+      return static::copiedTexts(is_array($value) ? array_map(static::copied(...), $value) : $value);
+    }
+    return $value;
+  }
+
+  /**
+   * Decodes what a keyword holds from a copy, as Schemas::decoded() does.
+   *
+   * @param \PortableSchema\Builder\Schema|\stdClass|array $value
+   *   The value.
+   *
+   * @return array|bool
+   *   It decoded; no text the author holds was rendered.
+   */
+  protected static function decodedCopy(Schema|\stdClass|array $value): array|bool {
+    $copy = static::copiedTexts(static::withTexts($value));
+    assert(is_array($copy) || is_bool($copy));
+    return Schemas::decoded($copy);
+  }
+
+  /**
+   * Collects the author's texts by their place, with what each decoded to.
+   *
+   * @param array $own
+   *   What withTexts() wrote of the frame, or a value it holds.
+   * @param mixed $decoded
+   *   The same place in the frame decoded from copies.
+   * @param string $pointer
+   *   The place.
+   * @param array<string, array{0: \Stringable, 1: string}> $texts
+   *   Collects each text and the string its copy decoded to, by pointer.
+   */
+  protected static function textsAt(array $own, mixed $decoded, string $pointer, array &$texts): void {
+    foreach ($own as $name => $member) {
+      $at = static::below($pointer, $name);
+      $read = is_array($decoded) ? ($decoded[$name] ?? NULL) : NULL;
+      if ($member instanceof \Stringable && is_string($read)) {
+        $texts[$at] = [$member, $read];
+      }
+      elseif (is_array($member)) {
+        static::textsAt($member, $read, $at, $texts);
+      }
+    }
+  }
+
+  /**
+   * Lists every pointer that holds a text's place, the places among them.
+   *
+   * @param array<string, mixed> $texts
+   *   The texts, by pointer.
+   *
+   * @return array<string, true>
+   *   Each pointer and every pointer above it.
+   */
+  protected static function ancestors(array $texts): array {
+    $above = [];
+    foreach (array_keys($texts) as $pointer) {
+      for ($at = (string) $pointer; $at !== '' && !isset($above[$at]); $at = substr($at, 0, (int) strrpos($at, '/'))) {
+        $above[$at] = TRUE;
+      }
+    }
+    $above[''] = TRUE;
+    return $above;
+  }
+
+  /**
+   * Puts each author's text back at its place in a prepared document.
+   *
+   * A place is restored where it still holds the string the text's copy
+   * decoded to. A text that preparing moved, or a string it rewrote, stays
+   * the string.
+   *
+   * @param mixed $value
+   *   The prepared document, or a value it holds.
+   * @param string $pointer
+   *   Its place.
+   * @param array<string, array{0: \Stringable, 1: string}> $texts
+   *   The author's texts, as textsAt() collected them.
+   * @param array<string, true> $above
+   *   The places that hold one, as ancestors() lists them.
+   *
+   * @return mixed
+   *   The same, each text that still stands where it stood the author's.
+   */
+  protected static function restoredTexts(mixed $value, string $pointer, array $texts, array $above): mixed {
+    if (is_string($value)) {
+      return isset($texts[$pointer]) && $texts[$pointer][1] === $value ? $texts[$pointer][0] : $value;
+    }
+    if (!isset($above[$pointer])) {
+      return $value;
+    }
+    if (Schemas::isObjectSchema($value)) {
+      foreach ($value->all() as $keyword => $member) {
+        $restored = static::restoredTexts($member, static::below($pointer, (string) $keyword), $texts, $above);
+        if ($restored !== $member) {
+          $value = $value->with((string) $keyword, $restored);
+        }
+      }
+      return $value;
+    }
+    if (is_array($value)) {
+      foreach ($value as $name => $member) {
+        $value[$name] = static::restoredTexts($member, static::below($pointer, $name), $texts, $above);
       }
     }
     return $value;
@@ -1065,11 +1299,7 @@ final class SchemaReader {
    * own definition says what it says. A document that says neither
    * anywhere, at any depth and in any def, holds no secret in any
    * structure read from it, so a door that only asks for secrets need not
-   * build one to know. Read with a margin: a `writeOnly: true` in any
-   * subschema, or any def a shape is known by, answers FALSE.
-   *
-   * A `$ref` to a type of the library that says `writeOnly: true`, or
-   * holds a type that does, answers FALSE too.
+   * build one to know. Read with a margin, by Secrets::absent().
    *
    * Decision: see
    * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
@@ -1086,112 +1316,19 @@ final class SchemaReader {
    *   TRUE when nothing read from it can be secret.
    */
   public static function holdsNoSecret(array $root, \Closure $isShape, ?string $hash = NULL): bool {
-    $defs = [];
-    $types = [];
-    // Only what holds a schema is walked: a keyword that holds data says
-    // no key.
     $schema = match (TRUE) {
       $hash !== NULL && isset(self::$schemas[$hash]) => self::$schemas[$hash],
       self::$last !== NULL && self::$last[0] === $root => self::$last[1],
-      default => $root,
+      default => Schema::from($root),
     };
-    if (!static::writesNoSecret($schema, $defs, $types) || ($types !== [] && (new static(library: static::library()))->librarySecret(array_keys($types)))) {
-      return FALSE;
-    }
+    // The defs the prepared document holds, whichever Schema value it was
+    // read as.
     foreach (array_keys(is_array($root['$defs'] ?? NULL) ? $root['$defs'] : []) as $name) {
-      $defs[(string) $name] = TRUE;
-    }
-    foreach (array_keys($defs) as $name) {
       if ($isShape((string) $name)) {
         return FALSE;
       }
     }
-    return TRUE;
-  }
-
-  /**
-   * Looks through a schema for `writeOnly: true`, noting what it refers to.
-   *
-   * Only the keywords that hold a schema, a map or a list of them, are
-   * entered.
-   *
-   * @param \PortableSchema\Builder\Schema|array $schema
-   *   The schema: a Schema, or as JSON decodes it.
-   * @param array<string, true> $defs
-   *   Collects the defs a `$ref` names.
-   * @param array<string, true> $types
-   *   Collects the types of the library a `$ref` names.
-   *
-   * @return bool
-   *   FALSE as soon as one says `writeOnly: true`.
-   */
-  protected static function writesNoSecret(Schema|array $schema, array &$defs, array &$types): bool {
-    $keywords = $schema instanceof Schema ? $schema->all() : $schema;
-    if (($keywords['writeOnly'] ?? NULL) === TRUE) {
-      return FALSE;
-    }
-    $reference = $keywords['$ref'] ?? NULL;
-    if (is_string($reference)) {
-      $name = SchemaResolver::defName($reference);
-      if ($name !== NULL) {
-        $defs[$name] = TRUE;
-      }
-      elseif (static::isLibrary($reference)) {
-        $types[$reference] = TRUE;
-      }
-    }
-    foreach ($keywords as $keyword => $value) {
-      $shape = Keywords::TABLE[$keyword] ?? NULL;
-      if ($shape === Keywords::SCHEMA) {
-        $value = [$value];
-      }
-      elseif ($shape !== Keywords::SCHEMA_MAP && $shape !== Keywords::SCHEMA_LIST) {
-        continue;
-      }
-      foreach (is_array($value) ? $value : [] as $member) {
-        if ((is_array($member) || Schemas::isObjectSchema($member)) && !static::writesNoSecret($member, $defs, $types)) {
-          return FALSE;
-        }
-      }
-    }
-    return TRUE;
-  }
-
-  /**
-   * Answers whether a type of the library says a value is secret.
-   *
-   * Where the type, or a type it holds at any depth, says `writeOnly:
-   * true`.
-   *
-   * @param string[] $ids
-   *   The types' ids.
-   * @param string[] $seen
-   *   The ids read on the way here.
-   *
-   * @return bool
-   *   TRUE when one says so; FALSE for an id the registry does not hold.
-   */
-  protected function librarySecret(array $ids, array $seen = []): bool {
-    foreach (array_diff($ids, $seen) as $id) {
-      $seen[] = $id;
-      $flat = $this->libraryKeywords($id);
-      if ($flat === NULL) {
-        continue;
-      }
-      $secret = FALSE;
-      $inside = [];
-      Schemas::map(Schema::from($flat), static function (Schema $schema) use (&$secret, &$inside): Schema {
-        $secret = $secret || $schema->get('writeOnly') === TRUE;
-        if (static::isLibrary($schema->get('$ref'))) {
-          $inside[] = (string) $schema->get('$ref');
-        }
-        return $schema;
-      });
-      if ($secret || $this->librarySecret($inside, $seen)) {
-        return TRUE;
-      }
-    }
-    return FALSE;
+    return Secrets::absent($schema, $isShape, static::library());
   }
 
   /**
@@ -1915,6 +2052,41 @@ final class SchemaReader {
   }
 
   /**
+   * Answers whether a schema says exactly what a plain one says.
+   *
+   * As Schemas::same() answers it, read keyword by keyword and never
+   * written out as JSON: a schema that holds more, a title an author made
+   * with t() among it, is told apart without being rendered.
+   *
+   * @param mixed $schema
+   *   A Schema, or its keywords as an array.
+   * @param mixed $plain
+   *   The plain schema, as JSON decodes it, holding no text.
+   *
+   * @return bool
+   *   TRUE where both say the same.
+   */
+  protected static function says(mixed $schema, mixed $plain): bool {
+    if (!is_array($plain)) {
+      return $schema === $plain;
+    }
+    $members = match (TRUE) {
+      Schemas::isObjectSchema($schema) => $schema->all(),
+      is_array($schema) => $schema,
+      default => NULL,
+    };
+    if ($members === NULL || array_keys($members) !== array_keys($plain)) {
+      return FALSE;
+    }
+    foreach ($plain as $name => $member) {
+      if (!static::says($members[$name], $member)) {
+        return FALSE;
+      }
+    }
+    return TRUE;
+  }
+
+  /**
    * Reads the test of one key in an `if`.
    *
    * @param string $key
@@ -1926,10 +2098,10 @@ final class SchemaReader {
    *   The test, or NULL for one outside the vocabulary.
    */
   protected static function test(string $key, Schema $test): ?Condition {
-    if (Schemas::same($test, ['not' => ['type' => 'null']])) {
+    if (static::says($test, ['not' => ['type' => 'null']])) {
       return Condition::present($key);
     }
-    if (Schemas::same($test, ['type' => 'null'])) {
+    if (static::says($test, ['type' => 'null'])) {
       return Condition::absent($key);
     }
     $keywords = $test->all();
@@ -2558,7 +2730,7 @@ final class SchemaReader {
     $extension = static::extensionOf($property);
     $by = is_string($extension['by'] ?? NULL) ? $extension['by'] : NULL;
     $union = is_array($property->get('anyOf')) ? $property->get('anyOf') : (is_array($property->get('oneOf')) ? $property->get('oneOf') : NULL);
-    $objects = is_array($union) && $union !== [] && array_filter($union, fn (mixed $member): bool => !Schemas::isObjectSchema($member) || (!$this->isObject($member) && !Schemas::same($member, ['type' => 'null']))) === [];
+    $objects = is_array($union) && $union !== [] && array_filter($union, fn (mixed $member): bool => !Schemas::isObjectSchema($member) || (!$this->isObject($member) && !static::says($member, ['type' => 'null']))) === [];
     if ($by === NULL && !$objects) {
       return NULL;
     }
@@ -2862,7 +3034,8 @@ final class SchemaReader {
     foreach (is_array($deciding->get('oneOf')) ? $deciding->get('oneOf') : [] as $choice) {
       if (Schemas::isObjectSchema($choice) && $choice->has('const') && static::text($choice->get('title')) !== NULL && $choice->get('const') !== NULL) {
         $const = $choice->get('const');
-        $labels[is_bool($const) ? ($const ? '1' : '0') : (string) $const] = (string) $choice->get('title');
+        // A variant's label is a string, said from a copy of the title.
+        $labels[is_bool($const) ? ($const ? '1' : '0') : (string) $const] = (string) static::copiedTexts($choice->get('title'));
       }
     }
     $fixed = static::extensionOf($deciding)['fixed'] ?? NULL;
@@ -2965,7 +3138,11 @@ final class SchemaReader {
    */
   protected function key(string $name, Schema $property, bool $required, string $pointer, BlueprintAdditionsInterface $inputs, Schema $root, array $keys = []): void {
     $property = $this->throughLibrary($property, $root);
+    // Where `writeOnly` stands: on the schema of the key, or on the member
+    // of its union with null that withNull() reads it as.
+    $secret_at = Secrets::marked($property) ? $pointer : NULL;
     [$property, $pointer] = $this->withNull($property, $pointer);
+    $secret_at ??= $pointer;
     $extension = static::extensionOf($property);
     $this->droppedExtension($extension, static::below($pointer, ContractEmitter::EXTENSION));
     $this->droppedLinks($property, $pointer);
@@ -3002,7 +3179,7 @@ final class SchemaReader {
       }
       $shape = $this->shape($def_name, $inputs);
       if ($shape !== NULL) {
-        $this->shapedKey($name, $property, $def, $shape, $required, $pointer, $inputs);
+        $this->shapedKey($name, $property, $def, $shape, $required, $pointer, $inputs, $secret_at);
         return;
       }
       // A scalar def the site has no shape for: the def where it stands.
@@ -3333,10 +3510,21 @@ final class SchemaReader {
    *   Its pointer.
    * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The blueprint.
+   * @param string|null $secretAt
+   *   The pointer of the schema that says `writeOnly`, where one does;
+   *   NULL for $pointer.
    */
-  protected function shapedKey(string $name, Schema $property, Schema $def, string $shape, bool $required, string $pointer, BlueprintAdditionsInterface $inputs): void {
+  protected function shapedKey(string $name, Schema $property, Schema $def, string $shape, bool $required, string $pointer, BlueprintAdditionsInterface $inputs, ?string $secretAt = NULL): void {
     $definition = $inputs->add($name, $shape, static::title($property) ?? '');
     $site = array_diff_key($property->all(), ['$ref' => TRUE, 'title' => TRUE]);
+    if (Secrets::marked($property)) {
+      // A key declared with a shape is secret where its shape is: what is
+      // secret is said of the value, by the shape or by a key of its own.
+      // Noted, so an author's schema that says it is refused.
+      // Decision: see
+      // docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-node.
+      $this->note(static::below($secretAt ?? $pointer, 'writeOnly'), self::SHAPED_SECRET);
+    }
     if (static::text($site['description'] ?? NULL) !== NULL) {
       $definition->setDescription($site['description']);
     }
@@ -3599,7 +3787,7 @@ final class SchemaReader {
         $definition->setRequired(TRUE);
       }
     }
-    if ($property->get('writeOnly') === TRUE) {
+    if (Secrets::marked($property)) {
       DefinitionMetadata::setSecret($definition);
     }
     elseif (!$this->authored && !$required && !$nullable && $property->has('default') && $property->get('default') !== NULL && $property->get('readOnly') !== TRUE) {
@@ -3954,7 +4142,7 @@ final class SchemaReader {
     if (!$this->authored || $property->has('type') || $property->has('$ref') || $property->has(ContractEmitter::EXTENSION)) {
       return [$property, $pointer];
     }
-    $null = static fn (mixed $member): bool => Schemas::isObjectSchema($member) && (Schemas::same($member->all(), ['type' => 'null']) || Schemas::same($member->all(), ['type' => ['null']]) || (array_keys($member->all()) === ['const'] && $member->get('const') === NULL));
+    $null = static fn (mixed $member): bool => Schemas::isObjectSchema($member) && (static::says($member, ['type' => 'null']) || static::says($member, ['type' => ['null']]) || (array_keys($member->all()) === ['const'] && $member->get('const') === NULL));
     foreach (['anyOf', 'oneOf'] as $keyword) {
       $members = $property->get($keyword);
       if (!is_array($members) || count($members) !== 2 || $property->has($keyword === 'anyOf' ? 'oneOf' : 'anyOf')) {
@@ -4174,10 +4362,19 @@ final class SchemaReader {
   protected function constraints(Schema $property, string $pointer, array $types, ?array &$foreign = []): array {
     $foreign = [];
     // The table reads only its own keywords, as JSON decodes them: the
-    // rest of the schema, and the schemas it holds, is not decoded.
+    // rest of the schema, and the schemas it holds, is not decoded. A
+    // message an author made with t() stays that object, as a title does
+    // (withTexts()), so it is translated where it is said and not here;
+    // the rest is decoded from a copy (decodedCopy()), so an option's
+    // title the author made is not rendered: choice() reads it from the
+    // schema itself.
     $table = [];
     foreach (array_intersect_key($property->all(), ConstraintKeywords::keywords()) as $keyword => $value) {
-      $table[$keyword] = is_array($value) || $value instanceof Schema || $value instanceof \stdClass ? Schemas::decoded($value) : $value;
+      $table[$keyword] = match (TRUE) {
+        $keyword === PortableKeywords::MESSAGES => static::withTexts($value),
+        is_array($value) || $value instanceof Schema || $value instanceof \stdClass => static::decodedCopy($value),
+        default => $value,
+      };
     }
     $read = ConstraintKeywords::read($table, $types);
     $taken = [];
@@ -4271,7 +4468,7 @@ final class SchemaReader {
                 }
               }
               else {
-                $foreign[PortableKeywords::CHECK][$check['id']] = $check['options'] === [] ? new \stdClass() : $check['options'];
+                $foreign[PortableKeywords::CHECK][$check['id']] = $check['options'] === [] ? new \stdClass() : static::copiedTexts($check['options']);
                 $this->accept(static::below($at, $check['id']), 'Kept as a JsonSchema constraint: ' . $why . ', so the server answers it as a check it cannot run.');
               }
             }
@@ -4394,7 +4591,7 @@ final class SchemaReader {
    * `drupal:<plugin id>`, the site has that plugin, and the plugin takes
    * the options as given.
    *
-   * @param array{id: string, constraint: string, options: array, message: ?string} $check
+   * @param array{id: string, constraint: string, options: array, message: string|\Stringable|null} $check
    *   The check, as PortableKeywords::checks() read it.
    *
    * @return string|null
@@ -4409,7 +4606,8 @@ final class SchemaReader {
       return sprintf('the site has no constraint %s', $check['constraint']);
     }
     try {
-      $manager->create($check['constraint'], $this->withMessage($check));
+      // Made from a copy: Symfony takes a message as a string.
+      $manager->create($check['constraint'], static::copiedTexts($this->withMessage($check)));
     }
     catch (\Throwable $refused) {
       return sprintf('the constraint %s refuses these options (%s)', $check['constraint'], rtrim($refused->getMessage(), '.'));
@@ -4435,7 +4633,7 @@ final class SchemaReader {
    * constraint's `message`, where the constraint has one and the options
    * name none.
    *
-   * @param array{id: string, constraint: string, options: array, message: ?string} $check
+   * @param array{id: string, constraint: string, options: array, message: string|\Stringable|null} $check
    *   The check, as PortableKeywords::checks() read it.
    *
    * @return array
@@ -4572,14 +4770,14 @@ final class SchemaReader {
       assert($if instanceof Schema);
       $then = $conditional->get('then');
       $required = is_array($then->get('required')) ? array_map('strval', $then->get('required')) : [];
-      if (array_diff(array_keys($then->all()), ['properties', 'required']) === [] && $then->get('properties') === NULL && count($required) === 1 && isset($unless[$required[0]]) && Schemas::same($if, $unless[$required[0]])) {
+      if (array_diff(array_keys($then->all()), ['properties', 'required']) === [] && $then->get('properties') === NULL && count($required) === 1 && isset($unless[$required[0]]) && Schemas::same(static::copied($if), static::copied($unless[$required[0]]))) {
         // Required wherever no rule rules it out: the key is required.
         $this->requireKey($inputs, $required[0]);
         continue;
       }
       // A rule requiring a key another rule may rule out, guarded so.
       $guarded = $if->get('allOf');
-      if (array_keys($if->all()) === ['allOf'] && is_array($guarded) && count($guarded) === 2 && count($required) === 1 && isset($unless[$required[0]]) && Schemas::same($guarded[1], $unless[$required[0]]) && $guarded[0] instanceof Schema) {
+      if (array_keys($if->all()) === ['allOf'] && is_array($guarded) && count($guarded) === 2 && count($required) === 1 && isset($unless[$required[0]]) && Schemas::same(static::copied($guarded[1]), static::copied($unless[$required[0]])) && $guarded[0] instanceof Schema) {
         $if = $guarded[0];
       }
       $condition = static::conditionOf($if);
@@ -4698,7 +4896,7 @@ final class SchemaReader {
     // applies to: the build refuses a rule its key cannot take.
     $types = array_values(array_diff($declared_types, ['null'])) ?: ['integer', 'number', 'string', 'array'];
     $taken = [];
-    $decoded = Schemas::decoded($narrowing);
+    $decoded = static::decodedCopy($narrowing);
     foreach (ConstraintKeywords::read(is_array($decoded) ? $decoded : [], $types) as $back) {
       $options = Rule::CONSTRAINTS[$back->constraint ?? ''] ?? NULL;
       if ($back->kept !== [] || $options === NULL || array_diff_key($back->options, array_flip($options)) !== []) {
@@ -4830,7 +5028,9 @@ final class SchemaReader {
       $defs = [];
       $all = $root->get('$defs');
       foreach ($needed as $name) {
-        $defs[$name] = static::plain($all[$name]);
+        // A copy: a def is written out with the kept schema, and an
+        // author's text is never rendered while it is read.
+        $defs[$name] = static::plain(static::copied($all[$name]));
       }
       $kept = Schemas::defaults($kept, ['$defs' => $defs]);
     }
@@ -5002,7 +5202,9 @@ final class SchemaReader {
    */
   protected function kept(mixed $schema, string $pointer): mixed {
     $dropped = [];
-    $schema = static::plain($schema, $dropped, $pointer);
+    // A copy: what is kept is written out as a document, and an author's
+    // text is never rendered while it is read.
+    $schema = static::plain(static::copied($schema), $dropped, $pointer);
     foreach ($dropped as $at) {
       $this->note($at, self::IDENTIFIER_DROPPED);
     }

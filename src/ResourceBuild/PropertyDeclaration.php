@@ -540,7 +540,7 @@ final class PropertyDeclaration {
     if ($attribute === NULL) {
       throw new \LogicException(sprintf('%s is named as a shape and carries no #[Shape] id, by which a schema refers to it.', $class));
     }
-    $type = $class::define()->getDataType();
+    $type = Shapes::dataType($class);
     return [$attribute->newInstance()->id, LeafTypes::ROWS[$type]['type'] ?? 'string'];
   }
 

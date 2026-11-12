@@ -148,7 +148,7 @@ is one of them:
 | `float` | `type: number` |
 | `boolean` | `type: boolean` |
 
-A shape's class is the scalar its `define()` returns; a config schema
+A shape's class is the scalar its `schema()` states; a config schema
 type such as `machine_name`, `label`, `path`, `color_hex` or `langcode`
 is the string underneath with the type's constraints. Any other type is
 refused when the blueprint is filled, naming the method for what was
@@ -250,20 +250,21 @@ plugin's label and description unless it says its own
 A value asked for at more than one key, with the same type, the same
 pattern and the same words for it, is declared once as a **shape**: a
 class in the module's `src/Shape/` carrying `#[Shape]`, whose static
-`define()` returns a plain core definition. The examples' event license:
+`schema()` returns the Portable Schema of one value, read as
+`addSchema()` reads one ([A key stated as a schema](#declared-as-a-schema)).
+The examples' event license:
 
 ```php
 #[Shape('event.license')]
 final class License implements ShapeInterface {
 
-  public static function define(): DataDefinition {
-    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => t('A license number is four digits, such as 2048.')];
-    $license = DataDefinition::create('string')
-      ->setLabel(t('Event license'))
-      ->setDescription(t('The four digits after EV- on the license, such as 2048. Required to host more than 100 people.'))
-      ->addConstraint('Regex', $pattern);
-    DefinitionMetadata::setExamples($license, ['2048']);
-    return $license;
+  public static function schema(): Schema {
+    return Schema::string()
+      ->title(t('Event license'))
+      ->description(t('The four digits after EV- on the license, such as 2048. Required to host more than 100 people.'))
+      ->pattern('^\d{4}$')
+      ->message('pattern', t('A license number is four digits, such as 2048.'))
+      ->examples(['2048']);
   }
 
 }
@@ -272,17 +273,18 @@ final class License implements ShapeInterface {
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 A constraint's message is a sentence a person reads, so a translator
-should find it beside every label: a message option may be written with
+should find it beside every label: a message may be written with
 `t()`, as the license's is; the build hands Symfony its source string,
 which core's validator translates when it refuses a value ([Violation messages are objects](semantics.md#violation-messages-are-objects)).
 
 A `Regex` reaches both JSON Schema documents as `pattern` only when it
 stays inside the subset PHP and a JavaScript engine read alike: no
 negated class, `\d` `\w` `\s` `\b` only without the `u` modifier, and
-`$` only with the `D` modifier, which the license's pattern carries
+`$` only with the `D` modifier, which a shape's `pattern` is read with
+(the license's `^\d{4}$` is the `Regex` `/^\d{4}$/D`)
 ([The served contract](served-contract.md#never-stricter-than-the-runtime)).
 Any other pattern is checked on the server only and named under
-`portable-check`: an email shape written
+`portable-check`: a `Regex` written
 `/^[^@\s]+@example\.org$/D` is, for its negated class, while
 `/^[a-z0-9._-]+@example\.org$/D` reaches both documents, and so does
 `/^\d{4}$/D`, where `/^\d{4}$/uD` does not.
@@ -304,10 +306,11 @@ $inputs->add('license', License::class, t('Event license'));
   already has restates the bounds it keeps:
   `addConstraint('Length', ['min' => 4, 'max' => 12])` over a shape
   allowing twelve.
-- **A shape is a value.** `define()` returns one scalar type, never a
-  map or a list, which is a structure, and declares no default and no
-  required flag, which are each key's. A shape handed to `attach()`,
-  `attachList()` or `mixIn()` is refused.
+- **A shape is a value.** `schema()` states one scalar type, never an
+  object or an array, which is a structure, and states no default (not
+  even `default(NULL)`) and no `required()` marker, which are each key's.
+  Each is refused where a key is first declared with the shape. A shape
+  handed to `attach()`, `attachList()` or `mixIn()` is refused.
 - **A port may read one.** `$inputs->reads('code', Sku::class)` reads a
   value of the shape's type, and a container may wire it only to a key
   declared with that shape ([Ports](resources.md#ports)).

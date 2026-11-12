@@ -8,6 +8,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attachment;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
@@ -36,9 +37,9 @@ final class Outbound {
   /**
    * The key of a secrets tree that holds what is secret inside each item.
    *
-   * In the "@" namespace, which no definition is named in.
+   * Secrets::EACH, which a document's tree is keyed by too.
    */
-  public const EACH = '@each';
+  public const EACH = Secrets::EACH;
 
   /**
    * Projects values as any door returns them.

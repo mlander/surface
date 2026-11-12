@@ -286,8 +286,9 @@ A structure asks for the widget that draws it as a whole with
 `#[Structure(widget:)]`, the one word a key's `widget` setting uses
 (`setSetting('widget', 'radios')`): the build sets it on the key
 wherever the structure is attached, unless the owner set one there, and
-the hint `x-portable-ui.widget` says it. A shape's `define()` sets the
-setting on its definition, which every key of the shape starts from. A
+the hint `x-portable-ui.widget` says it. A shape's `schema()` states the
+word as its hint (`->ui('radios')`), which every key of the shape starts
+from. A
 widget draws and reads back; what is accepted is the keys' definitions,
 which the pipeline holds every door to. Three guards hold that:
 

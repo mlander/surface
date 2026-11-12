@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples_compliance\Shape;
 
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Shape;
 use Drupal\surface\Resource\ShapeInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * An event license: four digits, as printed after EV- on the license.
@@ -21,14 +20,13 @@ final class License implements ShapeInterface {
   /**
    * {@inheritdoc}
    */
-  public static function define(): DataDefinition {
-    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => t('A license number is four digits, such as 2048.')];
-    $license = DataDefinition::create('string')
-      ->setLabel(t('Event license'))
-      ->setDescription(t('The four digits after EV- on the license, such as 2048. Required to host more than 100 people.'))
-      ->addConstraint('Regex', $pattern);
-    DefinitionMetadata::setExamples($license, ['2048']);
-    return $license;
+  public static function schema(): Schema {
+    return Schema::string()
+      ->title(t('Event license'))
+      ->description(t('The four digits after EV- on the license, such as 2048. Required to host more than 100 people.'))
+      ->pattern('^\d{4}$')
+      ->message('pattern', t('A license number is four digits, such as 2048.'))
+      ->examples(['2048']);
   }
 
 }

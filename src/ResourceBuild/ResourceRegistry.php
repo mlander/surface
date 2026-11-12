@@ -1430,8 +1430,8 @@ final class ResourceRegistry {
    * Refuses a #[Shape] class that cannot be one, and says why.
    *
    * A shape carries #[Shape] alone, implements ShapeInterface and
-   * declares define() static. PHP refuses a class implementing the
-   * interface with an instance define(), so a class reaching here with one
+   * declares schema() static. PHP refuses a class implementing the
+   * interface with an instance schema(), so a class reaching here with one
    * dropped the interface; it is named for what it is.
    *
    * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
@@ -1444,9 +1444,9 @@ final class ResourceRegistry {
    */
   protected static function assertShapeClass(\ReflectionClass $class): void {
     self::assertOneKind($class);
-    if ($class->hasMethod('define') && !$class->getMethod('define')->isStatic()) {
+    if ($class->hasMethod('schema') && !$class->getMethod('schema')->isStatic()) {
       throw new \LogicException(sprintf(
-        '%s carries #[Shape] and declares define() as an instance method. What a shape allows belongs to the class: declare it `public static function define(): DataDefinition`, and implement %s.',
+        '%s carries #[Shape] and declares schema() as an instance method. What a shape allows belongs to the class: declare it `public static function schema(): Schema`, and implement %s.',
         $class->getName(),
         ShapeInterface::class,
       ));

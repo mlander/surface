@@ -15,30 +15,28 @@ Your module keeps two colors, one for links and one for the background,
 in a second config object, `my_module.colors`. Both are written the
 same way: `#` and six hexadecimal digits. The shape says so once. It is
 a class in your module's `src/Shape/` directory, with `#[Shape]` and
-its id, and its static `define()` returns core's `DataDefinition`:
+its id, and its static `schema()` returns the value's schema, built with
+Portable Schema's `Schema`:
 
 ```php
 #[Shape('my_module.hex_color')]
 final class HexColor implements ShapeInterface {
 
-  public static function define(): DataDefinition {
-    $color = DataDefinition::create('string')
-      ->setLabel(t('Color'))
-      ->setDescription(t('A # and six hexadecimal digits, such as #0969DA.'))
-      ->addConstraint('Regex', [
-        'pattern' => '/^#[0-9A-Fa-f]{6}$/D',
-        'message' => t('Write the color as # and six hexadecimal digits, such as #0969DA.'),
-      ]);
-    DefinitionMetadata::setExamples($color, ['#0969DA']);
-    return $color;
+  public static function schema(): Schema {
+    return Schema::string()
+      ->title(t('Color'))
+      ->description(t('A # and six hexadecimal digits, such as #0969DA.'))
+      ->pattern('^#[0-9A-Fa-f]{6}$')
+      ->message('pattern', t('Write the color as # and six hexadecimal digits, such as #0969DA.'))
+      ->examples(['#0969DA']);
   }
 
 }
 ```
 
-`Regex` is Drupal's validation constraint for a pattern, and its
-`message` is what a caller reads when a value does not match.
-`DefinitionMetadata::setExamples()` adds an example of a good value. A
+`pattern()` is the pattern a value must match, as JSON Schema writes
+it, and the message for `pattern` is what a caller reads when a value
+does not match. `examples()` gives an example of a good value. A
 shape has no default and is never required: each place that uses it
 decides those. Nor does it have a permission or an access answer of
 its own, since `#[Shape]` takes only an id; the value takes the

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
@@ -19,12 +21,23 @@ use Drupal\surface\ResourceBuild\Shapes;
 use Drupal\surface_resource_test\Alter\MountingShapeAlter;
 use Drupal\surface_resource_test\Alter\SkuAlter;
 use Drupal\surface_resource_test\OutsideDiscovery\AccessShapeAlter;
+use Drupal\surface_resource_test\OutsideDiscovery\AllOfShape;
 use Drupal\surface_resource_test\OutsideDiscovery\ClashingShape;
-use Drupal\surface_resource_test\OutsideDiscovery\InstanceDefineShape;
+use Drupal\surface_resource_test\OutsideDiscovery\GroupedShape;
+use Drupal\surface_resource_test\OutsideDiscovery\InstanceSchemaShape;
+use Drupal\surface_resource_test\OutsideDiscovery\LinkedShape;
+use Drupal\surface_resource_test\OutsideDiscovery\ListedShape;
+use Drupal\surface_resource_test\OutsideDiscovery\LockedConstShape;
+use Drupal\surface_resource_test\OutsideDiscovery\MembersShape;
+use Drupal\surface_resource_test\OutsideDiscovery\NullDefaultShape;
+use Drupal\surface_resource_test\OutsideDiscovery\ObjectDefShape;
 use Drupal\surface_resource_test\OutsideDiscovery\OperationsShapeAlter;
+use Drupal\surface_resource_test\OutsideDiscovery\ReadOnlyShape;
 use Drupal\surface_resource_test\OutsideDiscovery\RequiredShape;
 use Drupal\surface_resource_test\OutsideDiscovery\ShapeAndStructureClass;
+use Drupal\surface_resource_test\OutsideDiscovery\TranslatedShape;
 use Drupal\surface_resource_test\OutsideDiscovery\UnimplementedShape;
+use Drupal\surface_resource_test\OutsideDiscovery\UntitledShape;
 use Drupal\surface_resource_test\Resource\Depot\DepotResource;
 use Drupal\surface_resource_test\Resource\Journal\LedgerResource;
 use Drupal\surface_resource_test\Shape\Broken\MountedShape;
@@ -36,6 +49,7 @@ use Drupal\surface_resource_test\Structure\Broken\WideningShapeStructure;
 use Drupal\surface_resource_test\Structure\Broken\WiresShapePortStructure;
 use Drupal\surface_resource_test\Structure\Depot\ShelfTagStructure;
 use Drupal\surface\Tool\OperationInputs;
+use Drupal\Tests\surface\Kernel\Fixture\FakeLanguageTranslator;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -207,9 +221,9 @@ class ShapesTest extends SurfaceKernelTestBase {
         ['resources' => [ShapeAndStructureClass::class => $module]],
         ShapeAndStructureClass::class . ' carries both #[Shape] and #[Structure]. A class is one kind: a shape is one value reused at many keys, a structure holds keys of its own.',
       ],
-      'an instance define()' => [
-        ['shapes' => [InstanceDefineShape::class => $module]],
-        InstanceDefineShape::class . ' carries #[Shape] and declares define() as an instance method. What a shape allows belongs to the class: declare it `public static function define(): DataDefinition`, and implement Drupal\surface\Resource\ShapeInterface.',
+      'an instance schema()' => [
+        ['shapes' => [InstanceSchemaShape::class => $module]],
+        InstanceSchemaShape::class . ' carries #[Shape] and declares schema() as an instance method. What a shape allows belongs to the class: declare it `public static function schema(): Schema`, and implement Drupal\surface\Resource\ShapeInterface.',
       ],
       'no interface' => [
         ['shapes' => [UnimplementedShape::class => $module]],
@@ -294,13 +308,144 @@ class ShapesTest extends SurfaceKernelTestBase {
         $this->assertSame($message, $e->getMessage(), $class);
       }
     }
+    // What a shape's schema() may not say, refused where it is read.
+    $grouped = ': a shape is one scalar value, and a group of keys is a structure';
+    foreach ([
+      RequiredShape::class => [
+        'resource_test.broken.required',
+        'it required: whether a value must be given belongs to the key, which calls setRequired(TRUE)',
+      ],
+      GroupedShape::class => ['resource_test.broken.grouped', 'a map' . $grouped],
+      ListedShape::class => ['resource_test.broken.listed', 'a list' . $grouped],
+      NullDefaultShape::class => [
+        'resource_test.broken.null_default',
+        'a default: a default belongs to the key, add(\'<key>\', NullDefaultShape::class, ..., default: ...)',
+      ],
+      LockedConstShape::class => [
+        'resource_test.broken.locked_const',
+        'a default: a default belongs to the key, add(\'<key>\', LockedConstShape::class, ..., default: ...)',
+      ],
+      ReadOnlyShape::class => [
+        'resource_test.broken.read_only',
+        'readOnly: a key is locked where it is declared, so whether its value may change belongs to the key that uses the shape',
+      ],
+      LinkedShape::class => [
+        'resource_test.broken.linked',
+        'what ' . LinkedShape::class . '::schema() does not read as written (/x-portable-links/0: Not read: a link names where a client asks)',
+      ],
+      AllOfShape::class => [
+        'resource_test.broken.all_of',
+        'a schema that does not read as one scalar type (through `allOf`): a shape is one scalar value, such as Schema::string() or Schema::integer()',
+      ],
+      MembersShape::class => [
+        'resource_test.broken.members',
+        'a schema that does not read as one scalar type (through `additionalProperties`): a shape is one scalar value, such as Schema::string() or Schema::integer()',
+      ],
+    ] as $class => [$id, $problem]) {
+      try {
+        Shapes::declared($class, $id);
+        $this->fail($class . ' was declared.');
+      }
+      catch (\LogicException $e) {
+        $this->assertSame('The shape ' . $id . ' (' . $class . ') declares ' . $problem . '.', $e->getMessage(), $class);
+      }
+    }
+    // What the blueprint a shape is read in refuses, said as the shape's.
     try {
-      Shapes::declared(RequiredShape::class, 'resource_test.broken.required');
-      $this->fail('A shape that requires itself was declared.');
+      Shapes::declared(ObjectDefShape::class, 'resource_test.broken.object_def');
+      $this->fail('A shape referring to an object def was declared.');
     }
     catch (\LogicException $e) {
-      $this->assertSame('The shape resource_test.broken.required (' . RequiredShape::class . ') declares it required: whether a value must be given belongs to the key, which calls setRequired(TRUE).', $e->getMessage());
+      $this->assertSame('The shape resource_test.broken.object_def (' . ObjectDefShape::class . ') cannot be read from ' . ObjectDefShape::class . '::schema(): The document read into This blueprint holds a structure at /$defs/box, and this blueprint has no registry to build one by.', $e->getMessage());
     }
+    // What a reading leaves beside the definition is found generically,
+    // by comparing the blueprint with one handed only the definition:
+    // readOnly leaves a lock, refused by its own rule above.
+    $held = (\Closure::bind(static function (): array {
+      static::read(ReadOnlyShape::class, ReadOnlyShape::schema(), 'resource_test.broken.read_only', $held);
+      return $held;
+    }, NULL, Shapes::class))();
+    $this->assertSame(['notes' => [], 'default' => FALSE, 'besides' => ['locked']], $held);
+  }
+
+  /**
+   * Tests a shape is read once, and every use gets a copy of its own.
+   */
+  public function testShapeIsReadOnce(): void {
+    $kept = static fn (): array => (new \ReflectionProperty(Shapes::class, 'read'))->getValue()[Sku::class]['resource_test.sku']->toArray();
+    $first = Shapes::unaltered(Sku::class);
+    $before = $kept();
+    $second = Shapes::unaltered(Sku::class);
+    $this->assertNotSame($first, $second);
+    $this->assertNotSame($first->getLabel(), $second->getLabel(), 'Each copy holds texts of its own.');
+    $this->assertNotSame($first->getLabel(), $before['label']);
+    // Refining one copy leaves the other, the kept one and a later read.
+    $first->setDescription('Changed')->addConstraint('Length', ['max' => 3]);
+    foreach (['the other copy' => $second, 'a later read' => Shapes::unaltered(Sku::class)] as $case => $copy) {
+      $this->assertSame('Letters and digits.', (string) $copy->getDescription(), $case);
+      $this->assertSame(['Regex' => self::PATTERN], self::declared($copy), $case);
+    }
+    $this->assertEquals($before, $kept(), 'The kept definition is never handed out.');
+    // An alter tightens the copy a key gets, and nothing kept.
+    $depot = $this->depot();
+    $this->assertSame(['Regex' => self::PATTERN, 'Length' => ['min' => 4, 'max' => 12]], self::declared($depot->getDefinition('sku')));
+    $this->assertNotSame($depot->getDefinition('sku'), $depot->getDefinition('spare'));
+    $this->assertSame(['Regex' => self::PATTERN], self::declared(Shapes::unaltered(Sku::class)));
+    $this->assertEquals($before, $kept());
+    $this->assertSame('string', Shapes::dataType(Sku::class), 'The data type is the kept one\'s.');
+  }
+
+  /**
+   * Tests a shape's schema() reads into the definition a key starts from.
+   */
+  public function testTheSchemaIsTheShape(): void {
+    $sku = Shapes::unaltered(Sku::class);
+    $this->assertSame(DataDefinition::class, $sku::class);
+    $this->assertSame('string', $sku->getDataType());
+    $this->assertInstanceOf(TranslatableMarkup::class, $sku->getLabel(), 'A title made with t() stays translatable.');
+    $this->assertSame(['type', 'label', 'description', 'constraints', 'examples', 'surface_shape'], array_keys($sku->toArray()), 'Said in the order a definition is written by hand.');
+    $this->assertSame(['Regex' => self::PATTERN], self::declared($sku));
+    $this->assertSame('string', Shapes::dataType(Sku::class));
+    // No title: no label, as a definition written by hand has none.
+    $untitled = Shapes::declared(UntitledShape::class, 'resource_test.broken.untitled');
+    $this->assertNull($untitled->getLabel());
+    $this->assertArrayNotHasKey('label', $untitled->toArray());
+  }
+
+  /**
+   * Tests a shape's message is said in the language it is served in.
+   *
+   * The shape is read under one language and served under another, and
+   * nothing is rendered between: what is tested is that reading keeps the
+   * message and the title as their sources, not how long a text keeps the
+   * language it was first rendered in.
+   */
+  public function testTheMessageIsSaidInTheServedLanguage(): void {
+    $translation = $this->container->get('string_translation');
+    $translation->addTranslator(new FakeLanguageTranslator('xx', [
+      'Lowercase letters only.' => 'XX Lowercase letters only.',
+      'Lowercase code' => 'XX Lowercase code',
+    ]), 100);
+    $definitions = $this->container->get('surface.definition_schema');
+    $said = static fn (DataDefinitionInterface $shape): array => (array) Schemas::decoded(DefinitionSchema::published($definitions->of($shape, FALSE)));
+
+    $translation->setDefaultLangcode('xx');
+    $read = DefinitionMetadata::shapeDefinition(Shapes::unaltered(TranslatedShape::class));
+    $this->assertNotNull($read);
+    $this->assertSame('Lowercase letters only.', $read->getConstraints()['Regex']['message'], 'The definition holds the source, which the validator translates.');
+    $translation->setDefaultLangcode('en');
+    $this->assertSame(['title' => 'Lowercase code', 'pattern' => 'Lowercase letters only.'], [
+      'title' => $said($read)['title'] ?? NULL,
+      'pattern' => $said($read)['x-portable-messages']['pattern'] ?? NULL,
+    ], 'Read under one language, said in the one it is served in.');
+
+    $read = DefinitionMetadata::shapeDefinition(Shapes::unaltered(TranslatedShape::class));
+    $this->assertNotNull($read);
+    $translation->setDefaultLangcode('xx');
+    $this->assertSame(['title' => 'XX Lowercase code', 'pattern' => 'XX Lowercase letters only.'], [
+      'title' => $said($read)['title'] ?? NULL,
+      'pattern' => $said($read)['x-portable-messages']['pattern'] ?? NULL,
+    ], 'And the other way.');
   }
 
   /**
@@ -388,7 +533,7 @@ class ShapesTest extends SurfaceKernelTestBase {
     $inputs = new ShapeBlueprint('resource_test.broken.mounted', $alter);
     $lowercase = ['pattern' => '/^[a-z]+$/D', 'message' => 'Lowercase letters.'];
     $inputs->narrow('resource_test.broken.mounted')->constrain('Regex', $lowercase);
-    $this->assertSame(['Regex' => $lowercase], self::declared($inputs->applyTo(MountedShape::define())));
+    $this->assertSame(['Regex' => $lowercase], self::declared($inputs->applyTo(Shapes::declared(MountedShape::class, 'resource_test.broken.mounted'))));
   }
 
   /**

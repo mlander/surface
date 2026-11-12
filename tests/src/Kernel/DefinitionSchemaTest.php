@@ -11,6 +11,7 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\PortableKeywords;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Plugin\Validation\Constraint\UniqueConstraint;
 use Drupal\surface\Refinement\DoesNotApply;
@@ -139,7 +140,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $this->assertInstanceOf(TranslatableMarkup::class, $messages['check.drupal:Regex'] ?? NULL, 'A lazy message stays lazy.');
     $model = DefinitionSchema::model($built);
     $this->assertSame(DefinitionSchema::MEMBERS, array_keys($model));
-    $this->assertFalse($model['secret']);
+    $this->assertFalse(Secrets::marked($built), 'A node says it is secret by writeOnly alone.');
     $this->assertStringNotContainsString('DataDefinition', serialize($model), 'A node holds no reference to its definition.');
     $this->assertSame(array_keys($leaf->getConstraints()), array_keys($model['constraints']), 'Every declared constraint, the ones keywords state among them.');
     $this->assertSame(['max' => 2], $model['constraints']['Length']);

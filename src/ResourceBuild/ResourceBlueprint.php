@@ -1002,7 +1002,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       // A port may read a shape: the key wired to it is then of that shape.
       // Decision: see docs/decisions.md#a-shape-is-a-named-definition.
       $shape = Shapes::idOf($type);
-      $type = $type::define()->getDataType();
+      $type = Shapes::dataType($type);
     }
     try {
       $this->typedDataManager->getDefinition($type);

@@ -62,8 +62,9 @@ Precisely: a named type, in Smithy's sense, of which there are three
 kinds: a resource, a structure, and a named scalar shape, one value
 (its type, label, description, constraints, examples) declared once
 and used at many keys. The third is the one the attribute names: a
-class in `src/Shape/` carrying `#[Shape(id)]`, whose static `define()`
-returns a plain data definition, used in the type position of `add()`;
+class in `src/Shape/` carrying `#[Shape(id)]`, whose static `schema()`
+returns the Portable Schema of the value, used in the type position of
+`add()`;
 each key may only narrow it, an alter of it tightens it at every key,
 and the served contract writes it once, as a def. Never the blueprint
 or the layout.
