@@ -6,10 +6,8 @@ namespace Drupal\surface\Contract;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
@@ -17,7 +15,6 @@ use Drupal\surface\Computed;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Plugin\SurfaceWidget\AutocompleteWidget;
 use Drupal\surface\Plugin\SurfaceWidget\CheckboxesWidget;
-use Drupal\surface\Plugin\SurfaceWidget\DateWidget;
 use Drupal\surface\Plugin\SurfaceWidget\OptionsWidget;
 use Drupal\surface\Plugin\SurfaceWidget\RadiosWidget;
 use Drupal\surface\Options\SurfaceOptions;
@@ -35,12 +32,14 @@ use PortableSchema\Builder\Schema;
  * Describes one key as a JSON Schema property, with its `x-surface`.
  *
  * ContractEmitter walks a document's frames and asks this class for each
- * key that is not a child (property()): its type and the keywords its
- * constraints state, its allowed values as `oneOf` with their labels,
- * read from the options service, its widget hints (`x-portable-ui`), its
- * `x-surface`, and what only the server checks, a reference's check with
- * what it refers to as its options (checked()); ContractEmitter adds its
- * `lookup` link (`x-portable-links`). A key declared with a
+ * key that is not a child (property()): the projection of its built node
+ * (DefinitionSchema::of(), DefinitionSchema::publishedNode()), which says
+ * its type, the keywords its constraints state and what only the server
+ * checks, decorated with what the request adds: its allowed values as
+ * `oneOf` with their labels, read from the options service, its widget
+ * hints (`x-portable-ui`), its `x-surface`, a lock and what is computed;
+ * ContractEmitter adds its `lookup` link (`x-portable-links`). A key
+ * declared with a
  * shape is written whole, and named() files the shape's def once and
  * turns the key into a reference to it. A child's site is a reference to
  * its def with only what differs from it (reference(), narrowing()).
@@ -75,68 +74,6 @@ final class PropertySchema {
   public const SHAPED = self::EXTENSION . '-shape';
 
   /**
-   * The keyword holding, while a key is described, what only the server checks.
-   *
-   * Each constraint no keyword states, as checked() writes it; property()
-   * writes them as `portable-check` and `x-portable-messages`
-   * (PortableKeywords::write()) and drops this. Never in a document.
-   */
-  protected const CHECKED = self::EXTENSION . '-checked';
-
-  /**
-   * The keyword holding, while a key is described, a Regex's own message.
-   *
-   * By the code of its keyword; written as `x-portable-messages` with the
-   * checks' and dropped. Never in a document.
-   */
-  protected const PATTERN_MESSAGE = self::EXTENSION . '-pattern-message';
-
-  /**
-   * A placeholder the server fills in a check's message.
-   *
-   * Drupal's `%value` and `@value`, Symfony's `{{ value }}`, by any name.
-   * A check's message that holds one is not written under
-   * `x-portable-messages`.
-   */
-  protected const PLACEHOLDER = '/(?<![\w.])[%@]\w|\{\{ ?\w+ ?\}\}/';
-
-  /**
-   * The constraints a list of values is read from, by the options resolvers.
-   *
-   * Written as the `oneOf` of the list (optionSet()) where the key's own
-   * list is written; one no resolver reads a list from (AllowedValues,
-   * whose values a callback gives when it validates, or a Choice with
-   * `match` FALSE), one on a list definition and one with `multiple` are
-   * named under `portable-check`.
-   */
-  protected const LISTED = [
-    'Choice',
-    'LabeledChoice',
-    'AllowedValues',
-  ];
-
-  /**
-   * Constraints the schema states with no keyword of the constraint table.
-   *
-   * The constraints the table maps to keywords are its own
-   * (ConstraintKeywords); the ones here are said otherwise. NotNull is
-   * `required`. PrimitiveType, ComplexData and ValidReference are the
-   * data type's own, which `type` states. The lists of values are LISTED.
-   * Anything else no keyword states is named under `portable-check`, so a
-   * client knows the schema is not the
-   * whole story for that key, unless the resolver reading it says its
-   * list is the whole of it, which is its `oneOf`
-   * (SurfaceOptions::isStatedByList()).
-   */
-  protected const STATED = [
-    'NotNull',
-    'PrimitiveType',
-    'ComplexData',
-    'ValidReference',
-    ...self::LISTED,
-  ];
-
-  /**
    * Constructs a PropertySchema.
    *
    * @param \Drupal\surface\Options\SurfaceOptions $options
@@ -149,15 +86,25 @@ final class PropertySchema {
    * @param \Drupal\surface\Contract\WidgetChoice|null $widgets
    *   The widget choice, which says what a module's widget claims or
    *   draws; without it, the stock rule alone names the widget.
+   * @param \Drupal\surface\Contract\DefinitionSchema|null $definitions
+   *   The one read of a definition into its built node; without it, one
+   *   of its own.
    */
   public function __construct(
     protected readonly SurfaceOptions $options,
     TranslationInterface $string_translation,
     protected readonly ?ConstraintManager $constraints,
     protected readonly ?WidgetChoice $widgets,
+    ?DefinitionSchema $definitions = NULL,
   ) {
     $this->stringTranslation = $string_translation;
+    $this->definitions = $definitions ?? new DefinitionSchema($options, $string_translation, $constraints);
   }
+
+  /**
+   * Reads each definition into its built node.
+   */
+  protected readonly DefinitionSchema $definitions;
 
   /**
    * States what a collection's own definition says, without its items.
@@ -172,10 +119,11 @@ final class PropertySchema {
    *   `x-surface` (PortableKeywords::before()).
    */
   public function listKeywords(DataDefinitionInterface $definition): array {
-    $keywords = $this->keywords($definition, 'array');
-    $checks = PortableKeywords::write($keywords[self::CHECKED] ?? []);
-    unset($keywords[self::CHECKED], $keywords[self::PATTERN_MESSAGE]);
-    $schema = Schemas::defaults($this->describe($definition), ['type' => $this->nullable('array', $definition)] + $keywords);
+    $schema = DefinitionSchema::publishedNode($this->definitions->head($definition));
+    $checks = array_intersect_key($schema->all(), array_flip([PortableKeywords::CHECK, PortableKeywords::MESSAGES]));
+    foreach (array_keys($checks) as $keyword) {
+      $schema = $schema->without($keyword);
+    }
     return [$schema, $checks];
   }
 
@@ -328,7 +276,8 @@ final class PropertySchema {
    *
    * A schema read into a frame that is only `portable-check` naming this
    * site's checks (an author's check on the items of a collection) is
-   * written as those checks, each as checked() writes a map's.
+   * written as those checks, each as a map's own is said
+   * (DefinitionSchema::entry()).
    *
    * @param array $fragment
    *   The frame's schema.
@@ -348,7 +297,7 @@ final class PropertySchema {
       if (!str_starts_with($name, PortableKeywords::PROVIDER) || $name === PortableKeywords::PROVIDER . 'JsonSchema') {
         return NULL;
       }
-      $entries[] = $this->checked(substr($name, strlen(PortableKeywords::PROVIDER)), json_decode((string) json_encode($options), TRUE));
+      $entries[] = $this->definitions->entry(substr($name, strlen(PortableKeywords::PROVIDER)), json_decode((string) json_encode($options), TRUE));
     }
     return $entries;
   }
@@ -437,22 +386,30 @@ final class PropertySchema {
    */
   public function property(DataDefinitionInterface $definition, ?DataDefinitionInterface $advertised, mixed $value, string $path, bool $locked, array $depends, Emission $emission): array {
     $cacheability = $emission->cacheability;
-    $schema = $this->describe($definition);
     $shown = $value;
     $set = $this->optionSet($definition instanceof ListDataDefinitionInterface ? $definition->getItemDefinition() : $definition, $cacheability);
     // A list of no values is still a list: a select offering nothing.
     // Decision: see docs/decisions.md#a-key-that-does-not-apply.
     $listed = $set !== NULL;
     $refined = $advertised !== NULL && $this->signature($advertised) !== $this->signature($definition);
+    // The node as the document says it; its properties and items are each
+    // described below as their own key, and what the request adds goes
+    // between what the definition says, where it always stood.
+    // Decision: see
+    // docs/decisions.md#a-definition-is-read-once-into-a-built-node.
+    $schema = DefinitionSchema::publishedNode($this->definitions->of($definition, $listed));
+    $held = [];
+    foreach (['writeOnly', 'default', 'examples', PortableKeywords::CHECK, PortableKeywords::MESSAGES] as $keyword) {
+      if ($schema->has($keyword)) {
+        $held[$keyword] = $schema->get($keyword);
+        $schema = $schema->without($keyword);
+      }
+    }
 
     if ($definition instanceof ListDataDefinitionInterface) {
       $item = $definition->getItemDefinition();
       [$items] = $this->property($item, NULL, NULL, $path . '.*', FALSE, [], $emission->withoutStale());
-      $list = [
-        'type' => $this->nullable('array', $definition),
-        'items' => static::neverNull($items),
-      ];
-      $schema = Schemas::defaults($schema, $list + $this->keywords($definition, 'array'));
+      $schema = $schema->with('items', static::neverNull($items));
       // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
       $checkboxes = $set !== NULL && CheckboxesWidget::drawsList($definition, $set);
       $extension = $this->extension($depends, $refined);
@@ -474,7 +431,6 @@ final class PropertySchema {
     }
     elseif (!$listed && $definition instanceof ComplexDataDefinitionInterface && $definition->getPropertyDefinitions() !== []) {
       $properties = [];
-      $required = [];
       $nested = [];
       $before = $advertised instanceof ComplexDataDefinitionInterface ? $advertised->getPropertyDefinitions() : [];
       foreach ($definition->getPropertyDefinitions() as $name => $property) {
@@ -484,20 +440,8 @@ final class PropertySchema {
           continue;
         }
         [$properties[$name], $nested[$name]] = $this->property($property, $before[$name] ?? NULL, is_array($value) ? ($value[$name] ?? NULL) : NULL, $path . '.' . $name, FALSE, [], $emission);
-        if (static::required($property)) {
-          $required[] = $name;
-        }
       }
-      $schema = Schemas::defaults($schema, [
-        'type' => $this->nullable('object', $definition),
-        // Every key ruled out leaves an object still.
-        'properties' => $properties,
-        'additionalProperties' => FALSE,
-      ]);
-      if ($required !== []) {
-        $schema = $schema->with('required', $required);
-      }
-      $schema = $this->mapChecks($schema, $definition);
+      $schema = $schema->with('properties', $properties);
       $extension = $this->extension($depends, $refined || $this->anyRefined($schema));
       $ui = PortableUi::write($this->asked($definition) ?? $this->word('fieldset'));
       if (DefinitionMetadata::isGrouping($definition)) {
@@ -517,11 +461,6 @@ final class PropertySchema {
       $shown = $nested === [] ? new \stdClass() : $nested;
     }
     else {
-      $type = $this->type($definition);
-      if (isset($type['type'])) {
-        $type['type'] = $this->nullable($type['type'], $definition);
-      }
-      $schema = Schemas::defaults($schema, $this->keywords($definition, $type['type'] ?? NULL, $type, $listed));
       $radios = $listed && RadiosWidget::drawsOne($definition);
       $fixed = $listed && OptionsWidget::drawsFixed($definition, $set, $value);
       // A reference with too many candidates to list is looked up.
@@ -587,17 +526,11 @@ final class PropertySchema {
       }
     }
 
-    if (DefinitionMetadata::isSecret($definition)) {
-      $schema = $schema->with('writeOnly', TRUE);
-    }
-    elseif (!$definition instanceof ComplexDataDefinitionInterface) {
-      $default = DefinitionMetadata::hasDefaultValue($definition) ? DefinitionMetadata::getDefaultValue($definition) : NULL;
-      if ($default !== NULL) {
-        $schema = $schema->with('default', $default);
-      }
-      $examples = DefinitionMetadata::getExamples($definition);
-      if ($examples !== []) {
-        $schema = $schema->with('examples', array_values($examples));
+    // What a value holds by default, or that it is a secret, as the
+    // definition says it.
+    foreach (['writeOnly', 'default', 'examples'] as $keyword) {
+      if (array_key_exists($keyword, $held)) {
+        $schema = $schema->with($keyword, $held[$keyword]);
       }
     }
     if ($locked) {
@@ -622,8 +555,8 @@ final class PropertySchema {
     // keywords, after the standard ones and before `x-surface`.
     // Decision: see
     // docs/decisions.md#the-served-document-is-a-portable-schema-document.
-    $checks = PortableKeywords::write($schema->get(self::CHECKED) ?? [], $schema->get(self::PATTERN_MESSAGE) ?? []);
-    $schema = Schemas::defaults($schema->without(self::CHECKED)->without(self::PATTERN_MESSAGE), $checks);
+    $checks = array_flip([PortableKeywords::CHECK, PortableKeywords::MESSAGES]);
+    $schema = Schemas::defaults($schema, array_intersect_key($held, $checks));
     // The widget hints, how the key is drawn and never what it accepts,
     // in the dialect's keyword, before `x-surface`: its widget, its
     // arrangement and its empty option. Decision: see
@@ -800,83 +733,40 @@ final class PropertySchema {
    *
    * @return \PortableSchema\Builder\Schema
    *   `title` and `description`, each only when the definition has one,
-   *   as plain text (PlainText).
+   *   as plain text (DefinitionSchema::describe(), projected).
    */
   public function describe(DataDefinitionInterface $definition): Schema {
-    $described = Schema::any();
-    $label = $definition->getLabel();
-    if ($label !== NULL && (string) $label !== '') {
-      $described = $described->with('title', PlainText::of($label));
-    }
-    $description = $definition->getDescription();
-    if ($description !== NULL && (string) $description !== '') {
-      $described = $described->with('description', PlainText::of($description));
-    }
-    return $described;
+    return DefinitionSchema::publishedNode($this->definitions->describe($definition));
   }
 
   /**
    * Names the JSON type, and format, a data type is.
    *
-   * The row of the type table (LeafTypes); a map or a list has none here,
-   * since what it holds says its type.
-   *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    *
    * @return array
-   *   `type`, and `format` where the row has one or the key is drawn as a
-   *   date; empty for a map, a list, and the `any` the module makes.
-   *
-   * @throws \LogicException
-   *   For a value of a type no row is for, which the blueprint refuses.
+   *   What DefinitionSchema::type() says.
    */
   protected function type(DataDefinitionInterface $definition): array {
-    if (!LeafTypes::isLeaf($definition)) {
-      return [];
-    }
-    // A date input posts the RFC 3339 full-date, `YYYY-MM-DD`, so a key
-    // drawn as one is that format. A time input posts `HH:MM`, which
-    // RFC 3339's time refuses (it needs seconds and an offset), so a time
-    // states no format.
-    if ($definition->getDataType() === 'string' && DateWidget::draws($definition)) {
-      return ['type' => 'string', 'format' => 'date'];
-    }
-    return LeafTypes::spelling($definition);
+    return $this->definitions->type($definition);
   }
 
   /**
    * Answers whether a key is in its object's `required`.
    *
-   * A key the resource requires must be present and not null. A secret is
-   * always optional, whatever it requires: left out or null, the stored
-   * secret stands, and a required one that was never set is refused by
-   * the pipeline as missing.
-   *
-   * Decision: see docs/decisions.md#a-secret-is-optional-never-nullable.
-   *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key.
    *
    * @return bool
-   *   Whether the schema requires it.
+   *   What DefinitionSchema::required() says.
    */
   public static function required(DataDefinitionInterface $definition): bool {
-    // Nor is a computed key asked of a caller: one computed unless sent
-    // is computed when left out.
-    return $definition->isRequired() && !DefinitionMetadata::isSecret($definition) && Computed::of($definition) === NULL;
+    return DefinitionSchema::required($definition);
   }
 
   /**
    * Allows null beside a type, for an optional key a caller may clear.
-   *
-   * Null on an optional key clears it, so it is a value the key takes. A
-   * required key never takes it, nor one its storage always holds, which
-   * refuses it, and neither does a secret, which null leaves as it is and
-   * only its clear marker empties.
-   *
-   * Decision: see docs/decisions.md#absent-keeps-null-clears and
-   * docs/decisions.md#a-key-its-storage-always-holds.
    *
    * @param string|array $type
    *   The JSON type.
@@ -884,13 +774,10 @@ final class PropertySchema {
    *   The definition.
    *
    * @return string|array
-   *   The type, or the type and null.
+   *   What DefinitionSchema::nullable() says.
    */
   public function nullable(string|array $type, DataDefinitionInterface $definition): string|array {
-    if (DefinitionMetadata::holdsValue($definition) || DefinitionMetadata::isSecret($definition) || is_array($type)) {
-      return $type;
-    }
-    return [$type, 'null'];
+    return $this->definitions->nullable($type, $definition);
   }
 
   /**
@@ -994,176 +881,6 @@ final class PropertySchema {
   }
 
   /**
-   * States a definition's constraints as JSON Schema keywords.
-   *
-   * The table of constraints and keywords writes what it maps
-   * (ConstraintKeywords::state()); what is left is named under
-   * `portable-check`, but for the constraints STATED names.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
-   * @param string|array|null $type
-   *   The JSON type it was given.
-   * @param array $given
-   *   What the key says already, its `type` and `format`, which the
-   *   constraints' keywords are merged into and which come first.
-   * @param bool $listed
-   *   Whether the key's `oneOf` is written from its own constraints'
-   *   list: never for a list, whose `oneOf` is its items'.
-   *
-   * @return array
-   *   The keywords; under `x-surface-pattern-message` a Regex's own
-   *   message by the code of its keyword, and under `x-surface-checked`
-   *   each constraint no keyword states, as checked(), which property()
-   *   writes as `x-portable-messages` and `portable-check`
-   *   (PortableKeywords::write()).
-   */
-  protected function keywords(DataDefinitionInterface $definition, string|array|null $type, array $given = [], bool $listed = FALSE): array {
-    $stated = ConstraintKeywords::state($definition->getConstraints(), (array) $type, $given);
-    $keywords = $stated['keywords'];
-    $unstated = [];
-    foreach ($stated['left'] as [$name, $options, $mapped]) {
-      $said = !$mapped && match (TRUE) {
-        // A list of values is the `oneOf` the options resolvers read, where
-        // that `oneOf` is written for this key and one reads it. One
-        // resolved only when it is validated (a callback), one that names
-        // the values it refuses (`match` FALSE), one on a list, and one
-        // of several values (`multiple`, an array checked against the list
-        // with its own `min` and `max`, written on no array here) are the
-        // server's.
-        in_array($name, self::LISTED, TRUE) => $listed && empty($options['multiple']) && $this->options->readsAsList($name, $options),
-        // A constraint whose resolver says it is its list is the `oneOf`
-        // the list is written as.
-        default => in_array($name, self::STATED, TRUE) || $this->options->isStatedByList($name),
-      };
-      if (!$said) {
-        // Email beside `format: email` and Uuid beside `format: uuid`:
-        // the format's sentence says it, so no label stands in for a
-        // message the constraint was not given.
-        $unstated[] = $this->checked($name, $options, !ConstraintKeywords::isFormatTwin($name, $keywords['format'] ?? NULL));
-      }
-    }
-    // A pattern is for machines; a person is told the message, in the
-    // document's language: the source core's validator translates when it
-    // refuses a value, read as plain text.
-    $messages = [];
-    foreach ($stated['extras']['messages'] ?? [] as $code => $message) {
-      // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
-      $message = is_string($message) ? $this->t($message) : $message;
-      if ($message instanceof TranslatableMarkup) {
-        $messages[$code] = PlainText::of($message);
-      }
-    }
-    if ($messages !== []) {
-      $keywords[self::EXTENSION . '-pattern-message'] = $messages;
-    }
-    if ($unstated !== []) {
-      $keywords[self::EXTENSION . '-checked'] = $unstated;
-    }
-    return $keywords;
-  }
-
-  /**
-   * Names a map's own constraints under `portable-check`, at the map.
-   *
-   * A map's settings, a map in a map and the map each item of a list is
-   * alike: every constraint the definition holds as its own, not its data
-   * type's (ReviewDeadline on an amount and a unit together, a
-   * ComplexData), but NotNull and PrimitiveType, which `required` and
-   * `type` state. Each is a check the server runs at the map
-   * (DrupalCheckProvider), so the document names it. No keyword states a
-   * map's constraint, so the constraint table is not read here.
-   *
-   * Decision: see docs/decisions.md#the-checks-the-document-names.
-   *
-   * @param \PortableSchema\Builder\Schema $schema
-   *   The map's schema.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The map.
-   *
-   * @return \PortableSchema\Builder\Schema
-   *   The schema, each of them under `x-surface-checked` (checked()),
-   *   which property() writes as `portable-check`.
-   */
-  protected function mapChecks(Schema $schema, DataDefinitionInterface $definition): Schema {
-    $own = $definition instanceof DataDefinition ? ($definition->toArray()['constraints'] ?? []) : [];
-    $checked = [];
-    foreach (is_array($own) ? $own : [] as $id => $options) {
-      if (!in_array((string) $id, ['NotNull', 'PrimitiveType'], TRUE)) {
-        $checked[] = $this->checked((string) $id, $options);
-      }
-    }
-    if ($checked === []) {
-      return $schema;
-    }
-    return $schema->with(self::CHECKED, [...($schema->get(self::CHECKED) ?? []), ...$checked]);
-  }
-
-  /**
-   * Names a constraint only the server checks, and says what it checks.
-   *
-   * A client told only a plugin id learns nothing it can act on, so each
-   * entry carries a sentence: the constraint's own reason where it was
-   * given one (SurfaceUnique's), else its own message (a Regex's is
-   * how a person is told what it allows), else the label its plugin
-   * declares, else the id again; a check beside the format it is the
-   * host's rule for (ConstraintKeywords::FORMAT_TWINS) says none of
-   * those two. A reference's check states what it
-   * refers to as its options, `{entityTypeId, bundles?}`, the plugin's own
-   * option names, the bundles only where it names any: the one fact a
-   * client needs of it, and what a reader reads the key back from.
-   * Decision: see docs/decisions.md#contract-2,
-   * docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
-   *
-   * @param string $name
-   *   The constraint's plugin id.
-   * @param mixed $options
-   *   Its options.
-   * @param bool $labeled
-   *   FALSE where a message the constraint was not given is left empty,
-   *   not said by its label or id.
-   *
-   * @return array{constraint: string, message: string, options?: array}
-   *   The entry; an empty message is not written
-   *   (PortableKeywords::write()).
-   */
-  protected function checked(string $name, mixed $options, bool $labeled = TRUE): array {
-    if ($name === 'JsonSchema' && is_array($options)) {
-      // What a structure read from a schema kept of it and no keyword of
-      // this document states: the keywords, and the schema itself, so a
-      // reader reads it back as the same constraint.
-      // Decision: see
-      // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
-      return ContractEmitter::foreign(is_array($options['schema'] ?? NULL) ? $options['schema'] : [], $this->stringTranslation);
-    }
-    // A constraint that refuses in a sentence of its own (SurfaceUnique)
-    // says what it checks in its `reason`.
-    $message = is_array($options) ? ($options['reason'] ?? $options['message'] ?? NULL) : NULL;
-    if (is_string($message) && preg_match(self::PLACEHOLDER, $message)) {
-      // The dialect's messages are plain sentences: one the server fills
-      // in (`%value`) is said by the server's refusal alone.
-      $message = NULL;
-    }
-    if (is_string($message) && $message !== '') {
-      // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
-      $message = $this->t($message);
-    }
-    if ((!$message instanceof \Stringable || (string) $message === '') && !$labeled) {
-      $message = '';
-    }
-    elseif (!$message instanceof \Stringable || (string) $message === '') {
-      $label = $this->constraints?->getDefinitions()[$name]['label'] ?? NULL;
-      $message = $label instanceof \Stringable || (is_string($label) && $label !== '') ? $label : $name;
-    }
-    $entry = ['constraint' => $name, 'message' => PlainText::of($message)];
-    $target = $name === References::CONSTRAINT && is_array($options) ? References::targetOf($options) : NULL;
-    if ($target !== NULL) {
-      $entry['options'] = ['entityTypeId' => $target['entityType']] + ($target['bundles'] === [] ? [] : ['bundles' => $target['bundles']]);
-    }
-    return $entry;
-  }
-
-  /**
    * Spells an option set as `oneOf` entries, labels and help included.
    *
    * A key that may be cleared allows null besides, as its own entry with
@@ -1261,10 +978,16 @@ final class PropertySchema {
       }
     }
     $type = $this->type($definition);
+    // What the document would say of the constraints: their keywords, the
+    // checks with their published options, and the messages as plain text.
+    $keywords = Schema::any();
+    foreach ($this->definitions->keywords($definition, $type['type'] ?? NULL, $type, $set !== NULL && !$definition instanceof ListDataDefinitionInterface) as $keyword => $said) {
+      $keywords = $keywords->with((string) $keyword, $said);
+    }
     return serialize([
       $definition->getDataType(),
       $definition->isRequired(),
-      $this->keywords($definition, $type['type'] ?? NULL, $type, $set !== NULL && !$definition instanceof ListDataDefinitionInterface),
+      Schemas::decoded(DefinitionSchema::publishedNode($keywords)),
       $set === NULL ? NULL : array_keys($set->options),
       $properties,
     ]);
@@ -1392,7 +1115,7 @@ final class PropertySchema {
    */
   public function withoutExtension(Schema $schema): Schema {
     return Schemas::map($schema, static function (Schema $node): Schema {
-      foreach ([self::EXTENSION, self::CHECKED, self::PATTERN_MESSAGE, self::SHAPED, ...PortableKeywords::KEYWORDS] as $keyword) {
+      foreach ([self::EXTENSION, self::SHAPED, ...PortableKeywords::KEYWORDS] as $keyword) {
         if ($node->has($keyword)) {
           $node = $node->without($keyword);
         }

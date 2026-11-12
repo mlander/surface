@@ -7,9 +7,10 @@ namespace Drupal\surface\Form;
 use Drupal\Core\Entity\EntityRepositoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\surface\Contract\BuiltNodes;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\ServedContract;
 use Drupal\surface\Reference\References;
-use Drupal\surface\ResourceBuild\Location;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Widget\WidgetHostInterface;
 
@@ -21,9 +22,10 @@ use Drupal\surface\Widget\WidgetHostInterface;
  * label of an entity a reference holds is loaded here, as core's
  * autocomplete element shows it, the account's access to its label
  * asked; a reference key's selection handler and settings are read from
- * its definition at its place (Location::definitionAt(),
- * References::handlerOf()); and a deferred key's chosen document is the
- * narrowing service's (NarrowsDocumentsInterface::chosen()).
+ * the options of its reference check on its built node at its place
+ * (BuiltNodes, References::handlerFrom()); and a deferred key's chosen
+ * document is the narrowing service's
+ * (NarrowsDocumentsInterface::chosen()).
  *
  * Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
  *
@@ -42,6 +44,8 @@ final class FormWidgetHost implements WidgetHostInterface {
    *   The entity repository, which gives its label in the page's language.
    * @param \Drupal\surface\Form\NarrowsDocumentsInterface $narrowing
    *   The narrowing, which emits a deferred key's chosen document.
+   * @param \Drupal\surface\Contract\BuiltNodes $nodes
+   *   What finds the built node at a place.
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface the envelope was emitted from.
    * @param array $values
@@ -51,6 +55,7 @@ final class FormWidgetHost implements WidgetHostInterface {
     protected readonly EntityTypeManagerInterface $entityTypeManager,
     protected readonly EntityRepositoryInterface $entityRepository,
     protected readonly NarrowsDocumentsInterface $narrowing,
+    protected readonly BuiltNodes $nodes,
     protected readonly SurfaceInterface $surface,
     protected readonly array $values,
   ) {}
@@ -78,11 +83,11 @@ final class FormWidgetHost implements WidgetHostInterface {
   public function selection(string $pointer): ?array {
     $values = $this->values;
     unset($values[SurfaceFormBuilderInterface::STANDING_KEY]);
-    $definition = Location::definitionAt($this->surface, $values, $pointer)?->definition;
-    if ($definition === NULL) {
+    $node = $this->nodes->at($this->surface, $values, $pointer);
+    if ($node === NULL) {
       return NULL;
     }
-    [$handler, $settings] = References::handlerOf($definition);
+    [$handler, $settings] = References::handlerFrom(DefinitionSchema::options($node, References::CONSTRAINT));
     return $handler === '' ? NULL : ['handler' => $handler, 'handlerSettings' => $settings];
   }
 

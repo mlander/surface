@@ -1108,7 +1108,7 @@ Rejected: a constraint per resource for every list the site holds,
 which is how example 2 started, because each one is code a reader must
 open to learn what a key allows, where a type string or a stock
 constraint says it.
-(`PropertySchema::STATED`, `PropertySchema::keywords()`,
+(`DefinitionSchema::STATED`, `DefinitionSchema::keywords()`,
 `ConstraintKeywords`, `SurfaceOptions::isStatedByList()`, `RegistrationStep2Resource`,
 `EventVenueRoomConstraint`, `UniqueItemsConstraint`)
 
@@ -2500,17 +2500,150 @@ document, refusal or stored value changed.
   so a deploy that changes the module rebuilds caches, as `drush
   deploy` and `drush cr` do.
 
-Later: Surface's own constraints run on plain values, through a plain
-validator built by the two rules above, with the runner kept for
-core's; the built schema, a `Schema` node holding a check's real
-options, which the check provider runs from instead of a definition; a
-build format in the build cache's id.
+Later: a build format in the build cache's id. Surface's own
+constraints run on plain values and the check provider runs from the
+built node since [A definition is read once, into a built
+node](#a-definition-is-read-once-into-a-built-node).
 
 (`Validation\ConstraintRunner`, `DrupalCheckProvider`,
 `PortableValidator`, `Pipeline\Conforming`,
 `Refinement\WatchedValueCheck`, `ResourceBuild\KeyPaths`,
 `UniqueItemsConstraintValidator`, `ConstraintRunnerTest`,
 `ValueOnlyConstraintsTest`, `TypedDataFootprintTest`)
+
+### A definition is read once, into a built node
+
+Decided 2026-11-12. One function reads a definition into a `Schema`,
+the result holds what a node knows beyond its document form, and the
+check provider reads that node instead of a definition. No served
+document, refusal or stored value changed.
+
+- **One read.** `Contract\DefinitionSchema::of($definition, $listed)`
+  (`surface.definition_schema`) is the one read of a definition into a
+  `Schema`: the built node of the definition at one site. It holds what
+  the definition says whatever the request: the title and description,
+  the type and the keywords its constraints state, a map's properties
+  and a list's items (each the built node of that definition), what only
+  the server checks and the messages. What depends on the request is
+  the emitter's and decorates the projection: an option set's `oneOf`
+  and empty option, a stale value, a lock, links, the widget hints, what
+  a key depends on, sharing a node as a def, naming it.
+  `PropertySchema::property()` is `publishedNode(of($definition,
+  $listed))` with that decoration placed where each keyword always
+  stood; a collection's own keywords are `head()`.
+- **What a node holds.** `portable-check` holds each named check's
+  options as the definition holds them (an array, NULL or a scalar), the
+  options the check provider runs, where the document publishes fewer.
+  Titles, descriptions and messages are held as the definition holds
+  them: a `TranslatableMarkup` stays one. A message the reader writes
+  itself (a Regex's or a check's own sentence, what a JsonSchema check
+  holds a value to) is a `NodeMessage`, which is translated each time it
+  is rendered, so a node kept for the process says each document's
+  language. `x-surface-model` holds what a node knows that no document
+  says, a closed list of two members, each added for the reader that
+  reads it: `secret`, read by the check provider (slice 25 replaces it
+  with `writeOnly` on the node), and `constraints`, every declared
+  constraint with its options, the ones a keyword states included, read
+  by the check provider (a bridge until the model is the source). A
+  node holds no reference to its definition: a reader that needs the
+  definition takes it from the place it found the node at. The data
+  type is no member, since no reader reads it. The emitter's transient keywords for checks and pattern
+  messages are gone: the node holds `portable-check` and
+  `x-portable-messages` from the start. The shape marker stays the
+  emitter's, since a shape's def is described with the request.
+- **One projection.** `DefinitionSchema::published()`, a node at a time
+  (`publishedNode()`), is the one place a built node becomes a document
+  node: each check's options through one table, `CheckOptions::published()`
+  (`{entityTypeId, bundles?}` for `SurfaceValidReference`, `{schema}` for
+  `JsonSchema`, `{}` for every other plugin), the title, the description
+  and each message as plain text (`PlainText::of()`, which `toDocument()`
+  is not), a message empty as plain text left out, and `x-surface-model`
+  stripped. A node is projected before anything compares it, so every
+  `Schemas::same()` of the walk sees the published form, and two sites
+  whose checks differ only in their options still share one def.
+- **Built once per definition.** The node of a definition a sealed data
+  surface holds is kept per definition object and `$listed`, in a
+  `WeakMap`. The code knows a definition is held by one because it was
+  handed one: the emitter seals each frame's data surface
+  (`DefinitionSchema::seal()`), `hold()` marks a definition `Location`
+  hands out, and a node built for such a definition marks its
+  properties and items. Any other definition (a copy a conditional
+  narrows, one a test builds and changes) is read afresh. A refined key
+  is a new definition, so its node is built again; an unrefined key
+  keeps its node across refinements. A built node never reaches the
+  build cache, a served document, `ServedContract`, a log or an
+  exception message: it is held in memory only.
+- **The memo's precondition.** A definition a sealed data surface holds,
+  and one `Location` hands out, is never written after its node is
+  built; code that changes a definition works on a copy
+  (`Surface::deepClone()`), as refiners and conditionals do. Where
+  assertions run, each read of a kept node compares the definition's
+  fingerprint with the one taken when its node was built, and a
+  difference fails the assertion, naming the definition's label and
+  data type. The fingerprint is taken and compared only inside
+  `assert()`, so production pays nothing. It reads the definition array
+  (or a definition's getters, for one that is no `DataDefinition`) and
+  the same of every property and item below; text by its source string,
+  arguments and options; any other object, a closure among them, by its
+  class and identity, so an object replaced is seen and one changed in
+  place is not. Why: nothing in production writes a held definition, but
+  the next slices move more readers onto kept nodes, and a stale node
+  would serve the old key and raise no error.
+- **The provider reads the node.** `Contract\BuiltNodes::place()` finds
+  the built node at a place as `Location::definitionAt()` finds the
+  definition (each level refined against its own values, a chosen
+  variant, an item of a collection, a property or an item below a plain
+  key), never a node of the served document, so two sites one def stands
+  for each keep their own options. The node is the definition's own
+  statement, its unlisted form (`of($definition, FALSE)`): whether a key
+  offers a list of values is a fact of the request the emitter adds, so
+  no options resolver is asked for the place, and a reader of a place
+  reads checks, options and the model from this node, which say the same
+  on the listed form (`BuiltNodesTest`), never an option set. Why:
+  asking the resolver for the place was most of what `validate()` paid
+  over HEAD for a refined key, for an answer no reader read.
+  `place()` hands out the definition beside the node, the frame and the
+  value; `at()` is the node alone. `DrupalCheckProvider` takes the
+  check's options (`DefinitionSchema::options()`: the check's own under
+  `portable-check`, else the declared list), the secret flag and the
+  declared list from the node, and hands `ConstraintRunner::check()` the
+  definition from the place; `FormWidgetHost::selection()` reads a
+  reference's handler from the node the same way. Neither calls
+  `Location::definitionAt()`, and the provider calls no
+  `getConstraints()`. Two cases stay the frame's and read its entries: a
+  frame's `drupal:JsonSchema`, held to the frame's values as the
+  pipeline writes them, and an item of a collection whose structure
+  names a check on its whole, run on a map of the structure's keys.
+- **Surface's own constraints run on plain values.**
+  `ConstraintRunner::check()` runs the seven plugins the module ships
+  (`VALUE_ONLY`, each plugin id with the class the module ships) through
+  a plain validator made once, core's `BasicRecursiveValidatorFactory`
+  (Symfony's recursive validator with `DrupalTranslator`), in the
+  constraint's own groups, while the constraint manager's definition of
+  the id names that class; every other plugin, and one whose class an
+  alter replaced, keeps its typed value (`typed()`). Why: an altered
+  class may read the typed context, as core's entity-aware validators
+  do, and would fail on a plain value. `ValueOnlyConstraintsTest` holds the
+  runner's two paths to the same violations, message and sentence for
+  every plugin and every option set the examples use.
+- **The footprint.** `DefinitionSchema` joins the Typed Data footprint
+  as an `edge`: the edge list gained one file by decision, the one read
+  of a definition into a `Schema`, which stays the host readers' shared
+  reader after the flip. `OUTSIDE_THE_EDGES` stays 156, so the list
+  still only shrinks. `BuiltNodes`, `CheckOptions` and `NodeMessage`
+  name no Typed Data; `BuiltNodes` types the definition it hands out
+  through `DefinitionSchema`'s type alias.
+
+Later: lazy text read by the consumers that render it themselves; a
+frame's own node, built from its entries' nodes, holding the frame's
+checks; the member list growing one member per consumer that reads it;
+the declared constraint list going when the model is the source.
+
+(`Contract\DefinitionSchema`, `Contract\CheckOptions`,
+`Contract\BuiltNodes`, `Contract\NodeMessage`, `PropertySchema`,
+`DrupalCheckProvider`, `ConstraintRunner`, `FormWidgetHost`,
+`DefinitionSchemaTest`, `BuiltNodesTest`, `CheckOptionsTest`,
+`ValueOnlyConstraintsTest`)
 
 ### A key that does not apply
 
@@ -7748,7 +7881,7 @@ puts the pattern on the input: an HTML `pattern` makes the browser ask
 for "the requested format", and Form API's `#pattern` says
 "is not in the right format", both vaguer than the message the data
 surface answers with. (`ContractPanel::regex()`,
-`PropertySchema::keywords()`, `ContractPanel.tsx`)
+`DefinitionSchema::keywords()`, `ContractPanel.tsx`)
 
 ### The empty option rule
 
@@ -10697,7 +10830,7 @@ is stated by its format, and the composite is written and named under
 Decided 2026-11-10: the constraints the contract states in keywords,
 and how, are one table, `Contract\ConstraintKeywords`, which the emitter,
 the config schema document and the schema reader all read. Why: the
-mapping was written four times (`PropertySchema::keywords()`,
+mapping was written four times (`DefinitionSchema::keywords()`,
 `SchemaReader::constraints()` with its bounds, the reader's reading of a
 rule, `ConfigSchemaDocument::constraints()`) and had drifted: a `Range`
 on a string and a `Choice` whose values a callback gives were dropped
@@ -10800,7 +10933,7 @@ types, and `NotBlank` was tested in no direction.
   ([core gaps 1.2](core-gaps.md#12-constraints-as-json-schema-keywords)),
   answered by a row that asks the constraint for its keywords.
 
-(`ConstraintKeywords`, `Keywords\`, `PropertySchema::keywords()`,
+(`ConstraintKeywords`, `Keywords\`, `DefinitionSchema::keywords()`,
 `SchemaReader::constraints()`, `SchemaReader::holdTo()`,
 `ConfigSchemaDocument::constraints()`, `SurfaceOptions::readers()`,
 `ConstraintKeywordsTest`, `ConstraintTableTest`)
@@ -11729,7 +11862,7 @@ nothing a value may be changed.
   a bundle removed or another entity type narrows.
 
 (`PortableLinks`, `PortableKeywords::LINKS`, `PortableKeywords::write()`,
-`PropertySchema::checked()`, `ContractEmitter::linked()`,
+`DefinitionSchema::checked()`, `ContractEmitter::linked()`,
 `ContractEmitter::lookup()`, `ContractEmitter::linksBelow()`,
 `ContractEmitter::fetch()`, `PropertySchema::narrowing()`,
 `ServedPaths::lookupPath()`, `ResourceApiController::lookupAt()`,
@@ -11838,9 +11971,13 @@ arrays. Contract 5 stays 5.
   `x-surface` member inside a JSON Schema fragment a structure keeps
   under `portable-check` is served as given, with the widget hints or
   without, in both documents (`PortableServedContractTest`).
-- **Transients.** `x-surface-shape`, `x-surface-checked` and
-  `x-surface-pattern-message` are `x-` keywords on a node while a key is
-  described; each is removed when the key's description ends.
+- **Transients.** `x-surface-shape` is an `x-` keyword on a node while
+  a key is described, removed when the key's description ends. The
+  checks and messages a key states are held by its built node from the
+  start, since 2026-11-12
+  ([A definition is read once](#a-definition-is-read-once-into-a-built-node)),
+  where `x-surface-checked` and `x-surface-pattern-message` held them
+  before.
 - **Comparison is by JSON.** Two schemas, or two keyword values that
   hold schemas, say the same when their JSON is the same
   (`Schemas::same()`), encoded with the fixture flags, among them
@@ -12569,14 +12706,14 @@ accepted, and the bytes that change are the checks named.
   separated by a space. Nothing a check says is lost on the wire.
 - **A map's own constraints are named at the map.** A plain key's map,
   a map in a map and the map each item of a list is
-  (`PropertySchema::mapChecks()`) write every constraint the definition
+  (`DefinitionSchema::mapChecks()`) write every constraint the definition
   holds as its own (not its data type's), but `NotNull` and
   `PrimitiveType`, which `required` and `type` state, under
   `portable-check` at the object, `ComplexData` included; a list of
   maps writes them at `items`. Each has the message every check has.
   The constraint table is not read here: no keyword states a map's
   constraint. The provider answers a `drupal:<id>` at a map as at a
-  key (`Location::definitionAt()`), an empty map is checked, and a map
+  key (the built node at the place, `BuiltNodes`), an empty map is checked, and a map
   its `type` refuses is not asked. A shape is one scalar definition, so
   a shape's def holds no map. A check newly named at a map lints as
   NARROWS, as any check added does; no adopter holds a contract 5
@@ -12673,8 +12810,8 @@ accepted, and the bytes that change are the checks named.
   candidate to drop for every check, a byte change of its own.
 
 (`DrupalCheckProvider::error()`, `DrupalCheckProvider::aboutSecret()`,
-`PortableValidator::said()`, `PropertySchema::mapChecks()`,
-`PropertySchema::checked()`, `PropertySchema::narrowing()`,
+`PortableValidator::said()`, `DefinitionSchema::mapChecks()`,
+`DefinitionSchema::checked()`, `PropertySchema::narrowing()`,
 `PropertySchema::namedFrameChecks()`, `ConstraintKeywords::FORMAT_TWINS`,
 `ConfigSchemaDocument::constraints()`, `Nodes::refusedByComposite()`,
 `EmailRow`, `UuidRow`, `CompositeRow`, `SchemaReader::mapChecks()`,

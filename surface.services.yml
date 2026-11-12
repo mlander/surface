@@ -10,9 +10,10 @@ services:
     arguments: ['@surface.portable_registry', '@surface.contract_emitter', '@surface.constraint_runner', '@validation.constraint', '@string_translation', '@surface.options', '@current_user']
   # The one place a typed value is built to run a constraint: one plugin on
   # one value (check()), or a value against a whole definition (conforms()).
+  # Surface's own plugins run on the plain value, through a plain validator.
   surface.constraint_runner:
     class: Drupal\surface\Validation\ConstraintRunner
-    arguments: ['@typed_data_manager']
+    arguments: ['@typed_data_manager', '@class_resolver']
   Drupal\surface\Pipeline\SurfacePipelineInterface: '@surface.pipeline'
   plugin.manager.surface_widget:
     class: Drupal\surface\Widget\SurfaceWidgetManager
@@ -175,7 +176,13 @@ services:
   # widget hints only when a renderer asks for them.
   surface.contract_emitter:
     class: Drupal\surface\Contract\ContractEmitter
-    arguments: ['@surface.options', '@string_translation', '@validation.constraint', '@surface.site_list_budget', '@surface.widget_choice', '@?Drupal\surface\ResourceBuild\ServedPathsInterface']
+    arguments: ['@surface.options', '@string_translation', '@validation.constraint', '@surface.site_list_budget', '@surface.widget_choice', '@?Drupal\surface\ResourceBuild\ServedPathsInterface', '@surface.definition_schema']
+  # The one read of a definition into its built node, which the emitter
+  # projects to a document and the check provider runs a check from; a
+  # node of a definition a sealed data surface holds is built once.
+  surface.definition_schema:
+    class: Drupal\surface\Contract\DefinitionSchema
+    arguments: ['@surface.options', '@string_translation', '@validation.constraint']
   # How many entries of a list the site decides (variants from the site,
   # keys from the site) the documents and the tool listing spell out.
   surface.site_list_budget:

@@ -7,17 +7,16 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
-use Drupal\Core\Validation\BasicRecursiveValidatorFactory;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
 use Drupal\surface\Pipeline\ViolationMessage;
 use Drupal\surface\Plugin\Validation\Constraint\UniqueConstraint;
+use Drupal\surface\Validation\ConstraintRunner;
 use Drupal\surface_examples\Storage\VenueStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
 use Symfony\Component\Validator\Constraints\Unique;
 
@@ -26,15 +25,15 @@ use Symfony\Component\Validator\Constraints\Unique;
  *
  * The rule: none of the seven plugins Surface ships (JsonSchema,
  * LabeledChoice, LanguageExists, SurfaceReferenceableType, SurfaceUnique,
- * UniqueItems, SurfaceValidReference) needs a typed value. Each runs here
- * through a plain Symfony validator (plainly() says how it is built and
- * run), on plain PHP values, valid and invalid, with the option sets the
- * shipped examples give it, and gives the violations
- * ConstraintRunner::check() gives for the same value: the same message
- * template, parameters, property path and code, the same message, its
- * class and its words, and the same sentence a door says
- * (ViolationMessage::of()). A later slice can then run them without Typed
- * Data; until then the check provider runs them through the runner.
+ * UniqueItems, SurfaceValidReference) needs a typed value, so
+ * ConstraintRunner::check() runs each on the plain value, through its
+ * plain validator (ConstraintRunner::VALUE_ONLY). Each runs here on plain
+ * PHP values, valid and invalid, with the option sets the shipped examples
+ * give it, on both of the runner's paths, and the plain path gives the
+ * violations the typed path (ConstraintRunner::typed()) gives for the same
+ * value: the same message template, parameters, property path and code,
+ * the same message, its class and its words, and the same sentence a door
+ * says (ViolationMessage::of()).
  *
  * @see docs/decisions.md#one-adapter-runs-a-constraint-the-typed-data-footprint-is-pinned
  */
@@ -175,34 +174,7 @@ class ValueOnlyConstraintsTest extends KernelTestBase {
   }
 
   /**
-   * Validates a plain value with a plain validator, as Typed Data would.
-   *
-   * Two rules make a plain validator say what Typed Data's says. It words
-   * messages with core's DrupalTranslator, which turns a `{{ name }}`
-   * parameter into `%name` and gives a TranslatableMarkup; Symfony's own
-   * translator leaves `%value` unfilled in UniqueItems' message. And it
-   * runs the constraint in the constraint's own groups, so a constraint
-   * runs whatever its groups, as it does on a typed value, which Typed
-   * Data validates with no group. The validator is core's
-   * BasicRecursiveValidatorFactory's: Symfony's recursive validator with
-   * DrupalTranslator and Drupal's constraint validator factory, so a
-   * validator's services resolve, and no typed data manager.
-   *
-   * @param \Symfony\Component\Validator\Constraint $constraint
-   *   The constraint.
-   * @param mixed $value
-   *   The value.
-   *
-   * @return \Symfony\Component\Validator\ConstraintViolationListInterface
-   *   What the constraint refused.
-   */
-  protected function plainly(Constraint $constraint, mixed $value): ConstraintViolationListInterface {
-    $validator = (new BasicRecursiveValidatorFactory($this->container->get('class_resolver')))->createValidator();
-    return $validator->validate($value, $constraint, $constraint->groups);
-  }
-
-  /**
-   * Tests each plugin says the same of a plain value as through the runner.
+   * Tests each plugin says the same of a plain value on both paths.
    */
   public function testPluginsReadThePlainValue(): void {
     $constraints = $this->container->get('validation.constraint');
@@ -212,8 +184,8 @@ class ValueOnlyConstraintsTest extends KernelTestBase {
       $seen[$id] = TRUE;
       foreach ([...$passes, ...$refuses] as $index => $value) {
         $label = sprintf('%s %s on %s', $id, json_encode($options), json_encode($value));
-        $alone = static::rows($this->plainly($constraints->create($id, $options), $value));
-        $this->assertSame(static::rows($runner->check($id, $options, $value, $definition)), $alone, $label . ': the plain validator says what the runner says.');
+        $alone = static::rows($runner->check($id, $options, $value, $definition));
+        $this->assertSame(static::rows($runner->typed($id, $options, $value, $definition)), $alone, $label . ': the plain path says what the typed path says.');
         if ($index < count($passes)) {
           $this->assertSame([], $alone, $label . ': passes.');
         }
@@ -236,6 +208,10 @@ class ValueOnlyConstraintsTest extends KernelTestBase {
       'UniqueItems',
     ], $held);
     $this->assertSame($shipped, $held, 'Every constraint plugin Surface ships is held here.');
+    $this->assertSame($held, array_keys(ConstraintRunner::VALUE_ONLY), 'The runner runs each on the plain value.');
+    foreach (ConstraintRunner::VALUE_ONLY as $id => $class) {
+      $this->assertSame($class, $constraints->getDefinition($id)['class'], "$id: the runner names the class Surface ships.");
+    }
   }
 
   /**

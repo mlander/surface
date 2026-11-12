@@ -170,7 +170,8 @@ sealed one. The form, the pipeline and the contract emitter
   kind, in `src/Plugin/Validation/Constraint/`.
 - **Validation.** One class makes typed data to run a constraint on a
   data surface's definition, `ConstraintRunner`, with `TypedDataManager::create()`: one constraint
-  on one value for each check a document names, or `validate()` on a
+  on one value for each check a document names (the module's own seven
+  on the plain value, with no typed data), or `validate()` on a
   whole definition for an output, a watched value and a site's default
   (`src/Validation/ConstraintRunner.php`,
   [decision](decisions.md#one-adapter-runs-a-constraint-the-typed-data-footprint-is-pinned)).

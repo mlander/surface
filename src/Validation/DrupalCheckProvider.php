@@ -14,9 +14,10 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\Validation\ConstraintManager;
+use Drupal\surface\Contract\BuiltNodes;
 use Drupal\surface\Contract\ConstraintKeywords;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\PortableKeywords;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\ValueState;
@@ -34,15 +35,20 @@ use Symfony\Component\Validator\ConstraintViolationInterface;
 /**
  * Answers every `drupal:<plugin id>` check of one validation.
  *
- * The rule: a request is read back to the place it is about
- * (Location::definitionAt(), on the data surface refined against the
- * values), and the constraint of that plugin id on that place's own
- * definition runs, with the options the definition holds (storage, key,
- * handler, theme, ...), alone, by ConstraintRunner::check() with that
- * definition. The options the document publishes describe the check;
- * they are never what runs. A frame's `drupal:JsonSchema` is each
- * schema read into that frame, held to the frame's values as the pipeline
- * writes them (SurfacePipelineInterface::document()).
+ * The rule: a request is read back to the place it is about, and to the
+ * built node there (BuiltNodes, on the data surface refined against the
+ * values), never a node of the served document; the constraint of that
+ * plugin id the node declares runs, with the options the definition holds
+ * (storage, key, handler, theme, ...), read from the node
+ * (DefinitionSchema::options()), alone, by ConstraintRunner::check() with
+ * the definition the node was read from, which the place hands out beside
+ * the node (BuiltNodes::place()). The options the document
+ * publishes describe the check; they are never what runs. A frame's
+ * `drupal:JsonSchema` is each schema read into that frame, held to the
+ * frame's values as the pipeline writes them
+ * (SurfacePipelineInterface::document()); an item of a collection whose
+ * structure names a check on its whole runs it on the item as a map of
+ * the structure's keys. Those two are the frame's, and read its entries.
  *
  * Each Symfony violation is one error: its code `check.drupal:<id>`, and
  * `.<name>` after it when the violation has a code, its constraint's name
@@ -143,7 +149,7 @@ final class DrupalCheckProvider implements CheckProvider {
   /**
    * What is at each place, by its JSON Pointer.
    *
-   * @var array<string, \Drupal\surface\ResourceBuild\Location|null>
+   * @var array<string, array{node: ?\PortableSchema\Builder\Schema, definition: ?\Drupal\Core\TypedData\DataDefinitionInterface, frame: ?\Drupal\surface\SurfaceInterface, value: mixed}|null>
    */
   private array $places = [];
 
@@ -177,6 +183,8 @@ final class DrupalCheckProvider implements CheckProvider {
    * @param \Drupal\surface\Options\SurfaceOptions $options
    *   The options service, which tells whether a constraint is read as a
    *   list of values.
+   * @param \Drupal\surface\Contract\BuiltNodes $built
+   *   What finds the built node at a place.
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface of the top, as advertised.
    * @param array $values
@@ -188,6 +196,7 @@ final class DrupalCheckProvider implements CheckProvider {
     private readonly SurfacePipelineInterface $pipeline,
     private readonly TranslationInterface $translation,
     private readonly SurfaceOptions $options,
+    private readonly BuiltNodes $built,
     public readonly SurfaceInterface $surface,
     public readonly array $values,
   ) {
@@ -234,18 +243,19 @@ final class DrupalCheckProvider implements CheckProvider {
    * @param string $pointer
    *   The place's JSON Pointer.
    *
-   * @return \Drupal\surface\ResourceBuild\Location|null
-   *   What is there, or NULL where nothing declares it.
+   * @return array{node: ?\PortableSchema\Builder\Schema, definition: ?\Drupal\Core\TypedData\DataDefinitionInterface, frame: ?\Drupal\surface\SurfaceInterface, value: mixed}|null
+   *   The built node there and its definition, the frame there, and the
+   *   value there (BuiltNodes::place()); NULL where nothing declares it.
    */
-  public function at(string $pointer): ?Location {
+  private function at(string $pointer): ?array {
     if (!array_key_exists($pointer, $this->places)) {
-      $this->places[$pointer] = Location::definitionAt($this->surface, $this->values, $pointer, $this->refine(...));
+      $this->places[$pointer] = $this->built->place($this->surface, $this->values, $pointer, $this->refine(...));
     }
     return $this->places[$pointer];
   }
 
   /**
-   * Answers whether the place's definition is a secret.
+   * Answers whether the place is a secret, as its built node says.
    *
    * @param string $pointer
    *   The place's JSON Pointer.
@@ -254,8 +264,7 @@ final class DrupalCheckProvider implements CheckProvider {
    *   TRUE when it is.
    */
   public function isSecret(string $pointer): bool {
-    $definition = $this->at($pointer)?->definition;
-    return $definition !== NULL && DefinitionMetadata::isSecret($definition);
+    return (DefinitionSchema::model($this->at($pointer)['node'] ?? NULL)['secret'] ?? FALSE) === TRUE;
   }
 
   /**
@@ -272,9 +281,8 @@ final class DrupalCheckProvider implements CheckProvider {
    *   TRUE when the list is read, and from checks alone.
    */
   public function isListedByChecks(string $pointer): bool {
-    $definition = $this->at($pointer)?->definition;
     $listed = FALSE;
-    foreach ($definition?->getConstraints() ?? [] as $id => $options) {
+    foreach (DefinitionSchema::model($this->at($pointer)['node'] ?? NULL)['constraints'] ?? [] as $id => $options) {
       if (!$this->options->readsAsList((string) $id, $options)) {
         continue;
       }
@@ -405,11 +413,14 @@ final class DrupalCheckProvider implements CheckProvider {
    */
   public function constraintMessage(string $location, array $ids, ?array $others = NULL): string|\Stringable|null {
     $place = $this->at($location);
-    $definition = $place?->definition;
-    if ($definition === NULL) {
+    $model = DefinitionSchema::model($place['node'] ?? NULL);
+    $definition = $place['definition'] ?? NULL;
+    if ($place === NULL || $definition === NULL) {
       return NULL;
     }
-    $constraints = $definition->getConstraints();
+    // Every constraint the place declares, the ones its keywords state
+    // among them: a keyword's refusal is worded by its constraint.
+    $constraints = $model['constraints'] ?? [];
     if ($others !== NULL) {
       $type = ['NotNull', 'PrimitiveType', 'ComplexData'];
       $ids = array_unique([...$ids, ...array_diff(array_map('strval', array_keys($constraints)), $others, $type)]);
@@ -418,7 +429,7 @@ final class DrupalCheckProvider implements CheckProvider {
       if (!array_key_exists($id, $constraints)) {
         continue;
       }
-      foreach ($this->runner->check($id, $constraints[$id], $place->value, $definition) as $violation) {
+      foreach ($this->runner->check($id, $constraints[$id], $place['value'], $definition) as $violation) {
         if ((string) $violation->getPropertyPath() === '') {
           return ViolationMessage::of($violation);
         }
@@ -450,7 +461,7 @@ final class DrupalCheckProvider implements CheckProvider {
     if ($location === NULL) {
       return CheckResult::unchecked('noProvider');
     }
-    if (!ValueState::isConfigured($location->value)) {
+    if (!ValueState::isConfigured($location['value'])) {
       // A place holding no value: whether it must hold one is the
       // module's to say (required, cannot be cleared), never a check's.
       return new CheckResult();
@@ -469,9 +480,11 @@ final class DrupalCheckProvider implements CheckProvider {
     }
     $ran = FALSE;
     $errors = [];
-    $definition = $location->definition;
-    if ($definition !== NULL && array_key_exists($id, $definition->getConstraints())) {
-      $options = $definition->getConstraints()[$id];
+    $node = $location['node'];
+    $definition = $location['definition'];
+    $frame = $location['frame'];
+    if ($definition !== NULL && DefinitionSchema::declares($node, $id)) {
+      $options = DefinitionSchema::options($node, $id);
       if ($id === 'JsonSchema' && is_array($options['schema'] ?? NULL)) {
         $foreign = self::foreignChecks($options['schema']);
         if ($foreign !== []) {
@@ -480,17 +493,17 @@ final class DrupalCheckProvider implements CheckProvider {
         }
       }
       $ran = TRUE;
-      foreach ($this->runner->check($id, $options, $location->value, $definition) as $violation) {
+      foreach ($this->runner->check($id, $options, $location['value'], $definition) as $violation) {
         $error = $this->error($request, $name, $violation, $definition);
         // One error per location, code and params; said() joins their
         // messages.
         $errors[json_encode($error)] = $error;
       }
     }
-    if ($location->frame !== NULL && $id === 'JsonSchema' && $location->frame->getDefinitions()->frameConstraints() !== []) {
+    if ($frame !== NULL && $id === 'JsonSchema' && $frame->getDefinitions()->frameConstraints() !== []) {
       $ran = TRUE;
-      $document = $this->pipeline->document($location->frame, is_array($location->value) ? $location->value : []);
-      foreach ($location->frame->getDefinitions()->frameConstraints() as $schema) {
+      $document = $this->pipeline->document($frame, is_array($location['value']) ? $location['value'] : []);
+      foreach ($frame->getDefinitions()->frameConstraints() as $schema) {
         if (self::namesChecksOnly($schema)) {
           // Named in the document as those checks, each asked on its own.
           continue;
@@ -516,21 +529,21 @@ final class DrupalCheckProvider implements CheckProvider {
         $errors[] = $error;
       }
     }
-    if (!$ran && $definition === NULL && $location->frame !== NULL && $request->location !== '' && $id !== 'JsonSchema') {
+    if (!$ran && $node === NULL && $frame !== NULL && $request->location !== '' && $id !== 'JsonSchema') {
       // An item of a collection, whose structure names the check on its
       // whole: run on the item as a map of the structure's keys.
-      foreach ($location->frame->getDefinitions()->frameConstraints() as $schema) {
+      foreach ($frame->getDefinitions()->frameConstraints() as $schema) {
         $checks = $schema[PortableKeywords::CHECK] ?? NULL;
         if (!self::namesChecksOnly($schema) || !is_array($checks) || !array_key_exists($name, $checks)) {
           continue;
         }
         $ran = TRUE;
         $map = MapDataDefinition::create();
-        foreach ($location->frame->getDefinitions()->entries() as $key => $entry) {
+        foreach ($frame->getDefinitions()->entries() as $key => $entry) {
           $map->setPropertyDefinition((string) $key, $entry->definition);
         }
         $options = json_decode((string) json_encode($checks[$name]), TRUE);
-        foreach ($this->runner->check($id, is_array($options) ? $options : [], $location->value, $map) as $violation) {
+        foreach ($this->runner->check($id, is_array($options) ? $options : [], $location['value'], $map) as $violation) {
           $error = $this->error($request, $name, $violation, $map);
           $errors[json_encode($error)] = $error;
         }

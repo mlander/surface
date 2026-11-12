@@ -572,7 +572,21 @@ final class References {
    *   settings.
    */
   public static function handlerOf(DataDefinitionInterface $definition): array {
-    $options = $definition->getConstraints()[self::CONSTRAINT] ?? NULL;
+    return static::handlerFrom($definition->getConstraints()[self::CONSTRAINT] ?? NULL);
+  }
+
+  /**
+   * Reads which selection handler a reference check's options name.
+   *
+   * @param mixed $options
+   *   The options of the key's SurfaceValidReference, as its definition
+   *   holds them; NULL for none.
+   *
+   * @return array{0: string, 1: array}
+   *   The handler's plugin id, empty for the default one, and its
+   *   settings (handlerOf()).
+   */
+  public static function handlerFrom(mixed $options): array {
     $handler = is_array($options) && is_string($options['handler'] ?? NULL) ? $options['handler'] : '';
     $settings = $handler !== '' && is_array($options['handlerSettings'] ?? NULL) ? $options['handlerSettings'] : [];
     return [$handler, $settings];

@@ -7,12 +7,15 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\Core\TypedData\TypedDataInterface;
 use Drupal\Core\Validation\Plugin\Validation\Constraint\NotNullConstraint;
 use Drupal\Core\Validation\Plugin\Validation\Constraint\PrimitiveTypeConstraint;
 use Drupal\Core\Validation\Plugin\Validation\Constraint\RangeConstraint;
+use Drupal\Core\Plugin\DefaultPluginManager;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\surface\Plugin\Validation\Constraint\UniqueItemsConstraint;
 use Drupal\surface\Validation\ConstraintRunner;
+use Drupal\Tests\surface\Kernel\Fixture\ContextReadingConstraint;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\Validator\Constraints\Unique;
@@ -134,6 +137,47 @@ class ConstraintRunnerTest extends KernelTestBase {
     $rows = static::rows($this->runner()->conforms($map, ['count' => 'two'], 'output'));
     $this->assertSame([PrimitiveTypeConstraint::class, 'count'], [$rows[0][0] ?? NULL, $rows[0][2] ?? NULL], 'A declared key is held, its path below the root, whatever the root is named.');
     $this->assertCount(1, $rows);
+  }
+
+  /**
+   * Tests Surface's own plugins run on the plain value, core's on a typed one.
+   *
+   * The plain validator words the message as Typed Data's does
+   * (ValueOnlyConstraintsTest holds the two paths alike for every plugin);
+   * the value it is handed is the value itself.
+   */
+  public function testSurfacePluginsRunOnThePlainValue(): void {
+    $plain = $this->runner()->check('UniqueItems', [], ['a', 'a'], ListDataDefinition::create('string'));
+    $this->assertCount(1, $plain);
+    $this->assertSame(['a', 'a'], $plain[0]->getRoot(), 'No typed value is built for UniqueItems.');
+    $this->assertSame('The item %value is listed more than once.', $plain[0]->getMessageTemplate());
+    $this->assertSame('The item &quot;a&quot; is listed more than once.', strip_tags((string) $plain[0]->getMessage()), 'Its message is filled, as Typed Data fills it.');
+    $typed = $this->runner()->typed('UniqueItems', [], ['a', 'a'], ListDataDefinition::create('string'));
+    $this->assertInstanceOf(TypedDataInterface::class, $typed[0]->getRoot(), 'The typed path builds one.');
+    $this->assertSame((string) $typed[0]->getMessage(), (string) $plain[0]->getMessage());
+    $core = $this->runner()->check('Range', ['max' => 3], 5, DataDefinition::create('integer'));
+    $this->assertInstanceOf(TypedDataInterface::class, $core[0]->getRoot(), 'A core plugin runs on a typed value.');
+  }
+
+  /**
+   * Tests a plugin whose class was altered runs on a typed value.
+   *
+   * The plain path is for the class Surface ships under an id
+   * (ConstraintRunner::VALUE_ONLY). Here the constraint manager's
+   * definition of UniqueItems names another class, as an alter hook would
+   * leave it, whose validator reads the typed value: check() runs it on
+   * one, so it refuses in its own message and does not throw.
+   */
+  public function testAlteredPluginRunsOnTypedValue(): void {
+    $manager = $this->container->get('validation.constraint');
+    $definitions = $manager->getDefinitions();
+    $definitions['UniqueItems']['class'] = ContextReadingConstraint::class;
+    // What hook_validation_constraint_alter() would leave in the manager.
+    (new \ReflectionProperty(DefaultPluginManager::class, 'definitions'))->setValue($manager, $definitions);
+    $violations = $this->runner()->check('UniqueItems', [], ['a', 'b'], ListDataDefinition::create('string'));
+    $this->assertCount(1, $violations);
+    $this->assertSame('Refused by the altered class.', (string) $violations[0]->getMessage());
+    $this->assertInstanceOf(TypedDataInterface::class, $violations[0]->getRoot(), 'The altered class is handed a typed value.');
   }
 
 }

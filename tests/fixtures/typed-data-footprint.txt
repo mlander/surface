@@ -49,6 +49,7 @@ emitter src/Contract/Choices.php
 emitter src/Contract/Conditionals.php
 emitter src/Contract/ConfigSchemaDocument.php
 emitter src/Contract/ContractEmitter.php
+edge src/Contract/DefinitionSchema.php
 emitter src/Contract/DefinitionWidgetInterface.php
 emitter src/Contract/LeafTypes.php
 emitter src/Contract/PropertySchema.php

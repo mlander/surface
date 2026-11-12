@@ -269,6 +269,11 @@ final class ContractEmitter {
   protected array $site = ['pointer' => '', 'steps' => [], 'reached' => TRUE];
 
   /**
+   * Reads each definition into its built node.
+   */
+  protected readonly DefinitionSchema $definitions;
+
+  /**
    * Describes one key as a property, and a child's site as a reference.
    */
   protected readonly PropertySchema $propertySchema;
@@ -303,6 +308,9 @@ final class ContractEmitter {
    *   The API's paths, which a reference key's lookup link names; NULL
    *   on a site that serves no API (surface_http is not installed), whose
    *   documents carry no lookup link.
+   * @param \Drupal\surface\Contract\DefinitionSchema|null $definitions
+   *   The one read of a definition into its built node, which the check
+   *   provider shares (definitionSchema()); without it, one of its own.
    */
   public function __construct(
     SurfaceOptions $options,
@@ -311,9 +319,11 @@ final class ContractEmitter {
     protected readonly ?SiteListBudget $budget = NULL,
     ?WidgetChoice $widgets = NULL,
     protected readonly ?ServedPathsInterface $servedPaths = NULL,
+    ?DefinitionSchema $definitions = NULL,
   ) {
     $this->stringTranslation = $string_translation;
-    $this->propertySchema = new PropertySchema($options, $string_translation, $constraints, $widgets);
+    $this->definitions = $definitions ?? new DefinitionSchema($options, $string_translation, $constraints);
+    $this->propertySchema = new PropertySchema($options, $string_translation, $constraints, $widgets, $this->definitions);
     $this->conditionals = new Conditionals($this->propertySchema);
     $this->documentHead = new DocumentHead($this->propertySchema);
   }
@@ -603,11 +613,15 @@ final class ContractEmitter {
     $values = $declared->getPortValues() + $values;
     $refined = $declared->refine($values, $runtime ? SurfaceInterface::EVERY : $kinds);
     $cacheability->addCacheableDependency($refined);
+    // Each definition a data surface holds is read into its node once.
+    $this->definitions->seal($declared);
+    $this->definitions->seal($refined);
     $advertised = $declared->getDefinitions();
     $now = $refined->getDefinitions();
     // What the static refiners alone answer for these values, which is
     // all a conditional may state: a runtime refiner is never run ahead.
     $static = $runtime && $this->conditionals->refinedAtRuntime($advertised) ? $declared->refine($values, $kinds) : $refined;
+    $this->definitions->seal($static);
     $ahead = $static->getDefinitions();
     // What the coded ones alone answer: whether their gate is open yet.
     $coded = $runtime && $this->conditionals->hasRules($advertised) ? $declared->refine($values, SurfaceInterface::CODED)->getDefinitions() : $ahead;
@@ -2206,6 +2220,20 @@ final class ContractEmitter {
   }
 
   /**
+   * Gets the one read of a definition into its built node.
+   *
+   * The check provider reads the built node of the place a check is about
+   * (BuiltNodes) through the same reader, so a node built for a document
+   * is the one it reads.
+   *
+   * @return \Drupal\surface\Contract\DefinitionSchema
+   *   The reader.
+   */
+  public function definitionSchema(): DefinitionSchema {
+    return $this->definitions;
+  }
+
+  /**
    * Reports how many combinations were refined and how many remembered.
    *
    * For a performance budget, never for behavior: counts since the
@@ -2233,15 +2261,30 @@ final class ContractEmitter {
    *   PortableKeywords::write() writes as the check `drupal:JsonSchema`.
    */
   public static function foreign(array $schema, TranslationInterface $translation): array {
+    return [
+      'constraint' => 'JsonSchema',
+      'message' => PlainText::of(static::foreignMessage($schema, $translation)),
+      'schema' => $schema === [] ? new \stdClass() : $schema,
+    ];
+  }
+
+  /**
+   * Says which keywords a JSON Schema only the server checks holds.
+   *
+   * @param array $schema
+   *   The schema a JsonSchema constraint holds a value, or a frame, to.
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $translation
+   *   The string translation service.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The message, as a built node holds it (DefinitionSchema, NodeMessage).
+   */
+  public static function foreignMessage(array $schema, TranslationInterface $translation): TranslatableMarkup {
     // Schemas held together as an `allOf` alone are named by what each
     // says: the message a frame's several schemas were written with.
     $together = array_keys($schema) === ['allOf'] && is_array($schema['allOf']) && array_is_list($schema['allOf']) && array_filter($schema['allOf'], 'is_array') === $schema['allOf'];
     $keywords = $together ? array_values(array_unique(array_merge(...array_map(JsonSchemaConstraint::keywords(...), $schema['allOf'])))) : JsonSchemaConstraint::keywords($schema);
-    return [
-      'constraint' => 'JsonSchema',
-      'message' => PlainText::of(new TranslatableMarkup('Checked on the server against the schema it was read from: @keywords.', ['@keywords' => implode(', ', $keywords)], [], $translation)),
-      'schema' => $schema === [] ? new \stdClass() : $schema,
-    ];
+    return new NodeMessage('Checked on the server against the schema it was read from: @keywords.', ['@keywords' => implode(', ', $keywords)], [], $translation);
   }
 
 }

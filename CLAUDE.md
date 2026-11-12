@@ -641,13 +641,38 @@ the record of the rework that brought the module to the pattern.
   route's value. Nothing else takes the typed data manager to validate
   such a value; host storage validates its own typed config and
   entities, and host readers build typed objects to read them. Surface's
-  own seven constraint plugins read the plain value
-  (`ValueOnlyConstraintsTest`, through a plain validator with core's
-  `DrupalTranslator` that runs a constraint whatever its groups), and
+  own seven constraint plugins run on the plain value (`VALUE_ONLY`, by
+  plugin id the class Surface ships, the plain path taken only while the
+  constraint manager names that class; through a plain validator with
+  core's `DrupalTranslator` that runs a constraint whatever its groups;
+  `ValueOnlyConstraintsTest` holds the runner's two paths alike), and
   `TypedDataFootprintTest` pins every file that uses Typed Data, by
   role, a list that only shrinks: the lines outside the edges equal
   `OUTSIDE_THE_EDGES`, and the edge files are named in the test
   (`docs/decisions.md#one-adapter-runs-a-constraint-the-typed-data-footprint-is-pinned`).
+- **Built node**: what `Contract\DefinitionSchema::of()`
+  (`surface.definition_schema`), the one read of a definition into a
+  `Schema`, answers for one definition at one site: its keywords,
+  `portable-check` with each check's options as the definition holds
+  them, titles and messages as held (lazy text kept), and
+  `x-surface-model`, a closed list of two members, each with its reader:
+  `secret` (read by the check provider, until `writeOnly` on the node
+  says it) and `constraints` (every declared constraint
+  with its options, read by the check provider; the bridge until the
+  model is the source). A node holds no reference to its definition.
+  `published()` is the one place it becomes a document node
+  (`CheckOptions::published()`, `PlainText::of()`, the model stripped),
+  before anything compares it; the emitter decorates the projection with
+  what the request adds. Kept per definition a sealed data surface holds,
+  under one precondition: such a definition is never written after its
+  node is built (a change works on a copy), which an assertion checks by
+  fingerprint where assertions run. Never in the build cache or a served
+  document. `Contract\BuiltNodes::place()` gives the check provider and
+  the form the node at a place, its unlisted form (`of($definition,
+  FALSE)`: whether a key offers a list is the request's, so no options
+  resolver is asked for the place), beside the definition, the frame and
+  the value; never a node of the served document
+  (`docs/decisions.md#a-definition-is-read-once-into-a-built-node`).
 - **Runner**: the one service that runs an operation,
   `Operation\OperationRunner` (`surface.runner`, typed
   `OperationRunnerInterface`), modeled on the Tool API's `ToolRunner`:
@@ -972,8 +997,8 @@ test errored or failed and every gate passed.
   cache; it orders classes slowest first.
 
 On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-12: the
-full lane takes 10m33s at the defaults (phpunit 9m53s) and the fast
-lane 6m07s (phpunit 6m01s). As of 2026-10-23, with a smaller suite, the
+full lane takes 9m49s at the defaults (phpunit 9m02s) and the fast
+lane 5m48s (phpunit 5m41s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1004,7 +1029,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2396, Assertions: 57905, Errors: 0, Failures: 0, Skipped: 3. Classes: 335 of 335, 8 at a time, browser classes 4.
+phpunit: Tests: 2422, Assertions: 112613, Errors: 0, Failures: 0, Skipped: 3. Classes: 338 of 338, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1028,8 +1053,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2282, Assertions: 53351, Deprecations: 687, Skipped: 3. Classes:
-282, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2308, Assertions: 108059, Deprecations: 687, Skipped: 3. Classes:
+285, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 
@@ -1343,10 +1368,11 @@ src/Validation/          A request's values held to their document by the
                          (`surface.portable_validator`, one run per
                          validate(), compiled validators kept by the
                          document's hash), DrupalCheckProvider (every
-                         `drupal:<plugin id>` check, run from the place's
-                         own definition, by ConstraintRunner, the one
-                         class that builds a typed value to run a
-                         constraint), Nodes (the document's nodes at
+                         `drupal:<plugin id>` check, run from the built
+                         node at the place (Contract/BuiltNodes), by
+                         ConstraintRunner, the one class that builds a
+                         typed value to run a constraint, Surface's own
+                         plugins on the plain value), Nodes (the document's nodes at
                          each place of the data), Found (one refusal,
                          said). ResourceBuild/Location.php reads a JSON
                          Pointer back to its definition and value.
@@ -1365,8 +1391,15 @@ src/Staging/             The store contract (StageStoreInterface, and
                          (StagedSecrets) and what records and resets
                          the config an apply wrote (ConfigWrites).
 src/Contract/            The served contract's emitter (a Portable Schema
-                         document): ContractEmitter
-                         walks the frames, PropertySchema writes each key,
+                         document): DefinitionSchema reads each definition
+                         into its built node (real check options, lazy
+                         text, x-surface-model) and projects it
+                         (published(), CheckOptions the check options a
+                         document says, NodeMessage a message it holds);
+                         BuiltNodes finds the node at a place for the
+                         check provider and the form; ContractEmitter
+                         walks the frames, PropertySchema writes each key
+                         from its projected node,
                          Conditionals the if/then, DocumentHead the top,
                          PortableKeywords the dialect's portable-check and
                          x-portable-messages, PortableUi its

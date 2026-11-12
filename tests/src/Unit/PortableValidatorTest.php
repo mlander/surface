@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Unit;
 
+use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\Core\Validation\ConstraintManager;
@@ -35,7 +36,7 @@ class PortableValidatorTest extends UnitTestCase {
   public function testDocumentMessageWins(): void {
     $translation = $this->getStringTranslationStub();
     $options = (new \ReflectionClass(SurfaceOptions::class))->newInstanceWithoutConstructor();
-    $validator = new PortableValidator(Registry::withTypes(), new ContractEmitter($options, $translation), new ConstraintRunner($this->createMock(TypedDataManagerInterface::class)), $this->createMock(ConstraintManager::class), $translation, $options, new AnonymousUserSession());
+    $validator = new PortableValidator(Registry::withTypes(), new ContractEmitter($options, $translation), new ConstraintRunner($this->createMock(TypedDataManagerInterface::class), $this->createMock(ClassResolverInterface::class)), $this->createMock(ConstraintManager::class), $translation, $options, new AnonymousUserSession());
     $schema = Schema::from([
       '$schema' => 'https://portable-schema.dev/v1/schema',
       'type' => 'object',

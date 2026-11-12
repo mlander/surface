@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Unit;
 
+use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
@@ -90,7 +91,7 @@ class SurfacePipelineCastingTest extends UnitTestCase {
     // so it answers none without a resolver.
     (new \ReflectionProperty(SurfaceOptions::class, 'resolved'))->setValue($options, new \WeakMap());
     $translation = $this->getStringTranslationStub();
-    $runner = new ConstraintRunner($manager);
+    $runner = new ConstraintRunner($manager, $this->createMock(ClassResolverInterface::class));
     $validator = new PortableValidator(Registry::withTypes(), new ContractEmitter($options, $translation), $runner, $this->createMock(ConstraintManager::class), $translation, $options, new AnonymousUserSession());
     return new SurfacePipeline($runner, $options, $translation, $validator);
   }
