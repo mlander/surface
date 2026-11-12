@@ -42,9 +42,10 @@ use Symfony\Component\HttpFoundation\Request;
  * One more door onto the same contract: the HTTP door's API,
  * contract 3, for every operation that can be asked on its own
  * (ResourceCatalog::standalone(), the rule the tool deriver follows).
- * OpenAPI 3.1, because its schema objects are JSON Schema 2020-12, the
- * dialect both documents are written in; 3.0 has no `$defs`, `if`/`then`,
- * `const`, type arrays or `unevaluatedProperties`.
+ * OpenAPI 3.1, because its schema objects are JSON Schema 2020-12, of
+ * which both documents are written in a dialect, Portable Schema; 3.0 has
+ * no `$defs`, `if`/`then`, `const`, type arrays or
+ * `unevaluatedProperties`.
  *
  * - **One path item per resource path.** A singleton or a collection is
  *   `/surface-api/{resource}`, one thing `/surface-api/{resource}/{id}`,
@@ -99,6 +100,18 @@ final class OpenApiDocument {
    * The OpenAPI version written.
    */
   public const OPENAPI = '3.1.0';
+
+  /**
+   * The dialect the document names for its schema objects, for OpenAPI tools.
+   *
+   * JSON Schema 2020-12, which every OpenAPI 3.1 tool reads. Each operation's
+   * component still says its own `$schema`, the Portable Schema dialect
+   * (ContractEmitter::DIALECT), a profile of 2020-12 with keywords a tool
+   * that does not know them ignores.
+   * Decision: see
+   * docs/decisions.md#the-served-document-is-a-portable-schema-document.
+   */
+  public const JSON_SCHEMA_DIALECT = 'https://json-schema.org/draft/2020-12/schema';
 
   /**
    * The security scheme of the session cookie.
@@ -297,7 +310,7 @@ final class OpenApiDocument {
     $document = [
       'openapi' => self::OPENAPI,
       'info' => $this->info($request),
-      'jsonSchemaDialect' => ContractEmitter::DIALECT,
+      'jsonSchemaDialect' => self::JSON_SCHEMA_DIALECT,
       'servers' => [['url' => $request->getSchemeAndHttpHost()]],
       'tags' => array_values($tags),
       'paths' => $paths === [] ? new \stdClass() : $paths,
@@ -411,9 +424,9 @@ final class OpenApiDocument {
     $creates = $kind === OperationDefinition::CREATE;
     // The resource in the answers: its values, and its schema documents
     // shown by example.
-    $documents = ['schema' => static::document($components->get($schema), (string) $this->t('JSON Schema 2020-12; its example is the full schema built for no account.'))];
+    $documents = ['schema' => static::document($components->get($schema), (string) $this->t('A Portable Schema document, a dialect of JSON Schema 2020-12; its example is the full schema built for no account.'))];
     if ($outputs !== NULL) {
-      $documents['outputs'] = static::document($components->get($outputs), (string) $this->t('JSON Schema 2020-12; its example is the output schema.'));
+      $documents['outputs'] = static::document($components->get($outputs), (string) $this->t('A Portable Schema document, a dialect of JSON Schema 2020-12; its example is the output schema.'));
     }
     $contractValues = $this->shaped($schema, (string) $this->t('Values not valid against it: a key that holds nothing is null.'));
     $resultValues = $this->shaped($schema, (string) $this->t('Values not valid against it: a run answers what it accepted.'));
@@ -458,7 +471,7 @@ final class OpenApiDocument {
             'name' => Choices::PARAMETER,
             'in' => 'query',
             'required' => FALSE,
-            'description' => (string) $this->t("A choice of a key marked deferred, its list too long to write out: the key's JSON Pointer, =, then a value of its deciding key or an entry's id, choose=/props=card. The answer is the full schema with that variant or entry stated in full, the rest as without it. Once per choice; a key inside a variant is named with the variant's choice beside it, choose=/settings=surface_component&choose=/settings/props=card. The key's x-surface.deferred.fetch is this URL as an RFC 6570 template. A choice of no such key or value is a 404 naming the pointer."),
+            'description' => (string) $this->t("A choice of a key marked deferred, its list too long to write out: the key's JSON Pointer, =, then a value of its deciding key or an entry's id, choose=/props=card. The answer is the full schema with that variant or entry stated in full, the rest as without it. Once per choice; a key inside a variant is named with the variant's choice beside it, choose=/settings=surface_component&choose=/settings/props=card. The key's choose link (x-portable-links, rel choose) is this URL as an RFC 6570 template. A choice of no such key or value is a 404 naming the pointer."),
             'style' => 'form',
             'explode' => TRUE,
             'schema' => ['type' => 'array', 'items' => ['type' => 'string', 'pattern' => '^/?[^=]+=.+$']],
@@ -609,7 +622,7 @@ final class OpenApiDocument {
     // serves this operation at.
     // Decision: see
     // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
-    $references = static::references($full->document['schema']);
+    $references = static::references($built);
     if (!$readNamed && !$standsFor && $references !== []) {
       [$path, $names, $url] = $this->paths->lookupTemplate($definition, $operation);
       $cacheability->addCacheableDependency($url);
@@ -703,37 +716,41 @@ final class OpenApiDocument {
   }
 
   /**
-   * Finds the keys of a full schema that refer to an entity.
+   * Finds the keys of a data surface the lookup answers for.
    *
-   * @param array $schema
-   *   The full schema.
-   * @param array|null $frame
-   *   The object being read; NULL for the top.
+   * Read from the data surface, not the document, whose links a key the
+   * lookup does not answer for leaves out: each key that refers to an
+   * entity, as References::definitionAt() finds it, through attached
+   * children alone, never into a collection's item, a variant or a mount.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The data surface, or a child of it.
    * @param string $prefix
    *   Its JSON Pointer.
    *
    * @return string[]
-   *   The JSON Pointer of each key `x-surface.reference` marks, and of the
-   *   object a bare reference's id is in, which names it too.
+   *   The JSON Pointer of each key that names its entity type, and of
+   *   each id whose entity type its sibling names, and of the object such
+   *   an id is in, which names it too.
    */
-  protected static function references(array $schema, ?array $frame = NULL, string $prefix = ''): array {
-    $frame ??= $schema;
+  protected static function references(SurfaceInterface $surface, string $prefix = ''): array {
     $found = [];
-    foreach (is_array($frame['properties'] ?? NULL) ? $frame['properties'] : [] as $name => $property) {
-      if (!is_array($property)) {
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      if ($entry->variants !== NULL || $entry->list !== NULL) {
         continue;
       }
       $at = $prefix . '/' . str_replace(['~', '/'], ['~0', '~1'], (string) $name);
-      if (isset($property['$ref']) && is_string($property['$ref']) && str_starts_with($property['$ref'], ContractEmitter::DEFS)) {
-        $def = $schema['$defs'][substr($property['$ref'], strlen(ContractEmitter::DEFS))] ?? NULL;
-        $inside = is_array($def) ? static::references($schema, $def, $at) : [];
-        if (in_array($at . '/id', $inside, TRUE) && (($def['properties']['id'][ContractEmitter::EXTENSION]['reference']['by'] ?? NULL) !== NULL)) {
+      $child = $entry->attachment?->child;
+      if ($child !== NULL) {
+        $inside = static::references($child, $at);
+        $id = $child->getDefinitions()->entry('id');
+        if ($id !== NULL && in_array($at . '/id', $inside, TRUE) && $id->definition->getSetting(References::TARGETS) !== NULL) {
           $found[] = $at;
         }
         array_push($found, ...$inside);
         continue;
       }
-      if (isset($property[ContractEmitter::EXTENSION]['reference'])) {
+      if (References::target($entry->definition) !== NULL || $entry->definition->getSetting(References::TARGETS) !== NULL) {
         $found[] = $at;
       }
     }
@@ -1340,7 +1357,7 @@ final class OpenApiDocument {
           'resource' => ['type' => 'string'],
           'operation' => $nullable,
           'label' => $nullable,
-          'schema' => $object + $this->said($this->t('JSON Schema 2020-12 for the values, for the account that asks and these values; x-surface on every property.')),
+          'schema' => $object + $this->said($this->t('A Portable Schema document, a dialect of JSON Schema 2020-12, for the values, for the account that asks and these values; x-surface on every property.')),
           'values' => $object + $this->said($this->t('Every key: what is stored over the declared defaults; a secret and a stale value are null.')),
           'stale' => $paths + $this->said($this->t('The JSON Pointers shown on the empty option in place of a stored value.')),
           'outputs' => $object + $this->said($this->t('The output schema, when outputs are declared.')),
@@ -1361,7 +1378,7 @@ final class OpenApiDocument {
       ],
       'FullSchema' => [
         'type' => 'object',
-        'description' => (string) $this->t('The full schema itself, JSON Schema 2020-12 for any values, for the account that asks; it reads no stored value.'),
+        'description' => (string) $this->t('The full schema itself, a Portable Schema document, a dialect of JSON Schema 2020-12, for any values, for the account that asks; it reads no stored value.'),
       ],
       'NarrowRequest' => [
         'type' => 'object',

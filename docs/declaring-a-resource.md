@@ -141,9 +141,9 @@ is one of them:
 | Type | JSON Schema |
 | --- | --- |
 | `string` | `type: string`; `format: date` where the key asks for the date widget |
-| `email` | `type: string`, `format: idn-email` |
+| `email` | `type: string`, `format: email` |
 | `uri` | `type: string`, `format: uri` |
-| `datetime_iso8601` | `type: string`, `format: date-time` |
+| `datetime_iso8601` | `type: string`, `format: date-time`; `format: date` for a key that holds a `DateOnly` constraint |
 | `integer`, `timestamp` | `type: integer` |
 | `float` | `type: number` |
 | `boolean` | `type: boolean` |
@@ -282,7 +282,7 @@ negated class, `\d` `\w` `\s` `\b` only without the `u` modifier, and
 `$` only with the `D` modifier, which the license's pattern carries
 ([The served contract](served-contract.md#never-stricter-than-the-runtime)).
 Any other pattern is checked on the server only and named under
-`x-surface.checkedOnServer`: an email shape written
+`portable-check`: an email shape written
 `/^[^@\s]+@example\.org$/D` is, for its negated class, while
 `/^[a-z0-9._-]+@example\.org$/D` reaches both documents, and so does
 `/^\d{4}$/D`, where `/^\d{4}$/uD` does not.
@@ -529,6 +529,101 @@ two can be read side by side
 once with calls and once as properties, and `PropertyDeclarationTest`
 holds the two to the same documents
 ([decision](decisions.md#a-class-may-declare-its-keys-as-properties)).
+
+## Declared as a Schema
+
+A key may be stated as a Portable Schema, the dialect the served
+document is written in, beside the Typed Data spelling. `addSchema()`
+takes the key and a `PortableSchema\Builder\Schema`; the module reads it
+into the same verbs `add()`, `addList()` and `addMap()` are, so the key
+is a definition like any other. Example 1, whole:
+
+```php
+public static function defineInputs(BlueprintInterface $inputs): void {
+  $inputs->addSchema(self::TITLE, Schema::string()
+    ->title(t('Event title')));
+
+  $inputs->addSchema(self::CAPACITY, Schema::integer()
+    ->title(t('Capacity'))
+    ->minimum(1)
+    ->maximum(1000)
+    ->default(50));
+
+  $inputs->addSchema(self::OPEN, Schema::bool()
+    ->title(t('Registration open'))
+    ->default(TRUE));
+}
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+- **Required.** A key with no `default` and no null is required. The
+  third argument says otherwise: `required: TRUE` requires a key that
+  has a default, `required: FALSE` leaves one optional.
+- **What a key allows** is its keywords, read as the constraints they
+  are written from: `maxLength()` a Length, `minimum()` and `maximum()`
+  a Range, `Schema::options()` a LabeledChoice, `format('email')` the
+  email type. A Drupal constraint the dialect has no keyword for is a
+  check named after its plugin, with the plugin's options:
+  `->check('drupal:ExtensionExists', ['type' => 'module'])`, its message
+  `->message('check.drupal:Regex', '...')` where the constraint has one,
+  as Regex does. A check beside a keyword that says the same constraint
+  holds as well: a Length or a Range is merged with the keyword's, the
+  stricter bound kept, and any other runs beside the keyword.
+- **Null.** `Schema::anyOf([Schema::integer(), Schema::null()])`, the
+  package's spelling of `?int`, is an optional integer; so is the same
+  union of an enum, an object or a type of the library.
+- **What is not read is refused.** A part of the schema the module does
+  not read as written is the author's to fix, so `addSchema()` throws,
+  naming each part by its pointer: an unknown widget, a message for no
+  constraint, a format on a type that is no string. A link is dropped,
+  and a check the site cannot run is kept for the server to answer as
+  unchecked. An object left open is read closed, as a served document
+  is, and served with `additionalProperties: false`.
+- **A type of the library** is a `$ref`: `Schema::of('portable:email')`
+  is the email type, and what the library says beyond it (an address of
+  254 characters at most) is a Length the document serves as
+  `maxLength`.
+- **The document follows the definition.** An optional key with a
+  default may be cleared, which puts the default back, so the capacity
+  is served as `["integer", "null"]`, as `add()` declares it.
+
+A class declared as properties may spell a key with the package's own
+attributes in place of Surface's: `#[Of]` for a type of the library or a
+shape's class, `#[Schema]` for keywords, `#[Check]` for a check, `#[Ui]`
+for a widget, a weight and the group on the class, `#[Required]` for a
+key with a default that must hold a value. They are a spelling of
+`#[Input]`, so they combine with what `#[Input]` combines with,
+`#[Examples]` and `#[Rule]`, and are refused beside another kind, as
+`#[Input]` is. A property is spelled one way: `#[Input]`,
+`#[Constraint]`, `#[Widget]`, `#[Describe]` and `#[Setting]` beside them
+are refused. A test module's structure, shortened:
+
+```php
+#[Structure('property_test.portable.properties')]
+#[Ui(groups: ['about' => ['label' => 'About']])]
+final class PortablePropertiesStructure implements StructureInterface {
+
+  use DeclaresByProperties;
+
+  #[Schema(title: 'Name', description: 'As printed on the badge.', maxLength: 64)]
+  #[Ui(group: 'about', weight: 1, options: ['placeholder' => 'Full name'])]
+  public string $name;
+
+  #[Of('portable:email')]
+  #[Schema(title: 'Email')]
+  public ?string $email = NULL;
+
+  #[Schema(title: 'Module')]
+  #[Check('drupal:ExtensionExists', ['type' => 'module'])]
+  public ?string $module = NULL;
+
+}
+```
+
+`SchemaAttributesTest` holds the whole class to the documents its twin
+declared with calls emits
+([decision](decisions.md#authoring-takes-a-schema)).
 
 ## On a plugin
 
@@ -1161,8 +1256,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   storage can say whether a thing is stored under it
   (`DeletableStorageInterface::exists()`, which `ConfigEntityStorage`
   answers), the build adds the stock `SurfaceUnique` to it: "A venue
-  named riverside already exists.", code `taken`, named under
-  `checkedOnServer`. No resource writes a uniqueness rule of its own.
+  named riverside already exists.", code `check.drupal:SurfaceUnique.taken`, named under
+  `portable-check`. No resource writes a uniqueness rule of its own.
 - **Drawn as core's element.** The form draws it as a `machine_name`
   element whose source is the title's element, so the browser suggests
   the name as the title is typed and a person may edit it. On an update

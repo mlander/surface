@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Traits;
 
+use Drupal\surface\Contract\ConstraintKeywords;
 use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\AlterDefinition;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Reads a full schema back into a structure, and names why one differs.
@@ -44,7 +48,7 @@ trait SchemaRoundTripTrait {
       'access' => 'An access answer (a lock, a whole locked, a key a runtime answer marks `live`) is the access class\'s, not the structure\'s.',
       'alter' => 'An alter\'s mount: its keys, the rules reading them and the structures it attaches there are the alter\'s; read back, the mount is a map or a child of the owner\'s, its rules a JsonSchema constraint on the frame.',
       'site' => 'Keys from the site: the entries are a provider\'s, so an entry it locks, and the ports each entry reads, are not the document\'s to say; read back, the rules on those ports are a JsonSchema constraint on the frame.',
-      'server' => 'A constraint no keyword states (a composite, or one of a module that is not on), which only the server checks: the document names it under `checkedOnServer`, and a name is no constraint the reader can declare.',
+      'server' => 'A constraint no keyword states (a composite, or one of a module that is not on), which only the server checks: the document names it under `portable-check`, and a name is no constraint the reader can declare.',
       'computed' => 'A computed key: what computes it is a class, which no document names, so read back it is a key nobody types that holds what is stored, `readOnly`, with no `x-surface.computed`.',
       'live' => 'A runtime refiner: its rule is a lookup no document states, so the full schema marks the key `live` and nothing can read the rule back.',
       'site list' => 'A list the site decides, past the site list limit: the full schema states the key open and `deferred`, with no def per variant or entry, so read back it is an open map, which the provider\'s list is not.',
@@ -145,9 +149,9 @@ trait SchemaRoundTripTrait {
    */
   protected static function kindOf(array $original, ?array $again, ResourceDefinition $definition): ?string {
     $marks = [];
-    static::marks(SchemaResolver::restored(json_decode((string) json_encode($original), TRUE)), $marks);
+    static::marks(Schemas::decoded(SchemaResolver::restored(Schema::from(json_decode((string) json_encode($original), TRUE)))), $marks);
     $added = [];
-    static::marks($again === NULL ? [] : SchemaResolver::restored(json_decode((string) json_encode($again), TRUE)), $added);
+    static::marks($again === NULL ? [] : Schemas::decoded(SchemaResolver::restored(Schema::from(json_decode((string) json_encode($again), TRUE)))), $added);
     $added = array_diff_key($added, $marks);
     $registry = \Drupal::service('surface.resource_registry');
     assert($registry instanceof ResourceRegistry);
@@ -159,9 +163,9 @@ trait SchemaRoundTripTrait {
     return match (TRUE) {
       static::pastTheLimit($original) => 'site list',
       isset($marks['computed']) => 'computed',
-      isset($marks['checkedOnServer']) => 'server',
+      isset($marks['portable-check']) => 'server',
       isset($marks['live']) || (isset($marks['@readOnly']) && $answering) => 'access',
-      $definition->alters !== [] && (isset($added['checkedOnServer']) || $refining !== []) => 'alter',
+      $definition->alters !== [] && (isset($added['portable-check']) || $refining !== []) => 'alter',
       isset($marks['@readOnly']) => 'site',
       isset($marks['enumerated']) || isset($marks['refine']) => $again !== NULL && static::encoded(static::withoutMarkers($original)) === static::encoded(static::withoutMarkers($again)) ? 'coded' : 'coded otherwise',
       isset($marks['ports']) => 'port',
@@ -187,7 +191,7 @@ trait SchemaRoundTripTrait {
       return FALSE;
     }
     $extension = $schema[ContractEmitter::EXTENSION] ?? NULL;
-    if (is_array($extension) && is_array($extension['deferred'] ?? NULL) && (isset($extension['deferred']['entries']) || (isset($extension['by']) && !isset($schema['anyOf'])))) {
+    if (is_array($extension) && (($extension['deferred'] ?? NULL) === TRUE || is_array($extension['deferred'] ?? NULL)) && (isset($extension['deferred']['entries']) || (isset($extension['by']) && !isset($schema['anyOf'])))) {
       return TRUE;
     }
     foreach ($schema as $value) {
@@ -204,7 +208,10 @@ trait SchemaRoundTripTrait {
    * @param mixed $schema
    *   A schema, or anything inside one.
    * @param array<string, true> $marks
-   *   Collects each `x-surface` key, and `@readOnly` for a key read only.
+   *   Collects each `x-surface` key, `portable-check` where a constraint
+   *   only the server checks is named (not a host's rule beside its
+   *   format, ConstraintKeywords::FORMAT_TWINS), and `@readOnly` for a key read
+   *   only.
    */
   protected static function marks(mixed $schema, array &$marks): void {
     if (!is_array($schema)) {
@@ -217,6 +224,11 @@ trait SchemaRoundTripTrait {
             $marks[(string) $mark] = TRUE;
           }
         }
+      }
+      // A host's rule beside its format reads back as the format, and is
+      // named again: no mark.
+      if ($keyword === 'portable-check' && is_array($value) && array_filter(array_keys($value), static fn (int|string $name): bool => !ConstraintKeywords::isFormatTwin(substr((string) $name, strlen(PortableKeywords::PROVIDER)), $schema['format'] ?? NULL)) !== []) {
+        $marks['portable-check'] = TRUE;
       }
       if ($keyword === 'readOnly' && $value === TRUE) {
         $marks['@readOnly'] = TRUE;

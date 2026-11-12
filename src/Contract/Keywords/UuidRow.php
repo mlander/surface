@@ -10,8 +10,10 @@ namespace Drupal\surface\Contract\Keywords;
  * Read back, `format: uuid` on a string is the Uuid constraint with no
  * options. A Uuid that is not `strict` accepts spellings `uuid` refuses,
  * and one with a `normalizer` accepts what it changes first, so neither
- * is stated; one limited to some `versions` is stated, and named under
- * `checkedOnServer` besides.
+ * is stated. Every other is stated, and named under `portable-check`
+ * besides (`drupal:Uuid`), since the format admits what the constraint
+ * refuses (the nil UUID, a version it does not take), with no message of
+ * its own (ConstraintKeywords::FORMAT_TWINS).
  *
  * @internal
  */
@@ -45,7 +47,7 @@ final class UuidRow implements ConstraintRowInterface {
     if (($options['strict'] ?? TRUE) === FALSE || isset($options['normalizer'])) {
       return NULL;
     }
-    return new Written(['format' => 'uuid'], whole: !isset($options['versions']));
+    return new Written(['format' => 'uuid'], whole: FALSE);
   }
 
   /**

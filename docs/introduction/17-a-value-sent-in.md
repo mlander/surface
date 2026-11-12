@@ -58,15 +58,18 @@ in the tool's `violations` envelope (an excerpt of its answer):
 "violations": [
   {
     "path": "/settings/limit",
-    "code": "not_in_range",
-    "message": "This value should be between 1 and 50."
+    "code": "maximum",
+    "message": "This value should be between 1 and 50.",
+    "params": {"limit": 50}
   }
 ]
 ```
 
 HTTP refuses it with status 422 and the same object in its `errors`.
-No door wrote this message. The Range rule on the sealed data surface
-did, once, and the one service carried it to whichever door asked.
+No door wrote this message. The validator refused the value by the
+`maximum` the document states, and the Range rule on the sealed data
+surface said why, once; the one service carried it to whichever door
+asked.
 
 Next: [Where next](18-where-next.md)
 

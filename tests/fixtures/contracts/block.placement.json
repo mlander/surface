@@ -1,18 +1,18 @@
 {
     "resource": "block.placement",
     "module": "surface_examples_block",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "block.placement",
             "operation": "create",
             "label": "Place a block",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "Place a block",
                 "description": "Places a block under a machine name the caller chooses, in a region of a theme, with the settings its plugin takes; a machine name already in use is refused.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "create",
                         "label": "Place a block",
@@ -31,14 +31,11 @@
                         "description": "The title of the block as shown to the user.",
                         "type": "string",
                         "maxLength": 255,
-                        "x-surface": {
-                            "checkedOnServer": [
-                                {
-                                    "constraint": "Regex",
-                                    "message": "The title may not span lines or hold control characters."
-                                }
-                            ],
-                            "patternMessage": "The title may not span lines or hold control characters."
+                        "portable-check": {
+                            "drupal:Regex": {}
+                        },
+                        "x-portable-messages": {
+                            "check.drupal:Regex": "The title may not span lines or hold control characters."
                         }
                     },
                     "id": {
@@ -46,18 +43,13 @@
                         "description": "A unique name for the placed block: lowercase letters, numbers, underscores and periods, not starting with a period.",
                         "type": "string",
                         "maxLength": 166,
-                        "x-surface": {
-                            "checkedOnServer": [
-                                {
-                                    "constraint": "Regex",
-                                    "message": "The machine name may hold only lowercase letters, numbers, underscores and periods, and may not start with a period."
-                                },
-                                {
-                                    "constraint": "SurfaceUnique",
-                                    "message": "Refused when a block named this already exists."
-                                }
-                            ],
-                            "patternMessage": "The machine name may hold only lowercase letters, numbers, underscores and periods, and may not start with a period."
+                        "portable-check": {
+                            "drupal:Regex": {},
+                            "drupal:SurfaceUnique": {}
+                        },
+                        "x-portable-messages": {
+                            "check.drupal:Regex": "The machine name may hold only lowercase letters, numbers, underscores and periods, and may not start with a period.",
+                            "check.drupal:SurfaceUnique": "Refused when a block named this already exists."
                         }
                     },
                     "label_display": {
@@ -191,13 +183,11 @@
                                 "title": "Stark"
                             }
                         ],
-                        "x-surface": {
-                            "checkedOnServer": [
-                                {
-                                    "constraint": "ExtensionExists",
-                                    "message": "Extension exists"
-                                }
-                            ]
+                        "portable-check": {
+                            "drupal:ExtensionExists": {}
+                        },
+                        "x-portable-messages": {
+                            "check.drupal:ExtensionExists": "Extension exists"
                         }
                     },
                     "region": {
@@ -246,15 +236,15 @@
                                 "title": "Breadcrumb"
                             }
                         ],
+                        "portable-check": {
+                            "drupal:SurfaceAnyThemeRegion": {}
+                        },
+                        "x-portable-messages": {
+                            "check.drupal:SurfaceAnyThemeRegion": "Region of an installed theme"
+                        },
                         "x-surface": {
                             "dependsOn": [
                                 "theme"
-                            ],
-                            "checkedOnServer": [
-                                {
-                                    "constraint": "SurfaceAnyThemeRegion",
-                                    "message": "Region of an installed theme"
-                                }
                             ],
                             "enumerated": true
                         }

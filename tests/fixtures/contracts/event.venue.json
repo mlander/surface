@@ -1,18 +1,18 @@
 {
     "resource": "event.venue",
     "module": "surface_examples",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "event.venue",
             "operation": "create",
             "label": "Add a venue",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "Add a venue",
                 "description": "Adds a venue under a machine name the caller chooses, or one computed from its name, with its capacity, address and rooms; a machine name already in use is refused.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "create",
                         "label": "Add a venue",
@@ -37,19 +37,19 @@
                         "type": "string",
                         "pattern": "^[a-z0-9_]+$",
                         "maxLength": 32,
+                        "portable-check": {
+                            "drupal:SurfaceUnique": {}
+                        },
+                        "x-portable-messages": {
+                            "check.drupal:SurfaceUnique": "Refused when a venue named this already exists."
+                        },
                         "x-surface": {
                             "computed": {
                                 "from": [
                                     "label"
                                 ],
                                 "when": "unless_sent"
-                            },
-                            "checkedOnServer": [
-                                {
-                                    "constraint": "SurfaceUnique",
-                                    "message": "Refused when a venue named this already exists."
-                                }
-                            ]
+                            }
                         }
                     },
                     "slug": {
@@ -62,14 +62,16 @@
                         "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
                         "maxLength": 128,
                         "readOnly": true,
+                        "x-portable-messages": {
+                            "pattern": "The slug may hold only lowercase letters, numbers and single dashes between them."
+                        },
                         "x-surface": {
                             "computed": {
                                 "from": [
                                     "label"
                                 ],
                                 "when": "create"
-                            },
-                            "patternMessage": "The slug may hold only lowercase letters, numbers and single dashes between them."
+                            }
                         }
                     },
                     "capacity": {
@@ -132,8 +134,8 @@
                                 "type": "string",
                                 "pattern": "^[a-z0-9_]+$",
                                 "maxLength": 64,
-                                "x-surface": {
-                                    "patternMessage": "A room id holds only lowercase letters, numbers and underscores."
+                                "x-portable-messages": {
+                                    "pattern": "A room id holds only lowercase letters, numbers and underscores."
                                 }
                             },
                             "label": {
@@ -163,11 +165,11 @@
             "operation": "list",
             "label": "List the venues",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "List the venues",
                 "description": "Answers a page of the venues, lighter first, each one the account may read, and how many the filter matched.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "list",
                         "label": "List the venues",
@@ -215,7 +217,7 @@
                 "additionalProperties": false
             },
             "outputs": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "type": "object",
                 "properties": {
                     "items": {
@@ -269,11 +271,11 @@
             "operation": "reorder",
             "label": "Reorder the venues",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "Reorder the venues",
                 "description": "Gives each venue named its new weight, all in one write; a venue left out keeps its own, and an unknown or repeated venue is refused.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "reorder",
                         "label": "Reorder the venues",

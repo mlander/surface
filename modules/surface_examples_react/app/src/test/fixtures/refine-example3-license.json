@@ -1,11 +1,11 @@
 {
     "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "$id": "http://localhost/surface-api/registration.step3/schema",
         "title": "Configure registration (step 3)",
         "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "configure",
                 "label": "Configure registration (step 3)",
@@ -25,7 +25,7 @@
             "title": {
                 "title": "Public event title",
                 "type": "string",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "text"
                 }
             },
@@ -36,7 +36,7 @@
                     "null"
                 ],
                 "default": true,
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "checkbox"
                 }
             },
@@ -57,7 +57,7 @@
                         "title": "Harbour Centre"
                     }
                 ],
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select"
                 }
             },
@@ -90,8 +90,10 @@
                         "title": "Upper deck"
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "select"
+                },
                 "x-surface": {
-                    "widget": "select",
                     "dependsOn": [
                         "venue"
                     ],
@@ -107,8 +109,10 @@
                 ],
                 "minimum": 1,
                 "default": 50,
+                "x-portable-ui": {
+                    "widget": "number"
+                },
                 "x-surface": {
-                    "widget": "number",
                     "dependsOn": [
                         "room",
                         "third_party_settings.surface_examples_compliance.license"
@@ -130,7 +134,7 @@
                     }
                 ],
                 "default": "free",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select"
                 }
             },
@@ -147,8 +151,10 @@
                         "type": "null"
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "variants"
+                },
                 "x-surface": {
-                    "widget": "variants",
                     "dependsOn": [
                         "pricing"
                     ],
@@ -162,7 +168,7 @@
             "contact": {
                 "title": "Contact",
                 "$ref": "#/$defs/registration.contact",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "fieldset"
                 }
             },
@@ -175,8 +181,10 @@
                     "surface_examples_compliance": {
                         "title": "Compliance",
                         "$ref": "#/$defs/registration.compliance",
+                        "x-portable-ui": {
+                            "widget": "fieldset"
+                        },
                         "x-surface": {
-                            "widget": "fieldset",
                             "after": "capacity",
                             "reads": {
                                 "capacity": "capacity"
@@ -185,8 +193,10 @@
                     }
                 },
                 "additionalProperties": false,
+                "x-portable-ui": {
+                    "widget": "fieldset"
+                },
                 "x-surface": {
-                    "widget": "fieldset",
                     "dependsOn": [
                         "capacity"
                     ],
@@ -508,7 +518,8 @@
         ],
         "$defs": {
             "registration.step3.ticket.free": {
-                "title": "registration.step3.ticket.free",
+                "title": "Free ticket",
+                "description": "The ticket when registration costs nothing: a note shown beside the register button.",
                 "type": "object",
                 "properties": {
                     "note": {
@@ -518,7 +529,7 @@
                             "string",
                             "null"
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "text"
                         }
                     }
@@ -526,14 +537,15 @@
                 "additionalProperties": false
             },
             "registration.step3.ticket.paid": {
-                "title": "registration.step3.ticket.paid",
+                "title": "Paid ticket",
+                "description": "The ticket when registration costs money: its price and currency.",
                 "type": "object",
                 "properties": {
                     "price": {
                         "title": "Price",
                         "type": "number",
                         "minimum": 0.01,
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "number"
                         }
                     },
@@ -555,7 +567,7 @@
                             }
                         ],
                         "default": "EUR",
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select"
                         }
                     }
@@ -573,8 +585,11 @@
                     "email": {
                         "title": "Email",
                         "type": "string",
-                        "format": "idn-email",
-                        "x-surface": {
+                        "format": "email",
+                        "portable-check": {
+                            "drupal:Email": {}
+                        },
+                        "x-portable-ui": {
                             "widget": "email"
                         }
                     },
@@ -584,7 +599,7 @@
                             "string",
                             "null"
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "text"
                         }
                     }
@@ -601,17 +616,21 @@
                     "license": {
                         "$ref": "#/$defs/event.license",
                         "title": "Event license",
-                        "x-surface": {
-                            "widget": "text",
-                            "patternMessage": "A license number is four digits, such as 2048."
+                        "x-portable-messages": {
+                            "pattern": "A license number is four digits, such as 2048."
+                        },
+                        "x-portable-ui": {
+                            "widget": "text"
                         }
                     },
                     "stewards": {
                         "title": "Stewards",
                         "type": "integer",
                         "default": 1,
+                        "x-portable-ui": {
+                            "widget": "number"
+                        },
                         "x-surface": {
-                            "widget": "number",
                             "dependsOn": [
                                 "capacity"
                             ]
@@ -632,7 +651,7 @@
                 }
             },
             "event.license": {
-                "title": "event.license",
+                "title": "Event license",
                 "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                 "type": [
                     "string",
@@ -642,8 +661,8 @@
                 "examples": [
                     "2048"
                 ],
-                "x-surface": {
-                    "patternMessage": "A license number is four digits, such as 2048."
+                "x-portable-messages": {
+                    "pattern": "A license number is four digits, such as 2048."
                 }
             }
         }
@@ -653,12 +672,12 @@
         "operation": "configure",
         "label": "Configure registration (step 3)",
         "schema": {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$schema": "https://portable-schema.dev/v1/schema",
             "$id": "http://localhost/surface-api/registration.step3",
             "title": "Configure registration (step 3)",
             "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
             "x-surface": {
-                "contract": 4,
+                "contract": 5,
                 "operation": {
                     "id": "configure",
                     "label": "Configure registration (step 3)",
@@ -675,7 +694,7 @@
                 "title": {
                     "title": "Public event title",
                     "type": "string",
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "text"
                     }
                 },
@@ -686,7 +705,7 @@
                         "null"
                     ],
                     "default": true,
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "checkbox"
                     }
                 },
@@ -707,11 +726,13 @@
                             "title": "Harbour Centre"
                         }
                     ],
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "select",
-                        "emptyOption": {
-                            "show": false,
-                            "label": "- Select -"
+                        "options": {
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
                         }
                     }
                 },
@@ -728,16 +749,20 @@
                             "title": "East room"
                         }
                     ],
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "select",
+                        "options": {
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
+                        }
+                    },
+                    "x-surface": {
                         "dependsOn": [
                             "venue"
                         ],
                         "refined": true,
-                        "emptyOption": {
-                            "show": false,
-                            "label": "- Select -"
-                        },
                         "live": true
                     }
                 },
@@ -751,8 +776,10 @@
                     "minimum": 1,
                     "maximum": 100,
                     "default": 50,
+                    "x-portable-ui": {
+                        "widget": "number"
+                    },
                     "x-surface": {
-                        "widget": "number",
                         "dependsOn": [
                             "room",
                             "third_party_settings.surface_examples_compliance.license"
@@ -774,11 +801,13 @@
                         }
                     ],
                     "default": "free",
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "select",
-                        "emptyOption": {
-                            "show": false,
-                            "label": "- Select -"
+                        "options": {
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
                         }
                     }
                 },
@@ -795,8 +824,10 @@
                             "type": "null"
                         }
                     ],
+                    "x-portable-ui": {
+                        "widget": "variants"
+                    },
                     "x-surface": {
-                        "widget": "variants",
                         "dependsOn": [
                             "pricing"
                         ],
@@ -812,7 +843,7 @@
                 "contact": {
                     "title": "Contact",
                     "$ref": "#/$defs/registration.contact",
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "fieldset"
                     }
                 },
@@ -834,13 +865,18 @@
                                         "stewards": {
                                             "type": "integer",
                                             "description": "At least 1 steward for 50 attendees.",
-                                            "minimum": 1
+                                            "minimum": 1,
+                                            "x-portable-ui": {
+                                                "widget": "number"
+                                            }
                                         }
                                     }
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "fieldset"
+                            },
                             "x-surface": {
-                                "widget": "fieldset",
                                 "refined": true,
                                 "after": "capacity",
                                 "reads": {
@@ -848,7 +884,6 @@
                                 },
                                 "within": {
                                     "/allOf/1/properties/stewards": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "capacity"
                                         ],
@@ -859,8 +894,10 @@
                         }
                     },
                     "additionalProperties": false,
+                    "x-portable-ui": {
+                        "widget": "fieldset"
+                    },
                     "x-surface": {
-                        "widget": "fieldset",
                         "dependsOn": [
                             "capacity"
                         ],
@@ -920,7 +957,8 @@
             ],
             "$defs": {
                 "registration.step3.ticket.free": {
-                    "title": "registration.step3.ticket.free",
+                    "title": "Free ticket",
+                    "description": "The ticket when registration costs nothing: a note shown beside the register button.",
                     "type": "object",
                     "properties": {
                         "note": {
@@ -930,7 +968,7 @@
                                 "string",
                                 "null"
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         }
@@ -938,14 +976,15 @@
                     "additionalProperties": false
                 },
                 "registration.step3.ticket.paid": {
-                    "title": "registration.step3.ticket.paid",
+                    "title": "Paid ticket",
+                    "description": "The ticket when registration costs money: its price and currency.",
                     "type": "object",
                     "properties": {
                         "price": {
                             "title": "Price",
                             "type": "number",
                             "minimum": 0.01,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "number"
                             }
                         },
@@ -967,11 +1006,13 @@
                                 }
                             ],
                             "default": "EUR",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         }
@@ -989,8 +1030,11 @@
                         "email": {
                             "title": "Email",
                             "type": "string",
-                            "format": "idn-email",
-                            "x-surface": {
+                            "format": "email",
+                            "portable-check": {
+                                "drupal:Email": {}
+                            },
+                            "x-portable-ui": {
                                 "widget": "email"
                             }
                         },
@@ -1000,7 +1044,7 @@
                                 "string",
                                 "null"
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         }
@@ -1017,17 +1061,21 @@
                         "license": {
                             "$ref": "#/$defs/event.license",
                             "title": "Event license",
-                            "x-surface": {
-                                "widget": "text",
-                                "patternMessage": "A license number is four digits, such as 2048."
+                            "x-portable-messages": {
+                                "pattern": "A license number is four digits, such as 2048."
+                            },
+                            "x-portable-ui": {
+                                "widget": "text"
                             }
                         },
                         "stewards": {
                             "title": "Stewards",
                             "type": "integer",
                             "default": 1,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "capacity"
                                 ]
@@ -1048,7 +1096,7 @@
                     }
                 },
                 "event.license": {
-                    "title": "event.license",
+                    "title": "Event license",
                     "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                     "type": [
                         "string",
@@ -1058,8 +1106,8 @@
                     "examples": [
                         "2048"
                     ],
-                    "x-surface": {
-                        "patternMessage": "A license number is four digits, such as 2048."
+                    "x-portable-messages": {
+                        "pattern": "A license number is four digits, such as 2048."
                     }
                 }
             }
@@ -1104,12 +1152,12 @@
                 "operation": "configure",
                 "label": "Configure registration (step 3)",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/registration.step3",
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -1126,7 +1174,7 @@
                         "title": {
                             "title": "Public event title",
                             "type": "string",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         },
@@ -1137,7 +1185,7 @@
                                 "null"
                             ],
                             "default": true,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -1158,11 +1206,13 @@
                                     "title": "Harbour Centre"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -1179,16 +1229,20 @@
                                     "title": "East room"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
+                                }
+                            },
+                            "x-surface": {
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
-                                },
                                 "live": true
                             }
                         },
@@ -1202,8 +1256,10 @@
                             "minimum": 1,
                             "maximum": 400,
                             "default": 50,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "room",
                                     "third_party_settings.surface_examples_compliance.license"
@@ -1225,11 +1281,13 @@
                                 }
                             ],
                             "default": "free",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -1246,8 +1304,10 @@
                                     "type": "null"
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "variants"
+                            },
                             "x-surface": {
-                                "widget": "variants",
                                 "dependsOn": [
                                     "pricing"
                                 ],
@@ -1263,7 +1323,7 @@
                         "contact": {
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         },
@@ -1285,13 +1345,18 @@
                                                 "stewards": {
                                                     "type": "integer",
                                                     "description": "At least 1 steward for 50 attendees.",
-                                                    "minimum": 1
+                                                    "minimum": 1,
+                                                    "x-portable-ui": {
+                                                        "widget": "number"
+                                                    }
                                                 }
                                             }
                                         }
                                     ],
+                                    "x-portable-ui": {
+                                        "widget": "fieldset"
+                                    },
                                     "x-surface": {
-                                        "widget": "fieldset",
                                         "refined": true,
                                         "after": "capacity",
                                         "reads": {
@@ -1299,7 +1364,6 @@
                                         },
                                         "within": {
                                             "/allOf/1/properties/stewards": {
-                                                "widget": "number",
                                                 "dependsOn": [
                                                     "capacity"
                                                 ],
@@ -1310,8 +1374,10 @@
                                 }
                             },
                             "additionalProperties": false,
+                            "x-portable-ui": {
+                                "widget": "fieldset"
+                            },
                             "x-surface": {
-                                "widget": "fieldset",
                                 "dependsOn": [
                                     "capacity"
                                 ],
@@ -1371,7 +1437,8 @@
                     ],
                     "$defs": {
                         "registration.step3.ticket.free": {
-                            "title": "registration.step3.ticket.free",
+                            "title": "Free ticket",
+                            "description": "The ticket when registration costs nothing: a note shown beside the register button.",
                             "type": "object",
                             "properties": {
                                 "note": {
@@ -1381,7 +1448,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -1389,14 +1456,15 @@
                             "additionalProperties": false
                         },
                         "registration.step3.ticket.paid": {
-                            "title": "registration.step3.ticket.paid",
+                            "title": "Paid ticket",
+                            "description": "The ticket when registration costs money: its price and currency.",
                             "type": "object",
                             "properties": {
                                 "price": {
                                     "title": "Price",
                                     "type": "number",
                                     "minimum": 0.01,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "number"
                                     }
                                 },
@@ -1418,11 +1486,13 @@
                                         }
                                     ],
                                     "default": "EUR",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "select",
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
+                                        "options": {
+                                            "emptyOption": {
+                                                "show": false,
+                                                "label": "- Select -"
+                                            }
                                         }
                                     }
                                 }
@@ -1440,8 +1510,11 @@
                                 "email": {
                                     "title": "Email",
                                     "type": "string",
-                                    "format": "idn-email",
-                                    "x-surface": {
+                                    "format": "email",
+                                    "portable-check": {
+                                        "drupal:Email": {}
+                                    },
+                                    "x-portable-ui": {
                                         "widget": "email"
                                     }
                                 },
@@ -1451,7 +1524,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -1468,17 +1541,21 @@
                                 "license": {
                                     "$ref": "#/$defs/event.license",
                                     "title": "Event license",
-                                    "x-surface": {
-                                        "widget": "text",
-                                        "patternMessage": "A license number is four digits, such as 2048."
+                                    "x-portable-messages": {
+                                        "pattern": "A license number is four digits, such as 2048."
+                                    },
+                                    "x-portable-ui": {
+                                        "widget": "text"
                                     }
                                 },
                                 "stewards": {
                                     "title": "Stewards",
                                     "type": "integer",
                                     "default": 1,
+                                    "x-portable-ui": {
+                                        "widget": "number"
+                                    },
                                     "x-surface": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "capacity"
                                         ]
@@ -1499,7 +1576,7 @@
                             }
                         },
                         "event.license": {
-                            "title": "event.license",
+                            "title": "Event license",
                             "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                             "type": [
                                 "string",
@@ -1509,8 +1586,8 @@
                             "examples": [
                                 "2048"
                             ],
-                            "x-surface": {
-                                "patternMessage": "A license number is four digits, such as 2048."
+                            "x-portable-messages": {
+                                "pattern": "A license number is four digits, such as 2048."
                             }
                         }
                     }
@@ -1556,12 +1633,12 @@
                 "operation": "configure",
                 "label": "Configure registration (step 3)",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/registration.step3",
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -1578,7 +1655,7 @@
                         "title": {
                             "title": "Public event title",
                             "type": "string",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         },
@@ -1589,7 +1666,7 @@
                                 "null"
                             ],
                             "default": true,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -1610,11 +1687,13 @@
                                     "title": "Harbour Centre"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -1631,16 +1710,20 @@
                                     "title": "East room"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
+                                }
+                            },
+                            "x-surface": {
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
-                                },
                                 "live": true
                             }
                         },
@@ -1654,8 +1737,10 @@
                             "minimum": 1,
                             "maximum": 120,
                             "default": 50,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "room",
                                     "third_party_settings.surface_examples_compliance.license"
@@ -1677,11 +1762,13 @@
                                 }
                             ],
                             "default": "free",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -1698,8 +1785,10 @@
                                     "type": "null"
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "variants"
+                            },
                             "x-surface": {
-                                "widget": "variants",
                                 "dependsOn": [
                                     "pricing"
                                 ],
@@ -1715,7 +1804,7 @@
                         "contact": {
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         },
@@ -1737,13 +1826,18 @@
                                                 "stewards": {
                                                     "type": "integer",
                                                     "description": "At least 1 steward for 50 attendees.",
-                                                    "minimum": 1
+                                                    "minimum": 1,
+                                                    "x-portable-ui": {
+                                                        "widget": "number"
+                                                    }
                                                 }
                                             }
                                         }
                                     ],
+                                    "x-portable-ui": {
+                                        "widget": "fieldset"
+                                    },
                                     "x-surface": {
-                                        "widget": "fieldset",
                                         "refined": true,
                                         "after": "capacity",
                                         "reads": {
@@ -1751,7 +1845,6 @@
                                         },
                                         "within": {
                                             "/allOf/1/properties/stewards": {
-                                                "widget": "number",
                                                 "dependsOn": [
                                                     "capacity"
                                                 ],
@@ -1762,8 +1855,10 @@
                                 }
                             },
                             "additionalProperties": false,
+                            "x-portable-ui": {
+                                "widget": "fieldset"
+                            },
                             "x-surface": {
-                                "widget": "fieldset",
                                 "dependsOn": [
                                     "capacity"
                                 ],
@@ -1823,7 +1918,8 @@
                     ],
                     "$defs": {
                         "registration.step3.ticket.free": {
-                            "title": "registration.step3.ticket.free",
+                            "title": "Free ticket",
+                            "description": "The ticket when registration costs nothing: a note shown beside the register button.",
                             "type": "object",
                             "properties": {
                                 "note": {
@@ -1833,7 +1929,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -1841,14 +1937,15 @@
                             "additionalProperties": false
                         },
                         "registration.step3.ticket.paid": {
-                            "title": "registration.step3.ticket.paid",
+                            "title": "Paid ticket",
+                            "description": "The ticket when registration costs money: its price and currency.",
                             "type": "object",
                             "properties": {
                                 "price": {
                                     "title": "Price",
                                     "type": "number",
                                     "minimum": 0.01,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "number"
                                     }
                                 },
@@ -1870,11 +1967,13 @@
                                         }
                                     ],
                                     "default": "EUR",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "select",
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
+                                        "options": {
+                                            "emptyOption": {
+                                                "show": false,
+                                                "label": "- Select -"
+                                            }
                                         }
                                     }
                                 }
@@ -1892,8 +1991,11 @@
                                 "email": {
                                     "title": "Email",
                                     "type": "string",
-                                    "format": "idn-email",
-                                    "x-surface": {
+                                    "format": "email",
+                                    "portable-check": {
+                                        "drupal:Email": {}
+                                    },
+                                    "x-portable-ui": {
                                         "widget": "email"
                                     }
                                 },
@@ -1903,7 +2005,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -1920,17 +2022,21 @@
                                 "license": {
                                     "$ref": "#/$defs/event.license",
                                     "title": "Event license",
-                                    "x-surface": {
-                                        "widget": "text",
-                                        "patternMessage": "A license number is four digits, such as 2048."
+                                    "x-portable-messages": {
+                                        "pattern": "A license number is four digits, such as 2048."
+                                    },
+                                    "x-portable-ui": {
+                                        "widget": "text"
                                     }
                                 },
                                 "stewards": {
                                     "title": "Stewards",
                                     "type": "integer",
                                     "default": 1,
+                                    "x-portable-ui": {
+                                        "widget": "number"
+                                    },
                                     "x-surface": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "capacity"
                                         ]
@@ -1951,7 +2057,7 @@
                             }
                         },
                         "event.license": {
-                            "title": "event.license",
+                            "title": "Event license",
                             "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                             "type": [
                                 "string",
@@ -1961,8 +2067,8 @@
                             "examples": [
                                 "2048"
                             ],
-                            "x-surface": {
-                                "patternMessage": "A license number is four digits, such as 2048."
+                            "x-portable-messages": {
+                                "pattern": "A license number is four digits, such as 2048."
                             }
                         }
                     }
@@ -2008,12 +2114,12 @@
                 "operation": "configure",
                 "label": "Configure registration (step 3)",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/registration.step3",
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -2030,7 +2136,7 @@
                         "title": {
                             "title": "Public event title",
                             "type": "string",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         },
@@ -2041,7 +2147,7 @@
                                 "null"
                             ],
                             "default": true,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -2062,11 +2168,13 @@
                                     "title": "Harbour Centre"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -2083,16 +2191,20 @@
                                     "title": "East room"
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
+                                }
+                            },
+                            "x-surface": {
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
-                                },
                                 "live": true
                             }
                         },
@@ -2106,8 +2218,10 @@
                             "minimum": 1,
                             "maximum": 100,
                             "default": 50,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "room",
                                     "third_party_settings.surface_examples_compliance.license"
@@ -2129,11 +2243,13 @@
                                 }
                             ],
                             "default": "free",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -2150,8 +2266,10 @@
                                     "type": "null"
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "variants"
+                            },
                             "x-surface": {
-                                "widget": "variants",
                                 "dependsOn": [
                                     "pricing"
                                 ],
@@ -2167,7 +2285,7 @@
                         "contact": {
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         },
@@ -2189,13 +2307,18 @@
                                                 "stewards": {
                                                     "type": "integer",
                                                     "description": "At least 1 steward for 50 attendees.",
-                                                    "minimum": 1
+                                                    "minimum": 1,
+                                                    "x-portable-ui": {
+                                                        "widget": "number"
+                                                    }
                                                 }
                                             }
                                         }
                                     ],
+                                    "x-portable-ui": {
+                                        "widget": "fieldset"
+                                    },
                                     "x-surface": {
-                                        "widget": "fieldset",
                                         "refined": true,
                                         "after": "capacity",
                                         "reads": {
@@ -2203,7 +2326,6 @@
                                         },
                                         "within": {
                                             "/allOf/1/properties/stewards": {
-                                                "widget": "number",
                                                 "dependsOn": [
                                                     "capacity"
                                                 ],
@@ -2214,8 +2336,10 @@
                                 }
                             },
                             "additionalProperties": false,
+                            "x-portable-ui": {
+                                "widget": "fieldset"
+                            },
                             "x-surface": {
-                                "widget": "fieldset",
                                 "dependsOn": [
                                     "capacity"
                                 ],
@@ -2275,7 +2399,8 @@
                     ],
                     "$defs": {
                         "registration.step3.ticket.free": {
-                            "title": "registration.step3.ticket.free",
+                            "title": "Free ticket",
+                            "description": "The ticket when registration costs nothing: a note shown beside the register button.",
                             "type": "object",
                             "properties": {
                                 "note": {
@@ -2285,7 +2410,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -2293,14 +2418,15 @@
                             "additionalProperties": false
                         },
                         "registration.step3.ticket.paid": {
-                            "title": "registration.step3.ticket.paid",
+                            "title": "Paid ticket",
+                            "description": "The ticket when registration costs money: its price and currency.",
                             "type": "object",
                             "properties": {
                                 "price": {
                                     "title": "Price",
                                     "type": "number",
                                     "minimum": 0.01,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "number"
                                     }
                                 },
@@ -2322,11 +2448,13 @@
                                         }
                                     ],
                                     "default": "EUR",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "select",
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
+                                        "options": {
+                                            "emptyOption": {
+                                                "show": false,
+                                                "label": "- Select -"
+                                            }
                                         }
                                     }
                                 }
@@ -2344,8 +2472,11 @@
                                 "email": {
                                     "title": "Email",
                                     "type": "string",
-                                    "format": "idn-email",
-                                    "x-surface": {
+                                    "format": "email",
+                                    "portable-check": {
+                                        "drupal:Email": {}
+                                    },
+                                    "x-portable-ui": {
                                         "widget": "email"
                                     }
                                 },
@@ -2355,7 +2486,7 @@
                                         "string",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 }
@@ -2372,17 +2503,21 @@
                                 "license": {
                                     "$ref": "#/$defs/event.license",
                                     "title": "Event license",
-                                    "x-surface": {
-                                        "widget": "text",
-                                        "patternMessage": "A license number is four digits, such as 2048."
+                                    "x-portable-messages": {
+                                        "pattern": "A license number is four digits, such as 2048."
+                                    },
+                                    "x-portable-ui": {
+                                        "widget": "text"
                                     }
                                 },
                                 "stewards": {
                                     "title": "Stewards",
                                     "type": "integer",
                                     "default": 1,
+                                    "x-portable-ui": {
+                                        "widget": "number"
+                                    },
                                     "x-surface": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "capacity"
                                         ]
@@ -2403,7 +2538,7 @@
                             }
                         },
                         "event.license": {
-                            "title": "event.license",
+                            "title": "Event license",
                             "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                             "type": [
                                 "string",
@@ -2413,8 +2548,8 @@
                             "examples": [
                                 "2048"
                             ],
-                            "x-surface": {
-                                "patternMessage": "A license number is four digits, such as 2048."
+                            "x-portable-messages": {
+                                "pattern": "A license number is four digits, such as 2048."
                             }
                         }
                     }

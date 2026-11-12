@@ -6,58 +6,103 @@ draw, or to find which element a key gets.
 [Rules on a key](introduction/06-rules-on-a-key.md) introduce what a
 widget reads.
 
-A widget maps one data definition to a form element, and reads the
-submitted value back. It is a plugin type: classes live in
-`Plugin/SurfaceWidget` and are declared with the
-`#[SurfaceWidget]` attribute.
+A widget maps one node of the served document to a form element, and
+reads the submitted value back. It is a plugin type: classes live in
+`Plugin/SurfaceWidget` and are declared with the `#[SurfaceWidget]`
+attribute.
 
-A widget reads the definition and **nothing else**. It never sees the
-data surface, the host or the storage: everything it needs (type, label,
-description, whether the value is required, the values it allows) is on
-the definition. That is what makes one definition render the same way
-wherever it appears.
+The form is drawn from the document the data surface serves for its
+values, emitted with the widget hints, as the HTTP door serves it to the
+React app ([Forms](forms.md#the-form-is-drawn-from-the-document)). A
+widget reads one node of it and **nothing else**: the key's schema with
+its `$ref`s followed and its compositions merged, its hints under
+`x-portable-ui`, and Surface's markers under `x-surface`. It never sees
+the data surface, a definition, the host or the storage. What it needs
+that the document does not say, the label of the entity a reference
+holds, it asks its context, which the host answers. That is what makes
+one key render the same way wherever it appears, and the PHP form and
+the React app read the same document by the same rules.
 
 ## The API
 
 ```php
-public function isApplicable(DataDefinitionInterface $definition): bool;
-public function buildElement(DataDefinitionInterface $definition, mixed $value): array;
-public function extractValue(DataDefinitionInterface $definition, array $element, FormStateInterface $form_state, array $fallback_parents): mixed;
+public function isApplicable(Schema $node, WidgetContext $context): bool;
+public function buildElement(Schema $node, mixed $value, WidgetContext $context): array;
+public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed;
 ```
 
-Plain values in, a render element out, plain values back. No typed-data
-objects are threaded through the form path and no subform states exist
-anywhere, so the coordinate-frame mistakes of an adapter-based form layer
-cannot occur.
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-A definition's element **is** its input, or a container of named children
-for a complex definition. There is no wrapper nesting, so a submitted
-value tree is already in the definition's clean shape.
+`Schema` is Portable Schema's (`PortableSchema\Builder\Schema`), the node
+inline. `WidgetContext` says what the node does not say of itself: its
+JSON Pointer in the values, whether the object holding it lists it in
+`required`, whether the envelope lists its value as stale, whether an
+element around it is locked, whether it is drawn inside a collection's
+item (`item`); and it carries the host's answers (`labelOf()`,
+`selection()`) and the drawer, which draws the nodes inside a node
+(`properties()`, `node()`).
 
-## Applicability is an instance method
+Plain values in, a render element out, plain values back. A node's
+element **is** its input, or a container of named children for an
+object. There is no wrapper nesting, so a submitted value tree is
+already in the node's shape.
 
-`isApplicable()` is deliberately not static. A widget may have to ask a
-collaborator before it can answer (the select widget asks the options
-service whether the definition's constraints name a list that is not
-empty), and a static answer would have to reach the container to do it.
+## The word names the widget
 
-The manager instantiates every widget once, in ascending weight order,
-and asks each in turn; the first that says yes wins. So a specialized
-widget undercuts a generic per-type one by declaring a **lower** weight.
-Widgets hold no per-definition state, so one instance serves every
-definition for the rest of the request. A widget that claims keys is
-asked before any of them, for the keys it claims alone
-([below](#a-module-serves-a-widget-to-every-key-of-a-kind)).
+The emitter chooses each key's widget from its definition, and writes
+its word into the node, `x-portable-ui.widget`. The drawer draws the node
+with the widget that word names (`SurfaceWidgetManager::widgetFor()`),
+so the choice is made once and a client never makes it again. There is
+one table, word to plugin ID (`SurfaceWidgetManager::words()`): each
+widget's words (`answersTo()`, its plugin ID first), and
+`SurfaceWidgetManager::DOCUMENT_WORDS`, the consumer's mapping of the
+words the document uses for a stock widget by another name, `text`,
+`textarea` and `email` to the string widget and `fixed` to the select.
+The emitter writes only words that table holds: a widget's own by
+`WidgetChoice::wordOf()`, the first word it answers to that the table
+maps to it, and the words for a value's shape by
+`WidgetChoice::valueWord()`, each checked by `WidgetChoice::word()`.
+`variants` names no widget: the drawer draws a key with variants itself.
+
+A word no widget answers to (a module's widget the site does not have),
+a word whose widget's `isApplicable()` refuses the node, and a node with
+no word (a timestamp, a date and time, a key with variants) fall to the
+stock word for the node's shape, in the order of the React app's
+`stockWidget()` (`SurfaceWidgetManager::stockWord()`): a list whose
+items offer choices a multiple select, any other list `list`, a node
+offering choices a select, an object a fieldset, a boolean a checkbox,
+an integer or a number a number input, a string whose `format` is
+`email` an email input, any other string a text input. A node that
+states no one type (a value of any type) is drawn by the module's own
+widgets in weight order, the first whose `isApplicable()` says yes, the
+JSON widget last. The weights decide only among widgets answering to
+the same word. `isApplicable()` reads the node alone (`type`, `format`,
+`oneOf`, `items`, a check, a hint), never a live collaborator. A
+module's widget is drawn only where the document names it.
+
+Two of the emitter's words are rules of their own. A module's widget the
+emitter chooses by a setting of its own (the extras' comma separated
+list) is named by its word, where `list` stood before. A list the list
+widget does not draw (its items lists, or of any type) is named by no
+word, and the drawer draws it as JSON.
+
+The emitter's side is `Contract\WidgetChoice`: a widget that claims the
+key first, then the widget the key asks for by its word, then every
+widget in weight order whose `drawsDefinition()` says it draws the
+definition (`Contract\DefinitionWidgetInterface`). Every stock widget
+implements both halves; `WidgetAgreementTest` holds them to each other
+for every key of every example, collections, keys with variants and keys
+with no word among them.
 
 ### How a widget declines
 
-By returning `FALSE` from `isApplicable()`. There is no other way to opt
-out. Every data type core defines is drawn by a stock widget, a type
-whose value nobody types (bytes, a language) as an item saying it is not
-drawn here, and the `json` widget is the last resort for an `any` key
-and a list nothing else draws, so the form never refuses a key it is
-declared with. A data type a module adds that no widget names, such as
-`filter_format`, still throws naming it.
+By returning `FALSE` from `isApplicable()`, and on the emitter's side
+from `drawsDefinition()`. Every data type core defines is drawn by a
+stock widget, a type whose value nobody types (bytes, a language) as an
+item saying it is not drawn here, and the `json` widget is the last
+resort for an `any` key and a list nothing else draws, so the form never
+refuses a key it is declared with. A data type a module adds that no
+widget names, such as `filter_format`, still throws naming it.
 
 To put a widget in front of or behind another module's, alter its
 weight rather than its class:
@@ -70,22 +115,25 @@ function my_module_surface_widget_info_alter(array &$definitions): void {
 
 ## The stock widgets
 
-| Widget | Weight | Applies to | Element |
+The second column is what the emitter chooses the widget for, from the
+definition; the drawer draws the node its word names.
+
+| Widget | Weight | Chosen for | Element |
 | --- | --- | --- | --- |
 | `checkboxes` | -15 | A list whose item resolves to a list of allowed values, while it offers at most twelve (`CheckboxesWidget::MAXIMUM_OPTIONS`), or that asks for checkboxes. | `checkboxes`, never `#required` |
 | `radios` | -15 | One value that resolves to a list of allowed values and asks for radios. | `radios`; `- None -` a radio only where the key may be cleared |
 | `select` | -10 | Any definition whose constraints resolve to a list of allowed values, an empty one included: one value, and a list the checkboxes leave (more than twelve, or asking for a select). See [Options and resolvers](options.md). | `select`; a list's `#multiple`, never `#required`; an `item` showing the one value a deciding key's variants offer |
-| `autocomplete` | -5 | A key that refers to one entity type, its id with `SurfaceValidReference`, or the id of a key of any entity type once its entity type is chosen, whose candidates are not listed: more than `surface.settings:reference_list_limit` ([Options](options.md#a-key-that-refers-to-an-entity)). | core's `entity_autocomplete`, its selection settings the key's; read back as the id in brackets, `Riverside Hall (riverside)` as `riverside`; core's own check of what was typed taken off |
+| `autocomplete` | -5 | A key that refers to one entity type, its id with `SurfaceValidReference`, or the id of a key of any entity type once its entity type is chosen, whose candidates are not listed: more than `surface.settings:reference_list_limit` ([Options](options.md#a-key-that-refers-to-an-entity)). | core's `entity_autocomplete`, its handler and selection settings the check's options where they carry them, else the host's answer (`WidgetContext::selection()`: a reference field's handler and settings, which the document does not carry); read back as the id in brackets, `Riverside Hall (riverside)` as `riverside`; core's own check of what was typed taken off |
 | `fieldset` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a variant for a choice with nothing more to say, renders as an empty container and answers an empty map. A list of maps inside it is the form builder's, drawn as a collection in its place ([below](#a-list-of-maps-is-a-collection)). | `details` |
 | `list` | 8 | A list of single values with no list of allowed values, whose item a widget draws: keywords, a list of free strings or numbers. | a `fieldset` of rows, "Remove" beside each, "Add another" under them |
 | `time` | 9 | A `string` that asks for a time. | a time input |
 | `date` | 9 | A `string` that asks for a date. | a date input |
-| `string` | 10 | `string`, `email`, `uri`, `duration_iso8601`. | `textfield`, `email`, `url`; `textarea` when multiline; `password` for a secret |
+| `string` | 10 | `string`, `email`, `uri`, `duration_iso8601`; the words `text`, `textarea` and `email`. | `textfield`, `email`, `url`; `textarea` when multiline; `password` for a secret (`writeOnly`); `#size` and `#rows` from the hints `options.size` and `options.rows` |
 | `number` | 10 | `integer`, `float`, `decimal`, `timestamp`, `timespan`. | `number`, `#step` 1, or any for a float or a decimal |
 | `checkbox` | 10 | `boolean`. | `checkbox`, never `#required` |
 | `datetime` | 10 | `datetime_iso8601`. | core's `datetime`, a date and a time input in the site's time zone; read back as the ISO 8601 string, its offset kept |
 | `not_drawn` | 10 | `language`, `language_reference`, `entity_reference`, and a list of any of them: a value nobody types, which no blueprint declares, so only a definition handed to the engine by hand reaches it. | `item`: "This is not drawn on this form; what it holds is kept.", posting nothing |
-| `scalars` | 999 | A key of type `any` read from a schema whose `type` lists two or more of string, integer, number and boolean, and nothing else but null (`ScalarsWidget::types()`, from the schema `SchemaReader::statedTypes()` reads off its JsonSchema constraint). | `textfield`, its description naming the types; read as the first stated type the text spells, in this order: integer, number, `true` or `false`, string; empty sends nothing |
+| `scalars` | 999 | A key of type `any` read from a schema whose `type` lists two or more of string, integer, number and boolean, and nothing else but null (`ScalarsWidget::stated()`, from the schema `SchemaReader::statedTypes()` reads off its JsonSchema constraint); on the drawer's side, a node whose `type` lists them (`ScalarsWidget::scalars()`). | `textfield`, its description naming the types; read as the first stated type the text spells, in this order: integer, number, `true` or `false`, string; empty sends nothing |
 | `json` | 1000 | What every other widget refused: a key of type `any` that holds no variants and is no union of scalars (its types include an object or a list, or it states none), and a list the list widget refuses, its items lists or `any`. | `textarea` of pretty-printed JSON, its description naming the type; empty sends nothing, text that is not JSON is an error on the element |
 
 The weights say the selection rule out loud: the checkboxes and radios
@@ -118,14 +166,15 @@ another" under them, over AJAX. At the top of a frame, inside a
 collection's item, inside a variant (a component's props), inside an
 attached part, or inside a plain map. A widget cannot draw it, since it
 knows neither the list's place in the form nor the container its buttons
-rebuild: the map widget draws an item standing in for it, and the form
-builder draws the collection in that place
-(`Drawing::collectionsInside()`) and reads it back item by item
-(`Extracting::collectionsIn()`). Where `attachList()` declared the list,
-its child structure draws each item; a list declared with a map as its
-item has none, so one is sealed from the item's keys for the form
-(`Collection::forList()`), and the list is accepted and validated
-through its own definition, as any list is. A list of lists is the
+rebuild: the drawer draws the collection in its place, a list of
+objects in the document (`x-surface.collection`, or `items` an object),
+and reads it back item by item. Each item is the items' object, the
+conditionals it states narrowed for that item's values
+(`DocumentDrawer::narrowedFor()`): the document states one `items` for
+every item. Where `attachList()` declared the list, its child
+structure's def is the items; a list declared with a map as its item is
+the map, and the list is accepted and validated through its own
+definition, as any list is. A list of lists is the
 `json` widget's.
 
 ### Which element a list of choices is
@@ -151,7 +200,7 @@ the stock widgets have a rule (why: [decision](decisions.md#a-widget-is-chosen-f
   element's hints, and a refusal of one is shown on its row.
 
 A definition asks for an element with core's own setting, in the words
-the served contract's `x-surface.widget` uses:
+the served contract's `x-portable-ui.widget` uses:
 
 ```php
 $inputs->add('handling', 'string', t('Handling'))
@@ -171,7 +220,7 @@ $inputs->add('reviewed_on', 'string', t('Reviewed on'))
 `checkboxes`, `radios`, `select`, `time` and `date` are the words the stock
 widgets answer to (`SurfaceWidgetBase::answersTo()`): each is the
 widget's plugin ID, as `fieldset` and `checkbox` are, and the word
-`x-surface.widget` says. *Renamed 2026-10-24:* the select, fieldset and
+`x-portable-ui.widget` says. *Renamed 2026-10-24:* the select, fieldset and
 checkbox widgets were the plugins `options`, `map` and `boolean`; a
 `hook_surface_widget_info_alter()` keyed by an old ID finds
 nothing. A word the
@@ -237,9 +286,9 @@ those is missing is in
 ## Extraction returns raw shapes
 
 A widget **does not coerce**. `extractValue()` hands back the raw
-submitted value in the definition's shape (a scalar for a primitive
-definition, an array keyed by property name for a complex one), and the
-pipeline's `accept()` casts it.
+submitted value in the node's shape (a scalar for one value, an array
+keyed by property name for an object), and the pipeline's `accept()`
+casts it.
 
 This is not a division of labor for its own sake. Casting in the widgets
 is what an earlier design did, and it meant a caller that handed the
@@ -248,13 +297,20 @@ all and validated raw strings. With one coercion table in `accept()`, a
 generated form and a payload carrying the same strings produce the same
 values. The rules are in [Value semantics](semantics.md).
 
-The base class reads the element back for a widget whose element holds
-one value at its own place in the form. It reads checkboxes too, which
-post every option with its value or `0`, as the list of the values
-checked, whichever widget reads them: a list a refiner narrowed may be
-drawn as checkboxes and read back through the definition as advertised.
-A widget that renders several elements, as the map and list widgets do,
-overrides `extractValue()`.
+Each element drawn for a value carries its JSON Pointer
+(`#surface_path`) and the plugin ID of the widget that drew it
+(`#surface_widget`), and no node: extraction finds the node at that
+pointer in the envelope drawn (`Form\Document\DocumentNodes::at()`), the
+one the request drew or, for a form read from the form cache, the one
+emitted again for the values the container keeps (`#surface_values`), so
+the form reads each value back with the widget that built it, through
+that node. The base class reads an element that holds one value at its
+own place in the form, and checkboxes, which post every option with its
+value or `0`, as the list of the values checked. A widget that renders
+several elements, as the map and list widgets do, overrides
+`extractValue()`. An element standing for a stale value, left on its
+empty option, keeps what is stored: the form reads the stored value back
+at its pointer, since the document never carries it.
 
 ### The one subtlety in extraction
 
@@ -271,8 +327,8 @@ replaced by nothing for an optional one.
 widget that overrides `extractValue()` should go through it rather than
 reading `$form_state` directly. An absolute path is read against the complete
 form state it is absolute in; an element with no `#parents` has not been
-processed at all (programmatic use, kernel tests) and is read at
-`$fallback_parents`, relative to the state handed over.
+processed at all (programmatic use, kernel tests) and is read at its
+pointer, relative to the state handed over.
 
 ## Writing a widget
 
@@ -282,15 +338,19 @@ processed at all (programmatic use, kernel tests) and is read at
   label: new TranslatableMarkup('Color'),
   weight: 5,
 )]
-final class ColorWidget extends SurfaceWidgetBase {
+final class ColorWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
 
-  public function isApplicable(DataDefinitionInterface $definition): bool {
+  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
     return $definition->getDataType() === 'string'
       && $definition->getSetting('my_module_color') === TRUE;
   }
 
-  public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
-    return $this->baseElement($definition) + [
+  public function isApplicable(Schema $node, WidgetContext $context): bool {
+    return static::types($node) === ['string'];
+  }
+
+  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
+    return $this->baseElement($node, $context) + [
       '#type' => 'color',
       '#default_value' => $value ?? '#000000',
     ];
@@ -301,12 +361,16 @@ final class ColorWidget extends SurfaceWidgetBase {
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-`baseElement()` supplies what every element wants from a definition
-(`#title`, `#description`, `#required`), so a widget only adds the part
-that is its own. `#required` draws the marker and the browser's
-`required` attribute and is never checked by core: the form builder
-keeps that check off, so a required key left empty is refused in the
-data surface's words (why: [decision](decisions.md#an-element-hints-and-the-rule-speaks)). The attribute takes `id`, `label`, `weight`, and
+`drawsDefinition()` is the emitter's question: it is asked in weight
+order, and the widget that says yes first is the word the document
+carries. `isApplicable()` is the drawer's, asked only of a node whose word
+names no widget that draws it. `baseElement()` supplies what every
+element wants from a node (`#title` from `title`, `#description` from
+`description`, `#required` from the owner's `required`), so a widget
+only adds the part that is its own. `#required` draws the marker and the
+browser's `required` attribute and is never checked by core: the form
+builder keeps that check off, so a required key left empty is refused in
+the data surface's words (why: [decision](decisions.md#an-element-hints-and-the-rule-speaks)). The attribute takes `id`, `label`, `weight`, and
 optionally a `deriver`, as every core plugin attribute does, and
 `claims` and `priority` ([below](#a-module-serves-a-widget-to-every-key-of-a-kind)).
 
@@ -315,11 +379,26 @@ Three things to hold to:
 1. **Declare a weight that says where you belong.** Lower than 10 to
    undercut a per-type widget, lower than -10 to undercut the options
    widget, lower than -15 to undercut the checkboxes and radios.
-2. **Do not coerce.** Give back what was submitted, in the definition's
-   shape.
-3. **Read nothing but the definition.** If you find yourself wanting the
-   data surface or the host, the thing you want is probably a constraint on
-   the definition and a resolver that reads it.
+2. **Do not coerce.** Give back what was submitted, in the node's shape.
+3. **Read nothing but the node.** If you find yourself wanting the data
+   surface or the host, the thing you want is probably a keyword the
+   emitter writes, a setting your widget publishes
+   ([below](#a-widget-may-publish-its-settings)), or the context's
+   `labelOf()`.
+
+### A widget may publish its settings
+
+A module's widget may read settings of its own from a key's definition,
+how it is drawn: a palette, a number of columns. Those it lists in
+`publishedSettings()` reach the document: the emitter writes each the
+definition holds under `x-portable-ui.options`, its name in lowerCamel
+(`swatch_columns` as `swatchColumns`), as a hint, and the widget's
+`buildElement()` reads it there (`static::options($node)`). The reader
+reads each back into the setting it was written from, where the widget
+the word names publishes one of that name, and notes it otherwise. A
+setting that says what the key accepts is a constraint, never a
+published setting. The stock string widget's `size` and `rows` reach
+the document the same way, as `options.size` and `options.rows`.
 
 ## A module serves a widget to every key of a kind
 
@@ -335,10 +414,14 @@ instead:
   claims: [['type' => 'string', 'format' => 'color']],
   priority: 10,
 )]
-final class ColorWidget extends SurfaceWidgetBase {
+final class ColorWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
 
-  public function isApplicable(DataDefinitionInterface $definition): bool {
+  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
     return !DefinitionMetadata::isSecret($definition);
+  }
+
+  public function isApplicable(Schema $node, WidgetContext $context): bool {
+    return $node->get('writeOnly') !== TRUE;
   }
 
   // buildElement() as above.
@@ -361,20 +444,20 @@ A claim of a list or a map is refused when the plugins are discovered:
 a list is drawn item by item, each item by the widget that serves it,
 and a map is a fieldset of its keys.
 
-How the manager chooses (`SurfaceWidgetManager::claimed()`):
+How the emitter chooses (`WidgetChoice::claimed()`):
 
 1. **A key whose owner asks for a widget**, `setSetting('widget', ...)`,
    is drawn by that widget, and no claim is asked. The owner wins.
 2. **The claims**, the highest `priority` first, then by plugin ID. The
-   first widget whose claim matches the key and whose `isApplicable()`
-   says yes draws it. A claimed widget may still decline a key, as the
+   first widget whose claim matches the key and whose
+   `drawsDefinition()` says yes draws it. A claimed widget may still decline a key, as the
    one above declines a secret.
 3. **The stock rule**, by weight, as above. A widget that claims is not
    asked here for a key it does not claim, unless the key names it, so
-   its `isApplicable()` answers for the keys it claims alone, and its
+   its `drawsDefinition()` answers for the keys it claims alone, and its
    weight matters only when a key asks for it by name.
 
-`x-surface.widget` says the chosen widget's word, the first word it
+`x-portable-ui.widget` says the chosen widget's word, the first word it
 answers to (its plugin ID), in both documents, and the catalog's view
 of one resource (`drush surface:catalog --resource=<id>`) names each
 key's widget among its notes. The React page draws the stock widgets

@@ -63,11 +63,11 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
    */
   protected const MAILER_OFF = <<<'JSON'
     {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Configure the mailer",
         "description": "Sets who the event's mail is sent from, the mail service it is sent through, and the credential that service is called with: a key pasted here, or a key the site manages.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "configure",
                 "label": "Configure the mailer",
@@ -84,8 +84,11 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
             "sender": {
                 "title": "Sender",
                 "type": "string",
-                "format": "idn-email",
-                "default": "tickets@example.com"
+                "format": "email",
+                "default": "tickets@example.com",
+                "portable-check": {
+                    "drupal:Email": {}
+                }
             },
             "endpoint": {
                 "title": "Mail service",
@@ -175,11 +178,11 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
    */
   protected const MAILER_ON = <<<'JSON'
     {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Configure the mailer",
         "description": "Sets who the event's mail is sent from, the mail service it is sent through, and the credential that service is called with: a key pasted here, or a key the site manages.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "configure",
                 "label": "Configure the mailer",
@@ -196,8 +199,11 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
             "sender": {
                 "title": "Sender",
                 "type": "string",
-                "format": "idn-email",
-                "default": "tickets@example.com"
+                "format": "email",
+                "default": "tickets@example.com",
+                "portable-check": {
+                    "drupal:Email": {}
+                }
             },
             "endpoint": {
                 "title": "Mail service",
@@ -327,13 +333,11 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
                                 "title": "Webhook signing"
                             }
                         ],
-                        "x-surface": {
-                            "checkedOnServer": [
-                                {
-                                    "constraint": "ManagedKey",
-                                    "message": "Managed key"
-                                }
-                            ]
+                        "portable-check": {
+                            "drupal:ManagedKey": {}
+                        },
+                        "x-portable-messages": {
+                            "check.drupal:ManagedKey": "Managed key"
                         }
                     }
                 },
@@ -351,11 +355,11 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
    */
   protected const WEBHOOK_OFF = <<<'JSON'
     {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Configure the sales webhook",
         "description": "Sets the address the event's sales are posted to, and the key each post is signed with.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "configure",
                 "label": "Configure the sales webhook",
@@ -394,11 +398,11 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
    */
   protected const WEBHOOK_ON = <<<'JSON'
     {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Configure the sales webhook",
         "description": "Sets the address the event's sales are posted to, and the key each post is signed with.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "configure",
                 "label": "Configure the sales webhook",
@@ -465,13 +469,11 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
                                         "const": null
                                     }
                                 ],
-                                "x-surface": {
-                                    "checkedOnServer": [
-                                        {
-                                            "constraint": "ManagedKey",
-                                            "message": "Managed key"
-                                        }
-                                    ]
+                                "portable-check": {
+                                    "drupal:ManagedKey": {}
+                                },
+                                "x-portable-messages": {
+                                    "check.drupal:ManagedKey": "Managed key"
                                 }
                             }
                         },
@@ -715,9 +717,9 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
     $source = $this->now('event.mailer')['properties']['source'];
     $this->assertSame('pasted', $source['const']);
     $this->assertArrayNotHasKey('oneOf', $source);
-    $this->assertSame('fixed', $source['x-surface']['widget']);
+    $this->assertSame('fixed', $source['x-portable-ui']['widget']);
     $this->assertSame('Pasted here', $source['x-surface']['fixed']);
-    $this->assertArrayNotHasKey('emptyOption', $source['x-surface']);
+    $this->assertArrayNotHasKey('emptyOption', $source['x-surface'] ?? []);
     $element = $this->formAt('surface_examples.step14')['source'];
     $this->assertSame('item', $element['#type']);
     $this->assertSame('Pasted here', $element['#plain_text']);
@@ -729,7 +731,7 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
     $source = $this->now('event.mailer')['properties']['source'];
     $this->assertArrayNotHasKey('const', $source);
     $this->assertSame(['pasted', 'managed'], array_column($source['oneOf'], 'const'));
-    $this->assertSame('select', $source['x-surface']['widget']);
+    $this->assertSame('select', $source['x-portable-ui']['widget']);
     $element = $this->formAt('surface_examples.step14')['source'];
     $this->assertSame('select', $element['#type']);
     $this->assertSame(['pasted' => 'Pasted here', 'managed' => 'A managed key'], array_map('strval', $element['#options']));

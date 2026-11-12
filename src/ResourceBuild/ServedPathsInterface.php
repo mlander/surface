@@ -44,9 +44,11 @@ interface ServedPathsInterface {
    * @param string $operation
    *   The operation id, whose identity parameters the path names.
    *
-   * @return string
-   *   The path, each identity segment a `{parameter}`.
+   * @return string|null
+   *   The path, each identity segment a `{parameter}`; NULL for an
+   *   operation `GET` does not serve at its path, since the lookup answers
+   *   for the operation it serves there.
    */
-  public function lookupPath(string $resource, string $operation): string;
+  public function lookupPath(string $resource, string $operation): ?string;
 
 }

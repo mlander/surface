@@ -7,6 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Pipeline\UnknownKeysException;
@@ -30,6 +31,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\InputBag;
 use Symfony\Component\HttpFoundation\Request;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests a child invoked through an operation of its own, and its access.
@@ -353,7 +355,7 @@ class ChildOperationTest extends SurfaceKernelTestBase {
 
     $schema = $this->contract($edit)->document['schema'];
     $this->assertArrayNotHasKey('readOnly', $schema['properties']['rack']);
-    $rack = SchemaResolver::inline($schema['properties']['rack'], $schema);
+    $rack = Schemas::decoded(SchemaResolver::inline(Schema::from($schema['properties']['rack']), Schema::from($schema)));
     $this->assertArrayNotHasKey('readOnly', $rack['properties']['spices']);
     $this->assertArrayNotHasKey('const', $rack['properties']['spices']);
 
@@ -386,7 +388,7 @@ class ChildOperationTest extends SurfaceKernelTestBase {
     $contract = $this->contract($edit);
     $schema = $contract->document['schema'];
     $this->assertTrue($schema['properties']['rack']['readOnly']);
-    $rack = SchemaResolver::inline($schema['properties']['rack'], $schema);
+    $rack = Schemas::decoded(SchemaResolver::inline(Schema::from($schema['properties']['rack']), Schema::from($schema)));
     foreach (['shelf' => 'low', 'spices' => 7, 'label' => 'Everyday'] as $key => $value) {
       $this->assertTrue($rack['properties'][$key]['readOnly'], $key);
       $this->assertSame($value, $rack['properties'][$key]['const'], $key);
@@ -399,7 +401,7 @@ class ChildOperationTest extends SurfaceKernelTestBase {
     $full = $this->contract($edit, TRUE);
     $schema = $full->document['schema'];
     $this->assertTrue($schema['properties']['rack']['readOnly']);
-    $rack = SchemaResolver::inline($schema['properties']['rack'], $schema);
+    $rack = Schemas::decoded(SchemaResolver::inline(Schema::from($schema['properties']['rack']), Schema::from($schema)));
     $this->assertTrue($rack['properties']['spices']['readOnly']);
     $this->assertArrayNotHasKey('const', $rack['properties']['spices']);
     $this->assertContains('user.permissions', $full->getCacheContexts());

@@ -8,9 +8,13 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
+use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface\Widget\WidgetContext;
+use PortableSchema\Builder\Schema;
 
 /**
  * A text field for a value of several scalar types, read from a schema.
@@ -37,7 +41,7 @@ use Drupal\surface\Widget\SurfaceWidgetBase;
   label: new TranslatableMarkup('Text for several types'),
   weight: 999,
 )]
-final class ScalarsWidget extends SurfaceWidgetBase {
+final class ScalarsWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
 
   /**
    * The scalar types, in the order what was typed is read as them.
@@ -55,7 +59,7 @@ final class ScalarsWidget extends SurfaceWidgetBase {
    *   holding no variants whose kept schema states two or more scalar
    *   types and nothing else but null; NULL for any other definition.
    */
-  public static function types(DataDefinitionInterface $definition): ?array {
+  public static function stated(DataDefinitionInterface $definition): ?array {
     if ($definition->getDataType() !== 'any' || DefinitionMetadata::variantsBy($definition) !== NULL) {
       return NULL;
     }
@@ -69,15 +73,43 @@ final class ScalarsWidget extends SurfaceWidgetBase {
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(DataDefinitionInterface $definition): bool {
-    return static::types($definition) !== NULL;
+  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
+    return static::stated($definition) !== NULL;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A node whose `type`, or the schema its JsonSchema check holds it to,
+   * names two or more scalar types and nothing else but null.
+   */
+  public function isApplicable(Schema $node, WidgetContext $context): bool {
+    return static::scalars($node) !== NULL;
+  }
+
+  /**
+   * Reads the scalar types a node holds, when it is a union of them.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The node.
+   *
+   * @return string[]|null
+   *   The types other than null, in ORDER; NULL for a node of fewer than
+   *   two types or of one that is no scalar.
+   */
+  public static function scalars(Schema $node): ?array {
+    $stated = array_values(array_diff(static::statedTypes($node), ['null']));
+    if (count($stated) < 2 || array_diff($stated, self::ORDER) !== []) {
+      return NULL;
+    }
+    return array_values(array_intersect(self::ORDER, $stated));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
-    $element = $this->baseElement($definition) + [
+  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
+    $element = $this->baseElement($node, $context) + [
       '#type' => 'textfield',
       '#default_value' => match (TRUE) {
         $value === NULL => '',
@@ -88,10 +120,8 @@ final class ScalarsWidget extends SurfaceWidgetBase {
         default => (string) json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
       },
     ];
-    $said = $this->said(static::types($definition) ?? []);
-    $element['#description'] = isset($element['#description'])
-      ? $this->t('@description @types', ['@description' => $element['#description'], '@types' => $said])
-      : $said;
+    $said = (string) $this->said(static::scalars($node) ?? []);
+    $element['#description'] = isset($element['#description']) ? $element['#description'] . ' ' . $said : $said;
     return $element;
   }
 
@@ -103,8 +133,8 @@ final class ScalarsWidget extends SurfaceWidgetBase {
    * the key's constraint to refuse. A value that is not text (a payload's)
    * passes.
    */
-  public function extractValue(DataDefinitionInterface $definition, array $element, FormStateInterface $form_state, array $fallback_parents): mixed {
-    $raw = $this->rawValue($element, $form_state, $fallback_parents);
+  public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed {
+    $raw = $this->rawValue($element, $form_state);
     if (!is_string($raw)) {
       return $raw;
     }
@@ -112,7 +142,7 @@ final class ScalarsWidget extends SurfaceWidgetBase {
     if ($typed === '') {
       return NULL;
     }
-    foreach (static::types($definition) ?? [] as $type) {
+    foreach (static::scalars($node) ?? [] as $type) {
       $read = match ($type) {
         'integer' => filter_var($typed, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE),
         'number' => is_numeric($typed) ? $typed + 0 : NULL,

@@ -46,7 +46,7 @@ $inputs->add('opens', 'string', t('Opens at'), default: '09:00')
 ```
 
 The form draws the browser's time input, the served contract says
-`x-surface.widget: "time"` and React draws the same; the browser posts
+`x-portable-ui.widget: "time"` and React draws the same; the browser posts
 `09:00`, and the pattern is still the rule, at every door
 ([Widgets](widgets.md#which-element-a-list-of-choices-is)). A date is the
 same with `setSetting('widget', 'date')` and RFC 3339's full-date
@@ -117,7 +117,7 @@ or a definition, as here, when the item has constraints of its own, and
 returns the list for the rest of the core setters.
 
 The form draws checkboxes, one per day, the served contract says
-`x-surface.widget: "checkboxes"`, React draws its checkboxes, and the
+`x-portable-ui.widget: "checkboxes"`, React draws its checkboxes, and the
 tool lists the days as the items' values. Every box unchecked is the
 empty list; boxes left as drawn keep the days. A list of more than
 twelve choices is a multiple select, and
@@ -146,7 +146,7 @@ $inputs->add('notes', 'string', t('Notes'))
 ```
 
 The string widget draws a `textarea`, with no `maxlength` and no
-placeholder, and the served contract says `x-surface.widget:
+placeholder, and the served contract says `x-portable-ui.widget:
 "textarea"` ([Widgets](widgets.md#the-stock-widgets)). Its config schema
 type is `string`, which the generator writes
 ([Storage](storage.md#a-schema-generated-from-the-resource)): config
@@ -250,7 +250,7 @@ $inputs->addList('keywords', 'string', t('Keywords'), default: []);
 A row left empty is dropped, as the pipeline drops an empty item; what a
 keyword may be (a `Length`, a `Regex` on the item definition) reaches
 each row's field, and a refused keyword is marked on its own row. The
-served contract says `x-surface.widget: "list"`. A text area of one
+served contract says `x-portable-ui.widget: "list"`. A text area of one
 keyword per line, or a comma separated list, is still a widget of your
 own if you want one ([Writing a widget](widgets.md#writing-a-widget));
 the extras example module ships the second, `CommaSeparatedListWidget`.

@@ -166,6 +166,20 @@ door and cut the `x-surface` keywords that said nothing or said it twice
 `deferred`, `list`), and writes every keyword only where it says
 something (why: [decision](decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire)).
 
+### Contract 5
+
+Contract 5 writes the documents as Portable Schema documents, and holds
+a request's values to them with the dialect's validator. So the codes of
+the violation document became the dialect's where the document
+expresses the rule (`maxLength` for `too_long`, `enum` for
+`no_such_choice`, `type` for `type_mismatch`,
+`check.drupal:SurfaceUnique.taken` for `taken`; the table is in
+[Codes](semantics.md#codes)), each entry gained `params` after its
+`message`, and a `datetime_iso8601` value is served with its offset,
+`2026-11-14T16:32:00Z`, as `format: date-time` says, where contract 4
+served `2026-11-14T16:32:00`
+(why: [decision](decisions.md#validation-runs-through-the-dialects-validator)).
+
 **What raises it.** A change to how documents are spelled or laid out
 that a client reading the old spelling would misread: a key or a marker
 renamed, moved, reshaped or removed (`surface` becoming `resource`,
@@ -181,8 +195,8 @@ Every wire change waiting for a version moves together, once, so a
 client moves once.
 
 **How a server states it.** Both documents carry it first under the top
-`x-surface`, `"contract": 4`, and every answer of the `/surface-api`
-API carries the response header `Contract-Version: 4`, so a client can
+`x-surface`, `"contract": 5`, and every answer of the `/surface-api`
+API carries the response header `Contract-Version: 5`, so a client can
 tell before it reads a body. A
 document that states none is of contract 1.
 
@@ -190,7 +204,7 @@ document that states none is of contract 1.
 `x-surface.contract`, first, and refuses a version it does not know
 rather than guess at it: a key read by its old name finds nothing, and
 a marker read where it no longer sits says nothing, so a guess fails
-quietly. The React app reads contract 4 only, and refuses another by
+quietly. The React app reads contract 5 only, and refuses another by
 the header or by the document. A full schema cached in another contract
 version is fetched again, as one of another resource version is.
 
@@ -318,9 +332,16 @@ note on its `configure` and breaking on its `create`, each reported on its
 own document. A change to a key's union of its
 variants is a note, since the conditionals that state each variant are
 judged themselves, and so is one to `$id`, `rules` or `within`, which
-say where a thing is, not what is accepted. `checkedOnServer` is
-compared by constraint, and a change to what one says it checks is a
-note. Each breaking change is then:
+say where a thing is, not what is accepted. `portable-check` is
+compared by check, and a change to a check's options, or to a message
+under `x-portable-messages`, is a note; so is a check added beside an
+unchanged `format` it is the host's rule for (`drupal:Email` beside
+`email`, `drupal:Uuid` beside `uuid`), which the server applied before
+the document named it. A check newly named at a map narrows, as any
+check added does. `format` is asserted, so it is judged as `pattern`
+is: the diff cannot order two formats, so a changed `format` breaks on
+an input and widens on an output; added narrows, removed widens. Each
+breaking change is then:
 
 - **versioned**, when the version of the id that owns it was raised
   (the document's resource or structure, or the structure whose def the

@@ -78,10 +78,11 @@ description, and always present:
 | `notes` | Each value sent for a locked key and not taken, `{path, code, message}`, code `locked`. |
 | `stale` | Each stored value kept that may no longer be chosen, `{path, code, message, stored}`, code `stale`. |
 
-The codes are a table in [Value semantics](semantics.md#codes):
-a constraint's (`not_in_range`, `no_such_choice`, `too_long`), or the
-module's own (`required`, `does_not_apply`, `unknown_key`,
-`type_mismatch`, `locked`, `access`, `permission`, `not_found`). A
+The codes are a table in [Value semantics](semantics.md#codes): the
+dialect's where the document states the rule (`maximum`, `enum`,
+`maxLength`, `type`, `check.drupal:SurfaceUnique.taken`), each with its
+`params`, or the module's own (`required`, `does_not_apply`,
+`unknown_key`, `locked`, `access`, `permission`, `not_found`). A
 message names a key it depends on by its path and a value by what is
 sent with its label beside it, the vocabulary of the listing. The
 resource's own outputs, from `defineOutputs()`, follow the shape, and
@@ -105,8 +106,8 @@ drush tool:run surface:registration.step3:configure --uid=1 --json \
    "ok": false, "committed": false, "changed": false, "changes": [],
    "values": {"title": "Spring meetup", "open": true, "venue": "riverside", "room": "harbour_deck", "capacity": 500, ...},
    "violations": [
-     {"path": "/room", "code": "no_such_choice", "message": "The value you selected is not a valid choice. This applies when Venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room)."},
-     {"path": "/capacity", "code": "not_in_range", "message": "This value should be between 1 and 100. This applies when Room is empty (harbour_deck was refused) and Compliance: Event license is empty."}],
+     {"path": "/room", "code": "enum", "message": "The value you selected is not a valid choice. This applies when Venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).", "params": {"value": "harbour_deck", "allowed": ["riverside_main", "riverside_east"]}},
+     {"path": "/capacity", "code": "maximum", "message": "This value should be between 1 and 100. This applies when Room is empty (harbour_deck was refused) and Compliance: Event license is empty.", "params": {"limit": 100}}],
    "notes": [], "stale": []}}
 ```
 
@@ -608,7 +609,7 @@ changing the Tool API.
   tool answers it in its own shape, `code` and `path` included; a runner
   never gives it the chance: the Tool API's position in the message
   ("(property deposit)") is read back off its arguments onto the path,
-  and its primitive type refusal is `type_mismatch`, the pipeline's code.
+  and its primitive type refusal is `type`, the pipeline's code.
   A type mismatch that named the type wanted
   (core's `PrimitiveType` constraint has its type to hand), or a way for
   a runner to hand the refusal to the tool to answer, would close it.

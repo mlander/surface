@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Resource;
 
+use PortableSchema\Builder\Schema;
+
 /**
  * A provider of variants that answers an entry's schema when it is read.
  *
@@ -33,16 +35,17 @@ interface EntrySchemasInterface extends SiteListInterface {
    * @param string $id
    *   The entry's id, one list() names.
    *
-   * @return array
-   *   The schema, an object, decoded with objects as arrays; a reference
-   *   alone, `#/$defs/<name>`, is that def of entryDefs().
+   * @return \PortableSchema\Builder\Schema|null
+   *   The schema, an object; a reference alone, `#/$defs/<name>`, is that
+   *   def of entryDefs(). NULL for none: a variant with no keys. A schema
+   *   held as an array is answered as Schema::from($array).
    */
-  public function entrySchema(string $id): array;
+  public function entrySchema(string $id): ?Schema;
 
   /**
    * Gets the defs every entry's schema may refer to.
    *
-   * @return array<string, array>
+   * @return array<string, \PortableSchema\Builder\Schema>
    *   The defs, by name; empty for none.
    */
   public function entryDefs(): array;

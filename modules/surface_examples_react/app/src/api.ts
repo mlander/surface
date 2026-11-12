@@ -1,5 +1,5 @@
 import type { Contract, Created, Schema, Submission, Values, Violation } from './contract';
-import { assertContract, assertSchema, CONTRACT, ContractRefused, getAt, setAt } from './contract';
+import { assertContract, assertSchema, CONTRACT, ContractRefused, expanded, getAt, setAt } from './contract';
 
 /**
  * Whether a write sends the ETag the contract was loaded with.
@@ -25,11 +25,6 @@ export interface Endpoints {
   schema: string;
   /** A run of the operation. */
   write: { method: 'PATCH' | 'POST'; url: string };
-  /**
-   * The lookup of the path's reference keys: GET, `?key=&q=`; null for a
-   * page whose operation GET does not serve, which has none.
-   */
-  lookup?: string | null;
 }
 
 /** One candidate a lookup answers. */
@@ -122,7 +117,7 @@ export interface Api {
   schema(): Promise<Schema>;
   /**
    * The full schema with choices of deferred keys stated, at the URL their
-   * filled `fetch` templates name: fetched once per URL for the page's
+   * expanded `choose` links name: fetched once per URL for the page's
    * life, since it reads no value either.
    */
   chosen(url: string): Promise<Schema>;
@@ -132,24 +127,11 @@ export interface Api {
   validate(values: Values, stale: string[], etag: string | null): Promise<Submission>;
   /** A run of the operation, and the ETag of what it stored. */
   submit(values: Values, stale: string[], etag: string | null): Promise<Tagged<Submission>>;
-  /** The candidates of one reference key whose labels contain the text. */
-  lookup(path: string, text: string, type?: string): Promise<Candidate[]>;
-}
-
-/**
- * Where a page's lookup is: the one the page names, or the read path's.
- *
- * The read path with any `:{operation}` and query taken off, then
- * `:lookup`: the custom read every resource path answers.
- */
-export function lookupOf(endpoints: Endpoints): string | null {
-  if (endpoints.lookup !== undefined) {
-    return endpoints.lookup;
-  }
-  const path = endpoints.read.split('?')[0];
-  const slash = path.lastIndexOf('/');
-  const colon = path.indexOf(':', slash);
-  return `${colon === -1 ? path : path.slice(0, colon)}:lookup`;
+  /**
+   * The candidates of one reference key at its `lookup` link, the template
+   * expanded with the variables: those its `source` names, and `q`.
+   */
+  lookup(href: string, variables: Record<string, unknown>): Promise<Candidate[]>;
 }
 
 /** Where the React pages are: the page's base, or beside the API. */
@@ -418,15 +400,10 @@ export function createApi(settings: Settings, fetcher: Fetcher): Api {
     narrow: async (values, stale) => dottedContract(assertContract(await read<Contract>(await send('POST', endpoints.schema, 'application/json', values, stale)))),
     validate: async (values, stale, etag) => (await run(values, stale, etag, true)).document,
     submit: async (values, stale, etag) => run(values, stale, etag, false),
-    lookup: async (path, text, type) => {
-      const at = lookupOf(endpoints);
-      if (at === null) {
-        return [];
-      }
-      let url = withQuery(withQuery(at, 'key', dottedToPointer(path)), 'q', text);
-      if (type !== undefined) {
-        url = withQuery(url, 'type', type);
-      }
+    lookup: async (href, variables) => {
+      // The link is concrete but for the variables its `source` names and
+      // the lookup's own `q` and `limit`.
+      const url = expanded(href, variables);
       const answer = await read<{ items?: Candidate[] }>(await get(url, 'application/json'));
       return Array.isArray(answer.items) ? answer.items : [];
     },

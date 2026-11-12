@@ -12,9 +12,11 @@ namespace Drupal\surface\Resource;
  * form display says, said once, on the key, so every door that draws the
  * key reads it. The generated form reads it for every host (the operation
  * form, a block, a formatter, a field type), and the served contract
- * states it as `x-surface.arrangement` when a renderer asks for widget
- * hints, which the React app draws from. Nothing in it changes what is
- * accepted: no rule, no default, no requiredness, and no path moves.
+ * states it in `x-portable-ui` (`group`, `weight`, the texts as
+ * `options`, each group declared once under its frame's `groups`) when a
+ * renderer asks for widget hints, which the React app draws from.
+ * Nothing in it changes what is accepted: no rule, no default, no
+ * requiredness, and no path moves.
  *
  * Nobody writes one. An owner and an alter alike arrange a key with the
  * blueprint's describe(), whose six arguments are this class's, after the

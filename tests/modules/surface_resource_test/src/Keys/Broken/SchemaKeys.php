@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface_resource_test\Keys\Broken;
 
 use Drupal\surface\Resource\SiteList;
+use PortableSchema\Builder\Schema;
 use Drupal\surface\Resource\SiteListInterface;
 
 /**
@@ -16,7 +17,7 @@ final class SchemaKeys implements SiteListInterface {
    * {@inheritdoc}
    */
   public function list(): SiteList {
-    return (new SiteList())->add('lathe', 'Lathe', schema: ['type' => 'object']);
+    return (new SiteList())->add('lathe', 'Lathe', schema: Schema::from(['type' => 'object']));
   }
 
 }

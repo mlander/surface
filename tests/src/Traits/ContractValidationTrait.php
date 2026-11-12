@@ -5,16 +5,21 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Traits;
 
 use Opis\JsonSchema\CompliantValidator;
+use PortableSchema\Registry;
+use PortableSchema\Validator;
 
 /**
- * Validates values against an emitted schema as a standard client does.
+ * Validates values against an emitted schema as a client of the dialect does.
  *
- * Opis/json-schema's own Validator runs with its extensions on, and one
- * of them (allowDefaults) fills a missing property from its `default`
- * before `required` is read, which no standard validator does. The
- * compliant validator turns the extensions off; `format`, an annotation
- * in JSON Schema 2020-12 that a client opts into asserting, is not
- * asserted either, since the contract says it is advisory.
+ * A served document is held by the dialect's own validator, as the
+ * server holds a request's values to it: every `format` asserted, a
+ * `portable-check` reported unchecked and never refused, since a client
+ * runs no check. A served document the dialect cannot load fails the
+ * test: that is what the never-stricter tests are there to catch. A
+ * schema the caller marks as a fragment (a fragment a reader kept, a
+ * standard schema outside the profile) is held by Opis's compliant
+ * validator, as JsonSchemaConstraintValidator holds it on the server: no
+ * extension, and `format` not asserted.
  *
  * Values are encoded the way a JSON client sends a document: a map is an
  * object (empty or not), a list an array, and a null stays a null, which
@@ -33,15 +38,51 @@ trait ContractValidationTrait {
    *   The schema, as emitted and decoded by a client.
    * @param mixed $values
    *   The values.
+   * @param bool $fragment
+   *   TRUE for a schema the dialect is not asked to load: a fragment a
+   *   reader kept, or a standard schema outside the profile.
    *
    * @return bool
    *   Whether they validate.
    */
-  protected function validates(array|\stdClass $schema, mixed $values): bool {
+  protected function validates(array|\stdClass $schema, mixed $values, bool $fragment = FALSE): bool {
+    if (!$fragment) {
+      $object = json_decode((string) json_encode(static::asSent($schema), JSON_PRESERVE_ZERO_FRACTION));
+      assert($object instanceof \stdClass, 'A served document is an object.');
+      $id = is_string($object->{'$id'} ?? NULL) ? $object->{'$id'} : 'urn:surface:test:' . hash('xxh128', (string) json_encode($object));
+      return (new Validator(Registry::withTypes()->add($object, $id)))->validate($this->document($values), $id)->valid;
+    }
     $validator = new CompliantValidator();
     $validator->parser()->setOption('defaultDraft', '2020-12');
     $validator->parser()->setOption('allowFormats', FALSE);
     return $validator->validate($this->document($values), (string) json_encode($schema))->isValid();
+  }
+
+  /**
+   * Writes a decoded document's empty maps as the objects a client reads.
+   *
+   * PHP decodes `{}` and `[]` alike; a check's options, and the members
+   * of `properties` and `$defs`, are objects in the document as served.
+   *
+   * @param mixed $schema
+   *   The document, or a node of it.
+   *
+   * @return mixed
+   *   The same, each such empty map an object.
+   */
+  protected static function asSent(mixed $schema): mixed {
+    if (!is_array($schema)) {
+      return $schema;
+    }
+    foreach ($schema as $keyword => $value) {
+      if (in_array($keyword, ['portable-check', 'properties', '$defs', 'patternProperties'], TRUE) && is_array($value)) {
+        $schema[$keyword] = $value === [] ? new \stdClass() : array_map(static fn (mixed $one): mixed => $one === [] ? new \stdClass() : static::asSent($one), $value);
+      }
+      elseif (is_array($value)) {
+        $schema[$keyword] = static::asSent($value);
+      }
+    }
+    return $schema;
   }
 
   /**

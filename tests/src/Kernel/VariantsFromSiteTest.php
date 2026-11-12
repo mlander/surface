@@ -28,6 +28,7 @@ use Drupal\tool\TypedData\MapInputDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Variants from the site: one per layout, each read from the schema it carries.
@@ -177,7 +178,7 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
     $again = $this->poster();
     $this->assertSame(['banner', 'grid', 'strip', 'column'], array_keys($again->getDefinitions()->entry('panels')->variants->variants));
     $full = $emitter->emitFull($again, 'resource_test.poster')->document['schema'];
-    $this->assertSame('#/$defs/resource_test.poster.panels.column', $full['properties']['panels']['x-surface']['variants']->column);
+    $this->assertSame('#/$defs/resource_test.poster.panels.column', $full['properties']['panels']['x-surface']['variants']['column']);
   }
 
   /**
@@ -198,7 +199,7 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
     // The strip's caption is never "Untitled", which the documents leave
     // to the server: wider than the pipeline, never stricter.
     $this->assertTrue($this->validates($full['schema'], ['layout' => 'strip', 'panels' => ['caption' => 'Untitled']]));
-    $this->assertSame(['not' => ['const' => 'Untitled']], $full['schema']['$defs']['resource_test.poster.panels.strip']['properties']['caption']['x-surface']['checkedOnServer'][0]['schema']);
+    $this->assertSame(['not' => ['const' => 'Untitled']], $full['schema']['$defs']['resource_test.poster.panels.strip']['properties']['caption']['portable-check']['drupal:JsonSchema']['schema']);
     // Its tags are unique, which the documents state.
     $this->assertFalse($this->validates($full['schema'], ['layout' => 'strip', 'panels' => ['tags' => ['a', 'a']]]));
     $this->assertTrue($full['schema']['$defs']['resource_test.poster.panels.strip']['properties']['tags']['uniqueItems']);
@@ -293,20 +294,36 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
       $this->assertSame('attachVariants("panels") names Drupal\surface_resource_test\Structure\Poster\BannerPanelsStructure as where its variants come from, which does not implement Drupal\surface\Resource\SiteListInterface: a provider lists the site\'s variants, each with its schema or structure, with list().', $e->getMessage());
     }
     $list = new SiteList();
-    $list->add('one', 'One', schema: ['type' => 'object']);
+    $list->add('one', 'One', schema: Schema::from(['type' => 'object']));
     $refusals = [
       '' => 'An empty id cannot name an entry: it becomes a key, or the value that chooses a variant.',
       'one' => 'The "one" entry was added to this list already: one entry per thing.',
     ];
     foreach ($refusals as $value => $message) {
       try {
-        $list->add((string) $value, 'Again', schema: ['type' => 'object']);
+        $list->add((string) $value, 'Again', schema: Schema::from(['type' => 'object']));
         $this->fail($message);
       }
       catch (\InvalidArgumentException $e) {
         $this->assertSame($message, $e->getMessage());
       }
     }
+    // A boolean schema holds no keys, as addSchema() refuses it.
+    $boolean = [
+      'SiteList::add("two") was handed the boolean schema false, which says only whether a value is allowed: a variant is the schema of what it holds, Schema::object() with its properties and the like.' => static fn () => $list->add('two', 'Two', schema: Schema::boolean(FALSE)),
+      'SiteList::addDefs() for the def "any" was handed the boolean schema true, which says only whether a value is allowed: a variant is the schema of what it holds, Schema::object() with its properties and the like.' => static fn () => $list->addDefs(['any' => Schema::boolean(TRUE)]),
+    ];
+    foreach ($boolean as $message => $call) {
+      try {
+        $call();
+        $this->fail($message);
+      }
+      catch (\InvalidArgumentException $e) {
+        $this->assertSame($message, $e->getMessage());
+      }
+    }
+    $this->assertSame(['one'], array_keys($list->entries()));
+    $this->assertSame([], $list->defs());
   }
 
   /**

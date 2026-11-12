@@ -20,7 +20,7 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  * the storage's name for one thing as its options. The form's machine
  * name element asks the same storage the same question, so the form, the
  * tool and HTTP refuse one id in one sentence. No JSON Schema keyword
- * says it: both documents name it under `x-surface.checkedOnServer`, its
+ * says it: both documents name it under `portable-check`, its
  * `reason` the sentence beside it.
  *
  * Decision: see docs/decisions.md#a-machine-name-is-a-computed-identity.
@@ -44,7 +44,7 @@ final class UniqueConstraint extends SymfonyConstraint {
   ];
 
   /**
-   * Says what the constraint checks, for `checkedOnServer`.
+   * Says what the constraint checks, for `portable-check`.
    *
    * @param string|\Stringable $thing
    *   What one thing is called, singular and lowercase: "venue".
@@ -66,7 +66,7 @@ final class UniqueConstraint extends SymfonyConstraint {
    * @param string|\Stringable $thing
    *   What one thing is called, singular and lowercase: "venue".
    * @param string|\Stringable|null $reason
-   *   What the constraint checks, for `checkedOnServer`.
+   *   What the constraint checks, for `portable-check`.
    * @param string $message
    *   The refusal.
    * @param array|null $groups

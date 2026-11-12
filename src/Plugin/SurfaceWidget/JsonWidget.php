@@ -7,13 +7,16 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\SchemaReader;
+use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface\Widget\WidgetContext;
+use PortableSchema\Builder\Schema;
 
 /**
  * A text area of JSON for a key no other widget draws: a stopgap.
@@ -40,7 +43,7 @@ use Drupal\surface\Widget\SurfaceWidgetBase;
   label: new TranslatableMarkup('JSON'),
   weight: 1000,
 )]
-final class JsonWidget extends SurfaceWidgetBase {
+final class JsonWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
 
   /**
    * The plain words for each JSON type, in the order they are named.
@@ -68,22 +71,30 @@ final class JsonWidget extends SurfaceWidgetBase {
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(DataDefinitionInterface $definition): bool {
+  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
     return static::draws($definition);
   }
 
   /**
    * {@inheritdoc}
+   *
+   * Whatever reaches it: it is asked last.
    */
-  public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
-    $element = $this->baseElement($definition) + [
+  public function isApplicable(Schema $node, WidgetContext $context): bool {
+    return TRUE;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
+    $element = $this->baseElement($node, $context) + [
       '#type' => 'textarea',
       '#rows' => 5,
       '#default_value' => $value === NULL ? '' : (string) json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
     ];
-    $element['#description'] = isset($element['#description'])
-      ? $this->t('@description @json', ['@description' => $element['#description'], '@json' => $this->said($definition)])
-      : $this->said($definition);
+    $said = (string) $this->said($node);
+    $element['#description'] = isset($element['#description']) ? $element['#description'] . ' ' . $said : $said;
     return $element;
   }
 
@@ -94,8 +105,8 @@ final class JsonWidget extends SurfaceWidgetBase {
    * is not JSON is an error on the element, and sends nothing. A value
    * that is not text (a payload's, handed in already decoded) passes.
    */
-  public function extractValue(DataDefinitionInterface $definition, array $element, FormStateInterface $form_state, array $fallback_parents): mixed {
-    $raw = $this->rawValue($element, $form_state, $fallback_parents);
+  public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed {
+    $raw = $this->rawValue($element, $form_state);
     if (!is_string($raw)) {
       return $raw;
     }
@@ -113,7 +124,7 @@ final class JsonWidget extends SurfaceWidgetBase {
           $state->setError($element, $message);
         }
         else {
-          $state->setErrorByName(implode('][', $fallback_parents), $message);
+          $state->setErrorByName(implode('][', WidgetContext::parentsOf((string) ($element[SurfaceFormBuilderInterface::PATH_KEY] ?? ''))), $message);
         }
       }
       return NULL;
@@ -123,22 +134,24 @@ final class JsonWidget extends SurfaceWidgetBase {
   /**
    * Says that the value is JSON, and what type it is, where that is known.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   * @param \PortableSchema\Builder\Schema $node
+   *   The node.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The sentence.
    */
-  protected function said(DataDefinitionInterface $definition): TranslatableMarkup {
-    if ($definition instanceof ListDataDefinitionInterface) {
-      $item = $definition->getItemDefinition();
-      return match (TRUE) {
-        $item instanceof ComplexDataDefinitionInterface => $this->t('Enter JSON: a list of objects.'),
-        $item instanceof ListDataDefinitionInterface => $this->t('Enter JSON: a list of lists.'),
+  protected function said(Schema $node): TranslatableMarkup {
+    $types = static::types($node);
+    if ($types === ['array']) {
+      $items = $node->get('items');
+      $item = $items instanceof Schema && !$items->isBoolean() ? static::type($items) : NULL;
+      return match ($item) {
+        'object' => $this->t('Enter JSON: a list of objects.'),
+        'array' => $this->t('Enter JSON: a list of lists.'),
         default => $this->t('Enter JSON: a list.'),
       };
     }
-    $types = array_values(array_intersect(self::TYPES, SchemaReader::statedTypes($definition)));
+    $types = array_values(array_intersect(self::TYPES, static::statedTypes($node)));
     if ($types === []) {
       return $this->t('Enter JSON.');
     }

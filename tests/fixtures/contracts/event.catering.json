@@ -1,18 +1,18 @@
 {
     "resource": "event.catering",
     "module": "surface_examples",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "event.catering",
             "operation": "configure",
             "label": "Configure the catering",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "Configure the catering",
                 "description": "Sets who caters the event, for how many, the budget, the dietary needs, when food is served and who to contact.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the catering",
@@ -102,11 +102,13 @@
                             "null"
                         ],
                         "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                        "x-portable-messages": {
+                            "pattern": "Write the time as HH:MM, such as 18:30."
+                        },
                         "x-surface": {
                             "dependsOn": [
                                 "public"
-                            ],
-                            "patternMessage": "Write the time as HH:MM, such as 18:30."
+                            ]
                         }
                     },
                     "notes": {
@@ -202,7 +204,10 @@
                                     "string",
                                     "null"
                                 ],
-                                "format": "idn-email",
+                                "format": "email",
+                                "portable-check": {
+                                    "drupal:Email": {}
+                                },
                                 "x-surface": {
                                     "dependsOn": [
                                         "listed"
@@ -212,8 +217,8 @@
                             "phone": {
                                 "$ref": "#/$defs/event.phone",
                                 "title": "Phone",
-                                "x-surface": {
-                                    "patternMessage": "Write the number in digits, such as +1 555 0100."
+                                "x-portable-messages": {
+                                    "pattern": "Write the number in digits, such as +1 555 0100."
                                 }
                             }
                         },
@@ -241,8 +246,8 @@
                         "examples": [
                             "+1 555 0100"
                         ],
-                        "x-surface": {
-                            "patternMessage": "Write the number in digits, such as +1 555 0100."
+                        "x-portable-messages": {
+                            "pattern": "Write the number in digits, such as +1 555 0100."
                         }
                     }
                 }

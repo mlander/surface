@@ -1,6 +1,6 @@
 import { pointerToDotted } from '../api';
 import type { Contract, Extension, Marker, Schema, Settled, Values } from '../contract';
-import { filled, holdsValue, holdsIf, inlineSchema, joinedFetch, narrow, narrowingStatus, setAt } from '../contract';
+import { expanded, holdsValue, holdsIf, inlineSchema, joinedFetch, relativeValue, narrow, narrowingStatus, setAt } from '../contract';
 import example2 from './fixtures/refine-example2.json';
 import example3 from './fixtures/refine-example3.json';
 import compliance from './fixtures/refine-example3-compliance.json';
@@ -116,9 +116,9 @@ describe('the empty option rule, narrowed here', () => {
         copy[key] = walk(value);
       }
       const properties = copy.properties as Record<string, Schema> | undefined;
-      const room = properties?.room?.['x-surface'];
+      const room = properties?.room?.['x-portable-ui'];
       if (room !== undefined) {
-        properties!.room = { ...properties!.room, 'x-surface': { ...room, widget: 'radios' } };
+        properties!.room = { ...properties!.room, 'x-portable-ui': { ...room, widget: 'radios' } };
       }
       return copy;
     };
@@ -141,8 +141,8 @@ describe('the empty option rule, narrowed here', () => {
     if (!asSelect.local || !asRadios.local) {
       return;
     }
-    expect(asSelect.settled.schema.properties?.room['x-surface']?.emptyOption).toEqual({ show: true, label: '- Select -' });
-    expect(asRadios.settled.schema.properties?.room['x-surface']?.emptyOption).toEqual({ show: false, label: '- None -' });
+    expect(asSelect.settled.schema.properties?.room['x-portable-ui']?.options?.emptyOption).toEqual({ show: true, label: '- Select -' });
+    expect(asRadios.settled.schema.properties?.room['x-portable-ui']?.options?.emptyOption).toEqual({ show: false, label: '- None -' });
   });
 
   it('says a select keeps a stored value no longer offered under a key nobody moved (an orphan, above, says - Select -)', () => {
@@ -156,7 +156,7 @@ describe('the empty option rule, narrowed here', () => {
       return;
     }
     expect(kept.settled.stale).toContain('room');
-    expect(kept.settled.schema.properties?.room['x-surface']?.emptyOption).toEqual({ show: true, label: '- Keep library_garden (no longer offered) -' });
+    expect(kept.settled.schema.properties?.room['x-portable-ui']?.options?.emptyOption).toEqual({ show: true, label: '- Keep library_garden (no longer offered) -' });
   });
 
   it('reads a key that holds a value off its required list or its type', () => {
@@ -451,13 +451,13 @@ describe('a key deferred for its size', () => {
   });
 
   it('is open where nothing is chosen, and the server\'s for a map of keys from the site', () => {
-    const extension = (more: Partial<Extension>): Extension => ({ widget: 'fieldset', dependsOn: ['kind'], ...more });
+    const extension = (more: Partial<Extension>): Extension => ({ dependsOn: ['kind'], ...more });
     const full: Schema = {
       type: 'object',
       properties: {
-        kind: { title: 'Kind', type: ['string', 'null'], oneOf: [{ const: 'a', title: 'A' }], 'x-surface': extension({ widget: 'select', dependsOn: undefined }) },
-        detail: { title: 'Detail', type: ['object', 'null'], 'x-surface': extension({ widget: 'variants', by: 'kind', deferred: { fetch: '?choose=/detail={value}' } }) },
-        benches: { title: 'Benches', type: ['object', 'null'], 'x-surface': extension({ deferred: { fetch: '?choose=/benches={value}', entries: [{ id: 'b1', label: 'Bench 1' }] } }) },
+        kind: { title: 'Kind', type: ['string', 'null'], oneOf: [{ const: 'a', title: 'A' }], 'x-portable-ui': { widget: 'select' } },
+        detail: { title: 'Detail', type: ['object', 'null'], 'x-portable-ui': { widget: 'variants' }, 'x-portable-links': [{ rel: 'choose', href: '?choose=/detail={value}', source: { value: '1/kind' } }], 'x-surface': extension({ by: 'kind', deferred: true }) },
+        benches: { title: 'Benches', type: ['object', 'null'], 'x-portable-ui': { widget: 'fieldset' }, 'x-portable-links': [{ rel: 'choose', href: '?choose=/benches={value}' }], 'x-surface': extension({ deferred: { entries: [{ id: 'b1', label: 'Bench 1' }] } }) },
       },
     };
     const previous: Settled = { schema: full, values: { kind: null, detail: null, benches: {} }, stale: [] };
@@ -466,8 +466,24 @@ describe('a key deferred for its size', () => {
     expect(narrowingStatus(asked)).toBe('Asked the server: benches is a list left out for its size');
   });
 
-  it('fills a template and joins several into one URL, its choices sorted', () => {
-    expect(filled('/s/schema?choose=/props={value}', 'theme:card')).toBe('/s/schema?choose=/props=theme%3Acard');
+  it('expands a link and joins several into one URL, its choices sorted', () => {
+    expect(expanded('/s/schema?choose=/props={value}', { value: 'theme:card' })).toBe('/s/schema?choose=/props=theme%3Acard');
+    // A query and its continuation, a variable left undefined left out.
+    expect(expanded('/l:lookup?key=/a{&q,limit}', { q: "it's" })).toBe('/l:lookup?key=/a&q=it%27s');
+    expect(expanded('/l{?q,limit}', {})).toBe('/l');
+    expect(expanded('/n/{id}:lookup', { id: 'a/b' })).toBe('/n/a%2Fb:lookup');
+    // A form it does not expand throws rather than write a wrong URL.
+    for (const template of ['/x/{+path}', '/x{#frag}', '/x{.ext}', '/x{/seg}', '/x{;p}', '/x{?list*}', '/x/{id:3}']) {
+      expect(() => expanded(template, { path: 'a/b', frag: 'f', ext: 'e', seg: 's', p: 'p', list: ['a'], id: 'abcd' })).toThrow(/not one this client expands/);
+    }
+    expect(() => expanded('/x{?q}', { q: ['a', 'b'] })).toThrow(/does not expand/);
+    // A Relative JSON Pointer: levels up from the key, then a pointer.
+    const values = { thing: { entity_type: 'node', id: '5' }, 'a/b': 1 };
+    expect(relativeValue('0', values, 'thing.id')).toBe('5');
+    expect(relativeValue('1/entity_type', values, 'thing.id')).toBe('node');
+    expect(relativeValue('2/a~1b', values, 'thing.id')).toBe(1);
+    expect(relativeValue('3', values, 'thing.id')).toBeUndefined();
+    expect(relativeValue('0#', values, 'thing.id')).toBeUndefined();
     expect(joinedFetch([
       '/s/schema?bundle=article&choose=/slots=theme%3Acard',
       '/s/schema?bundle=article&choose=/props=theme%3Ahero',

@@ -318,7 +318,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
 
     <section class="chapter" id="ch-contract" hidden>
       <h2>The contract</h2>
-      <p>Ask the resource and it answers in JSON Schema, contract 4, as two documents. The schema as it stands is built for the values so far. The full schema reads no value, so it is the same whatever is stored or typed; access in it is the asking account's.</p>
+      <p>Ask the resource and it answers in a Portable Schema document, a dialect of JSON Schema, contract 5, as two documents. The schema as it stands is built for the values so far. The full schema reads no value, so it is the same whatever is stored or typed; access in it is the asking account's.</p>
       <p>Labeled choices are <code>oneOf</code>. A key's variants are an <code>anyOf</code> of their defs, each chosen by a conditional. A declared rule is an <code>if</code> / <code>then</code> listed under <code>x-surface.rules</code>. Where a rule cannot be stated, the key says <code>refine</code> (ask again with values) or <code>live</code> (settled at runtime, by a runtime rule or an access answer that waits for the stored program).</p>
       <pre class="code" data-code="contract"></pre>
       <p class="drawn">Drawn from examples <a href="https://github.com/mlander/surface/blob/next/modules/surface_examples/README.md#example-3-made-of-parts" target="_blank" rel="noopener">3</a> and <a href="https://github.com/mlander/surface/blob/next/modules/surface_examples/README.md#example-4-others-get-a-say" target="_blank" rel="noopener">4</a>: <a href="https://github.com/mlander/surface/blob/next/modules/surface_examples/src/Resource/RegistrationStep3Resource.php" target="_blank" rel="noopener"><code>RegistrationStep3Resource.php</code></a>, <a href="https://github.com/mlander/surface/blob/next/modules/surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php" target="_blank" rel="noopener"><code>RegistrationComplianceAlter.php</code></a>. Explained in <a href="https://github.com/mlander/surface/blob/next/docs/served-contract.md#two-documents" target="_blank" rel="noopener">Two documents</a>.</p>
@@ -471,7 +471,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
 
 }`,
     contract: `{
-  "x-surface": { "contract": 4,
+  "x-surface": { "contract": 5,
     "operation": { "id": "configure", "kind": "update", ... },
     "version": 1, "rules": [9] },
   "properties": {
@@ -492,7 +492,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
         "$ref": "#/$defs/registration.step3.ticket.paid" } } } } ]
 }`,
     rules: `// registration.step3, the full schema
-"x-surface": { "contract": 4, ..., "rules": [9] },
+"x-surface": { "contract": 5, ..., "rules": [9] },
 "allOf": [ ...,
   { "if": { "properties": { "third_party_settings": {
       "type": ["object", "null"],
@@ -559,7 +559,7 @@ public function access(OperationContext $context, AccountInterface $account): Ac
 }`,
     ops: `// event.program, the check operation, both documents
 "x-surface": {
-  "contract": 4,
+  "contract": 5,
   "operation": {
     "id": "check",
     "label": "Check a program",

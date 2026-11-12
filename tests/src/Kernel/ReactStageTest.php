@@ -188,11 +188,15 @@ class ReactStageTest extends SurfaceKernelTestBase {
     $id = $this->open();
     $this->assertTrue($this->stage($id, self::PAGE, [], self::CREATED, 'create')->committed);
     $endpoints = $this->page(self::PAGE, 'update', ['id' => -1, 'stage' => $id])['#attached']['drupalSettings']['surfaceReact']['endpoints'];
-    // The lookup answers for the operation GET serves at the path, the
-    // read, so an update's page has none; a page of the read asks it.
-    $this->assertNull($endpoints['lookup']);
+    // A reference key names its lookup as a link: the page names none.
+    $this->assertArrayNotHasKey('lookup', $endpoints);
     $lookup = '/surface-api/' . self::PAGE . '/-1:lookup?key=' . rawurlencode('/uid/target_id');
     $header = ['X-Surface-Stage' => $id];
+    // The lookup answers for the operation GET serves at the path, the
+    // read, so the update's document names none.
+    $update = json_decode((string) $this->api($endpoints['read'], $header)->getContent(), TRUE);
+    $this->assertArrayHasKey('schema', $update);
+    $this->assertSame([], static::lookups($update['schema']), 'No lookup link on a document of an operation GET does not serve at its path.');
     foreach (['schema' => $endpoints['schema'], 'lookup' => $lookup] as $name => $url) {
       $staged = $this->api($url, $header);
       $this->assertSame(200, $staged->getStatusCode(), $name . ': ' . $staged->getContent());
@@ -353,6 +357,62 @@ class ReactStageTest extends SurfaceKernelTestBase {
       $this->assertSame(0, $page['#cache']['max-age']);
       $this->container->get('request_stack')->pop();
     }
+  }
+
+  /**
+   * Lists every lookup link of a schema, by the JSON Pointer it is at.
+   *
+   * @param mixed $schema
+   *   The schema, decoded as arrays.
+   * @param string $at
+   *   Its pointer.
+   *
+   * @return array<string, string>
+   *   Each lookup link's href, by the pointer of the node carrying it.
+   */
+  protected static function lookups(mixed $schema, string $at = ''): array {
+    if (!is_array($schema)) {
+      return [];
+    }
+    $found = [];
+    foreach ($schema['x-portable-links'] ?? [] as $link) {
+      if (($link['rel'] ?? NULL) === 'lookup') {
+        $found[$at] = $link['href'];
+      }
+    }
+    foreach ($schema as $key => $value) {
+      if ($key !== 'x-portable-links') {
+        $found += static::lookups($value, $at . '/' . $key);
+      }
+    }
+    return $found;
+  }
+
+  /**
+   * Tests a lookup link at a thing is concrete: its identity in the path.
+   *
+   * The envelope and the full schema of the read GET serves at the page's
+   * path name the lookup as their schema URL is named, the request's id
+   * in it, with no variable the document does not explain; without a
+   * request (a baseline) a lookup whose path takes the id is not linked.
+   */
+  public function testTheLookupLinkOfOneThingIsConcrete(): void {
+    $at = '/surface-api/' . self::PAGE . '/' . $this->node;
+    $envelope = json_decode((string) $this->api($at)->getContent(), TRUE);
+    $full = json_decode((string) $this->api($at . '/schema')->getContent(), TRUE);
+    foreach (['envelope' => $envelope['schema'], 'full schema' => $full] as $which => $schema) {
+      $hrefs = array_values(array_filter(static::lookups($schema), static fn (string $href): bool => str_contains($href, 'key=/uid/target_id')));
+      $this->assertCount(1, $hrefs, $which . ': ' . json_encode(static::lookups($schema)));
+      $this->assertMatchesRegularExpression('#^https?://[^/]+/surface-api/entity\.content:node\.page/' . $this->node . ':lookup\?key=/uid/target_id\{&q,limit\}$#', $hrefs[0], $which . ': concrete, as the schema URL is.');
+    }
+
+    $paths = $this->container->get('Drupal\surface\ResourceBuild\ServedPathsInterface');
+    $this->assertStringContainsString('{', (string) $paths->lookupPath(self::PAGE, 'read'));
+    $resources = $this->container->get('surface.resources');
+    $class = $this->container->get('surface.resource_registry')->getDefinition(self::PAGE)->name();
+    $context = $resources->operation($class, 'read', ['id' => $this->node]);
+    $baseline = $this->container->get('surface.contract_emitter')->emitFull($resources->buildStatic($class, $context), self::PAGE, 'read');
+    $this->assertSame([], static::lookups(json_decode((string) json_encode($baseline->document['schema']), TRUE)), 'No URL given and a path that takes the id: no link, rather than a variable the document does not explain.');
   }
 
 }

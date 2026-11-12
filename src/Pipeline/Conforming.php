@@ -258,10 +258,10 @@ final class Conforming {
    *   The violation.
    */
   protected function outputShapeViolation(string $key, string $path, string $expected, mixed $value): Violation {
-    return new Violation($key, $path, $this->t('This value must be of type @expected, @actual given.', [
+    return Violation::typeMismatch($key, $path, $this->t('This value must be of type @expected, @actual given.', [
       '@expected' => $expected,
       '@actual' => get_debug_type($value),
-    ]), Violation::TYPE_MISMATCH);
+    ]), $expected, get_debug_type($value));
   }
 
 }

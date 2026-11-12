@@ -9,8 +9,10 @@ use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\Contract\ContractChange;
 use Drupal\surface\Contract\ContractDiff;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Pipeline\Sentences;
 use Drupal\surface\Pipeline\VariantMismatchException;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\OperationRoute;
@@ -29,6 +31,7 @@ use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Route;
+use PortableSchema\Builder\Schema;
 
 /**
  * Variants that hold children, and variants that hold variants.
@@ -207,6 +210,28 @@ class VariantsHoldTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests the chosen variant's refusal is said, and never a bare null type.
+   *
+   * The load is an `anyOf` of each variant and null, and the carry's
+   * conditional holds it to the chosen variant: a refusal inside the
+   * variant's own def is said where it is, and the null branch the
+   * `anyOf` falls back to says nothing beside it. Were it ever said
+   * alone, it would say the value does not fit the chosen variant.
+   */
+  public function testTheChosenVariantsRefusalIsSaid(): void {
+    $pack = $this->pack();
+    $input = ['load' => ['capacity' => 5] + self::PACK['load']];
+    $accepted = $this->pipeline()->accept($pack, $input, self::PACK);
+    $said = [];
+    foreach ($this->pipeline()->validate($pack, $accepted, self::PACK) as $violation) {
+      $said[] = $violation->fullPath() . ' ' . $violation->code;
+    }
+    $this->assertSame(['load.capacity minimum'], $said);
+    $sentence = Sentences::ofError('type', ['expected' => ['null'], 'actual' => 'object'], [], $this->container->get('string_translation'));
+    $this->assertSame('This value does not fit the chosen variant.', (string) $sentence);
+  }
+
+  /**
    * Tests a value shaped for the other variant is refused under the carry.
    */
   public function testTheChildOfAnotherVariantIsRefused(): void {
@@ -250,7 +275,7 @@ class VariantsHoldTest extends SurfaceKernelTestBase {
     $this->assertTrue($this->validates($full, $day_pack));
     $this->assertFalse($this->validates($full, ['load' => ['belt' => ['width' => 6]] + $day_pack['load']] + $day_pack), 'The frame pack\'s belt under the daypack.');
     $this->assertFalse($this->validates($full, ['load' => ['capacity' => 20, 'cover' => ['pouch' => ['name' => NULL]]]] + $day_pack), 'The pouch\'s def holds.');
-    $inline = SchemaResolver::inline($full);
+    $inline = Schemas::decoded(SchemaResolver::inline(Schema::from($full)));
     $this->assertSame(self::PACK_KEYS, array_keys($inline['properties']));
     $this->assertTrue($this->validates($inline, $day_pack));
     $this->assertFalse($this->validates($inline, ['load' => ['belt' => ['width' => 6]] + $day_pack['load']] + $day_pack));
@@ -411,7 +436,7 @@ class VariantsHoldTest extends SurfaceKernelTestBase {
     $tarp = ['title' => 'Fly', 'kind' => 'tarp', 'shelter' => ['size' => 4], 'notes' => ''];
     $this->assertTrue($this->validates($full, $tarp));
     $this->assertFalse($this->validates($full, ['shelter' => ['size' => 4, 'covering' => ['depth' => 3]]] + $tarp), 'The hut\'s covering under the tarp.');
-    $inline = SchemaResolver::inline($full);
+    $inline = Schemas::decoded(SchemaResolver::inline(Schema::from($full)));
     $this->assertSame(self::SHELTER_KEYS, array_keys($inline['properties']));
     $this->assertTrue($this->validates($inline, self::SHELTER));
     $this->assertFalse($this->validates($inline, ['shelter' => ['size' => 4, 'covering' => ['depth' => 3]]] + $tarp));

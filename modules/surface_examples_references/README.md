@@ -29,7 +29,8 @@ The candidates are core's selection handler's for the account asking,
 listed while there are at most
 `surface.settings:reference_list_limit` and looked up past that:
 on the form with core's entity autocomplete, over HTTP with the
-resource's lookup, `GET /surface-api/event.sponsorship:lookup?key=/venue&q=riv`
+resource's lookup, `GET /surface-api/event.sponsorship:lookup?key=/venue&q=riv`,
+which each key names in both documents as its `lookup` link
 ([A key that refers to an entity](../../docs/options.md#a-key-that-refers-to-an-entity);
 why: [decision](../../docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)).
 

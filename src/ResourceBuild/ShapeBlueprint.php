@@ -14,6 +14,7 @@ use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * What an alter of a shape is handed: the shape, to tighten.
@@ -88,6 +89,13 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
    */
   public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): ListDataDefinition {
     throw $this->refused(sprintf('addList("%s")', $key));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function addSchema(string $key, Schema $schema, ?bool $required = NULL): static {
+    throw $this->refused(sprintf('addSchema("%s")', $key));
   }
 
   /**

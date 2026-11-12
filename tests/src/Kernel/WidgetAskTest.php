@@ -67,8 +67,8 @@ class WidgetAskTest extends SurfaceKernelTestBase {
     $built = $this->built(PairsStructure::class);
     $this->assertSame('widget_test_pair', $built->getDefinition('asked')->getSetting('widget'));
     $this->assertSame('fieldset', $built->getDefinition('owned')->getSetting('widget'), 'The owner\'s ask at the key wins.');
-    $manager = $this->container->get('plugin.manager.surface_widget');
-    $this->assertInstanceOf(PairWidget::class, $manager->getWidgetFor($built->getDefinition('asked')));
+    $manager = $this->container->get('surface.widget_choice');
+    $this->assertInstanceOf(PairWidget::class, $manager->forDefinition($built->getDefinition('asked')));
 
     $form = $this->formBuilder()->buildSurfaceForm($built, ['asked' => ['left' => 'L', 'right' => 'R']], new FormState());
     $this->assertSame(['widget-test-pair'], $form['asked']['#attributes']['class']);
@@ -77,10 +77,11 @@ class WidgetAskTest extends SurfaceKernelTestBase {
 
     $emitter = $this->container->get('surface.contract_emitter');
     $hinted = $emitter->emitFull($built, 'widget_test.pairs', widgets: TRUE)->document['schema']['properties'];
-    $this->assertSame('widget_test_pair', $hinted['asked']['x-surface']['widget']);
-    $this->assertSame('fieldset', $hinted['owned']['x-surface']['widget']);
+    $this->assertSame('widget_test_pair', $hinted['asked']['x-portable-ui']['widget']);
+    $this->assertSame('fieldset', $hinted['owned']['x-portable-ui']['widget']);
     $plain = $emitter->emitFull($built, 'widget_test.pairs')->document['schema']['properties'];
-    $this->assertArrayNotHasKey('x-surface', $plain['asked'], 'A hint only, and only when asked for.');
+    $this->assertArrayNotHasKey('x-portable-ui', $plain['asked'], 'A hint only, and only when asked for.');
+    $this->assertArrayNotHasKey('x-surface', $plain['asked']);
     // What is accepted is the pair's own keys, whichever widget draws it.
     $this->assertContains('asked', $this->pipeline()->validate($built, ['asked' => ['right' => 'Too long by far']])->keys());
   }

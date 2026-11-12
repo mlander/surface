@@ -581,6 +581,9 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @param string|null $hash
    *   The document's hash (documentHash()), when the caller took it
    *   already; NULL to take it here.
+   * @param bool $authored
+   *   TRUE for a structure of a schema an author handed addSchema(), read
+   *   as the author's own (SchemaReader::authored()).
    *
    * @return string
    *   The name it is attached, listed, mixed in or chosen by.
@@ -588,7 +591,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @internal
    *   For SchemaReader alone.
    */
-  public function readStructure(string $id, array $root, string $pointer, ?string $hash = NULL): string {
+  public function readStructure(string $id, array $root, string $pointer, ?string $hash = NULL, bool $authored = FALSE): string {
     if ($this->registry === NULL) {
       throw new \LogicException(sprintf('The document read into %s holds a structure at %s, and this blueprint has no registry to build one by.', $this->name($this->owner), $pointer === '' ? 'its root' : $pointer));
     }
@@ -596,11 +599,19 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     // A document is read a frame at a time, each naming the structures it
     // holds: its hash is taken once and handed on with it.
     $hash ??= static::documentHash($root);
+    $arguments = [$root, $pointer, $hash];
+    $identity = [$id, $hash, $pointer];
+    if ($authored) {
+      // Read as the author's own: another structure than the same
+      // document read from anywhere else.
+      $arguments[] = TRUE;
+      $identity[] = TRUE;
+    }
     return $this->registry->defineRead(
       $id,
       $owner->module ?? 'surface',
-      new ResourceCallable(SchemaReader::class, 'fill', [$root, $pointer, $hash]),
-      hash('xxh128', serialize([$id, $hash, $pointer])),
+      new ResourceCallable(SchemaReader::class, 'fill', $arguments),
+      hash('xxh128', serialize($identity)),
     );
   }
 

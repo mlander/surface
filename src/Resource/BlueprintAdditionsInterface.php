@@ -9,6 +9,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Refinement\Rule;
+use PortableSchema\Builder\Schema;
 
 /**
  * What anyone may do to a blueprint: add to it.
@@ -201,6 +202,51 @@ interface BlueprintAdditionsInterface {
    *   list, or when its type is one add() refuses.
    */
   public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface;
+
+  /**
+   * Adds a key stated as a Portable Schema.
+   *
+   * @code
+   * $inputs->addSchema('capacity', Schema::integer()
+   *   ->title(t('Capacity'))
+   *   ->minimum(1)
+   *   ->maximum(1000)
+   *   ->default(50));
+   * @endcode
+   *
+   * The schema is read as a document is (SchemaReader::authored()), into
+   * the verbs it says: one value add() declares, a list addList(), an
+   * object addMap(), a `$ref` to a def a child or a shape; its keywords
+   * the constraints they are written from, `title` the label. A
+   * `drupal:<plugin id>` check is that constraint with its options, and
+   * `Schema::of('portable:email')` the email type. The schema is complete
+   * at the call, so nothing is returned to go on with: the definition is
+   * the module's, and the document served for it says what the definition
+   * means, a key that null may clear included. A boolean schema is
+   * refused. A schema held as an array is handed in as
+   * Schema::from($array).
+   *
+   * @param string $key
+   *   The key.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   What it holds.
+   * @param bool|null $required
+   *   TRUE to require a value, a key with a default included; FALSE to
+   *   leave it optional; NULL for the dialect's rule: required where the
+   *   schema has no `default` and allows no null, or is marked
+   *   `required()`.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the key is declared already, or the schema needs what this
+   *   blueprint does not declare (a child in an alter's blueprint).
+   * @throws \InvalidArgumentException
+   *   For a boolean schema, and for what a document cannot hold.
+   *
+   * @see docs/decisions.md#authoring-takes-a-schema
+   */
+  public function addSchema(string $key, Schema $schema, ?bool $required = NULL): static;
 
   /**
    * Rewords or arranges a key anyone declared.

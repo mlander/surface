@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface\Contract;
 
 use Drupal\surface\SurfaceInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Writes what sits above a document's properties.
@@ -43,7 +44,17 @@ final class DocumentHead {
   /**
    * The keywords a schema holds data under, never a subschema.
    */
-  protected const DATA = ['const', 'default', 'examples', 'enum', self::EXTENSION];
+  protected const DATA = [
+    'const',
+    'default',
+    'examples',
+    'enum',
+    self::EXTENSION,
+    PortableKeywords::CHECK,
+    PortableKeywords::MESSAGES,
+    PortableKeywords::UI,
+    PortableKeywords::LINKS,
+  ];
 
   /**
    * The JSON type each keyword only one type reads is about.
@@ -94,7 +105,7 @@ final class DocumentHead {
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   The top frame, its `$defs` written.
    * @param string|\Stringable|null $label
    *   The operation's label.
@@ -103,29 +114,31 @@ final class DocumentHead {
    * @param string|null $id
    *   The URI the document is served at, or NULL.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The schema.
    */
-  public function top(SurfaceInterface $surface, array $schema, string|\Stringable|null $label, array $operation, ?string $id): array {
+  public function top(SurfaceInterface $surface, Schema $schema, string|\Stringable|null $label, array $operation, ?string $id): Schema {
     $top = ['$schema' => ContractEmitter::DIALECT];
     if ($id !== NULL) {
       $top['$id'] = $id;
     }
     $schema = $this->lockedWhole($surface, $this->operation($operation, $this->versioned($surface, $schema)));
-    $schema[self::EXTENSION] = ['contract' => ContractEmitter::CONTRACT] + $schema[self::EXTENSION];
-    if (is_array($schema['$defs'] ?? NULL)) {
+    $schema = $schema->with(self::EXTENSION, ['contract' => ContractEmitter::CONTRACT] + (array) $schema->get(self::EXTENSION));
+    $defs = $schema->get('$defs');
+    if (is_array($defs)) {
       // Each def titled by what its structure or shape is called, and by
       // its key where it is called nothing; a site gives the key its own
       // label beside the reference, as before.
       // Decision: see
       // docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
-      foreach ($schema['$defs'] as $key => $def) {
-        $title = is_string($def['title'] ?? NULL) && $def['title'] !== '' ? $def['title'] : (string) $key;
-        unset($def['title']);
-        $schema['$defs'][$key] = ['title' => $title] + $def;
+      foreach ($defs as $key => $def) {
+        $title = $def->get('title');
+        $title = is_string($title) && $title !== '' ? $title : (string) $key;
+        $defs[$key] = Schemas::first($def->without('title'), ['title' => $title]);
       }
+      $schema = $schema->with('$defs', $defs);
     }
-    return $this->settled($top + $this->heading($label, $operation) + $schema);
+    return $this->settled(Schemas::first($schema, $top + $this->heading($label, $operation)));
   }
 
   /**
@@ -149,156 +162,174 @@ final class DocumentHead {
    *
    * Decision: see docs/decisions.md#contract-2.
    *
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   The document's schema.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The same, laid out.
    */
-  protected function settled(array $schema): array {
+  protected function settled(Schema $schema): Schema {
     return $this->owning($schema, $schema);
   }
 
   /**
    * Lays out one schema that is not below an applicator, and inside it.
    *
-   * @param array $node
+   * @param \PortableSchema\Builder\Schema $node
    *   The schema.
-   * @param array $root
+   * @param \PortableSchema\Builder\Schema $root
    *   The document's root, which holds `$defs`.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The schema, its applicators carrying no `x-surface`.
    */
-  protected function owning(array $node, array $root): array {
+  protected function owning(Schema $node, Schema $root): Schema {
     $within = [];
     $rules = [];
-    $known = isset($node['type']);
-    foreach ($node as $keyword => $value) {
-      if (!is_array($value) || in_array($keyword, self::DATA, TRUE)) {
+    $known = $node->has('type');
+    foreach ($node->all() as $keyword => $value) {
+      if (in_array($keyword, self::DATA, TRUE)) {
         continue;
       }
       if (in_array($keyword, self::APPLICATORS, TRUE)) {
-        if (!array_is_list($value)) {
-          $node[$keyword] = $this->below($value, '/' . $keyword, $known, [$node], $root, $within);
+        if ($value instanceof Schema) {
+          if (!$value->isBoolean()) {
+            $node = $node->with($keyword, $this->below($value, '/' . $keyword, $known, [$node], $root, $within));
+          }
+          continue;
+        }
+        if (!is_array($value)) {
           continue;
         }
         foreach ($value as $i => $member) {
-          if (!is_array($member)) {
+          if ($member->isBoolean()) {
             continue;
           }
-          if ($keyword === 'allOf' && ($member[self::EXTENSION]['declared'] ?? FALSE) === TRUE) {
+          $extension = $member->get(self::EXTENSION);
+          if ($keyword === 'allOf' && is_array($extension) && ($extension['declared'] ?? FALSE) === TRUE) {
             // A declared rule's conditional, stated as written: a client
             // evaluates it whatever the keys it reads hold.
             $rules[] = $i;
-            unset($member[self::EXTENSION]['declared']);
-            if ($member[self::EXTENSION] === []) {
-              unset($member[self::EXTENSION]);
-            }
+            unset($extension['declared']);
+            $member = $extension === [] ? $member->without(self::EXTENSION) : $member->with(self::EXTENSION, $extension);
           }
-          $node[$keyword][$i] = $this->below($member, '/' . $keyword . '/' . $i, $known, [$node], $root, $within);
+          $value[$i] = $this->below($member, '/' . $keyword . '/' . $i, $known, [$node], $root, $within);
         }
+        $node = $node->with($keyword, $value);
         continue;
       }
-      if (in_array($keyword, ['properties', '$defs', 'patternProperties'], TRUE)) {
+      if (in_array($keyword, ['properties', '$defs', 'patternProperties'], TRUE) && is_array($value)) {
         foreach ($value as $name => $child) {
-          if (is_array($child)) {
-            $node[$keyword][$name] = $this->owning($child, $root);
+          if (!$child->isBoolean()) {
+            $value[$name] = $this->owning($child, $root);
           }
         }
+        $node = $node->with($keyword, $value);
         continue;
       }
-      if (in_array($keyword, ['items', 'additionalProperties', 'unevaluatedProperties', 'contains', 'propertyNames'], TRUE)) {
-        $node[$keyword] = $this->owning($value, $root);
+      if (in_array($keyword, ['items', 'additionalProperties', 'unevaluatedProperties', 'contains', 'propertyNames'], TRUE) && $value instanceof Schema && !$value->isBoolean()) {
+        $node = $node->with($keyword, $this->owning($value, $root));
       }
     }
+    if ($rules === [] && $within === []) {
+      return $node;
+    }
+    $extension = (array) $node->get(self::EXTENSION);
     if ($rules !== []) {
-      $node[self::EXTENSION]['rules'] = $rules;
+      $extension['rules'] = $rules;
     }
     if ($within !== []) {
-      $node[self::EXTENSION]['within'] = $within;
+      $extension['within'] = $within;
     }
-    return $node;
+    return $node->with(self::EXTENSION, $extension);
   }
 
   /**
    * Lays out a schema below an applicator, and everything inside it.
    *
-   * @param array $node
+   * @param \PortableSchema\Builder\Schema $node
    *   The schema.
    * @param string $pointer
    *   Its JSON pointer from the owning object.
    * @param bool $known
    *   Whether a type is stated at this place in the instance already, by
    *   a schema around it at the same place.
-   * @param array[] $sources
+   * @param \PortableSchema\Builder\Schema[] $sources
    *   The schemas declaring this place in the instance, nearest first,
    *   to read its declared type from.
-   * @param array $root
+   * @param \PortableSchema\Builder\Schema $root
    *   The document's root.
    * @param array $within
    *   Collects what is said below the owning object, by pointer.
    *
-   * @return array|true
+   * @return \PortableSchema\Builder\Schema|true
    *   The schema, with no `x-surface` and every type it needs; TRUE where
-   *   it said nothing but its `x-surface`, which is still a schema, and
-   *   one every JSON reader reads back as itself.
+   *   it said nothing but its `x-surface` (directly or in the properties
+   *   it holds), which is still a schema, and one every JSON reader reads
+   *   back as itself. A schema empty from the start is kept as `{}`.
    */
-  protected function below(array $node, string $pointer, bool $known, array $sources, array $root, array &$within): array|bool {
-    if (isset($node[self::EXTENSION])) {
-      $within[$pointer] = $node[self::EXTENSION];
-      unset($node[self::EXTENSION]);
+  protected function below(Schema $node, string $pointer, bool $known, array $sources, Schema $root, array &$within): Schema|bool {
+    if ($node->all() === []) {
+      // An empty schema is written as given, `{}`.
+      return $node;
+    }
+    if ($node->has(self::EXTENSION)) {
+      $within[$pointer] = $node->get(self::EXTENSION);
+      $node = $node->without(self::EXTENSION);
     }
     $sources = [$node, ...$sources];
-    $here = $known || isset($node['type']);
-    foreach ($node as $keyword => $value) {
-      if (!is_array($value) || in_array($keyword, self::DATA, TRUE)) {
+    $here = $known || $node->has('type');
+    foreach ($node->all() as $keyword => $value) {
+      if (in_array($keyword, self::DATA, TRUE)) {
         continue;
       }
       if (in_array($keyword, self::APPLICATORS, TRUE)) {
-        if (!array_is_list($value)) {
-          $node[$keyword] = $this->below($value, $pointer . '/' . $keyword, $here, $sources, $root, $within);
+        if ($value instanceof Schema) {
+          if (!$value->isBoolean()) {
+            $node = $node->with($keyword, $this->below($value, $pointer . '/' . $keyword, $here, $sources, $root, $within));
+          }
           continue;
         }
-        foreach ($value as $i => $member) {
-          if (is_array($member)) {
-            $node[$keyword][$i] = $this->below($member, $pointer . '/' . $keyword . '/' . $i, $here, $sources, $root, $within);
+        if (is_array($value)) {
+          foreach ($value as $i => $member) {
+            if (!$member->isBoolean()) {
+              $value[$i] = $this->below($member, $pointer . '/' . $keyword . '/' . $i, $here, $sources, $root, $within);
+            }
           }
+          $node = $node->with($keyword, $value);
         }
       }
-      elseif ($keyword === 'properties') {
+      elseif ($keyword === 'properties' && is_array($value)) {
         foreach ($value as $name => $child) {
-          if (!is_array($child)) {
+          if ($child->isBoolean()) {
             continue;
           }
           $child = $this->below($child, $pointer . '/properties/' . str_replace(['~', '/'], ['~0', '~1'], (string) $name), FALSE, $this->declaredAt($sources, 'properties', (string) $name, $root), $root, $within);
           if ($child === TRUE) {
             // It said nothing but its `x-surface`, now said above: a
             // property that narrows nothing is no property here.
-            unset($node[$keyword][$name]);
+            unset($value[$name]);
           }
           else {
-            $node[$keyword][$name] = $child;
+            $value[$name] = $child;
           }
         }
-        if ($node[$keyword] === []) {
-          unset($node[$keyword]);
-        }
+        $node = $value === [] ? $node->without($keyword) : $node->with($keyword, $value);
       }
-      elseif ($keyword === 'items') {
-        $node[$keyword] = $this->below($value, $pointer . '/items', FALSE, $this->declaredAt($sources, 'items', NULL, $root), $root, $within);
+      elseif ($keyword === 'items' && $value instanceof Schema && !$value->isBoolean()) {
+        $node = $node->with($keyword, $this->below($value, $pointer . '/items', FALSE, $this->declaredAt($sources, 'items', NULL, $root), $root, $within));
       }
-      elseif (in_array($keyword, ['additionalProperties', 'unevaluatedProperties', 'contains', 'propertyNames'], TRUE)) {
-        $node[$keyword] = $this->below($value, $pointer . '/' . $keyword, FALSE, [], $root, $within);
+      elseif (in_array($keyword, ['additionalProperties', 'unevaluatedProperties', 'contains', 'propertyNames'], TRUE) && $value instanceof Schema && !$value->isBoolean()) {
+        $node = $node->with($keyword, $this->below($value, $pointer . '/' . $keyword, FALSE, [], $root, $within));
       }
     }
-    if ($node === []) {
+    if ($node->all() === []) {
       return TRUE;
     }
-    if (!$known && !isset($node['type']) && array_intersect_key($node, self::TYPED) !== []) {
+    if (!$known && !$node->has('type') && array_intersect_key($node->all(), self::TYPED) !== []) {
       $type = $this->declaredType($sources, $root);
       if ($type !== NULL) {
-        $node = ['type' => $type] + $node;
+        $node = Schemas::first($node, ['type' => $type]);
       }
     }
     return $node;
@@ -307,9 +338,9 @@ final class DocumentHead {
   /**
    * Reads the type declared for a place in the instance.
    *
-   * @param array[] $sources
+   * @param \PortableSchema\Builder\Schema[] $sources
    *   The schemas declaring it, nearest first.
-   * @param array $root
+   * @param \PortableSchema\Builder\Schema $root
    *   The document's root.
    * @param string[] $seen
    *   The defs followed on the way, so a reference back ends.
@@ -318,10 +349,10 @@ final class DocumentHead {
    *   The first type one of them states, following its references; NULL
    *   when none does.
    */
-  protected function declaredType(array $sources, array $root, array $seen = []): string|array|null {
+  protected function declaredType(array $sources, Schema $root, array $seen = []): string|array|null {
     foreach ($sources as $source) {
-      if (isset($source['type'])) {
-        return $source['type'];
+      if ($source->get('type') !== NULL) {
+        return $source->get('type');
       }
       $followed = [...$seen, ...$this->references($source)];
       $type = $this->declaredType($this->referred($source, $root, $seen), $root, $followed);
@@ -335,25 +366,26 @@ final class DocumentHead {
   /**
    * Reads what the schemas declaring a place declare one step inside it.
    *
-   * @param array[] $sources
+   * @param \PortableSchema\Builder\Schema[] $sources
    *   The schemas declaring the place, nearest first.
    * @param string $keyword
    *   The keyword: `properties` or `items`.
    * @param string|null $name
    *   The property, for `properties`.
-   * @param array $root
+   * @param \PortableSchema\Builder\Schema $root
    *   The document's root.
    * @param string[] $seen
    *   The defs followed on the way.
    *
-   * @return array[]
+   * @return \PortableSchema\Builder\Schema[]
    *   The schemas declaring the place inside, nearest first.
    */
-  protected function declaredAt(array $sources, string $keyword, ?string $name, array $root, array $seen = []): array {
+  protected function declaredAt(array $sources, string $keyword, ?string $name, Schema $root, array $seen = []): array {
     $found = [];
     foreach ($sources as $source) {
-      $inside = $name === NULL ? ($source[$keyword] ?? NULL) : (is_array($source[$keyword] ?? NULL) ? ($source[$keyword][$name] ?? NULL) : NULL);
-      if (is_array($inside)) {
+      $value = $source->get($keyword);
+      $inside = $name === NULL ? $value : (is_array($value) ? ($value[$name] ?? NULL) : NULL);
+      if ($inside instanceof Schema && !$inside->isBoolean()) {
         $found[] = $inside;
       }
       $followed = [...$seen, ...$this->references($source)];
@@ -365,16 +397,18 @@ final class DocumentHead {
   /**
    * Lists the local references a schema makes, beside it or composed.
    *
-   * @param array $source
+   * @param \PortableSchema\Builder\Schema $source
    *   The schema.
    *
    * @return string[]
    *   The def keys.
    */
-  protected function references(array $source): array {
+  protected function references(Schema $source): array {
     $references = [];
-    foreach ([$source, ...(is_array($source['allOf'] ?? NULL) ? $source['allOf'] : [])] as $part) {
-      $name = is_array($part) && is_string($part['$ref'] ?? NULL) ? SchemaResolver::defName($part['$ref']) : NULL;
+    $composed = $source->get('allOf');
+    foreach ([$source, ...(is_array($composed) ? $composed : [])] as $part) {
+      $reference = $part->get('$ref');
+      $name = is_string($reference) ? SchemaResolver::defName($reference) : NULL;
       if ($name !== NULL) {
         $references[] = $name;
       }
@@ -385,21 +419,23 @@ final class DocumentHead {
   /**
    * Reads the defs a schema refers to, not yet followed.
    *
-   * @param array $source
+   * @param \PortableSchema\Builder\Schema $source
    *   The schema.
-   * @param array $root
+   * @param \PortableSchema\Builder\Schema $root
    *   The document's root.
    * @param string[] $seen
    *   The defs followed on the way.
    *
-   * @return array[]
+   * @return \PortableSchema\Builder\Schema[]
    *   The defs.
    */
-  protected function referred(array $source, array $root, array $seen): array {
+  protected function referred(Schema $source, Schema $root, array $seen): array {
     $defs = [];
+    $declared = $root->get('$defs');
     foreach (array_diff($this->references($source), $seen) as $name) {
-      if (is_array($root['$defs'][$name] ?? NULL)) {
-        $defs[] = $root['$defs'][$name];
+      $def = is_array($declared) ? ($declared[$name] ?? NULL) : NULL;
+      if ($def instanceof Schema && !$def->isBoolean()) {
+        $defs[] = $def;
       }
     }
     return $defs;
@@ -442,13 +478,13 @@ final class DocumentHead {
    *
    * @param array $operation
    *   The facts, or empty for none.
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   The top frame.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The top frame, `x-surface` first when there are facts.
    */
-  protected function operation(array $operation, array $schema): array {
+  protected function operation(array $operation, Schema $schema): Schema {
     if ($operation === []) {
       return $schema;
     }
@@ -456,9 +492,8 @@ final class DocumentHead {
     // means locked whole. The attribute keeps it, for the tool.
     // Decision: see docs/decisions.md#contract-2.
     unset($operation['readOnly']);
-    $extension = [self::EXTENSION => ['operation' => $operation] + ($schema[self::EXTENSION] ?? [])];
-    unset($schema[self::EXTENSION]);
-    return $extension + $schema;
+    $extension = ['operation' => $operation] + (array) $schema->get(self::EXTENSION);
+    return Schemas::first($schema->without(self::EXTENSION), [self::EXTENSION => $extension]);
   }
 
   /**
@@ -473,25 +508,23 @@ final class DocumentHead {
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface the frame was described from.
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   The frame.
    * @param bool $top
    *   Whether it is the top of a document rather than a def.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The frame, stamped.
    */
-  public function versioned(SurfaceInterface $surface, array $schema, bool $top = TRUE): array {
+  public function versioned(SurfaceInterface $surface, Schema $schema, bool $top = TRUE): Schema {
     if (!$top && $surface->version() === 1) {
       return $schema;
     }
-    $schema[self::EXTENSION] = ['version' => $surface->version()] + ($schema[self::EXTENSION] ?? []);
+    $extension = ['version' => $surface->version()] + (array) $schema->get(self::EXTENSION);
     if (!$top) {
-      return $schema;
+      return $schema->with(self::EXTENSION, $extension);
     }
-    $extension = [self::EXTENSION => $schema[self::EXTENSION]];
-    unset($schema[self::EXTENSION]);
-    return $extension + $schema;
+    return Schemas::first($schema->without(self::EXTENSION), [self::EXTENSION => $extension]);
   }
 
   /**
@@ -504,17 +537,17 @@ final class DocumentHead {
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
    *   The top frame.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The top frame, `readOnly` when locked whole.
    */
-  protected function lockedWhole(SurfaceInterface $surface, array $schema): array {
+  protected function lockedWhole(SurfaceInterface $surface, Schema $schema): Schema {
     if ($surface->lockedWhole() === NULL) {
       return $schema;
     }
-    return ['readOnly' => TRUE] + $schema;
+    return Schemas::first($schema, ['readOnly' => TRUE]);
   }
 
   /**
@@ -528,10 +561,10 @@ final class DocumentHead {
    * @param \Drupal\surface\Contract\Emission $emission
    *   The walk: its cacheability collects what the description depends on.
    *
-   * @return array|null
+   * @return \PortableSchema\Builder\Schema|null
    *   The output schema, or NULL for a data surface with no outputs.
    */
-  public function outputs(SurfaceInterface $surface, Emission $emission): ?array {
+  public function outputs(SurfaceInterface $surface, Emission $emission): ?Schema {
     $properties = [];
     $required = [];
     $emission = $emission->withoutStale();
@@ -545,11 +578,12 @@ final class DocumentHead {
     if ($properties === []) {
       return NULL;
     }
-    return [
+    $outputs = Schema::keywords([
       '$schema' => ContractEmitter::DIALECT,
       'type' => 'object',
       'properties' => $properties,
-    ] + ($required === [] ? [] : ['required' => $required]);
+    ]);
+    return $required === [] ? $outputs : $outputs->with('required', $required);
   }
 
 }

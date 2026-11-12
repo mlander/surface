@@ -9,6 +9,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
@@ -34,6 +35,7 @@ use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use Drupal\surface_examples_references\Sponsorship;
 use Drupal\surface_examples_retitle\Retitle;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * The schema is never stricter than the runtime, on the accepted document.
@@ -289,8 +291,9 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       // docs/decisions.md#an-item-is-never-null.
       'a null item, dropped' => [['tags' => ['a', NULL]], TRUE],
       'an empty item, dropped' => [['tags' => ['', 'b']], TRUE],
-      'format is advisory: an internationalized address' => [['mail' => 'üser@example.com'], TRUE],
-      'format is advisory: a URI with a space' => [['link' => 'http://a b.example'], TRUE],
+      // `format` is asserted, by the server and by both documents alike.
+      'format is asserted: an internationalized address' => [['mail' => 'üser@example.com'], FALSE],
+      'format is asserted: a URI with a space' => [['link' => 'http://a b.example'], FALSE],
       'below the range' => [['count' => 0], FALSE],
       'above the range' => [['count' => 1001], FALSE],
       'a fraction for an integer' => [['count' => 7.5], FALSE],
@@ -308,8 +311,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       'a list for a string' => [['word' => ['a']], FALSE],
       'the required key emptied' => [['name' => ''], FALSE],
       'the required key null' => [['name' => NULL], FALSE],
-      // Drupal's Email check refuses it; `format` is an annotation.
-      'format is advisory: not an address' => [['mail' => 'nobody'], FALSE, TRUE, TRUE],
+      'format is asserted: not an address' => [['mail' => 'nobody'], FALSE],
     ]);
   }
 
@@ -351,7 +353,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       'a price below a cent' => [['pricing' => 'paid', 'ticket' => ['price' => 0, 'currency' => 'EUR']], FALSE],
       'another variant\'s key' => [['pricing' => 'free', 'ticket' => ['price' => 5]], FALSE],
       'an unknown key inside the part' => [['contact' => ['email' => 'a@example.com', 'fax' => '1']], FALSE],
-      'format is advisory: not an address' => [['contact' => ['email' => 'nobody']], FALSE, TRUE, TRUE],
+      'format is asserted: not an address' => [['contact' => ['email' => 'nobody']], FALSE],
       // A child sent null is each of its keys sent null: the optional ones
       // cleared, a required one refused in its own words.
       'the contact null, its email required' => [['contact' => NULL], FALSE],
@@ -673,7 +675,8 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
     Cache::invalidateTags([PosterLayouts::TAG]);
     $poster = $this->build('resource_test.poster');
     $full = $this->decoded($this->container->get('surface.contract_emitter')->emitFull($poster, 'resource_test.poster')->document);
-    $this->assertSame(['fetch' => '?choose=/panels={value}'], $full['schema']['properties']['panels']['x-surface']['deferred']);
+    $this->assertTrue($full['schema']['properties']['panels']['x-surface']['deferred']);
+    $this->assertSame([['rel' => 'choose', 'href' => '?choose=/panels={value}', 'source' => ['value' => '1/layout']]], $full['schema']['properties']['panels']['x-portable-links']);
     $this->assertTable('resource_test.poster', $poster, $this->stored('resource_test.poster'), [
       'as stored' => [[], TRUE],
       'the strip with a caption' => [['layout' => 'strip', 'panels' => ['caption' => 'Spring']], TRUE],
@@ -730,7 +733,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       'a pasted key' => [['credential' => ['api_key' => 'mk-1']], TRUE],
       'the one source, and a pasted key' => [['source' => 'pasted', 'credential' => ['api_key' => 'mk-1']], TRUE],
       'the managed source, which the site does not offer' => [$managed('mail_service'), FALSE],
-      'a sender that is no address' => [['sender' => 'tickets'] + $pasted, FALSE, TRUE, TRUE],
+      'a sender that is no address' => [['sender' => 'tickets'] + $pasted, FALSE],
     ]);
 
     $this->container->get('module_installer')->install(['surface_examples_keys']);
@@ -807,12 +810,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       'a section holding a card' => [$section($card), TRUE],
       'a section holding a call to action, which has no tag block' => [$section($cta([])), FALSE],
       'a hero\'s slot sent for the card' => [['slots' => ['actions' => ['kind' => 'text']]], FALSE],
-      'format is advisory: an address that is no URI' => [
-        ['props' => ['link' => ['url' => 'not a uri']]],
-        FALSE,
-        TRUE,
-        TRUE,
-      ],
+      'format is asserted: an address that is no URI' => [['props' => ['link' => ['url' => 'not a uri']]], FALSE],
     ]);
   }
 
@@ -1223,7 +1221,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
     $document = $this->decoded($this->container->get('surface.contract_emitter')->emit($cellar, array_replace($cellar->getDefaultValues(), self::CELLAR), 'resource_test.cellar')->document);
     $racks = $document['schema']['properties']['racks'];
     $this->assertTrue($racks['readOnly']);
-    $items = SchemaResolver::inline($racks, $document['schema'])['items'];
+    $items = Schemas::decoded(SchemaResolver::inline(Schema::from($racks), Schema::from($document['schema'])))['items'];
     foreach (['shelf', 'spices', 'label'] as $key) {
       $this->assertTrue($items['properties'][$key]['readOnly'], $key);
       $this->assertArrayNotHasKey('const', $items['properties'][$key], $key);
@@ -1309,10 +1307,14 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       $emitter = $this->container->get('surface.contract_emitter');
       $property = $this->decoded($emitter->emitFull($surface, 'audit')->document['schema'])['properties']['k'];
       $this->assertSame($pattern, $property['pattern'] ?? NULL, $regex);
-      $this->assertSame('As it says.', $property['x-surface']['patternMessage'] ?? NULL, $regex . ': the message is carried either way.');
       if ($pattern === NULL) {
-        // Each named with what it checks: here, its own message.
-        $this->assertSame([['constraint' => 'Regex', 'message' => 'As it says.']], $property['x-surface']['checkedOnServer'], $regex);
+        // Each named with what it checks: here, its own message, the
+        // check's, since no keyword is written to give it under.
+        $this->assertSame(['drupal:Regex' => []], $property['portable-check'], $regex);
+        $this->assertSame(['check.drupal:Regex' => 'As it says.'], $property['x-portable-messages'], $regex);
+      }
+      else {
+        $this->assertSame(['pattern' => 'As it says.'], $property['x-portable-messages'], $regex . ': the message, under the keyword it goes with.');
       }
     }
 
@@ -1579,7 +1581,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
    * Case 7: constraints JSON Schema has no keyword for.
    *
    * A constraint with no keyword and no options resolver is named under
-   * checkedOnServer and changes nothing else. One with a resolver is
+   * portable-check and changes nothing else. One with a resolver is
    * stated as `oneOf` read from the source its validator reads; a
    * PluginExists that allows a fallback accepts any id, so it offers no
    * list and the schema stays as wide as the validator. UniqueItems, which
@@ -1600,9 +1602,10 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       $property = $full($this->surface([
         'k' => DataDefinition::create('string')->setLabel('K')->addConstraint($name, []),
       ]))['properties']['k'];
-      $this->assertSame([$name], array_column($property['x-surface']['checkedOnServer'], 'constraint'), $name);
-      $this->assertNotSame('', $property['x-surface']['checkedOnServer'][0]['message'], $name . ': what it checks is said.');
-      $this->assertSame(array_diff_key($bare, ['x-surface' => TRUE]), array_diff_key($property, ['x-surface' => TRUE]), $name . ': no keyword.');
+      $this->assertSame(['drupal:' . $name], array_keys($property['portable-check']), $name);
+      $this->assertNotSame('', $property['x-portable-messages']['check.drupal:' . $name], $name . ': what it checks is said.');
+      $said = ['x-surface' => TRUE, 'portable-check' => TRUE, 'x-portable-messages' => TRUE];
+      $this->assertSame(array_diff_key($bare, $said), array_diff_key($property, $said), $name . ': no keyword.');
     }
 
     // Each item once: a keyword, as narrow as the validator.
@@ -1611,7 +1614,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
     ]);
     $schema = $full($unique);
     $this->assertTrue($schema['properties']['k']['uniqueItems']);
-    $this->assertArrayNotHasKey('checkedOnServer', (array) ($schema['properties']['k']['x-surface'] ?? []));
+    $this->assertArrayNotHasKey('portable-check', $schema['properties']['k']);
     $this->assertTrue($this->pipeline()->validate($unique, ['k' => ['a', 'b']])->isEmpty());
     $this->assertTrue($this->validates($schema, ['k' => ['a', 'b']]));
     $this->assertFalse($this->pipeline()->validate($unique, ['k' => ['a', 'b', 'a']])->isEmpty());
@@ -1705,7 +1708,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       ['Regex' => ['pattern' => '/^(name|pass|website)$/', 'match' => FALSE, 'message' => $common]],
     ]);
     $property = $this->decoded($emitter->emitFull($as_written, 'audit')->document['schema'])['properties']['element_name'];
-    $this->assertSame(['Sequentially'], array_column($property['x-surface']['checkedOnServer'], 'constraint'));
+    $this->assertSame(['drupal:Sequentially'], array_keys($property['portable-check']));
     $this->assertArrayNotHasKey('allOf', $property);
 
     $carried = $name([
@@ -1719,7 +1722,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       ['pattern' => '^[a-zA-Z][-_a-zA-Z0-9]+$'],
       ['not' => ['pattern' => '^(name|pass|website)$']],
     ], $property['allOf']);
-    $this->assertArrayNotHasKey('checkedOnServer', $property['x-surface'] ?? []);
+    $this->assertArrayNotHasKey('portable-check', $property);
     foreach (['as written' => $as_written, 'carried' => $carried] as $which => $surface) {
       // Left to the server, a refused name is accepted by both schemas.
       $wide = $which === 'as written';
@@ -1760,7 +1763,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
     ]);
     $property = $this->decoded($emitter->emitFull($unstated, 'audit')->document['schema'])['properties']['code'];
     $this->assertArrayNotHasKey('anyOf', $property);
-    $this->assertSame(['AtLeastOneOf'], array_column($property['x-surface']['checkedOnServer'], 'constraint'));
+    $this->assertSame(['drupal:AtLeastOneOf'], array_keys($property['portable-check']));
   }
 
   /**

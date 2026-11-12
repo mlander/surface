@@ -6,6 +6,7 @@ namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\Validation\PortableValidator;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -58,6 +59,14 @@ final class ResourceRegistryInvalidator implements CacheTagsInvalidatorInterface
       $options = $this->container->get('surface.options');
       if ($options instanceof SurfaceOptions) {
         $options->invalidateTags($tags);
+      }
+    }
+    // The documents a validation emitted for the request, which state
+    // those lists and those builds.
+    if ($this->container->initialized('surface.portable_validator')) {
+      $validator = $this->container->get('surface.portable_validator');
+      if ($validator instanceof PortableValidator) {
+        $validator->forget();
       }
     }
   }

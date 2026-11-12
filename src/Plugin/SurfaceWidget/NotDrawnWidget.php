@@ -6,9 +6,13 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\WidgetChoice;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface\Widget\WidgetContext;
+use PortableSchema\Builder\Schema;
 
 /**
  * A value no element types in: an item saying it is not drawn on this form.
@@ -30,7 +34,7 @@ use Drupal\surface\Widget\SurfaceWidgetBase;
   label: new TranslatableMarkup('Not drawn'),
   weight: 10,
 )]
-final class NotDrawnWidget extends SurfaceWidgetBase {
+final class NotDrawnWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
 
   /**
    * The data types it draws.
@@ -40,7 +44,7 @@ final class NotDrawnWidget extends SurfaceWidgetBase {
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(DataDefinitionInterface $definition): bool {
+  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
     $value = $definition instanceof ListDataDefinitionInterface ? $definition->getItemDefinition() : $definition;
     return in_array($value->getDataType(), self::TYPES, TRUE);
   }
@@ -48,8 +52,17 @@ final class NotDrawnWidget extends SurfaceWidgetBase {
   /**
    * {@inheritdoc}
    */
-  public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
-    return static::notDrawn($definition);
+  public function isApplicable(Schema $node, WidgetContext $context): bool {
+    // Named by its word alone: a node says no data type the form does
+    // not draw.
+    return FALSE;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
+    return static::notDrawn($node);
   }
 
 }

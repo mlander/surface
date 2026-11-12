@@ -8,6 +8,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\SchemaResolver;
+use PortableSchema\Builder\Schema;
 
 /**
  * Shows what config schema alone can say about an example's settings.
@@ -32,6 +33,7 @@ use Drupal\surface\Contract\SchemaResolver;
  */
 final class ConfigSchemaPanel {
 
+  use ResolvesSchemas;
   use StringTranslationTrait;
 
   /**
@@ -159,7 +161,7 @@ final class ConfigSchemaPanel {
           ['data' => ['#markup' => '<code>' . htmlspecialchars($key) . '</code>']],
           is_array($from_schema) ? $this->keywords($from_schema) : (string) $this->t('not declared'),
           implode(', ', array_filter([
-            $this->keywords(SchemaResolver::resolve($property, $full), ''),
+            $this->keywords(static::resolved($property, $full), ''),
             $this->reference($property),
             $this->conditionals($full, $key),
           ])),
@@ -195,7 +197,7 @@ final class ConfigSchemaPanel {
       if (!is_array($branch) || !isset($branch['$ref'])) {
         continue;
       }
-      $def = SchemaResolver::resolve($branch, $full);
+      $def = static::resolved($branch, $full);
       if (is_array($def['properties'][$key] ?? NULL)) {
         return $def['properties'][$key] + ['$ref' => $branch['$ref']];
       }
@@ -204,7 +206,10 @@ final class ConfigSchemaPanel {
   }
 
   /**
-   * Lists the JSON Schema keywords a property schema states.
+   * Lists the keywords a property schema states.
+   *
+   * JSON Schema's, and the dialect's own (`portable-check`,
+   * `x-portable-messages`), which say what a value is checked by.
    *
    * @param array $schema
    *   The property's schema.
@@ -239,7 +244,7 @@ final class ConfigSchemaPanel {
    *   def.
    */
   protected function reference(array $schema): string {
-    $def = SchemaResolver::refersTo($schema);
+    $def = SchemaResolver::refersTo(Schema::from($schema));
     return $def === NULL ? '' : '$ref (' . $def . ')';
   }
 
@@ -276,7 +281,7 @@ final class ConfigSchemaPanel {
       $count++;
       $if = is_array($branch['if']['properties'] ?? NULL) ? $branch['if']['properties'] : [];
       $on += array_fill_keys(array_map('strval', array_keys($if)), TRUE);
-      $then = SchemaResolver::resolve($site, $full);
+      $then = static::resolved($site, $full);
       if (is_array($then['properties'] ?? NULL)) {
         $variants[] = implode(', ', array_filter([
           (string) $this->t('@value has @keys', [

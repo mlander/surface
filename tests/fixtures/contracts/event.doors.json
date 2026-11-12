@@ -1,18 +1,18 @@
 {
     "resource": "event.doors",
     "module": "surface_examples",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "event.doors",
             "operation": "configure",
             "label": "Configure the doors",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "Configure the doors",
                 "description": "Sets when the doors open, the badges checked at the door and the notes for the door team.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the doors",
@@ -32,8 +32,8 @@
                         "type": "string",
                         "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
                         "default": "18:30",
-                        "x-surface": {
-                            "patternMessage": "Write the time as HH:MM, such as 18:30."
+                        "x-portable-messages": {
+                            "pattern": "Write the time as HH:MM, such as 18:30."
                         }
                     },
                     "days": {

@@ -1,11 +1,11 @@
 {
     "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "$id": "http://localhost/surface-api/event.sales/schema",
         "title": "Configure ticket sales",
         "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "configure",
                 "label": "Configure ticket sales",
@@ -44,7 +44,7 @@
                         }
                     }
                 ],
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "fieldset"
                 }
             },
@@ -79,8 +79,10 @@
                         }
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "fieldset"
+                },
                 "x-surface": {
-                    "widget": "fieldset",
                     "dependsOn": [
                         "on_sale.standard",
                         "on_sale.student",
@@ -317,7 +319,7 @@
                             "null"
                         ],
                         "default": false,
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "checkbox"
                         }
                     },
@@ -328,7 +330,7 @@
                             "null"
                         ],
                         "default": false,
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "checkbox"
                         }
                     },
@@ -338,7 +340,7 @@
                             "boolean",
                             "null"
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "checkbox"
                         }
                     }
@@ -358,8 +360,10 @@
                         "minimum": 1,
                         "maximum": 10,
                         "default": 4,
+                        "x-portable-ui": {
+                            "widget": "number"
+                        },
                         "x-surface": {
-                            "widget": "number",
                             "dependsOn": [
                                 "selling"
                             ]
@@ -372,8 +376,10 @@
                             "null"
                         ],
                         "default": false,
+                        "x-portable-ui": {
+                            "widget": "checkbox"
+                        },
                         "x-surface": {
-                            "widget": "checkbox",
                             "dependsOn": [
                                 "selling"
                             ]
@@ -397,21 +403,21 @@
                     "standard": {
                         "title": "Standard",
                         "$ref": "#/$defs/event.ticket_limit",
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "fieldset"
                         }
                     },
                     "student": {
                         "title": "Student",
                         "$ref": "#/$defs/event.ticket_limit",
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "fieldset"
                         }
                     },
                     "speaker": {
                         "title": "Speaker",
                         "$ref": "#/$defs/event.ticket_limit",
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "fieldset"
                         }
                     }
@@ -425,12 +431,12 @@
         "operation": "configure",
         "label": "Configure ticket sales",
         "schema": {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$schema": "https://portable-schema.dev/v1/schema",
             "$id": "http://localhost/surface-api/event.sales",
             "title": "Configure ticket sales",
             "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
             "x-surface": {
-                "contract": 4,
+                "contract": 5,
                 "operation": {
                     "id": "configure",
                     "label": "Configure ticket sales",
@@ -462,7 +468,7 @@
                             }
                         }
                     ],
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "fieldset"
                     }
                 },
@@ -493,8 +499,10 @@
                             }
                         }
                     ],
+                    "x-portable-ui": {
+                        "widget": "fieldset"
+                    },
                     "x-surface": {
-                        "widget": "fieldset",
                         "dependsOn": [
                             "on_sale.standard",
                             "on_sale.student",
@@ -537,7 +545,7 @@
                                 "null"
                             ],
                             "default": false,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -548,7 +556,7 @@
                                 "null"
                             ],
                             "default": false,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -558,7 +566,7 @@
                                 "boolean",
                                 "null"
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         }
@@ -578,8 +586,10 @@
                             "minimum": 1,
                             "maximum": 10,
                             "default": 4,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "selling"
                                 ]
@@ -592,8 +602,10 @@
                                 "null"
                             ],
                             "default": false,
+                            "x-portable-ui": {
+                                "widget": "checkbox"
+                            },
                             "x-surface": {
-                                "widget": "checkbox",
                                 "dependsOn": [
                                     "selling"
                                 ]
@@ -617,21 +629,21 @@
                         "standard": {
                             "title": "Standard",
                             "$ref": "#/$defs/event.ticket_limit",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         },
                         "student": {
                             "title": "Student",
                             "$ref": "#/$defs/event.ticket_limit",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         },
                         "speaker": {
                             "title": "Speaker",
                             "$ref": "#/$defs/event.ticket_limit",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         }
@@ -677,12 +689,12 @@
                 "operation": "configure",
                 "label": "Configure ticket sales",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/event.sales",
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -714,7 +726,7 @@
                                     }
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         },
@@ -759,8 +771,10 @@
                                     }
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "fieldset"
+                            },
                             "x-surface": {
-                                "widget": "fieldset",
                                 "dependsOn": [
                                     "on_sale.standard",
                                     "on_sale.student",
@@ -819,7 +833,7 @@
                                         "null"
                                     ],
                                     "default": false,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 },
@@ -830,7 +844,7 @@
                                         "null"
                                     ],
                                     "default": false,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 },
@@ -840,7 +854,7 @@
                                         "boolean",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 }
@@ -860,8 +874,10 @@
                                     "minimum": 1,
                                     "maximum": 10,
                                     "default": 4,
+                                    "x-portable-ui": {
+                                        "widget": "number"
+                                    },
                                     "x-surface": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "selling"
                                         ]
@@ -874,8 +890,10 @@
                                         "null"
                                     ],
                                     "default": false,
+                                    "x-portable-ui": {
+                                        "widget": "checkbox"
+                                    },
                                     "x-surface": {
-                                        "widget": "checkbox",
                                         "dependsOn": [
                                             "selling"
                                         ]
@@ -899,21 +917,21 @@
                                 "standard": {
                                     "title": "Standard",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 },
                                 "student": {
                                     "title": "Student",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 },
                                 "speaker": {
                                     "title": "Speaker",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 }
@@ -957,12 +975,12 @@
                 "operation": "configure",
                 "label": "Configure ticket sales",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/event.sales",
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -994,7 +1012,7 @@
                                     }
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         },
@@ -1025,8 +1043,10 @@
                                     }
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "fieldset"
+                            },
                             "x-surface": {
-                                "widget": "fieldset",
                                 "dependsOn": [
                                     "on_sale.standard",
                                     "on_sale.student",
@@ -1069,7 +1089,7 @@
                                         "null"
                                     ],
                                     "default": false,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 },
@@ -1080,7 +1100,7 @@
                                         "null"
                                     ],
                                     "default": false,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 },
@@ -1090,7 +1110,7 @@
                                         "boolean",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 }
@@ -1110,8 +1130,10 @@
                                     "minimum": 1,
                                     "maximum": 10,
                                     "default": 4,
+                                    "x-portable-ui": {
+                                        "widget": "number"
+                                    },
                                     "x-surface": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "selling"
                                         ]
@@ -1124,8 +1146,10 @@
                                         "null"
                                     ],
                                     "default": false,
+                                    "x-portable-ui": {
+                                        "widget": "checkbox"
+                                    },
                                     "x-surface": {
-                                        "widget": "checkbox",
                                         "dependsOn": [
                                             "selling"
                                         ]
@@ -1149,21 +1173,21 @@
                                 "standard": {
                                     "title": "Standard",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 },
                                 "student": {
                                     "title": "Student",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 },
                                 "speaker": {
                                     "title": "Speaker",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 }
@@ -1210,12 +1234,12 @@
                 "operation": "configure",
                 "label": "Configure ticket sales",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/event.sales",
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -1247,7 +1271,7 @@
                                     }
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         },
@@ -1278,8 +1302,10 @@
                                     }
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "fieldset"
+                            },
                             "x-surface": {
-                                "widget": "fieldset",
                                 "dependsOn": [
                                     "on_sale.standard",
                                     "on_sale.student",
@@ -1322,7 +1348,7 @@
                                         "null"
                                     ],
                                     "default": false,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 },
@@ -1333,7 +1359,7 @@
                                         "null"
                                     ],
                                     "default": false,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 },
@@ -1343,7 +1369,7 @@
                                         "boolean",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 }
@@ -1363,8 +1389,10 @@
                                     "minimum": 1,
                                     "maximum": 10,
                                     "default": 4,
+                                    "x-portable-ui": {
+                                        "widget": "number"
+                                    },
                                     "x-surface": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "selling"
                                         ]
@@ -1377,8 +1405,10 @@
                                         "null"
                                     ],
                                     "default": false,
+                                    "x-portable-ui": {
+                                        "widget": "checkbox"
+                                    },
                                     "x-surface": {
-                                        "widget": "checkbox",
                                         "dependsOn": [
                                             "selling"
                                         ]
@@ -1402,21 +1432,21 @@
                                 "standard": {
                                     "title": "Standard",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 },
                                 "student": {
                                     "title": "Student",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 },
                                 "speaker": {
                                     "title": "Speaker",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 }
@@ -1463,12 +1493,12 @@
                 "operation": "configure",
                 "label": "Configure ticket sales",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/event.sales",
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -1500,7 +1530,7 @@
                                     }
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         },
@@ -1545,8 +1575,10 @@
                                     }
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "fieldset"
+                            },
                             "x-surface": {
-                                "widget": "fieldset",
                                 "dependsOn": [
                                     "on_sale.standard",
                                     "on_sale.student",
@@ -1605,7 +1637,7 @@
                                         "null"
                                     ],
                                     "default": false,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 },
@@ -1616,7 +1648,7 @@
                                         "null"
                                     ],
                                     "default": false,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 },
@@ -1626,7 +1658,7 @@
                                         "boolean",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 }
@@ -1646,8 +1678,10 @@
                                     "minimum": 1,
                                     "maximum": 10,
                                     "default": 4,
+                                    "x-portable-ui": {
+                                        "widget": "number"
+                                    },
                                     "x-surface": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "selling"
                                         ]
@@ -1660,8 +1694,10 @@
                                         "null"
                                     ],
                                     "default": false,
+                                    "x-portable-ui": {
+                                        "widget": "checkbox"
+                                    },
                                     "x-surface": {
-                                        "widget": "checkbox",
                                         "dependsOn": [
                                             "selling"
                                         ]
@@ -1685,21 +1721,21 @@
                                 "standard": {
                                     "title": "Standard",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 },
                                 "student": {
                                     "title": "Student",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 },
                                 "speaker": {
                                     "title": "Speaker",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 }
@@ -1743,12 +1779,12 @@
                 "operation": "configure",
                 "label": "Configure ticket sales",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/event.sales",
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -1780,7 +1816,7 @@
                                     }
                                 }
                             ],
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         },
@@ -1811,8 +1847,10 @@
                                     }
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "fieldset"
+                            },
                             "x-surface": {
-                                "widget": "fieldset",
                                 "dependsOn": [
                                     "on_sale.standard",
                                     "on_sale.student",
@@ -1855,7 +1893,7 @@
                                         "null"
                                     ],
                                     "default": false,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 },
@@ -1866,7 +1904,7 @@
                                         "null"
                                     ],
                                     "default": false,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 },
@@ -1876,7 +1914,7 @@
                                         "boolean",
                                         "null"
                                     ],
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "checkbox"
                                     }
                                 }
@@ -1896,8 +1934,10 @@
                                     "minimum": 1,
                                     "maximum": 10,
                                     "default": 4,
+                                    "x-portable-ui": {
+                                        "widget": "number"
+                                    },
                                     "x-surface": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "selling"
                                         ]
@@ -1910,8 +1950,10 @@
                                         "null"
                                     ],
                                     "default": false,
+                                    "x-portable-ui": {
+                                        "widget": "checkbox"
+                                    },
                                     "x-surface": {
-                                        "widget": "checkbox",
                                         "dependsOn": [
                                             "selling"
                                         ]
@@ -1935,21 +1977,21 @@
                                 "standard": {
                                     "title": "Standard",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 },
                                 "student": {
                                     "title": "Student",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 },
                                 "speaker": {
                                     "title": "Speaker",
                                     "$ref": "#/$defs/event.ticket_limit",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 }

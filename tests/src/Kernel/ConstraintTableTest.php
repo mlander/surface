@@ -8,7 +8,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\surface\Contract\ConstraintKeywords;
-use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\SurfaceBuilder;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -23,7 +23,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * a standard validator checks, and the two verdicts are the same for every
  * value, so the table cannot drift from what the validator checks. Through
  * the emitter, a constraint the schema does not state is named under
- * `x-surface.checkedOnServer`, never dropped.
+ * `portable-check`, never dropped.
  *
  * @see \Drupal\surface\Contract\ConstraintKeywords
  * @see docs/audit-never-stricter.md
@@ -113,7 +113,7 @@ class ConstraintTableTest extends SurfaceKernelTestBase {
   public function testRowNotApplyingIsCheckedOnServer(string $type, string $id, array $options): void {
     $definition = ($type === 'list' ? ListDataDefinition::create('string') : DataDefinition::create($type))->setLabel('Key')->addConstraint($id, $options);
     $emitted = $this->emitted(['key' => $definition])['key'];
-    $this->assertSame([$id], array_column($emitted[ContractEmitter::EXTENSION]['checkedOnServer'] ?? [], 'constraint'), $id . ' is named under checkedOnServer.');
+    $this->assertSame([$id], array_column(PortableKeywords::checks($emitted), 'constraint'), $id . ' is named under portable-check.');
     $written = ConstraintKeywords::row($id)->write($id, $options, ['string', 'integer', 'number', 'array', 'boolean']);
     foreach (array_keys($written->keywords ?? []) as $keyword) {
       $this->assertArrayNotHasKey($keyword, $emitted, $id . ' writes no ' . $keyword . '.');
@@ -144,15 +144,15 @@ class ConstraintTableTest extends SurfaceKernelTestBase {
     ];
     $emitted = $this->emitted(array_map(static fn (DataDefinitionInterface $definition): DataDefinitionInterface => $definition->setLabel('Key'), $definitions));
     foreach (['not' => 'Choice', 'not_zero' => 'Choice', 'labeled_not' => 'LabeledChoice', 'on_list' => 'Choice'] as $key => $constraint) {
-      $this->assertSame([$constraint], array_column($emitted[$key][ContractEmitter::EXTENSION]['checkedOnServer'] ?? [], 'constraint'), $key . ' is checked on the server.');
+      $this->assertSame([$constraint], array_column(PortableKeywords::checks($emitted[$key]), 'constraint'), $key . ' is checked on the server.');
       $this->assertArrayNotHasKey('oneOf', $emitted[$key], $key . ' states no list.');
       $this->assertArrayNotHasKey('oneOf', $emitted[$key]['items'] ?? [], $key . ' states no list of items.');
     }
     foreach (['not', 'not_zero', 'labeled_not'] as $key) {
       $this->assertNull($this->options()->resolve($definitions[$key]), $key . ' offers no options.');
     }
-    $this->assertSame(['Choice'], array_column($emitted['several'][ContractEmitter::EXTENSION]['checkedOnServer'], 'constraint'), 'Several values: checked on the server.');
-    $this->assertArrayNotHasKey('checkedOnServer', $emitted['plain'][ContractEmitter::EXTENSION] ?? []);
+    $this->assertSame(['Choice'], array_column(PortableKeywords::checks($emitted['several']), 'constraint'), 'Several values: checked on the server.');
+    $this->assertArrayNotHasKey(PortableKeywords::CHECK, $emitted['plain']);
     $this->assertSame(['a', 'b'], array_values(array_filter(array_column($emitted['plain']['oneOf'], 'const'))));
   }
 

@@ -1,18 +1,18 @@
 {
     "resource": "registration.step2",
     "module": "surface_examples",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "registration.step2",
             "operation": "configure",
             "label": "Configure registration (step 2)",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "Configure registration (step 2)",
                 "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "configure",
                         "label": "Configure registration (step 2)",
@@ -55,17 +55,20 @@
                                 "title": "Riverside Hall"
                             }
                         ],
-                        "x-surface": {
-                            "reference": {
-                                "entityType": "event_venue"
-                            },
-                            "checkedOnServer": [
-                                {
-                                    "constraint": "SurfaceValidReference",
-                                    "message": "Refers to an entity the account may reference"
-                                }
-                            ]
-                        }
+                        "portable-check": {
+                            "drupal:SurfaceValidReference": {
+                                "entityTypeId": "event_venue"
+                            }
+                        },
+                        "x-portable-messages": {
+                            "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
+                        },
+                        "x-portable-links": [
+                            {
+                                "rel": "lookup",
+                                "href": "/surface-api/registration.step2:lookup?key=/venue{&q,limit}"
+                            }
+                        ]
                     },
                     "room": {
                         "title": "Room",

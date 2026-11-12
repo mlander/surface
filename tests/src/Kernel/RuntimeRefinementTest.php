@@ -223,7 +223,7 @@ class RuntimeRefinementTest extends SurfaceKernelTestBase {
     $this->assertSame(['green', 'blue'], self::offered($schema['properties']['tag']));
     $this->assertTrue($schema['properties']['shelf']['x-surface']['refined']);
     $this->assertTrue($schema['properties']['shelf']['x-surface']['live']);
-    $this->assertArrayNotHasKey('enumerated', $schema['properties']['shelf']['x-surface'], 'Refined for the values, so nothing is enumerated.');
+    $this->assertArrayNotHasKey('enumerated', $schema['properties']['shelf']['x-surface'] ?? [], 'Refined for the values, so nothing is enumerated.');
     $this->assertTrue($schema['properties']['tag']['x-surface']['refined']);
     $served = $this->container->get('surface.contract_emitter')->emit($surface, $values, 'resource_test.stockroom');
     $this->assertSame(0, $served->getCacheMaxAge());

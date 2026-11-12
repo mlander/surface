@@ -90,9 +90,11 @@ final class Violation {
   public const CANNOT_CLEAR = 'cannot_clear';
 
   /**
-   * A value in a shape its definition cannot hold.
+   * A value in a shape its definition cannot hold: the dialect's `type`.
+   *
+   * Its params are the dialect's, `expected` (the JSON types) and `actual`.
    */
-  public const TYPE_MISMATCH = 'type_mismatch';
+  public const TYPE_MISMATCH = 'type';
 
   /**
    * A key sent for a variant the deciding key did not choose.
@@ -132,9 +134,10 @@ final class Violation {
   /**
    * A create names a thing that exists already: its machine name is taken.
    *
-   * Also the code of the stock SurfaceUnique constraint's refusal.
+   * The code of the stock SurfaceUnique check's refusal, which a storage
+   * that finds the name taken itself answers too.
    */
-  public const TAKEN = 'taken';
+  public const TAKEN = 'check.drupal:SurfaceUnique.taken';
 
   /**
    * A storage holds settings no schema describes.
@@ -149,17 +152,23 @@ final class Violation {
   /**
    * Values a schema read into a structure refuses, beyond any key's rules.
    *
-   * The code of a JsonSchema constraint's refusal too, read off its own
-   * code by codeOf().
+   * The check `drupal:JsonSchema`, at a key or at a frame.
    */
-  public const NOT_VALID = 'not_valid';
+  public const NOT_VALID = 'check.drupal:JsonSchema.not_valid';
 
   /**
    * Values a schema read into a structure cannot decide here.
    *
    * It refers to a document outside it, which is never fetched.
    */
-  public const UNRESOLVED = 'unresolved';
+  public const UNRESOLVED = 'check.drupal:JsonSchema.unresolved';
+
+  /**
+   * A check the document names that cannot run on this site.
+   *
+   * A check never counts as passed: a value it would judge is refused.
+   */
+  public const UNCHECKED = 'unchecked';
 
   /**
    * Symfony's constraints whose codes name a violation that lost its own.
@@ -201,6 +210,11 @@ final class Violation {
    *   change it. A stale entry warns and never blocks.
    * @param mixed $stored
    *   For a stale entry, the value it keeps; NULL otherwise.
+   * @param array<string, mixed> $params
+   *   What the code's refusal names, as plain JSON values, keyed as the
+   *   dialect keys them for its codes (`limit`, `property`, `allowed`); a
+   *   check's, its violation's parameters. Empty for most of the module's
+   *   own codes.
    */
   public function __construct(
     public readonly string $key,
@@ -209,7 +223,51 @@ final class Violation {
     public readonly string $code,
     public readonly bool $stale = FALSE,
     public readonly mixed $stored = NULL,
+    public readonly array $params = [],
   ) {
+  }
+
+  /**
+   * Files a value in a shape its definition cannot hold, the dialect's way.
+   *
+   * @param string $key
+   *   The top level key.
+   * @param string $path
+   *   The path within it.
+   * @param string|\Stringable $message
+   *   What to say about it.
+   * @param string $expected
+   *   What the definition holds: a data type (`integer`, `email`), `map`
+   *   or `list`.
+   * @param string $actual
+   *   What was given, as get_debug_type() names it.
+   * @param bool $nullable
+   *   Whether the place also takes null: then `expected` names `null` too,
+   *   as the document's `type` does and the validator says it.
+   *
+   * @return static
+   *   The violation, code `type`, its params the dialect's: `expected`, the
+   *   JSON types, and `actual`, the JSON type given.
+   */
+  public static function typeMismatch(string $key, string $path, string|\Stringable $message, string $expected, string $actual, bool $nullable = FALSE): static {
+    $expected = match ($expected) {
+      'map' => 'object',
+      'list' => 'array',
+      'integer', 'timestamp' => 'integer',
+      'float', 'decimal' => 'number',
+      'boolean' => 'boolean',
+      'string', 'email', 'uri', 'datetime_iso8601' => 'string',
+      default => $expected,
+    };
+    $actual = match ($actual) {
+      'int' => 'integer',
+      'float' => 'number',
+      'bool' => 'boolean',
+      'string', 'null', 'array' => $actual,
+      default => 'object',
+    };
+    $params = ['expected' => $nullable ? [$expected, 'null'] : [$expected], 'actual' => $actual];
+    return new static($key, $path, $message, self::TYPE_MISMATCH, params: $params);
   }
 
   /**
@@ -232,6 +290,11 @@ final class Violation {
 
   /**
    * Names a constraint's violation by a stable code.
+   *
+   * For what a storage's own Typed Data pass refuses (SchemaViolations, an
+   * entity's validate()) and the Tool API's refusals of a call's shape:
+   * what a request's values are refused by is the dialect's validator, and
+   * its codes are the dialect's.
    *
    * Symfony's own code where the constraint defines one, by the name its
    * constraint gives it, lower case and without `_ERROR`: a Range's
@@ -280,10 +343,10 @@ final class Violation {
    *   The path within it.
    *
    * @return static
-   *   The violation, its message, code and staleness kept.
+   *   The violation, its message, code, params and staleness kept.
    */
   public function at(string $key, string $path): static {
-    return new static($key, $path, $this->message, $this->code, $this->stale, $this->stored);
+    return new static($key, $path, $this->message, $this->code, $this->stale, $this->stored, $this->params);
   }
 
   /**
@@ -293,10 +356,10 @@ final class Violation {
    *   The message.
    *
    * @return static
-   *   The violation, its place, code and staleness kept.
+   *   The violation, its place, code, params and staleness kept.
    */
   public function saying(string|\Stringable $message): static {
-    return new static($this->key, $this->path, $message, $this->code, $this->stale, $this->stored);
+    return new static($this->key, $this->path, $message, $this->code, $this->stale, $this->stored, $this->params);
   }
 
   /**

@@ -9,7 +9,9 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Flow\Staged;
 use Drupal\surface\Form\SurfaceFormBuilder;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
@@ -45,6 +47,7 @@ use Drupal\tool\Tool\ToolOperation;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests examples 7 to 13: one small resource per concept, then a block.
@@ -266,7 +269,8 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $desk = $this->full(InfoDeskResource::class);
     $this->assertSame(['event.person', 'event.review', 'event.phone'], array_keys($press['$defs']));
     $this->assertSame(['event.person', 'event.phone'], array_keys($desk['$defs']));
-    $this->assertSame($press['$defs']['event.person'], $desk['$defs']['event.person'], 'One def, whatever the site.');
+    // By its JSON: an empty check's options are an object each time.
+    $this->assertSame(json_encode($press['$defs']['event.person']), json_encode($desk['$defs']['event.person']), 'One def, whatever the site.');
     $this->assertSame(['listed' => ['type' => 'boolean', 'required' => FALSE]], $press['$defs']['event.person'][ContractEmitter::EXTENSION]['ports']);
     $this->assertSame(['listed' => 'public'], $press['properties']['contact'][ContractEmitter::EXTENSION]['reads']);
     $this->assertSame(['listed' => 'in_program'], $desk['properties']['lead'][ContractEmitter::EXTENSION]['reads']);
@@ -326,15 +330,15 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
    */
   public function testNineTakesItsKeysFromTheSite(): void {
     $full = $this->full(TicketSalesResource::class);
-    $on_sale = SchemaResolver::resolve($full['properties']['on_sale'], $full);
+    $on_sale = Schemas::decoded(SchemaResolver::resolve(Schema::from($full['properties']['on_sale']), Schema::from($full)));
     $this->assertSame(['standard', 'student', 'speaker'], array_keys($on_sale['properties']));
     $this->assertTrue($on_sale['properties']['speaker']['readOnly']);
     $this->assertArrayNotHasKey('locked', $on_sale['properties']['speaker'][ContractEmitter::EXTENSION] ?? [], '`readOnly` says it.');
     $this->assertArrayNotHasKey('readOnly', $on_sale['properties']['standard']);
-    $limits = SchemaResolver::resolve($full['properties']['limits'], $full);
+    $limits = Schemas::decoded(SchemaResolver::resolve(Schema::from($full['properties']['limits']), Schema::from($full)));
     $this->assertTrue($limits['properties']['speaker']['readOnly']);
     $now = $this->now(TicketSalesResource::class);
-    $this->assertFalse(SchemaResolver::resolve($now['properties']['on_sale'], $now)['properties']['speaker']['const']);
+    $this->assertFalse(Schemas::decoded(SchemaResolver::resolve(Schema::from($now['properties']['on_sale']), Schema::from($now)))['properties']['speaker']['const']);
 
     $form = $this->formAt('surface_examples.step9');
     $this->assertTrue($form['on_sale']['speaker']['#disabled']);
@@ -346,7 +350,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $this->assertContains('config:surface_examples.ticket_types', $built->getCacheTags());
     $this->config('surface_examples.ticket_types')->set('types.vip', ['label' => 'VIP', 'locked' => FALSE])->save();
     $full = $this->full(TicketSalesResource::class);
-    $this->assertSame(['standard', 'student', 'speaker', 'vip'], array_keys(SchemaResolver::resolve($full['properties']['on_sale'], $full)['properties']));
+    $this->assertSame(['standard', 'student', 'speaker', 'vip'], array_keys(Schemas::decoded(SchemaResolver::resolve(Schema::from($full['properties']['on_sale']), Schema::from($full)))['properties']));
 
     // A save keeps the locked type as stored, whatever is posted for it.
     $this->formAt('surface_examples.step9');
@@ -447,7 +451,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
    */
   public function testElevenDrawsEveryStockWidget(): void {
     $now = $this->now(DoorsResource::class, TRUE);
-    $widgets = array_map(static fn (array $property): ?string => $property[ContractEmitter::EXTENSION]['widget'] ?? NULL, $now['properties']);
+    $widgets = array_map(static fn (array $property): ?string => $property[PortableKeywords::UI]['widget'] ?? NULL, $now['properties']);
     $this->assertSame([
       'opens' => 'time',
       'days' => 'checkboxes',
@@ -522,7 +526,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     // Both documents state the components as variants.
     $full = $this->full(SpotlightResource::class);
     $this->assertSame('component', $full['properties']['props'][ContractEmitter::EXTENSION]['by']);
-    $this->assertSame('#/$defs/event.spotlight.props.surface_examples:card', $full['properties']['props'][ContractEmitter::EXTENSION]['variants']->{'surface_examples:card'});
+    $this->assertSame('#/$defs/event.spotlight.props.surface_examples:card', $full['properties']['props'][ContractEmitter::EXTENSION]['variants']['surface_examples:card']);
     $this->assertSame(['heading'], $full['$defs']['event.spotlight.props.surface_examples:card']['required']);
     $this->assertSame('component', $full['properties']['slots'][ContractEmitter::EXTENSION]['by']);
     $this->assertSame('#/$defs/component.slot.text', $full['$defs']['event.spotlight.slots.surface_examples:card']['properties']['body']['$ref']);
@@ -850,7 +854,8 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $page = $this->thirteen();
     $contract = json_decode((string) $page['parts']['contract']['content']['#code'], TRUE);
     $this->assertSame(self::COMPONENTS, array_column($contract['component']['oneOf'], 'const'), 'The chooser keeps its options.');
-    $this->assertArrayHasKey('fetch', $contract['props'][ContractEmitter::EXTENSION]['deferred']);
+    $this->assertTrue($contract['props'][ContractEmitter::EXTENSION]['deferred']);
+    $this->assertSame('choose', $contract['props']['x-portable-links'][0]['rel']);
     $this->assertArrayNotHasKey('anyOf', $contract['props']);
     $this->assertSame([], $contract['allOf']);
     $this->assertStringContainsString('more than 2, the site list limit', (string) $page['parts']['contract']['note']['#markup']);
@@ -866,7 +871,8 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $read = json_decode((string) $panel['read']['content']['#code'], TRUE);
     $this->assertSame('event.spotlight.props.surface_examples:card', $read['structure']['title'], 'The chosen component\'s def, from the full schema fetched with it chosen.');
     $contract = json_decode((string) $panel['contract']['content']['#code'], TRUE);
-    $this->assertSame(['fetch' => '?choose=/props={value}'], $contract['props'][ContractEmitter::EXTENSION]['deferred'], 'Its query alone: the panel shows a document no route serves.');
+    $this->assertTrue($contract['props'][ContractEmitter::EXTENSION]['deferred']);
+    $this->assertSame([['rel' => 'choose', 'href' => '?choose=/props={value}', 'source' => ['value' => '1/component']]], $contract['props']['x-portable-links'], 'Its query alone: the panel shows a document no route serves.');
     $this->assertSame('surface_examples:card', $contract['allOf'][0]['if']['properties']['component']['const']);
     $this->assertCount(2, $contract['allOf'], 'The card\'s two conditionals, one per key.');
   }

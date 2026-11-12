@@ -31,11 +31,16 @@ use Drupal\surface\Contract\Keywords\Written;
  * | Count | array | `minItems`, `maxItems` | Count |
  * | UniqueItems | array | `uniqueItems: true`, last | UniqueItems |
  * | NotBlank | string | `minLength: 1` | Length, `min: 1` |
- * | Email | string | `format: idn-email` | the `email` type |
+ * | Email | string | `format: email` and `drupal:Email` | the `email` type |
  * | Regex | string | `pattern`, `not: {pattern}` | Regex |
- * | Uuid | string | `format: uuid` | Uuid |
+ * | Uuid | string | `format: uuid` and `drupal:Uuid` | Uuid |
  * | Sequentially | its parts' | `allOf` of its parts | Sequentially |
  * | AtLeastOneOf | its parts' | `anyOf` of its parts | AtLeastOneOf |
+ *
+ * Email and Uuid are each also named under `portable-check` beside their
+ * format (FORMAT_TWINS), since the format admits what the constraint
+ * refuses (`a@b`, the nil UUID): the document names every check the
+ * server runs.
  *
  * `exactly` on Length and Count is written as both bounds; an exclusive
  * bound on an integer reads back as Range. Each row's docblock says the
@@ -43,7 +48,7 @@ use Drupal\surface\Contract\Keywords\Written;
  *
  * Nothing is dropped silently: a constraint with a row that does not
  * apply to the value's type, or whose options its keywords cannot state,
- * is left to the caller, which names it under `x-surface.checkedOnServer`;
+ * is left to the caller, which names it under `portable-check`;
  * the reader keeps a row's keywords it cannot read in the JsonSchema
  * constraint. A constraint with no row is the caller's too: a list of
  * values is the options resolvers' `oneOf`, and the rest are checked on
@@ -59,6 +64,35 @@ use Drupal\surface\Contract\Keywords\Written;
  * @internal
  */
 final class ConstraintKeywords {
+
+  /**
+   * The constraints named beside the format they are the host's rule for.
+   *
+   * By plugin id, each format a `format` value. The check beside its
+   * format says no message of its own: the format's sentence and the
+   * constraint's own message say it.
+   *
+   * Decision: see docs/decisions.md#the-checks-the-document-names.
+   */
+  public const FORMAT_TWINS = [
+    'Email' => 'email',
+    'Uuid' => 'uuid',
+  ];
+
+  /**
+   * Answers whether a check is the host's twin of a node's format.
+   *
+   * @param string $constraint
+   *   The check's constraint plugin id.
+   * @param mixed $format
+   *   The node's `format`.
+   *
+   * @return bool
+   *   TRUE for Email beside `format: email` and Uuid beside `format: uuid`.
+   */
+  public static function isFormatTwin(string $constraint, mixed $format): bool {
+    return isset(self::FORMAT_TWINS[$constraint]) && self::FORMAT_TWINS[$constraint] === $format;
+  }
 
   /**
    * How a keyword two rows write on one property is merged, by keyword.
@@ -136,6 +170,29 @@ final class ConstraintKeywords {
   }
 
   /**
+   * Names the keywords read() reads of a schema.
+   *
+   * Each row's own (ConstraintRowInterface::keywords()), the `format` a
+   * row reads as a constraint (readsFormat()), and `x-portable-messages`,
+   * where a Regex's message stands. A reader hands read() these alone.
+   *
+   * @return array<string, true>
+   *   The keywords, as the keys.
+   */
+  public static function keywords(): array {
+    static $keywords = NULL;
+    if ($keywords === NULL) {
+      $keywords = ['format' => TRUE, PortableKeywords::MESSAGES => TRUE];
+      foreach (self::rows() as $row) {
+        foreach ($row->keywords() as $keyword) {
+          $keywords[$keyword] = TRUE;
+        }
+      }
+    }
+    return $keywords;
+  }
+
+  /**
    * Names the constraints a row maps.
    *
    * @return string[]
@@ -193,11 +250,11 @@ final class ConstraintKeywords {
    *   constraints' keywords are merged into.
    *
    * @return array{keywords: array, extras: array, left: list<array{0: string, 1: mixed, 2: bool}>}
-   *   The keywords, those given first; what goes under `x-surface` beside
-   *   them; and each constraint the keywords do not state whole, in
-   *   order, with its options and whether a row maps it. A row's
-   *   constraint left here is checked on the server; one with no row is
-   *   the caller's to decide.
+   *   The keywords, those given first; what goes beside them (a Regex's
+   *   message by code, under `messages`); and each constraint the
+   *   keywords do not state whole, in order, with its options and whether
+   *   a row maps it. A row's constraint left here is checked on the
+   *   server; one with no row is the caller's to decide.
    */
   public static function state(iterable $constraints, array $types, array $keywords = []): array {
     $extras = [];
@@ -217,7 +274,10 @@ final class ConstraintKeywords {
         continue;
       }
       $keywords = $merged;
-      $extras += $written->extras;
+      foreach ($written->extras as $extra => $value) {
+        // A map (the messages by code) gains what it does not hold yet.
+        $extras[$extra] = is_array($value) && is_array($extras[$extra] ?? NULL) ? $extras[$extra] + $value : $extras[$extra] ?? $value;
+      }
       if (!$written->whole || $written->keywords === []) {
         $left[] = [$id, $options, TRUE];
       }

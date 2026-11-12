@@ -478,6 +478,12 @@ of `keywords()`, listed below), naming the constraint under
 `checkedOnServer` instead; or `idn-email` for email, if the email
 validator is held to it.
 
+**Since contract 5: closed the other way.** The server holds a request's
+values to the document by the dialect's validator, which asserts every
+`format`, so the pipeline refuses what the documents refuse: a non-ASCII
+local part, a URI with no scheme or with a space, a date and time with
+no offset ([decision](decisions.md#validation-runs-through-the-dialects-validator)).
+
 ### The pipeline stores a value in another type
 
 **Test:** `testValuesTheCastLeavesInAnotherTypeAreStored`. An outright
@@ -561,8 +567,8 @@ became.*
 | 8 | Collections | The decided drop stands; on the accepted document it holds (a blank row is not in it) | the cellar's "four racks and a blank row" row |
 | 9 | Narrowing composition | A locked list's items carry no `const`, only the lock | `::testLockedCollectionItemsCarryNoConst()` |
 | 10 | Locked keys | Neither: the posted value is a notation; the accepted document holds the locked value, which `const` states | the cellar's "a posted larder is ignored" row |
-| Outside | `format` | Stays, as an annotation per JSON Schema 2020-12; the suite's validator does not assert it (why: [decision](decisions.md#format-is-an-annotation)) | the "format is advisory" rows |
-| Outside | Values stored in another type | An alignment with the Tool API's table: `TRUE` for an integer is `1` now. `TRUE` for a float or a string, and `'01'` or `'1.0'` for a boolean, are left by the table and let through by core's PrimitiveType check, at both doors alike | `InputCoercionMatrixTest::testValuesTheTableLeavesAndCoreLetsThrough()` |
+| Outside | `format` | Asserted since contract 5, by the server and the suite's validator alike (why: [decision](decisions.md#validation-runs-through-the-dialects-validator)) | the "format is asserted" rows |
+| Outside | Values stored in another type | An alignment with the Tool API's table: `TRUE` for an integer is `1` now. `TRUE` for a float or a string, and `'01'` or `'1.0'` for a boolean, are left by the table and refused by the validator as `type`, at both doors alike (contract 5) | `InputCoercionMatrixTest::testValuesTheTableLeavesAreRefused()` |
 
 What the decisions cost, said once:
 

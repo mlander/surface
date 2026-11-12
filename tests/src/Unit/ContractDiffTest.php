@@ -107,6 +107,171 @@ class ContractDiffTest extends UnitTestCase {
   }
 
   /**
+   * Tests the dialect's two keywords are judged where the standard ones are.
+   *
+   * A check added narrows, one removed widens, its options changed is a
+   * note, the constraint ids being the map's keys; a message changed is a
+   * note.
+   */
+  public function testChecksAndMessagesAreJudged(): void {
+    $check = ['properties', 'code', 'portable-check'];
+    $messages = ['properties', 'code', 'x-portable-messages'];
+    $baseline = self::BASELINE;
+    $baseline['schema'] = self::patched($baseline['schema'], $check, [
+      'drupal:UniqueCode' => [],
+      'drupal:JsonSchema' => ['schema' => ['minLength' => 2]],
+    ]);
+    $baseline['schema'] = self::patched($baseline['schema'], $messages, ['check.drupal:UniqueCode' => 'A code no other event has.']);
+    $current = $baseline;
+    $current['schema'] = self::patched($current['schema'], $check, [
+      'drupal:JsonSchema' => ['schema' => ['minLength' => 3]],
+      'drupal:SurfaceUnique' => [],
+    ]);
+    $current['schema'] = self::patched($current['schema'], $messages, ['check.drupal:SurfaceUnique' => 'Not taken.']);
+    $said = static fn (ContractChange $change): array => [$change->path, $change->change, $change->effect];
+    $found = array_map($said, (new ContractDiff())->compare($baseline, $current));
+    $at = 'configure#/properties/code/';
+    $this->assertSame([
+      [$at . 'portable-check/drupal:UniqueCode', 'no longer checked on the server: drupal:UniqueCode', 'widens'],
+      [$at . 'portable-check/drupal:JsonSchema', 'the options of the check drupal:JsonSchema changed', 'note'],
+      [$at . 'portable-check/drupal:SurfaceUnique', 'checked on the server now: drupal:SurfaceUnique', 'narrows'],
+      [$at . 'x-portable-messages', 'the messages changed', 'note'],
+    ], $found);
+  }
+
+  /**
+   * Tests a host's rule named beside its unchanged format only notes.
+   *
+   * `drupal:Email` beside `format: email` and `drupal:Uuid` beside
+   * `format: uuid` are rules the server applied beside the format before
+   * the document named them. The same check added where the format
+   * changes, or beside another format, narrows.
+   */
+  public function testTwinBesideItsFormatOnlyNotes(): void {
+    $baseline = self::BASELINE;
+    $baseline['schema'] = self::patched($baseline['schema'], ['properties', 'code', 'format'], 'email');
+    $baseline['schema'] = self::patched($baseline['schema'], ['$defs', 'event.contact', 'properties', 'email', 'format'], 'uuid');
+    $current = $baseline;
+    $current['schema'] = self::patched($current['schema'], ['properties', 'code', 'portable-check'], ['drupal:Email' => []]);
+    $contact = ['$defs', 'event.contact', 'properties', 'email'];
+    $current['schema'] = self::patched($current['schema'], [...$contact, 'portable-check'], ['drupal:Uuid' => []]);
+    $changes = (new ContractDiff())->compare($baseline, $current);
+    $this->assertCount(2, $changes);
+    foreach ($changes as $change) {
+      $verdict = [$change->effect, $change->status];
+      $this->assertSame([ContractDiff::NOTE, ContractChange::COMPATIBLE], $verdict, $change->change);
+      $this->assertStringContainsString('which the server checked already', $change->change);
+    }
+
+    // Beside another format, or with the format added, it narrows.
+    $other = $baseline;
+    $other['schema'] = self::patched($other['schema'], ['properties', 'code', 'portable-check'], ['drupal:Uuid' => []]);
+    $said = static fn (ContractChange $change): array => [$change->change, $change->effect];
+    $found = array_map($said, (new ContractDiff())->compare($baseline, $other));
+    $this->assertSame([['checked on the server now: drupal:Uuid', ContractDiff::NARROWS]], $found);
+    $added = self::BASELINE;
+    $added['schema'] = self::patched($added['schema'], ['properties', 'code', 'format'], 'email');
+    $added['schema'] = self::patched($added['schema'], ['properties', 'code', 'portable-check'], ['drupal:Email' => []]);
+    $effect = static fn (ContractChange $change): string => $change->effect;
+    $effects = array_map($effect, (new ContractDiff())->compare(self::BASELINE, $added));
+    $this->assertSame([ContractDiff::NARROWS, ContractDiff::NARROWS], $effects);
+  }
+
+  /**
+   * Tests `format` is judged as the assertion it is, as `pattern` is.
+   *
+   * Added to an input it narrows, removed from an output it widens what a
+   * client may meet, changed it replaces.
+   */
+  public function testFormatIsAnAssertion(): void {
+    $diff = new ContractDiff();
+    $current = self::BASELINE;
+    $current['schema'] = self::patched($current['schema'], ['properties', 'code', 'format'], 'email');
+    $change = $diff->compare(self::BASELINE, $current)[0];
+    $verdict = [$change->change, $change->effect, $change->status];
+    $this->assertSame(['format added', ContractDiff::NARROWS, ContractChange::BREAKING], $verdict);
+
+    $changed = $current;
+    $changed['schema'] = self::patched($changed['schema'], ['properties', 'code', 'format'], 'date');
+    $this->assertSame(ContractDiff::BREAKS, $diff->compare($current, $changed)[0]->effect);
+
+    $at = ['type' => 'string', 'format' => 'date-time'];
+    $read = self::BASELINE + ['outputs' => ['type' => 'object', 'properties' => ['at' => $at]]];
+    $looser = $read;
+    unset($looser['outputs']['properties']['at']['format']);
+    $change = $diff->compare($read, $looser)[0];
+    $verdict = [$change->change, $change->effect, $change->status];
+    $this->assertSame(['format removed', ContractDiff::WIDENS, ContractChange::BREAKING], $verdict);
+  }
+
+  /**
+   * Tests the widget hints changed are a note, never a break.
+   */
+  public function testTheWidgetHintsChangedAreNoted(): void {
+    $ui = ['properties', 'code', 'x-portable-ui'];
+    $baseline = self::BASELINE;
+    $current = self::BASELINE;
+    $current['schema'] = self::patched($current['schema'], $ui, ['widget' => 'text', 'group' => 'about']);
+    $groups = ['about' => ['label' => 'About', 'widget' => 'fieldset']];
+    $current['schema'] = self::patched($current['schema'], ['x-portable-ui'], ['groups' => $groups]);
+    $said = static fn (ContractChange $change): array => [
+      $change->path,
+      $change->change,
+      $change->effect,
+      $change->status,
+    ];
+    $note = ['x-portable-ui changed', ContractDiff::NOTE, ContractChange::COMPATIBLE];
+    $this->assertSame([
+      ['configure#/properties/code/x-portable-ui', ...$note],
+      ['configure#/x-portable-ui', ...$note],
+    ], array_map($said, (new ContractDiff())->compare($baseline, $current)));
+    // Taken away again: a note too.
+    $this->assertSame([ContractDiff::NOTE, ContractDiff::NOTE], array_map(static fn (ContractChange $change): string => $change->effect, (new ContractDiff())->compare($current, $baseline)));
+  }
+
+  /**
+   * Tests the links and a check's options changed are noted.
+   *
+   * A link says where a client asks for what the document leaves out, and a
+   * check's options what the server holds a value to by name: neither
+   * changes what a value may be.
+   */
+  public function testTheLinksAndTheCheckOptionsChangedAreNoted(): void {
+    $venue = ['properties', 'venue'];
+    $baseline = self::BASELINE;
+    $baseline['schema'] = self::patched($baseline['schema'], [...$venue, 'portable-check'], ['drupal:SurfaceValidReference' => []]);
+    $current = $baseline;
+    $current['schema'] = self::patched($current['schema'], [...$venue, 'portable-check'], ['drupal:SurfaceValidReference' => ['entityTypeId' => 'event_venue']]);
+    $link = ['rel' => 'lookup', 'href' => '/surface-api/event:lookup?key=/venue{&q,limit}'];
+    $current['schema'] = self::patched($current['schema'], [...$venue, 'x-portable-links'], [$link]);
+    $said = static fn (ContractChange $change): array => [
+      $change->path,
+      $change->change,
+      $change->effect,
+      $change->status,
+    ];
+    $linked = [
+      'configure#/properties/venue/x-portable-links',
+      'x-portable-links changed',
+      ContractDiff::NOTE,
+      ContractChange::COMPATIBLE,
+    ];
+    $this->assertSame([
+      [
+        'configure#/properties/venue/portable-check/drupal:SurfaceValidReference',
+        'the options of the check drupal:SurfaceValidReference changed',
+        ContractDiff::NOTE,
+        ContractChange::COMPATIBLE,
+      ],
+      $linked,
+    ], array_map($said, (new ContractDiff())->compare($baseline, $current)));
+    // Taken away again, and a link changed: notes too.
+    $this->assertSame([ContractDiff::NOTE, ContractDiff::NOTE], array_map(static fn (ContractChange $change): string => $change->effect, (new ContractDiff())->compare($current, $baseline)));
+    $moved = self::patched($current['schema'], [...$venue, 'x-portable-links'], [['href' => '/surface-api/event/{id}:lookup?key=/venue{&q,limit}'] + $link]);
+    $this->assertSame([$linked], array_map($said, (new ContractDiff())->compare($current, ['schema' => $moved] + $current)));
+  }
+
+  /**
    * Sets or removes one value at a path.
    *
    * @param array $schema
@@ -196,13 +361,7 @@ class ContractDiffTest extends UnitTestCase {
       ],
       'a rule tightened' => [['allOf/0/then/properties/capacity/maximum' => 60], ContractDiff::NARROWS, $breaking],
       'a constraint only the server checks added' => [
-        [
-          'properties/code/x-surface' => [
-            'checkedOnServer' => [
-              ['constraint' => 'UniqueCode', 'message' => 'A code no other event has'],
-            ],
-          ],
-        ],
+        ['properties/code/portable-check' => ['drupal:UniqueCode' => []]],
         ContractDiff::NARROWS,
         $breaking,
       ],

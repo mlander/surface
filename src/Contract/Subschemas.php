@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface\Contract;
 
 use Drupal\surface\SurfaceInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The subschemas one emission writes under `$defs`, as it writes them.
@@ -28,7 +29,7 @@ final class Subschemas {
   /**
    * The defs written so far, by key, in the order they were finished.
    *
-   * @var array<string, array>
+   * @var array<string, \PortableSchema\Builder\Schema>
    */
   protected array $defs = [];
 
@@ -64,18 +65,23 @@ final class Subschemas {
    *   Whether the document is the full schema (emitFull()).
    * @param string[] $transient
    *   The `x-surface` keywords the document strips once it is written:
-   *   what is only true of a moment, in the full schema, and the widget
-   *   hints, when they were not asked for. A reference site differing
-   *   from its def in nothing but these differs in nothing.
+   *   what is only true of a moment, in the full schema. A reference site
+   *   differing from its def in nothing but these, and $ui, differs in
+   *   nothing.
    * @param string[] $open
    *   The ids of the structures the document mixes in somewhere: each
    *   one's def is written open, so an owner can compose it with keys of
    *   its own, and every other place it is used closes it.
+   * @param string[] $ui
+   *   The `x-portable-ui` members and options the document strips once it
+   *   is written: the empty option, in the full schema, and the widget
+   *   hints, when they were not asked for (PortableUi::without()).
    */
   public function __construct(
     public readonly bool $full,
     public readonly array $transient,
     protected array $open = [],
+    public readonly array $ui = [],
   ) {
     $this->keys = new \SplObjectStorage();
     $this->writing = new \SplObjectStorage();
@@ -124,7 +130,7 @@ final class Subschemas {
    *
    * @param string $id
    *   The child's id.
-   * @param array $def
+   * @param \PortableSchema\Builder\Schema $def
    *   Its declaration, as its own frame describes it for no values.
    * @param \Drupal\surface\SurfaceInterface $child
    *   The child it was written from.
@@ -138,10 +144,10 @@ final class Subschemas {
    *   The key it is filed under: the id, unless the id holds a different
    *   declaration already.
    */
-  public function add(string $id, array $def, SurfaceInterface $child, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL): string {
+  public function add(string $id, Schema $def, SurfaceInterface $child, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL): string {
     $this->writing->detach($child);
     $key = $id;
-    for ($n = 2; isset($this->defs[$key]) && !self::same($this->defs[$key], $def); $n++) {
+    for ($n = 2; isset($this->defs[$key]) && !Schemas::same($this->defs[$key], $def); $n++) {
       $key = $id . '@' . $n;
     }
     $this->defs[$key] ??= $def;
@@ -165,10 +171,10 @@ final class Subschemas {
    * @param string $key
    *   Its key.
    *
-   * @return array|null
+   * @return \PortableSchema\Builder\Schema|null
    *   The def, or NULL while it is being written.
    */
-  public function get(string $key): ?array {
+  public function get(string $key): ?Schema {
     return $this->defs[$key] ?? NULL;
   }
 
@@ -207,7 +213,7 @@ final class Subschemas {
   /**
    * Gets every def, for the document's `$defs`.
    *
-   * @return array<string, array>
+   * @return array<string, \PortableSchema\Builder\Schema>
    *   The defs, by key.
    */
   public function all(): array {
@@ -224,33 +230,15 @@ final class Subschemas {
    * Decision: see
    * docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
    *
-   * @return array<string, array>
+   * @return array<string, \PortableSchema\Builder\Schema>
    *   The defs, by key.
    */
   public function named(): array {
     $defs = [];
     foreach ($this->defs as $key => $def) {
-      $defs[$key] = ($this->names[$key] ?? []) + $def;
+      $defs[$key] = Schemas::first($def, $this->names[$key] ?? []);
     }
     return $defs;
-  }
-
-  /**
-   * Answers whether two pieces of a schema say the same.
-   *
-   * By their JSON: an empty object is written as an `\stdClass`, which
-   * PHP compares by identity.
-   *
-   * @param mixed $a
-   *   One.
-   * @param mixed $b
-   *   The other.
-   *
-   * @return bool
-   *   TRUE when they encode the same.
-   */
-  public static function same(mixed $a, mixed $b): bool {
-    return $a === $b || json_encode($a) === json_encode($b);
   }
 
 }

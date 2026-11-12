@@ -54,7 +54,10 @@ final class ChoiceOptions extends SurfaceOptionsResolverBase {
     assert($constraint instanceof Choice);
     $options = [];
     foreach ($constraint->choices ?? [] as $choice) {
-      $options[$choice] = $choice;
+      // A float is no array key: PHP would cut 1.5 to 1. It is keyed as
+      // JSON writes it, which PropertySchema::cast() reads back as the
+      // number.
+      $options[is_float($choice) ? (string) json_encode($choice, JSON_PRESERVE_ZERO_FRACTION) : $choice] = $choice;
     }
     return new OptionSet($options);
   }

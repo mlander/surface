@@ -17,6 +17,8 @@ use Drupal\surface\Contract\UnknownChoiceException;
 use Drupal\surface\Operation\OperationRun;
 use Drupal\surface\Operation\Refusal;
 use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Form\DocumentNarrowing;
+use Drupal\surface\Form\NarrowsDocumentsInterface;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
@@ -138,6 +140,9 @@ final class ResourceApiController implements ContainerInjectionInterface {
    * @param \Drupal\surface\Contract\SiteListBudget|null $budget
    *   The site list limit: a refused choice lists the values of a list no
    *   longer than it.
+   * @param \Drupal\surface\Form\NarrowsDocumentsInterface|null $narrowing
+   *   The narrowing of the document for an edit in progress, which a
+   *   form's rebuild draws from too; NULL for the form builder's own.
    */
   public function __construct(
     protected readonly ServedOperations $servedOperations,
@@ -148,6 +153,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     TranslationInterface $stringTranslation,
     protected readonly References $references,
     protected readonly ?SiteListBudget $budget = NULL,
+    protected readonly ?NarrowsDocumentsInterface $narrowing = NULL,
   ) {
     $this->stringTranslation = $stringTranslation;
   }
@@ -165,6 +171,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
       $container->get('string_translation'),
       $container->get('surface.references'),
       $container->get('surface.site_list_budget'),
+      $container->get('surface.document_narrowing'),
     );
   }
 
@@ -378,13 +385,17 @@ final class ResourceApiController implements ContainerInjectionInterface {
     $choices = $this->choices($request, $definition->id, $declared);
     $url = $id->getGeneratedUrl();
     $chosen = $choices->isEmpty() ? $url : $url . (str_contains($url, '?') ? '&' : '?') . Choices::query($choices->all());
-    $full = $this->emitter->emitFull($declared, $definition->id, $operation->id, $operation->label, widgets: TRUE, operation: $operation->facts(), id: $chosen, choices: $choices, schema_url: $url);
+    $lookup = $this->lookupAt($definition, $operation, $target->parameters);
+    $full = $this->emitter->emitFull($declared, $definition->id, $operation->id, $operation->label, widgets: TRUE, operation: $operation->facts(), id: $chosen, choices: $choices, schema_url: $url, lookup_url: $lookup?->getGeneratedUrl());
     $response = new CacheableJsonResponse($full->document['schema']);
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     $response->headers->set('Content-Type', self::SCHEMA_TYPE);
     $response->headers->set(self::VERSION_HEADER, (string) ContractEmitter::CONTRACT);
     $response->addCacheableDependency($full);
     $response->addCacheableDependency($id);
+    if ($lookup !== NULL) {
+      $response->addCacheableDependency($lookup);
+    }
     $response->addCacheableDependency($gated->access());
     $response->getCacheableMetadata()->addCacheContexts(['url.query_args', 'languages:language_interface']);
     return $response;
@@ -461,16 +472,18 @@ final class ResourceApiController implements ContainerInjectionInterface {
     // them.
     $input = array_intersect_key($body, $served->surface->getDefinitions()->toArray());
     $input = $this->servedOperations->keepStale($input, $current, $this->stalePaths($request));
-    // A key, or a dotted path to one inside an attached child or a variant,
-    // dropped the way SurfaceHostTrait::surfaceFormValues() drops it.
-    $discarded = $this->formBuilder->discardedRefinementInput($served->surface, $current, $input);
-    // And emitted from the same overlay the form is rebuilt from, settled
-    // to its fixed point: a key falling back to a stored value this edit
-    // orphaned is held unanswered, so nothing below it is refined against
-    // it, and is shown stale, standing for that value.
-    $contract = $this->emit($served, $this->formBuilder->refinementOverlay($served->surface, $current, $input));
-    return $this->respond($this->envelope($contract) + [
-      'discarded' => array_values(array_map(ResultDocument::pointer(...), $discarded)),
+    // The one narrowing a form's rebuild draws from too: a key, or a
+    // dotted path to one inside an attached child or a variant, dropped
+    // the way SurfaceHostTrait::surfaceFormValues() drops it, and the
+    // envelope emitted from the same overlay, settled to its fixed point:
+    // a key falling back to a stored value this edit orphaned is held
+    // unanswered, so nothing below it is refined against it, and is shown
+    // stale, standing for that value.
+    // Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
+    $narrowing = $this->narrowing ?? new DocumentNarrowing($this->formBuilder, $this->emitter);
+    $narrowed = $narrowing->narrow($served->surface, $current, $input, fn (array $values): ServedContract => $this->emit($served, $values));
+    return $this->respond($this->envelope($narrowed->contract()) + [
+      'discarded' => array_values(array_map(ResultDocument::pointer(...), $narrowed->discarded)),
     ]);
   }
 
@@ -753,7 +766,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
    * Emits the contract of a served operation for some values.
    *
    * With the widget hints: the app draws each key from its
-   * `x-surface.widget`, which the canonical contract leaves out.
+   * `x-portable-ui.widget`, which the canonical contract leaves out.
    *
    * @param \Drupal\surface_http\ServedOperation $served
    *   The operation.
@@ -765,12 +778,43 @@ final class ResourceApiController implements ContainerInjectionInterface {
    */
   protected function emit(ServedOperation $served, array $values): ServedContract {
     $id = $this->location($served->definition, $served->operation, $served->parameters);
-    // A deferred key's `fetch` is written against the full schema's URL.
+    // A deferred key's `choose` link is written against the full schema's URL.
     $schema = $this->location($served->definition, $served->operation, $served->parameters, TRUE);
-    $contract = $this->emitter->emit($served->surface, $values, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts(), id: $id->getGeneratedUrl(), schema_url: $schema->getGeneratedUrl());
+    // A reference key's `lookup` link is written against the lookup's URL.
+    $lookup = $this->lookupAt($served->definition, $served->operation, $served->parameters);
+    $contract = $this->emitter->emit($served->surface, $values, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts(), id: $id->getGeneratedUrl(), schema_url: $schema->getGeneratedUrl(), lookup_url: $lookup?->getGeneratedUrl());
     $contract->cacheability->addCacheableDependency($id);
     $contract->cacheability->addCacheableDependency($schema);
+    if ($lookup !== NULL) {
+      $contract->cacheability->addCacheableDependency($lookup);
+    }
     return $contract;
+  }
+
+  /**
+   * Names the URL of the lookup for a served operation's keys.
+   *
+   * Concrete, as its schema's URL is: the request's parameters in it.
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
+   *
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
+   *   The operation it is served as.
+   * @param array $parameters
+   *   The operation's parameters, as the request gave them.
+   *
+   * @return \Drupal\Core\GeneratedUrl|null
+   *   The URL, absolute; NULL for an operation `GET` does not serve at its
+   *   path, whose keys the lookup there does not answer for.
+   */
+  protected function lookupAt(ResourceDefinition $definition, OperationDefinition $operation, array $parameters): ?GeneratedUrl {
+    if (!$this->servedPaths->readsPlain($definition, $operation)) {
+      return NULL;
+    }
+    return $this->servedPaths->lookupUrl($definition, $operation, array_filter($parameters, 'is_scalar'), ['absolute' => TRUE]);
   }
 
   /**

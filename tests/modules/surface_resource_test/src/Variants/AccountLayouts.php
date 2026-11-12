@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface_resource_test\Variants;
 
 use Drupal\surface\Resource\SiteList;
+use PortableSchema\Builder\Schema;
 use Drupal\surface\Resource\SiteListInterface;
 
 /**
@@ -16,7 +17,7 @@ final class AccountLayouts implements SiteListInterface {
    * {@inheritdoc}
    */
   public function list(): SiteList {
-    return (new SiteList())->add('mine', 'Mine', schema: ['type' => 'object', 'properties' => []])->addCacheContexts(['user.permissions']);
+    return (new SiteList())->add('mine', 'Mine', schema: Schema::from(['type' => 'object', 'properties' => []]))->addCacheContexts(['user.permissions']);
   }
 
 }

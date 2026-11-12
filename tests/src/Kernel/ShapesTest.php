@@ -8,6 +8,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\Condition;
@@ -42,6 +43,7 @@ use Drupal\tool\TypedData\InputDefinitionInterface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Shapes: one scalar definition, named, used at many keys.
@@ -102,7 +104,7 @@ class ShapesTest extends SurfaceKernelTestBase {
     'pattern' => '^[A-Z]{2}\d+$',
     'maxLength' => 12,
     'examples' => ['AB12'],
-    'x-surface' => ['patternMessage' => 'A stock code is two capitals and digits, such as AB12.'],
+    'x-portable-messages' => ['pattern' => 'A stock code is two capitals and digits, such as AB12.'],
   ];
 
   /**
@@ -419,7 +421,7 @@ class ShapesTest extends SurfaceKernelTestBase {
       'title' => 'Stock code',
       'type' => 'string',
       'minLength' => 4,
-      'x-surface' => ['patternMessage' => self::PATTERN['message']],
+      'x-portable-messages' => ['pattern' => self::PATTERN['message']],
     ], $full['properties']['sku']);
     $this->assertSame([
       '$ref' => '#/$defs/resource_test.sku',
@@ -427,7 +429,7 @@ class ShapesTest extends SurfaceKernelTestBase {
       'description' => 'Printed on the back of the shelf.',
       'maxLength' => 6,
       'default' => 'ZZ9',
-      'x-surface' => ['patternMessage' => self::PATTERN['message']],
+      'x-portable-messages' => ['pattern' => self::PATTERN['message']],
     ], $full['properties']['spare']);
     $this->assertSame(['code' => ['type' => 'string', 'required' => TRUE, 'shape' => 'resource_test.sku']], $full['$defs']['resource_test.shelf_tag']['x-surface']['ports']);
 
@@ -438,14 +440,14 @@ class ShapesTest extends SurfaceKernelTestBase {
       'title' => 'Stock code',
       'type' => 'string',
       'minLength' => 4,
-      'x-surface' => [
-        'patternMessage' => self::PATTERN['message'],
+      'x-portable-messages' => [
+        'pattern' => self::PATTERN['message'],
       ],
     ], $these['properties']['sku']);
     $this->assertSame('#/$defs/resource_test.sku', $these['properties']['spare']['$ref']);
 
     // Read inline, each key is the def with the key laid over it.
-    $inline = SchemaResolver::inline($full);
+    $inline = Schemas::decoded(SchemaResolver::inline(Schema::from($full)));
     $this->assertSame([
       'title' => 'Stock code',
       'description' => self::DEF['description'],
@@ -453,7 +455,7 @@ class ShapesTest extends SurfaceKernelTestBase {
       'pattern' => self::DEF['pattern'],
       'maxLength' => 12,
       'examples' => ['AB12'],
-      'x-surface' => $full['properties']['sku']['x-surface'],
+      'x-portable-messages' => ['pattern' => self::PATTERN['message']],
       'minLength' => 4,
     ], $inline['properties']['sku']);
     $this->assertSame(['Spare code', 'Printed on the back of the shelf.', ['string', 'null'], 6], [

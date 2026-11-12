@@ -8,21 +8,23 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
+use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Options\OptionSet;
 use Drupal\surface\Widget\ChoiceWidgetBase;
+use Drupal\surface\Widget\WidgetContext;
+use PortableSchema\Builder\Schema;
 
 /**
  * Checkboxes for a list of allowed values that a column of them shows.
  *
- * A list whose item names a list of values (a Choice, a LabeledChoice,
- * AllowedValues or a resolver's list) is drawn as checkboxes while it
- * offers at most MAXIMUM_OPTIONS values, and as a multiple select (the
+ * A list whose item names a list of values is drawn as checkboxes while
+ * it offers at most MAXIMUM_OPTIONS values, and as a multiple select (the
  * options widget) above that, where a column of checkboxes stops being
- * something a person scans. A multiple select asks for a modifier key to
- * choose more than one and drops every choice on a stray click, so it is
- * kept for the long lists alone. The definition overrides the count with
- * its `widget` setting: `checkboxes` at any length, `select` at any
- * length.
+ * something a person scans. The definition overrides the count with its
+ * `widget` setting: `checkboxes` at any length, `select` at any length.
+ * The document names the choice `checkboxes`, and the node's `items`
+ * offer the values.
  *
  * Checkboxes post every option, each with its value or 0; the base class
  * reads that back as the list of the values checked, so all unchecked is
@@ -30,8 +32,7 @@ use Drupal\surface\Widget\ChoiceWidgetBase;
  * what it showed, which keeps it.
  *
  * Never #required, as the boolean widget's checkbox is not: a required
- * list must hold a value, and the empty list is one, so a required
- * checkboxes element would ask for more than the list does.
+ * list must hold a value, and the empty list is one.
  *
  * Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
  */
@@ -40,7 +41,7 @@ use Drupal\surface\Widget\ChoiceWidgetBase;
   label: new TranslatableMarkup('Checkboxes'),
   weight: -15,
 )]
-final class CheckboxesWidget extends ChoiceWidgetBase {
+final class CheckboxesWidget extends ChoiceWidgetBase implements DefinitionWidgetInterface {
 
   /**
    * The most values a list offers and is still drawn as checkboxes.
@@ -76,26 +77,30 @@ final class CheckboxesWidget extends ChoiceWidgetBase {
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(DataDefinitionInterface $definition): bool {
-    $set = $definition instanceof ListDataDefinitionInterface ? $this->optionSet($definition) : NULL;
+  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
+    $set = $definition instanceof ListDataDefinitionInterface ? $choice->optionSet($definition) : NULL;
     return $set !== NULL && static::drawsList($definition, $set);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
-    $set = $this->optionSet($definition);
-    $element = $this->baseElement($definition) + [
+  public function isApplicable(Schema $node, WidgetContext $context): bool {
+    return static::type($node) === 'array' && static::offers(static::offering($node));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
+    [$options, $descriptions] = static::choices(static::offering($node));
+    $element = $this->baseElement($node, $context) + [
       '#type' => 'checkboxes',
-      '#options' => $set === NULL ? [] : $set->options,
+      '#options' => $options,
       '#default_value' => array_values(array_filter(is_array($value) ? $value : [], 'is_scalar')),
     ];
     $element['#required'] = FALSE;
-    if ($set !== NULL) {
-      $element = static::describedOptions($element, $set);
-    }
-    return static::cachedBy($element, $set);
+    return static::describedOptions($element, $descriptions);
   }
 
 }

@@ -98,11 +98,11 @@ class RecipesTest extends SurfaceKernelTestBase {
     $full = $this->container->get('surface.contract_emitter')->emitFull($hours, 'resource_test.opening_hours', widgets: TRUE)->document['schema'];
     $this->assertSame('^([01]\d|2[0-3]):[0-5]\d$', $full['properties']['opens']['pattern']);
     $this->assertSame([721, 1439], [$full['properties']['closes']['minimum'], $full['properties']['closes']['maximum']]);
-    $this->assertSame('textarea', $full['properties']['notes']['x-surface']['widget']);
-    $this->assertSame('time', $full['properties']['opens']['x-surface']['widget']);
-    $this->assertSame('checkboxes', $full['properties']['days']['x-surface']['widget']);
+    $this->assertSame('textarea', $full['properties']['notes']['x-portable-ui']['widget']);
+    $this->assertSame('time', $full['properties']['opens']['x-portable-ui']['widget']);
+    $this->assertSame('checkboxes', $full['properties']['days']['x-portable-ui']['widget']);
     $this->assertTrue($full['properties']['days']['uniqueItems'], 'Each day once, stated.');
-    $this->assertSame('list', $full['properties']['keywords']['x-surface']['widget']);
+    $this->assertSame('list', $full['properties']['keywords']['x-portable-ui']['widget']);
     $this->assertSame(1, $full['properties']['late_days']['minItems'], 'At least one day, stated wherever the key applies.');
   }
 

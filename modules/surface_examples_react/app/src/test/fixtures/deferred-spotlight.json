@@ -4,12 +4,12 @@
     "operation": "configure",
     "label": "Configure the spotlight",
     "schema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$schema": "https://portable-schema.dev/v1/schema",
       "$id": "/surface-api/event.spotlight",
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 4,
+        "contract": 5,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -45,11 +45,13 @@
             }
           ],
           "default": "surface_examples:card",
-          "x-surface": {
+          "x-portable-ui": {
             "widget": "select",
-            "emptyOption": {
-              "show": false,
-              "label": "- Select -"
+            "options": {
+              "emptyOption": {
+                "show": false,
+                "label": "- Select -"
+              }
             }
           }
         },
@@ -63,8 +65,10 @@
               "type": "null"
             }
           ],
+          "x-portable-ui": {
+            "widget": "variants"
+          },
           "x-surface": {
-            "widget": "variants",
             "dependsOn": [
               "component"
             ],
@@ -86,8 +90,10 @@
               "type": "null"
             }
           ],
+          "x-portable-ui": {
+            "widget": "variants"
+          },
           "x-surface": {
-            "widget": "variants",
             "dependsOn": [
               "component"
             ],
@@ -155,7 +161,7 @@
               "title": "Heading",
               "type": "string",
               "maxLength": 80,
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "text"
               }
             },
@@ -173,11 +179,13 @@
                 }
               ],
               "default": "plain",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "select",
-                "emptyOption": {
-                  "show": false,
-                  "label": "- Select -"
+                "options": {
+                  "emptyOption": {
+                    "show": false,
+                    "label": "- Select -"
+                  }
                 }
               }
             },
@@ -195,7 +203,7 @@
                     "null"
                   ],
                   "format": "uri",
-                  "x-surface": {
+                  "x-portable-ui": {
                     "widget": "text"
                   }
                 },
@@ -205,13 +213,13 @@
                     "string",
                     "null"
                   ],
-                  "x-surface": {
+                  "x-portable-ui": {
                     "widget": "text"
                   }
                 }
               },
               "additionalProperties": false,
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "fieldset"
               }
             }
@@ -235,11 +243,13 @@
                 }
               ],
               "default": "text",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "select",
-                "emptyOption": {
-                  "show": false,
-                  "label": "- Select -"
+                "options": {
+                  "emptyOption": {
+                    "show": false,
+                    "label": "- Select -"
+                  }
                 }
               }
             },
@@ -249,8 +259,10 @@
                 "string",
                 "null"
               ],
+              "x-portable-ui": {
+                "widget": "textarea"
+              },
               "x-surface": {
-                "widget": "textarea",
                 "dependsOn": [
                   "kind"
                 ]
@@ -293,7 +305,7 @@
               "title": "Text",
               "description": "A line under the heading.",
               "$ref": "#/$defs/component.slot.text",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "fieldset"
               }
             }
@@ -323,12 +335,12 @@
     "notes": []
   },
   "full": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$schema": "https://portable-schema.dev/v1/schema",
     "$id": "/surface-api/event.spotlight/schema",
     "title": "Configure the spotlight",
     "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
     "x-surface": {
-      "contract": 4,
+      "contract": 5,
       "operation": {
         "id": "configure",
         "label": "Configure the spotlight",
@@ -364,7 +376,7 @@
           }
         ],
         "default": "surface_examples:card",
-        "x-surface": {
+        "x-portable-ui": {
           "widget": "select"
         }
       },
@@ -374,15 +386,24 @@
           "object",
           "null"
         ],
+        "x-portable-ui": {
+          "widget": "variants"
+        },
+        "x-portable-links": [
+          {
+            "rel": "choose",
+            "href": "/surface-api/event.spotlight/schema?choose=/props={value}",
+            "source": {
+              "value": "1/component"
+            }
+          }
+        ],
         "x-surface": {
-          "widget": "variants",
           "dependsOn": [
             "component"
           ],
           "by": "component",
-          "deferred": {
-            "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
-          }
+          "deferred": true
         }
       },
       "slots": {
@@ -391,15 +412,24 @@
           "object",
           "null"
         ],
+        "x-portable-ui": {
+          "widget": "variants"
+        },
+        "x-portable-links": [
+          {
+            "rel": "choose",
+            "href": "/surface-api/event.spotlight/schema?choose=/slots={value}",
+            "source": {
+              "value": "1/component"
+            }
+          }
+        ],
         "x-surface": {
-          "widget": "variants",
           "dependsOn": [
             "component"
           ],
           "by": "component",
-          "deferred": {
-            "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
-          }
+          "deferred": true
         }
       }
     },
@@ -410,12 +440,12 @@
   },
   "chosen": {
     "choose=/props=surface_examples%3Ahero": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$schema": "https://portable-schema.dev/v1/schema",
       "$id": "/surface-api/event.spotlight/schema?choose=/props=surface_examples:hero",
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 4,
+        "contract": 5,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -451,7 +481,7 @@
             }
           ],
           "default": "surface_examples:card",
-          "x-surface": {
+          "x-portable-ui": {
             "widget": "select"
           }
         },
@@ -461,8 +491,19 @@
             "object",
             "null"
           ],
+          "x-portable-ui": {
+            "widget": "variants"
+          },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/props={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
-            "widget": "variants",
             "dependsOn": [
               "component"
             ],
@@ -470,9 +511,7 @@
             "variants": {
               "surface_examples:hero": "#/$defs/event.spotlight.props.surface_examples:hero"
             },
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
-            }
+            "deferred": true
           }
         },
         "slots": {
@@ -481,15 +520,24 @@
             "object",
             "null"
           ],
+          "x-portable-ui": {
+            "widget": "variants"
+          },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/slots={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
-            "widget": "variants",
             "dependsOn": [
               "component"
             ],
             "by": "component",
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
-            }
+            "deferred": true
           }
         }
       },
@@ -527,7 +575,7 @@
             "title": {
               "title": "Title",
               "type": "string",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "text"
               }
             },
@@ -537,7 +585,7 @@
                 "string",
                 "null"
               ],
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "text"
               }
             },
@@ -555,7 +603,7 @@
                 }
               ],
               "default": "center",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "select"
               }
             },
@@ -566,7 +614,7 @@
               "minimum": 0,
               "maximum": 100,
               "default": 40,
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "number"
               }
             },
@@ -574,7 +622,7 @@
               "title": "Full width",
               "type": "boolean",
               "default": false,
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "checkbox"
               }
             }
@@ -587,12 +635,12 @@
       }
     },
     "choose=/props=surface_examples%3Ahero&choose=/slots=surface_examples%3Ahero": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$schema": "https://portable-schema.dev/v1/schema",
       "$id": "/surface-api/event.spotlight/schema?choose=/props=surface_examples:hero&choose=/slots=surface_examples:hero",
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 4,
+        "contract": 5,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -628,7 +676,7 @@
             }
           ],
           "default": "surface_examples:card",
-          "x-surface": {
+          "x-portable-ui": {
             "widget": "select"
           }
         },
@@ -638,8 +686,19 @@
             "object",
             "null"
           ],
+          "x-portable-ui": {
+            "widget": "variants"
+          },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/props={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
-            "widget": "variants",
             "dependsOn": [
               "component"
             ],
@@ -647,9 +706,7 @@
             "variants": {
               "surface_examples:hero": "#/$defs/event.spotlight.props.surface_examples:hero"
             },
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
-            }
+            "deferred": true
           }
         },
         "slots": {
@@ -658,8 +715,19 @@
             "object",
             "null"
           ],
+          "x-portable-ui": {
+            "widget": "variants"
+          },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/slots={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
-            "widget": "variants",
             "dependsOn": [
               "component"
             ],
@@ -667,9 +735,7 @@
             "variants": {
               "surface_examples:hero": "#/$defs/event.spotlight.slots.surface_examples:hero"
             },
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
-            }
+            "deferred": true
           }
         }
       },
@@ -727,7 +793,7 @@
             "title": {
               "title": "Title",
               "type": "string",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "text"
               }
             },
@@ -737,7 +803,7 @@
                 "string",
                 "null"
               ],
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "text"
               }
             },
@@ -755,7 +821,7 @@
                 }
               ],
               "default": "center",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "select"
               }
             },
@@ -766,7 +832,7 @@
               "minimum": 0,
               "maximum": 100,
               "default": 40,
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "number"
               }
             },
@@ -774,7 +840,7 @@
               "title": "Full width",
               "type": "boolean",
               "default": false,
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "checkbox"
               }
             }
@@ -792,7 +858,7 @@
               "title": "Button text",
               "type": "string",
               "maxLength": 40,
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "text"
               }
             },
@@ -800,7 +866,7 @@
               "title": "Address",
               "type": "string",
               "format": "uri",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "text"
               }
             },
@@ -818,7 +884,7 @@
                 }
               ],
               "default": "primary",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "select"
               }
             },
@@ -826,7 +892,7 @@
               "title": "Open in a new window",
               "type": "boolean",
               "default": false,
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "checkbox"
               }
             },
@@ -839,12 +905,12 @@
               ],
               "items": {
                 "type": "string",
-                "x-surface": {
+                "x-portable-ui": {
                   "widget": "text"
                 }
               },
               "maxItems": 3,
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "list"
               }
             }
@@ -874,7 +940,7 @@
                   "title": "Call to action"
                 }
               ],
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "select"
               }
             },
@@ -888,8 +954,10 @@
                   "type": "null"
                 }
               ],
+              "x-portable-ui": {
+                "widget": "variants"
+              },
               "x-surface": {
-                "widget": "variants",
                 "dependsOn": [
                   "component"
                 ],
@@ -909,8 +977,10 @@
                   "type": "null"
                 }
               ],
+              "x-portable-ui": {
+                "widget": "variants"
+              },
               "x-surface": {
-                "widget": "variants",
                 "dependsOn": [
                   "component"
                 ],
@@ -990,7 +1060,7 @@
                 }
               ],
               "default": "text",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "select"
               }
             },
@@ -1000,8 +1070,10 @@
                 "string",
                 "null"
               ],
+              "x-portable-ui": {
+                "widget": "textarea"
+              },
               "x-surface": {
-                "widget": "textarea",
                 "dependsOn": [
                   "kind"
                 ]
@@ -1010,8 +1082,10 @@
             "component": {
               "title": "Component",
               "$ref": "#/$defs/component.nested.surface_examples:call_to_action.1",
+              "x-portable-ui": {
+                "widget": "fieldset"
+              },
               "x-surface": {
-                "widget": "fieldset",
                 "dependsOn": [
                   "kind"
                 ]
@@ -1024,8 +1098,10 @@
               "items": {
                 "$ref": "#/$defs/component.nested.surface_examples:call_to_action.1"
               },
+              "x-portable-ui": {
+                "widget": "list"
+              },
               "x-surface": {
-                "widget": "list",
                 "dependsOn": [
                   "kind"
                 ],
@@ -1109,7 +1185,7 @@
               "title": "Actions",
               "description": "Up to two buttons under the title.",
               "$ref": "#/$defs/component.slot.surface_examples:hero.actions.1",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "fieldset"
               }
             }
@@ -1119,12 +1195,12 @@
       }
     },
     "choose=/props=surface_examples%3Acard": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$schema": "https://portable-schema.dev/v1/schema",
       "$id": "/surface-api/event.spotlight/schema?choose=/props=surface_examples:card",
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 4,
+        "contract": 5,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -1160,7 +1236,7 @@
             }
           ],
           "default": "surface_examples:card",
-          "x-surface": {
+          "x-portable-ui": {
             "widget": "select"
           }
         },
@@ -1170,8 +1246,19 @@
             "object",
             "null"
           ],
+          "x-portable-ui": {
+            "widget": "variants"
+          },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/props={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
-            "widget": "variants",
             "dependsOn": [
               "component"
             ],
@@ -1179,9 +1266,7 @@
             "variants": {
               "surface_examples:card": "#/$defs/event.spotlight.props.surface_examples:card"
             },
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
-            }
+            "deferred": true
           }
         },
         "slots": {
@@ -1190,15 +1275,24 @@
             "object",
             "null"
           ],
+          "x-portable-ui": {
+            "widget": "variants"
+          },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/slots={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
-            "widget": "variants",
             "dependsOn": [
               "component"
             ],
             "by": "component",
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
-            }
+            "deferred": true
           }
         }
       },
@@ -1237,7 +1331,7 @@
               "title": "Heading",
               "type": "string",
               "maxLength": 80,
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "text"
               }
             },
@@ -1255,7 +1349,7 @@
                 }
               ],
               "default": "plain",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "select"
               }
             },
@@ -1273,7 +1367,7 @@
                     "null"
                   ],
                   "format": "uri",
-                  "x-surface": {
+                  "x-portable-ui": {
                     "widget": "text"
                   }
                 },
@@ -1283,13 +1377,13 @@
                     "string",
                     "null"
                   ],
-                  "x-surface": {
+                  "x-portable-ui": {
                     "widget": "text"
                   }
                 }
               },
               "additionalProperties": false,
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "fieldset"
               }
             }
@@ -1302,12 +1396,12 @@
       }
     },
     "choose=/props=surface_examples%3Acard&choose=/slots=surface_examples%3Acard": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$schema": "https://portable-schema.dev/v1/schema",
       "$id": "/surface-api/event.spotlight/schema?choose=/props=surface_examples:card&choose=/slots=surface_examples:card",
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 4,
+        "contract": 5,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -1343,7 +1437,7 @@
             }
           ],
           "default": "surface_examples:card",
-          "x-surface": {
+          "x-portable-ui": {
             "widget": "select"
           }
         },
@@ -1353,8 +1447,19 @@
             "object",
             "null"
           ],
+          "x-portable-ui": {
+            "widget": "variants"
+          },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/props={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
-            "widget": "variants",
             "dependsOn": [
               "component"
             ],
@@ -1362,9 +1467,7 @@
             "variants": {
               "surface_examples:card": "#/$defs/event.spotlight.props.surface_examples:card"
             },
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
-            }
+            "deferred": true
           }
         },
         "slots": {
@@ -1373,8 +1476,19 @@
             "object",
             "null"
           ],
+          "x-portable-ui": {
+            "widget": "variants"
+          },
+          "x-portable-links": [
+            {
+              "rel": "choose",
+              "href": "/surface-api/event.spotlight/schema?choose=/slots={value}",
+              "source": {
+                "value": "1/component"
+              }
+            }
+          ],
           "x-surface": {
-            "widget": "variants",
             "dependsOn": [
               "component"
             ],
@@ -1382,9 +1496,7 @@
             "variants": {
               "surface_examples:card": "#/$defs/event.spotlight.slots.surface_examples:card"
             },
-            "deferred": {
-              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
-            }
+            "deferred": true
           }
         }
       },
@@ -1443,7 +1555,7 @@
               "title": "Heading",
               "type": "string",
               "maxLength": 80,
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "text"
               }
             },
@@ -1461,7 +1573,7 @@
                 }
               ],
               "default": "plain",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "select"
               }
             },
@@ -1479,7 +1591,7 @@
                     "null"
                   ],
                   "format": "uri",
-                  "x-surface": {
+                  "x-portable-ui": {
                     "widget": "text"
                   }
                 },
@@ -1489,13 +1601,13 @@
                     "string",
                     "null"
                   ],
-                  "x-surface": {
+                  "x-portable-ui": {
                     "widget": "text"
                   }
                 }
               },
               "additionalProperties": false,
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "fieldset"
               }
             }
@@ -1519,7 +1631,7 @@
                 }
               ],
               "default": "text",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "select"
               }
             },
@@ -1529,8 +1641,10 @@
                 "string",
                 "null"
               ],
+              "x-portable-ui": {
+                "widget": "textarea"
+              },
               "x-surface": {
-                "widget": "textarea",
                 "dependsOn": [
                   "kind"
                 ]
@@ -1573,7 +1687,7 @@
               "title": "Text",
               "description": "A line under the heading.",
               "$ref": "#/$defs/component.slot.text",
-              "x-surface": {
+              "x-portable-ui": {
                 "widget": "fieldset"
               }
             }
@@ -1589,12 +1703,12 @@
       "operation": "configure",
       "label": "Configure the spotlight",
       "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "$id": "/surface-api/event.spotlight",
         "title": "Configure the spotlight",
         "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
         "x-surface": {
-          "contract": 4,
+          "contract": 5,
           "operation": {
             "id": "configure",
             "label": "Configure the spotlight",
@@ -1642,11 +1756,13 @@
               }
             ],
             "default": "surface_examples:card",
-            "x-surface": {
+            "x-portable-ui": {
               "widget": "select",
-              "emptyOption": {
-                "show": false,
-                "label": "- Select -"
+              "options": {
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                }
               }
             }
           },
@@ -1660,8 +1776,10 @@
                 "type": "null"
               }
             ],
+            "x-portable-ui": {
+              "widget": "variants"
+            },
             "x-surface": {
-              "widget": "variants",
               "dependsOn": [
                 "component"
               ],
@@ -1683,8 +1801,10 @@
                 "type": "null"
               }
             ],
+            "x-portable-ui": {
+              "widget": "variants"
+            },
             "x-surface": {
-              "widget": "variants",
               "dependsOn": [
                 "component"
               ],
@@ -1774,7 +1894,7 @@
               "title": {
                 "title": "Title",
                 "type": "string",
-                "x-surface": {
+                "x-portable-ui": {
                   "widget": "text"
                 }
               },
@@ -1784,7 +1904,7 @@
                   "string",
                   "null"
                 ],
-                "x-surface": {
+                "x-portable-ui": {
                   "widget": "text"
                 }
               },
@@ -1802,11 +1922,13 @@
                   }
                 ],
                 "default": "center",
-                "x-surface": {
+                "x-portable-ui": {
                   "widget": "select",
-                  "emptyOption": {
-                    "show": false,
-                    "label": "- Select -"
+                  "options": {
+                    "emptyOption": {
+                      "show": false,
+                      "label": "- Select -"
+                    }
                   }
                 }
               },
@@ -1817,7 +1939,7 @@
                 "minimum": 0,
                 "maximum": 100,
                 "default": 40,
-                "x-surface": {
+                "x-portable-ui": {
                   "widget": "number"
                 }
               },
@@ -1825,7 +1947,7 @@
                 "title": "Full width",
                 "type": "boolean",
                 "default": false,
-                "x-surface": {
+                "x-portable-ui": {
                   "widget": "checkbox"
                 }
               }
@@ -1843,7 +1965,7 @@
                 "title": "Button text",
                 "type": "string",
                 "maxLength": 40,
-                "x-surface": {
+                "x-portable-ui": {
                   "widget": "text"
                 }
               },
@@ -1851,7 +1973,7 @@
                 "title": "Address",
                 "type": "string",
                 "format": "uri",
-                "x-surface": {
+                "x-portable-ui": {
                   "widget": "text"
                 }
               },
@@ -1869,11 +1991,13 @@
                   }
                 ],
                 "default": "primary",
-                "x-surface": {
+                "x-portable-ui": {
                   "widget": "select",
-                  "emptyOption": {
-                    "show": false,
-                    "label": "- Select -"
+                  "options": {
+                    "emptyOption": {
+                      "show": false,
+                      "label": "- Select -"
+                    }
                   }
                 }
               },
@@ -1881,7 +2005,7 @@
                 "title": "Open in a new window",
                 "type": "boolean",
                 "default": false,
-                "x-surface": {
+                "x-portable-ui": {
                   "widget": "checkbox"
                 }
               },
@@ -1894,12 +2018,12 @@
                 ],
                 "items": {
                   "type": "string",
-                  "x-surface": {
+                  "x-portable-ui": {
                     "widget": "text"
                   }
                 },
                 "maxItems": 3,
-                "x-surface": {
+                "x-portable-ui": {
                   "widget": "list"
                 }
               }
@@ -1929,11 +2053,13 @@
                     "title": "Call to action"
                   }
                 ],
-                "x-surface": {
+                "x-portable-ui": {
                   "widget": "select",
-                  "emptyOption": {
-                    "show": true,
-                    "label": "- Select -"
+                  "options": {
+                    "emptyOption": {
+                      "show": true,
+                      "label": "- Select -"
+                    }
                   }
                 }
               },
@@ -1947,8 +2073,10 @@
                     "type": "null"
                   }
                 ],
+                "x-portable-ui": {
+                  "widget": "variants"
+                },
                 "x-surface": {
-                  "widget": "variants",
                   "dependsOn": [
                     "component"
                   ],
@@ -1968,8 +2096,10 @@
                     "type": "null"
                   }
                 ],
+                "x-portable-ui": {
+                  "widget": "variants"
+                },
                 "x-surface": {
-                  "widget": "variants",
                   "dependsOn": [
                     "component"
                   ],
@@ -2049,11 +2179,13 @@
                   }
                 ],
                 "default": "text",
-                "x-surface": {
+                "x-portable-ui": {
                   "widget": "select",
-                  "emptyOption": {
-                    "show": false,
-                    "label": "- Select -"
+                  "options": {
+                    "emptyOption": {
+                      "show": false,
+                      "label": "- Select -"
+                    }
                   }
                 }
               },
@@ -2063,8 +2195,10 @@
                   "string",
                   "null"
                 ],
+                "x-portable-ui": {
+                  "widget": "textarea"
+                },
                 "x-surface": {
-                  "widget": "textarea",
                   "dependsOn": [
                     "kind"
                   ]
@@ -2073,8 +2207,10 @@
               "component": {
                 "title": "Component",
                 "$ref": "#/$defs/component.nested.surface_examples:call_to_action.1",
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                },
                 "x-surface": {
-                  "widget": "fieldset",
                   "dependsOn": [
                     "kind"
                   ]
@@ -2087,8 +2223,10 @@
                 "items": {
                   "$ref": "#/$defs/component.nested.surface_examples:call_to_action.1"
                 },
+                "x-portable-ui": {
+                  "widget": "list"
+                },
                 "x-surface": {
-                  "widget": "list",
                   "dependsOn": [
                     "kind"
                   ],
@@ -2172,7 +2310,7 @@
                 "title": "Actions",
                 "description": "Up to two buttons under the title.",
                 "$ref": "#/$defs/component.slot.surface_examples:hero.actions.1",
-                "x-surface": {
+                "x-portable-ui": {
                   "widget": "fieldset"
                 }
               }

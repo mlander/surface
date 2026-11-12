@@ -6,6 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Session\AccountInterface;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\PipelineGuard;
 use Drupal\surface\Resource\AccessAnswer;
@@ -27,6 +28,7 @@ use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * An alter may answer access: after the owner's, the stricter standing.
@@ -161,7 +163,7 @@ class AlterAccessTest extends SurfaceKernelTestBase {
    */
   protected function full(string $operation = 'configure'): array {
     $served = $this->container->get('surface.contract_emitter')->emitFull($this->gallery(TRUE, $operation), 'resource_test.gallery', $operation);
-    return SchemaResolver::inline(json_decode((string) json_encode($served->document['schema']), TRUE));
+    return Schemas::decoded(SchemaResolver::inline(Schema::from(json_decode((string) json_encode($served->document['schema']), TRUE))));
   }
 
   /**

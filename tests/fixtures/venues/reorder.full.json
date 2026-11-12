@@ -3,11 +3,11 @@
     "operation": "reorder",
     "label": "Reorder the venues",
     "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Reorder the venues",
         "description": "Gives each venue named its new weight, all in one write; a venue left out keeps its own, and an unknown or repeated venue is refused.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "reorder",
                 "label": "Reorder the venues",

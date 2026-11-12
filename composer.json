@@ -11,6 +11,7 @@
     "require": {
         "php": ">=8.3",
         "drupal/core": "^11.3 || ^12",
+        "fago/portable-schema": "dev-main",
         "opis/json-schema": "^2.4"
     },
     "require-dev": {

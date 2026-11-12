@@ -3,11 +3,11 @@
     "operation": "update",
     "label": "Edit a placed block",
     "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Edit a placed block",
         "description": "Changes a placed block, named by its machine name: its label, region, weight, status, plugin settings and visibility. Its theme stays as it is.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "update",
                 "label": "Edit a placed block",
@@ -76,14 +76,11 @@
                 "description": "The title of the block as shown to the user.",
                 "type": "string",
                 "maxLength": 255,
-                "x-surface": {
-                    "checkedOnServer": [
-                        {
-                            "constraint": "Regex",
-                            "message": "The title may not span lines or hold control characters."
-                        }
-                    ],
-                    "patternMessage": "The title may not span lines or hold control characters."
+                "portable-check": {
+                    "drupal:Regex": {}
+                },
+                "x-portable-messages": {
+                    "check.drupal:Regex": "The title may not span lines or hold control characters."
                 }
             },
             "id": {
@@ -94,14 +91,11 @@
                 "default": "spotlight",
                 "readOnly": true,
                 "const": "spotlight",
-                "x-surface": {
-                    "checkedOnServer": [
-                        {
-                            "constraint": "Regex",
-                            "message": "The machine name may hold only lowercase letters, numbers, underscores and periods, and may not start with a period."
-                        }
-                    ],
-                    "patternMessage": "The machine name may hold only lowercase letters, numbers, underscores and periods, and may not start with a period."
+                "portable-check": {
+                    "drupal:Regex": {}
+                },
+                "x-portable-messages": {
+                    "check.drupal:Regex": "The machine name may hold only lowercase letters, numbers, underscores and periods, and may not start with a period."
                 }
             },
             "label_display": {
@@ -183,10 +177,12 @@
                         "title": "User login"
                     }
                 ],
-                "x-surface": {
-                    "emptyOption": {
-                        "show": false,
-                        "label": "- Select -"
+                "x-portable-ui": {
+                    "options": {
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
+                        }
                     }
                 }
             },
@@ -283,17 +279,19 @@
                         "title": "Stark"
                     }
                 ],
-                "x-surface": {
-                    "emptyOption": {
-                        "show": false,
-                        "label": "- Select -"
-                    },
-                    "checkedOnServer": [
-                        {
-                            "constraint": "ExtensionExists",
-                            "message": "Extension exists"
+                "portable-check": {
+                    "drupal:ExtensionExists": {}
+                },
+                "x-portable-messages": {
+                    "check.drupal:ExtensionExists": "Extension exists"
+                },
+                "x-portable-ui": {
+                    "options": {
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
                         }
-                    ]
+                    }
                 }
             },
             "region": {
@@ -342,25 +340,27 @@
                         "title": "Breadcrumb"
                     }
                 ],
+                "portable-check": {
+                    "drupal:SurfaceAnyThemeRegion": {},
+                    "drupal:SurfaceThemeRegion": {}
+                },
+                "x-portable-messages": {
+                    "check.drupal:SurfaceAnyThemeRegion": "Region of an installed theme",
+                    "check.drupal:SurfaceThemeRegion": "Region of a theme"
+                },
+                "x-portable-ui": {
+                    "options": {
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
+                        }
+                    }
+                },
                 "x-surface": {
                     "dependsOn": [
                         "theme"
                     ],
-                    "refined": true,
-                    "emptyOption": {
-                        "show": false,
-                        "label": "- Select -"
-                    },
-                    "checkedOnServer": [
-                        {
-                            "constraint": "SurfaceAnyThemeRegion",
-                            "message": "Region of an installed theme"
-                        },
-                        {
-                            "constraint": "SurfaceThemeRegion",
-                            "message": "Region of a theme"
-                        }
-                    ]
+                    "refined": true
                 }
             },
             "weight": {
@@ -892,10 +892,12 @@
                             }
                         ],
                         "default": "primary",
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     },
@@ -946,10 +948,12 @@
                             }
                         ],
                         "default": "plain",
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     },
@@ -1013,10 +1017,12 @@
                             }
                         ],
                         "default": "center",
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     },
@@ -1073,10 +1079,12 @@
                             }
                         ],
                         "default": "text",
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     },
@@ -1161,10 +1169,12 @@
                             }
                         ],
                         "default": "primary",
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     },
@@ -1211,10 +1221,12 @@
                                 "title": "Call to action"
                             }
                         ],
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     },
@@ -1328,10 +1340,12 @@
                             }
                         ],
                         "default": "text",
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     },
@@ -1474,10 +1488,12 @@
                             }
                         ],
                         "default": "plain",
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     },
@@ -1541,10 +1557,12 @@
                             }
                         ],
                         "default": "center",
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     },
@@ -1598,10 +1616,12 @@
                                 "title": "Call to action"
                             }
                         ],
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     },
@@ -1715,10 +1735,12 @@
                             }
                         ],
                         "default": "text",
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     },
@@ -1855,10 +1877,12 @@
                                 "title": "Hero"
                             }
                         ],
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     },
@@ -2020,10 +2044,12 @@
                             }
                         ],
                         "default": "text",
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     },
@@ -2173,10 +2199,12 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- None -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- None -"
+                                }
                             }
                         }
                     },
@@ -2444,13 +2472,11 @@
                         "title": "Starting level",
                         "type": "integer",
                         "default": 1,
-                        "x-surface": {
-                            "checkedOnServer": [
-                                {
-                                    "constraint": "MenuLinkDepth",
-                                    "message": "Menu link depth"
-                                }
-                            ]
+                        "portable-check": {
+                            "drupal:MenuLinkDepth": {}
+                        },
+                        "x-portable-messages": {
+                            "check.drupal:MenuLinkDepth": "Menu link depth"
                         }
                     },
                     "depth": {
@@ -2515,10 +2541,12 @@
                                     "title": "404"
                                 }
                             ],
-                            "x-surface": {
-                                "emptyOption": {
-                                    "show": true,
-                                    "label": "- None -"
+                            "x-portable-ui": {
+                                "options": {
+                                    "emptyOption": {
+                                        "show": true,
+                                        "label": "- None -"
+                                    }
                                 }
                             }
                         },
@@ -2561,10 +2589,12 @@
                                     }
                                 ],
                                 "default": "@user.current_user_context:current_user",
-                                "x-surface": {
-                                    "emptyOption": {
-                                        "show": false,
-                                        "label": "- Select -"
+                                "x-portable-ui": {
+                                    "options": {
+                                        "emptyOption": {
+                                            "show": false,
+                                            "label": "- Select -"
+                                        }
                                     }
                                 }
                             }
@@ -2596,10 +2626,12 @@
                                 "title": "User Role"
                             }
                         ],
-                        "x-surface": {
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- Select -"
+                        "x-portable-ui": {
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- Select -"
+                                }
                             }
                         }
                     },

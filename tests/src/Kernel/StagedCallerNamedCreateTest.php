@@ -135,7 +135,7 @@ class StagedCallerNamedCreateTest extends SurfaceKernelTestBase {
 
     $again = $this->stageNamed($id, 'first', 'Again');
     $this->assertSame(['id' => Violation::TAKEN], static::codes($again), $this->said($again));
-    $this->assertSame('id (taken): A ' . self::OWN . ' named first is created in this stage already, at position 1.', $this->said($again));
+    $this->assertSame('id (check.drupal:SurfaceUnique.taken): A ' . self::OWN . ' named first is created in this stage already, at position 1.', $this->said($again));
     $this->assertSame($record, $this->stages()->read($id), 'The stage holds what it held.');
 
     // Another name is another thing.
@@ -168,7 +168,7 @@ class StagedCallerNamedCreateTest extends SurfaceKernelTestBase {
     $this->assertTrue($wide->committed, $this->said($wide));
     $own = $this->stageNamed($other, 'first', 'Again');
     $this->assertSame(['id' => Violation::TAKEN], static::codes($own), $this->said($own));
-    $this->assertSame('id (taken): A ' . self::WHOLE . ' named first is created in this stage already, at position 1.', $this->said($own));
+    $this->assertSame('id (check.drupal:SurfaceUnique.taken): A ' . self::WHOLE . ' named first is created in this stage already, at position 1.', $this->said($own));
   }
 
   /**
@@ -218,7 +218,7 @@ class StagedCallerNamedCreateTest extends SurfaceKernelTestBase {
     $this->assertTrue($first->committed, $this->said($first));
     $again = $this->stage($id, 'stage_test.ledger', [], ['id' => 'x', 'title' => 'Again'], 'create');
     $this->assertSame(['id' => Violation::TAKEN], static::codes($again), $this->said($again));
-    $this->assertSame('id (taken): A stage_test.ledger named x is created in this stage already, at position 1.', $this->said($again));
+    $this->assertSame('id (check.drupal:SurfaceUnique.taken): A stage_test.ledger named x is created in this stage already, at position 1.', $this->said($again));
     $this->assertNull($this->row('x'), 'Nothing is stored before apply.');
 
     $applied = $this->stageTool('apply', $id);
@@ -280,7 +280,7 @@ class StagedCallerNamedCreateTest extends SurfaceKernelTestBase {
 
     [$built, $storage] = $this->through($id, self::OWN, 'update', ['id' => 'first']);
     $renamed = $this->submitted($built, $storage, ['id' => 'second', 'name' => ['value' => 'Renamed']]);
-    $this->assertSame(['id' => 'no_such_choice'], static::codes($renamed), $this->said($renamed));
+    $this->assertSame(['id' => 'enum'], static::codes($renamed), $this->said($renamed));
     $merged = $this->submitted($built, $storage, ['name' => ['value' => 'First, again']]);
     $this->assertTrue($merged->committed, $this->said($merged));
     $this->assertSame(['id' => 'first'], $this->pipeline()->outputs($built, $storage, $merged));

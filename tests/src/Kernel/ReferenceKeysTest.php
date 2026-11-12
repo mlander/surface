@@ -302,7 +302,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
     $under = $all['under']['full']['schema'];
     $past = $all['past']['full']['schema'];
     // Under the limit: a select of the candidates with their labels.
-    $this->assertSame('select', $under['properties']['venue']['x-surface']['widget']);
+    $this->assertSame('select', $under['properties']['venue']['x-portable-ui']['widget']);
     $this->assertSame([
       ['const' => 'harbour', 'title' => 'Harbour Centre'],
       ['const' => 'library', 'title' => 'Old Library'],
@@ -315,20 +315,34 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
     ], $under['properties']['page']['oneOf'], 'Articles only, sorted by label: the page is another bundle.');
     // Past it: an id, looked up.
     $this->assertArrayNotHasKey('oneOf', $past['properties']['venue']);
-    $this->assertSame('autocomplete', $past['properties']['venue']['x-surface']['widget']);
-    $this->assertSame([
-      ['constraint' => 'SurfaceValidReference', 'message' => 'Refers to an entity the account may reference'],
-    ], $past['properties']['venue']['x-surface']['checkedOnServer']);
-    // The marker, in both documents and either way.
+    $this->assertSame('autocomplete', $past['properties']['venue']['x-portable-ui']['widget']);
+    $this->assertSame(['drupal:SurfaceValidReference' => ['entityTypeId' => 'event_venue']], $past['properties']['venue']['portable-check']);
+    $this->assertSame(['check.drupal:SurfaceValidReference' => 'Refers to an entity the account may reference'], $past['properties']['venue']['x-portable-messages']);
+    // What it refers to is the check's options, and the lookup a link, in
+    // both documents and either way; no `x-surface.reference`.
+    $lookup = '/surface-api/event.sponsorship:lookup';
     foreach ([$under, $past, $all['under']['emit']['schema'], $all['past']['emit']['schema']] as $schema) {
-      $this->assertSame(['entityType' => 'event_venue'], $schema['properties']['venue']['x-surface']['reference']);
-      $this->assertSame(['entityType' => 'node', 'bundles' => ['article']], $schema['properties']['page']['x-surface']['reference']);
+      $this->assertSame(['entityTypeId' => 'event_venue'], $schema['properties']['venue']['portable-check']['drupal:SurfaceValidReference']);
+      $this->assertSame(['entityTypeId' => 'node', 'bundles' => ['article']], $schema['properties']['page']['portable-check']['drupal:SurfaceValidReference']);
+      $this->assertSame([['rel' => 'lookup', 'href' => $lookup . '?key=/venue{&q,limit}']], $schema['properties']['venue']['x-portable-links']);
+      $this->assertSame([['rel' => 'lookup', 'href' => $lookup . '?key=/page{&q,limit}']], $schema['properties']['page']['x-portable-links']);
+      $this->assertArrayNotHasKey('x-surface', $schema['properties']['venue']);
     }
     // The bare key: its id refers to its sibling's entity type, and is
     // stated per entity type by a conditional, so a client narrows it with
     // no round trip.
     $thing = $under['$defs']['event.sponsorship.thing'];
-    $this->assertSame(['by' => 'entity_type'], $thing['properties']['id']['x-surface']['reference']);
+    $bare = [
+      'rel' => 'lookup',
+      'href' => $lookup . '?key=/thing/id&type={type}{&q,limit}',
+      'source' => ['type' => '1/entity_type'],
+    ];
+    // Its link is the site's, at the narrowing: the def several sites
+    // could share names no pointer.
+    $this->assertArrayNotHasKey('x-portable-links', $thing['properties']['id']);
+    $this->assertSame(['x-portable-links' => [$bare]], $under['properties']['thing']['allOf'][1]['properties']['id']);
+    $this->assertArrayNotHasKey('portable-check', $thing['properties']['id']);
+    $this->assertArrayNotHasKey('reference', $thing['properties']['id']['x-surface']);
     $this->assertTrue($thing['properties']['id']['x-surface']['enumerated']);
     $node = array_values(array_filter($thing['allOf'], static fn (array $condition): bool => ($condition['if']['properties']['entity_type']['const'] ?? NULL) === 'node'));
     $this->assertCount(1, $node);
@@ -391,7 +405,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
     ], $this->call(['venue' => 'concert_hall']));
     $refused = $this->call(['setting' => ['entity_type' => 'node', 'id' => (string) $nodes['article']]]);
     $this->assertFalse($refused['success']);
-    $this->assertSame('The entity type node cannot be referenced here.', $refused['refused']['/setting/entity_type'], 'Node is no config entity.');
+    $this->assertSame('The entity type node cannot be referenced here. Choose event_venue (Venue) or user_role (Role).', $refused['refused']['/setting/entity_type'], 'Node is no config entity, and what may be chosen is said.');
     $this->assertSame([
       'success' => FALSE,
       'refused' => [
@@ -511,7 +525,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
       ['thing', 'fieldset', '—'],
     ], array_map(static fn (array $row): array => [$row[0], $row[2], $row[3]], array_slice($concept['keys']['#rows'], 0, 4)));
     $past = json_decode((string) $concept['past']['content']['#code'], TRUE);
-    $this->assertSame('autocomplete', $past['venue']['x-surface']['widget']);
+    $this->assertSame('autocomplete', $past['venue']['x-portable-ui']['widget']);
     $this->assertArrayNotHasKey('oneOf', $past['contact']);
     $listing = json_decode((string) $concept['listing']['content']['#code'], TRUE);
     $this->assertSame([1, 2], $listing['now']['contact']['enum'], 'Derived as the anonymous account: the active users, admin and the sponsor.');

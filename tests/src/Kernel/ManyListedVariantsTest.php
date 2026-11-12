@@ -280,7 +280,7 @@ class ManyListedVariantsTest extends SurfaceKernelTestBase {
     $second = SchemaReader::prepared($document);
     $twice = memory_get_usage() - $start - $listed - $once;
     $this->assertSame($first, $second);
-    $this->assertSame(['$schema' => 'https://json-schema.org/draft/2020-12/schema'] + $document, $first, 'Nothing to convert, nothing converted.');
+    $this->assertSame(['$schema' => 'https://portable-schema.dev/v1/schema'] + $document, $first, 'Nothing to convert, nothing converted.');
     // Read as it is, it shares its arrays and strings with the document:
     // a fraction of what the document holds, and nothing more the second
     // time.

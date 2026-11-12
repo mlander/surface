@@ -318,6 +318,14 @@ moved onto it: `submit()` on `OperationRunnerInterface` and its class,
 `OperationRun::hasStorage()` and `OperationRun::account()`. The four
 pins are unchanged.
 
+*Grown 2026-11-11,* by one blueprint method, `addSchema()`, a key stated
+as a Portable Schema
+([Authoring takes a Schema](#authoring-takes-a-schema)): 18 blueprint
+methods. The package's attributes a property may carry instead of
+Surface's (`#[Of]`, `#[Schema]`, `#[Check]`, `#[Ui]`, `#[Required]`) are
+the package's, not counted; no Surface attribute, argument or interface
+was added.
+
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 36
 attribute arguments (35 until 2026-11-01, when `widget:` was added to
@@ -372,7 +380,8 @@ What changed, old → new, to grep:
 - **A5.** The stock widget plugins `options`, `map`, `boolean` →
   `select`, `fieldset`, `checkbox`, the words `x-surface.widget` and the
   `widget` setting say; a `hook_surface_widget_info_alter()` keyed
-  by an old id finds nothing.
+  by an old id finds nothing. *Superseded 2026-11-10:* the hint is
+  `x-portable-ui.widget` ([The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)).
 - **A6.** The tool's `committed` output labeled "Written" → "Committed";
   `drush surface:contract-diff --dir` → `--baselines`, `--dir` still
   read.
@@ -645,7 +654,9 @@ one value of a type the contract states a JSON Schema type for, and one
 class says which types those are and how each is written
 (`Contract\LeafTypes`).
 
-- **Eight rows.** `string`, `email` (`format: idn-email`), `uri`
+- **Eight rows.** `string`, `email` (`format: idn-email`; `format:
+  email` since contract 5,
+  [The served document is a Portable Schema document](#the-served-document-is-a-portable-schema-document)), `uri`
   (`format: uri`), `datetime_iso8601` (`format: date-time`), `integer`
   and `timestamp` (`type: integer`), `float` (`type: number`) and
   `boolean`. A shape and a config schema type of one value
@@ -4134,11 +4145,13 @@ Five parts, each an existing mechanism:
   question ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
 - **The widget.** A key of type `machine_name` computed unless sent from
   a key beside it is drawn as core's `machine_name` element
-  (`Form\MachineNameElement`): its source is the source key's element,
-  and its `exists` callback asks the storage what the constraint asks
-  (`UniqueConstraintValidator::taken()`). The element's own validation
-  is off, since a form keeps the first error per element and core's
-  words would replace the constraint's, which are the tool's and HTTP's.
+  (`Form\MachineNameElement`): its source is the source key's element.
+  The element's own validation is off, since a form keeps the first
+  error per element and core's words would replace the constraint's,
+  which are the tool's and HTTP's. *Amended 2026-11-11:* it has no
+  `exists` callback, which nothing called with the validation off; a
+  taken name is the constraint's refusal at the element
+  ([The form is drawn from the document](#the-form-is-drawn-from-the-document)).
   On an update the key is locked, drawn disabled with its value, as any
   locked key is. The React page draws it as a text input, shows the
   narrowing's suggestion, and sends it once the person typed it.
@@ -7683,7 +7696,8 @@ its empty option: `- None -` is a radio only where choosing nothing is
 an answer, a key that may be cleared, and a key that holds a value shows
 no checked radio while it holds no valid choice, a stale value behind it
 on the stash. The served contract says the same in `emptyOption`, for
-radios as for a select, and the React app follows it.
+radios as for a select, and the React app follows it. *Superseded
+2026-11-10:* it is `x-portable-ui.options.emptyOption` ([The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)).
 
 The placeholder option this replaced ("Previous value X is no longer
 available", posting a sentinel from the select) told the person what
@@ -7758,7 +7772,8 @@ free strings and a time picker):
 The served contract's `x-surface.widget` mirrors each choice by asking
 the same rule (`CheckboxesWidget::drawsList()`,
 `RadiosWidget::drawsOne()`, `TimeWidget::draws()`), and is still written
-only when asked for. (`SurfaceWidgetManager::asked()`,
+only when asked for. *Superseded 2026-11-10:* the hint is
+`x-portable-ui.widget` ([The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)). (`SurfaceWidgetManager::asked()`,
 `SurfaceWidgetBase::answersTo()`, `SurfaceWidgetBase::checked()`,
 `ListWidget`, `StockWidgetsTest`)
 
@@ -7960,6 +7975,9 @@ page never saw the content type's groups, and a block had none to give.
   `x-surface.arrangement` only when a renderer asks for the widget hints,
   as `x-surface.widget` is written: additive in contract 2, no version
   raised, and the baselines, emitted without the hints, do not move.
+  *Superseded 2026-11-10:* it is `x-portable-ui` (`group` by id, each
+  group declared once on its frame under `groups`, `weight`, the texts
+  as `options`), and the reader reads it back ([The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)).
 - **The placeholder is only ever declared.** The string and number
   widgets drew a key's first example as its placeholder, so an author
   could not give the contract an example without giving the form a
@@ -8014,7 +8032,8 @@ Declined, each in a line:
 `ArrangementGroup::details(..., description:)` (or `fieldset()`), drawn
 under its summary or legend on the form and the React page, and stated
 as plain text in `x-surface.arrangement.group.description`, only when
-declared. Core's performance form says one sentence of its bandwidth
+declared. *Superseded 2026-11-10:* the description is the group's in
+its frame's `x-portable-ui.groups` ([The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)). Core's performance form says one sentence of its bandwidth
 settings, which `surface_examples_performance` declares once.
 
 ### The form builder draws, extracts and refreshes
@@ -8059,6 +8078,15 @@ moved as they were, the examples' forms render byte for byte as they did,
 and the documents and tool definitions did not move.
 (`SurfaceFormBuilder`, `Form\Drawing`, `Form\Extracting`,
 `Form\Refreshing`)
+
+*Superseded 2026-11-11 in part by [The form is drawn from the
+document](#the-form-is-drawn-from-the-document):* `Drawing` is gone; the
+drawer, `Form\Document\DocumentDrawer`, draws the envelope the data
+surface serves, and holds the static helpers `Drawing` held
+(`elementChildren()`, `gatherGroups()`, `placeMounts()`, `named()`).
+`Extracting` reads each element back by the widget that drew it, and
+`Refreshing` wires no data surface: the drawer wires each key a key
+depends on.
 
 ### Defaults follow the definitions under a stored value
 
@@ -9513,6 +9541,7 @@ Decided 2026-10-23, with example 16, the sponsorship
   with labels in both documents, an enum in the tool listing, narrowed
   by a client locally. Past it the key is an id: core's
   `entity_autocomplete` on the form, `x-surface.widget: autocomplete`
+  (`x-portable-ui.widget` since 2026-11-10, [The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui))
   and the constraint under `checkedOnServer` in both documents, and a
   sentence in the tool listing naming the lookup. Why a setting and not
   the enumeration cap: the cap counts conditionals a document can
@@ -9539,6 +9568,8 @@ Decided 2026-10-23, with example 16, the sponsorship
   `{by: "entity_type"}` on a bare key's id: the reference keyword the
   Portable Schema notes argued for, as an `x-surface` keyword, so a
   client that does not read it reads an id of the key's type.
+  *Superseded 2026-11-10:* it is the check's options and a `lookup`
+  link ([A reference and a deferred list are the dialect's check options and links](#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)).
 
 *Open:* a multi-value reference, a list of
 references (`addList()` of an entity type); a lookup tool for an agent with no
@@ -9756,6 +9787,8 @@ of `x-surface` (locked, dependsOn, refined, stale, emptyOption, fixed, by,
 variants and chosen, rules, within, checkedOnServer, enumerated,
 refine, live) is the
 data surface's own reading of a key, not a widget, and is always written.
+*Superseded 2026-11-10:* the widget, `multiple` and the empty option
+are `x-portable-ui` ([The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)).
 The hints are stripped after the schema is built rather than threaded
 through it, so the widget a key gets is still read in the same pass as
 its shape. (`Contract\ContractEmitter::emit()`)
@@ -10122,7 +10155,9 @@ key is counted, is unchanged.
   A client fills `{value}` with the deciding key's value, or an entry's
   id. In a document no route serves (a baseline, the contract panel, the
   tool's answer) the template is its query alone, read against the full
-  schema's URL.
+  schema's URL. *Superseded 2026-11-10:* the template is the key's
+  `choose` link, and `deferred` is `true` or its entries
+  ([A reference and a deferred list are the dialect's check options and links](#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)).
 - **What the fetch answers.** `GET .../schema?choose=<pointer>=<value>`,
   once or more, answers the full schema with each choice stated as the
   full schema under the limit states it: a variant's def in `$defs` and
@@ -10511,6 +10546,19 @@ since [contract 2](#contract-2), which admits a non-ASCII local part
 as Drupal's validator does; it was `email`, which refused one.
 (`PropertySchema::type()`)
 
+*Superseded for `email` on 2026-11-11.* The served document is a
+Portable Schema document, whose profile allows `email` and not
+`idn-email`, so an address is `format: email` again: `format` follows
+the profile's list. Validation does not change until the pipeline
+validates through the dialect: the pipeline holds an address to
+Drupal's own check, which admits a non-ASCII local part `email`
+refuses, and the suite's validator still asserts no format
+([The served document is a Portable Schema document](#the-served-document-is-a-portable-schema-document)).
+
+*Superseded 2026-11-11 by [Validation runs through the dialect's
+validator](#validation-runs-through-the-dialects-validator):* `format`
+is asserted.
+
 ### A composite is its parts
 
 Core's two composite constraints are stated through their parts:
@@ -10531,6 +10579,11 @@ applies its constraints to each item of a collection, not all of them
 to one value, and core registers no `All` plugin, so it is not read as
 an `allOf`. (`Keywords\CompositeRow`,
 `AdvertisedSchemaAcceptanceTest::testCompositesAreTheirParts()`)
+
+*Amended 2026-11-11 by [The checks the document
+names](#the-checks-the-document-names):* a part that is Email or Uuid
+is stated by its format, and the composite is written and named under
+`portable-check` besides.
 
 ### One table maps a constraint to its keywords, both ways
 
@@ -11204,6 +11257,381 @@ names `x-surface.deferred.entries`. (`PropertySchema::extension()`,
 `app/src/contract.ts`, `ContractBaselineTest`, `SiteListBudgetTest`,
 `StaticRuntimeAccessTest`, `SchemaRoundTripTest`)
 
+### The served document is a Portable Schema document
+
+Decided 2026-11-11. Every document the module serves, both documents of
+an operation and its outputs, is a Portable Schema document: `$schema`
+is `https://portable-schema.dev/v1/schema` (`ContractEmitter::DIALECT`),
+a dialect of JSON Schema 2020-12 with a profile, fixed rules where the
+standard leaves a choice so a PHP and a JavaScript validator give one
+verdict, and a vocabulary of its own. The profile audit of the
+contract 4 baselines found two values between them and the profile:
+the root `$schema`, and `format: idn-email`. Contract 5 changes those
+and moves two facts `x-surface` said into the dialect's keywords;
+nothing else moves, and no path.
+
+- **Contract 5.** `ContractEmitter::CONTRACT` is 5, the
+  `Contract-Version` header says `5`, and so do the OpenAPI document's
+  `info.version` and the React app. A keyword moved out of `x-surface`
+  breaks a client that reads it there, so it takes a new number
+  ([Contract 4](#contract-4-fewer-keywords-nothing-new-on-the-wire),
+  the rule for keywords). One number for the series: the later slices
+  change spelling under it before it ships.
+- **`portable-check` for what only the server checks.** It was
+  `x-surface.checkedOnServer`, a list of `{constraint, message}`. It is
+  now a map from `drupal:` and the constraint plugin's id to its
+  options, an empty object, since the document says which plugin checks
+  and not how it is configured; a JsonSchema constraint keeps its
+  schema as its options, `{"schema": ...}`, so a reader reads the same
+  constraint back. Surface's own constraints are named the same way
+  (`drupal:SurfaceValidReference`): the dialect's Drupal provider maps
+  `drupal:<Name>` to the plugin `<Name>`. A constraint named twice on
+  one node is one check, its first options and its first message
+  standing; none of the baselines names one twice. A frame read from a
+  schema can hold several JsonSchema constraints (what its root left
+  over, and its own `portable-check`): they are one check, their
+  schemas held together as an `allOf`, and its message names the
+  keywords of all of them (`ContractEmitter::foreign()`), so the
+  document read back reads that one check and writes the same message.
+  On a property, a collection, a frame and a def, as `checkedOnServer`
+  was; 14 nodes of the 42 baselines carry it.
+- **`x-portable-messages` for a message.** The dialect keys a message
+  by the error code it is for. A Regex's own message is said under the
+  code of the keyword it goes with, `pattern`, or `not` for
+  `not: {pattern}`; it was `x-surface.patternMessage`. Each check's
+  message, what `checkedOnServer` carried beside the id, is said under
+  `check.drupal:<id>`, the code the dialect's validator reports the
+  check's error with. One map per node, the pattern's message first; an
+  empty message is left out. A Regex no keyword states has no code of
+  its own: its message is the check's. 38 nodes of the baselines carry
+  it.
+- **Why the dialect's and not `x-surface`'s.** Both say something a
+  validator acts on: that the document is not the whole check, and
+  what a person is told when a value fails. The dialect has the words,
+  and a client that knows the dialect and nothing of Surface reads
+  them. They are standard keywords of the dialect, so they come after
+  the standard keywords and before `x-surface` on their node, and stay
+  there below an applicator, where `x-surface` moves to `within`
+  (`DocumentHead::owning()` treats them as data and descends into
+  neither; `SchemaResolver::restored()` and the React app's
+  `restored()` move only `x-surface`, and needed no change). A key
+  declared with a shape keeps both beside its reference, as it kept its
+  whole `x-surface` (`PropertySchema::named()`), and a site's narrowing
+  writes them with its `x-surface` wherever any of the three differs
+  from the def (`PropertySchema::narrowing()`). A conditional's `then`
+  leaves them out, as it leaves out `x-surface`, and so does an
+  output's property (`PropertySchema::withoutExtension()`).
+- **What stays in `x-surface`.** Composition and placement (`ports`,
+  `reads`, `group`, `after`, `rules`, `within`, `by`, `variants`), the
+  reports for one set of values (`doesNotApply`, `refined`, `stale`,
+  `emptyOption`, `chosen`), Surface's own version and operation facts
+  (`contract`, `version`, `operation`), and the markers and hints a
+  later slice moves or keeps (`widget`, `multiple`, `arrangement`,
+  `reference`, `refine`, `live`, `enumerated`, `deferred`, `computed`,
+  `fixed`, `collection`, `dependsOn`). *Superseded 2026-11-10:*
+  `widget`, `multiple`, `arrangement` and `emptyOption` moved
+  ([The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)). Composition and ownership are
+  Surface's: the dialect is a value with no author, and the alter and
+  extend rules stay in this module.
+- **An email address is `format: email`.** The profile refuses
+  `idn-email`, whose IDNA processing differs between PHP and
+  JavaScript. `email` is RFC 5321, ASCII only, so a client that asserts
+  formats refuses `jöe@example.com`, which Drupal's validator accepts: a
+  known difference the dialect names (`docs/drupal.md` of the
+  `fago/portable-schema` package, section "Known differences"). The
+  pipeline still validates through Typed
+  Data, so what a write accepts is as before, and the never-stricter
+  helpers leave `format` out as they did. The reader reads `email` as
+  the email leaf type, and `idn-email`, which documents before contract
+  5 wrote, the same (`LeafTypes::READ_FORMATS`).
+- **What the reader reads.** A document is a Portable Schema document
+  only where no schema below its root holds a `$id` or a `$schema`
+  (the dialect's registry refuses one), and what a structure read from
+  a schema keeps of it is served again under `portable-check`, below
+  the root. So the reader drops `$id`, `$schema`, `$anchor` and
+  `$dynamicAnchor` below the root, each with a note
+  (`SchemaReader::IDENTIFIERS`). A document contract 4 wrote is read as
+  it was checked: its `x-surface.checkedOnServer` as `portable-check`
+  and its `x-surface.patternMessage` under the code of its keyword
+  (`SchemaReader::respelled()`), as `idn-email` is read as `email`.
+- **A list of anything.** Its `items` is the empty schema `{}`, an
+  object, as the config schema document writes one; an empty JSON
+  array is no schema, and the dialect refuses it.
+- **The lint.** `ContractDiff` compares `portable-check` where it
+  compares the standard keywords: a check added narrows, one removed
+  widens, its options changed is a note; `x-portable-messages` changed
+  is a note. `$schema` stays as the lint reads it, which only a new
+  contract changes. The contract 4 baselines were reported once,
+  "contract version 4 to 5", and re-pinned with no allowance.
+- **The document as the dialect's value.** `ServedContract::schema()`
+  and `outputs()` answer a `PortableSchema\Builder\Schema`, the value
+  the emitter built; the document holds each in the array form, which
+  the lint, the OpenAPI components and the tool result read
+  ([The emitter builds through the builder](#the-emitter-builds-through-the-builder)). Every
+  pinned document, the module's 73 and the React app's 59, loads in the
+  dialect's registry and validator and writes back byte for byte from a
+  `Schema` (`PortableDocumentTest`, `PortableServedContractTest`).
+- **The dependency.** The module requires `fago/portable-schema`
+  (`dev-main`), which depends on `opis/json-schema` as the module does.
+- **OpenAPI.** The OpenAPI document names JSON Schema 2020-12 as its
+  `jsonSchemaDialect`, since OpenAPI tools read that dialect, and each
+  operation's component keeps its own `$schema`, the Portable Schema
+  dialect, whose keywords a tool that does not know them ignores. A
+  Schema Object's own `$schema` takes precedence over
+  `jsonSchemaDialect`, so that default applies to no component the
+  module writes; it stays for any schema a site adds without one.
+- **Later.** The widget hints become `x-portable-ui` (done 2026-11-10,
+  [The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)); a reference
+  `portable-check` with `x-portable-links` (done 2026-11-10,
+  [A reference and a deferred list are the dialect's check options and links](#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)); variants `portable-typeBy`;
+  `refine` `portable-refine`; a shape a `portable:` type; the emitter
+  builds through `Schema`
+  ([The emitter builds through the builder](#the-emitter-builds-through-the-builder)), the reader reads through `Schema::from()`
+  ([The reader reads a Schema](#the-reader-reads-a-schema)),
+  and the pipeline validates through the dialect's validator. Each is
+  its own change, under contract 5 until it ships.
+
+(`ContractEmitter::DIALECT`, `ContractEmitter::CONTRACT`,
+`PortableKeywords`, `PropertySchema::property()`,
+`SchemaReader::respelled()`, `SchemaReader::kept()`,
+`PropertySchema::listKeywords()`, `ContractEmitter::frame()`,
+`Keywords\RegexRow`, `Keywords\EmailRow`, `LeafTypes`,
+`ContractDiff::checks()`, `ServedContract::schema()`,
+`OpenApiDocument::JSON_SCHEMA_DIALECT`, `app/src/contract.ts`,
+`ContractBaselineTest`, `PortableDocumentTest`)
+
+### The UI hints are `x-portable-ui`
+
+Decided 2026-11-10. The widget hints a renderer asks for are the
+dialect's `x-portable-ui`, on the node they are about, after
+`portable-check` and `x-portable-messages` and before `x-surface`.
+Contract 5 stays 5: one number for the series, and the baselines carry
+no hints, so none of them moved.
+
+- **What moved, and where.** `x-surface.widget` is
+  `x-portable-ui.widget`, left out where no widget claims the key
+  (`null` before). `multiple: true` is `options.multiple`. The
+  arrangement's texts, `placeholder`, `prefix`, `suffix` and `help`,
+  are `options` of the same names, each only where it is set; its
+  `weight` is `weight`. A text is written only where it is not empty
+  as plain text, so a text of markup alone is left out. `emptyOption`
+  is `options.emptyOption`. The
+  members are written in the order `widget`, `options`, `group`,
+  `weight`, `groups` (`PortableUi`). The vocabulary allows `fallback`
+  too; nothing here writes it.
+- **A group is declared once, on its frame.** The maintainer's decision. The
+  whole group was written on every key that named it, so a frame of
+  three keys in one group said its label three times. Each key now
+  names it, `group: "<id>"`, and the object whose `properties` the keys
+  are (the top, a structure's def, a module's mount, a map) declares it
+  under `x-portable-ui.groups`: `{label, description?, widget, options?,
+  weight?}`, `widget` `fieldset` or `details`, `options: {"open":
+  false}` for a details that starts collapsed (open is the default and
+  is not written), in the order the frame's keys first name them, after
+  the frame's own members. A group named by keys of two frames is
+  declared on each; `SurfaceBuilder::assertGroupsAgree()` already holds
+  the keys of one frame to one group. While a document is written a
+  key's `group` holds the whole group, so a site compares it with its
+  def as any part of the keyword; `PortableUi::settled()` declares it
+  on its frame at the end. The dialect requires a group's label, so
+  `ArrangementGroup` refuses a label that is empty as plain text when
+  the group is declared. A narrowing declares the groups its own keys
+  name, not the others its def declares; a merger joins the two, the
+  site's word standing for a group both declare
+  (`SchemaResolver::merge()`, `merge()` in the app). A structure mixed
+  in declares its groups on its def, and `mixIn()` joins them with the
+  frame's, the frame's word standing.
+- **What the flag strips.** With the hints off (`emit()`'s `$widgets`),
+  `x-portable-ui` loses everything but `options.emptyOption`, which the
+  schema for these answers carries whatever is asked, as it did; an
+  `options` or an `x-portable-ui` left empty is left out
+  (`PropertySchema::withoutWidgets()`, `ContractEmitter::WIDGET_HINTS`).
+  The full schema leaves out `options.emptyOption`
+  (`Conditionals::withoutPresent()`, `ContractEmitter::PRESENT_OPTIONS`).
+  An `x-surface` that said nothing but the widget is left out. A site
+  whose widget is `null` over a def that has one can no longer say so:
+  no `widget` is written for `null`. No shipped resource has such a site.
+- **Below an applicator, and at a site.** `x-portable-ui` is data
+  (`DocumentHead::DATA`): it stays on its node where `x-surface` moves
+  to `within`, so a site's narrowing whose key said nothing else than
+  its hints and what moved to `within` is that key with its
+  `x-portable-ui`, no longer left out. Such a key is now present in the
+  narrowing, and nothing it accepts changes, since `x-portable-ui`
+  checks nothing. A site's narrowing writes it
+  whole, with `x-surface` and the other two keywords, wherever any of
+  the four differs from the def, the parts the document strips not
+  compared (`PropertySchema::narrowing()`, `Subschemas::$ui`). A key
+  declared with a shape keeps it beside its reference; the shape's def
+  carries none. A conditional's `then` and an output leave it out.
+- **The reader.** `SchemaReader` reads the widget from
+  `x-portable-ui.widget` as it read it from `x-surface`, and now reads
+  the arrangement back too: `group` with its frame's `groups`, `weight`
+  and the four texts, described through the blueprint as an author
+  describes them (`SchemaReader::arranged()`), so a served document
+  reads back with its arrangement. `options.emptyOption` and
+  `options.multiple` are noted and not read: the options resolver
+  decides them. What cannot be read is noted: a weight that is no whole
+  number (`2.0` reads as `2`), a text that is no string, a group widget
+  other than `fieldset` or `details` (read as a fieldset), and a group
+  with no label, whose keys are read ungrouped. The keys of a map and of
+  a module's mount are read with the map's own `groups`. A document served before this change, the hints under
+  `x-surface` and the whole group on each key, is read as the emitter
+  writes it now (`SchemaReader::hinted()`); the reader never writes the
+  old spelling.
+- **The lint.** `ContractDiff` compares `x-portable-ui` as one keyword:
+  changed is a note, never a break. The lint against the baselines
+  pinned before this change reported nothing.
+- **React.** The app reads the hints from `x-portable-ui`, draws a
+  frame's groups from its `groups`, and writes the empty option into
+  `x-portable-ui.options` when it narrows locally. Its `merge()`
+  replaces a key's hints whole, and joins a frame's `groups`: a site's
+  widget laid over a def keeps the groups the def declares, as
+  `doesNotApply` is kept.
+- **What stays in `x-surface`, and why.** `group: true` and `after`:
+  placement of a module's fieldset, kept there as
+  [the served document is a Portable Schema document](#the-served-document-is-a-portable-schema-document)
+  keeps composition and placement, which are Surface's. The rest of `x-surface` is as before.
+- **Later.** A widget the host does not have, under `fallback`; the
+  form door reading the hints from the document instead of the
+  definitions, if a host other than this one draws from it.
+
+(`PortableUi`, `PortableKeywords::UI`, `PropertySchema::property()`,
+`PropertySchema::arrangement()`, `PropertySchema::narrowing()`,
+`PropertySchema::withoutWidgets()`, `Conditionals::withoutPresent()`,
+`ContractEmitter::WIDGET_HINTS`, `DocumentHead::DATA`,
+`SchemaReader::arranged()`, `SchemaReader::hinted()`,
+`SchemaResolver::merge()`, `SchemaResolver::mixIn()`,
+`ContractDiff::keyword()`, `app/src/contract.ts`,
+`app/src/widgets/Field.tsx`, `UiKeywordTest`)
+
+### A reference and a deferred list are the dialect's check options and links
+
+Decided 2026-11-10. What a key that refers to an entity refers to is the
+options of its check, and where a client asks the server for what a
+document leaves out is a link of the dialect's `x-portable-links`.
+Contract 5 stays 5: the lint reports each moved node as a note, and
+nothing a value may be changed.
+
+- **A reference is its check's options.** The check already sat on every
+  key that names its entity type, `{"drupal:SurfaceValidReference": {}}`.
+  Its options now say what it holds a value to, in the plugin's own
+  option names, `{"entityTypeId": "node", "bundles": ["article"]}`,
+  `bundles` only where the key names any; the message is unchanged. The
+  options are exactly the plugin's, so a check provider passes them to
+  the plugin as they are.
+  `x-surface.reference` is not written. A reader reads the key back
+  from the check as its author declares it,
+  `addConstraint('SurfaceValidReference', ['entityTypeId' => ...])` on a
+  key of the id's type, and reads no `oneOf` for it: the site lists the
+  candidates under the limit, and the widget follows from the site.
+- **The lookup is a link.** On every key that refers to one entity
+  type, listed or not, `{"rel": "lookup", "href":
+  "<lookup URL>?key=<pointer>{&q,limit}"}`, the pointer the key's JSON
+  Pointer, which the lookup takes as `key`; `{&q,limit}` is RFC 6570's
+  query continuation for the two optional parameters. The id of a key of
+  any entity type that is not refined to one has no check, and its link
+  reads `type` from its sibling; refined to one entity type, it carries
+  the check with its options and the same link: `&type={type}` before the braces and `"source": {"type":
+  "1/entity_type"}`, a Relative JSON Pointer from the id's value, up to
+  the object that holds it, then `References::TYPE_KEY`. The
+  `References::TARGETS` setting names the bundles per entity type, not
+  the sibling, so the sibling is that constant.
+- **The href is concrete.** The lookup URL is built as the schema URL
+  is: in a document the HTTP door serves, from the request's parameters
+  (`ResourceApiController` passes it to `emit()` and `emitFull()`, as it
+  passes the schema URL), so an identity segment is the request's id.
+  A document no route serves (a baseline, the contract panel, the
+  OpenAPI document's component) names
+  `ServedPathsInterface::lookupPath()` where the path takes no
+  parameter, and no link where it does: a template variable the document
+  does not explain is never written. The variables are the ones `source`
+  names, and `q` and `limit`; a client fills nothing else.
+- **No link where the lookup does not answer.** The lookup answers for
+  the operation `GET` serves at the path, so an operation served at its
+  own custom method gets no link: `ServedPathsInterface::lookupPath()`
+  is NULL for it, and the emitter, the tool door's sentence and the
+  OpenAPI document agree.
+- **A link is a site's, never a def's.** The pointer in a lookup link,
+  and whether the lookup reaches the key, depend on where the structure
+  is used, and several sites share one def. So a link is written only at
+  a site: the frame's own key, or the site's narrowing for a key inside
+  a def, `properties.<site>.allOf[1].properties.<key>`; the full schema
+  describes such a child at its site, not as its def alone. Where the
+  def's key and the site's differ in links alone, the narrowing carries
+  `x-portable-links` alone: the check and its messages are written whole
+  with the hints and `x-surface` for a client of contract 2, and a link
+  has no such reason. A `choose` link follows the same rule. A def is
+  never split by its sites (no `@2`).
+- **Where no link is written.** Without the HTTP door
+  (`surface_http`), the emitter has no lookup path, so no link: the
+  check keeps its options. A document for no operation (a structure's
+  baseline, a document read back) has none. A key the lookup does not
+  find has none: the lookup walks attached children
+  (`References::definitionAt()`), never into a collection's item, a
+  module's mount or a variant, so a link there would name a 404; the
+  tool door's sentence and the OpenAPI document's key list follow the
+  same walk; the OpenAPI document reads the keys from the data surface,
+  so a link withheld does not drop a key from its list.
+- **A deferred list's fetch is a link.** `x-surface.deferred` keeps the
+  marker and the entries and loses the template: `true` on a key with
+  variants, `{"entries": [...]}` on a map of keys from the site. The
+  template, as `ContractEmitter::fetch()` writes it, is a `choose` link.
+  On variants `{value}` is the deciding key's value, so the link says
+  where to read it, `"source": {"value": "1/<by>"}`, the sibling `by`
+  names; on a map it is an entry's id, which the entries list gives, so
+  the link has no `source`.
+- **Link relations.** `lookup` and `choose` are Surface's rel names: the
+  vocabulary shapes a link as a JSON Hyper-Schema Link Description
+  Object and registers no rel. A node carries `lookup` before `choose`.
+- **Where the keyword stands.** After `x-portable-ui` and before
+  `x-surface` (`PortableKeywords::LINKS`, `PortableLinks`). A link is
+  never a widget hint: a document without the hints keeps it, and so
+  does the full schema. It is data below an applicator
+  (`DocumentHead::DATA`), and is left out of a conditional's `then`.
+- **The lint.** `ContractDiff` compares `x-portable-links` as one
+  keyword: changed, added or removed is a note. The check's options
+  changed was a note already. The lint against the baselines pinned
+  before this change reported a note on each of the 12 reference nodes
+  and on each new link, and nothing that breaks.
+- **The reader.** A link is noted and not read: the server writes its
+  own; an entry with no `rel` and `href`, or a keyword that is no list,
+  is noted as no link. A check that names an entity type the site does
+  not have, or bundles that are no list of names, is not read as a
+  reference: noted, the key read as a value of its type. The id of a key of any entity type, known only by its link's
+  `source`, is read as a value of its type, as before. A document served
+  before this change is read as the emitter writes it now
+  (`SchemaReader::linked()`): `x-surface.reference {entityType,
+  bundles?}` into the check's options, `{entityTypeId, bundles?}`, `deferred.fetch` into a `choose`
+  link; the bare id's `{by}` is left out, since its lookup link names a
+  path the document does not give.
+- **React.** The autocomplete looks an id up at the key's `lookup`
+  link, its template expanded with `q` and each `source` variable, and
+  sends nothing while a `source` variable is empty; the page names no
+  lookup of its own any more. The expander refuses an RFC 6570 operator
+  or modifier it does not support rather than write a wrong URL. A
+  deferred key's fetch is its `choose` link, `{value}` read where its
+  `source` says. A key with no link takes an id typed alone.
+- **OpenAPI.** The `:lookup` path and its `key` enum list the keys the
+  lookup answers for, read from the data surface (`References`); they
+  are as before.
+- **Later.** A lookup inside a collection's item, a mount or a
+  variant, and the link for it. An `?operation=` parameter on `:lookup`,
+  so an operation `GET` does not serve at its path (a create form) gets
+  a working lookup and its link. Once validation runs through the checks,
+  the lint can judge a check's options by meaning: a bundle added widens,
+  a bundle removed or another entity type narrows.
+
+(`PortableLinks`, `PortableKeywords::LINKS`, `PortableKeywords::write()`,
+`PropertySchema::checked()`, `ContractEmitter::linked()`,
+`ContractEmitter::lookup()`, `ContractEmitter::linksBelow()`,
+`ContractEmitter::fetch()`, `PropertySchema::narrowing()`,
+`ServedPaths::lookupPath()`, `ResourceApiController::lookupAt()`,
+`References::targetOf()`, `References::TYPE_KEY`,
+`SchemaReader::linked()`, `SchemaReader::droppedLinks()`,
+`SchemaReader::referenceOptions()`,
+`ContractDiff::keyword()`, `OpenApiDocument::references()`,
+`app/src/contract.ts`, `app/src/widgets/Inputs.tsx`, `LinksKeywordTest`)
+
 ### The emitter is one walk and three writers
 
 `ContractEmitter` had grown to 4,300 lines. It is now the walk, and three
@@ -11243,6 +11671,908 @@ documents and tool definitions are byte for byte what they were, and
 the contract baselines did not move. (`ContractEmitter`,
 `Contract\PropertySchema`, `Contract\Conditionals`,
 `Contract\DocumentHead`, `ContractBaselineTest`)
+
+### The emitter builds through the builder
+
+The emitter builds each served document as
+`PortableSchema\Builder\Schema` values, the dialect's own, not as PHP
+arrays. Contract 5 stays 5.
+
+- **The boundary.** `ServedContract::$document` stays an array for the
+  code that reads it: the controller, the tool door, the contract
+  panel, the OpenAPI components, the examples panels and the tests. The
+  emitter builds `schema` and `outputs` as `Schema` values and writes
+  each into the document once, with `Schemas::arrayed()`;
+  `ServedContract::schema()` and `outputs()` answer the values it built.
+- **The array form.** `Schemas::arrayed()` is `toDocument()` with each
+  JSON object an associative array or a `\stdClass`, chosen by the
+  shape of the keyword that holds it, so `json_encode()` of the array
+  form is `json_encode()` of the schema:
+  - A schema is an associative array, and a `\stdClass` when empty.
+  - A map of schemas (`properties`, `$defs`, `patternProperties`,
+    `dependentSchemas`) is an associative array, and a `\stdClass` when
+    empty or when its names are exactly 0 to n - 1, which a PHP array
+    would encode as a list. A map with a member named "0" is therefore
+    a `\stdClass`, which a reader that checks `is_array()` skips.
+  - A data object (the value of any other keyword, such as
+    `x-surface`, `x-portable-ui`, `default`, `const`, `examples` or
+    `portable-check`, and every object inside one) is a `\stdClass`
+    when empty or when every name is a numeric string, and an
+    associative array otherwise. `x-surface.variants` named by numeric
+    ids is a `\stdClass`, and by any other ids an associative array.
+  - A list stays a list.
+- **Order is insertion order.** The builder never sorts: `with()` on a
+  keyword a schema has keeps its place, and a new keyword goes last. The
+  emitter adds keywords in the order the document carries them.
+  `Schemas::first()` puts keywords first (`$schema` and the heading,
+  `readOnly` at the top, `x-surface` led by how the operation behaves, a
+  def's title, a site's title before its reference, the `type` a
+  narrowing needs); `Schemas::defaults()` adds only the keywords a schema
+  does not state; `PortableKeywords::before()` places `portable-check`,
+  `x-portable-messages`, `x-portable-ui` and `x-portable-links`, in that
+  order, before `x-surface`. All three build with `Schema::from()`, so
+  a keyword outside the vocabulary that a schema carries stays, and
+  each refuses a boolean schema, which holds no keywords.
+- **Empty values.** `properties` and `$defs` are given as `[]`, which
+  the builder writes as `{}`. An empty `x-surface` is left out.
+- **An empty subschema stays `{}`.** Below an applicator, a schema that
+  said nothing but its `x-surface` (directly or in the properties it
+  holds) is written `true` once its `x-surface` moves to the owning
+  object; a schema empty from the start (`then: {}`, `items: {}`,
+  `not: {}`, `allOf: [{}]`) is written `{}`.
+- **A walk reaches schemas only.** `Schemas::map()` descends into the
+  keywords whose value is a schema, a map of schemas or a list of them
+  (`Keywords::shape()`), and into `x-surface-shape.def`, the one
+  transient keyword that holds a schema; never into `default`, `const`,
+  `examples`, `enum`, `portable-check`'s options, `x-portable-messages`,
+  `x-portable-ui` or `x-surface`. `PropertySchema::named()`,
+  `withoutWidgets()` and `withoutExtension()`, `PortableUi::settled()`
+  and `Conditionals::withoutPresent()` walk with it. So a hint or an
+  `x-surface` member inside a JSON Schema fragment a structure keeps
+  under `portable-check` is served as given, with the widget hints or
+  without, in both documents (`PortableServedContractTest`).
+- **Transients.** `x-surface-shape`, `x-surface-checked` and
+  `x-surface-pattern-message` are `x-` keywords on a node while a key is
+  described; each is removed when the key's description ends.
+- **Comparison is by JSON.** Two schemas, or two keyword values that
+  hold schemas, say the same when their JSON is the same
+  (`Schemas::same()`), encoded with the fixture flags, among them
+  `JSON_PRESERVE_ZERO_FRACTION` and `JSON_THROW_ON_ERROR`: `1` and `1.0`
+  differ, two empty objects are the same whatever their PHP form, and a
+  value that cannot be encoded (NAN, INF, invalid UTF-8) is an error,
+  never the same as another. A narrowing restates a keyword only when
+  its JSON differs, and `Subschemas` files a second declaration under
+  `<id>@2` by the same test.
+- **Variants stay a union of references.** Each variant is a local def,
+  `#/$defs/...`, never a registry schema, so a key with variants is an
+  `anyOf` of references with a conditional per variant, and carries no
+  `portable-typeBy`.
+- **An OpenAPI correction.** `SchemaComponents` rewrites every pointer
+  in `x-surface.variants`, in either PHP form, to the lifted component,
+  so no component points into a `$defs` it no longer has. Its pointers
+  used to stay `#/$defs/...`, because the map reached it as a
+  `\stdClass` and only arrays were rewritten. This is the one output
+  that changed: the components of every OpenAPI document with variants
+  (`OpenApiDocumentTest`, `SchemaComponentsTest`).
+- **What reads arrays.** `ConfigSchemaDocument`, `ComponentSlots` and
+  `ComponentProps` write the reader's input as arrays; the reader and
+  `SchemaResolver` read `Schema` values
+  ([The reader reads a Schema](#the-reader-reads-a-schema)).
+- **Later.** The code that reads the document moves to the `Schema` as
+  it is touched: the controller, the tool door, the contract panel, the
+  OpenAPI components, the examples panels and the tests. Then the
+  document array goes, so a `ServedContract` stops holding both the
+  `Schema` and its array form. The builder could hold what Surface writes here:
+  `first()`, `defaults()`, an `equals()`, and a walk keyed on
+  `Keywords::shape()`.
+
+(`Contract\Schemas`, `ServedContract`, `ContractEmitter`,
+`PropertySchema`, `Conditionals`, `DocumentHead`, `Subschemas`,
+`PortableKeywords::before()`, `PortableUi::set()`, `PortableUi::settled()`,
+`PortableLinks::set()`, `Refinement\Condition::schema()`,
+`SchemaComponents`, `SchemasTest`, `DocumentHeadSettledTest`,
+`NarrowingComparedByJsonTest`, `PortableDocumentTest`,
+`PortableServedContractTest`, `OpenApiDocumentTest`)
+
+### The reader reads a Schema
+
+The schema reader walks a document as `PortableSchema\Builder\Schema`
+values, as the emitter builds one.
+
+- **The boundary.** The reader's entries (`read()`, `fill()`,
+  `names()`, `structure()`, `notes()`, `prepared()`, `upconvert()`,
+  `holdsNoSecret()`, `condition()`, `statedTypes()`) take arrays: a
+  document arrives as JSON, and a structure read from it is registered,
+  cached and hashed by the document's array and a JSON pointer into it,
+  as the provider contracts (`EntrySchemasInterface`, `SiteList::add()`)
+  hand it over. Inside, the reader converts once: `upconvert()` on the
+  array, since a draft's spellings are no keywords of the dialect, then
+  `Schema::from()`, then the markers put back
+  (`SchemaResolver::restored()`), the draft spellings read
+  (`respelled()`) and the rules a container states for a child moved
+  (`localized()`), on the `Schema`. `prepared()` answers the result as
+  JSON decodes it (`Schemas::decoded()`), the array the build registers,
+  and where the conversion changes nothing the array it was given. A
+  document is converted once per preparing: `read()` and `notes()` read
+  the `Schema` they prepared; `prepared()` keeps the `Schema` of the
+  array it answered last, below the size from which a prepared document
+  is shared, and `fill()` and `holdsNoSecret()` read it when handed the
+  same array; where a hash is given, the `Schema` is shared by it.
+- **What is no schema is refused.** Before it is read, `prepared()`
+  walks every keyword that holds a schema, a map or a list of them, at
+  every depth: each member is an object or a boolean, and a schema's
+  keywords are names, or the document is refused, naming the member's
+  pointer. A marker a document places inside a value leaves the value
+  as it is.
+- **The walk reads keywords.** Every frame, key, value, constraint,
+  variant, rule and kept schema is read with `get()`, `has()`, `all()`
+  and `isBoolean()`; a subschema is found by JSON pointer with
+  `Schemas::at()`, which steps by the shape of each keyword; schemas are
+  compared with `Schemas::same()` and edited as copies with `with()` and
+  `without()`. `get()` answers NULL for an absent keyword and for a JSON
+  null, so `has()` decides where the two differ (`const: null`,
+  `default: null`). A walk over a whole document reaches schemas only
+  (`Schemas::map()`), never data. `names()` alone reads the array: it
+  reads a def's `title` and `description` at `/$defs/<id>`, one step
+  in, so a structure is named without converting its document.
+- **Data in either form.** A `Schema` may carry its data (`x-surface`,
+  `x-portable-ui`, its groups and options) as arrays or as `\stdClass`
+  objects, as `Schema::from()` of either kind of decoded JSON gives it;
+  the reader and `SchemaResolver` read data through `Schemas::data()`
+  and write it back in the array form.
+- **What leaves the reader is an array.** A schema kept for a
+  JsonSchema constraint is written in the array form
+  (`Schemas::arrayed()`) where it becomes the constraint's options: a
+  kept schema keeps `{}` as `{}`. The table of constraints reads a
+  value's own keywords as JSON decodes them, and only those
+  (`ConstraintKeywords::keywords()`).
+- **One form per helper.** `SchemaResolver` (`restored()`, `inline()`,
+  `resolve()`, `refersTo()`, `merge()`), `PortableKeywords::before()`,
+  `PortableUi::set()` and `PortableLinks::set()`, `all()` and `of()`
+  take and answer `Schema` values. Inside, `SchemaResolver` merges
+  schemas as keyword arrays and builds them again with `Schema::from()`,
+  which keeps a keyword outside the vocabulary, so every keyword
+  survives a merge. A caller holding the document array (the examples
+  panels, the tests) reads it in with `Schema::from()` and the result
+  back with `get()`, `Schemas::arrayed()` or `Schemas::decoded()`.
+- **Types of the library.** The reader holds a `PortableSchema\Registry`,
+  the service `surface.portable_registry` (`Registry::withTypes()`, built
+  once per container; a site adds its own schemas to it). A `$ref` to an
+  id `LeafTypes::LIBRARY` names reads as that leaf type, at a key, in a
+  list's items and through a def that is that `$ref`; what the type's
+  document says beyond the row is kept as a JsonSchema constraint, so
+  the key is no wider than the type. *Changed 2026-11-11:* what a row of
+  the table reads is that constraint, served as its keywords
+  ([Authoring takes a Schema](#authoring-takes-a-schema)). The site's
+  keywords beside the `$ref` narrow it, but for a `type` or a `format`
+  that says otherwise than the row, which is noted and not read; a
+  `format` the row states none of is kept beside the type. `anyOf` of
+  the `$ref` and `{"type": "null"}`, in either order, is the type,
+  nullable. Any other id of the
+  library is read from its document: an object type as a structure,
+  read as the library states it, the site's keywords beside the `$ref`
+  noted and not read; any other where the key stands, a `format` no
+  string reads kept for the server's check. A `$ref` to the library in
+  a schema kept for a JsonSchema constraint is replaced by what the type
+  says, so the kept schema refers to nothing outside it. A type that
+  says `writeOnly: true` makes the key a secret, and
+  `holdsNoSecret()` answers FALSE for a document that refers to one. An
+  id the registry does not hold is noted and kept. The emitter writes
+  the row's `type` and `format`.
+- **`portable-typeBy`.** Read as variants a sibling chooses where its
+  `source` reads one sibling, the sibling lists its values, each a
+  string, the `href` is a template of that one variable, and each
+  value's expansion, or else the `fallback`, is an object schema the
+  registry holds; each is a variant read from its own document, written
+  again as Surface writes variants. An object holding such a key is
+  read as a frame, never as a plain map. Otherwise the keyword is noted,
+  with the reason, and kept in the key's JsonSchema constraint.
+- **The rest of the dialect.** `portable-refine` and `portable-compare`
+  are kept in the JsonSchema constraint and noted. `x-portable-type`,
+  `x-portable-translatable`, `x-portable-provider` and
+  `x-portable-unchecked` are noted and dropped.
+- **`x-surface.collection`.** The emitter writes it on a collection; it
+  is accepted there, and noted on a key whose items are no object.
+- **OpenAPI.** `SchemaComponents` follows and loosens a map of schemas
+  in either PHP form, a `\stdClass` when its names are 0 to n - 1, so
+  every pointer in a component and in its patch leads to a component.
+- **Later.** The provider contracts and the writers of the reader's
+  input (`ConfigSchemaDocument`, `ComponentSlots`, `ComponentProps`)
+  move to `Schema` (done 2026-11-11,
+  [Authoring takes a Schema](#authoring-takes-a-schema)); the emitter
+  may write a type of the library as its `$ref`; the site's keywords
+  beside a `$ref` to an object type of the
+  library narrow it, once a `$ref` to a local def is narrowed the same
+  way; the server's validator enforces `portable-refine`,
+  `portable-compare` and `portable-typeBy`.
+
+(`SchemaReader`, `SchemaResolver`, `Schemas::at()`,
+`Schemas::decoded()`, `Schemas::data()`, `Schemas::boolean()`,
+`Schemas::isObjectSchema()`, `ConstraintKeywords::keywords()`,
+`LeafTypes::LIBRARY`, `SchemaComponents`, `LibraryTypesReaderTest`,
+`TypeByReaderTest`, `MalformedDocumentsReaderTest`, `SchemasTest`,
+`SchemaResolverDataFormsTest`, `SchemaComponentsTest`)
+
+### Validation runs through the dialect's validator
+
+A request's values are held once to the document they are served with,
+by the Portable Schema validator, and every rule the document cannot
+say is run by a check on the server.
+
+- **One run.** `validate()` emits the document the data surface serves
+  for the accepted values (`emit()`, `ServedContract::schema()`) and
+  holds `SurfacePipelineInterface::document()` of the values to it, once
+  (`Validation\PortableValidator`). Then it walks the levels: each level
+  refined against its own values, each child, variant and item in its
+  own frame. A key computed, a key that does not apply, a key required
+  or always held while it holds no value, and a key with variants and no
+  variant are the module's to judge, since the document cannot say
+  "configured"; every other key takes the validator's refusals at it and
+  below it, a list the refusals of the list itself, and a level those of
+  the level as a whole. A refusal at a key the module judged is not
+  said. The stale rule, "Choose X or Y" and "This applies when ..." are
+  the module's own sentences, set beside the validator's refusals.
+- **Typed Data stays where it is not a request.** `prepare()` and a
+  storage's own pass (`SchemaViolations`, an entity's `validate()`),
+  `Conforming::conformOutput()`, `WatchedValueCheck::admits()` while
+  refining, `KeyPaths` defaults at the build. A plugin host's settings
+  (`SurfaceConfigurationTrait`) go through `validate()`, so through the
+  validator. Inside a request it runs one constraint of one place alone,
+  and only there: a check's constraint (`DrupalCheckProvider::check()`),
+  the constraint a keyword's refusal is said in
+  (`DrupalCheckProvider::constraintMessage()`), and the checks the
+  document does not name yet (`DrupalCheckProvider::unwritten()` and
+  `unnamed()`, below). *Superseded 2026-11-11 by
+  [The checks the document names](#the-checks-the-document-names):* nothing runs that the document does not name, and both
+  are gone.
+- **A check runs the host's own constraint.** One `CheckProvider`,
+  `Validation\DrupalCheckProvider`, answers every `drupal:<plugin id>`
+  name. It reads the request's location back to its place on the data
+  surface refined against the values (`ResourceBuild\Location::definitionAt()`,
+  through attached children, variants, collection items and a map's
+  members, a key an alter mounted among them, each pointer segment one
+  name, a `.` in it included), and runs that place's constraint of that
+  id, with the options the definition holds, through Typed Data for that
+  definition with that constraint alone. The options the document
+  publishes describe the check and are never what runs. A frame's
+  `drupal:JsonSchema` is each schema read into the frame, held to the
+  frame's values. Each violation is `check.drupal:<id>`, then `.<name>`
+  where the violation has a code (its constraint's name for it, snake
+  case without `_ERROR`), its params its parameters, its message its
+  own. A violation below the place is filed where the check named it:
+  the request's location joined with the violation's own path
+  (ReviewDeadline's at `/review_deadline/amount`), so every door marks
+  the field it is about and no `params.path` is on the wire.
+  *Superseded 2026-11-11 by [The checks the document names](#the-checks-the-document-names):* the error carries the
+  dialect's `location` and the package files it. A place
+  holding no value passes. A throwable in a check is thrown once the
+  validation returns: a bug is never a refusal.
+- **A check is not asked where a keyword refuses.** Where the
+  document's `type`, `pattern`, `maxLength`, `minLength` or `format` at
+  a place refuses its value, the place's checks are not asked: that
+  refusal stands alone, and no check runs on a value of the wrong type
+  or shape (a SurfaceUnique lookup of an id too long to be one).
+  DateTime and DateOnly, which state the rule of the format beside them,
+  are asked where only that format refuses. `Validation\Nodes` reads the
+  document's nodes that apply at each place; where it reads a keyword
+  otherwise than the validator does, the run is made again with every
+  check asked.
+- **Checks the document does not name yet.** The document writes a
+  plain key's map (a key's settings, a map an alter mounted, the map
+  each item of a list is) as its properties alone, never the map's own
+  constraints (ReviewDeadline on an amount and a unit together). Each is
+  run as the check it is, `check.drupal:<id>` at the map, by the same
+  provider, at any depth (`unwritten()`). Drupal's Email and Uuid are
+  written as `format: email` and `format: uuid` alone, and each format
+  admits what the constraint refuses (`a@b`, `x@localhost`, a quoted
+  local part, an address literal, the nil UUID): at each place a node
+  writes either format and nothing refuses, the place's own constraint
+  runs too, as `check.drupal:Email` or `check.drupal:Uuid` with its
+  sub-code, never as the format's code (`unnamed()`). *Superseded
+  2026-11-11 by [The checks the document names](#the-checks-the-document-names):* the document names each of these
+  checks, and the provider runs them as any check it names.
+- **What the module says, the validator does not.** A key nothing
+  declares is refused by accept() as `unknown_key`, so the validator's
+  `unknownProperty` is never said, and what storage holds beyond what
+  the caller was built is kept, never judged. An `enum` the check's own
+  options produced is not said beside that check's refusal (a theme's
+  regions): the list is the check's rule, said once. An `enum` of the
+  place's own (a Choice beside the check) is said beside it. A key with
+  variants is an `anyOf` of each variant and null: its value is judged
+  by the chosen variant's conditional, and a `type` that asks for null
+  beside a refusal below it is not said; one that stands alone says
+  "This value does not fit the chosen variant." A map holding null whose
+  required keys the module names below it is not also refused as
+  `type`. A `const` at a read-only place is not said: a locked key's
+  `const` is the value the operation knows, the value sent for it is not
+  taken, and what is held there is never the request's (a resource built
+  from storage seeds that value from what is stored; a data surface
+  built by hand may declare a default storage does not hold, and the
+  validator does not judge storage).
+- **A check that cannot run refuses.** A name outside `drupal:`, a
+  plugin the site lacks, a place nothing declares, or a JsonSchema
+  whose schema names a check of its own is `unchecked`, at its location,
+  naming the check. `x-portable-unchecked` is neither written nor read.
+- **Codes.** A refusal the document expresses carries the dialect's code
+  and params at the dialect's location; a refusal of the call or of the
+  module's own rules keeps its snake case code
+  ([Codes](semantics.md#codes)). The entry is `{path, code, message,
+  params?}`, `params` written where it has any (`Violation::$params`,
+  `ResultDocument::entry()`). A storage's own pass keeps its
+  constraint's Symfony code. A value may carry two entries for one
+  problem where both are true: a `format.*` and a `pattern` (a date), a
+  check and a keyword (DateTime and `format.date-time`, ReviewDeadline
+  and `minimum`). `params.allowed` holds at most
+  `SurfacePipeline::CHOICES_SHOWN` values, `params.more` counting the
+  rest. accept()'s `type` names `null` in `params.expected` for a key
+  that takes it, as the validator's does.
+- **A secret's refusal carries no value.** At a secret place a
+  refusal's params keep `limit`, `expected`, `actual`,
+  `property`, `check` and `reason` alone (`path` too, until
+  [The checks the document names](#the-checks-the-document-names)), and its message is "This
+  value is not accepted.", a keyword's and a check's alike.
+- **Messages.** The validator says no text. A check's message is its
+  violation's. A keyword's is the message of the constraint the keyword
+  was written from (`maximum` from Range, `enum` from Choice or the
+  constraint the key's list is read from), run alone on the value where
+  the place holds it, so an author's message, its markup and Drupal's
+  translation stand; else, where the place holds no such constraint (a
+  document from another host), the document's `x-portable-messages` for
+  the code at its location; else one source string per code family
+  (`Sentences::ofError()`), its params as placeholders, a bound on both
+  sides said as Range says it. The package's formatter and catalog are
+  not used.
+- **One validator per document.** `surface.portable_validator` adds the
+  document to a clone of `surface.portable_registry` under its `$id`, or
+  `urn:surface:validate:<hash>`, and keeps the compiled validator for
+  the request by the document's hash, at most 16. The document emitted
+  for a data surface and its values is kept the same way, for the
+  account, until a cache tag is invalidated
+  (`ResourceRegistryInvalidator`). The provider refines each level once
+  per validation, for every place it reads.
+- **No coercion, every format.** Coercion stays in accept(); a value of
+  another type is `type`. `format` is asserted: `email` refuses a
+  non-ASCII local part; `uri` is an absolute URI as RFC 3986 says it, so
+  it needs a scheme, and a host with characters outside ASCII is sent in
+  punycode (`http://xn--r8jz45g.jp`, not `http://例え.jp`); `date-time`
+  needs an offset. Every `datetime_iso8601` key, with a DateTime
+  constraint or none, is stored in UTC with no offset, `Y-m-d\TH:i:s`: a
+  value with an offset is moved to UTC, and a value with none is read as
+  UTC. It is served, and handed to the validator, with `Z`
+  (`Coercion::served()`). A `datetime_iso8601` key that holds DateOnly is
+  written `format: date`, and is stored and served as `Y-m-d`.
+- **Never stricter, in the tests.** `NeverStricterTrait` and
+  `ContractValidationTrait` hold an advertised document to what the
+  server accepts with the package's validator; a served document the
+  package cannot load fails the test. A schema the caller marks as a
+  fragment (one a reader kept) is held with Opis, as
+  `JsonSchemaConstraintValidator` holds it on the server.
+- **Later.** The emitter writes what the provider runs unnamed:
+  `portable-check: {drupal:Email}` and `{drupal:Uuid}` beside the
+  format, a plain map's own constraints under `portable-check` at the
+  map and an item map's at `items`; `unwritten()` and `unnamed()` go
+  then. `format: iri` for a `uri` key that takes a host outside ASCII, a
+  document decision. A check's error filed at its own location by the
+  package once it carries one (`check-locations` on the fork, which
+  requires a location to name a value present in the instance), in place
+  of the joining above. Manifests for the library's checks.
+  *Done 2026-11-11 in [The checks the document names](#the-checks-the-document-names)*, but `iri` and the manifests,
+  which stay in its Later.
+  `References::definitionAt()`, `Validating::definitionAt()` and
+  `Extracting::definitionAt()` answer other questions than
+  `Location::definitionAt()` and stay their own: the first finds a
+  reference target and refines by an entity type, not by the values;
+  the other two read one level's definitions as handed in, never
+  refining.
+
+(`PortableValidator`, `DrupalCheckProvider`, `Nodes`, `Found`,
+`Location`, `Sentences::ofError()`, `Coercion::served()`,
+`PortableValidationTest`, `PortableValidatorTest`)
+
+### The form is drawn from the document
+
+The form door draws the envelope the data surface serves, as the React
+app draws it, and reads nothing else to draw.
+
+- **The drawer reads the envelope.** `buildSurfaceForm()` emits the
+  envelope for the values with the widget hints
+  (`SurfaceFormBuilderInterface::envelope()`, the `emit()` the HTTP door
+  answers `GET` with) and draws it (`drawDocument()`,
+  `Form\Document\DocumentDrawer`): the schema inline
+  (`SchemaResolver::inline()`), its `values` and its `stale` pointers.
+  It takes no data surface, no definition and no Typed Data; no class
+  under `src/Form/Document` or `src/Widget` imports them
+  (`DocumentFormIsolationTest`). It depends on the form module's own
+  helpers, which carry no data surface: `SurfaceFormBuilder`'s collection
+  button callbacks, `Refreshing`'s wiring and `MachineNameElement`. It
+  draws by the rules the React app reads the document by, one method
+  each, named as React names them where the names fit
+  (`resolveVariants()`, `arranged()`, `OptionsWidget::emptyOption()`):
+  the widget the word names; required from the owner's `required`;
+  title, description, help and the lock's note as plain text; a
+  `readOnly` key disabled, and what is inside it with it; a select's
+  empty option and its stale value; groups from the frame's
+  `x-portable-ui.groups`, by weight, a key naming no declared group
+  drawn ungrouped; a collection one details per item, padded to
+  `minItems`, adding stopped at `maxItems`; variants from the parent's
+  conditionals; a key the document leaves out of its frame, listed in
+  `x-surface.doesNotApply`, as its wrapper alone, after the first key it
+  depends on; a computed key not sent as its value, fixed; a machine
+  name computed unless sent (its `pattern` a machine name's) as core's
+  element; what a key depends on (`x-surface.dependsOn`) wired to the
+  rebuild; a document locked whole (`readOnly` at the top) with the
+  reason its root `x-surface.locked` gives, drawn above the fields
+  (`DocumentDrawer::LOCKED_KEY`), which the host form reads to draw no
+  Save. The host form keeps its own inputs: stored values, prefill, the
+  fingerprint, the stage, the flow, the buttons, the confirm and delete
+  pages, the operation's access gate, the cosmetic layer and the panel.
+- **An element carries its pointer, never its node.** Each element
+  drawn for a value carries its JSON Pointer (`#surface_path`) and the
+  widget that drew it (`#surface_widget`). The container keeps the
+  envelope's `values` (`#surface_values`), which hold no secret.
+  Extraction finds each element's node by its pointer in the envelope
+  (`Form\Document\DocumentNodes::at()`): the schema inline once, then a
+  walk from the root as the drawer draws, a list's item by its index, a
+  collection's item narrowed for its values, a key with variants by the
+  variant its frame chooses. The envelope is kept once per form build in
+  the request that drew it; a form read from the form cache emits it
+  again for the values the container keeps. Refusals are placed by the
+  violation's dotted path, which names the same element; slice 19 files
+  a check's refusal at the field it names.
+- **Widgets take a node.** `SurfaceWidgetInterface::isApplicable(Schema,
+  WidgetContext)`, `buildElement(Schema, mixed, WidgetContext)` and
+  `extractValue(array, FormStateInterface, Schema)`. The node's
+  `x-portable-ui.widget` names the widget through one table, word to
+  plugin ID (`SurfaceWidgetManager::words()`): each widget's own words,
+  and `DOCUMENT_WORDS`, the consumer's mapping of `text`, `textarea`,
+  `email` and `fixed` to the stock widgets they name. The emitter writes
+  only words that table holds (`WidgetChoice::wordOf()`, `valueWord()`
+  and `word()`). A word no widget answers to, one whose widget refuses
+  the node, and no word fall to the stock word for the node's shape, in
+  the order of React's `stockWidget()` (`SurfaceWidgetManager::stockWord()`):
+  a list whose items offer choices a multiple select, a list rows,
+  choices a select, an object a fieldset, a boolean a checkbox, an
+  integer or a number a number input, a string whose `format` is `email`
+  an email input, else a text input; a node that states no one type is
+  drawn by the module's own widgets in weight order, the JSON widget
+  last. The weights decide only among widgets answering to the same
+  word. `isApplicable()` reads the node alone, never a live
+  collaborator. The emitter's choice is the producer's side:
+  `Contract\WidgetChoice`, the old definition rule moved out of the
+  manager, each widget's own predicate `drawsDefinition()`
+  (`DefinitionWidgetInterface`); `WidgetAgreementTest` holds the two
+  sides to each other for every example key. A module's widget that the
+  emitter chooses by a setting of its own (the extras' comma separated
+  list) is named in the document, where `list` stood; a list the list
+  widget does not draw (its items lists, or of any type) is named by no
+  word, and drawn as JSON.
+- **Settings that reach the document.** `x-portable-ui.options` is an
+  open object. The emitter writes, as hints: a text input's `size` and a
+  text area's `rows`, after `help` and before `emptyOption`, and after
+  those each setting a module's widget lists in `publishedSettings()`,
+  under its name in lowerCamel. The reader reads each back into the
+  setting of that name, where the widget the word names publishes one,
+  and notes it otherwise. `match_operator` and `match_limit` are not
+  written: matching is the lookup's.
+- **Facts the document does not carry.** Why an access answer locked a
+  key is `x-surface.locked` beside its `readOnly`, and why the whole is
+  locked the same at the top, in the schema for these answers only (the
+  account and the values decide it), never in the full schema; the form
+  and the React app say it in place of "Fixed for this operation.". The
+  host answers two facts through a widget's context
+  (`WidgetHostInterface`): the label of the entity a reference holds
+  (`labelOf()`), and the selection handler and settings a reference
+  key's candidates are (`selection()`), which a reference field's
+  definition holds and the emitter does not write (its check options are
+  `{entityTypeId, bundles?}`); check options that carry `handler` and
+  `handlerSettings` (a document another host writes) win. A machine name
+  already in use is the key's own check's refusal (SurfaceUnique) at the
+  element, as at every door: core's element has no `exists` callback. A
+  key always held is one whose `type` leaves `null` out.
+- **A form carries the document's cacheability.** The container carries
+  the envelope's cacheability, the option lists' and the data surface's
+  among it. A chooser whose document holds every bundle's variant
+  carries each variant's: the content entity bundle chooser's form has a
+  max-age of 0, and every tag the document carries reaches the form.
+- **A def's description stays at its def.** A site's own `description`
+  wins over its def's, as its `title` does; a def's description is laid
+  in only where the site states none and the def is the key's own shape,
+  a value. A def with properties is a structure the site refers to (an
+  attached part, a variant, a field item), whose description says what
+  the structure is (`SchemaResolver::follow()`, React's
+  `withoutDefDescription()`).
+- **A key the values do not hold is drawn at its default.** Drawn and
+  posted at its document `default`, as the React app and the HTTP door
+  draw it: a visibility condition chosen posts its context mapping's
+  default, a component switched to posts each slot's default kind.
+- **Change means a new envelope.** A rebuild settles the edit (the
+  refinement overlay, its discard and orphan rules) and draws the
+  envelope emitted for the values it stands at, the function
+  `POST schema` answers with (`NarrowsDocumentsInterface`,
+  `surface.document_narrowing`). The drawer narrows locally in one place
+  only: the document states one `items` schema for every item of a
+  collection, so each item is narrowed by the conditionals the items'
+  schema enumerates (`DocumentDrawer::narrowedFor()`), read by values as
+  a variant is. It reads `required` and each key's `const` or `enum`
+  under `properties`, a key the item leaves out meeting them as JSON
+  Schema says unless it states a `default`, which it is read at, as it is
+  drawn; an `if` that says anything else is skipped, never held.
+  It runs no coded refiner: an item's key a coded refiner narrows is
+  wired to the rebuild. Inside an item the items' schema's empty option
+  is the answer for an empty item; an item holding a value is answered
+  for its own. A variant a frame's deciding key chooses is stated in the
+  envelope; a deferred key inside an item, which no conditional ties to
+  the item, is drawn from the document its `choose` link would serve for
+  that place and that value, which the host emits in process
+  (`WidgetHostInterface::chosen()`, `NarrowsDocumentsInterface::chosen()`:
+  the full schema with that choice, and one at each key with variants on
+  the way, `Choices::along()`). That document is narrowed for no values,
+  so each frame below the variant it gives is narrowed as it is drawn
+  and as extraction walks it, a declared rule's `if` among them held to
+  the frame's values by the JSON Schema validator, as the React app reads
+  a declared rule (a slot's kind ruling out its other keys).
+- **Extraction stays one pipeline call.** Each element is read back by
+  the widget that drew it, through the envelope's node at its pointer,
+  an object a level at a time and a collection item by item; an element
+  drawn for a variant its deciding key no longer chooses gives nothing;
+  an element standing for a stale value, left alone, gives what is
+  stored at its pointer; then `accept()`.
+- **Text is plain.** A title, a description, help, a group's label and
+  a lock's reason reach the form as the document carries them, plain
+  text in the language of the request; markup a description was written
+  with is drawn as its text. Form API's own words (Add another, Remove,
+  "- Select -", "- None -") stay `t()`.
+- **Later.** The cosmetic and panel plugins take the envelope in place
+  of the data surface. The narrowing service as a public API. Per-node
+  cacheability in the document, so a drawer adds only what it drew. A
+  per-item schema (`prefixItems`) in narrowed documents, a document
+  decision, in place of narrowing items in the drawer. A `choose` link
+  inside `items`, a document decision: links are at a site only today.
+  An autocomplete route of Surface's own that runs the lookup in
+  process, so core's element never needs the selection settings: the
+  lookup exists with `surface_http` alone, and core's element has its
+  own route.
+
+(`DocumentDrawer`, `DocumentNodes`, `WidgetContext`,
+`WidgetHostInterface`, `FormWidgetHost`, `WidgetChoice`,
+`DocumentNarrowing`, `DocumentFormIsolationTest`, `WidgetAgreementTest`,
+`DocumentFormTest`, `DocumentFormEntityTest`, `ItemConditionalsTest`)
+
+### Authoring takes a Schema
+
+Decided 2026-11-11. An author may state a key as a Portable Schema, with
+`addSchema()` or with the package's property attributes, beside the
+Typed Data spelling, which stays where storage needs it. Contract 5
+stays 5: the two examples rewritten in the new spelling serve the bytes
+they served.
+
+- **`addSchema()`.** `BlueprintAdditionsInterface::addSchema(string
+  $key, Schema $schema, ?bool $required = NULL): static` takes a
+  `Schema` only; a schema held as an array is handed in as
+  `Schema::from($array)`. The schema is laid in an object of one
+  property, the key, closed, its `$defs` moved up to that object, and
+  the object is read by the schema reader as any frame is
+  (`SchemaReader::authored()`): one reading turns a document and an
+  author's schema into keys, through the blueprint's own verbs. An
+  `array` schema is a list, an `object` one a map, a `$ref` to a def of
+  an object a child and to a scalar def the shape of that id. A boolean
+  schema is refused. The verb returns the blueprint: the schema is
+  complete at the call. A part that needs a frame of its own (a child,
+  variants, a rule) inside a map stops the map's first reading, as any
+  such verb does; in an alter's or a shape's blueprint it is refused.
+- **Two spellings, never on one property.** `PropertyDeclaration`
+  reads the package's `#[Of]`, `#[Schema]`, `#[Check]`, `#[Ui]` and
+  `#[Required]` beside Surface's attributes. A property carrying one of
+  them is spelled as a schema: built by the package's rules (the PHP
+  type the `type`, `?T` null beside it, the initializer the `default`,
+  `#[Of]` the `$ref`, an `anyOf` of it and null where nullable, a shape
+  too, `#[Schema]` keywords, `#[Check]` checks, `#[Ui]` hints), mirroring
+  `ClassReader`, which keeps the reading of one property private, and
+  declared with `addSchema()`. A class a keyword names (`items`) is a
+  `$ref` to its `#[Document]` id, or read in place where it has none, as
+  `ClassReader` reads it; `#[Of]` naming a class that is no shape and
+  has no `#[Document]` is refused, naming the property and the three ways
+  out. Required is `addSchema()`'s rule alone: the property passes
+  `#[Required]` as TRUE and nothing otherwise.
+- **The package's spelling is an `#[Input]`.** It combines with exactly
+  what `#[Input]` combines with in Surface's own spelling. Combined:
+  `#[Examples]` (as `examples`) and `#[Rule]`; a secret is `writeOnly`,
+  which `#[Schema]` says, since Surface has no attribute for one.
+  Refused with the message `#[Input]` gets beside another kind ("which
+  each say what it is"): `#[Output]`, `#[Port]`, `#[Computed]`,
+  `#[Attach]`, `#[AttachList]`, `#[AttachVariants]`, `#[Each]`,
+  `#[AttachEach]`, `#[Map]`. Refused naming both spellings, since they
+  say what the package's attributes say: `#[Input]`, `#[Constraint]`,
+  `#[Widget]`, `#[Describe]`, `#[Setting]`. On the class, the package's
+  `#[Ui(groups:)]` declares groups as `#[Group]` does, one of the two
+  per class; the group a key's `#[Ui(group:)]` names is laid on with
+  `describe()`. `#[Of]`, `#[Schema]` and `#[Check]` on the class, and a
+  class `#[Ui]` saying more than `groups`, are refused; `#[Document]` is
+  not read, since a resource's id and title are its own attributes'.
+  The properties read follow the host's reflection rule, not the
+  package's: a protected property carrying the package's attributes is
+  read, as Surface reads its own; a static one is refused.
+- **An author's schema is the author's own.** So what it holds and the
+  reader does not read as written is an author error: `addSchema()`,
+  and the property path naming `Class::$property`, throw
+  `\InvalidArgumentException` listing every such part by its pointer (an
+  unknown widget, a fractional weight, a message for a code no
+  constraint reads, a format on a type that is no string). An object
+  that declares `properties` with no `additionalProperties: false` is
+  read closed, with no note and no refusal, as every served document is
+  read, and served with `additionalProperties: false` (*amended
+  2026-11-11, revisitable*: both spellings close an object the same way,
+  and the rule for a structure is already documented). A structure of the schema read later in
+  the build is refused the same way. What is accepted, and returned by
+  `SchemaReader::authored()` as notes: a link, dropped, since links are
+  the emitter's; a check the site cannot build (a plugin it lacks,
+  options it refuses, a name outside `drupal:`), kept in the key's
+  JsonSchema constraint, which the server answers as `unchecked`; a
+  check merged with or kept beside a keyword (below); a value no data
+  type says, held whole to its schema by the JsonSchema constraint; a
+  def, or a type of the library, read in place. An id the library does
+  not hold is refused. A property named by digits alone is refused, since
+  PHP would write the object as a list.
+- **What the reader reads back of an author's schema.** Every
+  `drupal:<plugin id>` check of a plugin the site has, whose options the
+  plugin takes, is that constraint with those options; its message under
+  `check.drupal:<plugin id>` is the constraint's `message`, where the
+  constraint has one. A definition holds one constraint of each plugin,
+  so a check naming one a keyword already reads is laid beside it:
+  Range, Length and Count are merged, the check's options over the
+  keyword's, and where both bound the same side the stricter bound is
+  kept (the larger `min`, the smaller `max`); any other (Regex beside
+  `pattern`, Choice beside `enum`) is the check's constraint, and the
+  keyword is kept in the key's JsonSchema constraint, which runs it, so
+  both hold. A check kept inside the JsonSchema constraint would be
+  answered `unchecked` for every value, so the keyword is the one kept
+  there. A message under any other code but `pattern` and `not` is
+  refused. A document from anywhere else is read as before: its checks
+  describe what its server runs, and only `drupal:JsonSchema` and a
+  reference's are read.
+- **A union of one schema and null.** In an author's schema, an `anyOf`
+  or `oneOf` of exactly one schema and `{"type": "null"}` (or `{"const":
+  null}`), in either order, is that schema with null allowed: its
+  keywords beside the union's own, `null` added to the type it states or
+  its values say, so the key is served as an optional key is, for a
+  leaf, an enum, an object, a type of the library or a `$ref`. The
+  package writes `?Size` and a nullable `#[Of]` so. A document from
+  anywhere else is read as before.
+- **Labels stay translatable.** The reader reads a `Schema` an author
+  hands it as it is, never through JSON, so a title, description or
+  option label made with `t()` stays a `TranslatableMarkup` in the
+  definition, as `add()` keeps it. The builder takes
+  `string|\Stringable` for `title()`, `description()`, `message()` and
+  `options()`, and `Schema::from()` keeps a `\Stringable` as given;
+  `toDocument()` writes it as a string. `Schemas::decoded()` is for JSON
+  from outside (the generator's sources) and the writers, whose words are
+  strings as they were. A structure of an author's schema (an object
+  read as a child, a collection's item) is read from the document's
+  array and holds strings.
+- **Numbers to choose from.** A refusal names a Choice of numbers by its
+  values, as JSON writes them, never a `TypeError`; a float choice is
+  served as the float (`ChoiceOptions` keys it as JSON writes it).
+- **A site list holds no boolean schema.** `SiteList::add()` and
+  `addDefs()` refuse `true` and `false` as `addSchema()` does.
+- **Surface's semantics apply to the definition.** Required, where
+  `$required` is NULL, is the dialect's rule: no `default` and no null,
+  or `required()`. TRUE requires a key that has a default; FALSE leaves
+  one optional. An optional key with a default is one null clears,
+  which puts the default back, as for a key `add()` declares, so the
+  document writes `["<type>", "null"]` for it: the authored schema is
+  what the definition is read from, never what is served.
+- **Types of the library.** `#[Of('portable:email')]` and
+  `Schema::of('portable:email')` are the `email` leaf type, served as
+  that leaf is (`type: string`, `format: email`). What the type's
+  document says beyond the row is the constraint a row of the table
+  reads it as, served as its keywords (`maxLength: 254` a Length, an
+  integer's range a Range), so an author who wants the library's rule
+  gets it, and one who writes `format('email')` gets the row alone. A
+  keyword the site states beside the `$ref` too, or one no row reads, is
+  kept as before. This holds for every document the reader reads, not
+  only an author's (one reading, B1), with no served byte changed: a
+  value beyond the library's rule is refused with the keyword's code
+  (`maximum`, `maxLength`) where it was `check.drupal:JsonSchema.not_valid`.
+  Reading a `drupal:` check as its constraint holds for an author's
+  schema alone: a served document publishes its checks with `{}`
+  options, which describe and never run.
+- **Shapes and other ids.** `#[Of(SomeShape::class)]`, or the shape's
+  class as the property's type, is that shape: a `$ref` to a def of the
+  shape's `#[Shape]` id, which the reader reads as the shape. An
+  absolute URI the reader's registry holds is read as an id of the
+  library is; one it does not hold is kept, as any reference to another
+  document. A shape keeps `define(): DataDefinition`.
+- **The provider contracts.** `EntrySchemasInterface::entrySchema()`
+  answers `?Schema` and `entryDefs()` `array<string, Schema>`;
+  `SiteList::add(..., ?Schema $schema)` and `addDefs(array<string,
+  Schema>)`. A provider holding arrays hands in `Schema::from()`. The
+  build reads, hashes and registers a list's schemas as their array
+  form (`Schemas::arrayed()`) and keeps the `Schema` otherwise.
+  `ConfigSchemaDocument::object()` and `document()`, `ComponentSlots`
+  and `ComponentProps::props()` build through `Schema` (`with()`,
+  `property()`, `annotation()`) and answer it; what the reader builds
+  from them is unchanged, since a document is read as JSON decodes it.
+- **The examples.** `NewsletterResource` (the first page's budget is
+  now a resource, an operation, a storage and `addSchema()`) and
+  `RegistrationStep1Resource` are written with `addSchema()`;
+  `CateringResource` stays in Surface's attributes. A test module's
+  structure spells keys with the package's attributes beside a Typed
+  Data twin, and both emit the same documents
+  (`SchemaAttributesTest`).
+- **Cost.** `addSchema()` reads each key through the schema reader:
+  about 30 µs a key against 1 µs for `add()`, so the two examples build
+  and emit 36 to 39 percent slower. It is paid on a build cache miss
+  alone, since the static build is cached per language.
+- **Later.** The emitter writes a type of the library as its `$ref`,
+  once clients resolve one: the React client and the OpenAPI document
+  follow only local `$ref`s, the nullable spelling (`anyOf` of the
+  `$ref` and null, or a `type` array) is open, and the reader infers a
+  leaf type from `type` and `format`. A shape stated as a `Schema`. One
+  spelling in the docs. The generator writes `addSchema()`. A
+  constraint's accepted types are not declared, so neither `add()` nor
+  `addSchema()` can refuse a check that does not fit the key's type
+  (`drupal:Count` on a string) at build time. A default of the wrong
+  type is refused by neither verb. `addMap()` keys named by digits alone
+  are served as a list.
+
+(`BlueprintAdditionsInterface::addSchema()`, `SchemaReader::authored()`,
+`SchemaReader::$authored`, `SchemaReader::$accepted`,
+`SchemaReader::besideKeywords()`, `SchemaReader::withNull()`,
+`PropertyDeclaration`, `EntrySchemasInterface`, `SiteList`,
+`ChoiceOptions`, `Validating::choices()`, `ConfigSchemaDocument`,
+`ComponentSlots`, `ComponentProps`, `AddSchemaTest`,
+`SchemaAttributesTest`, `FirstResourceTest`, `LibraryTypesReaderTest`,
+`PublicSurfaceTest`)
+
+### The checks the document names
+
+Decided 2026-11-11. Every check the server runs at a request is one the
+served document names under `portable-check`, and a check's refusal
+below its place is filed by the package from the error's own
+`location`. Contract 5 stays 5: what each door accepts is what it
+accepted, and the bytes that change are the checks named.
+
+- **A check's refusal names its own location.**
+  `DrupalCheckProvider::error()` writes a violation's property path as
+  the error's `location`, a JSON Pointer relative to the request's
+  place, each name and each index one segment (`items[2].amount` is
+  `/items/2/amount`; a split on `.` alone filed it at `/items[2]/amount`).
+  The package files the error at the request's location joined with it,
+  and the provider keeps the error's message at that joined location,
+  where `PortableValidator` asks for it. `location` is written only
+  where the pointer names a value the request holds, since the package
+  answers a location that names nothing as the check's failure
+  (`unchecked`, reason `error`), and only where neither the place nor
+  the place below is a secret. Otherwise the error stays at the place,
+  with no `location`; one about a secret below its place keeps
+  `PortableValidator::SECRET_PARAMS` alone and is said as "This value is
+  not accepted." (`DrupalCheckProvider::aboutSecret()`).
+  `PortableValidator::said()` joins nothing, and `params.path` is gone.
+  A path is read against the definition at the place
+  (`DrupalCheckProvider::pointerOf()`): where the rest of the path
+  starts with a key the map there declares, the longest such key, `.`
+  and brackets included, is one segment (`x[1]`, `a.b`); otherwise
+  Symfony's split applies, `[n]` an index and `.` a separator. On the
+  wire a refusal's path is dotted, so a key holding `.` still reads as
+  two names there, as for every refusal.
+- **One error per place, code and params.** The package files the
+  errors of one location, code and params as one, whatever their
+  messages, so the provider joins the messages of violations that share
+  them (`DrupalCheckProvider::said()`): each sentence once, in order,
+  separated by a space. Nothing a check says is lost on the wire.
+- **A map's own constraints are named at the map.** A plain key's map,
+  a map in a map and the map each item of a list is
+  (`PropertySchema::mapChecks()`) write every constraint the definition
+  holds as its own (not its data type's), but `NotNull` and
+  `PrimitiveType`, which `required` and `type` state, under
+  `portable-check` at the object, `ComplexData` included; a list of
+  maps writes them at `items`. Each has the message every check has.
+  The constraint table is not read here: no keyword states a map's
+  constraint. The provider answers a `drupal:<id>` at a map as at a
+  key (`Location::definitionAt()`), an empty map is checked, and a map
+  its `type` refuses is not asked. A shape is one scalar definition, so
+  a shape's def holds no map. A check newly named at a map lints as
+  NARROWS, as any check added does; no adopter holds a contract 5
+  baseline from before this slice, and the slice's own baselines were
+  written again.
+- **A check on the items of a collection runs on each item.** An
+  author's check on a list of objects is a check on the structure its
+  items are. The emitter names a frame's schema that holds only this
+  site's checks as those checks (`PropertySchema::namedFrameChecks()`),
+  each with the message any check has, where it wrote a
+  `drupal:JsonSchema` holding them before; and the provider answers such
+  a check at an item as at a map, on the item, a map of the structure's
+  keys. A refusal of an item as a whole is filed at the item (`/k/0`,
+  no trailing `/`).
+- **Email and Uuid are named beside their format.** `EmailRow` and
+  `UuidRow` state their constraint in part: `format: email` and
+  `format: uuid` admit what the constraint refuses (`a@b`,
+  `x@localhost`, a quoted local part, an address literal, the nil UUID,
+  a version a Uuid does not take), so `portable-check: {drupal:Email: {}}`
+  and `{drupal:Uuid: {}}` stand after the format
+  (`ConstraintKeywords::FORMAT_TWINS`). Neither writes a message of its
+  own: the label alone, "Email", would say less than the format's
+  sentence and the constraint's own message, which the provider says on
+  a refusal. A message the constraint was given (`message`) is written
+  as any check's, unless it holds a placeholder the server fills
+  (`%value`, `@value`, `{{ value }}`): the dialect's messages are plain
+  sentences, so such a message is not written, and the server's refusal
+  says it with the value in it. A Uuid limited to some `versions` is a
+  twin too: it loses the label message it had, and its `versions` stay
+  the server's, unwritten. A twin travels with its format: where a
+  narrowing (`PropertySchema::narrowing()`) drops the `format` because
+  the def states it, it drops the twin, which the def names too. A
+  composite (`Sequentially`, `AtLeastOneOf`) whose part is Email or Uuid
+  writes its `allOf` or `anyOf` and is named besides, with its label as
+  its message, as every check with no message of its own; the server
+  now refuses what the parts' formats admit and the part refuses
+  (`a@b`). A check stays unasked where `type`, `pattern`, `maxLength`,
+  `minLength` or `format` refuses at its place, so the wire codes
+  `check.drupal:Email` and `check.drupal:Uuid` and their messages are
+  what they were; a composite's check stays unasked where the `allOf` or
+  `anyOf` it is written as refuses at its place
+  (`Nodes::refusedByComposite()`), so one fault is one refusal. A
+  keyword refusal of another node there does not leave it unasked. The
+  resource generator counts a twin written beside its format as carried
+  (`ConfigSchemaDocument::constraints()`), so a class generated from a
+  config schema says nothing of an Email or a Uuid it states by its type
+  or format.
+- **Nothing runs unnamed.** `DrupalCheckProvider::unwritten()` and
+  `unnamed()`, `PortableValidator::unwritten()` and its table of host
+  formats, `Nodes::formats()` and the block in `Validating` that merged
+  their refusals are gone. One place names a check, `checked()`, and the
+  provider answers what the document names.
+- **Reading.** A plain map's `portable-check` is read as a key's is
+  (`SchemaReader::mapChecks()`): a `drupal:JsonSchema` is the schema it
+  holds; on an author's schema each other check is the constraint it
+  names with its options, where the site can build it, else kept in a
+  JsonSchema constraint and noted as accepted; on a served document it
+  is noted, known by its plugin alone. The pair of a format and its twin
+  with no message of its own reads as the format reads (the `email`
+  type, Uuid), with nothing noted, and the emitter writes the check
+  again, so a document read back and written again is the same. A list
+  of maps is read as a collection: an author's check on its item frame
+  that the site can build is kept for the items and noted nowhere, one
+  it cannot build is kept and noted as unchecked, and on a served
+  document it is noted as a plain map's is.
+- **The contract diff.** A check added beside an unchanged `format` it
+  is the host's rule for is a note: the server applied that rule before
+  the document named it. `format` is asserted, so it is judged as
+  `pattern` is: the diff cannot order two formats, so any `format`
+  change on an input breaks and on an output widens; added narrows and
+  removed widens.
+- **Clients.** The React client carries the checks with no change; its
+  contract panel says a twin beside its format once, by the format ("an
+  email address", "a UUID"). The OpenAPI document and the form door
+  read no `portable-check` here.
+- **The React fixtures are pinned.** `ReactFixturesTest` emits each
+  document of the React app's fixtures again, in a site holding the
+  example modules it was taken from, asks the server each recorded
+  refine step again, and holds the whole file's bytes to what it
+  answers, each step's values, stale paths, notes and discarded answers
+  included; `SURFACE_REACT_FIXTURES_WRITE=1` writes them again.
+- **Later.** `format: iri` for a `uri` key that takes a host outside
+  ASCII: it widens every `uri` key, and which keys take such hosts is a
+  product decision. Per-item narrowing inside `items` (`prefixItems`, or
+  a `choose` link): every reader of `items` changes, its own slice with
+  the drawer. Cacheability per node: no client reads it, and its shape
+  is undecided. A type of the library on the wire (`$ref:
+  portable:...`): the React client and the OpenAPI document follow only
+  local `$ref`s, the nullable spelling is open, nearly every leaf key's
+  bytes change, and what `portable:timestamp` means is the package's to
+  say. A shape stated as a `Schema`: authoring only. Manifests for the
+  library's checks: the package's. A message derived from a plugin's
+  label alone ("Callback", "Universally Unique Identifier") is a
+  candidate to drop for every check, a byte change of its own.
+
+(`DrupalCheckProvider::error()`, `DrupalCheckProvider::aboutSecret()`,
+`PortableValidator::said()`, `PropertySchema::mapChecks()`,
+`PropertySchema::checked()`, `PropertySchema::narrowing()`,
+`PropertySchema::namedFrameChecks()`, `ConstraintKeywords::FORMAT_TWINS`,
+`ConfigSchemaDocument::constraints()`, `Nodes::refusedByComposite()`,
+`EmailRow`, `UuidRow`, `CompositeRow`, `SchemaReader::mapChecks()`,
+`ContractDiff::checks()`, `ReactFixturesTest`, `NamedChecksTest`,
+`PortableValidationTest`, `ResourceGeneratorTest`)
 
 ### An OpenAPI document is one more door
 

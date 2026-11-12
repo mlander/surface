@@ -100,25 +100,28 @@ The shape itself is written once, titled by its label:
   "type": ["string", "null"],
   "pattern": "^#[0-9A-Fa-f]{6}$",
   "examples": ["#0969DA"],
-  "x-surface": {"patternMessage": "Write the color as # and six hexadecimal digits, such as #0969DA."}
+  "x-portable-messages": {"pattern": "Write the color as # and six hexadecimal digits, such as #0969DA."}
 }
 ```
 
 Its `type` allows `null` because whether a value may be empty is
 decided where the shape is used, here by `setRequired(TRUE)`. Send
-`blue` and `#fff`, and the tool refuses both with the shape's message:
+`blue` and `#fff`, and the tool refuses both with the shape's message,
+under the dialect's code for the keyword, `pattern`:
 
 ```json
 "violations": [
   {
     "path": "/link_color",
-    "code": "regex_failed",
-    "message": "Write the color as # and six hexadecimal digits, such as #0969DA."
+    "code": "pattern",
+    "message": "Write the color as # and six hexadecimal digits, such as #0969DA.",
+    "params": {"pattern": "^#[0-9A-Fa-f]{6}$"}
   },
   {
     "path": "/background_color",
-    "code": "regex_failed",
-    "message": "Write the color as # and six hexadecimal digits, such as #0969DA."
+    "code": "pattern",
+    "message": "Write the color as # and six hexadecimal digits, such as #0969DA.",
+    "params": {"pattern": "^#[0-9A-Fa-f]{6}$"}
   }
 ]
 ```

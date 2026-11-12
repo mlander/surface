@@ -74,7 +74,8 @@ final class Outbound {
    *   The values.
    *
    * @return array
-   *   The declared keys of the values, in the order they were in.
+   *   The declared keys of the values, in the order they were in, a
+   *   datetime key's with its offset (Coercion::served()).
    */
   public static function declared(SurfaceInterface $surface, array $values): array {
     $definitions = $surface->getDefinitions();
@@ -90,6 +91,12 @@ final class Outbound {
       }
       elseif (is_array($value) && ($child = $entry->childFor($values)) !== NULL) {
         $value = static::declared($child, $value);
+      }
+      elseif ($entry->definition->getDataType() === 'datetime_iso8601') {
+        // Served with its offset.
+        // Decision: see
+        // docs/decisions.md#validation-runs-through-the-dialects-validator.
+        $value = Coercion::served($value, $entry->definition);
       }
       $declared[$name] = $value;
     }

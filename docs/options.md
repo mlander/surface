@@ -338,7 +338,7 @@ stock `SurfaceUnique`, which the build adds where the storage can
 say whether a thing exists ("A venue named riverside already exists.";
 [A title and its machine name](declaring-a-resource.md#a-title-and-its-machine-name)),
 so no resource writes one. The cost: the
-schema can only name it under `x-surface.checkedOnServer`, it does not
+schema can only name it under `portable-check`, it does not
 read back from the schema, the React page cannot narrow on it, and a
 caller learns the rule when a call is refused. When you write a
 constraint, at this step or for a kind at step 2, extend the stock
@@ -347,14 +347,14 @@ code come with it. Example 2's room constraint extends `Choice`: a room
 no venue has is refused in `Choice`'s words,
 naming the rooms, and its resolver says its list is the whole of the
 constraint ([below](#writing-a-resolver)), so both documents state the
-rooms as a `oneOf` and name nothing under `checkedOnServer`.
+rooms as a `oneOf` and name nothing under `portable-check`.
 
 **Example 2, before and after.** Its venue was a string with a
 constraint of its own, a `Choice` subclass, a validator that read the
 enabled venues and a resolver that listed them. It is now
 a string with `SurfaceValidReference` naming `event_venue`, step 2 with no code:
-its candidates are core's selection handler's, and both documents mark
-it `x-surface.reference`. The room keeps what no stock constraint
+its candidates are core's selection handler's, and both documents state
+it as its check's options, `{"entityTypeId": "event_venue"}`. The room keeps what no stock constraint
 says, a room of one of the site's venues: one constraint with its
 validator and its resolver, and a narrower one its refiner adds for the
 venue chosen
@@ -458,8 +458,19 @@ form, a `oneOf` in both documents and an enum in the tool listing. Past
 it, the resolver does not apply: the key takes an id, which the
 constraint's validator holds to the handler, drawn by core's
 `entity_autocomplete` element ([Widgets](widgets.md#the-stock-widgets)),
-`x-surface.widget: autocomplete` in both documents, and looked up with
+`x-portable-ui.widget: autocomplete` in both documents, and looked up with
 the resource's lookup ([The served contract](served-contract.md#a-lookup)).
+Listed or not, both documents state what the key refers to as the
+options of its check, `"portable-check": {"drupal:SurfaceValidReference":
+{"entityTypeId": "node", "bundles": ["article"]}}`, the plugin's own
+options, and, where the HTTP door serves the operation's lookup, name it
+as the key's `lookup` link,
+`{"rel": "lookup", "href": "/surface-api/event.sponsorship:lookup?key=/page{&q,limit}"}`;
+the id of a key of any entity type has no check and a link that reads
+its entity type from its sibling, written where the structure is used;
+refined to one entity type, it carries the check with its options and
+that link
+(why: [decision](decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)).
 The list's cacheability is what the handler read: the entity type's list
 tags, the contexts `References::CONTEXTS` names for it
 (`user.permissions`, and `user.node_grants:view` for a node), and the
@@ -487,7 +498,7 @@ of the variant the stored values choose, if any
 Where a reference key past its limit is looked up by label, such a key
 is fetched per choice: choose the deciding key, then fetch the full
 schema with that choice stated, `GET .../schema?choose=/props=<value>`,
-the key's `x-surface.deferred.fetch` filled, once per value, and keep it until
+the key's `choose` link expanded, once per value, and keep it until
 the site's list changes
 ([the fetch per choice](served-contract.md#the-fetch-per-choice)). Or
 ask with values, `POST .../schema` over HTTP or the narrowing tool,
@@ -533,8 +544,9 @@ final class RoleExistsOptions extends SurfaceOptionsResolverBase {
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-Declare the cacheability honestly. It is what a generated form applies to
-the element it builds, and it is the difference between a select that
+Declare the cacheability honestly. It is what the served contract
+carries, and what a generated form drawn from it applies to its
+container, and it is the difference between a select that
 updates when a role is added and one that does not. The distinction
 between tags, which travel into a shared cache, and contexts, which mean
 "this answer was for one request", is in
@@ -542,11 +554,11 @@ between tags, which travel into a shared cache, and contexts, which mean
 
 **A list that is the whole constraint.** Both documents state a
 resolved list as `oneOf`, and name the constraint under
-`x-surface.checkedOnServer` besides, since the schema cannot know the
+`portable-check` besides, since the schema cannot know the
 constraint checks nothing more. A resolver whose list is every value its
 constraint accepts and nothing else, as a `Choice`'s is, says so with
 `exact: TRUE` on its attribute, and the constraint, and every subclass of
-it the resolver reads, is then named under no `checkedOnServer`. Example
+it the resolver reads, is then named under no `portable-check`. Example
 2's room does: its constraint is a `Choice` whose list is the rooms of
 the venues the site has, read by `EventVenueRoomOptions`
 (why: [decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
