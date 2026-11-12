@@ -320,13 +320,8 @@ final class Validating {
       // surface's own words; a property ruled out is not there.
       $refusals = [];
       $choices = [];
-      $unwritten = [];
-      foreach ($this->provider === NULL ? [] : $this->validator->unwritten($this->provider, $definition, $value, $this->frame[0] . $name) as $found) {
-        $relative = $found->path === $this->frame[0] . $name ? '' : substr($found->path, strlen($this->frame[0] . $name) + 1);
-        $unwritten[] = [$relative, $found];
-      }
       $missing_paths = array_map('strval', array_keys($missing));
-      foreach ([...$this->taken($this->frame[0] . $name, TRUE), ...$unwritten] as [$path, $found]) {
+      foreach ($this->taken($this->frame[0] . $name, TRUE) as [$path, $found]) {
         $subject = static::subject($path, $found);
         if (static::under($subject, $missing_paths) || static::under($subject, $ruled_out)) {
           continue;
@@ -1292,7 +1287,8 @@ final class Validating {
       }
       $held = is_array($stored[$delta] ?? NULL) ? $stored[$delta] : [];
       foreach ($this->validateFramed($child, $item, $held, $name . '.' . $delta, $list->item->reads, $level) as $violation) {
-        $errors[] = $violation->at($name, $delta . '.' . $violation->fullPath());
+        // A refusal of the item as a whole is at the item itself.
+        $errors[] = $violation->at($name, $violation->fullPath() === '' ? (string) $delta : $delta . '.' . $violation->fullPath());
       }
     }
     return $errors;

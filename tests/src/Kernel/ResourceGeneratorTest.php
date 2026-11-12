@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\surface\Drush\Generators\Resource\ResourceCode;
+use Drupal\surface\Resource\ResourceInterface;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface\SurfaceBuilder;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\Filesystem\Filesystem;
@@ -205,6 +208,42 @@ PHP, $resource, 'Required in a fully validatable object, its default the value t
     $this->assertFileDoesNotExist($out . '/config/install/node.settings.yml');
     $this->assertStringContainsString('No config schema entry and no install file: node.settings is node\'s', $display);
     $this->assertParses(['src/Resource/NodeSettingsResource.php', 'src/Storage/NodeSettingsStorage.php'], $out);
+  }
+
+  /**
+   * Tests system.site's Uuid and Email are not called left out.
+   *
+   * Each is written as its format and named beside it, so the class
+   * carries no comment saying the config schema states it and it is not
+   * written.
+   */
+  public function testTheFormatTwinsOfSystemSiteAreWritten(): void {
+    $out = $this->sandbox . '/system_site';
+    $display = $this->generate([
+      'surface_examples_first',
+      // Resource id: system.site; label: Site information; class: Site.
+      '', '', '',
+      '1',
+      '',
+      'Sets the site name, its email address and its front page.',
+      '', '', '',
+    ], ['--from-config-schema' => 'system.site'], $out);
+    $resource = $this->written('src/Resource/SiteResource.php', $out);
+    $this->assertStringContainsString("\$inputs->add(self::UUID, 'string'", $resource);
+    $this->assertStringContainsString("\$inputs->add(self::MAIL, 'email'", $resource);
+    $this->assertStringNotContainsString('states Uuid', $resource);
+    $this->assertStringNotContainsString('states Email', $resource);
+    $this->assertStringContainsString('5 comments in the class name what was not written from the config schema of system.site', $display);
+    $this->assertParses(['src/Resource/SiteResource.php', 'src/Storage/SiteStorage.php'], $out);
+    // The class builds: its keys are declared into a blueprint.
+    require_once $out . '/src/Resource/SiteResource.php';
+    preg_match('/^namespace (.+);$/m', $resource, $namespace);
+    $class = $namespace[1] . '\\SiteResource';
+    $this->assertTrue(is_subclass_of($class, ResourceInterface::class));
+    $builder = new SurfaceBuilder();
+    $class::defineInputs(new ResourceBlueprint($builder, $this->container->get('typed_data_manager')));
+    $this->assertArrayHasKey('Uuid', $builder->getDefinition('uuid')->getConstraints());
+    $this->assertSame('email', $builder->getDefinition('mail')->getDataType());
   }
 
   /**

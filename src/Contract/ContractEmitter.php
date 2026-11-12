@@ -966,9 +966,25 @@ final class ContractEmitter {
       // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
       // Several are one check, their schemas held together, named by what
       // all of them say, so reading the document back reads that check.
-      $frame = $advertised->frameConstraints();
-      $together = count($frame) === 1 ? reset($frame) : ['allOf' => array_values($frame)];
-      $schema = PortableKeywords::before($schema, PortableKeywords::write([static::foreign($together, $this->stringTranslation)]));
+      // A schema that only names this site's checks names them here, as
+      // a map's own checks are named: the server runs them on each item
+      // of a collection.
+      // Decision: see docs/decisions.md#the-checks-the-document-names.
+      $frame = [];
+      $named = [];
+      foreach ($advertised->frameConstraints() as $fragment) {
+        $checks = $this->propertySchema->namedFrameChecks($fragment);
+        if ($checks === NULL) {
+          $frame[] = $fragment;
+          continue;
+        }
+        $named = [...$named, ...$checks];
+      }
+      $entries = $named;
+      if ($frame !== []) {
+        $entries[] = static::foreign(count($frame) === 1 ? reset($frame) : ['allOf' => $frame], $this->stringTranslation);
+      }
+      $schema = PortableKeywords::before($schema, PortableKeywords::write($entries));
     }
     if ($advertised->mixins() !== []) {
       // Decision: see docs/decisions.md#a-mixin-is-merged-flat.

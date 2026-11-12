@@ -743,6 +743,27 @@ describe('the contract panel', () => {
     expect(document.querySelector('tr[surface-key="tag"]')?.textContent).toContain('checked on the server: drupal:UniqueTag');
   });
 
+  it('says a host check beside the format it is the rule for once, by the format', () => {
+    render(
+      <ContractPanel
+        contract={{ resource: 'example', operation: 'configure', label: null, stale: [], values: {}, schema: object({}) }}
+        schema={object({
+          mail: { title: 'Mail', type: 'string', format: 'email', 'portable-check': { 'drupal:Email': {} }, ...x('email') },
+          id: { title: 'Id', type: 'string', format: 'uuid', 'portable-check': { 'drupal:Uuid': {} }, ...x('text') },
+          code: { title: 'Code', type: 'string', 'portable-check': { 'drupal:Uuid': {} }, ...x('text') },
+        })}
+        values={{}}
+      />,
+    );
+    const mail = document.querySelector('tr[surface-key="mail"]')?.textContent ?? '';
+    expect(mail).toContain('an email address');
+    expect(mail).not.toContain('checked on the server');
+    const id = document.querySelector('tr[surface-key="id"]')?.textContent ?? '';
+    expect(id).toContain('a UUID');
+    expect(id).not.toContain('checked on the server');
+    expect(document.querySelector('tr[surface-key="code"]')?.textContent).toContain('checked on the server: drupal:Uuid');
+  });
+
   it('explains a Regex by its message, and only a Regex without one by its pattern, in code', () => {
     const message = 'A license number is four digits, such as 2048.';
     render(

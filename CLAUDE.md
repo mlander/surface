@@ -955,10 +955,12 @@ test errored or failed and every gate passed.
   itself, so the full lane has no `--order-by=defects` and no result
   cache; it orders classes slowest first.
 
-On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-10-23: the
-full lane takes 5m07s at the defaults (phpunit 4m40s) and 23m03s with
-both set to 1 (phpunit 22m36s; a plain phpunit run takes 21m11s); the
-fast lane takes 2m31s, 3m30s while its caches are empty. For the first
+On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-11: the
+full lane takes 10m05s at the defaults (phpunit 9m18s) and the fast
+lane 5m51s (phpunit 5m41s). As of 2026-10-23, with a smaller suite, the
+full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
+phpunit run took 21m11s), and the fast lane 3m30s while its caches were
+empty. For the first
 run, eight classes at once took 3m12s, six 3m54s, ten 3m35s (ddev's
 php-fpm serves eight requests at once). The add-on's Chrome takes 12
 sessions, but six browser tests at once crash its tabs ("tab crashed")
@@ -986,7 +988,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2367, Assertions: 57467, Errors: 0, Failures: 0, Skipped: 3. Classes: 330 of 330, 8 at a time, browser classes 4.
+phpunit: Tests: 2388, Assertions: 57776, Errors: 0, Failures: 0, Skipped: 3. Classes: 332 of 332, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1010,8 +1012,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2253, Assertions: 52913, Deprecations: 683, Skipped: 3. Classes:
-277, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2274, Assertions: 53222, Deprecations: 687, Skipped: 3. Classes:
+279, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 
@@ -1258,7 +1260,10 @@ so the rule is this sentence. `npm test` is not part of
   `SURFACE_RETITLE_WRITE=1`, and the OpenAPI document's request examples,
   `modules/surface_openapi/tests/fixtures/openapi/examples.json`, by
   `OpenApiDocumentTest` with `SURFACE_OPENAPI_EXAMPLES_WRITE=1` (the
-  official OpenAPI 3.1 schema beside it is vendored, not generated).
+  official OpenAPI 3.1 schema beside it is vendored, not generated), and
+  the React app's fixtures,
+  `modules/surface_examples_react/app/src/test/fixtures/`, by
+  `ReactFixturesTest` with `SURFACE_REACT_FIXTURES_WRITE=1`.
   Never edit any of them by hand.
 - Commit messages are one line.
 

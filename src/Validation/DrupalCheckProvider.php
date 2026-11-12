@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Validation;
 
+use Drupal\Component\Render\MarkupInterface;
+use Drupal\Component\Utility\Html;
+use Drupal\Core\Render\Markup;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\Core\TypedData\Validation\RecursiveContextualValidator;
 use Drupal\Core\TypedData\Validation\RecursiveValidator;
+use Drupal\surface\Contract\ConstraintKeywords;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\DefinitionTypedData;
@@ -27,6 +31,7 @@ use Drupal\surface\SurfaceInterface;
 use PortableSchema\Check\CheckProvider;
 use PortableSchema\Check\CheckRequest;
 use PortableSchema\Check\CheckResult;
+use PortableSchema\Pointer;
 use Symfony\Component\Validator\ConstraintViolationInterface;
 
 /**
@@ -49,9 +54,15 @@ use Symfony\Component\Validator\ConstraintViolationInterface;
  * violation's parameters, each named without its `{{ }}`, `@`, `%` or `:`;
  * its message the violation's own, translated, which message() hands back.
  * A violation below the place (ReviewDeadline's at `amount`) carries
- * `params.path`, a JSON Pointer from the place, since a check's error has
- * no location of its own; PortableValidator files the refusal there and
- * drops `params.path`.
+ * `location`, a JSON Pointer from the place, each segment of its property
+ * path one segment (`items[2].amount` is `/items/2/amount`), and its
+ * message is kept at the place it names: the package files the error
+ * there. That holds only where the pointer names a value the request
+ * holds, since the package answers a location that names nothing as a
+ * failed check, and where neither the place nor the place below is a
+ * secret. Otherwise the error stays at the place, with no location; one
+ * about a secret keeps PortableValidator::SECRET_PARAMS alone
+ * (aboutSecret()).
  *
  * A place holding no value (ValueState::isConfigured()) passes: whether
  * it must hold one is the module's to say. A place whose value a keyword
@@ -88,11 +99,25 @@ final class DrupalCheckProvider implements CheckProvider {
   private array $messages = [];
 
   /**
+   * The sentences of each message in $messages, by the same id.
+   *
+   * @var array<string, string[]>
+   */
+  private array $sentences = [];
+
+  /**
    * The checks a JsonSchema named that could not run, by location.
    *
    * @var array<string, string[]>
    */
   private array $foreign = [];
+
+  /**
+   * The errors about a secret below their place, by id().
+   *
+   * @var array<string, true>
+   */
+  private array $secret = [];
 
   /**
    * The first throwable a check threw.
@@ -261,36 +286,6 @@ final class DrupalCheckProvider implements CheckProvider {
   }
 
   /**
-   * Runs a constraint of a place that the document names as no check.
-   *
-   * Drupal's Email and Uuid are each written as a `format` alone, and the
-   * format admits what the constraint refuses (`a@b`, the nil UUID): so
-   * the place's own constraint runs too, as the check it is,
-   * `check.drupal:<id>`.
-   *
-   * @param string $pointer
-   *   The place's JSON Pointer.
-   * @param string $id
-   *   The constraint's plugin id.
-   *
-   * @return array<int, array{code: string, params: array<string, mixed>}>
-   *   The errors, each as a check's; none where the place holds no such
-   *   constraint or no value.
-   */
-  public function unnamed(string $pointer, string $id): array {
-    $place = $this->at($pointer);
-    $definition = $place?->definition;
-    if ($definition === NULL || !ValueState::isConfigured($place->value) || !array_key_exists($id, $definition->getConstraints())) {
-      return [];
-    }
-    $errors = [];
-    foreach ($this->violations($definition, $id, $definition->getConstraints()[$id], $place->value) as $violation) {
-      $errors[] = $this->error($pointer, self::PREFIX . $id, $violation);
-    }
-    return $errors;
-  }
-
-  /**
    * Refines a level against its values, once for the provider.
    *
    * @param \Drupal\surface\SurfaceInterface $level
@@ -368,56 +363,20 @@ final class DrupalCheckProvider implements CheckProvider {
   }
 
   /**
-   * Runs the constraints of the maps in a plain key, which no document says.
+   * Answers whether an error this answered is about a secret below its place.
    *
-   * The document writes a map of a plain key (a key's settings, a map an
-   * alter mounted, a map that is each item of a list) as its properties
-   * alone, never its own constraints (ReviewDeadline on a deadline's
-   * amount and unit together). So each is run here as the check it is,
-   * `check.drupal:<id>`, at the map, with what a check's errors carry:
-   * every map inside the key, a map's properties and a list's items
-   * alike.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key's definition.
-   * @param mixed $value
-   *   Its value.
    * @param string $location
-   *   Its JSON Pointer.
+   *   Its location.
+   * @param string $code
+   *   Its code.
+   * @param array $params
+   *   Its params.
    *
-   * @return array<int, array{0: string, 1: string, 2: array<string, mixed>, 3: string|\Stringable}>
-   *   What they refused: each refusal's JSON Pointer, code, params and
-   *   message.
+   * @return bool
+   *   TRUE when the place it named is a secret, so it carries no value.
    */
-  public function unwritten(DataDefinitionInterface $definition, mixed $value, string $location): array {
-    if (!is_array($value)) {
-      return [];
-    }
-    $found = [];
-    if ($definition instanceof ListDataDefinitionInterface) {
-      foreach (array_values($value) as $delta => $item) {
-        $at = Location::append($location, $delta);
-        $found = [...$found, ...$this->unwritten($definition->getItemDefinition(), $item, $at)];
-      }
-      return $found;
-    }
-    if (!$definition instanceof ComplexDataDefinitionInterface || $definition->getPropertyDefinitions() === []) {
-      return [];
-    }
-    $own = $definition instanceof DataDefinition ? ($definition->toArray()['constraints'] ?? []) : [];
-    foreach (is_array($own) ? $own : [] as $id => $options) {
-      $name = self::PREFIX . $id;
-      foreach ($this->violations($definition, (string) $id, $options, $value) as $violation) {
-        $error = $this->error($location, $name, $violation);
-        $message = $this->message($location, $error['code'], $error['params']) ?? '';
-        $found[] = [$location, $error['code'], $error['params'], $message];
-      }
-    }
-    foreach ($definition->getPropertyDefinitions() as $property => $inside) {
-      $at = Location::append($location, (string) $property);
-      $found = [...$found, ...$this->unwritten($inside, $value[$property] ?? NULL, $at)];
-    }
-    return $found;
+  public function aboutSecret(string $location, string $code, array $params): bool {
+    return isset($this->secret[self::id($location, $code, $params)]);
   }
 
   /**
@@ -501,6 +460,13 @@ final class DrupalCheckProvider implements CheckProvider {
       $this->unasked[$request->location] = TRUE;
       return new CheckResult();
     }
+    $composite = array_intersect(ConstraintKeywords::row($id)?->keywords() ?? [], ['allOf', 'anyOf']);
+    if ($composite !== [] && $this->nodes?->refusedByComposite($request->location, $request->value, $name, reset($composite))) {
+      // The parts the composite is written as refuse the value: their
+      // refusal stands alone.
+      $this->unasked[$request->location] = TRUE;
+      return new CheckResult();
+    }
     $ran = FALSE;
     $errors = [];
     $definition = $location->definition;
@@ -515,13 +481,20 @@ final class DrupalCheckProvider implements CheckProvider {
       }
       $ran = TRUE;
       foreach ($this->violations($definition, $id, $options, $location->value) as $violation) {
-        $errors[] = $this->error($request->location, $name, $violation);
+        $error = $this->error($request, $name, $violation, $definition);
+        // One error per location, code and params; said() joins their
+        // messages.
+        $errors[json_encode($error)] = $error;
       }
     }
     if ($location->frame !== NULL && $id === 'JsonSchema' && $location->frame->getDefinitions()->frameConstraints() !== []) {
       $ran = TRUE;
       $document = $this->pipeline->document($location->frame, is_array($location->value) ? $location->value : []);
       foreach ($location->frame->getDefinitions()->frameConstraints() as $schema) {
+        if (self::namesChecksOnly($schema)) {
+          // Named in the document as those checks, each asked on its own.
+          continue;
+        }
         $foreign = self::foreignChecks($schema);
         if ($foreign !== []) {
           $this->foreign[$request->location] = $foreign;
@@ -543,7 +516,28 @@ final class DrupalCheckProvider implements CheckProvider {
         $errors[] = $error;
       }
     }
-    return $ran ? new CheckResult($errors) : CheckResult::unchecked('noProvider');
+    if (!$ran && $definition === NULL && $location->frame !== NULL && $request->location !== '' && $id !== 'JsonSchema') {
+      // An item of a collection, whose structure names the check on its
+      // whole: run on the item as a map of the structure's keys.
+      foreach ($location->frame->getDefinitions()->frameConstraints() as $schema) {
+        $checks = $schema[PortableKeywords::CHECK] ?? NULL;
+        if (!self::namesChecksOnly($schema) || !is_array($checks) || !array_key_exists($name, $checks)) {
+          continue;
+        }
+        $ran = TRUE;
+        $map = MapDataDefinition::create();
+        foreach ($location->frame->getDefinitions()->entries() as $key => $entry) {
+          $map->setPropertyDefinition((string) $key, $entry->definition);
+        }
+        $options = json_decode((string) json_encode($checks[$name]), TRUE);
+        foreach ($this->violations($map, $id, is_array($options) ? $options : [], $location->value) as $violation) {
+          $error = $this->error($request, $name, $violation, $map);
+          $errors[json_encode($error)] = $error;
+        }
+        break;
+      }
+    }
+    return $ran ? new CheckResult(array_values($errors)) : CheckResult::unchecked('noProvider');
   }
 
   /**
@@ -575,17 +569,21 @@ final class DrupalCheckProvider implements CheckProvider {
   /**
    * Writes one Symfony violation as a check's error.
    *
-   * @param string $location
-   *   The request's location.
+   * @param \PortableSchema\Check\CheckRequest $request
+   *   The request.
    * @param string $name
    *   The check's name.
    * @param \Symfony\Component\Validator\ConstraintViolationInterface $violation
    *   The violation.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition at the place, which the violation's path is read
+   *   against (pointerOf()).
    *
-   * @return array{code: string, params: array<string, mixed>}
-   *   The error.
+   * @return array{code: string, params: array<string, mixed>, location?: string}
+   *   The error; `location` for a violation below the place that names a
+   *   value the request holds, no secret.
    */
-  private function error(string $location, string $name, ConstraintViolationInterface $violation): array {
+  private function error(CheckRequest $request, string $name, ConstraintViolationInterface $violation, DataDefinitionInterface $definition): array {
     $code = PortableKeywords::CHECK_CODE . $name;
     $constraint = $violation->getConstraint();
     $raw = $violation->getCode();
@@ -601,12 +599,136 @@ final class DrupalCheckProvider implements CheckProvider {
     foreach ($violation->getParameters() as $placeholder => $value) {
       $params[trim((string) $placeholder, '{} @%:')] = $value instanceof \Stringable ? (string) $value : $value;
     }
-    $below = (string) $violation->getPropertyPath();
+    $error = [];
+    $at = $request->location;
+    $below = self::pointerOf((string) $violation->getPropertyPath(), $definition);
     if ($below !== '') {
-      $params['path'] = array_reduce(explode('.', $below), static fn (string $pointer, string $segment): string => Location::append($pointer, $segment), '');
+      if ($this->isSecret($at) || $this->isSecret($at . $below)) {
+        // Filed at the place, saying nothing of the value.
+        $params = array_intersect_key($params, array_flip(PortableValidator::SECRET_PARAMS));
+        $this->secret[self::id($at, $code, $params)] = TRUE;
+      }
+      elseif (Pointer::get($request->value, $below)[0]) {
+        $error['location'] = $below;
+        $at .= $below;
+      }
     }
-    $this->messages[self::id($location, $code, $params)] = ViolationMessage::of($violation);
-    return ['code' => $code, 'params' => $params];
+    $this->said(self::id($at, $code, $params), ViolationMessage::of($violation));
+    return ['code' => $code, 'params' => $params] + $error;
+  }
+
+  /**
+   * Registers an error's message, joined to one already there.
+   *
+   * The package files errors of one location, code and params as one
+   * (two distinct messages for one code at one place are one error), so
+   * the messages of violations that share them are joined into one: each
+   * sentence once, in the order given, separated by a space. One sentence
+   * stays the object the constraint built.
+   *
+   * @param string $id
+   *   The error's id().
+   * @param string|\Stringable $message
+   *   Its message.
+   */
+  private function said(string $id, string|\Stringable $message): void {
+    $sentence = (string) $message;
+    $this->sentences[$id] ??= [];
+    if (in_array($sentence, $this->sentences[$id], TRUE)) {
+      return;
+    }
+    $this->sentences[$id][] = $sentence;
+    if (count($this->sentences[$id]) === 1) {
+      $this->messages[$id] = $message;
+      return;
+    }
+    $first = $this->messages[$id];
+    $parts = [];
+    foreach ([$first, $message] as $part) {
+      $parts[] = $part instanceof MarkupInterface ? (string) $part : Html::escape((string) $part);
+    }
+    $this->messages[$id] = Markup::create(implode(' ', $parts));
+  }
+
+  /**
+   * Writes a violation's property path as a JSON Pointer.
+   *
+   * Each segment is resolved against the definition at the place: where
+   * the rest of the path starts with a key the map there declares (the
+   * longest such key, `.` and brackets included), that key is the
+   * segment, so `a.b` and `x[1]` declared as keys are one segment each.
+   * Otherwise the path is split as Symfony writes it: names joined by
+   * `.`, an index in brackets (`items[2].amount`).
+   *
+   * @param string $path
+   *   The path.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
+   *   The definition at the place the path starts from.
+   *
+   * @return string
+   *   The pointer, each name and index one segment (`/items/2/amount`);
+   *   empty for an empty path.
+   */
+  private static function pointerOf(string $path, ?DataDefinitionInterface $definition): string {
+    $pointer = '';
+    while ($path !== '') {
+      $segment = NULL;
+      if ($definition instanceof ComplexDataDefinitionInterface) {
+        foreach (array_keys($definition->getPropertyDefinitions()) as $name) {
+          $name = (string) $name;
+          $next = substr($path, strlen($name), 1);
+          if (str_starts_with($path, $name) && in_array($next, ['', '.', '['], TRUE) && strlen($name) > strlen((string) $segment)) {
+            $segment = $name;
+          }
+        }
+      }
+      if ($segment !== NULL) {
+        $rest = substr($path, strlen($segment));
+      }
+      elseif (preg_match('/^\[([^\]]*)\]/', $path, $match) || preg_match('/^([^.\[]+)/', $path, $match)) {
+        $segment = $match[1];
+        $rest = substr($path, strlen($match[0]));
+      }
+      else {
+        // A stray separator: skipped.
+        $path = substr($path, 1);
+        continue;
+      }
+      $pointer = Location::append($pointer, $segment);
+      $definition = match (TRUE) {
+        $definition instanceof ComplexDataDefinitionInterface => $definition->getPropertyDefinition($segment),
+        $definition instanceof ListDataDefinitionInterface => $definition->getItemDefinition(),
+        default => NULL,
+      };
+      $path = str_starts_with($rest, '.') ? substr($rest, 1) : $rest;
+    }
+    return $pointer;
+  }
+
+  /**
+   * Answers whether a frame's schema only names this site's checks.
+   *
+   * Such a schema is written as those checks
+   * (PropertySchema::namedFrameChecks()), each asked by its own name.
+   *
+   * @param array $schema
+   *   The frame's schema.
+   *
+   * @return bool
+   *   TRUE when it holds `portable-check` alone, every name `drupal:` and
+   *   none `drupal:JsonSchema`.
+   */
+  private static function namesChecksOnly(array $schema): bool {
+    $checks = $schema[PortableKeywords::CHECK] ?? NULL;
+    if (array_keys($schema) !== [PortableKeywords::CHECK] || !is_array($checks) || $checks === []) {
+      return FALSE;
+    }
+    foreach (array_keys($checks) as $name) {
+      if (!str_starts_with((string) $name, self::PREFIX) || $name === self::PREFIX . 'JsonSchema') {
+        return FALSE;
+      }
+    }
+    return TRUE;
   }
 
   /**

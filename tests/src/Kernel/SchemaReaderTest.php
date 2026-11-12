@@ -625,6 +625,33 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests a served document's check at a plain map is noted, at any depth.
+   *
+   * A check of the host's is known by its plugin alone, as at a key; a
+   * `drupal:JsonSchema` is the schema it holds, held to the map.
+   */
+  public function testMapChecksOfServedDocuments(): void {
+    $document = static::json(<<<'JSON'
+      {"type": "object", "additionalProperties": false, "properties": {
+        "deadline": {"type": ["object", "null"], "additionalProperties": false,
+          "properties": {"amount": {"type": ["integer", "null"]},
+            "inner": {"type": ["object", "null"], "additionalProperties": false,
+              "properties": {"n": {"type": ["integer", "null"]}},
+              "portable-check": {"drupal:ComplexData": {}}}},
+          "portable-check": {"drupal:SurfaceExamplesExtrasReviewDeadline": {}, "drupal:JsonSchema": {"schema": {"minProperties": 1}}},
+          "x-portable-messages": {"check.drupal:SurfaceExamplesExtrasReviewDeadline": "Review deadline"}}
+      }}
+      JSON);
+    $this->assertSame([
+      '/properties/deadline/portable-check/drupal:SurfaceExamplesExtrasReviewDeadline' => 'Not read: a constraint the server checks is known by its plugin alone.',
+      '/properties/deadline/properties/inner/portable-check/drupal:ComplexData' => 'Not read: a constraint the server checks is known by its plugin alone.',
+    ], $this->reader()->notes($document));
+    $read = $this->read($document);
+    $this->assertSame(['schema' => ['minProperties' => 1]], $read->getDefinition('deadline')->getConstraints()['JsonSchema']);
+    $this->assertArrayNotHasKey('SurfaceExamplesExtrasReviewDeadline', $read->getDefinition('deadline')->getConstraints());
+  }
+
+  /**
    * Tests the readings the table of constraints and keywords documents.
    *
    * `minLength: 1` is Length, never NotBlank; `format: uuid` is Uuid and
@@ -658,6 +685,8 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $full = $this->container->get('surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
     $this->assertSame(1, $full['properties']['name']['minLength']);
     $this->assertSame('uuid', $full['properties']['id']['format'], 'Uuid is written back as format: uuid.');
+    $this->assertSame(['drupal:Uuid' => []], json_decode((string) json_encode($full['properties']['id']['portable-check']), TRUE), 'And named beside it, the host\'s rule for the format.');
+    $this->assertSame([], $this->reader()->notes(static::json('{"type": "object", "additionalProperties": false, "properties": {"id": {"type": "string", "format": "uuid", "portable-check": {"drupal:Uuid": {}}}, "mail": {"type": "string", "format": "email", "portable-check": {"drupal:Email": {}}}}}')), 'A format and the check beside it that it states are read as one, with nothing noted.');
     $this->assertSame([4, 4], [$full['properties']['pin']['minLength'], $full['properties']['pin']['maxLength']]);
 
     $short = ['min' => 0, 'max' => 8];

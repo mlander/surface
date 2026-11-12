@@ -2058,7 +2058,7 @@ final class SchemaReader {
     // Closed, as every frame of a structure is: a key it does not declare
     // is refused before anything else is read.
     $closed = Schemas::boolean($schema->get('additionalProperties')) === FALSE || Schemas::boolean($schema->get('unevaluatedProperties')) === FALSE;
-    if (!$closed) {
+    if (!$closed && !$this->authored) {
       $this->note(static::below($pointer, 'additionalProperties'), 'Read closed: a structure holds the keys it declares, and a key the schema leaves open is refused.');
     }
     $this->frameExtension($extension, $pointer, $inputs);
@@ -2071,8 +2071,14 @@ final class SchemaReader {
       elseif ($this->authored) {
         // An author's check on a whole object: no constraint of a frame
         // runs but its JsonSchema, so the server answers it as unchecked.
+        // On the items of a collection it runs on each item, as a plain
+        // map's check does, where the site has the plugin and it takes
+        // the options.
+        // Decision: see docs/decisions.md#the-checks-the-document-names.
         $left[PortableKeywords::CHECK][$check['id']] = $check['options'] === [] ? new \stdClass() : $check['options'];
-        $this->accept(static::below($pointer, PortableKeywords::CHECK, $check['id']), 'Kept as a JsonSchema constraint on the frame: a check on a whole object is not run, and the server answers it as unchecked.');
+        if (!str_ends_with($pointer, '/items') || $this->unconstrained($check) !== NULL) {
+          $this->accept(static::below($pointer, PortableKeywords::CHECK, $check['id']), 'Kept as a JsonSchema constraint on the frame: a check on a whole object is not run, and the server answers it as unchecked.');
+        }
       }
       else {
         $this->note(static::below($pointer, PortableKeywords::CHECK, PortableKeywords::PROVIDER . $check['constraint']), 'Not read: a constraint the server checks is known by its plugin alone.');
@@ -3477,7 +3483,10 @@ final class SchemaReader {
    */
   protected function map(Schema $schema, string $pointer, Schema $root): MapDataDefinition {
     $map = MapDataDefinition::create();
-    if (Schemas::boolean($schema->get('additionalProperties')) !== FALSE) {
+    // An author's object is closed as a served one is, with nothing noted:
+    // both spellings close it the same way.
+    // Decision: see docs/decisions.md#authoring-takes-a-schema.
+    if (!$this->authored && Schemas::boolean($schema->get('additionalProperties')) !== FALSE) {
       $this->note(static::below($pointer, 'additionalProperties'), 'Read closed: a map holds the keys it declares, and a key the schema leaves open is refused.');
     }
     $extension = static::extensionOf($schema);
@@ -3487,6 +3496,7 @@ final class SchemaReader {
     if (is_string($extension['after'] ?? NULL)) {
       DefinitionMetadata::setPlacedAfter($map, $extension['after']);
     }
+    $this->mapChecks($map, $schema, $pointer);
     $groups = Schemas::data((Schemas::data($schema->get(PortableKeywords::UI)) ?? [])['groups'] ?? NULL) ?? [];
     $required = array_map('strval', is_array($schema->get('required')) ? $schema->get('required') : []);
     foreach ($schema->get('properties') as $name => $property) {
@@ -3515,6 +3525,51 @@ final class SchemaReader {
       $map->setPropertyDefinition($name, $this->finished($inner, $read, in_array($name, $required, TRUE), in_array('null', $types, TRUE)));
     }
     return $map;
+  }
+
+  /**
+   * Reads the checks a plain map names, as a key's are read.
+   *
+   * A `drupal:JsonSchema` is the schema it holds, held to the map. On an
+   * author's schema each other check is the constraint it names, with its
+   * options and its message, where the site has the plugin and it takes
+   * them; else it is kept in a JsonSchema constraint, which the server
+   * answers as a check it cannot run. On a served document a check is
+   * known by its plugin alone, and noted.
+   *
+   * Decision: see docs/decisions.md#the-checks-the-document-names.
+   *
+   * @param \Drupal\Core\TypedData\MapDataDefinition $map
+   *   The map read.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   Its schema.
+   * @param string $pointer
+   *   Its pointer.
+   */
+  protected function mapChecks(MapDataDefinition $map, Schema $schema, string $pointer): void {
+    $kept = [];
+    foreach (PortableKeywords::checks($schema->all()) as $check) {
+      $at = static::below($pointer, PortableKeywords::CHECK, $check['id']);
+      if ($check['constraint'] === 'JsonSchema' && is_array($check['options']['schema'] ?? NULL)) {
+        $held_at = static::below($at, 'schema');
+        $map->addConstraint('JsonSchema', ['schema' => static::fragment($this->keptSchema(static::checked($check['options']['schema'], $held_at), $held_at))]);
+        continue;
+      }
+      if (!$this->authored) {
+        $this->note($at, 'Not read: a constraint the server checks is known by its plugin alone.');
+        continue;
+      }
+      $why = $this->unconstrained($check);
+      if ($why === NULL) {
+        $map->addConstraint($check['constraint'], $this->withMessage($check));
+        continue;
+      }
+      $kept[$check['id']] = $check['options'] === [] ? new \stdClass() : $check['options'];
+      $this->accept($at, 'Kept as a JsonSchema constraint: ' . $why . ', so the server answers it as a check it cannot run.');
+    }
+    if ($kept !== []) {
+      $map->addConstraint('JsonSchema', ['schema' => [PortableKeywords::CHECK => $kept]]);
+    }
   }
 
   /**
@@ -4178,6 +4233,15 @@ final class SchemaReader {
         case PortableKeywords::CHECK:
           foreach (PortableKeywords::checks($property->all()) as $check) {
             $why = NULL;
+            if ($check['id'] === PortableKeywords::PROVIDER . $check['constraint'] && $check['options'] === [] && $check['message'] === NULL && ConstraintKeywords::isFormatTwin($check['constraint'], $property->get('format'))) {
+              // Email beside `format: email`, Uuid beside `format: uuid`,
+              // with no message of its own: the format reads as the
+              // constraint (the `email` type, UuidRow), and the emitter
+              // names the check beside it again, so nothing is lost and
+              // nothing is said.
+              // Decision: see docs/decisions.md#the-checks-the-document-names.
+              continue;
+            }
             if ($check['constraint'] === 'JsonSchema' && is_array($check['options']['schema'] ?? NULL)) {
               $held_at = static::below($at, PortableKeywords::PROVIDER . 'JsonSchema', 'schema');
               $read[] = new ReadBack('JsonSchema', ['schema' => static::fragment($this->keptSchema(static::checked($check['options']['schema'], $held_at), $held_at))], [$keyword]);

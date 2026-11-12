@@ -17,6 +17,17 @@ interface Row {
 type Phrase = string | { words: string; code: string };
 
 /**
+ * The checks that are the host's rule for a format, by the formats.
+ *
+ * Named beside the format, they say what its phrase says already, so the
+ * panel does not say them again.
+ */
+const FORMAT_TWINS: Record<string, string[]> = {
+  'drupal:Email': ['email'],
+  'drupal:Uuid': ['uuid'],
+};
+
+/**
  * Says what a property allows, in words, as the PHP panel does.
  *
  * A pattern is explained by its Regex's message, never shown to a person
@@ -51,6 +62,9 @@ function allows(schema: Schema): Phrase[] {
   if (schema.format === 'email' || schema.format === 'idn-email') {
     phrases.push('an email address');
   }
+  if (schema.format === 'uuid') {
+    phrases.push('a UUID');
+  }
   const messages = schema['x-portable-messages'] ?? {};
   if (schema.pattern !== undefined) {
     phrases.push(messages.pattern ?? { words: 'matches a required format: ', code: schema.pattern });
@@ -59,6 +73,9 @@ function allows(schema: Schema): Phrase[] {
     phrases.push(messages.not);
   }
   for (const check of Object.keys(schema['portable-check'] ?? {})) {
+    if (schema.format !== undefined && (FORMAT_TWINS[check] ?? []).includes(schema.format) && messages[`check.${check}`] === undefined) {
+      continue;
+    }
     phrases.push(`checked on the server: ${messages[`check.${check}`] ?? check}`);
   }
   return phrases.length === 0 ? ['anything of its type'] : phrases;

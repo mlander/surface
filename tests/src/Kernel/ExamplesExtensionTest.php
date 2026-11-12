@@ -85,7 +85,10 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
                 "title": "Sender",
                 "type": "string",
                 "format": "email",
-                "default": "tickets@example.com"
+                "default": "tickets@example.com",
+                "portable-check": {
+                    "drupal:Email": {}
+                }
             },
             "endpoint": {
                 "title": "Mail service",
@@ -197,7 +200,10 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
                 "title": "Sender",
                 "type": "string",
                 "format": "email",
-                "default": "tickets@example.com"
+                "default": "tickets@example.com",
+                "portable-check": {
+                    "drupal:Email": {}
+                }
             },
             "endpoint": {
                 "title": "Mail service",

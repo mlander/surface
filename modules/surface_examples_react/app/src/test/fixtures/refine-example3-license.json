@@ -586,6 +586,9 @@
                         "title": "Email",
                         "type": "string",
                         "format": "email",
+                        "portable-check": {
+                            "drupal:Email": {}
+                        },
                         "x-portable-ui": {
                             "widget": "email"
                         }
@@ -1028,6 +1031,9 @@
                             "title": "Email",
                             "type": "string",
                             "format": "email",
+                            "portable-check": {
+                                "drupal:Email": {}
+                            },
                             "x-portable-ui": {
                                 "widget": "email"
                             }
@@ -1505,6 +1511,9 @@
                                     "title": "Email",
                                     "type": "string",
                                     "format": "email",
+                                    "portable-check": {
+                                        "drupal:Email": {}
+                                    },
                                     "x-portable-ui": {
                                         "widget": "email"
                                     }
@@ -1983,6 +1992,9 @@
                                     "title": "Email",
                                     "type": "string",
                                     "format": "email",
+                                    "portable-check": {
+                                        "drupal:Email": {}
+                                    },
                                     "x-portable-ui": {
                                         "widget": "email"
                                     }
@@ -2461,6 +2473,9 @@
                                     "title": "Email",
                                     "type": "string",
                                     "format": "email",
+                                    "portable-check": {
+                                        "drupal:Email": {}
+                                    },
                                     "x-portable-ui": {
                                         "widget": "email"
                                     }

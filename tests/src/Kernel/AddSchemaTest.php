@@ -8,6 +8,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\SchemaReader;
+use Drupal\surface\DefinitionMap;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\MapBlueprint;
@@ -15,6 +16,7 @@ use Drupal\surface\ResourceBuild\NeedsFrame;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
 use Drupal\surface\ResourceBuild\ResourceBlueprintAdditions;
 use Drupal\surface\ResourceBuild\ShapeBlueprint;
+use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -120,7 +122,14 @@ class AddSchemaTest extends SurfaceKernelTestBase {
     $this->assertSame(['title' => 'Size', 'type' => ['integer', 'null'], 'default' => 10], $properties['size'], 'An optional key with a default is one null clears, as add() declares it.');
     $this->assertSame('integer', $properties['kept']['type'], 'A required key holds a value.');
     $this->assertSame(['string', 'null'], $properties['loose']['type']);
-    $this->assertSame(['title' => 'Sender', 'type' => ['string', 'null'], 'format' => 'email', 'maxLength' => 254], $properties['sender'], 'A type of the library is served as its leaf type is, its rule as keywords: no $ref.');
+    $sender = [
+      'title' => 'Sender',
+      'type' => ['string', 'null'],
+      'format' => 'email',
+      'maxLength' => 254,
+      'portable-check' => ['drupal:Email' => []],
+    ];
+    $this->assertSame($sender, json_decode((string) json_encode($properties['sender']), TRUE), 'A type of the library is served as its leaf type is, its rule as keywords and the host\'s check beside its format: no $ref.');
     $this->assertSame(['check.drupal:Regex' => 'Lowercase letters only.'], $properties['slug']['x-portable-messages'], 'Served as a Regex with that message is.');
     $this->assertArrayHasKey('drupal:ExtensionExists', $properties['module']['portable-check']);
     $this->assertArrayNotHasKey('$defs', $schema, 'A def read in place is the key\'s own.');
@@ -215,10 +224,6 @@ class AddSchemaTest extends SurfaceKernelTestBase {
         Schema::integer()->format('int64'),
         '/properties/format/format: Not read: the "int64" format is read on a string alone, and this key is integer.',
       ],
-      'an object left open' => [
-        Schema::object()->property('city', Schema::string()),
-        '/properties/open/additionalProperties: Read closed: a map holds the keys it declares, and a key the schema leaves open is refused.',
-      ],
       'a property named by digits' => [
         Schema::object()->property('0', Schema::string())->with('additionalProperties', FALSE),
         'addSchema("digits") was handed a schema naming the property "0" at /properties/digits/properties: a name of digits alone is written as a position, so the object would be served as a list. Name it with a letter in it.',
@@ -230,7 +235,6 @@ class AddSchemaTest extends SurfaceKernelTestBase {
       'a message for a check that is kept' => 'kept',
       'a fractional weight' => 'weight',
       'a format on an integer' => 'format',
-      'an object left open' => 'open',
       'a property named by digits' => 'digits',
     ];
     foreach ($refused as $what => [$schema, $said]) {
@@ -245,6 +249,27 @@ class AddSchemaTest extends SurfaceKernelTestBase {
         }
       }
     }
+  }
+
+  /**
+   * Tests an object left open is read closed, as a served one is.
+   *
+   * Both spellings close an object the same way, so nothing is noted or
+   * refused, and the document served for it says `additionalProperties:
+   * false`.
+   */
+  public function testAnOpenObjectReadsClosed(): void {
+    $blueprint = $this->blueprint();
+    $notes = SchemaReader::authored($blueprint, 'open', Schema::object()->property('city', Schema::string()->title('City'))->title('Open'), FALSE);
+    $this->assertSame([], $notes);
+    $definition = $blueprint->definitionOf('open');
+    $this->assertInstanceOf(MapDataDefinition::class, $definition);
+    $this->assertSame(['city'], array_keys($definition->getPropertyDefinitions()));
+    $surface = new Surface(DefinitionMap::fromArrays(definitions: ['open' => $definition]));
+    $schema = $this->container->get('surface.contract_emitter')->emit($surface, [], 'test')->document['schema'];
+    $open = json_decode((string) json_encode($schema), TRUE)['properties']['open'];
+    $this->assertFalse($open['additionalProperties']);
+    $this->assertSame(['city'], array_keys($open['properties']));
   }
 
   /**
@@ -287,6 +312,31 @@ class AddSchemaTest extends SurfaceKernelTestBase {
     }
     $notes = SchemaReader::authored($this->blueprint(), 'strict', Schema::string()->maxLength(5)->check('drupal:Length', ['max' => 9]));
     $this->assertSame(['/properties/strict/portable-check/drupal:Length' => 'Merged with the Length the keywords say: max 5 is kept, the stricter of the keyword\'s 5 and the check\'s 9.'], $notes);
+  }
+
+  /**
+   * Tests an author's checks at a map and beside a format are read.
+   *
+   * A map's check is the constraint it names, with its options, where the
+   * site can build it, and kept for the server to answer as unchecked
+   * where it cannot, noted and accepted. Drupal's Email beside
+   * `format: email` is the format's own rule: read with nothing noted.
+   */
+  public function testChecksOnMapsAndBesideFormatsAreRead(): void {
+    $blueprint = $this->blueprint();
+    $box = Schema::object(['n' => Schema::integer()])
+      ->with('additionalProperties', FALSE)
+      ->check('drupal:ComplexData', ['n' => ['Range' => ['max' => 5]]])
+      ->check('acme:thing');
+    $notes = SchemaReader::authored($blueprint, 'box', $box, FALSE);
+    $this->assertSame(['/properties/box/portable-check/acme:thing' => 'Kept as a JsonSchema constraint: acme:thing is no check of this site, whose checks are named drupal:<plugin id>, so the server answers it as a check it cannot run.'], $notes);
+    $constraints = $blueprint->definitionOf('box')?->getConstraints() ?? [];
+    $this->assertSame(['n' => ['Range' => ['max' => 5]]], $constraints['ComplexData']);
+    $this->assertSame(['acme:thing'], array_keys($constraints['JsonSchema']['schema']['portable-check']));
+
+    $notes = SchemaReader::authored($blueprint, 'mail', Schema::string()->with('format', 'email')->check('drupal:Email'), FALSE);
+    $this->assertSame([], $notes, 'The pair is the email type, read as one.');
+    $this->assertSame('email', $blueprint->definitionOf('mail')?->getDataType());
   }
 
   /**

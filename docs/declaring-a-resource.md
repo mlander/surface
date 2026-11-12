@@ -576,10 +576,10 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **What is not read is refused.** A part of the schema the module does
   not read as written is the author's to fix, so `addSchema()` throws,
   naming each part by its pointer: an unknown widget, a message for no
-  constraint, a format on a type that is no string, an object left open
-  (close it with `->with('additionalProperties', FALSE)`). A link is
-  dropped, and a check the site cannot run is kept for the server to
-  answer as unchecked.
+  constraint, a format on a type that is no string. A link is dropped,
+  and a check the site cannot run is kept for the server to answer as
+  unchecked. An object left open is read closed, as a served document
+  is, and served with `additionalProperties: false`.
 - **A type of the library** is a `$ref`: `Schema::of('portable:email')`
   is the email type, and what the library says beyond it (an address of
   254 characters at most) is a Length the document serves as

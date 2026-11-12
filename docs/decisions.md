@@ -10580,6 +10580,11 @@ to one value, and core registers no `All` plugin, so it is not read as
 an `allOf`. (`Keywords\CompositeRow`,
 `AdvertisedSchemaAcceptanceTest::testCompositesAreTheirParts()`)
 
+*Amended 2026-11-11 by [The checks the document
+names](#the-checks-the-document-names):* a part that is Email or Uuid
+is stated by its format, and the composite is written and named under
+`portable-check` besides.
+
 ### One table maps a constraint to its keywords, both ways
 
 Decided 2026-11-10: the constraints the contract states in keywords,
@@ -11917,7 +11922,9 @@ say is run by a check on the server.
   the constraint a keyword's refusal is said in
   (`DrupalCheckProvider::constraintMessage()`), and the checks the
   document does not name yet (`DrupalCheckProvider::unwritten()` and
-  `unnamed()`, below).
+  `unnamed()`, below). *Superseded 2026-11-11 by
+  [The checks the document names](#the-checks-the-document-names):* nothing runs that the document does not name, and both
+  are gone.
 - **A check runs the host's own constraint.** One `CheckProvider`,
   `Validation\DrupalCheckProvider`, answers every `drupal:<plugin id>`
   name. It reads the request's location back to its place on the data
@@ -11935,7 +11942,9 @@ say is run by a check on the server.
   own. A violation below the place is filed where the check named it:
   the request's location joined with the violation's own path
   (ReviewDeadline's at `/review_deadline/amount`), so every door marks
-  the field it is about and no `params.path` is on the wire. A place
+  the field it is about and no `params.path` is on the wire.
+  *Superseded 2026-11-11 by [The checks the document names](#the-checks-the-document-names):* the error carries the
+  dialect's `location` and the package files it. A place
   holding no value passes. A throwable in a check is thrown once the
   validation returns: a bug is never a refusal.
 - **A check is not asked where a keyword refuses.** Where the
@@ -11959,7 +11968,9 @@ say is run by a check on the server.
   local part, an address literal, the nil UUID): at each place a node
   writes either format and nothing refuses, the place's own constraint
   runs too, as `check.drupal:Email` or `check.drupal:Uuid` with its
-  sub-code, never as the format's code (`unnamed()`).
+  sub-code, never as the format's code (`unnamed()`). *Superseded
+  2026-11-11 by [The checks the document names](#the-checks-the-document-names):* the document names each of these
+  checks, and the provider runs them as any check it names.
 - **What the module says, the validator does not.** A key nothing
   declares is refused by accept() as `unknown_key`, so the validator's
   `unknownProperty` is never said, and what storage holds beyond what
@@ -11996,8 +12007,9 @@ say is run by a check on the server.
   rest. accept()'s `type` names `null` in `params.expected` for a key
   that takes it, as the validator's does.
 - **A secret's refusal carries no value.** At a secret place a
-  refusal's params keep `path`, `limit`, `expected`, `actual`,
-  `property`, `check` and `reason` alone, and its message is "This
+  refusal's params keep `limit`, `expected`, `actual`,
+  `property`, `check` and `reason` alone (`path` too, until
+  [The checks the document names](#the-checks-the-document-names)), and its message is "This
   value is not accepted.", a keyword's and a check's alike.
 - **Messages.** The validator says no text. A check's message is its
   violation's. A keyword's is the message of the constraint the keyword
@@ -12044,6 +12056,8 @@ say is run by a check on the server.
   package once it carries one (`check-locations` on the fork, which
   requires a location to name a value present in the instance), in place
   of the joining above. Manifests for the library's checks.
+  *Done 2026-11-11 in [The checks the document names](#the-checks-the-document-names)*, but `iri` and the manifests,
+  which stay in its Later.
   `References::definitionAt()`, `Validating::definitionAt()` and
   `Extracting::definitionAt()` answer other questions than
   `Location::definitionAt()` and stay their own: the first finds a
@@ -12283,8 +12297,12 @@ they served.
   and the property path naming `Class::$property`, throw
   `\InvalidArgumentException` listing every such part by its pointer (an
   unknown widget, a fractional weight, a message for a code no
-  constraint reads, a format on a type that is no string, an object left
-  open, which is read closed). A structure of the schema read later in
+  constraint reads, a format on a type that is no string). An object
+  that declares `properties` with no `additionalProperties: false` is
+  read closed, with no note and no refusal, as every served document is
+  read, and served with `additionalProperties: false` (*amended
+  2026-11-11, revisitable*: both spellings close an object the same way,
+  and the rule for a structure is already documented). A structure of the schema read later in
   the build is refused the same way. What is accepted, and returned by
   `SchemaReader::authored()` as notes: a link, dropped, since links are
   the emitter's; a check the site cannot build (a plugin it lacks,
@@ -12405,6 +12423,156 @@ they served.
 `ComponentSlots`, `ComponentProps`, `AddSchemaTest`,
 `SchemaAttributesTest`, `FirstResourceTest`, `LibraryTypesReaderTest`,
 `PublicSurfaceTest`)
+
+### The checks the document names
+
+Decided 2026-11-11. Every check the server runs at a request is one the
+served document names under `portable-check`, and a check's refusal
+below its place is filed by the package from the error's own
+`location`. Contract 5 stays 5: what each door accepts is what it
+accepted, and the bytes that change are the checks named.
+
+- **A check's refusal names its own location.**
+  `DrupalCheckProvider::error()` writes a violation's property path as
+  the error's `location`, a JSON Pointer relative to the request's
+  place, each name and each index one segment (`items[2].amount` is
+  `/items/2/amount`; a split on `.` alone filed it at `/items[2]/amount`).
+  The package files the error at the request's location joined with it,
+  and the provider keeps the error's message at that joined location,
+  where `PortableValidator` asks for it. `location` is written only
+  where the pointer names a value the request holds, since the package
+  answers a location that names nothing as the check's failure
+  (`unchecked`, reason `error`), and only where neither the place nor
+  the place below is a secret. Otherwise the error stays at the place,
+  with no `location`; one about a secret below its place keeps
+  `PortableValidator::SECRET_PARAMS` alone and is said as "This value is
+  not accepted." (`DrupalCheckProvider::aboutSecret()`).
+  `PortableValidator::said()` joins nothing, and `params.path` is gone.
+  A path is read against the definition at the place
+  (`DrupalCheckProvider::pointerOf()`): where the rest of the path
+  starts with a key the map there declares, the longest such key, `.`
+  and brackets included, is one segment (`x[1]`, `a.b`); otherwise
+  Symfony's split applies, `[n]` an index and `.` a separator. On the
+  wire a refusal's path is dotted, so a key holding `.` still reads as
+  two names there, as for every refusal.
+- **One error per place, code and params.** The package files the
+  errors of one location, code and params as one, whatever their
+  messages, so the provider joins the messages of violations that share
+  them (`DrupalCheckProvider::said()`): each sentence once, in order,
+  separated by a space. Nothing a check says is lost on the wire.
+- **A map's own constraints are named at the map.** A plain key's map,
+  a map in a map and the map each item of a list is
+  (`PropertySchema::mapChecks()`) write every constraint the definition
+  holds as its own (not its data type's), but `NotNull` and
+  `PrimitiveType`, which `required` and `type` state, under
+  `portable-check` at the object, `ComplexData` included; a list of
+  maps writes them at `items`. Each has the message every check has.
+  The constraint table is not read here: no keyword states a map's
+  constraint. The provider answers a `drupal:<id>` at a map as at a
+  key (`Location::definitionAt()`), an empty map is checked, and a map
+  its `type` refuses is not asked. A shape is one scalar definition, so
+  a shape's def holds no map. A check newly named at a map lints as
+  NARROWS, as any check added does; no adopter holds a contract 5
+  baseline from before this slice, and the slice's own baselines were
+  written again.
+- **A check on the items of a collection runs on each item.** An
+  author's check on a list of objects is a check on the structure its
+  items are. The emitter names a frame's schema that holds only this
+  site's checks as those checks (`PropertySchema::namedFrameChecks()`),
+  each with the message any check has, where it wrote a
+  `drupal:JsonSchema` holding them before; and the provider answers such
+  a check at an item as at a map, on the item, a map of the structure's
+  keys. A refusal of an item as a whole is filed at the item (`/k/0`,
+  no trailing `/`).
+- **Email and Uuid are named beside their format.** `EmailRow` and
+  `UuidRow` state their constraint in part: `format: email` and
+  `format: uuid` admit what the constraint refuses (`a@b`,
+  `x@localhost`, a quoted local part, an address literal, the nil UUID,
+  a version a Uuid does not take), so `portable-check: {drupal:Email: {}}`
+  and `{drupal:Uuid: {}}` stand after the format
+  (`ConstraintKeywords::FORMAT_TWINS`). Neither writes a message of its
+  own: the label alone, "Email", would say less than the format's
+  sentence and the constraint's own message, which the provider says on
+  a refusal. A message the constraint was given (`message`) is written
+  as any check's, unless it holds a placeholder the server fills
+  (`%value`, `@value`, `{{ value }}`): the dialect's messages are plain
+  sentences, so such a message is not written, and the server's refusal
+  says it with the value in it. A Uuid limited to some `versions` is a
+  twin too: it loses the label message it had, and its `versions` stay
+  the server's, unwritten. A twin travels with its format: where a
+  narrowing (`PropertySchema::narrowing()`) drops the `format` because
+  the def states it, it drops the twin, which the def names too. A
+  composite (`Sequentially`, `AtLeastOneOf`) whose part is Email or Uuid
+  writes its `allOf` or `anyOf` and is named besides, with its label as
+  its message, as every check with no message of its own; the server
+  now refuses what the parts' formats admit and the part refuses
+  (`a@b`). A check stays unasked where `type`, `pattern`, `maxLength`,
+  `minLength` or `format` refuses at its place, so the wire codes
+  `check.drupal:Email` and `check.drupal:Uuid` and their messages are
+  what they were; a composite's check stays unasked where the `allOf` or
+  `anyOf` it is written as refuses at its place
+  (`Nodes::refusedByComposite()`), so one fault is one refusal. A
+  keyword refusal of another node there does not leave it unasked. The
+  resource generator counts a twin written beside its format as carried
+  (`ConfigSchemaDocument::constraints()`), so a class generated from a
+  config schema says nothing of an Email or a Uuid it states by its type
+  or format.
+- **Nothing runs unnamed.** `DrupalCheckProvider::unwritten()` and
+  `unnamed()`, `PortableValidator::unwritten()` and its table of host
+  formats, `Nodes::formats()` and the block in `Validating` that merged
+  their refusals are gone. One place names a check, `checked()`, and the
+  provider answers what the document names.
+- **Reading.** A plain map's `portable-check` is read as a key's is
+  (`SchemaReader::mapChecks()`): a `drupal:JsonSchema` is the schema it
+  holds; on an author's schema each other check is the constraint it
+  names with its options, where the site can build it, else kept in a
+  JsonSchema constraint and noted as accepted; on a served document it
+  is noted, known by its plugin alone. The pair of a format and its twin
+  with no message of its own reads as the format reads (the `email`
+  type, Uuid), with nothing noted, and the emitter writes the check
+  again, so a document read back and written again is the same. A list
+  of maps is read as a collection: an author's check on its item frame
+  that the site can build is kept for the items and noted nowhere, one
+  it cannot build is kept and noted as unchecked, and on a served
+  document it is noted as a plain map's is.
+- **The contract diff.** A check added beside an unchanged `format` it
+  is the host's rule for is a note: the server applied that rule before
+  the document named it. `format` is asserted, so it is judged as
+  `pattern` is: the diff cannot order two formats, so any `format`
+  change on an input breaks and on an output widens; added narrows and
+  removed widens.
+- **Clients.** The React client carries the checks with no change; its
+  contract panel says a twin beside its format once, by the format ("an
+  email address", "a UUID"). The OpenAPI document and the form door
+  read no `portable-check` here.
+- **The React fixtures are pinned.** `ReactFixturesTest` emits each
+  document of the React app's fixtures again, in a site holding the
+  example modules it was taken from, asks the server each recorded
+  refine step again, and holds the whole file's bytes to what it
+  answers, each step's values, stale paths, notes and discarded answers
+  included; `SURFACE_REACT_FIXTURES_WRITE=1` writes them again.
+- **Later.** `format: iri` for a `uri` key that takes a host outside
+  ASCII: it widens every `uri` key, and which keys take such hosts is a
+  product decision. Per-item narrowing inside `items` (`prefixItems`, or
+  a `choose` link): every reader of `items` changes, its own slice with
+  the drawer. Cacheability per node: no client reads it, and its shape
+  is undecided. A type of the library on the wire (`$ref:
+  portable:...`): the React client and the OpenAPI document follow only
+  local `$ref`s, the nullable spelling is open, nearly every leaf key's
+  bytes change, and what `portable:timestamp` means is the package's to
+  say. A shape stated as a `Schema`: authoring only. Manifests for the
+  library's checks: the package's. A message derived from a plugin's
+  label alone ("Callback", "Universally Unique Identifier") is a
+  candidate to drop for every check, a byte change of its own.
+
+(`DrupalCheckProvider::error()`, `DrupalCheckProvider::aboutSecret()`,
+`PortableValidator::said()`, `PropertySchema::mapChecks()`,
+`PropertySchema::checked()`, `PropertySchema::narrowing()`,
+`PropertySchema::namedFrameChecks()`, `ConstraintKeywords::FORMAT_TWINS`,
+`ConfigSchemaDocument::constraints()`, `Nodes::refusedByComposite()`,
+`EmailRow`, `UuidRow`, `CompositeRow`, `SchemaReader::mapChecks()`,
+`ContractDiff::checks()`, `ReactFixturesTest`, `NamedChecksTest`,
+`PortableValidationTest`, `ResourceGeneratorTest`)
 
 ### An OpenAPI document is one more door
 

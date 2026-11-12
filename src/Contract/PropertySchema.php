@@ -9,6 +9,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
@@ -89,6 +90,15 @@ final class PropertySchema {
    * checks' and dropped. Never in a document.
    */
   protected const PATTERN_MESSAGE = self::EXTENSION . '-pattern-message';
+
+  /**
+   * A placeholder the server fills in a check's message.
+   *
+   * Drupal's `%value` and `@value`, Symfony's `{{ value }}`, by any name.
+   * A check's message that holds one is not written under
+   * `x-portable-messages`.
+   */
+  protected const PLACEHOLDER = '/(?<![\w.])[%@]\w|\{\{ ?\w+ ?\}\}/';
 
   /**
    * The constraints a list of values is read from, by the options resolvers.
@@ -310,7 +320,95 @@ final class PropertySchema {
         $narrowing[$keyword] = $value;
       }
     }
-    return Schema::keywords($narrowing);
+    return Schema::keywords(self::withoutStatedTwins($narrowing, $instance, $def));
+  }
+
+  /**
+   * Names the checks a frame's schema holds, where it holds nothing else.
+   *
+   * A schema read into a frame that is only `portable-check` naming this
+   * site's checks (an author's check on the items of a collection) is
+   * written as those checks, each as checked() writes a map's.
+   *
+   * @param array $fragment
+   *   The frame's schema.
+   *
+   * @return list<array>|null
+   *   The entries, for PortableKeywords::write(); NULL where the schema
+   *   says anything else.
+   */
+  public function namedFrameChecks(array $fragment): ?array {
+    $checks = $fragment[PortableKeywords::CHECK] ?? NULL;
+    if (array_keys($fragment) !== [PortableKeywords::CHECK] || !is_array($checks) || $checks === []) {
+      return NULL;
+    }
+    $entries = [];
+    foreach ($checks as $name => $options) {
+      $name = (string) $name;
+      if (!str_starts_with($name, PortableKeywords::PROVIDER) || $name === PortableKeywords::PROVIDER . 'JsonSchema') {
+        return NULL;
+      }
+      $entries[] = $this->checked(substr($name, strlen(PortableKeywords::PROVIDER)), json_decode((string) json_encode($options), TRUE));
+    }
+    return $entries;
+  }
+
+  /**
+   * Drops a format's twin from a narrowing that does not write the format.
+   *
+   * A twin travels with its format (ConstraintKeywords::FORMAT_TWINS):
+   * where the def states the format and the narrowing drops it, the def
+   * names the twin too, so the narrowing drops the twin and its messages
+   * where the def holds the same.
+   *
+   * @param array $narrowing
+   *   The keywords that differ.
+   * @param \PortableSchema\Builder\Schema $instance
+   *   The instance.
+   * @param \PortableSchema\Builder\Schema $def
+   *   The def.
+   *
+   * @return array
+   *   The same, less a twin the def names beside its format.
+   */
+  protected static function withoutStatedTwins(array $narrowing, Schema $instance, Schema $def): array {
+    $format = $instance->get('format');
+    $checks = $narrowing[PortableKeywords::CHECK] ?? NULL;
+    if (array_key_exists('format', $narrowing) || $format === NULL || $def->get('format') !== $format || !is_array($checks)) {
+      return $narrowing;
+    }
+    $stated = (array) ($def->get(PortableKeywords::CHECK) ?? []);
+    $messages = (array) ($narrowing[PortableKeywords::MESSAGES] ?? []);
+    $said = (array) ($def->get(PortableKeywords::MESSAGES) ?? []);
+    foreach ($checks as $name => $options) {
+      $name = (string) $name;
+      $twin = str_starts_with($name, PortableKeywords::PROVIDER) && ConstraintKeywords::isFormatTwin(substr($name, strlen(PortableKeywords::PROVIDER)), $format);
+      if (!$twin || !array_key_exists($name, $stated) || !Schemas::same($stated[$name], $options)) {
+        continue;
+      }
+      unset($checks[$name]);
+      foreach ($messages as $code => $message) {
+        $code = (string) $code;
+        if (($code === PortableKeywords::CHECK_CODE . $name || str_starts_with($code, PortableKeywords::CHECK_CODE . $name . '.')) && array_key_exists($code, $said) && Schemas::same($said[$code], $message)) {
+          unset($messages[$code]);
+        }
+      }
+    }
+    if ($checks === []) {
+      unset($narrowing[PortableKeywords::CHECK]);
+    }
+    else {
+      $narrowing[PortableKeywords::CHECK] = $checks;
+    }
+    if (array_key_exists(PortableKeywords::MESSAGES, $narrowing)) {
+      if ($messages === []) {
+        unset($narrowing[PortableKeywords::MESSAGES]);
+      }
+      else {
+        $narrowing[PortableKeywords::MESSAGES] = $messages;
+      }
+    }
+    return $narrowing;
   }
 
   /**
@@ -399,6 +497,7 @@ final class PropertySchema {
       if ($required !== []) {
         $schema = $schema->with('required', $required);
       }
+      $schema = $this->mapChecks($schema, $definition);
       $extension = $this->extension($depends, $refined || $this->anyRefined($schema));
       $ui = PortableUi::write($this->asked($definition) ?? $this->word('fieldset'));
       if (DefinitionMetadata::isGrouping($definition)) {
@@ -938,7 +1037,10 @@ final class PropertySchema {
         default => in_array($name, self::STATED, TRUE) || $this->options->isStatedByList($name),
       };
       if (!$said) {
-        $unstated[] = $this->checked($name, $options);
+        // Email beside `format: email` and Uuid beside `format: uuid`:
+        // the format's sentence says it, so no label stands in for a
+        // message the constraint was not given.
+        $unstated[] = $this->checked($name, $options, !ConstraintKeywords::isFormatTwin($name, $keywords['format'] ?? NULL));
       }
     }
     // A pattern is for machines; a person is told the message, in the
@@ -962,13 +1064,51 @@ final class PropertySchema {
   }
 
   /**
+   * Names a map's own constraints under `portable-check`, at the map.
+   *
+   * A map's settings, a map in a map and the map each item of a list is
+   * alike: every constraint the definition holds as its own, not its data
+   * type's (ReviewDeadline on an amount and a unit together, a
+   * ComplexData), but NotNull and PrimitiveType, which `required` and
+   * `type` state. Each is a check the server runs at the map
+   * (DrupalCheckProvider), so the document names it. No keyword states a
+   * map's constraint, so the constraint table is not read here.
+   *
+   * Decision: see docs/decisions.md#the-checks-the-document-names.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The map's schema.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The map.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The schema, each of them under `x-surface-checked` (checked()),
+   *   which property() writes as `portable-check`.
+   */
+  protected function mapChecks(Schema $schema, DataDefinitionInterface $definition): Schema {
+    $own = $definition instanceof DataDefinition ? ($definition->toArray()['constraints'] ?? []) : [];
+    $checked = [];
+    foreach (is_array($own) ? $own : [] as $id => $options) {
+      if (!in_array((string) $id, ['NotNull', 'PrimitiveType'], TRUE)) {
+        $checked[] = $this->checked((string) $id, $options);
+      }
+    }
+    if ($checked === []) {
+      return $schema;
+    }
+    return $schema->with(self::CHECKED, [...($schema->get(self::CHECKED) ?? []), ...$checked]);
+  }
+
+  /**
    * Names a constraint only the server checks, and says what it checks.
    *
    * A client told only a plugin id learns nothing it can act on, so each
    * entry carries a sentence: the constraint's own reason where it was
    * given one (SurfaceUnique's), else its own message (a Regex's is
    * how a person is told what it allows), else the label its plugin
-   * declares, else the id again. A reference's check states what it
+   * declares, else the id again; a check beside the format it is the
+   * host's rule for (ConstraintKeywords::FORMAT_TWINS) says none of
+   * those two. A reference's check states what it
    * refers to as its options, `{entityTypeId, bundles?}`, the plugin's own
    * option names, the bundles only where it names any: the one fact a
    * client needs of it, and what a reader reads the key back from.
@@ -979,11 +1119,15 @@ final class PropertySchema {
    *   The constraint's plugin id.
    * @param mixed $options
    *   Its options.
+   * @param bool $labeled
+   *   FALSE where a message the constraint was not given is left empty,
+   *   not said by its label or id.
    *
    * @return array{constraint: string, message: string, options?: array}
-   *   The entry.
+   *   The entry; an empty message is not written
+   *   (PortableKeywords::write()).
    */
-  protected function checked(string $name, mixed $options): array {
+  protected function checked(string $name, mixed $options, bool $labeled = TRUE): array {
     if ($name === 'JsonSchema' && is_array($options)) {
       // What a structure read from a schema kept of it and no keyword of
       // this document states: the keywords, and the schema itself, so a
@@ -995,11 +1139,19 @@ final class PropertySchema {
     // A constraint that refuses in a sentence of its own (SurfaceUnique)
     // says what it checks in its `reason`.
     $message = is_array($options) ? ($options['reason'] ?? $options['message'] ?? NULL) : NULL;
+    if (is_string($message) && preg_match(self::PLACEHOLDER, $message)) {
+      // The dialect's messages are plain sentences: one the server fills
+      // in (`%value`) is said by the server's refusal alone.
+      $message = NULL;
+    }
     if (is_string($message) && $message !== '') {
       // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
       $message = $this->t($message);
     }
-    if (!$message instanceof \Stringable || (string) $message === '') {
+    if ((!$message instanceof \Stringable || (string) $message === '') && !$labeled) {
+      $message = '';
+    }
+    elseif (!$message instanceof \Stringable || (string) $message === '') {
       $label = $this->constraints?->getDefinitions()[$name]['label'] ?? NULL;
       $message = $label instanceof \Stringable || (is_string($label) && $label !== '') ? $label : $name;
     }

@@ -91,7 +91,7 @@ the emitter wrote reads back as what it was written from
 | a conditional whose `if` is a condition of the vocabulary and whose `then` only narrows | a declared rule ([Declaring a rule](refinement.md#declaring-a-rule)): `{"properties": {k: false}}` `doesNotApply()`, `required` `require()`, a bound, a list or a pattern `constrain()`, a `description` `because()` |
 | a conditional on a key a child's port is wired to, reaching into the child | the child's rule, on the port |
 | `additionalProperties: false`, `unevaluatedProperties: false` | closed, as every structure is |
-| `additionalProperties` absent or `true` | read closed, noted: a key nobody declared has no type, label or storage |
+| `additionalProperties` absent or `true` | read closed, noted (an author's schema: read closed, not noted): a key nobody declared has no type, label or storage |
 
 The vocabulary of conditions and effects is the one a declared rule
 has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
@@ -119,7 +119,7 @@ Four keywords of the dialect are read too ([The dialect's own keywords](served-c
 | `x-portable-ui` `group`, with the frame's `groups`; `weight`; `options.placeholder`, `prefix`, `suffix`, `help` | the key's arrangement, described as an author describes it (`describe(group:, weight:, placeholder:, prefix:, suffix:, help:)`): a group's `widget` `details` is `ArrangementGroup::details()`, closed where its `options.open` is `false`, any other `fieldset()`, noted where it is neither; a key naming a group its frame does not declare, or one with no label, is noted and read ungrouped; a weight that is no whole number and a text that is no string are noted and not read; the keys of a map or a module's mount are read with the map's own `groups`. `options.emptyOption` and `options.multiple` are noted and not read: the options resolver decides them |
 | `x-portable-messages` | under `pattern`, or `not` for `not: {pattern}`: the `Regex`'s message |
 | `portable-check` `drupal:JsonSchema` | that constraint, from its `schema`; with keywords the value keeps besides, one constraint, the `allOf` of both |
-| `portable-check` `drupal:SurfaceValidReference` with `entityTypeId` | a key that refers to an entity, as its author declares it, the check's options the plugin's own: `addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']])` on a key of the id's type ([Options](options.md#a-key-that-refers-to-an-entity)); its `oneOf` is not read, noted: the site lists its candidates, under the limit, and the widget follows as for a declared key. An entity type the site does not have, or `bundles` that is no list of names, is noted and not read: the key is read as a value of its type, the check known by its plugin alone. Any other check is noted and not read: what the emitter names there, and why, is in [What the keywords leave to the server](served-contract.md#what-the-keywords-leave-to-the-server) |
+| `portable-check` `drupal:SurfaceValidReference` with `entityTypeId` | a key that refers to an entity, as its author declares it, the check's options the plugin's own: `addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']])` on a key of the id's type ([Options](options.md#a-key-that-refers-to-an-entity)); its `oneOf` is not read, noted: the site lists its candidates, under the limit, and the widget follows as for a declared key. An entity type the site does not have, or `bundles` that is no list of names, is noted and not read: the key is read as a value of its type, the check known by its plugin alone. `drupal:Email` beside `format: email` and `drupal:Uuid` beside `format: uuid`, with no message of their own, are read as the format is, with nothing noted: the emitter names them beside it again. Any other check is noted and not read, at a key and at a plain map alike: what the emitter names there, and why, is in [What the keywords leave to the server](served-contract.md#what-the-keywords-leave-to-the-server) |
 | `x-portable-links` | not read, each link noted: a link names where a client asks, and the server writes its own; an entry with no `rel` and `href`, or a keyword that is no list, is noted as no link. The id of a key of any entity type, known only by its `lookup` link's `source`, is read as a value of its type alone (why: [decision](decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)) |
 
 ### The type library and the rest of the dialect
@@ -234,7 +234,8 @@ closed object, with two differences, since the schema is the host's own
   check naming a constraint a keyword reads too is merged with it (a
   Range, a Length, a Count, the stricter bound kept) or read as its
   constraint with the keyword kept in the JsonSchema constraint, so
-  both hold.
+  both hold. A check on a plain map is read so too, as the map's
+  constraint ([decision](decisions.md#the-checks-the-document-names)).
 - An optional key with a default is one null clears, as `add()`
   declares it, and the document allows `null` for it; a document from
   elsewhere reads such a key as one its storage always holds.

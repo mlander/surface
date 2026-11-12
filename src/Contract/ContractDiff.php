@@ -85,10 +85,11 @@ final class ContractDiff {
   /**
    * Keywords that annotate and never refuse.
    *
-   * `format` is an annotation by decision
-   * (docs/decisions.md#format-is-an-annotation), and a default is filled
-   * by the pipeline, never by a client, so changing one changes what a
-   * key left out becomes on a create, not what is accepted.
+   * A default is filled by the pipeline, never by a client, so changing
+   * one changes what a key left out becomes on a create, not what is
+   * accepted. `format` is asserted
+   * (docs/decisions.md#validation-runs-through-the-dialects-validator),
+   * so it is one of the RULES.
    */
   protected const ANNOTATIONS = [
     'title',
@@ -98,7 +99,6 @@ final class ContractDiff {
     '$comment',
     '$id',
     'deprecated',
-    'format',
     'writeOnly',
   ];
 
@@ -117,6 +117,7 @@ final class ContractDiff {
    */
   protected const RULES = [
     'pattern',
+    'format',
     'multipleOf',
     'not',
     'uniqueItems',
@@ -391,7 +392,7 @@ final class ContractDiff {
     return match ($keyword) {
       '$defs' => $this->defs((array) $a, (array) $b, $path, $owner, $reading),
       'x-surface' => $this->extension((array) $a, (array) $b, $path, $owner, $reading),
-      PortableKeywords::CHECK => $this->checks((array) $a, (array) $b, $path, $owner, $reading),
+      PortableKeywords::CHECK => $this->checks((array) $a, (array) $b, $path, $owner, $reading, $old['format'] ?? NULL, $new['format'] ?? NULL),
       PortableKeywords::MESSAGES => $one('the messages changed', self::NOTE),
       // The widget hints: how a key is drawn, never what it accepts.
       PortableKeywords::UI => $one(PortableKeywords::UI . ' changed', self::NOTE),
@@ -526,7 +527,10 @@ final class ContractDiff {
    * Compares two `portable-check` keywords, each a map of checks by name.
    *
    * A check added narrows and one removed widens; options changed, a
-   * note: the document names which constraint checks, not how.
+   * note: the document names which constraint checks, not how. A check
+   * added beside an unchanged `format` it is the host's rule for
+   * (`drupal:Email` beside `email`, `drupal:Uuid` beside `uuid`) is a
+   * note: the server applied that rule already, beside the format.
    *
    * @param array $old
    *   The baseline's.
@@ -538,11 +542,15 @@ final class ContractDiff {
    *   The id whose version answers for it.
    * @param bool $reading
    *   Whether it describes what a client reads.
+   * @param mixed $was
+   *   The baseline node's `format`.
+   * @param mixed $is
+   *   Today's.
    *
    * @return list<array{0: string, 1: string, 2: string, 3: string, 4: bool}>
    *   Each difference.
    */
-  protected function checks(array $old, array $new, string $path, string $owner, bool $reading): array {
+  protected function checks(array $old, array $new, string $path, string $owner, bool $reading, mixed $was = NULL, mixed $is = NULL): array {
     $found = [];
     // By their JSON, decoded alike: `1` and `"1"` in a check's schema
     // differ, an empty object and an empty array do not.
@@ -550,7 +558,12 @@ final class ContractDiff {
     foreach (array_unique([...array_keys($old), ...array_keys($new)]) as $name) {
       $name = (string) $name;
       $at = $path . '/' . str_replace(['~', '/'], ['~0', '~1'], $name);
+      $twin = str_starts_with($name, PortableKeywords::PROVIDER) && $was === $is && ConstraintKeywords::isFormatTwin(substr($name, strlen(PortableKeywords::PROVIDER)), $is);
       [$change, $effect] = match (TRUE) {
+        !array_key_exists($name, $old) && $twin => [
+          sprintf('named beside its format now: %s, which the server checked already', $name),
+          self::NOTE,
+        ],
         !array_key_exists($name, $old) => [sprintf('checked on the server now: %s', $name), self::NARROWS],
         !array_key_exists($name, $new) => [sprintf('no longer checked on the server: %s', $name), self::WIDENS],
         $decoded($old[$name]) === $decoded($new[$name]) => [NULL, NULL],

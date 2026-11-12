@@ -31,11 +31,16 @@ use Drupal\surface\Contract\Keywords\Written;
  * | Count | array | `minItems`, `maxItems` | Count |
  * | UniqueItems | array | `uniqueItems: true`, last | UniqueItems |
  * | NotBlank | string | `minLength: 1` | Length, `min: 1` |
- * | Email | string | `format: email` | the `email` type |
+ * | Email | string | `format: email` and `drupal:Email` | the `email` type |
  * | Regex | string | `pattern`, `not: {pattern}` | Regex |
- * | Uuid | string | `format: uuid` | Uuid |
+ * | Uuid | string | `format: uuid` and `drupal:Uuid` | Uuid |
  * | Sequentially | its parts' | `allOf` of its parts | Sequentially |
  * | AtLeastOneOf | its parts' | `anyOf` of its parts | AtLeastOneOf |
+ *
+ * Email and Uuid are each also named under `portable-check` beside their
+ * format (FORMAT_TWINS), since the format admits what the constraint
+ * refuses (`a@b`, the nil UUID): the document names every check the
+ * server runs.
  *
  * `exactly` on Length and Count is written as both bounds; an exclusive
  * bound on an integer reads back as Range. Each row's docblock says the
@@ -59,6 +64,35 @@ use Drupal\surface\Contract\Keywords\Written;
  * @internal
  */
 final class ConstraintKeywords {
+
+  /**
+   * The constraints named beside the format they are the host's rule for.
+   *
+   * By plugin id, each format a `format` value. The check beside its
+   * format says no message of its own: the format's sentence and the
+   * constraint's own message say it.
+   *
+   * Decision: see docs/decisions.md#the-checks-the-document-names.
+   */
+  public const FORMAT_TWINS = [
+    'Email' => 'email',
+    'Uuid' => 'uuid',
+  ];
+
+  /**
+   * Answers whether a check is the host's twin of a node's format.
+   *
+   * @param string $constraint
+   *   The check's constraint plugin id.
+   * @param mixed $format
+   *   The node's `format`.
+   *
+   * @return bool
+   *   TRUE for Email beside `format: email` and Uuid beside `format: uuid`.
+   */
+  public static function isFormatTwin(string $constraint, mixed $format): bool {
+    return isset(self::FORMAT_TWINS[$constraint]) && self::FORMAT_TWINS[$constraint] === $format;
+  }
 
   /**
    * How a keyword two rows write on one property is merged, by keyword.
