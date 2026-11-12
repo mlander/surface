@@ -16,7 +16,14 @@ opens which door.
   installs it with the module.
 - `fago/portable-schema` (MIT, `dev-main`), the dialect every served
   document is written in ([The served contract](served-contract.md#the-dialects-own-keywords)).
-  Composer installs it with the module.
+  The builder the module uses is not in fago's repository yet, so for now
+  the package is installed from a fork. Run these in your site's root
+  first:
+
+  ```bash
+  composer config repositories.portable-schema vcs https://github.com/mlander/portable-schema.git
+  composer require fago/portable-schema:dev-main
+  ```
 
 Beyond these, the base module has no dependencies and ships no
 configuration of its own.

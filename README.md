@@ -1,5 +1,17 @@
 # Surface API
 
+> **Installing from `main` takes two extra commands for now.** The module
+> requires `fago/portable-schema`, and the schema builder it uses is not in
+> fago's repository yet. Until it is merged there, the package comes from
+> a fork. Run these in your site's root before you install the module:
+>
+> ```bash
+> composer config repositories.portable-schema vcs https://github.com/mlander/portable-schema.git
+> composer require fago/portable-schema:dev-main
+> ```
+>
+> This note goes away when the builder is in fago's repository.
+
 You describe once what a thing on your site accepts: each value, its
 type, and what it allows. From that one description the module makes
 the settings form, a Tool API tool and the command line
