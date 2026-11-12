@@ -5,15 +5,20 @@ declare(strict_types=1);
 namespace Drupal\surface\Contract\Keywords;
 
 /**
- * The row for Email: `format: email`, on a string.
+ * The row for Email: `format: email`, on a string, and the check beside it.
  *
- * Read back, the format is a leaf type, `email` (LeafTypes::read()),
+ * The format is not the whole constraint: Drupal's validator refuses
+ * what `email` admits (`a@b`, `x@localhost`, a quoted local part, an
+ * address literal), so the constraint is also named under
+ * `portable-check` (`drupal:Email`), with no message of its own
+ * (ConstraintKeywords::FORMAT_TWINS). Read back, the format is a leaf
+ * type, `email` (LeafTypes::read()),
  * whose data type carries core's Email constraint: the reader answers
  * with the type, and this row reads nothing. So a string key with an
  * Email constraint reads back as an email key; the document stays the
  * same. The dialect's `email` is RFC 5321, ASCII only, while Drupal's
- * validator admits a non-ASCII local part: a known difference, which the
- * pipeline's own check decides until it validates through the dialect.
+ * validator admits a non-ASCII local part: the format refuses it before
+ * the check is asked.
  *
  * Decision: see
  * docs/decisions.md#the-served-document-is-a-portable-schema-document.
@@ -49,7 +54,7 @@ final class EmailRow implements ConstraintRowInterface {
    * {@inheritdoc}
    */
   public function write(string $id, array $options, array $types): Written {
-    return new Written(['format' => 'email']);
+    return new Written(['format' => 'email'], whole: FALSE);
   }
 
   /**

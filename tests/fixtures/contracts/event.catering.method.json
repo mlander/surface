@@ -205,6 +205,9 @@
                                     "null"
                                 ],
                                 "format": "email",
+                                "portable-check": {
+                                    "drupal:Email": {}
+                                },
                                 "x-surface": {
                                     "dependsOn": [
                                         "listed"

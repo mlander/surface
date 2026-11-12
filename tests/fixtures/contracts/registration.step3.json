@@ -553,7 +553,10 @@
                             "email": {
                                 "title": "Email",
                                 "type": "string",
-                                "format": "email"
+                                "format": "email",
+                                "portable-check": {
+                                    "drupal:Email": {}
+                                }
                             },
                             "phone": {
                                 "title": "Phone",

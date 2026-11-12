@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Traits;
 
+use Drupal\surface\Contract\ConstraintKeywords;
 use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
@@ -207,7 +209,8 @@ trait SchemaRoundTripTrait {
    *   A schema, or anything inside one.
    * @param array<string, true> $marks
    *   Collects each `x-surface` key, `portable-check` where a constraint
-   *   only the server checks is named, and `@readOnly` for a key read
+   *   only the server checks is named (not a host's rule beside its
+   *   format, ConstraintKeywords::FORMAT_TWINS), and `@readOnly` for a key read
    *   only.
    */
   protected static function marks(mixed $schema, array &$marks): void {
@@ -222,7 +225,9 @@ trait SchemaRoundTripTrait {
           }
         }
       }
-      if ($keyword === 'portable-check' && $value !== [] && $value !== NULL) {
+      // A host's rule beside its format reads back as the format, and is
+      // named again: no mark.
+      if ($keyword === 'portable-check' && is_array($value) && array_filter(array_keys($value), static fn (int|string $name): bool => !ConstraintKeywords::isFormatTwin(substr((string) $name, strlen(PortableKeywords::PROVIDER)), $schema['format'] ?? NULL)) !== []) {
         $marks['portable-check'] = TRUE;
       }
       if ($keyword === 'readOnly' && $value === TRUE) {

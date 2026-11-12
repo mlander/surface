@@ -7,7 +7,6 @@ namespace Drupal\surface\Validation;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\PortableKeywords;
@@ -52,13 +51,13 @@ use PortableSchema\Validator;
  * sentence (Sentences::ofError()). A check that could not run is the
  * refusal `unchecked`: a check never counts as passed.
  *
- * A check's refusal below the place it was asked about is filed there,
- * so `params.path` is not on the wire. Drupal's Email and Uuid run at
- * every place the document writes `format: email` or `format: uuid` and
- * the format admits the value, as the checks they are. A refusal at a
- * secret place carries no value: its params keep SECRET_PARAMS alone,
- * and its message (but an `unchecked` one's, which names the check) is
- * one sentence that names nothing sent. A list of
+ * A check's refusal below the place it was asked about is filed there by
+ * the package, from the error's own `location`
+ * (DrupalCheckProvider::error()). Every check that runs is one the
+ * document names. A refusal at a secret place, or a check's about a
+ * secret below its place, carries no value: its params keep
+ * SECRET_PARAMS alone, and its message (but an `unchecked` one's, which
+ * names the check) is one sentence that names nothing sent. A list of
  * allowed values in `params.allowed` holds at most
  * SurfacePipeline::CHOICES_SHOWN, `params.more` counting the rest.
  *
@@ -97,17 +96,9 @@ final class PortableValidator {
   ];
 
   /**
-   * The constraint run beside each format that admits more than it.
-   */
-  private const HOST_FORMATS = [
-    'email' => 'Email',
-    'uuid' => 'Uuid',
-  ];
-
-  /**
    * The params a refusal at a secret place keeps.
    */
-  public const SECRET_PARAMS = ['path', 'limit', 'expected', 'actual', 'property', 'check', 'reason'];
+  public const SECRET_PARAMS = ['limit', 'expected', 'actual', 'property', 'check', 'reason'];
 
   /**
    * The code of a check that could not run.
@@ -166,7 +157,7 @@ final class PortableValidator {
    *   The pipeline, which writes the values as the document's data.
    *
    * @return \Drupal\surface\Validation\DrupalCheckProvider
-   *   The provider, for validate() and unwritten().
+   *   The provider, for validate().
    */
   public function provider(SurfaceInterface $surface, array $values, SurfacePipelineInterface $pipeline): DrupalCheckProvider {
     return new DrupalCheckProvider($this->typedDataManager, $pipeline, $this->translation, $this->options, $surface, $values);
@@ -230,32 +221,6 @@ final class PortableValidator {
       }
     }
     return $this->found($result, $provider, $registry, $nodes);
-  }
-
-  /**
-   * Runs the constraints of the maps in a plain key, which no document says.
-   *
-   * @param \Drupal\surface\Validation\DrupalCheckProvider $provider
-   *   The provider of the validation.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key's definition, refined.
-   * @param mixed $value
-   *   Its value.
-   * @param string $path
-   *   Its dotted path from the top.
-   *
-   * @return \Drupal\surface\Validation\Found[]
-   *   What they refused.
-   *
-   * @see \Drupal\surface\Validation\DrupalCheckProvider::unwritten()
-   */
-  public function unwritten(DrupalCheckProvider $provider, DataDefinitionInterface $definition, mixed $value, string $path): array {
-    $found = [];
-    foreach ($provider->unwritten($definition, $value, ResultDocument::pointer($path)) as $refused) {
-      [$location, $code, $params, $message] = $refused;
-      $found[] = $this->said($location, $code, $params, $message, $provider);
-    }
-    return $found;
   }
 
   /**
@@ -339,12 +304,14 @@ final class PortableValidator {
    *
    * @return bool
    *   TRUE when the validator refused each by one of the keywords
-   *   Nodes::BEFORE_CHECKS names, or by a `format`.
+   *   Nodes::BEFORE_CHECKS names, by a `format`, or by the `anyOf` or
+   *   `allOf` a composite check is written as
+   *   (Nodes::refusedByComposite()).
    */
   private static function refusedWhereUnasked(Result $result, array $unasked): bool {
     $refused = [];
     foreach ($result->errors as $error) {
-      if (in_array($error->code, Nodes::BEFORE_CHECKS, TRUE) || str_starts_with($error->code, 'format.')) {
+      if (in_array($error->code, [...Nodes::BEFORE_CHECKS, 'anyOf', 'allOf'], TRUE) || str_starts_with($error->code, 'format.')) {
         $refused[$error->instanceLocation] = TRUE;
       }
     }
@@ -368,11 +335,9 @@ final class PortableValidator {
    */
   private function found(Result $result, ?DrupalCheckProvider $provider, Registry $registry, Nodes $nodes): array {
     $found = [];
-    // The places a check refused, and every place refused.
+    // The places a check refused.
     $checked = [];
-    $refused = [];
     foreach ($result->errors as $error) {
-      $refused[$error->instanceLocation] = TRUE;
       if (str_starts_with($error->code, PortableKeywords::CHECK_CODE . DrupalCheckProvider::PREFIX)) {
         $checked[$error->instanceLocation] = TRUE;
       }
@@ -409,17 +374,6 @@ final class PortableValidator {
       }
       $found[] = $this->said($location, $error->code, $error->params, $this->message($error, $result, $provider, $registry), $provider);
     }
-    if ($provider !== NULL) {
-      foreach ($nodes->formats(array_keys(self::HOST_FORMATS)) as $location => $format) {
-        if (isset($refused[$location])) {
-          continue;
-        }
-        // A format that admits what the host refuses: the host's rule.
-        foreach ($provider->unnamed($location, self::HOST_FORMATS[$format]) as $error) {
-          $found[] = $this->said($location, $error['code'], $error['params'], $provider->message($location, $error['code'], $error['params']) ?? '', $provider);
-        }
-      }
-    }
     foreach ($result->unchecked as $unchecked) {
       $names = $provider?->foreignAt($unchecked->instanceLocation) ?: [substr($unchecked->code, strlen(PortableKeywords::CHECK_CODE))];
       $check = implode(', ', $names);
@@ -433,10 +387,11 @@ final class PortableValidator {
   /**
    * Files one refusal where it belongs, with what it may carry.
    *
-   * A check's refusal below its place (`params.path`) is filed there. An
-   * `allowed` list holds at most SurfacePipeline::CHOICES_SHOWN values,
-   * `more` counting the rest. A refusal at a secret place keeps
-   * SECRET_PARAMS alone and says one sentence that names no value.
+   * An `allowed` list holds at most SurfacePipeline::CHOICES_SHOWN
+   * values, `more` counting the rest. A refusal at a secret place, or a
+   * check's about a secret below its place
+   * (DrupalCheckProvider::aboutSecret()), keeps SECRET_PARAMS alone and
+   * says one sentence that names no value.
    *
    * @param string $location
    *   Where the validator filed it.
@@ -453,16 +408,12 @@ final class PortableValidator {
    *   The refusal.
    */
   private function said(string $location, string $code, array $params, string|\Stringable $message, ?DrupalCheckProvider $provider): Found {
-    $asked = $location;
-    if (str_starts_with($code, PortableKeywords::CHECK_CODE) && is_string($params['path'] ?? NULL) && str_starts_with($params['path'], '/')) {
-      $location .= $params['path'];
-      unset($params['path']);
-    }
+    $secret = $provider !== NULL && ($provider->isSecret($location) || $provider->aboutSecret($location, $code, $params));
     if (is_array($params['allowed'] ?? NULL) && count($params['allowed']) > SurfacePipeline::CHOICES_SHOWN) {
       $params['more'] = count($params['allowed']) - SurfacePipeline::CHOICES_SHOWN;
       $params['allowed'] = array_slice(array_values($params['allowed']), 0, SurfacePipeline::CHOICES_SHOWN);
     }
-    if ($provider !== NULL && ($provider->isSecret($location) || $provider->isSecret($asked))) {
+    if ($secret) {
       $params = array_intersect_key($params, array_flip(self::SECRET_PARAMS));
       if ($code !== self::UNCHECKED) {
         $message = new TranslatableMarkup('This value is not accepted.', [], [], $this->translation);

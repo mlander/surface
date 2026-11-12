@@ -140,6 +140,71 @@ class ContractDiffTest extends UnitTestCase {
   }
 
   /**
+   * Tests a host's rule named beside its unchanged format only notes.
+   *
+   * `drupal:Email` beside `format: email` and `drupal:Uuid` beside
+   * `format: uuid` are rules the server applied beside the format before
+   * the document named them. The same check added where the format
+   * changes, or beside another format, narrows.
+   */
+  public function testTwinBesideItsFormatOnlyNotes(): void {
+    $baseline = self::BASELINE;
+    $baseline['schema'] = self::patched($baseline['schema'], ['properties', 'code', 'format'], 'email');
+    $baseline['schema'] = self::patched($baseline['schema'], ['$defs', 'event.contact', 'properties', 'email', 'format'], 'uuid');
+    $current = $baseline;
+    $current['schema'] = self::patched($current['schema'], ['properties', 'code', 'portable-check'], ['drupal:Email' => []]);
+    $contact = ['$defs', 'event.contact', 'properties', 'email'];
+    $current['schema'] = self::patched($current['schema'], [...$contact, 'portable-check'], ['drupal:Uuid' => []]);
+    $changes = (new ContractDiff())->compare($baseline, $current);
+    $this->assertCount(2, $changes);
+    foreach ($changes as $change) {
+      $verdict = [$change->effect, $change->status];
+      $this->assertSame([ContractDiff::NOTE, ContractChange::COMPATIBLE], $verdict, $change->change);
+      $this->assertStringContainsString('which the server checked already', $change->change);
+    }
+
+    // Beside another format, or with the format added, it narrows.
+    $other = $baseline;
+    $other['schema'] = self::patched($other['schema'], ['properties', 'code', 'portable-check'], ['drupal:Uuid' => []]);
+    $said = static fn (ContractChange $change): array => [$change->change, $change->effect];
+    $found = array_map($said, (new ContractDiff())->compare($baseline, $other));
+    $this->assertSame([['checked on the server now: drupal:Uuid', ContractDiff::NARROWS]], $found);
+    $added = self::BASELINE;
+    $added['schema'] = self::patched($added['schema'], ['properties', 'code', 'format'], 'email');
+    $added['schema'] = self::patched($added['schema'], ['properties', 'code', 'portable-check'], ['drupal:Email' => []]);
+    $effect = static fn (ContractChange $change): string => $change->effect;
+    $effects = array_map($effect, (new ContractDiff())->compare(self::BASELINE, $added));
+    $this->assertSame([ContractDiff::NARROWS, ContractDiff::NARROWS], $effects);
+  }
+
+  /**
+   * Tests `format` is judged as the assertion it is, as `pattern` is.
+   *
+   * Added to an input it narrows, removed from an output it widens what a
+   * client may meet, changed it replaces.
+   */
+  public function testFormatIsAnAssertion(): void {
+    $diff = new ContractDiff();
+    $current = self::BASELINE;
+    $current['schema'] = self::patched($current['schema'], ['properties', 'code', 'format'], 'email');
+    $change = $diff->compare(self::BASELINE, $current)[0];
+    $verdict = [$change->change, $change->effect, $change->status];
+    $this->assertSame(['format added', ContractDiff::NARROWS, ContractChange::BREAKING], $verdict);
+
+    $changed = $current;
+    $changed['schema'] = self::patched($changed['schema'], ['properties', 'code', 'format'], 'date');
+    $this->assertSame(ContractDiff::BREAKS, $diff->compare($current, $changed)[0]->effect);
+
+    $at = ['type' => 'string', 'format' => 'date-time'];
+    $read = self::BASELINE + ['outputs' => ['type' => 'object', 'properties' => ['at' => $at]]];
+    $looser = $read;
+    unset($looser['outputs']['properties']['at']['format']);
+    $change = $diff->compare($read, $looser)[0];
+    $verdict = [$change->change, $change->effect, $change->status];
+    $this->assertSame(['format removed', ContractDiff::WIDENS, ContractChange::BREAKING], $verdict);
+  }
+
+  /**
    * Tests the widget hints changed are a note, never a break.
    */
   public function testTheWidgetHintsChangedAreNoted(): void {

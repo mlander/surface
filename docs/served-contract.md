@@ -485,13 +485,13 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `Count`, on an array | `minItems`, `maxItems`; `exactly` as both, equal, where neither `min` nor `max` is given |
 | `UniqueItems`, on an array | `uniqueItems: true`, after every other keyword |
 | `Regex`, on a string | `pattern` (`not: {pattern}` for `match: false`), carried only when its body stays inside the subset both engines read alike and its modifiers are `u` and `D`; otherwise left to the server (why: [decision](decisions.md#a-pattern-both-engines-read-alike)) |
-| `Email`, on a string | `format: email`, asserted |
+| `Email`, on a string | `format: email`, asserted, and `portable-check: {drupal:Email: {}}` after it, with no message of its own: the format admits what Drupal's validator refuses (`a@b`, `x@localhost`, a quoted local part, an address literal) (why: [decision](decisions.md#the-checks-the-document-names)) |
 | `NotBlank`, on a string | `minLength: 1`, the larger of it and a `Length`'s `min` |
-| `Uuid`, on a string | `format: uuid`, asserted |
-| `Sequentially`, `AtLeastOneOf` | `allOf`, `anyOf` of its parts, each stated as the constraint alone would be; when any part is not, the composite is left to the server (why: [decision](decisions.md#a-composite-is-its-parts)) |
+| `Uuid`, on a string | `format: uuid`, asserted, and `portable-check: {drupal:Uuid: {}}` after it, with no message of its own: the format admits the nil UUID and any version (why: [decision](decisions.md#the-checks-the-document-names)) |
+| `Sequentially`, `AtLeastOneOf` | `allOf`, `anyOf` of its parts, each stated as the constraint alone would be; when any part is not, the composite is left to the server; a part that is `Email` or `Uuid` is its format, and the composite is named under `portable-check` besides (why: [decision](decisions.md#a-composite-is-its-parts)) |
 | one of the constraints above on a type it does not apply to, or with options its keywords cannot state | left to the server, under `portable-check`, whole or in part ([below](#what-the-keywords-leave-to-the-server); why: [decision](decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways)) |
 | any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. A `Choice` the `oneOf` does not state is left to the server ([below](#what-the-keywords-leave-to-the-server)). An optional key that may be cleared adds an untitled `{const: null}` (not one its storage always holds), and so does a list of no values, which a required key's type then refuses too: nothing is allowed. |
-| a map | a nested object |
+| a map | a nested object; each constraint of the map's own (not its data type's, nor `NotNull`), such as a rule on two of its keys together, named under `portable-check` at the object, or at `items` for a list of maps, and an author's check on the items of a collection at the def of the structure its items are (why: [decision](decisions.md#the-checks-the-document-names)) |
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
 | an anonymous map, `addMap()` | inline, as a map's: `type: object`, its properties, `additionalProperties: false`, and no def; a structure it holds a reference to that structure's def ([An anonymous map](declaring-a-resource.md#an-anonymous-map)) |
 | a key with variants | `anyOf` of a reference to each variant's def, and `{"type": "null"}` where it may be cleared, no `type` beside it; each variant stated exactly by a conditional on the parent ([below](#variants-are-conditionals)) |
@@ -527,11 +527,13 @@ refers to it.
 | `Count` with `divisibleBy` | in part: `minItems`, `maxItems` |
 | `NotBlank` with `normalizer` | in part: `minLength: 1` |
 | `Uuid` with `strict: false` or `normalizer` | no |
-| `Uuid` with `versions` | in part: `format: uuid` |
+| `Uuid` with `versions` | in part: `format: uuid`, as every `Uuid` the format states |
+| `Email`, `Uuid` beside their format | in part: the format; the check after it says no message of its own |
+| a map's own constraint | no: named at the map |
 | `Uuid` or `Email` on a key whose type writes another `format` (a string drawn as a date), or both on one key | the one the type or the table's order writes first; the other no |
 | `Regex` with `normalizer`, or a pattern outside the subset both engines read alike | no; with no `pattern` to give it under, its message is the check's, `check.drupal:Regex` |
 | `Regex` whose message names the value (`%value`, `@value`, `{{ value }}`) | the pattern; the message is not said |
-| `Sequentially`, `AtLeastOneOf` with any part not stated whole | no |
+| `Sequentially`, `AtLeastOneOf` with any part not stated whole | no; where each part is stated but an `Email` or `Uuid` part by its format alone, in part: the `allOf` or `anyOf` |
 | `Choice` with `match: false` | no: it refuses its values, so no `oneOf`, no form options, no list in a refusal |
 | `Choice` from a callback (`AllowedValues`) | no |
 | `Choice` on a list definition, or with `multiple` (its `min` and `max` count an array) | no |
@@ -779,7 +781,8 @@ its def, so every reference is bare:
                                      "additionalProperties": false, "required": ["price", "currency"]},
   "registration.contact": {"title": "registration.contact", "type": "object",
     "properties": {
-      "email": {"title": "Email", "type": "string", "format": "email"},
+      "email": {"title": "Email", "type": "string", "format": "email",
+                "portable-check": {"drupal:Email": {}}},
       "phone": {"title": "Phone", "type": ["string", "null"]}},
     "additionalProperties": false, "required": ["email"]}
 }

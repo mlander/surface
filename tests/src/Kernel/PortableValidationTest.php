@@ -8,6 +8,10 @@ use Drupal\Component\Render\MarkupInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Resource\ResourceCallable;
+use Drupal\surface\ResourceBuild\Location;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\Pipeline\ResultDocument;
@@ -17,6 +21,10 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
+use PortableSchema\Check\CheckRequest;
+use Symfony\Component\Validator\Constraint;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 use Symfony\Component\Validator\Exception\UnexpectedTypeException;
 
 /**
@@ -24,7 +32,9 @@ use Symfony\Component\Validator\Exception\UnexpectedTypeException;
  *
  * Each code family the document expresses, from a shipped resource where
  * one says it: its pointer, its params and its message. Then the checks:
- * a check's sub-code, a violation below the place filed there, a check
+ * a check's sub-code, a violation below the place filed there (a list
+ * item's included, the place where it names nothing, no value where it
+ * is a secret), a check
  * the site cannot run refused as `unchecked`, a throwable in a check
  * thrown, the host's Email and Uuid beside their formats, a secret's
  * refusal that carries no value, and a check left unasked where a keyword
@@ -240,11 +250,12 @@ class PortableValidationTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the constraints of a map the document does not name, at any depth.
+   * Tests the constraints of a map, which the document names, at any depth.
    *
-   * A map's own constraint runs on the map wherever it sits: a key's map,
-   * a map inside a map, the map each item of a list is. Its refusal below
-   * the map is filed where the check named it.
+   * A map's own constraint is named under `portable-check` at the map and
+   * runs on the map wherever it sits: a key's map, a map inside a map,
+   * the map each item of a list is. Its refusal below the map is filed
+   * by the package where the check's `location` names it.
    */
   public function testMapChecks(): void {
     $deadline = function (): MapDataDefinition {
@@ -269,6 +280,286 @@ class PortableValidationTest extends SurfaceKernelTestBase {
     ], array_keys($refused));
     $this->assertStringContainsString('90 days is outside that', $refused['/deadlines/1/amount check.drupal:SurfaceExamplesExtrasReviewDeadline']['message']);
     $this->assertArrayNotHasKey('path', $refused['/cd/n check.drupal:ComplexData.too_high']['params']);
+    $schema = $this->container->get('surface.contract_emitter')->emit($surface, [], 'test')->document['schema'];
+    $this->assertSame(['drupal:SurfaceExamplesExtrasReviewDeadline'], array_keys((array) $schema['properties']['deadlines']['items']['portable-check']), 'Named at each item.');
+    $this->assertSame(['drupal:ComplexData'], array_keys((array) $schema['properties']['cd']['portable-check']), 'Named at the map.');
+  }
+
+  /**
+   * Tests where a check's refusal below its place is filed.
+   *
+   * At the value its property path names, each name and index one
+   * segment (`items[2].amount`); at the place where that path names no
+   * value the request holds, since the package answers such a location as
+   * a check that failed; and at the place, saying nothing of the value,
+   * where the place below is a secret.
+   */
+  public function testCheckLocations(): void {
+    $line = MapDataDefinition::create()->setLabel('Line');
+    $line->setPropertyDefinition('amount', DataDefinition::create('integer')->setLabel('Amount'));
+    $lines = ListDataDefinition::create('map')->setLabel('Lines');
+    $lines->setItemDefinition($line);
+    $ledger = MapDataDefinition::create()->setLabel('Ledger');
+    $ledger->setPropertyDefinition('items', $lines);
+    $ledger->addConstraint('Callback', ['callback' => [static::class, 'refuseTheThirdAmount']]);
+    $ghost = MapDataDefinition::create()->setLabel('Ghost');
+    $ghost->setPropertyDefinition('n', DataDefinition::create('integer')->setLabel('N'));
+    $ghost->addConstraint('Callback', ['callback' => [static::class, 'refuseWhatIsNotThere']]);
+    $token = DataDefinition::create('string')->setLabel('Token');
+    DefinitionMetadata::setSecret($token);
+    $vault = MapDataDefinition::create()->setLabel('Vault');
+    $vault->setPropertyDefinition('token', $token);
+    $vault->addConstraint('Callback', ['callback' => [static::class, 'refuseTheToken']]);
+    $definitions = ['ledger' => $ledger, 'ghost' => $ghost, 'vault' => $vault];
+    $surface = new Surface(DefinitionMap::fromArrays(definitions: $definitions));
+    $refused = $this->validated($surface, [
+      'ledger' => ['items' => [['amount' => 1], ['amount' => 2], ['amount' => 3]]],
+      'ghost' => ['n' => 1],
+      'vault' => ['token' => 'hunter2-SECRET'],
+    ]);
+    $this->assertSame([
+      '/ledger/items/2/amount check.drupal:Callback',
+      '/ghost check.drupal:Callback',
+      '/vault check.drupal:Callback',
+    ], array_keys($refused));
+    $this->assertSame('The third amount is refused.', $refused['/ledger/items/2/amount check.drupal:Callback']['message']);
+    $this->assertSame('Nothing there is refused.', $refused['/ghost check.drupal:Callback']['message'], 'Filed at the place, in its own words.');
+    $vaulted = $refused['/vault check.drupal:Callback'];
+    $this->assertSame('This value is not accepted.', $vaulted['message']);
+    $this->assertStringNotContainsString('hunter2', json_encode($vaulted, JSON_UNESCAPED_SLASHES));
+
+    // The errors as the provider answers them: `location` only where the
+    // place below holds a value and no secret.
+    $values = $this->pipeline()->accept($surface, [
+      'ledger' => ['items' => [['amount' => 1], ['amount' => 2], ['amount' => 3]]],
+      'ghost' => ['n' => 1],
+      'vault' => ['token' => 'hunter2-SECRET'],
+    ]);
+    $this->assertSame('/items/2/amount', $this->answered($surface, $values, '/ledger')[0]['location']);
+    $this->assertArrayNotHasKey('location', $this->answered($surface, $values, '/ghost')[0], 'A path naming nothing: filed at the place.');
+    $this->assertArrayNotHasKey('location', $this->answered($surface, $values, '/vault')[0], 'A secret below: filed at the place.');
+
+    // The asked place a secret itself, with a path below it.
+    $secret = DataDefinition::create('string')->setLabel('Secret');
+    $secret->addConstraint('Callback', ['callback' => [static::class, 'refuseBelowTheToken']]);
+    DefinitionMetadata::setSecret($secret);
+    $surface = new Surface(DefinitionMap::fromArrays(definitions: ['secret' => $secret]));
+    $refused = $this->validated($surface, ['secret' => 'hunter2-SECRET']);
+    $this->assertSame(['/secret check.drupal:Callback'], array_keys($refused));
+    $this->assertSame('This value is not accepted.', $refused['/secret check.drupal:Callback']['message']);
+    $this->assertStringNotContainsString('hunter2', json_encode($refused, JSON_UNESCAPED_SLASHES));
+    $errors = $this->answered($surface, $this->pipeline()->accept($surface, ['secret' => 'hunter2-SECRET']), '/secret');
+    $this->assertCount(1, $errors);
+    $this->assertArrayNotHasKey('location', $errors[0]);
+    $this->assertStringNotContainsString('hunter2', json_encode($errors, JSON_UNESCAPED_SLASHES));
+  }
+
+  /**
+   * Asks the provider for drupal:Callback at one place, as the validator does.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The data surface.
+   * @param array $values
+   *   Its accepted values.
+   * @param string $pointer
+   *   The place.
+   *
+   * @return list<array>
+   *   The errors it answers.
+   */
+  protected function answered(SurfaceInterface $surface, array $values, string $pointer): array {
+    $provider = $this->container->get('surface.portable_validator')->provider($surface, $values, $this->pipeline());
+    $value = json_decode((string) json_encode(Location::definitionAt($surface, $values, $pointer)?->value), FALSE);
+    [$result] = $provider->check('drupal:Callback', [new CheckRequest('drupal:Callback', $value, $pointer, new \stdClass(), NULL, NULL)]);
+    $this->assertNull($result->unchecked);
+    return $result->errors;
+  }
+
+  /**
+   * Refuses a secret at a path below it, naming its value.
+   *
+   * @param mixed $value
+   *   The secret.
+   * @param \Symfony\Component\Validator\Context\ExecutionContextInterface $context
+   *   The context.
+   */
+  public static function refuseBelowTheToken(mixed $value, ExecutionContextInterface $context): void {
+    $context->buildViolation('The token @token is refused.')->setParameter('@token', (string) $value)->atPath('inner')->addViolation();
+  }
+
+  /**
+   * Refuses where the constraint's payload says, in its words.
+   *
+   * @param mixed $value
+   *   The value.
+   * @param \Symfony\Component\Validator\Context\ExecutionContextInterface $context
+   *   The context; the constraint's payload lists [path, message] pairs.
+   */
+  public static function refuseAsThePayloadSays(mixed $value, ExecutionContextInterface $context): void {
+    $constraint = method_exists($context, 'getConstraint') ? $context->getConstraint() : NULL;
+    foreach ($constraint instanceof Constraint ? (array) $constraint->payload : [] as [$path, $message]) {
+      $context->buildViolation($message)->atPath($path)->addViolation();
+    }
+  }
+
+  /**
+   * Tests two messages of one check at one place are both said, once each.
+   *
+   * The package files errors of one location, code and params as one, so
+   * the provider joins their messages, each sentence once.
+   */
+  public function testOneCheckTwoMessagesAtOnePlace(): void {
+    $map = MapDataDefinition::create()->setLabel('M');
+    $map->setPropertyDefinition('n', DataDefinition::create('integer')->setLabel('N'));
+    $map->addConstraint('Callback', [
+      'callback' => [static::class, 'refuseAsThePayloadSays'],
+      'payload' => [['n', 'First words.'], ['n', 'Second words.'], ['n', 'First words.']],
+    ]);
+    $surface = new Surface(DefinitionMap::fromArrays(definitions: ['m' => $map]));
+    $refused = $this->validated($surface, ['m' => ['n' => 1]]);
+    $this->assertSame(['/m/n check.drupal:Callback'], array_keys($refused));
+    $this->assertSame('First words. Second words.', $refused['/m/n check.drupal:Callback']['message']);
+  }
+
+  /**
+   * Tests a violation's path is read against the keys the map declares.
+   *
+   * A declared key holding brackets or a dot is one segment; brackets
+   * after a list's key are an index, as Symfony writes it.
+   */
+  public function testPathsAreReadAgainstTheKeys(): void {
+    $map = MapDataDefinition::create()->setLabel('M');
+    $map->setPropertyDefinition('x[1]', DataDefinition::create('string')->setLabel('Bracketed'));
+    $map->setPropertyDefinition('a.b', DataDefinition::create('string')->setLabel('Dotted'));
+    $map->setPropertyDefinition('x', ListDataDefinition::create('string')->setLabel('X'));
+    $map->setPropertyDefinition('a', DataDefinition::create('string')->setLabel('A'));
+    $map->addConstraint('Callback', [
+      'callback' => [static::class, 'refuseAsThePayloadSays'],
+      'payload' => [['x[1]', 'Bracketed key.'], ['a.b', 'Dotted key.'], ['x[0]', 'First item.']],
+    ]);
+    $surface = new Surface(DefinitionMap::fromArrays(definitions: ['m' => $map]));
+    $values = $this->pipeline()->accept($surface, ['m' => ['x[1]' => 'p', 'a.b' => 'q', 'x' => ['r'], 'a' => 's']]);
+    $this->assertSame(['/x[1]', '/a.b', '/x/0'], array_column($this->answered($surface, $values, '/m'), 'location'));
+    // On the wire a path is dotted, so the dotted key reads as two names
+    // there, as it does for every refusal.
+    $refused = $this->validated($surface, $values);
+    $this->assertSame('Bracketed key.', $refused['/m/x[1] check.drupal:Callback']['message'] ?? NULL);
+    $this->assertSame('First item.', $refused['/m/x/0 check.drupal:Callback']['message'] ?? NULL);
+  }
+
+  /**
+   * Tests a composite holding Email runs where its keywords admit the value.
+   *
+   * Sequentially and AtLeastOneOf are written as their parts, `allOf` and
+   * `anyOf`, and named: where those parts refuse, the check is not asked,
+   * so one fault is one refusal; where they admit what Drupal's Email
+   * refuses (`a@b`), the check refuses it.
+   */
+  public function testCompositesHoldingEmail(): void {
+    $surface = new Surface(DefinitionMap::fromArrays(definitions: [
+      'one' => DataDefinition::create('string')->setLabel('One')->addConstraint('AtLeastOneOf', [
+        'constraints' => [['Email' => []], ['Length' => ['max' => 2]]],
+      ]),
+      'seq' => DataDefinition::create('string')->setLabel('Seq')->addConstraint('Sequentially', [
+        'constraints' => [['NotBlank' => []], ['Email' => []]],
+      ]),
+    ]));
+    foreach (['one' => 'anyOf', 'seq' => 'format.email'] as $key => $code) {
+      $refused = $this->validated($surface, [$key => 'not an email']);
+      $this->assertSame(['/' . $key . ' ' . $code], array_keys($refused), $key . ': refused once, by its keywords.');
+      $refused = $this->validated($surface, [$key => 'a@b']);
+      $this->assertCount(1, $refused, $key);
+      $this->assertStringStartsWith('/' . $key . ' check.drupal:' . ($key === 'one' ? 'AtLeastOneOf' : 'Sequentially'), (string) array_key_first($refused), $key . ': the check refuses what the format admits.');
+      $this->assertSame([], $this->validated($surface, [$key => 'news@example.com']), $key);
+    }
+  }
+
+  /**
+   * Tests an author's check on the items of a list runs on each item.
+   *
+   * The list's items are a structure, which names the check on its
+   * whole: each item is refused at its own place, with the check's code.
+   */
+  public function testCheckOnListItems(): void {
+    $name = $this->container->get('surface.resource_registry')->defineRead('test.lines', 'surface', new ResourceCallable(static::class, 'defineLines', []), 'lines');
+    $built = $this->container->get('surface.resources')->buildStatic($name, new OperationContext('configure'));
+    $schema = json_decode((string) json_encode($this->container->get('surface.contract_emitter')->emitFull($built, 'test.lines', 'configure')->document['schema']), TRUE);
+    $def = substr((string) $schema['properties']['k']['items']['$ref'], strlen('#/$defs/'));
+    $this->assertArrayHasKey('drupal:Callback', $schema['$defs'][$def]['portable-check'], 'The items name the check.');
+    $this->assertSame([], $this->validated($built, ['k' => [['n' => 1], ['n' => 2]]]));
+    $refused = $this->validated($built, ['k' => [['n' => 1], ['n' => 7]]]);
+    $this->assertSame(['/k/1 check.drupal:Callback'], array_keys($refused));
+    $this->assertSame('Seven is refused.', $refused['/k/1 check.drupal:Callback']['message']);
+
+    $notes = $this->container->get('surface.schema_reader')->notes($schema);
+    $this->assertSame('Not read: a constraint the server checks is known by its plugin alone.', $notes['/$defs/' . $def . '/portable-check/drupal:Callback'] ?? NULL, 'Served, the check is noted as a plain map\'s.');
+  }
+
+  /**
+   * Declares a list whose items are a map with a check, with addSchema().
+   *
+   * @param \Drupal\surface\Resource\BlueprintInterface $inputs
+   *   The blueprint.
+   */
+  public static function defineLines(BlueprintInterface $inputs): void {
+    $item = Schema::object(['n' => Schema::integer()->title('N')])
+      ->title('Line')
+      ->with('additionalProperties', FALSE)
+      ->check('drupal:Callback', ['callback' => [static::class, 'refuseSeven']]);
+    $inputs->addSchema('k', Schema::list($item)->title('Lines'));
+  }
+
+  /**
+   * Refuses an item holding seven.
+   *
+   * @param mixed $value
+   *   The item.
+   * @param \Symfony\Component\Validator\Context\ExecutionContextInterface $context
+   *   The context.
+   */
+  public static function refuseSeven(mixed $value, ExecutionContextInterface $context): void {
+    if (is_array($value) && ($value['n'] ?? NULL) === 7) {
+      $context->addViolation('Seven is refused.');
+    }
+  }
+
+  /**
+   * Refuses a ledger's third amount, as a constraint below its place does.
+   *
+   * @param mixed $value
+   *   The ledger.
+   * @param \Symfony\Component\Validator\Context\ExecutionContextInterface $context
+   *   The context.
+   */
+  public static function refuseTheThirdAmount(mixed $value, ExecutionContextInterface $context): void {
+    if (is_array($value) && isset($value['items'][2])) {
+      $context->buildViolation('The third amount is refused.')->atPath('items[2].amount')->addViolation();
+    }
+  }
+
+  /**
+   * Refuses a property the map does not hold.
+   *
+   * @param mixed $value
+   *   The map.
+   * @param \Symfony\Component\Validator\Context\ExecutionContextInterface $context
+   *   The context.
+   */
+  public static function refuseWhatIsNotThere(mixed $value, ExecutionContextInterface $context): void {
+    $context->buildViolation('Nothing there is refused.')->atPath('missing.below')->addViolation();
+  }
+
+  /**
+   * Refuses a secret below the map, naming it.
+   *
+   * @param mixed $value
+   *   The map.
+   * @param \Symfony\Component\Validator\Context\ExecutionContextInterface $context
+   *   The context.
+   */
+  public static function refuseTheToken(mixed $value, ExecutionContextInterface $context): void {
+    $token = is_array($value) ? (string) ($value['token'] ?? '') : '';
+    $context->buildViolation('The token @token is refused.')->setParameter('@token', $token)->atPath('token')->addViolation();
   }
 
   /**

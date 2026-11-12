@@ -34,7 +34,10 @@
                     "sender_email": {
                         "title": "Sender email",
                         "type": "string",
-                        "format": "email"
+                        "format": "email",
+                        "portable-check": {
+                            "drupal:Email": {}
+                        }
                     },
                     "frequency": {
                         "title": "Frequency",

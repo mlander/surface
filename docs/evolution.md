@@ -334,7 +334,14 @@ variants is a note, since the conditionals that state each variant are
 judged themselves, and so is one to `$id`, `rules` or `within`, which
 say where a thing is, not what is accepted. `portable-check` is
 compared by check, and a change to a check's options, or to a message
-under `x-portable-messages`, is a note. Each breaking change is then:
+under `x-portable-messages`, is a note; so is a check added beside an
+unchanged `format` it is the host's rule for (`drupal:Email` beside
+`email`, `drupal:Uuid` beside `uuid`), which the server applied before
+the document named it. A check newly named at a map narrows, as any
+check added does. `format` is asserted, so it is judged as `pattern`
+is: the diff cannot order two formats, so a changed `format` breaks on
+an input and widens on an output; added narrows, removed widens. Each
+breaking change is then:
 
 - **versioned**, when the version of the id that owns it was raised
   (the document's resource or structure, or the structure whose def the

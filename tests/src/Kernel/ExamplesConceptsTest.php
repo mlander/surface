@@ -269,7 +269,8 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $desk = $this->full(InfoDeskResource::class);
     $this->assertSame(['event.person', 'event.review', 'event.phone'], array_keys($press['$defs']));
     $this->assertSame(['event.person', 'event.phone'], array_keys($desk['$defs']));
-    $this->assertSame($press['$defs']['event.person'], $desk['$defs']['event.person'], 'One def, whatever the site.');
+    // By its JSON: an empty check's options are an object each time.
+    $this->assertSame(json_encode($press['$defs']['event.person']), json_encode($desk['$defs']['event.person']), 'One def, whatever the site.');
     $this->assertSame(['listed' => ['type' => 'boolean', 'required' => FALSE]], $press['$defs']['event.person'][ContractEmitter::EXTENSION]['ports']);
     $this->assertSame(['listed' => 'public'], $press['properties']['contact'][ContractEmitter::EXTENSION]['reads']);
     $this->assertSame(['listed' => 'in_program'], $desk['properties']['lead'][ContractEmitter::EXTENSION]['reads']);

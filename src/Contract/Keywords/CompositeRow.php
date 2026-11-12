@@ -15,7 +15,12 @@ use Drupal\surface\Contract\ConstraintKeywords;
  * row, one whose row does not apply, a Regex no pattern carries) leaves
  * the whole composite unstated: an `anyOf` short of a part would refuse
  * what that part allows, and an `allOf` short of one would state a rule
- * that is not the one checked. A part's message is the server's to say.
+ * that is not the one checked. A part that is Email or Uuid is stated by
+ * its format, which admits what the constraint refuses: the composite is
+ * then written and named under `portable-check` besides, so the check
+ * the server runs is one the document names
+ * (ConstraintKeywords::FORMAT_TWINS). A part's message is the server's to
+ * say.
  *
  * Read back, each part must be one constraint of the table whose keywords
  * are all the part says, but for annotations and a `type` that is the
@@ -77,18 +82,20 @@ final class CompositeRow implements ConstraintRowInterface {
       return NULL;
     }
     $parts = [];
+    $whole = TRUE;
     foreach ($constraints as $constraint) {
       if (!is_array($constraint) || count($constraint) !== 1) {
         return NULL;
       }
       $name = (string) array_key_first($constraint);
       $part = ConstraintKeywords::write($name, $constraint[$name], $types);
-      if ($part === NULL || !$part->whole || $part->keywords === []) {
+      if ($part === NULL || $part->keywords === [] || (!$part->whole && !isset(ConstraintKeywords::FORMAT_TWINS[$name]))) {
         return NULL;
       }
+      $whole = $whole && $part->whole;
       $parts[] = $part->keywords;
     }
-    return new Written([$this->keyword => $parts]);
+    return new Written([$this->keyword => $parts], whole: $whole);
   }
 
   /**

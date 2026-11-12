@@ -170,7 +170,8 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
     $row = array_intersect_key($written['properties']['email'], ['type' => TRUE, 'format' => TRUE]);
     $this->assertSame(['type' => ['string', 'null'], 'format' => 'email'], $row, 'The emitter writes the leaf type as its row, an optional key nullable.');
     $this->assertSame(254, $written['properties']['email']['maxLength'], 'What the library says beyond the row is served as its keyword.');
-    $this->assertArrayNotHasKey('portable-check', $written['properties']['email']);
+    $this->assertSame(['drupal:Email' => []], json_decode((string) json_encode($written['properties']['email']['portable-check']), TRUE), 'The host\'s rule for the format, named beside it.');
+    $this->assertArrayNotHasKey('x-portable-messages', $written['properties']['email'], 'With no message of its own: the format says it.');
     $validator = new Validator(Registry::withTypes()->add($schema->toDocument(), 'surface:test.library'));
     $valid = $validator->validate(json_decode('{"email": "a@b.co", "count": 3, "link": {"uri": "https://example.com"}}'), 'surface:test.library');
     $this->assertSame([], $valid->toArray()['errors'], 'Values the library allows are valid.');

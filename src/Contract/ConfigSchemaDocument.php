@@ -328,13 +328,38 @@ final class ConfigSchemaDocument {
         // decides which is written, as it does for a definition.
         $stated = in_array($name, $accepted, TRUE) ? ConstraintKeywords::state([$name => $options], [$type], $keywords) : NULL;
         $keywords = $stated['keywords'] ?? $keywords;
-        $carried = $stated !== NULL && $stated['left'] === [];
+        $carried = $stated !== NULL && self::twinsOnly($stated['left'], $stated['keywords']['format'] ?? NULL);
       }
       if (!$carried && $this->whole) {
         $this->left[$path]['constraints'][$name] = $options;
       }
     }
     return $keywords;
+  }
+
+  /**
+   * Answers whether what state() left over is only the format's twins.
+   *
+   * Email beside `format: email` and Uuid beside `format: uuid` are
+   * carried: the served document names them beside the format
+   * (ConstraintKeywords::FORMAT_TWINS). A Uuid limited to some `versions`
+   * is not, since the format does not say which.
+   *
+   * @param list<array{0: string, 1: mixed, 2: bool}> $left
+   *   What state() did not state whole.
+   * @param mixed $format
+   *   The `format` state() wrote.
+   *
+   * @return bool
+   *   TRUE when nothing else is left.
+   */
+  protected static function twinsOnly(array $left, mixed $format): bool {
+    foreach ($left as [$id, $options]) {
+      if (!ConstraintKeywords::isFormatTwin($id, $format) || (is_array($options) && isset($options['versions']))) {
+        return FALSE;
+      }
+    }
+    return TRUE;
   }
 
   /**

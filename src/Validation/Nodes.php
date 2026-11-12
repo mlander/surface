@@ -16,7 +16,8 @@ use PortableSchema\Json;
  * stands, each `allOf` member at the same place. Those nodes apply
  * whatever else holds, and are certain. A node under `anyOf`, `oneOf`,
  * `then` or `else` applies only if its branch is the one that holds, and
- * is uncertain. Nothing is evaluated but what refusedByKeyword() asks.
+ * is uncertain. Nothing is evaluated but what refusedByKeyword() and
+ * refusedByComposite() ask.
  *
  * Decision: see
  * docs/decisions.md#validation-runs-through-the-dialects-validator.
@@ -54,31 +55,6 @@ final class Nodes {
    */
   public function __construct(private readonly array $root, mixed $data) {
     $this->visit($root, $data, '', TRUE, 0);
-  }
-
-  /**
-   * Lists the places where a node writes one of some formats.
-   *
-   * Certain or not: a format in a branch that does not hold names a place
-   * whose host rule may still apply.
-   *
-   * @param string[] $formats
-   *   The formats.
-   *
-   * @return array<string, string>
-   *   The format at each place, by its JSON Pointer.
-   */
-  public function formats(array $formats): array {
-    $found = [];
-    foreach ($this->at as $location => $nodes) {
-      foreach ($nodes as [$node]) {
-        if (is_string($node['format'] ?? NULL) && in_array($node['format'], $formats, TRUE)) {
-          $found[(string) $location] = $node['format'];
-          break;
-        }
-      }
-    }
-    return $found;
   }
 
   /**
@@ -122,27 +98,110 @@ final class Nodes {
    */
   public function refusedByKeyword(string $location, mixed $value, bool $formats = TRUE): bool {
     foreach ($this->at[$location] ?? [] as [$node, $certain]) {
-      if (!$certain) {
-        continue;
-      }
-      if (isset($node['type']) && !self::typed($value, (array) $node['type'])) {
-        return TRUE;
-      }
-      if (!is_string($value)) {
-        continue;
-      }
-      $length = mb_strlen($value);
-      if ((is_int($node['maxLength'] ?? NULL) && $length > $node['maxLength']) || (is_int($node['minLength'] ?? NULL) && $length < $node['minLength'])) {
-        return TRUE;
-      }
-      if (is_string($node['pattern'] ?? NULL) && @preg_match('~' . str_replace('~', '\~', $node['pattern']) . '~uD', $value) === 0) {
-        return TRUE;
-      }
-      if ($formats && is_string($node['format'] ?? NULL) && in_array($node['format'], Formats::NAMES, TRUE) && !Formats::check($node['format'], $value)) {
+      if ($certain && self::refuses($node, $value, $formats)) {
         return TRUE;
       }
     }
     return FALSE;
+  }
+
+  /**
+   * Answers whether the `allOf` or `anyOf` a composite check wrote refuses.
+   *
+   * A composite (Sequentially, AtLeastOneOf) is written as its parts
+   * under one keyword and named under `portable-check` at the same node:
+   * where those parts refuse the value, by the keywords refusedByKeyword()
+   * reads, the check is not asked. An `allOf` refuses where one part
+   * refuses; an `anyOf` where every part does. A refusal by any other
+   * node at the place does not count.
+   *
+   * @param string $location
+   *   The place.
+   * @param mixed $value
+   *   Its value.
+   * @param string $check
+   *   The check's name, as the node names it.
+   * @param string $keyword
+   *   `allOf` or `anyOf`: the keyword the composite is written as.
+   *
+   * @return bool
+   *   TRUE when a certain node naming the check refuses the value by it.
+   */
+  public function refusedByComposite(string $location, mixed $value, string $check, string $keyword): bool {
+    foreach ($this->at[$location] ?? [] as [$node, $certain]) {
+      if (!$certain || !is_array($node['portable-check'] ?? NULL) || !array_key_exists($check, $node['portable-check']) || !is_array($node[$keyword] ?? NULL)) {
+        continue;
+      }
+      if (self::refusesBy($keyword, $node[$keyword], $value)) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Answers whether one node refuses a value by the keywords read here.
+   *
+   * @param mixed $node
+   *   The node.
+   * @param mixed $value
+   *   The value.
+   * @param bool $formats
+   *   FALSE to leave `format` out.
+   *
+   * @return bool
+   *   TRUE when one refuses it.
+   */
+  private static function refuses(mixed $node, mixed $value, bool $formats = TRUE): bool {
+    if (!is_array($node)) {
+      return $node === FALSE;
+    }
+    if (isset($node['type']) && !self::typed($value, (array) $node['type'])) {
+      return TRUE;
+    }
+    if (!is_string($value)) {
+      return FALSE;
+    }
+    $length = mb_strlen($value);
+    if ((is_int($node['maxLength'] ?? NULL) && $length > $node['maxLength']) || (is_int($node['minLength'] ?? NULL) && $length < $node['minLength'])) {
+      return TRUE;
+    }
+    if (is_string($node['pattern'] ?? NULL) && @preg_match('~' . str_replace('~', '\~', $node['pattern']) . '~uD', $value) === 0) {
+      return TRUE;
+    }
+    return $formats && is_string($node['format'] ?? NULL) && in_array($node['format'], Formats::NAMES, TRUE) && !Formats::check($node['format'], $value);
+  }
+
+  /**
+   * Answers whether the parts of an `allOf` or `anyOf` refuse a value.
+   *
+   * @param string $keyword
+   *   `allOf` or `anyOf`.
+   * @param array $parts
+   *   Its parts.
+   * @param mixed $value
+   *   The value.
+   *
+   * @return bool
+   *   For `allOf`, TRUE when one part refuses; for `anyOf`, when every
+   *   part does.
+   */
+  private static function refusesBy(string $keyword, array $parts, mixed $value): bool {
+    if ($parts === []) {
+      return FALSE;
+    }
+    foreach ($parts as $part) {
+      $refused = self::refuses($part, $value)
+        || (is_array($part) && is_array($part['allOf'] ?? NULL) && self::refusesBy('allOf', $part['allOf'], $value))
+        || (is_array($part) && is_array($part['anyOf'] ?? NULL) && self::refusesBy('anyOf', $part['anyOf'], $value));
+      if ($keyword === 'allOf' && $refused) {
+        return TRUE;
+      }
+      if ($keyword === 'anyOf' && !$refused) {
+        return FALSE;
+      }
+    }
+    return $keyword === 'anyOf';
   }
 
   /**

@@ -116,7 +116,9 @@ class ConstraintKeywordsTest extends UnitTestCase {
       $stated = ConstraintKeywords::state([$id => $options], $types);
       $this->assertSame($keywords, $stated['keywords'], $id . ' writes its keywords.');
       $this->assertSame($extras, $stated['extras'], $id . ' writes its extras.');
-      $this->assertSame([], $stated['left'], $id . ' is stated whole.');
+      // Email and Uuid are stated by their format, and named beside it.
+      $twin = isset(ConstraintKeywords::FORMAT_TWINS[$id]);
+      $this->assertSame($twin ? [[$id, $options, TRUE]] : [], $stated['left'], $id . ($twin ? ' is left too, for portable-check beside its format.' : ' is stated whole.'));
 
       $schema = $keywords + ($extras === [] ? [] : [PortableKeywords::MESSAGES => $extras['messages']]);
       $read = array_values(array_filter(ConstraintKeywords::read($schema, $types), static fn (ReadBack $back): bool => $back->constraint !== NULL));
@@ -227,15 +229,16 @@ class ConstraintKeywordsTest extends UnitTestCase {
    * Tests a keyword no rule merges is decided by the table's order.
    *
    * Email and Uuid both write `format`: Email stands first in the table,
-   * so it is written and Uuid is left, whichever was added first.
+   * so it is written and Uuid is left, whichever was added first. Both
+   * are left for `portable-check`: Email beside its format, Uuid alone.
    */
   public function testClashIsDecidedByTheTableOrder(): void {
     $forward = ConstraintKeywords::state(['Email' => [], 'Uuid' => []], ['string']);
     $backward = ConstraintKeywords::state(['Uuid' => [], 'Email' => []], ['string']);
     $this->assertSame(['format' => 'email'], $forward['keywords']);
     $this->assertSame($forward['keywords'], $backward['keywords'], 'One document in either order.');
-    $this->assertSame(['Uuid'], array_column($forward['left'], 0));
-    $this->assertSame(['Uuid'], array_column($backward['left'], 0));
+    $this->assertSame(['Email', 'Uuid'], array_column($forward['left'], 0));
+    $this->assertSame(['Uuid', 'Email'], array_column($backward['left'], 0));
     $this->assertSame(['Email'], ConstraintKeywords::accepted(['Uuid' => [], 'Email' => []], ['string']));
   }
 
@@ -312,13 +315,15 @@ class ConstraintKeywordsTest extends UnitTestCase {
     $this->assertSame($two, $composite[0]->kept);
 
     // A composite with a part no row reads back (Email, read as a leaf
-    // type) is written whole and read back as the JsonSchema constraint.
+    // type) is written, named under `portable-check` besides since the
+    // format admits what Email refuses, and read back as the JsonSchema
+    // constraint.
     // A NotBlank part reads back as the literal Length, as NotBlank alone
     // does.
     $mail = ['constraints' => [['Email' => []], ['Length' => ['max' => 60]]]];
     $written = ConstraintKeywords::state(['Sequentially' => $mail], ['string']);
     $this->assertSame(['allOf' => [['format' => 'email'], ['maxLength' => 60]]], $written['keywords']);
-    $this->assertSame([], $written['left']);
+    $this->assertSame([['Sequentially', $mail, TRUE]], $written['left']);
     $back = ConstraintKeywords::read($written['keywords'], ['string']);
     $pairs = array_map(static fn (ReadBack $back): array => [$back->constraint, $back->kept], $back);
     $this->assertSame([[NULL, $written['keywords']]], $pairs);
