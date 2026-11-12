@@ -215,14 +215,14 @@ class ComputedKeysTest extends SurfaceKernelTestBase {
     $this->assertSame([
       [
         'handle',
-        'too_long',
+        'maxLength',
         'This value is too long. It should have 12 characters or less. This is computed from First name and Last name.',
       ],
     ], static::said($long->violations));
     $this->assertSame([], $this->stored());
     $source = $this->submit(['first' => 'Bartholomew', 'last' => 'Byron']);
     $this->assertSame([
-      ['first', 'too_long', 'This value is too long. It should have 10 characters or less.'],
+      ['first', 'maxLength', 'This value is too long. It should have 10 characters or less.'],
     ], static::said($source->violations), 'While a source is refused, what follows from it is not said.');
   }
 
@@ -277,7 +277,7 @@ class ComputedKeysTest extends SurfaceKernelTestBase {
     $refused = $this->submit(['tag' => 'Ada King']);
     $said = array_map(static fn (array $said): array => [$said[0], $said[1], html_entity_decode($said[2])], static::said($refused->violations));
     $this->assertSame([
-      ['tag', 'regex_failed', 'The "Ada King" machine name is not valid.'],
+      ['tag', 'pattern', 'The "Ada King" machine name is not valid.'],
     ], $said, 'A value sent is judged as any key, and its refusal names no source: the value is the caller\'s.');
     $this->assertSame('ada_king', $this->stored()['tag']);
   }

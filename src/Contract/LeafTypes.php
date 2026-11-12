@@ -48,13 +48,15 @@ final class LeafTypes {
    *
    * Read in order to read a JSON type back: `integer` before `timestamp`.
    * A string key drawn as a date is `format: date` besides, which the
-   * emitter adds (DateWidget::draws()). Drupal's email validator admits a
-   * non-ASCII local part, which `email` (RFC 5321) refuses and
-   * `idn-email` (RFC 6531) admits.
+   * emitter adds (DateWidget::draws()). `email` is the dialect's (RFC
+   * 5321, ASCII only); Drupal's email validator also admits a non-ASCII
+   * local part, a known difference the pipeline's own check decides.
+   * Decision: see
+   * docs/decisions.md#the-served-document-is-a-portable-schema-document.
    */
   public const ROWS = [
     'string' => ['type' => 'string'],
-    'email' => ['type' => 'string', 'format' => 'idn-email'],
+    'email' => ['type' => 'string', 'format' => 'email'],
     'uri' => ['type' => 'string', 'format' => 'uri'],
     'datetime_iso8601' => ['type' => 'string', 'format' => 'date-time'],
     'integer' => ['type' => 'integer'],
@@ -64,12 +66,42 @@ final class LeafTypes {
   ];
 
   /**
+   * The JSON Schema a `datetime_iso8601` key holding DateOnly is written with.
+   *
+   * Its value is a date alone, `Y-m-d`, which `date-time` would refuse.
+   */
+  public const DATE_ONLY = ['type' => 'string', 'format' => 'date'];
+
+  /**
    * Formats read as a type whose row writes another, by format.
    *
-   * `email` is read as Drupal's email, written back as `idn-email`.
+   * `idn-email`, which documents before contract 5 wrote for an email
+   * address, is read as Drupal's email, written back as `email`.
    */
   public const READ_FORMATS = [
-    'email' => 'email',
+    'idn-email' => 'email',
+  ];
+
+  /**
+   * The types of the Portable Schema library read as a row, by id.
+   *
+   * A `$ref` to one of these ids is read as the row's type; what the
+   * library's document says beyond the row's `type` and `format` (the
+   * length of an email, the range of an integer) the reader reads as the
+   * constraint it is written from, or keeps, so a key read from one is
+   * no wider than the library's type. A
+   * `portable:timestamp` is an integer to JSON Schema, and only its id
+   * tells it from one. The emitter writes each row as ROWS says.
+   */
+  public const LIBRARY = [
+    'portable:string' => 'string',
+    'portable:integer' => 'integer',
+    'portable:number' => 'float',
+    'portable:boolean' => 'boolean',
+    'portable:email' => 'email',
+    'portable:uri' => 'uri',
+    'portable:date-time' => 'datetime_iso8601',
+    'portable:timestamp' => 'timestamp',
   ];
 
   /**
@@ -105,6 +137,10 @@ final class LeafTypes {
    */
   public static function spelling(DataDefinitionInterface $definition): array {
     $type = $definition->getDataType();
+    if ($type === 'datetime_iso8601' && array_key_exists('DateOnly', $definition->getConstraints())) {
+      // A datetime that holds a date alone is a calendar date.
+      return self::DATE_ONLY;
+    }
     if (isset(self::ROWS[$type])) {
       return self::ROWS[$type];
     }

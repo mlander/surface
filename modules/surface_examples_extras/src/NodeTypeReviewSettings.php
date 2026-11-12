@@ -130,19 +130,36 @@ final class NodeTypeReviewSettings {
    *   One of units().
    *
    * @return int
-   *   The number of seconds.
+   *   The number of seconds; PHP_INT_MAX, or PHP_INT_MIN below zero, for
+   *   an amount whose seconds no integer holds, which the range refuses.
    *
    * @throws \InvalidArgumentException
    *   When the unit is not one of units().
    */
   public static function seconds(int $amount, string $unit): int {
     if ($unit === self::BUSINESS_DAYS) {
-      return self::businessDaysToCalendarDays($amount) * self::UNITS['days'];
+      return self::saturated(self::businessDaysToCalendarDays($amount) * self::UNITS['days']);
     }
     if (!isset(self::UNITS[$unit])) {
       throw new \InvalidArgumentException(sprintf('"%s" is not a review deadline unit.', $unit));
     }
-    return $amount * self::UNITS[$unit];
+    return self::saturated($amount * self::UNITS[$unit]);
+  }
+
+  /**
+   * Holds a product of integers to the integers.
+   *
+   * @param int|float $number
+   *   The product: a float once it is past the integers.
+   *
+   * @return int
+   *   It, or PHP_INT_MAX or PHP_INT_MIN where no integer holds it.
+   */
+  private static function saturated(int|float $number): int {
+    if (is_int($number)) {
+      return $number;
+    }
+    return $number > 0 ? PHP_INT_MAX : PHP_INT_MIN;
   }
 
   /**
@@ -156,7 +173,7 @@ final class NodeTypeReviewSettings {
    *   below one comes back below one day, for the range to refuse.
    */
   public static function businessDaysToCalendarDays(int $business_days): int {
-    return $business_days + 2 * intdiv($business_days - 1, 5);
+    return self::saturated($business_days + 2 * intdiv(max($business_days, PHP_INT_MIN + 1) - 1, 5));
   }
 
   /**

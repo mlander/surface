@@ -111,7 +111,7 @@ class UniqueIdentityTest extends SurfaceKernelTestBase {
    * @param string $after
    *   The sentence after the constraint's, if any.
    *
-   * @return list<array{path: string, code: string, message: string}>
+   * @return list<array{path: string, code: string, message: string, params: array}>
    *   The refusals, as the tool and HTTP answer them.
    */
   protected static function refused(string $after = ''): array {
@@ -120,6 +120,7 @@ class UniqueIdentityTest extends SurfaceKernelTestBase {
         'path' => '/id',
         'code' => Violation::TAKEN,
         'message' => self::TAKEN . ($after === '' ? '' : ' ' . $after),
+        'params' => ['thing' => 'venue', 'id' => 'riverside'],
       ],
     ];
   }
@@ -181,7 +182,7 @@ class UniqueIdentityTest extends SurfaceKernelTestBase {
     $main_stage = static::venue(['label' => 'Main stage', 'id' => 'riverside']);
     $taken = $this->servedJson('POST', '/surface-api/event.venue', $main_stage);
     $this->assertSame(422, $taken['status'] ?? NULL, print_r($taken, TRUE));
-    $said = array_flip(['path', 'code', 'message']);
+    $said = array_flip(['path', 'code', 'message', 'params']);
     $errors = array_map(static fn (array $error): array => array_intersect_key($error, $said), $taken['errors']);
     $this->assertSame(static::refused(), $errors);
 
@@ -198,12 +199,8 @@ class UniqueIdentityTest extends SurfaceKernelTestBase {
     $resources = $this->container->get('surface.resources');
     $built = $resources->build(VenueResource::class, $resources->operation(VenueResource::class, 'create'));
     $id = $this->container->get('surface.contract_emitter')->emitFull($built, 'event.venue', 'create')->document['schema']['properties']['id'];
-    $this->assertSame([
-      [
-        'constraint' => 'SurfaceUnique',
-        'message' => 'Refused when a venue named this already exists.',
-      ],
-    ], $id['x-surface']['checkedOnServer']);
+    $this->assertEquals(['drupal:SurfaceUnique' => new \stdClass()], $id['portable-check']);
+    $this->assertSame(['check.drupal:SurfaceUnique' => 'Refused when a venue named this already exists.'], $id['x-portable-messages']);
     $this->assertSame(['^[a-z0-9_]+$', 32], [$id['pattern'], $id['maxLength']]);
     $this->assertArrayNotHasKey('readOnly', $id);
   }

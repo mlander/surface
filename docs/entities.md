@@ -316,7 +316,7 @@ base field definition (`FieldItemDerivation::callerNamesId()`):
 - **Named by the caller**: any other id, a string with no default. The
   create takes `id` as a required key, its length the id field's, and
   the entity is created under it; an id an entity already has is
-  refused at `id`, code `taken`, so the create is idempotent, a second
+  refused at `id`, code `check.drupal:SurfaceUnique.taken`, so the create is idempotent, a second
   identical call refused for the id the first took. `update`, `read`
   and `delete` take the id as for any entity type.
 
@@ -472,7 +472,9 @@ done about it.
     (why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects));
     past that the key takes an id, the lookup (`GET .../{x}:lookup`)
     finds one and the constraint's validator asks the handler. Both
-    documents mark it `x-surface.reference`. A form display that draws
+    documents state it as the options of its check under
+    `portable-check` and, with the HTTP door, name the lookup as its
+    `lookup` link. A form display that draws
     the field with `entity_reference_autocomplete` asks for the
     autocomplete widget, its `match_operator` and `match_limit` handed
     to core's autocomplete route

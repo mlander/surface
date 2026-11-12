@@ -1,9 +1,9 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createApi, dottedToPointer, lookupOf, pageOf, pointerToDotted, STAGE_HEADER, startedPaths, startingValues, type Endpoints, type Settings } from '../api';
+import { createApi, dottedToPointer, pageOf, pointerToDotted, STAGE_HEADER, startedPaths, startingValues, type Endpoints, type Settings } from '../api';
 import type { Contract, Schema } from '../contract';
 import { ContractRefused, getAt } from '../contract';
-import { outputText, SurfaceForm } from '../SurfaceForm';
+import { fieldOf, outputText, SurfaceForm } from '../SurfaceForm';
 import example2 from './fixtures/example2.json';
 import library from './fixtures/example2-library.json';
 import example3 from './fixtures/example3.json';
@@ -58,11 +58,11 @@ interface Call {
   init?: RequestInit;
 }
 
-/** An answer of the API: JSON, of contract 4. */
+/** An answer of the API: JSON, of contract 5. */
 function json(body: unknown, init: { status?: number; headers?: Record<string, string> } = {}): Response {
   return new Response(JSON.stringify(body), {
     status: init.status ?? 200,
-    headers: { 'Content-Type': 'application/json', 'Contract-Version': '4', ...init.headers },
+    headers: { 'Content-Type': 'application/json', 'Contract-Version': '5', ...init.headers },
   });
 }
 
@@ -73,12 +73,12 @@ function problem(status: number, members: Record<string, unknown> = {}): Respons
   return new Response(JSON.stringify({ type: 'about:blank', title: REASONS[status], status, ...members }), {
     status,
     statusText: REASONS[status],
-    headers: { 'Content-Type': 'application/problem+json', 'Contract-Version': '4' },
+    headers: { 'Content-Type': 'application/problem+json', 'Contract-Version': '5' },
   });
 }
 
 /** A 422 refusal: the values as the result has them, `errors` the violations. */
-function refusal(errors: { path: string; code: string; message: string }[]): Response {
+function refusal(errors: { path: string; code: string; message: string; params?: Record<string, unknown> }[]): Response {
   return problem(422, {
     type: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/docs/served-contract.md#refused',
     title: 'The values were refused',
@@ -144,7 +144,7 @@ function narrowingLine(): string | null {
 
 /**
  * A mocked server: each route, `METHOD /path`, answers a document (200,
- * contract 4) or a Response of its own.
+ * contract 5) or a Response of its own.
  */
 function server(routes: Record<string, (call: Call) => unknown>) {
   const calls: Call[] = [];
@@ -231,7 +231,7 @@ describe('the React form of example 2', () => {
     };
     const { calls, fetcher } = server({
       [step2.narrow]: answered,
-      [step2.write]: () => refusal([{ path: '/room', code: 'no_such_choice', message: 'The value you selected is not a valid choice.' }]),
+      [step2.write]: () => refusal([{ path: '/room', code: 'enum', message: 'The value you selected is not a valid choice.', params: { value: 'harbour_deck', allowed: ['riverside_main', 'riverside_east'] } }]),
       [step2.read]: () => example2,
     });
     render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
@@ -267,7 +267,7 @@ describe('the React form of example 2', () => {
   it('a refused submit shows what was refused inline and in a summary', async () => {
     const { calls, fetcher } = server({
       [step2.narrow]: () => library,
-      [step2.write]: () => refusal([{ path: '/room', code: 'no_such_choice', message: 'The value you selected is not a valid choice.' }]),
+      [step2.write]: () => refusal([{ path: '/room', code: 'enum', message: 'The value you selected is not a valid choice.', params: { value: 'harbour_deck', allowed: ['riverside_main', 'riverside_east'] } }]),
       [step2.read]: () => example2,
     });
     render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
@@ -354,7 +354,7 @@ describe('submitting example 2', () => {
 
   it('shows a 422 problem as refused values, inline and in a summary', async () => {
     const { fetcher } = server({
-      [step2.write]: () => refusal([{ path: '/room', code: 'no_such_choice', message: 'The value you selected is not a valid choice.' }]),
+      [step2.write]: () => refusal([{ path: '/room', code: 'enum', message: 'The value you selected is not a valid choice.', params: { value: 'harbour_deck', allowed: ['riverside_main', 'riverside_east'] } }]),
       [step2.read]: loaded,
     });
     render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
@@ -393,7 +393,7 @@ describe('submitting example 2', () => {
 
   it('sends no If-Match when the page turns the fingerprint off', async () => {
     const { calls, fetcher } = server({
-      [step2.write]: () => refusal([{ path: '/room', code: 'no_such_choice', message: 'No.' }]),
+      [step2.write]: () => refusal([{ path: '/room', code: 'enum', message: 'No.' }]),
       [step2.read]: loaded,
     });
     render(<SurfaceForm settings={{ ...settings, sendFingerprint: false }} fetcher={fetcher} refineDelay={0} />);
@@ -411,6 +411,16 @@ describe('submitting example 2', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Submit' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('The server answered 500 Internal Server Error: The database went away.');
     expect(screen.queryByRole('status')).toBeNull();
+  });
+});
+
+describe('the field a violation is about', () => {
+  it('is its path, or the property a dialect code at the object names', () => {
+    expect(fieldOf({ path: 'room', code: 'enum', message: 'No.', params: { value: 'x', allowed: [] } })).toBe('room');
+    expect(fieldOf({ path: 'contact', code: 'required', message: 'Email is required.', params: { property: 'email' } })).toBe('contact.email');
+    expect(fieldOf({ path: '', code: 'unknownProperty', message: 'Unknown key fax.', params: { property: 'fax' } })).toBe('fax');
+    expect(fieldOf({ path: 'deadline.amount', code: 'check.drupal:ReviewDeadline', message: 'Too late.', params: { amount: '45' } })).toBe('deadline.amount');
+    expect(fieldOf({ path: 'deadline', code: 'maximum', message: 'Too big.', params: { limit: 3 } })).toBe('deadline');
   });
 });
 
@@ -565,7 +575,7 @@ describe('the React form of example 3', () => {
 
   it('shows a refusal inside the contact on its email field, its pointer read as a dotted path', async () => {
     const { calls, fetcher } = server({
-      [step3.write]: () => refusal([{ path: '/contact/email', code: 'invalid_format', message: 'This value is not a valid email address.' }]),
+      [step3.write]: () => refusal([{ path: '/contact/email', code: 'format.email', message: 'This value is not a valid email address.' }]),
       [step3.read]: () => example3,
     });
     render(<SurfaceForm settings={settings3} fetcher={fetcher} refineDelay={0} />);
@@ -722,7 +732,7 @@ describe('narrowing here, from the full schema', () => {
   });
 });
 
-describe('the contract 4 wire', () => {
+describe('the contract 5 wire', () => {
   const check: Settings = {
     ...settings,
     resource: 'event.program',
@@ -834,7 +844,7 @@ describe('the contract 4 wire', () => {
   });
 
   it('reads a 422, a 412 and a 403 that names what was refused as a refusal, and throws for a 403 that names nothing', async () => {
-    const errors = [{ path: '/contact/email', code: 'invalid_format', message: 'Not an email address.' }];
+    const errors = [{ path: '/contact/email', code: 'format.email', message: 'Not an email address.' }];
     const answers = [
       problem(422, { errors, notes: [{ path: '/venue', code: 'locked', message: 'Locked.' }], stale: [] }),
       problem(412, { errors: [{ path: '', code: 'conflict', message: 'Changed.' }], notes: [], stale: [] }),
@@ -849,7 +859,7 @@ describe('the contract 4 wire', () => {
         changed: false,
         changes: [],
         values: {},
-        violations: [{ path: 'contact.email', code: 'invalid_format', message: 'Not an email address.' }],
+        violations: [{ path: 'contact.email', code: 'format.email', message: 'Not an email address.' }],
         notes: [{ path: 'venue', code: 'locked', message: 'Locked.' }],
         stale: [],
         outputs: {},
@@ -866,14 +876,14 @@ describe('the contract 4 wire', () => {
   });
 });
 
-describe('contract 4 only', () => {
+describe('contract 5 only', () => {
   /** example 2's contract as a server of contract 1 wrote it: no version stated. */
   const contractOne = (): Contract => {
     const contract = JSON.parse(JSON.stringify(example2)) as Contract;
     delete contract.schema['x-surface']?.contract;
     return contract;
   };
-  const refusalOf = (version: string) => `This page reads contract 4; the server sent contract ${version}.`;
+  const refusalOf = (version: string) => `This page reads contract 5; the server sent contract ${version}.`;
 
   it('refuses a contract of contract 1, which states no version, as the form\'s error', async () => {
     const { fetcher } = server({ [step2.read]: () => contractOne() });
@@ -898,7 +908,7 @@ describe('contract 4 only', () => {
     const answer = (version: string | null) => vi.fn(async () =>
       new Response(JSON.stringify(example2), { status: 200, headers: version === null ? {} : { 'Content-Type': 'application/json', 'Contract-Version': version } }));
     await expect(createApi(settings, answer('3')).contract()).rejects.toThrow(refusalOf('3'));
-    await expect(createApi(settings, answer('4')).contract()).resolves.toMatchObject({ document: { resource: 'registration.step2', operation: 'configure' } });
+    await expect(createApi(settings, answer('5')).contract()).resolves.toMatchObject({ document: { resource: 'registration.step2', operation: 'configure' } });
     // No header is no refusal by itself: the document is read.
     await expect(createApi(settings, answer(null)).contract()).resolves.toMatchObject({ document: { resource: 'registration.step2' } });
   });
@@ -921,27 +931,36 @@ describe('contract 4 only', () => {
     expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('Main hall');
   });
 
-  it('refuses a write whose contract is of contract 1, and takes a write of contract 4', async () => {
+  it('refuses a write whose contract is of contract 1, and takes a write of contract 5', async () => {
     const written = (contract: Contract) => ({ ...nothing, committed: true, changed: true, changes: ['/title'], contract });
     const one = server({ [step2.write]: () => written(contractOne()) });
     await expect(createApi(settings, one.fetcher).submit({}, [], null)).rejects.toThrow(refusalOf('1'));
-    const four = server({ [step2.write]: () => written(example2 as unknown as Contract) });
-    await expect(createApi(settings, four.fetcher).submit({}, [], null)).resolves.toMatchObject({ document: { committed: true, changes: ['title'] } });
+    const five = server({ [step2.write]: () => written(example2 as unknown as Contract) });
+    await expect(createApi(settings, five.fetcher).submit({}, [], null)).resolves.toMatchObject({ document: { committed: true, changes: ['title'] } });
   });
 });
 
 describe('the lookup', () => {
-  it("is the page's, or the read path's custom read, an operation named in it taken off", () => {
-    expect(lookupOf({ read: '/surface-api/event.sponsorship', schema: '', write: { method: 'PATCH', url: '' } })).toBe('/surface-api/event.sponsorship:lookup');
-    expect(lookupOf({ read: '/surface-api/node.type/recipe?x=1', schema: '', write: { method: 'PATCH', url: '' } })).toBe('/surface-api/node.type/recipe:lookup');
-    expect(lookupOf({ read: '/surface-api/event.venue:create', schema: '', write: { method: 'POST', url: '' }, lookup: null })).toBeNull();
+  it("is the key's lookup link, concrete, expanded with its variables alone", async () => {
+    const { calls, fetcher } = server({
+      'GET /surface-api/node.page/7:lookup': () => ({ items: [{ id: 3, label: 'Ada' }] }),
+    });
+    // A page parameter named as a variable fills nothing: the server wrote
+    // the link concrete, and the variables are what its `source` names.
+    const api = createApi({ ...settings, parameters: { id: 7, limit: 2 } }, fetcher);
+    await expect(api.lookup('/surface-api/node.page/7:lookup?key=/uid/target_id{&q,limit}', { q: 'a d' })).resolves.toEqual([{ id: 3, label: 'Ada' }]);
+    await api.lookup('/surface-api/node.page/7:lookup?key=/thing/id&type={type}{&q,limit}', { type: 'node', q: 'x', limit: 5 });
+    expect(calls.map((call) => call.url)).toEqual([
+      '/surface-api/node.page/7:lookup?key=/uid/target_id&q=a%20d',
+      '/surface-api/node.page/7:lookup?key=/thing/id&type=node&q=x&limit=5',
+    ]);
   });
 });
 
 describe('a key deferred for its size', () => {
   // Example 12 on a site with more components than the site list limit:
   // the full schema states the props and slots open, `deferred`, each with
-  // a `fetch` template; the mocked server answers the full schema with the
+  // a `choose` link; the mocked server answers the full schema with the
   // choices named in the query, as GET .../schema?choose= does, and 404
   // for any other set.
   const resource = 'event.spotlight';
@@ -1122,14 +1141,14 @@ describe('a page under a stage', () => {
       [step2.write]: () => json({ ...nothing, committed: true, changed: true, contract: example2 }, { headers: { ETag: '"staged-2"' } }),
       'GET /surface-api/registration.step2:lookup': () => ({ items: [] }),
     });
-    const api = createApi({ ...staged, endpoints: { ...staged.endpoints, lookup: '/surface-api/registration.step2:lookup' } }, fetcher);
+    const api = createApi(staged, fetcher);
     const loaded = await api.contract();
     await api.schema();
     await api.chosen('/surface-api/registration.step2/schema?choose=%2Fvenue');
     await api.narrow(loaded.document.values, []);
     await api.validate(loaded.document.values, [], loaded.etag);
     await api.submit(loaded.document.values, [], loaded.etag);
-    await api.lookup('venue', 'riv');
+    await api.lookup('/surface-api/registration.step2:lookup?key=/venue{&q,limit}', { q: 'riv' });
     const token = calls.filter((call) => call.url === '/session/token');
     const others = calls.filter((call) => call.url !== '/session/token');
     expect(token).toHaveLength(1);

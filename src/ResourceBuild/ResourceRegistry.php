@@ -717,7 +717,9 @@ final class ResourceRegistry {
     foreach ($definitions as $name => $definition) {
       $inputs = $definition->inputs;
       [$root, $pointer, $hash] = ($inputs->arguments ?? []) + [NULL, NULL, NULL];
-      if ($inputs?->class === SchemaReader::class && $inputs->method === 'fill' && is_array($root) && is_string($pointer) && is_string($hash) && str_starts_with((string) $name, 'schema:')) {
+      // A structure of an author's schema (addSchema()) is kept whole: its
+      // inputs say it is read as the author's own.
+      if ($inputs?->class === SchemaReader::class && $inputs->method === 'fill' && is_array($root) && is_string($pointer) && is_string($hash) && !isset($inputs->arguments[3]) && str_starts_with((string) $name, 'schema:')) {
         $export['documents'][$hash] ??= $root;
         $export['schema'][(string) $name] = [$definition->id, $definition->module, $pointer, $hash];
         continue;

@@ -7,6 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\DoesNotApply;
@@ -30,6 +31,7 @@ use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Ports: a structure reads values from its container, under its own names.
@@ -344,8 +346,8 @@ class PortsTest extends SurfaceKernelTestBase {
     $this->assertArrayNotHasKey('allOf', $def, 'Nothing that depends on a port is stated in the def.');
     $this->assertSame(['rows'], $def['required'], 'The aisle may not apply, so the def does not require it.');
     $this->assertSame(['layout'], $def['properties']['aisle']['x-surface']['dependsOn'], 'In the def, a key reading a port names the port.');
-    $this->assertArrayNotHasKey('enumerated', $def['properties']['aisle']['x-surface']);
-    $this->assertArrayNotHasKey('refine', $def['properties']['aisle']['x-surface']);
+    $this->assertArrayNotHasKey('enumerated', $def['properties']['aisle']['x-surface'] ?? []);
+    $this->assertArrayNotHasKey('refine', $def['properties']['aisle']['x-surface'] ?? []);
 
     $site = $full['properties']['seating'];
     $this->assertSame('#/$defs/resource_test.seating', $site['$ref']);
@@ -354,7 +356,7 @@ class PortsTest extends SurfaceKernelTestBase {
     $this->assertTrue($site['x-surface']['enumerated']);
     // Its rules' conditionals are the frame's to name (below); the site
     // carries no marker.
-    $this->assertArrayNotHasKey('declared', $site['x-surface']);
+    $this->assertArrayNotHasKey('declared', $site['x-surface'] ?? []);
     $expected = [
       'no aisle for a standing room, on the venue\'s allOf' => <<<'JSON'
         {"if": {"properties": {"layout": {"const": "standing"}}, "required": ["layout"]},
@@ -380,7 +382,7 @@ class PortsTest extends SurfaceKernelTestBase {
     ];
     // A rule's conditional marked where the emitter's pass wrote it; the
     // wire lists it in the frame's `x-surface.rules`.
-    $conditions = SchemaResolver::restored($full)['allOf'];
+    $conditions = Schemas::decoded(SchemaResolver::restored(Schema::from($full)))['allOf'];
     foreach ($expected as $label => $json) {
       $this->assertContains(json_decode($json, TRUE), $conditions, $label);
     }
@@ -431,7 +433,7 @@ class PortsTest extends SurfaceKernelTestBase {
     // The schema for these answers: each site narrows the def for them.
     $now = $this->schema('venue', VenueResource::class, self::venue('banquet', 60, ['rows' => 5, 'aisle' => 'none']));
     $this->assertArrayNotHasKey('allOf', $now, 'Every port holds a value: nothing is stated ahead.');
-    $seating = SchemaResolver::inline($now['properties']['seating'], $now);
+    $seating = Schemas::decoded(SchemaResolver::inline(Schema::from($now['properties']['seating']), Schema::from($now)));
     $this->assertSame(['side', 'none'], array_column($seating['properties']['aisle']['oneOf'], 'const'));
     $this->assertSame(10, $seating['properties']['rows']['maximum']);
     $this->assertTrue($now['properties']['seating']['x-surface']['refined']);

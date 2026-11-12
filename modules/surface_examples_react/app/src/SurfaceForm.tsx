@@ -4,7 +4,7 @@ import type { Contract, Created, Narrowed, Schema, Settled, Values, Violation } 
 import { ContractRefused, inlineSchema, isSuggested, joinedFetch, narrow, narrowingStatus, watchedPaths, setAt, withoutComputed, withoutSuggested } from './contract';
 import { ContractPanel } from './ContractPanel';
 import { Properties } from './widgets/Field';
-import { LookupContext } from './widgets/Shell';
+import { LookupContext, wholeLockedNote } from './widgets/Shell';
 
 /** How long a change waits before the narrowing it asks of the server is sent: the request path only. */
 export const REFINE_DELAY = 300;
@@ -37,11 +37,26 @@ interface Summary {
   created: Created | null;
 }
 
-/** Files violations by path, for the fields to show inline. */
+/**
+ * The dotted path of the field a violation is about.
+ *
+ * Its own path, but for the codes the dialect files at the object and
+ * names the property of (`required`, `unknownProperty`), which are about
+ * that property. A check's refusal is filed where the check named it.
+ */
+export function fieldOf(violation: Violation): string {
+  const property = violation.params?.property;
+  if ((violation.code === 'required' || violation.code === 'unknownProperty') && typeof property === 'string') {
+    return violation.path === '' ? property : `${violation.path}.${property}`;
+  }
+  return violation.path;
+}
+
+/** Files violations by the field each is about, for the fields to show inline. */
 function byPath(violations: Violation[]): Record<string, string[]> {
   const errors: Record<string, string[]> = {};
   for (const violation of violations) {
-    (errors[violation.path] ??= []).push(violation.message);
+    (errors[fieldOf(violation)] ??= []).push(violation.message);
   }
   return errors;
 }
@@ -182,7 +197,7 @@ function StageBar({ settings }: { settings: Settings }): JSX.Element | null {
  * from the full schema's conditionals when every key that depends on the
  * change is stated there, by the rules the server's narrowing applies,
  * with no request. A key `deferred` for its size is stated by the full
- * schema fetched for the value chosen (its `fetch`, with the choices of
+ * schema fetched for the value chosen (its `choose` link, with the choices of
  * every other deferred key the change reaches joined in), kept in memory
  * for the page's life, and the form narrows from that, then from it for
  * the changes after. When one is not stated (`refine`, `live`, a stale value only
@@ -611,9 +626,7 @@ export function SurfaceForm({
       ) : null}
       {summary !== null && summary.valid ? <Outputs outputs={summary.outputs} /> : null}
       {/* Locked whole: every field is fixed, so there is nothing to submit. */}
-      {contract.schema.readOnly ? (
-        <p className="dsr-status">This may be seen and not changed.</p>
-      ) : null}
+      {contract.schema.readOnly ? <p className="dsr-status">{wholeLockedNote(contract.schema)}</p> : null}
       <LookupContext.Provider value={api.lookup}>
         <Properties schema={schema} values={values} prefix="" onChange={onChange} errors={errors} />
       </LookupContext.Provider>

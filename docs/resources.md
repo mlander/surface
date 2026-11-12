@@ -103,6 +103,12 @@ An owner may write its keys as properties carrying attributes instead of
 `defineInputs()`: the same blueprint in a second spelling, chosen per
 class ([Declared as properties](declaring-a-resource.md#declared-as-properties)).
 
+A key may also be stated as a Portable Schema, beside the Typed Data
+spelling: `$inputs->addSchema('capacity', Schema::integer()->title(t('Capacity'))->minimum(1)->default(50))`
+is read into the same definition `add()` and a Range declare, and the
+document served for it is the same
+([Declared as a Schema](declaring-a-resource.md#declared-as-a-schema)).
+
 The example block's configuration, `ExampleBlockStructure` in the example module,
 is the first one written this way. It is a structure: the block holds
 it, and the block's host stores it.
@@ -533,7 +539,7 @@ structure's inputs are what it takes and its outputs what it answers
 - **An update writes what it names.** The reorder is an update over
   the collection: its storage loads every venue's id and weight, and
   its `prepare()` refuses an id that names no venue (`not_found`) or is
-  named twice (`taken`), by its place in the list, and rehearses the rest;
+  named twice (`check.drupal:SurfaceUnique.taken`), by its place in the list, and rehearses the rest;
   `commit()` saves them. The listing answers the current order, each
   venue with its weight; the resource's one read is its default update's
   (why: [decision](decisions.md#a-read-is-an-operation-of-the-resource)).
@@ -2466,9 +2472,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   most `surface.settings:site_list_limit` variants (20 as shipped),
   both documents state each. Past it, the full schema states the key
   open, marked `deferred`, the deciding key still listing every value;
-  the full schema fetched with a value chosen,
-  `GET .../schema?choose=/props=<value>`, and the schema for these
-  answers state the variant chosen
+  the full schema fetched with a value chosen, which the key names as
+  its `choose` link, `GET .../schema?choose=/props=<value>`, and the
+  schema for these answers state the variant chosen
   (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 - **Never spelled out in a tool's listing.** Whatever the limit, the
   tool listing states the keys of the variant the stored values choose
@@ -2749,8 +2755,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   `surface.settings:site_list_limit` (20 as shipped) is stated open
   in the full schema and the tool listing, marked `deferred`, its keys
   named under `x-surface.deferred.entries` by id and label; the full schema
-  fetched with an entry chosen, `GET .../schema?choose=/limits=<id>`,
-  states that key, the schema for these answers states every key, and
+  fetched with an entry chosen, `GET .../schema?choose=/limits=<id>`
+  (the map's `choose` link, `{value}` an entry's id), states that key, the schema for these answers states every key, and
   the narrowing tool answers it to an agent
   (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
   The limit only moves a long list out of the documents; a provider that

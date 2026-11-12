@@ -370,7 +370,7 @@ class IntroductionExcerptsTest extends SurfaceKernelTestBase {
    */
   public function testOneShapeAtTwoKeys(): void {
     $this->assertSchemaExcerpt('04-shapes.md', '"background_color"', 'my_module.colors');
-    $def = json_decode('{' . $this->block('04-shapes.md', '"pattern"') . '}', TRUE, 512, JSON_THROW_ON_ERROR);
+    $def = json_decode('{' . $this->block('04-shapes.md', '"examples"') . '}', TRUE, 512, JSON_THROW_ON_ERROR);
     $this->assertSame($this->settingsSchema('my_module.colors')['$defs'], $def, 'The page quotes the one def whole.');
 
     $refused = $this->configure(['link_color' => 'blue', 'background_color' => '#fff'], 'my_module.colors');
@@ -472,7 +472,7 @@ class IntroductionExcerptsTest extends SurfaceKernelTestBase {
     // HTTP: status 422 and the same object in its errors.
     $problem = $this->httpDryRun('block.placement', 'create', $values);
     $this->assertSame(422, $problem['status'] ?? NULL, print_r($problem, TRUE));
-    $said = array_flip(['path', 'code', 'message']);
+    $said = array_flip(['path', 'code', 'message', 'params']);
     $this->assertSame($quoted['violations'], array_map(static fn (array $error): array => array_intersect_key($error, $said), $problem['errors']));
     $this->assertPageSays('17-a-value-sent-in.md', 'HTTP refuses it with status 422 and the same object in its `errors`.');
   }

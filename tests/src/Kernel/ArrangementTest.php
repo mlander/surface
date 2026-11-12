@@ -117,22 +117,34 @@ class ArrangementTest extends SurfaceKernelTestBase {
     $plain = $emitter->emit($studio, $values, 'resource_test.studio', 'configure')->document['schema'];
     $full = $emitter->emitFull($studio, 'resource_test.studio', 'configure')->document['schema'];
     foreach (['rate', 'name', 'notes'] as $key) {
-      $this->assertArrayNotHasKey('arrangement', $plain['properties'][$key]['x-surface'] ?? [], $key);
-      $this->assertArrayNotHasKey('arrangement', $full['properties'][$key]['x-surface'] ?? [], $key);
+      $this->assertArrayNotHasKey('x-portable-ui', $plain['properties'][$key], $key);
+      $this->assertArrayNotHasKey('x-portable-ui', $full['properties'][$key], $key);
     }
+    $this->assertArrayNotHasKey('x-portable-ui', $plain, 'No groups without the hints.');
 
     $hinted = $emitter->emit($studio, $values, 'resource_test.studio', 'configure', widgets: TRUE)->document['schema'];
+    // The key names its group; its frame declares the group once.
     $this->assertSame([
-      'group' => ['id' => 'pricing', 'label' => 'Pricing', 'as' => 'details', 'collapsed' => TRUE],
-      'placeholder' => 'For example, 40',
-      'prefix' => '$',
-      'suffix' => 'per hour',
-      'help' => 'Whole dollars.',
-    ], $hinted['properties']['rate']['x-surface']['arrangement']);
-    $this->assertSame(['placeholder' => 'Riverside studio', 'help' => 'Shown on the door.'], $hinted['properties']['name']['x-surface']['arrangement']);
-    $this->assertSame(['weight' => -10], $hinted['properties']['notes']['x-surface']['arrangement']);
+      'widget' => 'number',
+      'options' => [
+        'placeholder' => 'For example, 40',
+        'prefix' => '$',
+        'suffix' => 'per hour',
+        'help' => 'Whole dollars.',
+      ],
+      'group' => 'pricing',
+    ], $hinted['properties']['rate']['x-portable-ui']);
+    $groups = [
+      'hours' => ['label' => 'Opening hours', 'widget' => 'fieldset'],
+      'pricing' => ['label' => 'Pricing', 'widget' => 'details', 'options' => ['open' => FALSE]],
+    ];
+    $this->assertSame(['groups' => $groups], $hinted['x-portable-ui']);
+    $name = ['placeholder' => 'Riverside studio', 'help' => 'Shown on the door.'];
+    $this->assertSame(['widget' => 'text', 'options' => $name], $hinted['properties']['name']['x-portable-ui']);
+    $this->assertSame(['widget' => 'textarea', 'weight' => -10], $hinted['properties']['notes']['x-portable-ui']);
     $full = $emitter->emitFull($studio, 'resource_test.studio', 'configure', widgets: TRUE)->document['schema'];
-    $this->assertSame($hinted['properties']['rate']['x-surface']['arrangement'], $full['properties']['rate']['x-surface']['arrangement']);
+    $this->assertSame($hinted['properties']['rate']['x-portable-ui'], $full['properties']['rate']['x-portable-ui']);
+    $this->assertSame($hinted['x-portable-ui'], $full['x-portable-ui']);
     // Nothing a validator reads moved: the help is no description, and the
     // example stays an example.
     $this->assertSame('What an hour in the studio costs.', $hinted['properties']['rate']['description']);
@@ -264,6 +276,27 @@ class ArrangementTest extends SurfaceKernelTestBase {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('The keys opens and closes name the group "hours" and draw it differently');
     $builder->seal();
+  }
+
+  /**
+   * Tests a group needs a label that is not empty as plain text.
+   *
+   * The served document declares every group with its label, which the
+   * dialect requires not empty; markup alone is empty as plain text.
+   */
+  public function testGroupWithNoLabelIsRefused(): void {
+    foreach (['', '<strong></strong>', '<span></span>'] as $label) {
+      try {
+        ArrangementGroup::details('hours', $label);
+        $this->fail(sprintf('The label "%s" is refused.', $label));
+      }
+      catch (\InvalidArgumentException $e) {
+        $this->assertSame('The group "hours" has no label: a group needs a label that is not empty as plain text.', $e->getMessage());
+      }
+    }
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage('The group "hours" has no label');
+    ArrangementGroup::fieldset('hours', '');
   }
 
 }

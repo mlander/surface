@@ -326,16 +326,17 @@ final class SchemaComponents {
    *   Each `$ref`, and each value of an `x-surface.variants` map.
    */
   protected static function pointers(mixed $schema): array {
-    if (!is_array($schema)) {
+    if (!is_array($schema) && !$schema instanceof \stdClass) {
       return [];
     }
     $found = [];
-    foreach ($schema as $key => $value) {
+    // A map named 0 to n - 1 is a \stdClass (Schemas::arrayed()).
+    foreach ((array) $schema as $key => $value) {
       if ($key === '$ref' && is_string($value)) {
         $found[] = $value;
       }
-      elseif ($key === 'variants' && is_array($value)) {
-        foreach ($value as $pointer) {
+      elseif ($key === 'variants' && (is_array($value) || $value instanceof \stdClass)) {
+        foreach ((array) $value as $pointer) {
           if (is_string($pointer)) {
             $found[] = $pointer;
           }
@@ -380,6 +381,12 @@ final class SchemaComponents {
    *   The schema, its pointers rewritten.
    */
   protected function rewritten(mixed $schema, array $names, string $root): mixed {
+    if ($schema instanceof \stdClass) {
+      // A map named 0 to n - 1 (Schemas::arrayed()), rewritten as an
+      // array and given back in its form.
+      $rewritten = $this->rewritten((array) $schema, $names, $root);
+      return (object) $rewritten;
+    }
     if (!is_array($schema)) {
       return $schema;
     }
@@ -387,11 +394,13 @@ final class SchemaComponents {
       if ($key === '$ref' && is_string($value)) {
         $schema[$key] = static::moved($value, $names, $root);
       }
-      elseif ($key === 'variants' && is_array($value)) {
-        foreach ($value as $choice => $pointer) {
-          $value[$choice] = is_string($pointer) ? static::moved($pointer, $names, $root) : $pointer;
+      elseif ($key === 'variants' && (is_array($value) || $value instanceof \stdClass)) {
+        // A map named by numeric ids is a \stdClass (Schemas::arrayed()).
+        $map = (array) $value;
+        foreach ($map as $choice => $pointer) {
+          $map[$choice] = is_string($pointer) ? static::moved($pointer, $names, $root) : $pointer;
         }
-        $schema[$key] = $value;
+        $schema[$key] = $value instanceof \stdClass ? (object) $map : $map;
       }
       else {
         $schema[$key] = $this->rewritten($value, $names, $root);
@@ -452,10 +461,14 @@ final class SchemaComponents {
       }
     }
     foreach (self::PATCH_MAPS as $keyword) {
-      if (isset($schema[$keyword]) && is_array($schema[$keyword])) {
-        foreach ($schema[$keyword] as $key => $sub) {
-          $schema[$keyword][$key] = is_array($sub) ? $this->loosenedPart($sub, $survey) : $sub;
+      if (isset($schema[$keyword]) && (is_array($schema[$keyword]) || $schema[$keyword] instanceof \stdClass)) {
+        // A map named 0 to n - 1 is a \stdClass (Schemas::arrayed()), and
+        // stays one.
+        $map = (array) $schema[$keyword];
+        foreach ($map as $key => $sub) {
+          $map[$key] = is_array($sub) ? $this->loosenedPart($sub, $survey) : $sub;
         }
+        $schema[$keyword] = $schema[$keyword] instanceof \stdClass ? (object) $map : $map;
       }
     }
     foreach (self::PATCH_LISTS as $keyword) {

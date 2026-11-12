@@ -201,6 +201,7 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
         'path' => '/id',
         'code' => Violation::TAKEN,
         'message' => 'A block named doors_hero already exists.',
+        'params' => ['thing' => 'block', 'id' => 'doors_hero'],
       ],
     ], $again['violations']);
   }
@@ -255,8 +256,9 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
     $this->assertSame([
       [
         'path' => '/settings/slots/actions/component/component',
-        'code' => 'no_such_choice',
+        'code' => 'enum',
         'message' => 'The value you selected is not a valid choice. Choose surface_examples:call_to_action (Call to action).',
+        'params' => ['value' => 'surface_examples:hero', 'allowed' => ['surface_examples:call_to_action']],
       ],
     ], $this->call('create', ['values' => $hero, 'dry_run' => TRUE])['violations']);
     $cta = [
@@ -282,6 +284,14 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
     $this->assertStringStartsWith('The stark theme has no region named pre_content.', $wrong_region['violations'][0]['message'], 'Claro\'s region, refused for Stark by name.');
     $nowhere = $this->call('create', ['values' => ['region' => 'nowhere'] + self::HERO, 'dry_run' => TRUE]);
     $this->assertStringStartsWith('No installed theme has a region named nowhere.', $nowhere['violations'][0]['message']);
+    // The regions a check lists are its rule, said once, by the check:
+    // no `enum` beside it.
+    foreach ([$wrong_region, $nowhere] as $refused) {
+      foreach ($refused['violations'] as $violation) {
+        $this->assertSame('/region', $violation['path']);
+        $this->assertStringStartsWith('check.drupal:', $violation['code']);
+      }
+    }
 
     $hero = self::HERO;
     $hero['settings']['props'] = ['heading' => 'A card\'s heading'] + $hero['settings']['props'];
@@ -295,8 +305,9 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
     $this->assertSame([
       [
         'path' => '/settings/props/overlay',
-        'code' => 'not_in_range',
+        'code' => 'maximum',
         'message' => 'This value should be between 0 and 100.',
+        'params' => ['limit' => 100],
       ],
     ], $too_dark);
 

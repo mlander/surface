@@ -163,7 +163,7 @@ class EntryPortsTest extends SurfaceKernelTestBase {
     // Each rule the frame names states the limits; the key carries no
     // marker.
     $this->assertSame(array_fill(0, 6, ['limits']), array_map(static fn (int $index): array => array_keys($full['allOf'][$index]['then']['properties']), $full['x-surface']['rules']));
-    $this->assertArrayNotHasKey('declared', $full['properties']['limits']['x-surface']);
+    $this->assertArrayNotHasKey('declared', $full['properties']['limits']['x-surface'] ?? []);
     // The structure's def names no container: it lists its port, and
     // requires nothing a rule may rule out. The map lists none.
     $def = $full['$defs']['event.ticket_limit'];

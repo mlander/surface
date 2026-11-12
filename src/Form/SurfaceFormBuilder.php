@@ -6,6 +6,8 @@ namespace Drupal\surface\Form;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Entity\EntityRepositoryInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
@@ -13,7 +15,15 @@ use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Render\ElementInfoManagerInterface;
 use Drupal\Core\Security\TrustedCallbackInterface;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\ServedContract;
+use Drupal\surface\Form\Document\DocumentDrawer;
+use Drupal\surface\Form\Document\DocumentNodes;
 use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\ValueState;
+use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface\Widget\WidgetContext;
+use Drupal\surface\Widget\WidgetHostInterface;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\ViolationSet;
@@ -30,14 +40,17 @@ use Drupal\surface\Widget\SurfaceWidgetManager;
  * subform states anywhere.
  *
  * The service is the entry point, and the work is done by three internal
- * classes it constructs: Drawing draws the elements, Extracting reads
- * what was posted back into the data surface's shape, and Refreshing
- * refines the form over AJAX. The Form API callbacks stay here under
- * their own names, because form caches and render arrays hold the class
- * and the method. The AJAX callback and the two #process callbacks call
- * the static method of the same name on Refreshing, and the container's
- * #pre_render calls Drawing; the collection buttons' #submit callbacks
- * and preRenderRequired() keep their bodies here.
+ * classes it constructs: the drawer draws the elements from the envelope
+ * the data surface serves for the values (Document\DocumentDrawer), which
+ * the builder emits with the widget hints; Extracting reads what was
+ * posted back into the data surface's shape; and Refreshing refines the
+ * form over AJAX, each rebuild drawn from a new envelope. The Form API
+ * callbacks stay here under their own names, because form caches and
+ * render arrays hold the class and the method. The AJAX callback and the
+ * two #process callbacks call the static method of the same name on
+ * Refreshing, and the container's #pre_render calls the drawer; the
+ * collection buttons' #submit callbacks and preRenderRequired() keep
+ * their bodies here.
  *
  * Decision: see
  * docs/decisions.md#the-form-builder-draws-extracts-and-refreshes.
@@ -48,9 +61,18 @@ use Drupal\surface\Widget\SurfaceWidgetManager;
 class SurfaceFormBuilder implements SurfaceFormBuilderInterface, TrustedCallbackInterface {
 
   /**
-   * Draws a data surface as elements.
+   * The id the envelope a form is drawn from is emitted under.
+   *
+   * A form draws a data surface built in a host's context, which names no
+   * served resource: the id names the document, never a def a client
+   * fetches.
    */
-  protected readonly Drawing $drawing;
+  public const DOCUMENT_ID = 'surface.form';
+
+  /**
+   * Draws the served document as elements.
+   */
+  protected readonly DocumentDrawer $drawer;
 
   /**
    * Reads what a form posted, and flags what the pipeline refused.
@@ -61,6 +83,26 @@ class SurfaceFormBuilder implements SurfaceFormBuilderInterface, TrustedCallback
    * Refines the form over AJAX.
    */
   protected readonly Refreshing $refreshing;
+
+  /**
+   * Emits a deferred key's chosen document for the host's answers.
+   */
+  protected readonly NarrowsDocumentsInterface $narrowing;
+
+  /**
+   * How many drawn envelopes this request keeps for extraction.
+   */
+  protected const DRAWN_KEPT = 8;
+
+  /**
+   * The nodes of each envelope drawn in this request, by container id.
+   *
+   * Extraction in the request that drew the form reads them here; one
+   * that reads a form from the form cache emits the envelope again.
+   *
+   * @var array<string, \Drupal\surface\Form\Document\DocumentNodes>
+   */
+  protected array $drawn = [];
 
   /**
    * Constructs a SurfaceFormBuilder.
@@ -88,6 +130,13 @@ class SurfaceFormBuilder implements SurfaceFormBuilderInterface, TrustedCallback
    * @param \Drupal\Core\StringTranslation\TranslationInterface $stringTranslation
    *   The string translation service, which words a value of the wrong
    *   shape the form refuses.
+   * @param \Drupal\surface\Contract\ContractEmitter $emitter
+   *   The contract emitter, which writes the envelope the form is drawn
+   *   from.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
+   *   The entity type manager, which loads the entity a reference holds.
+   * @param \Drupal\Core\Entity\EntityRepositoryInterface $entityRepository
+   *   The entity repository, which gives its label in the page's language.
    */
   public function __construct(
     protected readonly SurfaceWidgetManager $widgetManager,
@@ -97,17 +146,107 @@ class SurfaceFormBuilder implements SurfaceFormBuilderInterface, TrustedCallback
     protected readonly SurfaceOptions $options,
     protected readonly ModuleHandlerInterface $moduleHandler,
     TranslationInterface $stringTranslation,
+    protected readonly ContractEmitter $emitter,
+    protected readonly EntityTypeManagerInterface $entityTypeManager,
+    protected readonly EntityRepositoryInterface $entityRepository,
   ) {
     $this->refreshing = new Refreshing($elementInfo);
-    $this->drawing = new Drawing($widgetManager, $this->refreshing);
-    $this->extracting = new Extracting($widgetManager, $pipeline, $messenger, $options, $moduleHandler, $stringTranslation);
+    $this->drawer = new DocumentDrawer($widgetManager, $this->refreshing);
+    $this->narrowing = new DocumentNarrowing($this, $emitter);
+    $this->extracting = new Extracting($widgetManager, $pipeline, $messenger, $options, $moduleHandler, $stringTranslation, $this->nodesFor(...));
   }
 
   /**
    * {@inheritdoc}
    */
   public function buildSurfaceForm(SurfaceInterface $surface, array $values, FormStateInterface $form_state, string $wrapper_key = 'surface', array $keys = []): array {
-    return $this->drawing->buildSurfaceForm($surface, $values, $form_state, $wrapper_key, $keys);
+    $container = $this->drawDocument($this->envelope($surface, $values), $form_state, $this->host($surface, $values), $wrapper_key, $keys);
+    // What each element standing for a stale value stands for, which the
+    // document leaves out: the host holds it, an orphan its standing
+    // value, so a select left alone reads it back.
+    $shown = $values;
+    foreach ($values[self::STANDING_KEY] ?? [] as $dotted => $standing) {
+      NestedArray::setValue($shown, explode('.', (string) $dotted), $standing, TRUE);
+    }
+    return static::stashed($container, $shown);
+  }
+
+  /**
+   * Puts on each element marked stale the value it stands for.
+   *
+   * @param array $element
+   *   The container, or an element inside it.
+   * @param array $shown
+   *   The values the host drew the form for, each orphan standing for its
+   *   stored value.
+   *
+   * @return array
+   *   The same, each stale element carrying its value.
+   */
+  protected static function stashed(array $element, array $shown): array {
+    if (($element[SurfaceWidgetBase::STALE_KEY] ?? NULL) === TRUE && isset($element[self::PATH_KEY])) {
+      $exists = FALSE;
+      $held = NestedArray::getValue($shown, WidgetContext::parentsOf((string) $element[self::PATH_KEY]), $exists);
+      if ($exists && ValueState::isConfigured($held)) {
+        $element[SurfaceWidgetBase::STALE_KEY] = $held;
+      }
+    }
+    foreach (DocumentDrawer::elementChildren($element) as $key) {
+      $element[$key] = static::stashed($element[$key], $shown);
+    }
+    return $element;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function drawDocument(ServedContract $contract, FormStateInterface $form_state, ?WidgetHostInterface $host = NULL, string $wrapper_key = 'surface', array $keys = []): array {
+    $nodes = DocumentNodes::of($contract, $host);
+    $container = $this->drawer->draw($contract, $form_state, $host, $wrapper_key, $keys, $nodes);
+    $id = (string) ($container[Refreshing::WRAPPER_KEY] ?? '');
+    unset($this->drawn[$id]);
+    $this->drawn[$id] = $nodes;
+    $this->drawn = array_slice($this->drawn, -self::DRAWN_KEPT, NULL, TRUE);
+    return $container;
+  }
+
+  /**
+   * Gets the nodes of the envelope a container was drawn from.
+   *
+   * Those this request drew for the container, when it drew it for the
+   * values the container keeps; else the envelope emitted for those
+   * values again, which is the one drawn: the form came from the form
+   * cache, and the host built the same data surface.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The data surface the container was drawn for.
+   * @param array $container
+   *   The container.
+   *
+   * @return \Drupal\surface\Form\Document\DocumentNodes
+   *   The nodes.
+   */
+  protected function nodesFor(SurfaceInterface $surface, array $container): DocumentNodes {
+    $values = is_array($container[self::VALUES_KEY] ?? NULL) ? $container[self::VALUES_KEY] : [];
+    $kept = $this->drawn[(string) ($container[Refreshing::WRAPPER_KEY] ?? '')] ?? NULL;
+    if ($kept !== NULL && $kept->values === $values) {
+      return $kept;
+    }
+    return DocumentNodes::of($this->envelope($surface, $values), $this->host($surface, $values));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function envelope(SurfaceInterface $surface, array $values): ServedContract {
+    return $this->emitter->emit($surface, $values, self::DOCUMENT_ID, widgets: TRUE);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function host(SurfaceInterface $surface, array $values): WidgetHostInterface {
+    return new FormWidgetHost($this->entityTypeManager, $this->entityRepository, $this->narrowing, $surface, $values);
   }
 
   /**
@@ -245,7 +384,7 @@ class SurfaceFormBuilder implements SurfaceFormBuilderInterface, TrustedCallback
    * {@inheritdoc}
    */
   public static function preRenderSurfaceContainer(array $element): array {
-    return Drawing::placeMounts(Drawing::gatherGroups($element));
+    return DocumentDrawer::placeMounts(DocumentDrawer::gatherGroups($element));
   }
 
   /**

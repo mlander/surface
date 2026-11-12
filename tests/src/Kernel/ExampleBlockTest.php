@@ -7,6 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Form\EnforcedResponseException;
 use Drupal\Core\Form\FormState;
 use Drupal\block\Entity\Block;
+use Drupal\surface\Pipeline\ViolationSummary;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Pipeline\Storage\PluginConfigurationStorage;
 use Drupal\surface\Widget\SurfaceWidgetBase;
@@ -502,7 +503,7 @@ class ExampleBlockTest extends SurfaceKernelTestBase {
 
     // And the values validate, so an unrelated save goes through.
     $violations = $this->pipeline()->validate($surface, $block->getConfiguration(), $block->getConfiguration());
-    $this->assertTrue($violations->isEmpty());
+    $this->assertTrue($violations->isEmpty(), (string) ViolationSummary::fromViolations($violations));
     $this->assertCount(1, $violations->stale());
   }
 

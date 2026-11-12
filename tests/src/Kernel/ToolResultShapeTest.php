@@ -142,9 +142,9 @@ class ToolResultShapeTest extends SurfaceKernelTestBase {
     $answered = $result->getContextValues();
     $this->assertSame(ResultDocument::KEYS, array_keys($answered));
     $this->assertFalse($answered['ok']);
-    $this->assertSame(['/drawers' => 'not_in_range', '/lock' => 'no_such_choice'], array_column($answered['violations'], 'code', 'path'));
+    $this->assertSame(['/drawers' => 'maximum', '/lock' => 'enum'], array_column($answered['violations'], 'code', 'path'));
     foreach ($answered['violations'] as $index => $violation) {
-      $this->assertSame(['path', 'code', 'message'], array_keys($violation));
+      $this->assertSame(['path', 'code', 'message', 'params'], array_keys($violation));
       $this->assertSame($violation['path'] . ': ' . $violation['message'], $lines[$index + 1]);
     }
     // A value not on its list names what to send, and its label.
@@ -231,7 +231,12 @@ class ToolResultShapeTest extends SurfaceKernelTestBase {
     $submit = $this->servedJson('PATCH', '/surface-api/tool_test.cabinet', ['drawers' => 40]);
     $this->assertSame(422, $submit['status']);
     $this->assertSame([
-      ['path' => '/drawers', 'code' => 'not_in_range', 'message' => 'This value should be between 1 and 12.'],
+      [
+        'path' => '/drawers',
+        'code' => 'maximum',
+        'message' => 'This value should be between 1 and 12.',
+        'params' => ['limit' => 12],
+      ],
     ], $submit['errors']);
     // The same refusal reads by labels at React, a person's door, and by
     // paths and values as sent at the tool; the paths and codes are one.
@@ -247,15 +252,17 @@ class ToolResultShapeTest extends SurfaceKernelTestBase {
     $this->assertSame([
       [
         'path' => '/room',
-        'code' => 'no_such_choice',
+        'code' => 'enum',
         'message' => $not_valid . 'This applies when Venue is harbour (Harbour Centre). Choose harbour_auditorium (Auditorium) or harbour_deck (Upper deck).',
+        'params' => ['value' => 'library_garden', 'allowed' => ['harbour_auditorium', 'harbour_deck']],
       ],
     ], $at_tool);
     $this->assertSame([
       [
         'path' => '/room',
-        'code' => 'no_such_choice',
+        'code' => 'enum',
         'message' => $not_valid . 'This applies when Venue is Harbour Centre. Choose Auditorium or Upper deck.',
+        'params' => ['value' => 'library_garden', 'allowed' => ['harbour_auditorium', 'harbour_deck']],
       ],
     ], $at_react);
     $this->setUpCurrentUser([], ['keep cabinet', 'set cabinet codes']);

@@ -22,7 +22,8 @@ namespace Drupal\surface\Contract;
  * - BREAKS: neither (a key removed or renamed, a type replaced, a
  *   reference to another def, a required port);
  * - NOTE: nothing a validator reads (a label, a description, a default,
- *   a marker under `x-surface`), and one thing it does: a required key
+ *   a marker under `x-surface`, the widget hints under `x-portable-ui`),
+ *   and one thing it does: a required key
  *   added to the inputs of an operation that acts on what is stored (an
  *   update or a read), which no document stored or sent before held, so
  *   a write supplies it where nothing is stored, a key left out keeps
@@ -84,10 +85,11 @@ final class ContractDiff {
   /**
    * Keywords that annotate and never refuse.
    *
-   * `format` is an annotation by decision
-   * (docs/decisions.md#format-is-an-annotation), and a default is filled
-   * by the pipeline, never by a client, so changing one changes what a
-   * key left out becomes on a create, not what is accepted.
+   * A default is filled by the pipeline, never by a client, so changing
+   * one changes what a key left out becomes on a create, not what is
+   * accepted. `format` is asserted
+   * (docs/decisions.md#validation-runs-through-the-dialects-validator),
+   * so it is one of the RULES.
    */
   protected const ANNOTATIONS = [
     'title',
@@ -97,7 +99,6 @@ final class ContractDiff {
     '$comment',
     '$id',
     'deprecated',
-    'format',
     'writeOnly',
   ];
 
@@ -116,6 +117,7 @@ final class ContractDiff {
    */
   protected const RULES = [
     'pattern',
+    'format',
     'multipleOf',
     'not',
     'uniqueItems',
@@ -390,6 +392,13 @@ final class ContractDiff {
     return match ($keyword) {
       '$defs' => $this->defs((array) $a, (array) $b, $path, $owner, $reading),
       'x-surface' => $this->extension((array) $a, (array) $b, $path, $owner, $reading),
+      PortableKeywords::CHECK => $this->checks((array) $a, (array) $b, $path, $owner, $reading, $old['format'] ?? NULL, $new['format'] ?? NULL),
+      PortableKeywords::MESSAGES => $one('the messages changed', self::NOTE),
+      // The widget hints: how a key is drawn, never what it accepts.
+      PortableKeywords::UI => $one(PortableKeywords::UI . ' changed', self::NOTE),
+      // Where a client asks for what the document leaves out, never what
+      // a key accepts.
+      PortableKeywords::LINKS => $one(PortableKeywords::LINKS . ' changed', self::NOTE),
       'readOnly' => $one($b === TRUE ? 'read only now' : 'no longer read only', $b === TRUE ? self::NARROWS : self::WIDENS),
       'type' => $this->type($in_old ? (array) $a : NULL, $in_new ? (array) $b : NULL, $one),
       'enum' => $this->choices(array_map(static fn ($value): array => ['const' => $value], (array) $a), array_map(static fn ($value): array => ['const' => $value], (array) $b), $path, $owner, $reading),
@@ -448,9 +457,9 @@ final class ContractDiff {
   /**
    * Compares two `x-surface` keywords.
    *
-   * Only what a client must act on is more than a note: a constraint the
-   * server checks that no keyword states, a port a container wires, and
-   * how the operation behaves. The version is judged apart.
+   * Only what a client must act on is more than a note: a port a
+   * container wires, and how the operation behaves. The version is judged
+   * apart; what the server checks is `portable-check`'s (checks()).
    *
    * @param array $old
    *   The baseline's.
@@ -479,20 +488,7 @@ final class ContractDiff {
       if ($name === 'version' || $a === $b) {
         continue;
       }
-      if ($name === 'checkedOnServer') {
-        $before = self::constraints((array) $a);
-        $after = self::constraints((array) $b);
-        foreach (array_diff($after, $before) as $constraint) {
-          $add($at, sprintf('checked on the server now: %s', $constraint), self::NARROWS);
-        }
-        foreach (array_diff($before, $after) as $constraint) {
-          $add($at, sprintf('no longer checked on the server: %s', $constraint), self::WIDENS);
-        }
-        if ($before === $after) {
-          $add($at, 'what a constraint checked on the server says changed', self::NOTE);
-        }
-      }
-      elseif ($name === 'ports') {
+      if ($name === 'ports') {
         foreach (array_unique([...array_keys((array) $a), ...array_keys((array) $b)]) as $port) {
           $was = $a[$port] ?? NULL;
           $is = $b[$port] ?? NULL;
@@ -528,16 +524,56 @@ final class ContractDiff {
   }
 
   /**
-   * Names the constraints a `checkedOnServer` lists.
+   * Compares two `portable-check` keywords, each a map of checks by name.
    *
-   * @param array $entries
-   *   Its entries, each `{constraint, message}`.
+   * A check added narrows and one removed widens; options changed, a
+   * note: the document names which constraint checks, not how. A check
+   * added beside an unchanged `format` it is the host's rule for
+   * (`drupal:Email` beside `email`, `drupal:Uuid` beside `uuid`) is a
+   * note: the server applied that rule already, beside the format.
    *
-   * @return string[]
-   *   The constraints' ids.
+   * @param array $old
+   *   The baseline's.
+   * @param array $new
+   *   Today's.
+   * @param string $path
+   *   Its path.
+   * @param string $owner
+   *   The id whose version answers for it.
+   * @param bool $reading
+   *   Whether it describes what a client reads.
+   * @param mixed $was
+   *   The baseline node's `format`.
+   * @param mixed $is
+   *   Today's.
+   *
+   * @return list<array{0: string, 1: string, 2: string, 3: string, 4: bool}>
+   *   Each difference.
    */
-  protected static function constraints(array $entries): array {
-    return array_map(static fn (mixed $entry): string => (string) (is_array($entry) ? ($entry['constraint'] ?? '') : $entry), $entries);
+  protected function checks(array $old, array $new, string $path, string $owner, bool $reading, mixed $was = NULL, mixed $is = NULL): array {
+    $found = [];
+    // By their JSON, decoded alike: `1` and `"1"` in a check's schema
+    // differ, an empty object and an empty array do not.
+    $decoded = static fn (mixed $options): string => (string) json_encode(json_decode((string) json_encode($options), TRUE));
+    foreach (array_unique([...array_keys($old), ...array_keys($new)]) as $name) {
+      $name = (string) $name;
+      $at = $path . '/' . str_replace(['~', '/'], ['~0', '~1'], $name);
+      $twin = str_starts_with($name, PortableKeywords::PROVIDER) && $was === $is && ConstraintKeywords::isFormatTwin(substr($name, strlen(PortableKeywords::PROVIDER)), $is);
+      [$change, $effect] = match (TRUE) {
+        !array_key_exists($name, $old) && $twin => [
+          sprintf('named beside its format now: %s, which the server checked already', $name),
+          self::NOTE,
+        ],
+        !array_key_exists($name, $old) => [sprintf('checked on the server now: %s', $name), self::NARROWS],
+        !array_key_exists($name, $new) => [sprintf('no longer checked on the server: %s', $name), self::WIDENS],
+        $decoded($old[$name]) === $decoded($new[$name]) => [NULL, NULL],
+        default => [sprintf('the options of the check %s changed', $name), self::NOTE],
+      };
+      if ($change !== NULL) {
+        $found[] = [$owner, $at, $change, $effect, $reading];
+      }
+    }
+    return $found;
   }
 
   /**

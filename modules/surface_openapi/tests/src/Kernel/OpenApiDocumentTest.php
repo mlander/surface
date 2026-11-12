@@ -142,13 +142,14 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
   public function testTheDocumentIsOpenApi31(): void {
     $document = $this->decoded();
     $this->assertSame('3.1.0', $document['openapi']);
-    $this->assertSame(ContractEmitter::DIALECT, $document['jsonSchemaDialect']);
+    $this->assertSame(OpenApiDocument::JSON_SCHEMA_DIALECT, $document['jsonSchemaDialect']);
+    $this->assertSame('https://json-schema.org/draft/2020-12/schema', $document['jsonSchemaDialect']);
     $this->assertSame((string) ContractEmitter::CONTRACT, $document['info']['version'], 'info.version is the contract version.');
     $this->assertSame('Test site: Surface API', $document['info']['title']);
     $this->assertStringContainsString('Built for no account', $document['info']['description']);
     $this->assertSame('no account', $document['x-surface']['builtFor']);
     $this->assertSame(['GET /surface-api/{resource}[/{id}]', 'GET /surface-api/{resource}[/{id}]/schema'], $document['x-surface']['perAccount']);
-    $this->assertArrayNotHasKey('withASubject', $document['x-surface'], 'An operation with a subject is a path of its own.');
+    $this->assertArrayNotHasKey('withASubject', $document['x-surface'] ?? [], 'An operation with a subject is a path of its own.');
     $this->assertSame([['url' => 'https://example.com']], $document['servers']);
 
     $schema = $this->moduleRoot() . '/' . self::FIXTURES . '/oas-3.1-schema-2022-10-07.json';
@@ -189,6 +190,35 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
         $node = $node[$segment];
       }
     }
+  }
+
+  /**
+   * Tests every variants pointer in the components names a component.
+   *
+   * The block placement's create attaches its visibility conditions as
+   * variants, so `x-surface.variants` maps an id to a def pointer; each one
+   * is rewritten to the def's component, and no `#/$defs/` pointer is left.
+   */
+  public function testEveryVariantsPointerNamesComponent(): void {
+    $schemas = $this->decoded()['components']['schemas'];
+    $pointers = [];
+    $walk = static function (mixed $node) use (&$walk, &$pointers): void {
+      if (!is_array($node)) {
+        return;
+      }
+      if (is_array($node['x-surface']['variants'] ?? NULL)) {
+        array_push($pointers, ...array_values($node['x-surface']['variants']));
+      }
+      array_map($walk, $node);
+    };
+    $walk($schemas);
+    $this->assertNotEmpty($pointers, 'The block placement carries variants.');
+    foreach ($pointers as $pointer) {
+      $this->assertIsString($pointer);
+      $this->assertStringStartsWith(SchemaComponents::POINTER, $pointer);
+      $this->assertArrayHasKey(explode('/', substr($pointer, strlen(SchemaComponents::POINTER)))[0], $schemas, $pointer . ' names a component.');
+    }
+    $this->assertStringNotContainsString('#/$defs/', (string) json_encode($schemas, JSON_UNESCAPED_SLASHES), 'No def pointer is left.');
   }
 
   /**
@@ -449,8 +479,8 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
    *
    * With the limit at two, a placed block's settings, a variant per block
    * plugin, are stated open and `deferred` in its component, the full
-   * schema, with the `fetch` template of one plugin's; the schema path's
-   * GET describes `choose`, the parameter that template fills, and the
+   * schema, with the `choose` link of one plugin's; the schema path's
+   * GET describes `choose`, the parameter that link fills, and the
    * 304 and the `ETag` of a fetched schema; a client may still ask
    * `POST .../schema` with the plugin chosen. The narrowing tool beside the
    * write tool is the tool door's, not a path: no path names `:schema`.
@@ -462,8 +492,9 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
     $this->config('surface.settings')->set('site_list_limit', 2)->save();
     $document = $this->decoded();
     $settings = $document['components']['schemas']['block.placement.create']['properties']['settings'];
-    $this->assertSame(['fetch' => '?choose=/settings={value}'], $settings['x-surface']['deferred']);
-    $this->assertArrayNotHasKey('refine', $settings['x-surface']);
+    $this->assertTrue($settings['x-surface']['deferred']);
+    $this->assertSame([['rel' => 'choose', 'href' => '?choose=/settings={value}', 'source' => ['value' => '1/plugin']]], $settings['x-portable-links']);
+    $this->assertArrayNotHasKey('refine', $settings['x-surface'] ?? []);
     $this->assertSame('plugin', $settings['x-surface']['by']);
     $this->assertArrayNotHasKey('anyOf', $settings);
     $schema = $document['paths']['/surface-api/block.placement/schema'];

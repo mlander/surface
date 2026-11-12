@@ -799,15 +799,15 @@ drush tool:run surface:entity.content:node.page:create --uid=1 --json \
 - **A name the caller gives.** Where the caller names the thing (an
   entity type whose id is a string with no default), a later write in
   the stage names it by that name, and the name is fixed: a write that
-  sends another is refused, code `no_such_choice`. A second staged
+  sends another is refused, code `enum`. A second staged
   create of the same name through any resource of the same storage
-  class is refused at the name, code `taken`: "A … named first is
+  class is refused at the name, code `check.drupal:SurfaceUnique.taken`: "A … named first is
   created in this stage already, at position 1." A name already stored
   is refused by the storage, as without a stage; one stored by another
   path after staging is refused at apply, at `/writes/<position>/id`,
-  code `taken`.
+  code `check.drupal:SurfaceUnique.taken`.
 - **What is refused.** A reference to `-1` from another value, staged or
-  not, code `valid_reference`, "This entity (node: -1) cannot be
+  not, code `check.drupal:SurfaceValidReference`, "This entity (node: -1) cannot be
   referenced.": the reference check reads permanent storage and sees no
   stage. `-1` through another resource of the same entity type
   (`entity.content:node` after a create through

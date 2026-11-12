@@ -85,15 +85,20 @@ final class References {
    * A reference to an entity of any type is two keys of a structure, an
    * `entity_type` carrying TYPE_CONSTRAINT and an `id` carrying this
    * setting: the bundles each entity type allows, by entity type. Every
-   * reader of such an id reads it here: the marker on the wire
-   * (`x-surface.reference: {by: entity_type}`), the autocomplete, the
-   * tool listing's lookup sentence, the lookup and the storage layout. The
+   * reader of such an id reads it here: its lookup link on the wire, whose
+   * `source` names the sibling TYPE_KEY, the autocomplete, the tool
+   * listing's lookup sentence, the lookup and the storage layout. The
    * structure's refiner narrows the id to the entity type chosen with
    * CONSTRAINT, the bundles read from this setting.
    *
    * Decision: see docs/decisions.md#a-blueprint-takes-no-complex-data-types.
    */
   public const TARGETS = 'surface_reference_targets';
+
+  /**
+   * The sibling key that names the entity type of an id carrying TARGETS.
+   */
+  public const TYPE_KEY = 'entity_type';
 
   /**
    * The most a lookup answers, whatever it is asked for.
@@ -529,7 +534,20 @@ final class References {
    */
   public static function target(DataDefinitionInterface $definition): ?array {
     $options = $definition->getConstraints()[self::CONSTRAINT] ?? NULL;
-    if (!is_array($options) || !is_string($options['entityTypeId'] ?? NULL) || $options['entityTypeId'] === '') {
+    return is_array($options) ? static::targetOf($options) : NULL;
+  }
+
+  /**
+   * Reads which entity type and bundles CONSTRAINT's options name.
+   *
+   * @param array $options
+   *   The constraint's options.
+   *
+   * @return array{entityType: string, bundles: string[]}|null
+   *   The entity type and bundles, or NULL where they name no entity type.
+   */
+  public static function targetOf(array $options): ?array {
+    if (!is_string($options['entityTypeId'] ?? NULL) || $options['entityTypeId'] === '') {
       return NULL;
     }
     return [
@@ -603,7 +621,7 @@ final class References {
     if ($entry->definition->getSetting(self::TARGETS) === NULL) {
       return NULL;
     }
-    $type = $surface->getDefinition('entity_type')?->getConstraints()[self::TYPE_CONSTRAINT] ?? NULL;
+    $type = $surface->getDefinition(self::TYPE_KEY)?->getConstraints()[self::TYPE_CONSTRAINT] ?? NULL;
     if ($entity_type_id === NULL || !is_array($type)) {
       return NULL;
     }
@@ -611,7 +629,7 @@ final class References {
     if (!isset($allowed[$entity_type_id])) {
       return NULL;
     }
-    $refined = $surface->refine(['entity_type' => $entity_type_id], FALSE)->getDefinition($name);
+    $refined = $surface->refine([self::TYPE_KEY => $entity_type_id], FALSE)->getDefinition($name);
     return $refined !== NULL && static::target($refined) !== NULL ? $refined : NULL;
   }
 

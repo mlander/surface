@@ -42,9 +42,24 @@ class WidgetHintsOnlyTest extends SurfaceKernelTestBase {
   ];
 
   /**
-   * The keywords of `x-surface` that are widget hints.
+   * The members and options of `x-portable-ui` that are widget hints.
+   *
+   * With every option a module's widget publishes, which the examples'
+   * widgets publish none of.
    */
-  protected const HINTS = ['widget', 'multiple', 'arrangement'];
+  protected const HINTS = [
+    'widget',
+    'multiple',
+    'placeholder',
+    'prefix',
+    'suffix',
+    'help',
+    'size',
+    'rows',
+    'group',
+    'weight',
+    'groups',
+  ];
 
   /**
    * {@inheritdoc}
@@ -74,33 +89,62 @@ class WidgetHintsOnlyTest extends SurfaceKernelTestBase {
   /**
    * Strips every widget hint from a document, at every depth.
    *
+   * As the emitter does before it lays the document out: a property below
+   * an applicator that said nothing but its hints (its `x-surface` said in
+   * `within`) is no property there, a narrowing left with nothing is
+   * `true`, and any other schema left with nothing is `{}`.
+   *
    * @param mixed $schema
    *   The document or a part of it.
    *
    * @return mixed
-   *   It, with no hint, and no `x-surface` a hint alone made.
+   *   It, with no hint, and no `x-portable-ui` a hint alone made.
    */
   protected static function withoutHints(mixed $schema): mixed {
     if (!is_array($schema)) {
       return $schema;
     }
     foreach ($schema as $key => $value) {
-      if ($key === 'x-surface' && is_array($value)) {
+      if (!is_array($value) || in_array($key, ['const', 'default', 'examples', 'enum', 'x-surface'], TRUE)) {
+        continue;
+      }
+      if ($key === 'x-portable-ui') {
         $value = array_diff_key($value, array_flip(self::HINTS));
-        if (is_array($value['within'] ?? NULL)) {
-          // What the extension says of a pointer inside the property is
-          // an extension too.
-          $value['within'] = array_filter(array_map(static fn (array $inside): array => array_diff_key($inside, array_flip(self::HINTS)), $value['within']));
-          if ($value['within'] === []) {
-            unset($value['within']);
+        if (is_array($value['options'] ?? NULL)) {
+          $value['options'] = array_diff_key($value['options'], array_flip(self::HINTS));
+          if ($value['options'] === []) {
+            unset($value['options']);
           }
         }
         if ($value === []) {
           unset($schema[$key]);
           continue;
         }
+        $schema[$key] = $value;
+        continue;
       }
-      $schema[$key] = static::withoutHints($value);
+      if ($key === 'properties' || $key === '$defs') {
+        foreach ($value as $name => $child) {
+          $stripped = static::withoutHints($child);
+          if ($stripped === [] && $child !== [] && $key === 'properties') {
+            unset($value[$name]);
+            continue;
+          }
+          $value[$name] = $stripped;
+        }
+        if ($value === [] && $schema[$key] !== []) {
+          unset($schema[$key]);
+          continue;
+        }
+        $schema[$key] = $value;
+        continue;
+      }
+      if (array_is_list($value) && in_array($key, ['allOf', 'anyOf', 'oneOf'], TRUE)) {
+        $schema[$key] = array_map(static fn (mixed $member): mixed => is_array($member) && $member !== [] && static::withoutHints($member) === [] ? TRUE : static::withoutHints($member), $value);
+        continue;
+      }
+      $stripped = static::withoutHints($value);
+      $schema[$key] = $stripped === [] && $value !== [] ? new \stdClass() : $stripped;
     }
     return $schema;
   }
@@ -119,7 +163,9 @@ class WidgetHintsOnlyTest extends SurfaceKernelTestBase {
       }
       $name = $definition->name();
       $operations = $registry->getOperations($name);
-      $asked = $operations === [] ? [NULL] : array_filter($operations, static fn ($operation): bool => $operation->needsNothing());
+      $asked = $operations === [] ? [
+        NULL,
+      ] : array_filter($operations, static fn ($operation): bool => $operation->needsNothing());
       foreach ($asked as $operation) {
         $context = $operation === NULL ? new OperationContext(ContractBaselines::ALONE) : $resources->operation($name, $operation->id);
         $built = $resources->build($name, $context);

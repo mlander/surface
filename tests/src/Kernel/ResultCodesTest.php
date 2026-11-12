@@ -141,8 +141,17 @@ class ResultCodesTest extends SurfaceKernelTestBase {
     foreach (['violations', 'notes', 'stale'] as $list) {
       $this->assertIsArray($result[$list]);
       foreach ($result[$list] as $entry) {
-        $this->assertSame($list === 'stale' ? ['path', 'code', 'message', 'stored'] : ['path', 'code', 'message'], array_keys($entry), $list);
-        $this->assertMatchesRegularExpression('/^[a-z][a-z_]*$/', $entry['code'], $list . ': ' . $entry['message']);
+        // `params` after `message`, only where the code names something.
+        $keys = isset($entry['params']) ? ['path', 'code', 'message', 'params'] : ['path', 'code', 'message'];
+        $this->assertSame($list === 'stale' ? [...$keys, 'stored'] : $keys, array_keys($entry), $list);
+        if (isset($entry['params'])) {
+          $this->assertIsArray($entry['params']);
+          $this->assertNotSame([], $entry['params']);
+        }
+        // The module's snake case, or the dialect's camel case with a
+        // family after a dot: `format.email`,
+        // `check.drupal:SurfaceUnique.taken`.
+        $this->assertMatchesRegularExpression('/^[a-z][A-Za-z0-9_]*(\.[A-Za-z0-9_:.-]+)?$/', $entry['code'], $list . ': ' . $entry['message']);
         $this->assertNotSame('', $entry['message']);
       }
     }
@@ -171,10 +180,10 @@ class ResultCodesTest extends SurfaceKernelTestBase {
       ['event.doors', $concept('event.doors', 'always_held'), ['/badges' => Violation::CANNOT_CLEAR]],
       ['event.press', $concept('event.press', 'listed_without_email'), ['/contact/email' => Violation::REQUIRED]],
       // A constraint's, by the name it gives Symfony's code.
-      ['registration.step3', ['room' => 'harbour_deck'], ['/room' => 'no_such_choice']],
-      ['registration.step3', ['room' => 'riverside_east', 'capacity' => 500], ['/capacity' => 'not_in_range']],
-      ['event.desk', $concept('event.desk', 'phone_with_dashes'), ['/phone' => 'regex_failed']],
-      ['event.program', $concept('event.program', 'check_too_many'), ['/sessions' => 'not_in_range'], 'check'],
+      ['registration.step3', ['room' => 'harbour_deck'], ['/room' => 'enum']],
+      ['registration.step3', ['room' => 'riverside_east', 'capacity' => 500], ['/capacity' => 'maximum']],
+      ['event.desk', $concept('event.desk', 'phone_with_dashes'), ['/phone' => 'pattern']],
+      ['event.program', $concept('event.program', 'check_too_many'), ['/sessions' => 'maximum'], 'check'],
     ];
     foreach ($cases as $case) {
       [$resource, $values, $expected] = $case;

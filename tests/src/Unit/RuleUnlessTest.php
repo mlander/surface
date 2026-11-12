@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Unit;
 
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\Rule;
 use Drupal\Tests\UnitTestCase;
@@ -29,7 +30,7 @@ class RuleUnlessTest extends UnitTestCase {
     $when = (new Rule('door_code'))->when(Condition::not($condition))->doesNotApply();
 
     $this->assertEquals($when->condition(), $unless->condition());
-    $this->assertSame(['not' => $condition->schema()], $unless->condition()?->schema());
+    $this->assertSame(['not' => Schemas::arrayed($condition->schema())], Schemas::arrayed($unless->condition()->schema()));
     $this->assertTrue($unless->condition()->holds(['after_hours' => FALSE]));
     $this->assertFalse($unless->condition()->holds(['after_hours' => TRUE]));
     $this->assertSame(['after_hours'], $unless->condition()->keys());

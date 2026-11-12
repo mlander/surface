@@ -7,6 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface_examples_first\Resource\NewsletterResource;
@@ -133,6 +134,26 @@ class FirstResourceTest extends SurfaceKernelTestBase {
       $this->assertSame((string) $operation->label, $full['title'], $id);
       $this->assertSame((string) $operation->description, $full['description'], $id);
     }
+  }
+
+  /**
+   * Tests the labels the page's addSchema() calls make with t() stay so.
+   *
+   * The reader reads the Schema an author hands it as it is, never
+   * through JSON, so each label, description and option label is the
+   * TranslatableMarkup the class made, as add() kept it.
+   */
+  public function testTheLabelsStayTranslatable(): void {
+    $this->setUpCurrentUser(admin: TRUE);
+    $resources = $this->container->get('surface.resources');
+    $built = $resources->buildStatic(NewsletterResource::class, $resources->operation(NewsletterResource::class, 'configure'));
+    foreach ($built->getDefinitions()->names() as $name) {
+      $this->assertInstanceOf(TranslatableMarkup::class, $built->getDefinition($name)->getLabel(), $name);
+    }
+    $this->assertInstanceOf(TranslatableMarkup::class, $built->getDefinition(NewsletterResource::MAX_RECIPIENTS)->getDescription());
+    $labels = $built->getDefinition(NewsletterResource::FREQUENCY)->getConstraint('LabeledChoice')['labels'];
+    $this->assertSame(['weekly', 'monthly'], array_keys($labels));
+    $this->assertContainsOnlyInstancesOf(TranslatableMarkup::class, $labels);
   }
 
   /**

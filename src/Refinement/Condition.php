@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface\Refinement;
 
 use Drupal\surface\Pipeline\ValueState;
+use PortableSchema\Builder\Schema;
 
 /**
  * What a declared rule waits for: a test of sibling values.
@@ -361,23 +362,20 @@ final class Condition {
    *   `['third_party_settings', <module>, <key>]`. A key not given is a
    *   top-level key of the frame.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The schema.
    */
-  public function schema(array $paths = []): array {
+  public function schema(array $paths = []): Schema {
     $at = $this->key === NULL ? [] : ($paths[$this->key] ?? [$this->key]);
     return match ($this->kind) {
-      self::PRESENT => static::at($at, ['not' => ['type' => 'null']], TRUE),
-      self::ABSENT => static::at($at, ['type' => 'null'], FALSE),
-      self::EQUALS => static::at($at, ['const' => $this->operand], TRUE),
-      self::IN => static::at($at, ['enum' => $this->operand], TRUE),
-      self::AT_LEAST, self::AT_MOST, self::ABOVE, self::BELOW => static::at($at, [
-        'type' => 'number',
-        self::BOUNDS[$this->kind] => $this->operand,
-      ], TRUE),
-      self::NOT => ['not' => $this->conditions[0]->schema($paths)],
-      self::ALL => ['allOf' => array_map(static fn (Condition $condition): array => $condition->schema($paths), $this->conditions)],
-      self::ANY => ['anyOf' => array_map(static fn (Condition $condition): array => $condition->schema($paths), $this->conditions)],
+      self::PRESENT => static::at($at, Schema::any()->with('not', Schema::null()), TRUE),
+      self::ABSENT => static::at($at, Schema::null(), FALSE),
+      self::EQUALS => static::at($at, Schema::any()->with('const', $this->operand), TRUE),
+      self::IN => static::at($at, Schema::any()->with('enum', $this->operand), TRUE),
+      self::AT_LEAST, self::AT_MOST, self::ABOVE, self::BELOW => static::at($at, Schema::number()->with(self::BOUNDS[$this->kind], $this->operand), TRUE),
+      self::NOT => Schema::any()->with('not', $this->conditions[0]->schema($paths)),
+      self::ALL => Schema::any()->with('allOf', array_map(static fn (Condition $condition): Schema => $condition->schema($paths), $this->conditions)),
+      self::ANY => Schema::any()->with('anyOf', array_map(static fn (Condition $condition): Schema => $condition->schema($paths), $this->conditions)),
       default => throw new \LogicException(sprintf('No condition is called %s.', $this->kind)),
     };
   }
@@ -387,20 +385,23 @@ final class Condition {
    *
    * @param string[] $segments
    *   The value's path in the frame.
-   * @param array $test
+   * @param \PortableSchema\Builder\Schema $test
    *   The schema the value is held to.
    * @param bool $required
    *   Whether the value must be there: every test but absent's, which a
    *   key left out, or a mount left out, satisfies.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The schema.
    */
-  protected static function at(array $segments, array $test, bool $required): array {
+  protected static function at(array $segments, Schema $test, bool $required): Schema {
     $schema = $test;
     while ($segments !== []) {
       $name = (string) array_pop($segments);
-      $schema = ['properties' => [$name => $schema]] + ($required ? ['required' => [$name]] : []);
+      $schema = Schema::any()->with('properties', [$name => $schema]);
+      if ($required) {
+        $schema = $schema->with('required', [$name]);
+      }
     }
     return $schema;
   }

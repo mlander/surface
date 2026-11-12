@@ -8,10 +8,8 @@ use Drupal\Component\Plugin\PluginInspectionInterface;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Plugin\DefaultPluginManager;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\DefinitionMetadata;
+use PortableSchema\Builder\Schema;
 
 /**
  * Manages data surface widget plugins.
@@ -21,14 +19,20 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
   /**
    * Every widget, instantiated once and sorted by weight.
    *
-   * Widgets hold no per-definition state — a definition is an argument
-   * to every method they have — so one instance serves every definition
-   * for the rest of the request, and applicability can be asked of an
-   * instance without paying for a new one each time.
+   * Widgets hold no per-node state (a node is an argument to every
+   * method they have), so one instance serves every node for the rest of
+   * the request.
    *
    * @var \Drupal\surface\Widget\SurfaceWidgetInterface[]
    */
   protected array $widgets;
+
+  /**
+   * The table of widget words, each to the plugin it names.
+   *
+   * @var array<string, string>
+   */
+  protected array $words;
 
   /**
    * The claims of every widget that makes any, in the order they are asked.
@@ -153,100 +157,147 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
   }
 
   /**
-   * Gets the widget serving a definition.
+   * The words the emitter writes that name a stock widget by another word.
    *
-   * A widget that claims the definition is asked first, the highest
-   * priority first (claimed()). A definition that asks for a widget by its
-   * word is served by that widget when it serves the definition at all,
-   * whatever its weight: the autocomplete a reference asks for, which the
-   * select would serve first while its candidates are listed. Otherwise
-   * every other widget, instantiated
-   * in weight order (lower first), is asked whether it serves the
-   * definition; the first that says yes wins, so specialized widgets
-   * undercut the generic per-type ones. Instantiating before asking is
-   * what lets a widget consult its own collaborators before answering. A
-   * widget that makes claims is asked for no definition it does not claim,
-   * unless the definition asks for it by name.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The data definition.
-   *
-   * @return \Drupal\surface\Widget\SurfaceWidgetInterface
-   *   The widget instance.
-   *
-   * @throws \InvalidArgumentException
-   *   When no widget can serve the definition.
+   * The string widget draws a text field, a text area and an email input,
+   * which the document names `text`, `textarea` and `email`; the options
+   * widget draws the one value a key may hold, `fixed`. Every other word
+   * is a widget's own (SurfaceWidgetBase::answersTo()).
    */
-  public function getWidgetFor(DataDefinitionInterface $definition): SurfaceWidgetInterface {
-    $claimed = $this->claimed($definition);
-    if ($claimed !== NULL) {
-      return $claimed;
-    }
-    $asked = $definition->getSetting('widget');
-    if (is_string($asked)) {
-      foreach ($this->widgets() as $widget) {
-        if ($widget instanceof SurfaceWidgetBase && in_array($asked, $widget->answersTo(), TRUE) && $widget->isApplicable($definition)) {
-          return $widget;
+  public const DOCUMENT_WORDS = [
+    'text' => 'string',
+    'textarea' => 'string',
+    'email' => 'string',
+    'fixed' => 'select',
+  ];
+
+  /**
+   * Gets the table of widget words, each to the plugin it names.
+   *
+   * One table, read on both sides of the document: the emitter names a
+   * widget by the first word it answers to (wordOf()), and the drawer
+   * draws a node with the widget its `x-portable-ui.widget` names here.
+   *
+   * @return array<string, string>
+   *   Plugin IDs, by word.
+   */
+  public function words(): array {
+    if (!isset($this->words)) {
+      $this->words = [];
+      foreach ($this->instances() as $plugin_id => $widget) {
+        foreach ($widget instanceof SurfaceWidgetBase ? $widget->answersTo() : [$plugin_id] as $word) {
+          $this->words[$word] ??= (string) $plugin_id;
+        }
+      }
+      foreach (self::DOCUMENT_WORDS as $word => $plugin_id) {
+        if (isset($this->getDefinitions()[$plugin_id])) {
+          $this->words[$word] ??= $plugin_id;
         }
       }
     }
-    foreach ($this->widgets() as $plugin_id => $widget) {
-      if (isset($this->claimants()[$plugin_id]) && !in_array($asked, $widget instanceof SurfaceWidgetBase ? $widget->answersTo() : [$plugin_id], TRUE)) {
-        continue;
-      }
-      if ($widget->isApplicable($definition)) {
-        return $this->asked($definition, $widget);
-      }
-    }
-    throw new \InvalidArgumentException(sprintf('No data surface widget serves the "%s" data type.', $definition->getDataType()));
+    return $this->words;
   }
 
   /**
-   * Gets the widget that claims a definition, if any does.
+   * Gets one widget by its plugin ID, the instance every caller shares.
    *
-   * A module's widget may claim every key of a kind on the site
-   * (`#[SurfaceWidget(claims:)]`): a data type, a data type and the
-   * key's `format` setting, or a shape. The claims are asked by priority,
-   * the highest first, then by plugin ID; the first widget whose claim
-   * matches and whose isApplicable() says yes serves the key. A key whose
-   * `widget` setting asks for a widget is its owner's choice, and no claim
-   * is asked.
+   * @param string $plugin_id
+   *   The plugin ID.
    *
-   * Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
+   * @return \Drupal\surface\Widget\SurfaceWidgetInterface
+   *   The widget.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
-   *
-   * @return \Drupal\surface\Widget\SurfaceWidgetInterface|null
-   *   The widget, or NULL when none claims it.
+   * @throws \InvalidArgumentException
+   *   When there is no such widget.
    */
-  public function claimed(DataDefinitionInterface $definition): ?SurfaceWidgetInterface {
-    if ($definition->getSetting('widget') !== NULL) {
-      return NULL;
-    }
-    foreach ($this->claimants() as $plugin_id => $claims) {
-      foreach ($claims as $claim) {
-        $matches = isset($claim['shape'])
-          ? DefinitionMetadata::shapeOf($definition) === $claim['shape']
-          : $definition->getDataType() === $claim['type'] && (!isset($claim['format']) || $definition->getSetting('format') === $claim['format']);
-        if ($matches) {
-          $widget = $this->widgets()[$plugin_id];
-          if ($widget->isApplicable($definition)) {
-            return $widget;
-          }
-          break;
-        }
+  public function widget(string $plugin_id): SurfaceWidgetInterface {
+    return $this->instances()[$plugin_id] ?? throw new \InvalidArgumentException(sprintf('There is no "%s" data surface widget.', $plugin_id));
+  }
+
+  /**
+   * Gets the widget that draws a node of the served document.
+   *
+   * The word the node's `x-portable-ui.widget` says names the widget
+   * (words()): the emitter chose it from the definition, so the drawer
+   * never chooses again. A word no widget answers to (a module's widget
+   * the site does not have), one whose widget does not draw the node, and
+   * a node with no word (a timestamp, a decimal, a key with variants) fall
+   * to the stock word for the node's shape, in the order of the React
+   * app's `stockWidget()` (stockWord()). A node whose shape that order
+   * names nothing for (a value of any type, which states no one type) is
+   * drawn by the module's own widgets, asked in weight order, the JSON
+   * widget last. A module's widget is drawn only where the document names
+   * it.
+   *
+   * Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The node, inline.
+   * @param \Drupal\surface\Widget\WidgetContext $context
+   *   Where it is drawn.
+   *
+   * @return \Drupal\surface\Widget\SurfaceWidgetInterface
+   *   The widget.
+   *
+   * @throws \InvalidArgumentException
+   *   When no widget draws the node.
+   */
+  public function widgetFor(Schema $node, WidgetContext $context): SurfaceWidgetInterface {
+    foreach ([SurfaceWidgetBase::ui($node)['widget'] ?? NULL, static::stockWord($node)] as $word) {
+      $plugin_id = is_string($word) ? ($this->words()[$word] ?? NULL) : NULL;
+      if ($plugin_id !== NULL && $this->widget($plugin_id)->isApplicable($node, $context)) {
+        return $this->widget($plugin_id);
       }
     }
-    return NULL;
+    foreach ($this->instances() as $id => $widget) {
+      if (($this->getDefinitions()[$id]['provider'] ?? NULL) === 'surface' && $widget->isApplicable($node, $context)) {
+        return $widget;
+      }
+    }
+    throw new \InvalidArgumentException(sprintf('No data surface widget draws the node at "%s".', $context->pointer));
+  }
+
+  /**
+   * Names the stock widget for a node's shape: React's `stockWidget()`.
+   *
+   * In this order: a list whose items offer choices a select (multiple),
+   * any other list `list`, a node offering choices a select, an object a
+   * fieldset, a boolean a checkbox, an integer or a number a number input,
+   * a string whose `format` is `email` an email input, any other string a
+   * text input.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The node.
+   *
+   * @return string|null
+   *   The word, or NULL for a node that states no one type.
+   */
+  public static function stockWord(Schema $node): ?string {
+    $type = SurfaceWidgetBase::type($node);
+    if ($type === 'array') {
+      $items = $node->get('items');
+      return $items instanceof Schema && !$items->isBoolean() && $items->get('oneOf') !== NULL ? 'select' : 'list';
+    }
+    if ($node->get('oneOf') !== NULL) {
+      return 'select';
+    }
+    return match ($type) {
+      'object' => 'fieldset',
+      'boolean' => 'checkbox',
+      'integer', 'number' => 'number',
+      // `idn-email` is how a document before contract 5 said it.
+      'string' => in_array($node->get('format'), ['email', 'idn-email'], TRUE) ? 'email' : 'text',
+      default => NULL,
+    };
   }
 
   /**
    * Names a widget by the word it answers to.
    *
    * The word a definition's `widget` setting asks for it by, and the word
-   * `x-surface.widget` and the catalog name it by: the first
-   * SurfaceWidgetBase::answersTo() gives, its plugin ID otherwise.
+   * `x-portable-ui.widget` and the catalog name it by: the first
+   * SurfaceWidgetBase::answersTo() gives, its plugin ID otherwise. The
+   * table words() reads it back.
    *
    * @param \Drupal\surface\Widget\SurfaceWidgetInterface $widget
    *   The widget.
@@ -262,49 +313,13 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
   }
 
   /**
-   * Holds a definition that asks for a widget to the one it asked for.
-   *
-   * A definition's `widget` setting names the element it wants, and the
-   * widget that answers to that name claims it. When another widget
-   * claimed it first, the name does not fit the definition (radios for a
-   * list, checkboxes for one value, a word no widget answers to), and
-   * drawing what was not asked for would hide the mistake.
-   *
-   * Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
-   * @param \Drupal\surface\Widget\SurfaceWidgetInterface $widget
-   *   The widget that claimed it.
-   *
-   * @return \Drupal\surface\Widget\SurfaceWidgetInterface
-   *   The widget.
-   *
-   * @throws \InvalidArgumentException
-   *   When the definition asked for another.
-   */
-  protected function asked(DataDefinitionInterface $definition, SurfaceWidgetInterface $widget): SurfaceWidgetInterface {
-    $asked = $definition->getSetting('widget');
-    if (!is_string($asked) || !$widget instanceof SurfaceWidgetBase || in_array($asked, $widget->answersTo(), TRUE)) {
-      return $widget;
-    }
-    throw new \InvalidArgumentException(sprintf(
-      '"%s" asks for the %s widget, which does not draw a key of type %s; the %s widget does. Ask for a widget that draws it, or for none.',
-      $definition->getLabel() ?? $definition->getDataType(),
-      $asked,
-      $definition instanceof ListDataDefinitionInterface ? 'list of ' . $definition->getItemDefinition()->getDataType() : $definition->getDataType(),
-      $widget->answersTo()[0] ?? $widget->getPluginId(),
-    ));
-  }
-
-  /**
    * Gets the claims of each widget that makes any, in the order asked.
    *
    * @return array<string, list<array{type?: string, format?: string, shape?: string}>>
    *   The claims, keyed by plugin ID, the highest priority first, then by
    *   plugin ID.
    */
-  protected function claimants(): array {
+  public function claimants(): array {
     if (!isset($this->claimants)) {
       $claiming = array_filter($this->getDefinitions(), static fn (array $definition): bool => ($definition['claims'] ?? []) !== []);
       $priority = static fn (string $id): int => (int) ($claiming[$id]['priority'] ?? 0);
@@ -320,7 +335,7 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
    * @return \Drupal\surface\Widget\SurfaceWidgetInterface[]
    *   The widget instances, keyed by plugin ID, lowest weight first.
    */
-  protected function widgets(): array {
+  public function instances(): array {
     if (!isset($this->widgets)) {
       $candidates = $this->getDefinitions();
       uasort($candidates, static fn (array $a, array $b) => ($a['weight'] ?? 0) <=> ($b['weight'] ?? 0));

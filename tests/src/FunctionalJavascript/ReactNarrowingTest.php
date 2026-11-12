@@ -17,7 +17,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * request, and one with a runtime dependent asks the server, with a POST
  * to the full schema's path (`POST .../schema`, after the one GET of it
  * the page loads with). The contract panel's line says which. Every
- * document the page reads is in contract 4, which it refuses any other
+ * document the page reads is in contract 5, which it refuses any other
  * than.
  */
 #[Group('surface')]
@@ -141,7 +141,7 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
    *
    * With the limit at two, the four components are more than it: the full
    * schema states the props and slots open, `deferred`, each with a
-   * `fetch` template, so choosing the hero fetches the full schema with
+   * `choose` link, so choosing the hero fetches the full schema with
    * the hero's props, then its props and slots, chosen, and narrows from
    * it with no narrowing asked; a component chosen again is not fetched
    * again.

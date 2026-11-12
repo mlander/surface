@@ -8,6 +8,7 @@ use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\PipelineGuard;
 use Drupal\surface\Resource\AccessAnswer;
@@ -27,6 +28,7 @@ use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Access is static or runtime, read from its cacheability.
@@ -144,7 +146,7 @@ class StaticRuntimeAccessTest extends SurfaceKernelTestBase {
    */
   protected function full(): array {
     $served = $this->container->get('surface.contract_emitter')->emitFull($this->exhibit(TRUE), 'resource_test.exhibit', 'configure');
-    return SchemaResolver::inline(json_decode((string) json_encode($served->document['schema']), TRUE));
+    return Schemas::decoded(SchemaResolver::inline(Schema::from(json_decode((string) json_encode($served->document['schema']), TRUE))));
   }
 
   /**
@@ -158,7 +160,7 @@ class StaticRuntimeAccessTest extends SurfaceKernelTestBase {
    */
   protected function these(array $values = self::EXHIBIT): array {
     $served = $this->container->get('surface.contract_emitter')->emit($this->exhibit(), $values, 'resource_test.exhibit', 'configure');
-    return SchemaResolver::inline(json_decode((string) json_encode($served->document['schema']), TRUE));
+    return Schemas::decoded(SchemaResolver::inline(Schema::from(json_decode((string) json_encode($served->document['schema']), TRUE))));
   }
 
   /**

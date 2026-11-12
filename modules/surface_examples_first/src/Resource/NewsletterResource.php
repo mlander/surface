@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_first\Storage\NewsletterStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * The newsletter settings: a form, a tool and a schema, from this class.
@@ -34,25 +35,28 @@ final class NewsletterResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add(self::SENDER_NAME, 'string', t('Sender name'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 64]);
+    $inputs->addSchema(self::SENDER_NAME, Schema::string()
+      ->title(t('Sender name'))
+      ->maxLength(64));
 
-    $inputs->add(self::SENDER_EMAIL, 'email', t('Sender email'))
-      ->setRequired(TRUE);
+    $inputs->addSchema(self::SENDER_EMAIL, Schema::string()
+      ->title(t('Sender email'))
+      ->format('email'));
 
-    $inputs->add(self::FREQUENCY, 'string', t('Frequency'), default: 'weekly')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'weekly' => t('Weekly'),
-          'monthly' => t('Monthly'),
-        ],
-      ]);
+    $inputs->addSchema(self::FREQUENCY, Schema::options([
+      'weekly' => t('Weekly'),
+      'monthly' => t('Monthly'),
+    ])
+      ->type('string')
+      ->title(t('Frequency'))
+      ->default('weekly'), required: TRUE);
 
-    $inputs->add(self::MAX_RECIPIENTS, 'integer', t('Maximum recipients per send'), default: 500)
-      ->setDescription(t('Larger lists are sent in batches of this size.'))
-      ->addConstraint('Range', ['min' => 1, 'max' => 10000]);
+    $inputs->addSchema(self::MAX_RECIPIENTS, Schema::integer()
+      ->title(t('Maximum recipients per send'))
+      ->description(t('Larger lists are sent in batches of this size.'))
+      ->minimum(1)
+      ->maximum(10000)
+      ->default(500));
   }
 
 }

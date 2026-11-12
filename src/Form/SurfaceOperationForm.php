@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Form;
 
+use Drupal\surface\Form\Document\DocumentDrawer;
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Access\AccessResultReasonInterface;
@@ -478,29 +479,29 @@ class SurfaceOperationForm extends FormBase {
         ['#weight' => static::PANEL_WEIGHT] + $panel->buildPanel($served, $surface, $values),
       );
     }
-    // Locked whole: every element is drawn disabled by its key's lock,
-    // and with nothing to save there is no Save. An operation that
-    // changes nothing saves nothing either: its button says what it does.
+    // Locked whole: every element is drawn disabled by its key's lock, and
+    // the drawer says why above them (the envelope's root
+    // `x-surface.locked`); with nothing to save there is no Save. An
+    // operation that changes nothing saves nothing either: its button says
+    // what it does.
     // Decision: see docs/decisions.md#locked-at-the-top.
-    $locked = $surface->lockedWhole();
+    $locked = isset($form[static::SURFACE_KEY][DocumentDrawer::LOCKED_KEY]);
     $buttons = ($flow !== NULL && $step !== 1 ? ['back' => $this->flowButton($this->t('Back'), 'back', '::flowBack')] : [])
       + ($flow === NULL ? [] : ['discard' => $this->flowButton($this->t('Cancel'), 'discard', '::flowDiscard')]);
-    $form[$locked === NULL ? 'actions' : 'locked'] = $locked === NULL ? [
-      '#type' => 'actions',
-      '#weight' => 100,
-      'submit' => [
-        '#type' => 'submit',
-        '#value' => match (TRUE) {
-          $flow !== NULL => $this->t('Next'),
-          $served->operation->readOnly => $served->operation->label,
-          default => $this->t('Save'),
-        },
-      ] + ($flow === NULL ? [] : ['#button_type' => 'primary']),
-    ] + $buttons : [
-      '#type' => 'item',
-      '#weight' => -100,
-      '#markup' => $this->t('This may be seen and not changed: @reason', ['@reason' => $locked]),
-    ];
+    if (!$locked) {
+      $form['actions'] = [
+        '#type' => 'actions',
+        '#weight' => 100,
+        'submit' => [
+          '#type' => 'submit',
+          '#value' => match (TRUE) {
+            $flow !== NULL => $this->t('Next'),
+            $served->operation->readOnly => $served->operation->label,
+            default => $this->t('Save'),
+          },
+        ] + ($flow === NULL ? [] : ['#button_type' => 'primary']),
+      ] + $buttons;
+    }
     $cosmetics = $foreign ? NULL : $this->surfaceCosmetics();
     return $this->stagedPage($cosmetics === NULL
       ? $form

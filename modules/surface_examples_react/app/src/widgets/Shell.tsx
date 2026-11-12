@@ -23,15 +23,16 @@ export interface FieldProps {
 }
 
 /**
- * Looks candidates of a reference key up, by the key's dotted path and
- * the text their labels contain; for a bare reference's id, of the entity
- * type its sibling holds. Null where no page provides one.
+ * Looks candidates of a reference key up at its `lookup` link: the link's
+ * template, and its variables (`q`, the text their labels contain; for a
+ * bare reference's id, `type`, the entity type its sibling holds). Null
+ * where no page provides one.
  */
-export type Lookup = (path: string, text: string, type?: string) => Promise<{ id: string | number; label: string }[]>;
+export type Lookup = (href: string, variables: Record<string, unknown>) => Promise<{ id: string | number; label: string }[]>;
 
 export const LookupContext = createContext<Lookup | null>(null);
 
-/** The note a locked element carries, as the form builder appends it. */
+/** The note a locked element carries where its node says no reason, as the form builder appends it. */
 export const LOCKED_NOTE = 'Fixed for this operation.';
 
 /** The note a computed key carries, by when it is computed, in place of the locked one. */
@@ -43,6 +44,19 @@ export const COMPUTED_NOTES = {
 
 /** The note a secret carries, as the string widget appends it. */
 export const SECRET_NOTE = 'Leave blank to keep the current value.';
+
+/**
+ * What a document locked whole says above its fields, as the form builder
+ * draws it: the reason its root gives (`x-surface.locked` beside
+ * `readOnly`), the way a locked key's note gives its own.
+ */
+export function wholeLockedNote(schema: Schema): string | null {
+  if (!schema.readOnly) {
+    return null;
+  }
+  const reason = schema['x-surface']?.locked;
+  return reason === undefined || reason === '' ? 'This may be seen and not changed.' : `This may be seen and not changed: ${reason}`;
+}
 
 export function isLocked(props: FieldProps): boolean {
   return Boolean(props.disabled || props.schema.readOnly);
@@ -60,12 +74,14 @@ export function RequiredMarker(): JSX.Element {
 /**
  * What is said under an element: its description, the help its
  * arrangement gives, and the locked, computed or secret note, as the form
- * builder appends them.
+ * builder appends them. A locked key's note is the reason its node gives
+ * (`x-surface.locked`), and "Fixed for this operation." where it gives
+ * none.
  */
 function notesOf(props: FieldProps): string[] {
   const computed = props.schema['x-surface']?.computed;
-  const fixed = computed !== undefined && !props.disabled ? COMPUTED_NOTES[computed.when] : isLocked(props) ? LOCKED_NOTE : undefined;
-  return [props.schema.description, props.schema['x-surface']?.arrangement?.help, fixed, props.schema.writeOnly ? SECRET_NOTE : undefined]
+  const fixed = computed !== undefined && !props.disabled ? COMPUTED_NOTES[computed.when] : isLocked(props) ? (props.schema['x-surface']?.locked ?? LOCKED_NOTE) : undefined;
+  return [props.schema.description, props.schema['x-portable-ui']?.options?.help, fixed, props.schema.writeOnly ? SECRET_NOTE : undefined]
     .filter((note): note is string => typeof note === 'string' && note !== '');
 }
 
@@ -130,7 +146,7 @@ export function Item({
   const id = fieldId(props.path);
   const hasError = (props.errors[props.path] ?? []).length > 0;
   return (
-    <div className={`dsr-item dsr-item--${props.schema['x-surface']?.widget ?? 'none'}${hasError ? ' dsr-item--error' : ''}`}>
+    <div className={`dsr-item dsr-item--${props.schema['x-portable-ui']?.widget ?? 'none'}${hasError ? ' dsr-item--error' : ''}`}>
       {label ? (
         <label className="dsr-label" htmlFor={id}>
           {props.schema.title ?? props.name}

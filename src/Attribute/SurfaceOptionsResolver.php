@@ -34,7 +34,7 @@ final class SurfaceOptionsResolver extends Plugin {
    *   (optional) Whether the list it answers is every value the constraint
    *   accepts and nothing else, as a Choice's is. A schema that states the
    *   list then states the constraint whole, so the emitter names it under
-   *   no `checkedOnServer`. FALSE, the default, for a list a constraint
+   *   no `portable-check`. FALSE, the default, for a list a constraint
    *   checks more than, or less.
    */
   public function __construct(

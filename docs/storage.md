@@ -570,7 +570,7 @@ context that creates.
   stored one made from its exported array (a clone shares the plugin
   collections of the entity the request holds, and shaping settings
   onto it would reach that entity's plugins), or a new one under the id
-  the values carry, refused when the id is in use (`taken`, under the
+  the values carry, refused when the id is in use (`check.drupal:SurfaceUnique.taken`, under the
   identity key). It shapes the values onto it, calculates the
   dependencies a save would, and holds the whole entity to its config
   schema, which for a config entity is its validation, filing each

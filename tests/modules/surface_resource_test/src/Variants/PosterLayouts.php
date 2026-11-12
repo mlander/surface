@@ -8,6 +8,7 @@ use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\State\StateInterface;
 use Drupal\surface\Resource\EntrySchemasInterface;
 use Drupal\surface\Resource\SiteList;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -132,10 +133,10 @@ final class PosterLayouts implements EntrySchemasInterface, ContainerInjectionIn
     $list = (new SiteList())->addCacheTags([self::TAG]);
     $lazy = (bool) $this->state->get(self::LAZY, FALSE);
     foreach (self::LAYOUTS as $value => $layout) {
-      $list->add((string) $value, $layout['label'], schema: $layout['schema']);
+      $list->add((string) $value, $layout['label'], schema: Schema::from($layout['schema']));
     }
     foreach ((array) $this->state->get(self::STATE, []) as $value => $layout) {
-      $list->add((string) $value, $layout['label'], schema: $lazy ? NULL : $layout['schema']);
+      $list->add((string) $value, $layout['label'], schema: $lazy ? NULL : Schema::from($layout['schema']));
     }
     $defs = $lazy ? [] : $this->entryDefs();
     return $defs === [] ? $list : $list->addDefs($defs);
@@ -144,9 +145,9 @@ final class PosterLayouts implements EntrySchemasInterface, ContainerInjectionIn
   /**
    * {@inheritdoc}
    */
-  public function entrySchema(string $id): array {
+  public function entrySchema(string $id): Schema {
     self::$read[] = $id;
-    return (self::LAYOUTS + (array) $this->state->get(self::STATE, []))[$id]['schema'];
+    return Schema::from((self::LAYOUTS + (array) $this->state->get(self::STATE, []))[$id]['schema']);
   }
 
   /**
@@ -156,7 +157,7 @@ final class PosterLayouts implements EntrySchemasInterface, ContainerInjectionIn
     if ($this->state->get(self::LAZY, FALSE)) {
       self::$read[] = '$defs';
     }
-    return (array) $this->state->get(self::DEFS, []);
+    return array_map(Schema::from(...), (array) $this->state->get(self::DEFS, []));
   }
 
 }

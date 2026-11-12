@@ -8,6 +8,7 @@ use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\surface\Contract\ConfigSchemaDocument;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceCallable;
@@ -108,7 +109,8 @@ final class ResourceSources {
   public function fromConfigSchema(string $id, string $module, string $config): BuiltSource {
     $defaults = $this->currentValues($config);
     $left = [];
-    $document = $this->documents->document($config, $defaults, $left);
+    $document = Schemas::decoded($this->documents->document($config, $defaults, $left));
+    assert(is_array($document));
     $name = $this->reader->structure($document, $id, $module);
     return $this->built($name, sprintf('the config schema of %s', $config), $this->reader->notes($document), $left);
   }
@@ -174,7 +176,8 @@ final class ResourceSources {
       throw new \InvalidArgumentException(sprintf('%s holds no JSON Schema object.', $file));
     }
     if (str_ends_with($file, '.component.yml')) {
-      $decoded = ComponentProps::props(is_array($decoded['props'] ?? NULL) ? $decoded['props'] : []);
+      $decoded = Schemas::decoded(ComponentProps::props(is_array($decoded['props'] ?? NULL) ? $decoded['props'] : []));
+      assert(is_array($decoded));
     }
     return $decoded;
   }

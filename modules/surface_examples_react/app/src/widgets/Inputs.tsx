@@ -1,4 +1,4 @@
-import { choices, fieldId, isEmpty, jsonType, sameValue } from '../contract';
+import { choices, fieldId, isEmpty, jsonType, linkOf, relativeValue, sameValue } from '../contract';
 import { useContext, useEffect, useState } from 'react';
 import { describedBy, Description, Errors, isLocked, Item, LookupContext, RequiredMarker, type FieldProps } from './Shell';
 
@@ -6,7 +6,7 @@ import { describedBy, Description, Errors, isLocked, Item, LookupContext, Requir
  * A single select, under the empty option rule.
  *
  * Whether the empty option is shown, and under which label, is the
- * contract's answer (`x-surface.emptyOption`): always for an optional
+ * contract's answer (`x-portable-ui.options.emptyOption`): always for an optional
  * select, and for a required one only while no valid choice is selected.
  * A stale value comes up on the empty option, selected, and is never put
  * back into the list; a required select standing for one keeps its
@@ -19,7 +19,7 @@ export function SelectField(props: FieldProps): JSX.Element {
   const options = choices(props.schema);
   const index = options.findIndex((choice) => sameValue(choice.const, props.value));
   const stale = Boolean(extension?.stale);
-  const empty = extension?.emptyOption ?? { show: !props.required, label: props.required ? '- Select -' : '- None -' };
+  const empty = props.schema['x-portable-ui']?.options?.emptyOption ?? { show: !props.required, label: props.required ? '- Select -' : '- None -' };
   const id = fieldId(props.path);
   return (
     <Item props={props} marker={props.required}>
@@ -128,10 +128,9 @@ export function CheckboxesField(props: FieldProps): JSX.Element {
  * them, as the radios widget does.
  */
 export function RadiosField(props: FieldProps): JSX.Element {
-  const extension = props.schema['x-surface'];
   const options = choices(props.schema);
   const id = fieldId(props.path);
-  const empty = extension?.emptyOption ?? { show: !props.required, label: '- None -' };
+  const empty = props.schema['x-portable-ui']?.options?.emptyOption ?? { show: !props.required, label: '- None -' };
   const entries = [
     ...(empty.show ? [{ key: '', label: empty.label, value: null as unknown }] : []),
     ...options.map((choice) => ({ key: String(choice.const), label: choice.title ?? String(choice.const), value: choice.const })),
@@ -203,20 +202,20 @@ function standsForStored(props: FieldProps): boolean {
  * arrangement declares, never an example, which would read as filled.
  */
 function placeholderOf(props: FieldProps): string | undefined {
-  return props.schema['x-surface']?.arrangement?.placeholder;
+  return props.schema['x-portable-ui']?.options?.placeholder;
 }
 
 /** An input between the prefix and the suffix its arrangement gives. */
 function Affixed({ props, children }: { props: FieldProps; children: JSX.Element }): JSX.Element {
-  const arrangement = props.schema['x-surface']?.arrangement;
-  if (arrangement?.prefix === undefined && arrangement?.suffix === undefined) {
+  const options = props.schema['x-portable-ui']?.options;
+  if (options?.prefix === undefined && options?.suffix === undefined) {
     return children;
   }
   return (
     <span className="dsr-affixed">
-      {arrangement.prefix !== undefined ? <span className="dsr-prefix">{arrangement.prefix}</span> : null}
+      {options.prefix !== undefined ? <span className="dsr-prefix">{options.prefix}</span> : null}
       {children}
-      {arrangement.suffix !== undefined ? <span className="dsr-suffix">{arrangement.suffix}</span> : null}
+      {options.suffix !== undefined ? <span className="dsr-suffix">{options.suffix}</span> : null}
     </span>
   );
 }
@@ -262,7 +261,7 @@ export function NumberField(props: FieldProps): JSX.Element {
 export function TextField(props: FieldProps): JSX.Element {
   const id = fieldId(props.path);
   const secret = Boolean(props.schema.writeOnly);
-  const widget = props.schema['x-surface']?.widget;
+  const widget = props.schema['x-portable-ui']?.widget;
   const type = secret ? 'password' : widget === 'email' ? 'email' : widget === 'time' || widget === 'date' ? widget : props.schema.format === 'uri' ? 'url' : 'text';
   return (
     <Item props={props} marker={props.required}>
@@ -338,21 +337,25 @@ export function UnsupportedField(props: FieldProps): JSX.Element {
 
 /**
  * A key that refers to an entity: listed, a select; past the site's limit,
- * a text input whose suggestions the resource's lookup answers.
+ * a text input whose suggestions the key's `lookup` link answers.
  *
  * While the schema lists the candidates (`oneOf`, a bare reference's id
  * narrowed by its entity type), it is drawn as the select the form draws.
- * Otherwise the text typed is looked up, for the account, by label, and a
- * suggestion chosen sets its id; an id typed alone is taken as it is, as
- * the form's entity autocomplete takes it, and the server checks either.
+ * Otherwise the text typed is looked up, for the account, by label, at the
+ * key's `lookup` link, its `q` the text and each variable its `source`
+ * names read from the values (a bare reference's `type`, its sibling's),
+ * and a suggestion chosen sets its id; an id typed alone is taken as it
+ * is, as the form's entity autocomplete takes it, and the server checks
+ * either. A key with no link (no HTTP door, or a key the lookup does not
+ * reach) takes an id typed alone.
  */
 export function AutocompleteField(props: FieldProps): JSX.Element {
   const lookup = useContext(LookupContext);
   const [text, setText] = useState<string>(isEmpty(props.value) ? '' : String(props.value));
   const [found, setFound] = useState<{ id: string | number; label: string }[]>([]);
-  const reference = props.schema['x-surface']?.reference;
-  const by = reference?.by;
-  const type = by === undefined ? undefined : props.parentValues?.[by];
+  const link = linkOf(props.schema, 'lookup');
+  // Each variable the link reads, from the object the key sits in.
+  const sourced = Object.fromEntries(Object.entries(link?.source ?? {}).map(([name, pointer]) => [name, relativeValue(pointer, props.parentValues ?? { [props.name]: props.value }, props.name)]));
   useEffect(() => {
     setText(isEmpty(props.value) ? '' : String(props.value));
   }, [props.value]);
@@ -363,11 +366,11 @@ export function AutocompleteField(props: FieldProps): JSX.Element {
   const ask = (typed: string) => {
     setText(typed);
     props.onChange(props.path, typed === '' ? null : typed);
-    if (lookup === null || typed === '' || (by !== undefined && typeof type !== 'string')) {
+    if (lookup === null || link === undefined || typed === '' || Object.values(sourced).some(isEmpty)) {
       setFound([]);
       return;
     }
-    lookup(props.path, typed, typeof type === 'string' ? type : undefined).then(setFound, () => setFound([]));
+    lookup(link.href, { ...sourced, q: typed }).then(setFound, () => setFound([]));
   };
   return (
     <Item props={props} marker={props.required}>

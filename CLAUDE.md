@@ -130,8 +130,16 @@ the record of the rework that brought the module to the pattern.
   (`ResourceBuild\PropertyDeclaration`, which reads no value): a second
   spelling, never a second contract, either per class, never both
   (example 18,
-  `docs/decisions.md#a-class-may-declare-its-keys-as-properties`). A key holds one value of a type in the
-  one table the blueprint, the emitter and the reader read
+  `docs/decisions.md#a-class-may-declare-its-keys-as-properties`). A key
+  may also be stated as a Portable Schema, `addSchema(key, Schema,
+  required:)`, read by the schema reader as the author's own
+  (`SchemaReader::authored()`: a `drupal:` check the constraint it names,
+  an optional key with a default clearable), or, on a property, with the
+  package's `#[Of]`, `#[Schema]`, `#[Check]`, `#[Ui]`, `#[Required]`,
+  never beside Surface's spelling of the same key (examples 1 and the
+  first page, `docs/decisions.md#authoring-takes-a-schema`); a part of
+  the schema not read as written is refused. A key holds one value of a
+  type in the one table the blueprint, the emitter and the reader read
   (`Contract\LeafTypes`: `string`, `email`, `uri`, `datetime_iso8601`,
   `integer`, `timestamp`, `float`, `boolean`, or a shape or config
   schema type of one); any other type is refused at the blueprint, at
@@ -206,7 +214,8 @@ the record of the rework that brought the module to the pattern.
   `SiteListInterface` (one listing for several owners a
   `BoundSiteListInterface`, handed `arguments:` and asked `listFor()`),
   whose `list()` answers a `SiteList` (per value,
-  its label and the JSON Schema of what it chooses, `schema:`, or a
+  its label and the JSON Schema of what it chooses, `schema:`, a
+  `PortableSchema\Builder\Schema`, or a
   structure class, `structure:`; a start or a lock refused), asked at
   every build and refused uncacheable or varying by the account. Each variant is a structure read
   from its schema, id `<owner>.<key>.<value>`; a `#[Variant]` wins for a
@@ -225,7 +234,8 @@ the record of the rework that brought the module to the pattern.
   is attached (`Resources::buildRead()`), so variants nest: a component's
   slots, each holding a component with its own props and slots. A
   provider implementing `EntrySchemasInterface` lists values and labels
-  alone and answers `entrySchema($id)` and `entryDefs()` when a door
+  alone and answers `entrySchema($id)` and `entryDefs()`, `Schema`
+  values, when a door
   reads a variant (`SiteEntries`), as `ComponentProps` and
   `ComponentSlots` do; the pipeline asks an unsettled variant's document,
   not the variant, whether it holds a secret
@@ -235,21 +245,28 @@ the record of the rework that brought the module to the pattern.
 - **Reading a schema**: `Contract\SchemaReader`
   (`surface.schema_reader`), the emitter's mapping run backwards: a
   JSON Schema document (2020-12; draft-04 to -07 converted first,
-  `upconvert()`) read into a blueprint, for a variant from the site, or
-  registered as a structure, `structure($document, $id)`. A def is one
+  `upconvert()`), taken as an array and walked as `Schema` values, read
+  into a blueprint, for a variant from the site, or registered as a
+  structure, `structure($document, $id)`. A `$ref` to a type of the
+  Portable Schema library and a `portable-typeBy` are read through the
+  registry `surface.portable_registry` (the type library, a site's
+  schemas added), the one the validator holds a request's values to
+  their document over (`surface.portable_validator`). A def is one
   structure (a read structure, registered by
   `ResourceRegistry::defineRead()` as `schema:<id>:<hash>` and listed by
   nothing), a conditional of the vocabulary a declared rule. What no
   keyword says is a **foreign constraint**: the part left over, a
   `JsonSchema` constraint on the key, or on the frame
   (`DefinitionMap::frameConstraints()`), checked with opis and named
-  under `checkedOnServer` with its schema. A constraint and its keywords
+  under `portable-check` as `drupal:JsonSchema` with its schema. A
+  constraint and its keywords
   are one table, read both ways (`Contract\ConstraintKeywords`, a row per
   constraint in `Contract\Keywords\`: `Range`, `Length`, `Count`,
   `UniqueItems`, `NotBlank`, `Email`, `Regex`, `Uuid`, `Sequentially`,
   `AtLeastOneOf`; `@internal`, closed), whose one type guard,
   `appliesTo()`, holds both ways: a row that does not apply, or cannot
-  state its options, is `checkedOnServer` on write and kept in the
+  state its options, is named under `portable-check` on write and kept
+  in the
   `JsonSchema` constraint on read
   (`docs/decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways`).
   The full schema of a
@@ -317,8 +334,9 @@ the record of the rework that brought the module to the pattern.
   selection handler's for the account (`Reference\References`), listed
   up to `surface.settings:reference_list_limit` and looked up past
   it, with core's entity autocomplete on the form and `GET
-  .../{x}:lookup` over HTTP; `x-surface.reference` marks it in both
-  documents (example 16, `docs/options.md#a-key-that-refers-to-an-entity`,
+  .../{x}:lookup` over HTTP; both documents state what it refers to as
+  its check's options and name the lookup as its `lookup` link under
+  `x-portable-links` (example 16, `docs/options.md#a-key-that-refers-to-an-entity`,
   `docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up`).
   A content entity's reference field's `target_id` is one, answered by
   the field's own selection handler and settings
@@ -347,7 +365,10 @@ the record of the rework that brought the module to the pattern.
   Compute::UNLESS_SENT)` on the identity key, with core's `machine_name`
   config schema type for the pattern and length, `SurfaceUnique` added
   to the identity key of every `creates` operation (the storage answers
-  `exists()`), and core's machine name element as the widget (example 15's
+  `exists()`; on the form a taken name is that check's refusal at the
+  element, which has no `exists` callback of its own),
+  and core's machine name element as the widget, drawn for a string
+  computed unless sent whose `pattern` is a machine name's (example 15's
   id, the content type example,
   `docs/decisions.md#a-machine-name-is-a-computed-identity`).
   A key **resolved** at use is asked and stored as declared, and read
@@ -534,16 +555,52 @@ the record of the rework that brought the module to the pattern.
   model as optional config in `surface_examples`, shipped disabled
   (`eca.eca.surface_stage_walkthrough`, `docs/staging.md#eca`), and a
   drush walk-through (`docs/staging.md#walk-through-with-drush`).
-- **Contract**: the JSON Schema a built resource or structure emits.
+- **Contract**: the JSON Schema a built resource or structure emits, a
+  Portable Schema document since contract 5.
+- **Portable Schema**: the dialect every served document is written in,
+  `$schema` `https://portable-schema.dev/v1/schema`
+  (`ContractEmitter::DIALECT`): JSON Schema 2020-12 with a profile, fixed
+  rules where the standard leaves a choice, and a vocabulary of its own,
+  the package `fago/portable-schema` (`PortableSchema\`, required by the
+  module). Four of its keywords are written beside the standard ones,
+  in this order, before `x-surface` (`Contract\PortableKeywords`):
+  **`portable-check`**, what only the server checks, a map from
+  `drupal:<constraint plugin id>` to its options (`{}`,
+  `{"schema": ...}` for `drupal:JsonSchema`, or what a reference refers
+  to, the plugin's own options `{"entityTypeId": ..., "bundles"?: [...]}`, for
+  `drupal:SurfaceValidReference`); **`x-portable-messages`**,
+  a message per error code, a Regex's under `pattern` (or `not`), then
+  each check's under `check.drupal:<id>`; and **`x-portable-ui`**, the
+  widget hints (`Contract\PortableUi`): `widget`, `options`
+  (`multiple`, the arrangement's texts, a text input's `size` and a text
+  area's `rows`, `emptyOption`, then each setting a module's widget
+  publishes, `publishedSettings()`, under its name in lowerCamel), `group` by id,
+  `weight`, and each group declared once on its frame under `groups`,
+  all but `options.emptyOption` written only when a renderer asks for
+  the hints (`docs/decisions.md#the-ui-hints-are-x-portable-ui`); and
+  **`x-portable-links`** (`Contract\PortableLinks`), where a client asks
+  the server for what a document leaves out, never a hint: a `lookup`
+  link on a reference key the lookup finds, where the HTTP door is
+  installed and `GET` serves the operation at its path,
+  `<lookup URL>?key=<pointer>{&q,limit}`, the URL concrete as the schema
+  URL is (a bare id's with `&type={type}` and `source: {type:
+  "1/entity_type"}`), and a `choose` link on a deferred list, the full
+  schema with one entry stated; a link is a site's, written at a key of
+  the frame or at a site's narrowing, never in a def
+  (`docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links`). They
+  stay on their node below an applicator, where `x-surface` moves to
+  `within`. `format: email`, not `idn-email`,
+  which the profile refuses
+  (`docs/decisions.md#the-served-document-is-a-portable-schema-document`).
 - **Markers**: what a key's `x-surface` says of how far the schema holds
   it, and what an invoker does: `enumerated`, stated in full, narrow
   locally; `deferred`, a list the site decides left out for its size,
   fetch per choice (`GET .../schema?choose=<pointer>=<value>`, the
-  key's `deferred.fetch` template filled) and cache, or ask the narrowing;
+  key's `choose` link expanded) and cache, or ask the narrowing;
   `refine`, a static rule that cannot be written out, ask the narrowing
   with values; `live`, a runtime rule or a runtime access answer, ask
-  per request and never cache;
-  `checkedOnServer`, a constraint only the server checks
+  per request and never cache; beside them, the dialect's
+  `portable-check`, a constraint only the server checks
   (`docs/served-contract.md#what-a-key-marked-says-and-what-to-do`,
   `docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined`).
 - **Version**: `#[Resource(version:)]` or `#[Structure(version:)]`, from
@@ -898,10 +955,12 @@ test errored or failed and every gate passed.
   itself, so the full lane has no `--order-by=defects` and no result
   cache; it orders classes slowest first.
 
-On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-10-23: the
-full lane takes 5m07s at the defaults (phpunit 4m40s) and 23m03s with
-both set to 1 (phpunit 22m36s; a plain phpunit run takes 21m11s); the
-fast lane takes 2m31s, 3m30s while its caches are empty. For the first
+On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-11: the
+full lane takes 10m05s at the defaults (phpunit 9m18s) and the fast
+lane 5m51s (phpunit 5m41s). As of 2026-10-23, with a smaller suite, the
+full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
+phpunit run took 21m11s), and the fast lane 3m30s while its caches were
+empty. For the first
 run, eight classes at once took 3m12s, six 3m54s, ten 3m35s (ddev's
 php-fpm serves eight requests at once). The add-on's Chrome takes 12
 sessions, but six browser tests at once crash its tabs ("tab crashed")
@@ -929,7 +988,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2218, Assertions: 54878, Errors: 0, Failures: 0, Skipped: 3. Classes: 309 of 309, 8 at a time, browser classes 4.
+phpunit: Tests: 2388, Assertions: 57776, Errors: 0, Failures: 0, Skipped: 3. Classes: 332 of 332, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -945,12 +1004,17 @@ or its process died) fails the gate by name, as does `run-tests.sh`
 exiting 2 or more with every log clean (an error outside any test). Its
 exit 1 with every log clean is a PHPUnit warning or a risky test, which
 the gate has never failed on; the classes are named. Deprecations never
-fail the gate, in either lane: plain phpunit counts them (42 as of this
-writing) and passes, and the full lane passes `--suppress-deprecations`,
-without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
+fail the gate, in either lane: plain phpunit counts them and passes,
+and the full lane passes `--suppress-deprecations`, without which
+`run-tests.sh` adds `--fail-on-deprecation` to every class. Most come
+from the Portable Schema package's subclasses of Opis classes
+(`PortableSchema\Opis\RegistryResolver`, `FullObjectSchema`) and from
+Opis itself, about four in each class that loads the package; none is
+the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2104, Assertions: 50329, Skipped: 3, Deprecations: 139. Classes:
-256, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2274, Assertions: 53222, Deprecations: 687, Skipped: 3. Classes:
+279, 8 at a time.`; its deprecation count is per process, so it is
+higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -964,14 +1028,18 @@ site install and a browser test a Chrome session, which is most of the
 full lane's time. Existing functional tests convert as units touch them
 (ROADMAP.md, Maintenance).
 
-The suite needs two packages a site may not have: the Tool Belt module
+The suite needs three packages a site may not have: the Tool Belt module
 (`drupal/tool_belt`, under `require-dev` in `composer.json`), which the
-two tool comparison tests install, and `opis/json-schema`, which
-`ServedContractTest` validates the emitted schemas with and which the
-module itself needs at runtime, under `require`, to check what a
-structure read from a JSON Schema keeps of it (the `JsonSchema`
-constraint). On a site where this module is a checkout and not a
-Composer package, require both at the site root. Without them those
+two tool comparison tests install; `opis/json-schema`, which the
+contract tests validate values with and which the module itself needs
+at runtime, under `require`, to check what a structure read from a JSON
+Schema keeps of it (the `JsonSchema` constraint); and
+`fago/portable-schema` (`dev-main`, under `require`), the dialect,
+whose registry and validator `ServedContractTest`,
+`PortableDocumentTest` and `PortableServedContractTest` load every
+document in, and whose `Schema` `ServedContract::schema()` answers. On
+a site where this module is a checkout and not a Composer package,
+require them at the site root. Without them those
 tests error; they do not skip.
 
 There are no open findings. The flaky
@@ -1016,8 +1084,9 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
 
 The served contract's emitter is the main module's:
 `Contract\ContractEmitter` (`surface.contract_emitter`) turns a
-sealed data surface and its values into JSON Schema 2020-12 with an
-`x-surface` keyword per property, variants as an `allOf` of `if`/`then`
+sealed data surface and its values into a Portable Schema document (a
+dialect of JSON Schema 2020-12, contract 5) with an `x-surface` keyword
+per property, variants as an `allOf` of `if`/`then`
 on their deciding sibling. That is the schema as it stands, for one set
 of values; `emitFull()` is the second document, the full schema, which
 reads no value: every key as declared, every listable dependency as
@@ -1035,8 +1104,8 @@ variants, and is what `tool:info` prints). The HTTP door, the submodule
 `surface_http` (`modules/surface_http/`, route `surface.api`, namespace
 `Drupal\surface_http`), serves it with the widget hints on
 an API where the path is the resource and the method the operation
-(contract 3's paths, `ServedPaths`, both documents in contract 4's
-keywords): `GET /surface-api/{resource}[/{id}]` the read's
+(contract 3's paths, `ServedPaths`, both documents in contract 5's
+keywords, `Contract-Version: 5`): `GET /surface-api/{resource}[/{id}]` the read's
 envelope, its `ETag` the stored values' fingerprint (the read the build
 adds served as its update, `ServedOperations::resolve()`, so the
 envelope is the update's); `GET .../schema` the
@@ -1050,7 +1119,9 @@ changed since, a refusal 422 problem details, every path a JSON Pointer
 and every contract 2 path a 410. The submodule `surface_openapi`
 (`modules/surface_openapi/`, routes `surface.openapi.*`, namespace
 `Drupal\surface_openapi`, depends on `surface_http`) describes that API
-as an OpenAPI 3.1 document at `/surface-api/openapi.json`, with Swagger
+as an OpenAPI 3.1 document at `/surface-api/openapi.json`
+(`jsonSchemaDialect` 2020-12, `OpenApiDocument::JSON_SCHEMA_DIALECT`,
+each component keeping the dialect's `$schema`), with Swagger
 UI and Redoc over it (`docs/served-contract.md#an-openapi-document`).
 Neither is installed with the base module, which works at the form and
 tool doors without them (`WithoutHttpModuleTest`) and reaches a served
@@ -1189,7 +1260,10 @@ so the rule is this sentence. `npm test` is not part of
   `SURFACE_RETITLE_WRITE=1`, and the OpenAPI document's request examples,
   `modules/surface_openapi/tests/fixtures/openapi/examples.json`, by
   `OpenApiDocumentTest` with `SURFACE_OPENAPI_EXAMPLES_WRITE=1` (the
-  official OpenAPI 3.1 schema beside it is vendored, not generated).
+  official OpenAPI 3.1 schema beside it is vendored, not generated), and
+  the React app's fixtures,
+  `modules/surface_examples_react/app/src/test/fixtures/`, by
+  `ReactFixturesTest` with `SURFACE_REACT_FIXTURES_WRITE=1`.
   Never edit any of them by hand.
 - Commit messages are one line.
 
@@ -1244,6 +1318,16 @@ src/Pipeline/            Access, accept, validate, prepare, commit; results.
                          Validating.php, Conforming.php. The storage
                          interfaces; TransactionalStorageInterface is
                          what a storage implements to be staged.
+src/Validation/          A request's values held to their document by the
+                         Portable Schema validator: PortableValidator
+                         (`surface.portable_validator`, one run per
+                         validate(), compiled validators kept by the
+                         document's hash), DrupalCheckProvider (every
+                         `drupal:<plugin id>` check, run from the place's
+                         own definition), Nodes (the document's nodes at
+                         each place of the data), Found (one refusal,
+                         said). ResourceBuild/Location.php reads a JSON
+                         Pointer back to its definition and value.
 src/Storage/             Where accepted values are written; settings layouts.
 src/Staging/             The store contract (StageStoreInterface, and
                          the optional ListsStagesInterface), the
@@ -1258,9 +1342,22 @@ src/Staging/             The store contract (StageStoreInterface, and
                          the sealing of a record's secrets
                          (StagedSecrets) and what records and resets
                          the config an apply wrote (ConfigWrites).
-src/Contract/            The served contract's emitter (JSON Schema): ContractEmitter
+src/Contract/            The served contract's emitter (a Portable Schema
+                         document): ContractEmitter
                          walks the frames, PropertySchema writes each key,
-                         Conditionals the if/then, DocumentHead the top;
+                         Conditionals the if/then, DocumentHead the top,
+                         PortableKeywords the dialect's portable-check and
+                         x-portable-messages, PortableUi its
+                         x-portable-ui, PortableLinks its
+                         x-portable-links; Schemas holds what the emitter
+                         and the reader need of a
+                         PortableSchema\Builder\Schema that the builder
+                         lacks (the array form, first(), defaults(),
+                         same(), map(), at(), decoded()), since every
+                         writer builds Schema values and the reader and
+                         SchemaResolver read them; ServedContract, the
+                         document in the array form, whose schema() and
+                         outputs() answer the Schema values built;
                          the contract diff; the schema reader; the two
                          tables both read, LeafTypes and ConstraintKeywords,
                          whose rows are in Keywords/.
@@ -1284,7 +1381,18 @@ src/Form/                Form builder, host traits, the operation form
                          spelling, compiled (internal).
                          The form builder is SurfaceFormBuilder.php,
                          the service and its Form API callbacks, over
-                         Drawing.php, Extracting.php and Refreshing.php.
+                         Document/DocumentDrawer.php (draws the served
+                         envelope, reading no data surface) and
+                         Document/DocumentNodes.php (an envelope's nodes
+                         by pointer, which extraction reads back through),
+                         Extracting.php and Refreshing.php; FormWidgetHost
+                         (what the host answers: an entity's label, a
+                         reference key's selection handler, a deferred
+                         key's chosen document); DocumentNarrowing
+                         (NarrowsDocumentsInterface, service
+                         surface.document_narrowing: the overlay and the
+                         envelope a rebuild and POST schema share, and a
+                         deferred key's chosen document).
 src/Tool/                The Tool API door: what a tool takes and answers
                          (OperationInputs, InputDefinitions), its catalog
                          doors and the invalidator, registered by
@@ -1293,7 +1401,15 @@ src/Plugin/tool/ src/Plugin/Derivative/
                          The tool plugins, which run an operation through
                          the runner, and their deriver, found only by the
                          tool module's plugin manager.
-src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
+src/Widget/ src/Plugin/  A node of the served document to a form element
+                         (SurfaceWidgetInterface on Schema, WidgetContext,
+                         WidgetHostInterface, NodeDrawerInterface; the
+                         manager's words() table, widgetFor() and
+                         stockWord(), React's stock order); the
+                         emitter's choice from a definition is
+                         Contract/WidgetChoice.php (service
+                         surface.widget_choice) over each widget's
+                         drawsDefinition(); resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots;
                          ConfigSchemaTypes, a config schema type's.

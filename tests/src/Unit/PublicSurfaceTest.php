@@ -113,6 +113,15 @@ use PHPUnit\Framework\Attributes\Group;
  * a resource that names no storage of its own; and OperationRun::account(),
  * the account submit() runs as. The four counts above are unchanged.
  *
+ * Grown on 2026-11-11 by one blueprint method, `addSchema()`, a key
+ * stated as a Portable Schema and read into the verbs it says by the
+ * schema reader (docs/decisions.md#authoring-takes-a-schema): 18
+ * methods. The package's own attributes (#[Of], #[Schema], #[Check],
+ * #[Ui], #[Required]), which DeclaresByProperties reads beside Surface's,
+ * are the package's and not counted here; no Surface attribute, argument
+ * or interface was added. EntrySchemasInterface and SiteList take a
+ * Schema where they took an array: no count changed.
+ *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
 #[Group('surface')]
@@ -134,7 +143,7 @@ class PublicSurfaceTest extends UnitTestCase {
   protected const PINNED = [
     'attributes' => 28,
     'attribute arguments' => 114,
-    'blueprint methods' => 17,
+    'blueprint methods' => 18,
     'interfaces' => 22,
   ];
 

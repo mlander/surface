@@ -55,7 +55,7 @@ the emitter wrote reads back as what it was written from
 | --- | --- |
 | a property | a key; `title` its label, `description` its description (a property with no title has no label) |
 | `type` `string`, `integer`, `number`, `boolean` | the data type `string`, `integer`, `float`, `boolean`: the type table the emitter writes from (`Contract\LeafTypes`), read backwards, so every value a declaration holds is written with a `type` and read back to it ([decision](decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)) |
-| `format` `idn-email` or `email`, `uri`, `date-time` | the data type `email`, `uri`, `datetime_iso8601`; `email` is written back as `idn-email`, which Drupal's validator holds to |
+| `format` `email` or `idn-email`, `uri`, `date-time` | the data type `email`, `uri`, `datetime_iso8601`; `idn-email`, which documents before contract 5 wrote, is written back as `email`, the dialect's ([Contract 5](served-contract.md#contract-5)) |
 | `format` `date`, `time` | a `Regex` of RFC 3339's date or full time (none beside a `pattern`, which is the rule); a `date` is drawn as a date input |
 | `format` `uuid` | a `Uuid` constraint, written back as `format: uuid`; core's check is strict and refuses the nil UUID, which the format allows ([decision](decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways)) |
 | `format` on a type other than string | dropped, with no note: an annotation, which checks nothing |
@@ -73,7 +73,7 @@ the emitter wrote reads back as what it was written from
 | `minLength`, `maxLength` on a string | `Length`, `min` and `max`; two equal bounds as `min` and `max`, not `exactly`; `minLength: 1` as `Length`, not `NotBlank` |
 | `minItems`, `maxItems` on an array | `Count`, `min` and `max`; on a collection, its bounds, a bound that is no whole number noted and not read |
 | `uniqueItems: true` on an array | `UniqueItems`; `false` is what an array says without it, and reads as nothing |
-| `pattern` on a string | a `Regex`, when it is inside the subset PHP and an ECMA engine read alike: the body, delimited, with `D` and, for a character outside ASCII, `u` (why: [decision](decisions.md#a-pattern-both-engines-read-alike)); `x-surface.patternMessage` its message; outside the subset, kept |
+| `pattern` on a string | a `Regex`, when it is inside the subset PHP and an ECMA engine read alike: the body, delimited, with `D` and, for a character outside ASCII, `u` (why: [decision](decisions.md#a-pattern-both-engines-read-alike)); `x-portable-messages.pattern` its message; outside the subset, kept |
 | `not: {pattern}` on a string | a `Regex` that must not match; beside a `pattern`, both are kept, since a definition holds one `Regex`; beside a `format` read as a `Regex` (`date`, `time`), the format's pattern is kept as a `pattern` |
 | `allOf`, `anyOf` of parts each one constraint of the table | `Sequentially`, `AtLeastOneOf` of them (why: [decision](decisions.md#a-composite-is-its-parts)); otherwise kept |
 | any of these on a type it does not say anything of (`minLength` on an integer) | kept ([below](#what-is-kept)) |
@@ -91,7 +91,7 @@ the emitter wrote reads back as what it was written from
 | a conditional whose `if` is a condition of the vocabulary and whose `then` only narrows | a declared rule ([Declaring a rule](refinement.md#declaring-a-rule)): `{"properties": {k: false}}` `doesNotApply()`, `required` `require()`, a bound, a list or a pattern `constrain()`, a `description` `because()` |
 | a conditional on a key a child's port is wired to, reaching into the child | the child's rule, on the port |
 | `additionalProperties: false`, `unevaluatedProperties: false` | closed, as every structure is |
-| `additionalProperties` absent or `true` | read closed, noted: a key nobody declared has no type, label or storage |
+| `additionalProperties` absent or `true` | read closed, noted (an author's schema: read closed, not noted): a key nobody declared has no type, label or storage |
 
 The vocabulary of conditions and effects is the one a declared rule
 has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
@@ -107,18 +107,145 @@ has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
 | `ports` | `reads()`, each port's type, or its shape where the site has one |
 | `reads` | the wiring of a child's ports, where the wired key is a key of the object holding the child |
 | `by`, `variants` | variants, and the def each value chooses; `by` beside `deferred` with no union and no `variants`, a list the site decides past its budget (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)), is an object like any other, the marker noted: no variant is in the document to read |
-| `collection` | a collection (`list` in contract 3) |
-| `patternMessage` | the `Regex`'s message |
-| `widget` `radios`, `time`, `date`, `checkboxes`; `textarea` | the widget it asks for; a multiline string |
+| `collection` | a collection (`list` in contract 3), which an array of structures is read as; on a key whose items are no object, noted and not read |
 | `group`, `after` | a map that only groups, a map placed after a key |
-| `checkedOnServer` of a `JsonSchema` constraint | that constraint, from the schema beside its message; with keywords the value keeps besides, one constraint, the `allOf` of both. Any other entry is noted and not read: what the emitter names there, and why, is in [What the keywords leave to the server](served-contract.md#what-the-keywords-leave-to-the-server) |
 | `rules`, `within` | where the emitter moved its markers, put back first (`SchemaResolver::restored()`) |
 
+Four keywords of the dialect are read too ([The dialect's own keywords](served-contract.md#the-dialects-own-keywords)):
+
+| Keyword | Read as |
+| --- | --- |
+| `x-portable-ui` `widget` `radios`, `time`, `date`, `checkboxes`; `textarea` | the widget it asks for; a multiline string |
+| `x-portable-ui` `group`, with the frame's `groups`; `weight`; `options.placeholder`, `prefix`, `suffix`, `help` | the key's arrangement, described as an author describes it (`describe(group:, weight:, placeholder:, prefix:, suffix:, help:)`): a group's `widget` `details` is `ArrangementGroup::details()`, closed where its `options.open` is `false`, any other `fieldset()`, noted where it is neither; a key naming a group its frame does not declare, or one with no label, is noted and read ungrouped; a weight that is no whole number and a text that is no string are noted and not read; the keys of a map or a module's mount are read with the map's own `groups`. `options.emptyOption` and `options.multiple` are noted and not read: the options resolver decides them |
+| `x-portable-messages` | under `pattern`, or `not` for `not: {pattern}`: the `Regex`'s message |
+| `portable-check` `drupal:JsonSchema` | that constraint, from its `schema`; with keywords the value keeps besides, one constraint, the `allOf` of both |
+| `portable-check` `drupal:SurfaceValidReference` with `entityTypeId` | a key that refers to an entity, as its author declares it, the check's options the plugin's own: `addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']])` on a key of the id's type ([Options](options.md#a-key-that-refers-to-an-entity)); its `oneOf` is not read, noted: the site lists its candidates, under the limit, and the widget follows as for a declared key. An entity type the site does not have, or `bundles` that is no list of names, is noted and not read: the key is read as a value of its type, the check known by its plugin alone. `drupal:Email` beside `format: email` and `drupal:Uuid` beside `format: uuid`, with no message of their own, are read as the format is, with nothing noted: the emitter names them beside it again. Any other check is noted and not read, at a key and at a plain map alike: what the emitter names there, and why, is in [What the keywords leave to the server](served-contract.md#what-the-keywords-leave-to-the-server) |
+| `x-portable-links` | not read, each link noted: a link names where a client asks, and the server writes its own; an entry with no `rel` and `href`, or a keyword that is no list, is noted as no link. The id of a key of any entity type, known only by its `lookup` link's `source`, is read as a value of its type alone (why: [decision](decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)) |
+
+### The type library and the rest of the dialect
+
+The reader holds a Portable Schema registry, the service
+`surface.portable_registry`: the type library (`Registry::withTypes()`),
+built once per container, to which a site adds its own schemas. It reads
+these keywords through it:
+
+- A `$ref` to a type `LeafTypes::LIBRARY` names (`portable:string`,
+  `portable:integer`, `portable:number`, `portable:boolean`,
+  `portable:email`, `portable:uri`, `portable:date-time`,
+  `portable:timestamp`) is a key of that leaf type: `float` for
+  `number`, `datetime_iso8601` for `date-time`, and `timestamp`, which
+  JSON Schema tells from an integer by the id alone. What the type's
+  document says beyond the row's `type` and `format` is read as the
+  constraint the table reads it as, so the key is no wider than the type
+  and the document served for it says that rule as keywords:
+  `maxLength: 254` for `portable:email` a Length, the range of
+  2^53 - 1 either side of zero for `portable:integer` and
+  `portable:timestamp` a Range. A keyword no row reads, or one the site
+  states too, is kept as a JsonSchema constraint. What the site says
+  beside the `$ref` (`title`, `maxLength`) is the key's own, and narrows
+  it, but for a `type` or a `format` that says otherwise than the row:
+  that is noted ("Not read: format uri beside portable:email, which
+  states email.") and the row stands. A `format` the row states none of
+  is kept beside the type. An absolute URI the registry holds, a schema
+  a site added to it, is read as an id of the library is. The same type is read
+  in a list's items, through a def that is only that `$ref` (the def's
+  own keywords under the site's), and as `anyOf` of the `$ref` and
+  `{"type": "null"}`, in either order, which is the type, nullable. The
+  emitter writes the row's `type` and `format`.
+- Any other type of the library is read from its document, each
+  reference into the library followed: an object type (`portable:link`,
+  `portable:image`) as a structure attached at the key, its id the
+  type's, read as the library states it, the site's keywords beside the
+  `$ref` noted and not read; any other where the key stands, noted
+  ("Read in place"), the site's keywords laid over it, and a `format` no
+  string reads (`int32` for `portable:weight`) kept as a JsonSchema
+  constraint. The type's title, description and annotations are the
+  library's, not the key's; what it says of the value (`writeOnly`,
+  `readOnly`, `default`) is the key's, so `portable:secret` is a secret.
+- A `$ref` to the library inside a schema kept for a JsonSchema
+  constraint (under `allOf`, `additionalProperties`, an `anyOf` other
+  than the nullable one) is replaced there by what the type says, so the
+  server's check reads the kept schema on its own. A `$ref` inside a
+  keyword outside the vocabulary, or inside data, is not followed, and
+  its def is not bundled.
+- A `portable:` id the registry does not hold is noted ("Not read: the
+  library has no ...") and kept as a reference to another document is.
+- `portable-typeBy` on a key of a frame is read as variants the sibling
+  it reads chooses, where all of these hold: its `source` reads one
+  value, a sibling's (`1/<key>`); the sibling lists the values it may
+  hold (`enum`, or a `oneOf` of `const`), each a string; its `href` is a
+  template of that one `{variable}`; and each value's expansion is the id of an
+  object schema the registry holds. Each schema is a variant, the
+  structure its document is, labeled by the sibling's titles; a value
+  with no schema of its own takes the `fallback`, which must be an
+  object schema the registry holds, and a `fallback` no value needs is
+  noted. The key is written again as Surface writes variants, a def
+  each. An object holding such a key, at any depth, is read as a frame,
+  not as a plain map. Where any condition fails, the keyword is noted
+  with the reason, and the key read as a value held whole, the keyword
+  kept in its JsonSchema constraint for the server's validator.
+- `portable-refine` and `portable-compare` are kept in the JsonSchema
+  constraint and noted: the server's validator checks them.
+- `x-portable-type`, `x-portable-translatable`, `x-portable-provider`
+  and `x-portable-unchecked` are noted and dropped: what they say is the
+  library's, or, for `x-portable-unchecked`, the validator's to decide.
+
+A document contract 4 wrote said both under `x-surface`: its
+`checkedOnServer`, a list of `{constraint, message, schema}`, is read as
+`portable-check`, and its `patternMessage` as `x-portable-messages`
+under the code of the node's `pattern` or `not`
+(`SchemaReader::respelled()`), so the document is checked as it was.
+A document served before 2026-11-10 said the widget hints under
+`x-surface` (`widget`, `multiple`, `arrangement` with the whole group on
+each key, `emptyOption`): they are read as `x-portable-ui` says them
+now, each group declared once on its frame (`SchemaReader::hinted()`).
+The same documents said what a key refers to as `x-surface.reference:
+{entityType, bundles?}` and a deferred list's fetch as
+`x-surface.deferred.fetch`: they are read as the check's options,
+`{entityTypeId, bundles?}`, and a `choose` link
+(`SchemaReader::linked()`); the id of a key of any entity type said
+`{by}`, which is left out, since its `lookup` link names a path the
+document does not give.
+
+Below the root, `$id`, `$schema`, `$anchor` and `$dynamicAnchor` are
+dropped, each noted, wherever they stand, in a schema kept for a
+JsonSchema constraint too: what a structure keeps of a schema is served
+again under `portable-check`, below the root, where a Portable Schema
+document holds no `$id` and no `$schema`.
+
 The rest says what is true of one moment (`refined`, `stale`,
-`emptyOption`, `chosen`, `doesNotApply`), of an account or an access
+`chosen`, `doesNotApply`), of an account or an access
 answer (`readOnly` on a whole), or follows from what is read
 (`dependsOn`, `enumerated`): read for nothing. `refine` and `live` say a
 rule or an access answer only the server knows: not read, noted.
+
+### An author's schema
+
+A key an author states as a Schema (`addSchema()`, or the package's
+attributes on a property) is read the same way, as one property of a
+closed object, with two differences, since the schema is the host's own
+([decision](decisions.md#authoring-takes-a-schema)):
+
+- Every `drupal:<plugin id>` check of a plugin the site has, whose
+  options the plugin takes, is that constraint with those options, and
+  its text under `check.drupal:<plugin id>` in `x-portable-messages` the
+  constraint's `message`. Any other check is noted and kept in the key's
+  JsonSchema constraint, which the server answers as `unchecked`. A
+  check naming a constraint a keyword reads too is merged with it (a
+  Range, a Length, a Count, the stricter bound kept) or read as its
+  constraint with the keyword kept in the JsonSchema constraint, so
+  both hold. A check on a plain map is read so too, as the map's
+  constraint ([decision](decisions.md#the-checks-the-document-names)).
+- An optional key with a default is one null clears, as `add()`
+  declares it, and the document allows `null` for it; a document from
+  elsewhere reads such a key as one its storage always holds.
+- An `anyOf` or `oneOf` of one schema and null is that schema, null
+  allowed.
+- What is noted and is none of a link dropped, a check kept or merged,
+  a value held whole to its schema or a def or type of the library read
+  in place is refused:
+  `addSchema()` throws, naming each part by its pointer. A message under
+  any other code but `pattern` and `not` is one such part.
 
 ## What is kept
 
@@ -146,18 +273,16 @@ from: At least one array item must match schema." A reference to another
 document is never fetched: a value it would decide is refused, naming
 the reference, code `unresolved`.
 
-Both documents name it under `checkedOnServer`, the key's or the
-frame's, with the keywords it checks and the schema itself, so a
-reader of a document reads it back as the same constraint:
+Both documents name it under `portable-check`, the key's or the
+frame's, with the schema itself, and say the keywords it checks under
+`x-portable-messages`, so a reader of a document reads it back as the
+same constraint:
 
 ```json
 "tags": {
   "title": "Tags", "type": ["array", "null"], "items": {"type": "string"},
-  "x-surface": {"checkedOnServer": [{
-    "constraint": "JsonSchema",
-    "message": "Checked on the server against the schema it was read from: contains.",
-    "schema": {"contains": {"const": "news"}}
-  }]}
+  "portable-check": {"drupal:JsonSchema": {"schema": {"contains": {"const": "news"}}}},
+  "x-portable-messages": {"check.drupal:JsonSchema": "Checked on the server against the schema it was read from: contains."}
 }
 ```
 
@@ -187,9 +312,14 @@ refused."
 
 Dropped, each noted: `$comment`, `deprecated`, `contentMediaType`,
 `contentEncoding`, `contentSchema`, `$anchor`, another vendor's `x-`
-keywords, a `default` or `examples` of a whole object, a `checkedOnServer`
-entry of a constraint other than `JsonSchema` (known by its plugin
-alone), and what a site narrows of a child (a lock its context made).
+keywords, a `default` or `examples` of a whole object, a `portable-check`
+check other than `drupal:JsonSchema` and a reference's (known by its plugin alone), the links, and what a site narrows of a child (a lock its context made).
+Noted as well: a reference to an id of the library the registry does not
+hold, a `type` or a `format` beside a type of the library that says
+otherwise, a site's keyword beside an object type of the library, a
+`portable-typeBy` not read as variants and why, a
+`portable-refine` or `portable-compare` kept, the library's annotations
+dropped, and `x-surface.collection` on a key that is no collection.
 
 ## What is refused
 
@@ -197,6 +327,9 @@ What cannot be read at all, naming its pointer:
 
 - an object at the root, a def or a variant that is no object
   (`/: what is read into a structure is an object; this is string.`);
+- a member of a keyword that holds schemas that is no object and no
+  boolean, at any depth (`/properties/b: a property is a schema, an
+  object or a boolean.`), and a schema keyword named by a number;
 - a property whose name holds a dot, which a key cannot;
 - a local reference to a def the document does not hold;
 - a type JSON Schema does not have (a single-directory component may

@@ -1,16 +1,16 @@
 {
     "resource": "event.person",
     "module": "surface_examples",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "event.person",
             "operation": null,
             "label": null,
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "version": 1,
                     "ports": {
                         "listed": {
@@ -31,7 +31,10 @@
                             "string",
                             "null"
                         ],
-                        "format": "idn-email",
+                        "format": "email",
+                        "portable-check": {
+                            "drupal:Email": {}
+                        },
                         "x-surface": {
                             "dependsOn": [
                                 "listed"
@@ -41,8 +44,8 @@
                     "phone": {
                         "$ref": "#/$defs/event.phone",
                         "title": "Phone",
-                        "x-surface": {
-                            "patternMessage": "Write the number in digits, such as +1 555 0100."
+                        "x-portable-messages": {
+                            "pattern": "Write the number in digits, such as +1 555 0100."
                         }
                     }
                 },
@@ -62,8 +65,8 @@
                         "examples": [
                             "+1 555 0100"
                         ],
-                        "x-surface": {
-                            "patternMessage": "Write the number in digits, such as +1 555 0100."
+                        "x-portable-messages": {
+                            "pattern": "Write the number in digits, such as +1 555 0100."
                         }
                     }
                 }

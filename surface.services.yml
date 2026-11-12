@@ -1,13 +1,25 @@
 services:
   surface.pipeline:
     class: Drupal\surface\Pipeline\SurfacePipeline
-    arguments: ['@typed_data_manager', '@surface.options', '@string_translation']
+    arguments: ['@typed_data_manager', '@surface.options', '@string_translation', '@surface.portable_validator']
+  # Holds a request's values to the document they are served with, by the
+  # dialect's validator over the site's registry; every `drupal:` check the
+  # document names runs the constraint of the place it is about.
+  surface.portable_validator:
+    class: Drupal\surface\Validation\PortableValidator
+    arguments: ['@surface.portable_registry', '@surface.contract_emitter', '@typed_data_manager', '@string_translation', '@surface.options', '@current_user']
   Drupal\surface\Pipeline\SurfacePipelineInterface: '@surface.pipeline'
   plugin.manager.surface_widget:
     class: Drupal\surface\Widget\SurfaceWidgetManager
     parent: default_plugin_manager
-  # By class, for the build's check of the widgets keys ask for.
   Drupal\surface\Widget\SurfaceWidgetManager: '@plugin.manager.surface_widget'
+  # The emitter's choice of a widget for each definition, whose word the
+  # served document carries; by class, for the build's check of the
+  # widgets keys ask for.
+  surface.widget_choice:
+    class: Drupal\surface\Contract\WidgetChoice
+    arguments: ['@plugin.manager.surface_widget', '@surface.options']
+  Drupal\surface\Contract\WidgetChoice: '@surface.widget_choice'
   plugin.manager.surface_options_resolver:
     class: Drupal\surface\Options\SurfaceOptionsResolverManager
     parent: default_plugin_manager
@@ -26,8 +38,14 @@ services:
   Drupal\surface\Storage\SecretCodecInterface: '@surface.secret_codec'
   surface.form_builder:
     class: Drupal\surface\Form\SurfaceFormBuilder
-    arguments: ['@plugin.manager.surface_widget', '@surface.pipeline', '@element_info', '@messenger', '@surface.options', '@module_handler', '@string_translation']
+    arguments: ['@plugin.manager.surface_widget', '@surface.pipeline', '@element_info', '@messenger', '@surface.options', '@module_handler', '@string_translation', '@surface.contract_emitter', '@entity_type.manager', '@entity.repository']
   Drupal\surface\Form\SurfaceFormBuilderInterface: '@surface.form_builder'
+  # The envelope narrowed for an edit in progress, in process: what a
+  # form's rebuild draws and what the HTTP door's POST schema answers.
+  surface.document_narrowing:
+    class: Drupal\surface\Form\DocumentNarrowing
+    arguments: ['@surface.form_builder', '@surface.contract_emitter']
+  Drupal\surface\Form\NarrowsDocumentsInterface: '@surface.document_narrowing'
   # A read-only panel an operation route can name in _surface_panel:
   # the contract the form's data surface emits, rebuilt with the form, and
   # what the derived tool can advertise of it where the tool module is
@@ -152,7 +170,7 @@ services:
   # widget hints only when a renderer asks for them.
   surface.contract_emitter:
     class: Drupal\surface\Contract\ContractEmitter
-    arguments: ['@surface.options', '@string_translation', '@validation.constraint', '@surface.site_list_budget', '@plugin.manager.surface_widget']
+    arguments: ['@surface.options', '@string_translation', '@validation.constraint', '@surface.site_list_budget', '@surface.widget_choice', '@?Drupal\surface\ResourceBuild\ServedPathsInterface']
   # How many entries of a list the site decides (variants from the site,
   # keys from the site) the documents and the tool listing spell out.
   surface.site_list_budget:
@@ -165,8 +183,15 @@ services:
   # caller with a document of its own registers it here to build it.
   surface.schema_reader:
     class: Drupal\surface\Contract\SchemaReader
-    arguments: ['@surface.resource_registry', '@typed_data_manager']
+    arguments: ['@surface.resource_registry', '@typed_data_manager', '@entity_type.manager', '@surface.portable_registry', '@plugin.manager.surface_widget']
   Drupal\surface\Contract\SchemaReader: '@surface.schema_reader'
+  # The Portable Schema registry the schema reader reads a `$ref` to a
+  # library type and a `portable-typeBy` through: the type library, built
+  # once per container. A site adds its own schemas to it (Registry::add())
+  # or decorates the service.
+  surface.portable_registry:
+    class: PortableSchema\Registry
+    factory: ['PortableSchema\Registry', 'withTypes']
   # Writes a config schema type as JSON Schema, for the schema reader: a
   # plugin's settings (surface_examples_block), a config object a resource is
   # first written from (drush generate surface:resource).
@@ -210,7 +235,7 @@ services:
       - !tagged_iterator surface.catalog_doors
       - '%app.root%'
       - '@surface.site_list_budget'
-      - '@plugin.manager.surface_widget'
+      - '@surface.widget_choice'
       - '@surface.operation_arguments'
       - '@surface.key_paths'
   # The form routes a module declares for an operation.

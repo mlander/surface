@@ -5,83 +5,81 @@ declare(strict_types=1);
 namespace Drupal\surface\Widget;
 
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
+use PortableSchema\Builder\Schema;
 
 /**
- * Maps a data definition to a form element and back.
+ * Maps a node of the served document to a form element and back.
  *
- * The API is deliberately value-based: plain values in, a render element
- * out, and plain values back from extraction. No typed-data objects are
- * threaded through the form path and no subform states exist anywhere —
- * the coordinate-frame landmines of adapter-era extraction cannot occur.
- * A definition's element IS its input (or a container of named children
- * for complex definitions); there is no wrapper nesting, so submitted
- * value trees are already in the definition's clean shape.
+ * A widget reads one node of the document the form is drawn from: the
+ * schema of one key, with its `$ref`s followed and its compositions
+ * merged (SchemaResolver::inline()), the hints the emitter wrote under
+ * `x-portable-ui`, and Surface's markers under `x-surface`. It reads no
+ * definition and asks no live collaborator: what it needs that the
+ * document does not say, the label of the entity a reference names, it
+ * asks the context the host provides.
  *
- * Widgets own the definition-to-element fidelity the adapter era lacked:
- * defaults populate at every depth, constraint options map onto element
- * properties as hints (Length to a maxlength attribute, Range to
- * #min/#max), and a select offers an empty option whenever no valid
- * choice is selected, and always when the key may be cleared. Widgets
- * do not coerce: extraction
- * hands back the raw submitted value in the definition's shape and the
- * pipeline's accept() casts it, which is what keeps a generated form
- * and a payload from drifting apart.
+ * Widgets do not validate and do not coerce: extraction hands back the
+ * raw submitted value in the node's shape, and the pipeline's accept()
+ * casts it, which keeps a generated form and a payload from drifting
+ * apart.
+ *
+ * Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
  */
 interface SurfaceWidgetInterface {
 
   /**
-   * Returns whether this widget can serve a definition.
+   * Returns whether this widget draws a node.
    *
-   * An instance method, and deliberately so: a widget may have to ask a
-   * collaborator before it can answer — the options widget asks the
-   * options service whether the definition's constraints name a list
-   * that is not empty — and a static answer would have to reach the
-   * container to do it. The manager instantiates the candidates in
-   * weight order and asks each, so a widget answers with everything
-   * create() gave it.
+   * Asked of a node whose `x-portable-ui.widget` names no widget, or names
+   * one that cannot draw it: the widgets are asked in weight order and
+   * the first that says yes draws it. The answer is read off the
+   * document alone (`type`, `format`, `oneOf`, `items`, a check, a hint),
+   * never from a live collaborator.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The (possibly refined) definition.
+   * @param \PortableSchema\Builder\Schema $node
+   *   The key's node, inline.
+   * @param \Drupal\surface\Widget\WidgetContext $context
+   *   Where the node is drawn.
    *
    * @return bool
-   *   TRUE when this widget can build an element for the definition.
+   *   TRUE when this widget can build an element for the node.
    */
-  public function isApplicable(DataDefinitionInterface $definition): bool;
+  public function isApplicable(Schema $node, WidgetContext $context): bool;
 
   /**
-   * Builds the form element for a definition.
+   * Builds the form element for a node.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The (possibly refined) definition.
+   * @param \PortableSchema\Builder\Schema $node
+   *   The key's node, inline.
    * @param mixed $value
-   *   The current value, or NULL.
+   *   The value shown, from the envelope's `values`, or NULL.
+   * @param \Drupal\surface\Widget\WidgetContext $context
+   *   Where the node is drawn: whether its owner requires it, whether its
+   *   value is stale, and the host's answers.
    *
    * @return array
    *   A render element: an input element, or a container whose children
-   *   are keyed by property name for complex definitions.
+   *   are keyed by property name for an object.
    */
-  public function buildElement(DataDefinitionInterface $definition, mixed $value): array;
+  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array;
 
   /**
-   * Extracts the submitted value for a definition's element.
+   * Extracts the submitted value of an element this widget built.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition the element was built from.
    * @param array $element
    *   The processed element (carries #parents), or the unprocessed
-   *   structure in programmatic use.
+   *   structure in programmatic use, whose #surface_path says where its
+   *   value is posted.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state carrying submitted values.
-   * @param array $fallback_parents
-   *   The value path to read when the element has no #parents (an
-   *   unprocessed form in programmatic/kernel use).
+   * @param \PortableSchema\Builder\Schema $node
+   *   The node the element was built from.
    *
    * @return mixed
-   *   The raw submitted value in the definition's shape: a scalar for a
-   *   primitive definition, an array keyed by property name for a
-   *   complex one. Coercion is the pipeline's job, not the widget's.
+   *   The raw submitted value in the node's shape: a scalar for a single
+   *   value, an array keyed by property name for an object. Coercion is
+   *   the pipeline's job, not the widget's.
    */
-  public function extractValue(DataDefinitionInterface $definition, array $element, FormStateInterface $form_state, array $fallback_parents): mixed;
+  public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed;
 
 }

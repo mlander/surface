@@ -12,6 +12,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\surface\Form\SurfaceFormBuilder;
+use Drupal\surface\Form\NarrowsDocumentsInterface;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Hook\ResourcePluginHooks;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
@@ -75,6 +76,18 @@ trait SurfaceHostTrait {
   protected function surfaceFormBuilder(): SurfaceFormBuilderInterface {
     // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
     return \Drupal::service('surface.form_builder');
+  }
+
+  /**
+   * Gets the narrowing of the served document for an edit in progress.
+   *
+   * The one the HTTP door's POST schema narrows through.
+   *
+   * @return \Drupal\surface\Form\NarrowsDocumentsInterface
+   *   The service.
+   */
+  protected function surfaceNarrowing(): NarrowsDocumentsInterface {
+    return \Drupal::service('surface.document_narrowing');
   }
 
   /**
@@ -409,18 +422,18 @@ trait SurfaceHostTrait {
     if ($state->isProgrammed()) {
       return array_replace($stored, $input);
     }
-    $builder = $this->surfaceFormBuilder();
-    // A key, or a dotted path to one inside an attached child or a variant:
-    // the child's own refiners orphan the child's own keys.
-    $discarded = $builder->discardedRefinementInput($surface, $stored, $input);
-    if ($discarded !== []) {
-      $this->forgetSurfaceInput($discarded, $form_state);
+    // The edit narrowed as POST schema narrows it: a key, or a dotted
+    // path to one inside an attached child or a variant, whose input it
+    // drops (the child's own refiners orphan the child's own keys), and
+    // the overlay from the same settling, so that a key falling back to a
+    // stored value this edit orphaned answers nothing below it. The
+    // rebuild draws the envelope emitted for those values.
+    // Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
+    $narrowed = $this->surfaceNarrowing()->narrow($surface, $stored, $input);
+    if ($narrowed->discarded !== []) {
+      $this->forgetSurfaceInput($narrowed->discarded, $form_state);
     }
-    // The overlay itself comes from the same settling, so that a key
-    // falling back to a stored value this edit orphaned answers nothing
-    // below it: the elements are built from the data surface refined as the
-    // person sees it, to the fixed point, not as it was posted.
-    return $builder->refinementOverlay($surface, $stored, $input);
+    return $narrowed->values;
   }
 
   /**

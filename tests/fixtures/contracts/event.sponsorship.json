@@ -1,18 +1,18 @@
 {
     "resource": "event.sponsorship",
     "module": "surface_examples_references",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "event.sponsorship",
             "operation": "configure",
             "label": "Configure the sponsorship",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "Configure the sponsorship",
                 "description": "Sets the sponsor's venue, contact and announcement, and what the sponsor is featured beside, linked to and credited on.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the sponsorship",
@@ -45,17 +45,20 @@
                             }
                         ],
                         "default": "riverside",
-                        "x-surface": {
-                            "reference": {
-                                "entityType": "event_venue"
-                            },
-                            "checkedOnServer": [
-                                {
-                                    "constraint": "SurfaceValidReference",
-                                    "message": "Refers to an entity the account may reference"
-                                }
-                            ]
-                        }
+                        "portable-check": {
+                            "drupal:SurfaceValidReference": {
+                                "entityTypeId": "event_venue"
+                            }
+                        },
+                        "x-portable-messages": {
+                            "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
+                        },
+                        "x-portable-links": [
+                            {
+                                "rel": "lookup",
+                                "href": "/surface-api/event.sponsorship:lookup?key=/venue{&q,limit}"
+                            }
+                        ]
                     },
                     "contact": {
                         "title": "Contact",
@@ -81,17 +84,20 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
-                            "reference": {
-                                "entityType": "user"
-                            },
-                            "checkedOnServer": [
-                                {
-                                    "constraint": "SurfaceValidReference",
-                                    "message": "Refers to an entity the account may reference"
-                                }
-                            ]
-                        }
+                        "portable-check": {
+                            "drupal:SurfaceValidReference": {
+                                "entityTypeId": "user"
+                            }
+                        },
+                        "x-portable-messages": {
+                            "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
+                        },
+                        "x-portable-links": [
+                            {
+                                "rel": "lookup",
+                                "href": "/surface-api/event.sponsorship:lookup?key=/contact{&q,limit}"
+                            }
+                        ]
                     },
                     "page": {
                         "title": "Announcement",
@@ -105,35 +111,98 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
-                            "reference": {
-                                "entityType": "node",
+                        "portable-check": {
+                            "drupal:SurfaceValidReference": {
+                                "entityTypeId": "node",
                                 "bundles": [
                                     "article"
                                 ]
-                            },
-                            "checkedOnServer": [
-                                {
-                                    "constraint": "SurfaceValidReference",
-                                    "message": "Refers to an entity the account may reference"
-                                }
-                            ]
-                        }
+                            }
+                        },
+                        "x-portable-messages": {
+                            "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
+                        },
+                        "x-portable-links": [
+                            {
+                                "rel": "lookup",
+                                "href": "/surface-api/event.sponsorship:lookup?key=/page{&q,limit}"
+                            }
+                        ]
                     },
                     "thing": {
                         "title": "Featured beside",
                         "description": "Any content the sponsor is featured beside.",
-                        "$ref": "#/$defs/event.sponsorship.thing"
+                        "allOf": [
+                            {
+                                "$ref": "#/$defs/event.sponsorship.thing"
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "x-portable-links": [
+                                            {
+                                                "rel": "lookup",
+                                                "href": "/surface-api/event.sponsorship:lookup?key=/thing/id&type={type}{&q,limit}",
+                                                "source": {
+                                                    "type": "1/entity_type"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        ]
                     },
                     "setting": {
                         "title": "Linked to",
                         "description": "A venue or a role the sponsorship is linked to.",
-                        "$ref": "#/$defs/event.sponsorship.setting"
+                        "allOf": [
+                            {
+                                "$ref": "#/$defs/event.sponsorship.setting"
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "x-portable-links": [
+                                            {
+                                                "rel": "lookup",
+                                                "href": "/surface-api/event.sponsorship:lookup?key=/setting/id&type={type}{&q,limit}",
+                                                "source": {
+                                                    "type": "1/entity_type"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        ]
                     },
                     "credit": {
                         "title": "Credited on",
                         "description": "An article or a user the sponsor is credited on.",
-                        "$ref": "#/$defs/event.sponsorship.credit"
+                        "allOf": [
+                            {
+                                "$ref": "#/$defs/event.sponsorship.credit"
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "x-portable-links": [
+                                            {
+                                                "rel": "lookup",
+                                                "href": "/surface-api/event.sponsorship:lookup?key=/credit/id&type={type}{&q,limit}",
+                                                "source": {
+                                                    "type": "1/entity_type"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        ]
                     }
                 },
                 "additionalProperties": false,
@@ -172,9 +241,6 @@
                                     "dependsOn": [
                                         "entity_type"
                                     ],
-                                    "reference": {
-                                        "by": "entity_type"
-                                    },
                                     "enumerated": true
                                 }
                             }
@@ -310,9 +376,6 @@
                                     "dependsOn": [
                                         "entity_type"
                                     ],
-                                    "reference": {
-                                        "by": "entity_type"
-                                    },
                                     "enumerated": true
                                 }
                             }
@@ -483,9 +546,6 @@
                                     "dependsOn": [
                                         "entity_type"
                                     ],
-                                    "reference": {
-                                        "by": "entity_type"
-                                    },
                                     "enumerated": true
                                 }
                             }

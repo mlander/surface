@@ -422,7 +422,7 @@ class StagedLocalIdTest extends SurfaceKernelTestBase {
     $this->page('create', $id, [OperationInputs::VALUES => self::VALUES]);
     $answer = $this->page('create', $id, [OperationInputs::VALUES => ['field_related' => ['target_id' => -1]] + self::VALUES]);
     $this->assertFalse($answer['success']);
-    $this->assertSame(['/field_related/target_id' => 'valid_reference'], static::toolCodes($answer));
+    $this->assertSame(['/field_related/target_id' => 'check.drupal:SurfaceValidReference'], static::toolCodes($answer));
     $this->assertSame('This entity (node: -1) cannot be referenced.', $answer['outputs'][OperationInputs::VIOLATIONS][0]['message']);
     $this->assertCount(1, $this->stages()->read($id)['writes']);
   }

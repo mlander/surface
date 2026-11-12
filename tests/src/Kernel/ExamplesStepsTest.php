@@ -12,6 +12,7 @@ use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
@@ -31,6 +32,7 @@ use Drupal\user\RoleInterface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests the examples' steps 1 to 3, and the contract panel under them.
@@ -385,13 +387,13 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     $panel = $form[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONTRACT];
     $this->assertSame('The schema for these answers', (string) $panel['contract']['#title']);
     $contract = json_decode((string) $panel['contract']['json']['#code'], TRUE);
-    $this->assertSame('https://json-schema.org/draft/2020-12/schema', $contract['$schema']);
+    $this->assertSame('https://portable-schema.dev/v1/schema', $contract['$schema']);
     $branches = [];
     foreach ($contract['allOf'] as $branch) {
       $this->assertSame(['pricing'], $branch['if']['required']);
       // Each refers to its variant's def, read here as one schema.
       $this->assertStringStartsWith('#/$defs/registration.step3.ticket.', $branch['then']['properties']['ticket']['$ref']);
-      $branches[$branch['if']['properties']['pricing']['const']] = SchemaResolver::inline($branch['then']['properties']['ticket'], $contract);
+      $branches[$branch['if']['properties']['pricing']['const']] = Schemas::decoded(SchemaResolver::inline(Schema::from($branch['then']['properties']['ticket']), Schema::from($contract)));
     }
     $this->assertSame(['free', 'paid'], array_keys($branches));
     $this->assertSame(['note'], array_keys($branches['free']['properties']));
@@ -400,7 +402,7 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     $ticket = $contract['properties']['ticket']['x-surface'];
     $said = [$ticket['by'], array_keys($ticket['variants']), $ticket['chosen']];
     $this->assertSame(['pricing', ['free', 'paid'], 'free'], $said);
-    $this->assertArrayNotHasKey('widget', $ticket);
+    $this->assertArrayNotHasKey('x-portable-ui', $contract['properties']['ticket'], 'No widget hint.');
     $this->assertSame(['venue'], $contract['properties']['room']['x-surface']['dependsOn']);
 
     // Beside it, the full schema: the same keys as declared, with every

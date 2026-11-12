@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Storage\RegistrationStep1Storage;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 1: declare what you accept.
@@ -34,13 +35,18 @@ final class RegistrationStep1Resource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add(self::TITLE, 'string', t('Event title'))
-      ->setRequired(TRUE);
+    $inputs->addSchema(self::TITLE, Schema::string()
+      ->title(t('Event title')));
 
-    $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
+    $inputs->addSchema(self::CAPACITY, Schema::integer()
+      ->title(t('Capacity'))
+      ->minimum(1)
+      ->maximum(1000)
+      ->default(50));
 
-    $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
+    $inputs->addSchema(self::OPEN, Schema::bool()
+      ->title(t('Registration open'))
+      ->default(TRUE));
   }
 
 }

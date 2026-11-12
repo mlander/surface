@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface_http\Functional;
 
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Drupal\Tests\surface\Traits\ServedApiTrait;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests the React page and the API's reads over HTTP: contract 3.
@@ -102,12 +104,13 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     // docs/decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire.
     $full = $this->decoded($response, 200, 'application/schema+json');
     $this->assertSame(['$schema', '$id', 'title'], array_slice(array_keys($full), 0, 3));
-    $this->assertSame(4, $full['x-surface']['contract']);
+    $this->assertSame(5, $full['x-surface']['contract']);
     $this->assertSame('configure', $full['x-surface']['operation']['id']);
     $this->assertStringEndsWith('/surface-api/registration.step2/schema', $full['$id']);
     $room = $full['properties']['room'];
     $this->assertCount(6, $this->offered($room));
-    $this->assertSame(['widget' => 'select', 'dependsOn' => ['venue'], 'enumerated' => TRUE], $room['x-surface']);
+    $this->assertSame(['dependsOn' => ['venue'], 'enumerated' => TRUE], $room['x-surface']);
+    $this->assertSame(['widget' => 'select'], $room['x-portable-ui']);
     // Every listable dependency as a conditional: three venues, six rooms.
     $this->assertCount(9, $full['allOf']);
     // Cacheable: it reads nothing stored, so it is not max-age 0 as the
@@ -168,8 +171,8 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame(['resource', 'operation', 'label', 'schema', 'values', 'stale', 'notes'], array_keys($envelope));
     $this->assertSame('registration.step2', $envelope['resource']);
     $this->assertSame('configure', $envelope['operation']);
-    $this->assertSame('https://json-schema.org/draft/2020-12/schema', $envelope['schema']['$schema']);
-    $this->assertSame(4, $envelope['schema']['x-surface']['contract']);
+    $this->assertSame('https://portable-schema.dev/v1/schema', $envelope['schema']['$schema']);
+    $this->assertSame(5, $envelope['schema']['x-surface']['contract']);
     $this->assertStringEndsWith('/surface-api/registration.step2', $envelope['schema']['$id']);
     $this->assertSame(['venue'], $envelope['schema']['properties']['room']['x-surface']['dependsOn']);
     $this->assertSame('riverside', $envelope['values']['venue']);
@@ -304,9 +307,9 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame('EV-2048', $refined['values']['third_party_settings']['surface_examples_compliance']['license']);
     // The license is the compliance structure's, defined once.
     $site = $refined['schema']['properties']['third_party_settings']['properties']['surface_examples_compliance'];
-    $schema = SchemaResolver::inline($site, $refined['schema'])['properties']['license'];
+    $schema = Schemas::decoded(SchemaResolver::inline(Schema::from($site), Schema::from($refined['schema'])))['properties']['license'];
     $this->assertSame('^\\d{4}$', $schema['pattern']);
-    $this->assertSame('A license number is four digits, such as 2048.', $schema['x-surface']['patternMessage']);
+    $this->assertSame('A license number is four digits, such as 2048.', $schema['x-portable-messages']['pattern']);
   }
 
   /**
@@ -328,7 +331,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     // JSON Pointer.
     $wrong_room = $this->problem($this->send('PATCH', $path, ['room' => 'library_garden', 'capacity' => 20] + $values), 422);
     $this->assertStringEndsWith('served-contract.md#refused', $wrong_room['type']);
-    $this->assertSame(['/room' => 'no_such_choice'], array_column($wrong_room['errors'], 'code', 'path'));
+    $this->assertSame(['/room' => 'enum'], array_column($wrong_room['errors'], 'code', 'path'));
     $this->assertSame(['type', 'title', 'status', 'detail', 'errors', 'notes', 'stale'], array_keys($wrong_room));
     // What storage rehearsed is never served: it may hold what the caller
     // may not see.

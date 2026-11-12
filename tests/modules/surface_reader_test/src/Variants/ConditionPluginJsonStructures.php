@@ -114,7 +114,7 @@ final class ConditionPluginJsonStructures implements SiteListInterface {
       $schema = $this->schemas->object('condition.plugin.' . $id, self::BASE, $this->defaults($id));
       $mapping = $this->contextMapping($definition['context_definitions'] ?? [], $available);
       if ($mapping !== NULL) {
-        $schema['properties'] = (array) $schema['properties'] + ['context_mapping' => $mapping];
+        $schema = $schema->property('context_mapping', $mapping);
       }
       $list->add($id, $label, schema: $schema);
     }

@@ -118,7 +118,7 @@ the resource's contract:
 
 ```json
 {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$schema": "https://portable-schema.dev/v1/schema",
     "title": "Registration settings, example 1",
     "type": "object",
     "properties": {
@@ -198,8 +198,10 @@ from example 2's resource.
 
 `/surface-examples/1`
 
-Three settings, each on one line: its name, its type, its label, and
-what it allows. The operation at the top, `configure`, is how the
+Three settings, each one schema: its type, its label, and what it
+allows, read into the definitions the module checks values against
+(`addSchema()`, [Authoring takes a Schema](../../docs/decisions.md#authoring-takes-a-schema)).
+The operation at the top, `configure`, is how the
 resource is asked for: it needs nothing, only an account that may
 administer site configuration may ask, and its description is what a
 tool's caller reads first. It needs no method: an operation is a method
@@ -224,13 +226,18 @@ final class RegistrationStep1Resource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add(self::TITLE, 'string', t('Event title'))
-      ->setRequired(TRUE);
+    $inputs->addSchema(self::TITLE, Schema::string()
+      ->title(t('Event title')));
 
-    $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
+    $inputs->addSchema(self::CAPACITY, Schema::integer()
+      ->title(t('Capacity'))
+      ->minimum(1)
+      ->maximum(1000)
+      ->default(50));
 
-    $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
+    $inputs->addSchema(self::OPEN, Schema::bool()
+      ->title(t('Registration open'))
+      ->default(TRUE));
   }
 
 }
@@ -307,7 +314,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/RegistrationStep1Resource.php`](src/Resource/RegistrationStep1Resource.php) | the resource: three keys, each with what it allows, and the operation that asks for them | 18 |
+| [`modules/surface_examples/src/Resource/RegistrationStep1Resource.php`](src/Resource/RegistrationStep1Resource.php) | the resource: three keys, each with what it allows, and the operation that asks for them | 23 |
 | [`modules/surface_examples/src/Storage/RegistrationStep1Storage.php`](src/Storage/RegistrationStep1Storage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step1` | the route: the generic operation form, serving the resource | 8 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.registration_step1` | the config schema, generated from the class | 21 |
@@ -400,7 +407,8 @@ final class RegistrationStep2Resource implements ResourceInterface {
 The venue refers to one of example 15's venue entities, a string with
 `SurfaceValidReference` naming `event_venue`: it holds the venue's machine name, its
 candidates are core's entity reference selection handler's for the
-account, and both documents mark it `x-surface.reference`. This module
+account, and both documents state it as its check's options,
+`{"entityTypeId": "event_venue"}`, with a `lookup` link. This module
 writes no code for it. The list differs from the one example 2 had
 before the venue was a reference: core's selection for a config entity
 type lists every venue, enabled or not, sorted by name, where the old
@@ -415,7 +423,7 @@ the venues' list tag, so a venue added through example 15 is offered
 here at the next request with no cache rebuild, and its rooms with it.
 The resolver says its list is the whole of the constraint
 (`exact: TRUE`), as a `Choice`'s is, so both documents state the rooms
-as a `oneOf` and name nothing under `checkedOnServer` for the room. The full
+as a `oneOf` and name nothing under `portable-check` for the room. The full
 schema states each venue's rooms as a conditional per venue the
 reference lists.
 
@@ -1085,7 +1093,7 @@ Failed: The values were refused:
   changed: false
   changes: []
   values: {"title":"Garden party","open":true,"venue":"library","room":"library_garden","capacity":45,"pricing":"free","ticket":{"note":null},"contact":{"email":"events@example.com","phone":""}}
-  violations: [{"path":"/capacity","code":"not_in_range","message":"This value should be between 1 and 30. This applies when Room is library_garden (Garden room)."}]
+  violations: [{"path":"/capacity","code":"maximum","message":"This value should be between 1 and 30. This applies when Room is library_garden (Garden room).","params":{"limit":30}}]
   notes: []
   stale: []
 
@@ -2298,7 +2306,7 @@ final class ComponentProps implements EntrySchemasInterface, ContainerInjectionI
   /**
    * {@inheritdoc}
    */
-  public function entrySchema(string $id): array {
+  public function entrySchema(string $id): Schema {
     return self::props($this->components->all()[$id]['props'] ?? []);
   }
 
@@ -2319,26 +2327,28 @@ final class ComponentProps implements EntrySchemasInterface, ContainerInjectionI
    * @param array $props
    *   The props as the component declares them.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The schema.
    */
-  public static function props(array $props): array {
-    $props += ['type' => 'object', 'properties' => []];
-    foreach ($props['properties'] as $name => $prop) {
-      $types = (array) ($prop['type'] ?? []);
+  public static function props(array $props): Schema {
+    $schema = Schema::from($props + ['type' => 'object', 'properties' => []]);
+    $properties = $schema->get('properties');
+    foreach (is_array($properties) ? $properties : [] as $name => $prop) {
+      $types = $prop instanceof Schema ? (array) ($prop->get('type') ?? []) : [];
       $json = array_values(array_intersect($types, self::JSON_TYPES));
       if (count($json) === count($types)) {
         continue;
       }
       if ($json === []) {
-        unset($props['properties'][$name]);
-        $props['required'] = array_values(array_diff($props['required'] ?? [], [$name]));
+        unset($properties[$name]);
+        $required = $schema->get('required');
+        $schema = $schema->with('properties', $properties)->with('required', array_values(array_diff(is_array($required) ? $required : [], [$name])));
         continue;
       }
-      $props['properties'][$name]['type'] = $json;
+      $properties[$name] = $prop->with('type', $json);
+      $schema = $schema->with('properties', $properties);
     }
-    $props['additionalProperties'] = FALSE;
-    return $props;
+    return $schema->with('additionalProperties', FALSE);
   }
 
 }
@@ -2499,7 +2509,7 @@ tests show every component spelled out. A site whose themes provide
 more is past it, as the development site this page was written on is,
 with 312: the full schema then lists each component by id and label,
 and states the props and slots open, marked `deferred`, with no def and
-no conditional per component and a `fetch` template in each `deferred`;
+no conditional per component and a `choose` link on each `deferred` key;
 the full schema fetched with a component chosen,
 `GET /surface-api/event.spotlight/schema?choose=/props={component}`,
 states that component's defs exactly, and so does the schema for these
@@ -2521,8 +2531,9 @@ The props in the full schema, past the limit:
 
 ```json
 "props": {"title": "Props", "type": ["object", "null"],
-          "x-surface": {"dependsOn": ["component"], "by": "component",
-                        "deferred": {"fetch": "https://example.com/surface-api/event.spotlight/schema?choose=/props={value}"}}}
+          "x-portable-links": [{"rel": "choose", "href": "https://example.com/surface-api/event.spotlight/schema?choose=/props={value}",
+                                "source": {"value": "1/component"}}],
+          "x-surface": {"dependsOn": ["component"], "by": "component", "deferred": true}}
 ```
 
 The form still swaps the props over AJAX, and the React page fetches
@@ -2608,8 +2619,8 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples/src/Resource/SpotlightResource.php`](src/Resource/SpotlightResource.php) | the resource: a component, and its props and slots as variants the component chooses | 14 |
-| [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 40 |
-| [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 229 |
+| [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 42 |
+| [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 220 |
 | [`src/Variants/ComponentsOffered.php`](../../src/Variants/ComponentsOffered.php) | the components both providers offer: every one, or those surface.settings:components_offered allows; the main module's | 31 |
 | [`modules/surface_examples/src/Storage/SpotlightStorage.php`](src/Storage/SpotlightStorage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step12` | the route | 8 |
@@ -4645,15 +4656,20 @@ While the site has at most 50 candidates, the setting
 `surface.settings:reference_list_limit`, the key lists them: a
 select on the form, a `oneOf` with their labels in both documents, an
 enum in the tool listing. Past it, the key is an id: core's
-`entity_autocomplete` element on the form, `x-surface.widget:
-autocomplete` and the constraint under `checkedOnServer` in both
+`entity_autocomplete` element on the form, `x-portable-ui.widget:
+autocomplete` and the constraint under `portable-check` in both
 documents, and a sentence in the tool listing naming where to look one
 up: the resource's lookup, `GET
 /surface-api/event.sponsorship:lookup?key=/contact&q=adm`, which answers
 ids and labels through the same handler, for the same account. Both
-documents mark every reference key `x-surface.reference`, `{"entityType":
-"node", "bundles": ["article"]}`, or for the id of a reference of any type `{"by":
-"entity_type"}`. The page shows the keys as the full schema states them
+documents state what every reference key refers to as its check's
+options, `"portable-check": {"drupal:SurfaceValidReference": {"entityTypeId":
+"node", "bundles": ["article"]}}`, and name the lookup as its `lookup`
+link, `{"rel": "lookup", "href":
+"/surface-api/event.sponsorship:lookup?key=/page{&q,limit}"}`; the id
+of a reference of any type has no check and a link that reads its
+entity type from its sibling, `"source": {"type": "1/entity_type"}`,
+written where the structure is used, never in its def. The page shows the keys as the full schema states them
 now, and again with the limit held at 1 for its own request, as
 `ddev drush config:set surface.settings reference_list_limit 1`
 would set it, without saving it.
@@ -4704,7 +4720,7 @@ drush tool:run surface:event.sponsorship:configure --uid=1 --input='{"values":{"
 4. A node where a config entity is asked for: refused
 Failed: The values were refused:
 /setting/id: ID does not apply.
-/setting/entity_type: The entity type node cannot be referenced here.
+/setting/entity_type: The entity type node cannot be referenced here. Choose event_venue (Venue) or user_role (Role).
 ```
 
 ### Files
@@ -4734,12 +4750,12 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples_references/surface_examples_references.install`](../surface_examples_references/surface_examples_references.install) | deletes them when it is uninstalled | 3 |
 | [`modules/surface_examples_references/src/Sponsorship.php`](../surface_examples_references/src/Sponsorship.php) | the three nodes: an article, a draft article and a page, their ids kept in State | 40 |
 | [`modules/surface_examples_references/surface_examples_references.post_update.php`](../surface_examples_references/surface_examples_references.post_update.php) | stores as uuids the ids a site stored before the object stored uuids | 6 |
-| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 287 |
+| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 291 |
 | [`src/Reference/ReferenceStorageLayout.php`](../../src/Reference/ReferenceStorageLayout.php) | how a config storage keeps a reference to content: by uuid, read back as the id; the main module's | 373 |
 | [`src/Plugin/Validation/Constraint/ValidReferenceConstraint.php`](../../src/Plugin/Validation/Constraint/ValidReferenceConstraint.php) | the id's constraint, core's ValidReference for a key that holds one id; the main module's | 22 |
 | [`src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php`](../../src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php) | the entity type's constraint, which the filters are options of; the main module's | 17 |
 | [`src/Plugin/SurfaceOptionsResolver/ReferenceOptions.php`](../../src/Plugin/SurfaceOptionsResolver/ReferenceOptions.php) | the resolver that lists the candidates up to the limit; the main module's | 39 |
-| [`src/Plugin/SurfaceWidget/AutocompleteWidget.php`](../../src/Plugin/SurfaceWidget/AutocompleteWidget.php) | core's entity autocomplete, for a key past the limit; the main module's | 65 |
+| [`src/Plugin/SurfaceWidget/AutocompleteWidget.php`](../../src/Plugin/SurfaceWidget/AutocompleteWidget.php) | core's entity autocomplete, for a key past the limit; the main module's | 80 |
 
 ## Example 17: retitle in bulk, access borrowed
 
@@ -5489,6 +5505,7 @@ Success: Dry run of Set up the event: the values were accepted and prepared, and
 
 2. A date written the other way round: refused
 Failed: The values were refused:
+/date: This value is not a valid date.
 /date: Write the date as YYYY-MM-DD, such as 2026-10-17.
 
 1. A banner, shown

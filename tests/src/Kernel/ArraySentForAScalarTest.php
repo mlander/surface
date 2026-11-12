@@ -17,7 +17,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * primitive type validator reads a `uri` with parse_url(), which throws a
  * TypeError on an array, and the Tool API validates `values` with it
  * before the tool runs: the tool answered "Tool execution failed:
- * TypeError". The tool's shape check refuses it first, `type_mismatch` by
+ * TypeError". The tool's shape check refuses it first, `type` by
  * pointer, in the pipeline's words, as the HTTP door does.
  */
 #[Group('surface')]
@@ -46,8 +46,9 @@ class ArraySentForAScalarTest extends SurfaceKernelTestBase {
    */
   protected const REFUSED = [
     'path' => '/endpoint',
-    'code' => 'type_mismatch',
+    'code' => 'type',
     'message' => 'This value must be of type uri, array given.',
+    'params' => ['expected' => ['string'], 'actual' => 'array'],
   ];
 
   /**

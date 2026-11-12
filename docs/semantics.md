@@ -188,9 +188,8 @@ Input that holds nothing never reaches the table: it is read first, by
 | `email`, `uri` | anything | unchanged but for the near miss above |
 | `timestamp` | `'1700000000'`, `1700000000.0` | `1700000000` |
 | `timestamp` | a date string (`'2023-11-14T22:13:20+00:00'`) | its timestamp |
-| `datetime_iso8601` with a `DateTime` constraint | a date and time with an offset (`'2026-11-14T09:32:00-07:00'`, `Z`, fractional seconds, a space for the `T`) | the UTC storage format, `'2026-11-14T16:32:00'` |
-| `datetime_iso8601` with a `DateOnly` constraint | `'2026-11-14'` | itself |
-| `datetime_iso8601` with neither | a parsable date and time | ISO 8601 with its offset; a bare date, a number and anything unparsable unchanged |
+| `datetime_iso8601`, with a `DateTime` constraint or none | a date and time with an offset (`'2026-11-14T09:32:00-07:00'`, `Z`, fractional seconds, a space for the `T`), or with none (`'2026-11-14T16:32:00'`, read as UTC) | the UTC storage format, `'2026-11-14T16:32:00'`, served with `Z`; a bare date, a number and anything else unchanged, for the validator to refuse |
+| `datetime_iso8601` with a `DateOnly` constraint | `'2026-11-14'` | itself, served as it is: the key is written `format: date` |
 | `any`, a map with no declared properties | anything | untouched |
 | any other type | anything | untouched |
 
@@ -540,7 +539,7 @@ validator translator translates that string when it makes a violation,
 in the language of the request. So when a data surface is sealed, and
 when a shape is copied for a key, each message option written with
 `t()` is replaced by its untranslated string (`ConstraintMessages`),
-and the validator, the served contract's `x-surface.patternMessage`
+and the validator, the served contract's `x-portable-messages`
 (translated into the document's language, read as plain text) and the
 contract panel all meet that one source. Only a plain source is
 unwrapped: a message with arguments, a context or plural forms is left
@@ -596,15 +595,33 @@ entries and counts the rest; the full list is still on the exception.
 Every violation carries a stable `code` beside its message, for a
 script or an agent to branch on: the message moves with the site's
 language and with what an alter relabels, the code does not
-(why: [decision](decisions.md#one-result-at-every-door)). A refusal a
-constraint made has its constraint's code: Symfony's own where the
-constraint defines one, by the name its constraint gives it, lower case
-and without `_ERROR` (Symfony's code is a UUID, and
-`Constraint::getErrorName()` names it one to one); a constraint that
-sets no code is named for itself, in snake case
-(`ValidReferenceConstraint` is `valid_reference`). Every refusal the module
-makes itself has one of its own (`Pipeline\Violation`'s constants). A
-refusal of the whole call has an empty path.
+(why: [decision](decisions.md#one-result-at-every-door)). A request's
+values are held once to the document they are served with, by the
+dialect's validator, and a refusal that document expresses carries the
+dialect's code, its `params` and its location
+([the dialect's codes](https://github.com/fago/portable-schema/blob/main/spec/errors.md#codes)):
+`type`, `const`, `enum`, `minLength`, `maxLength`, `pattern`,
+`format.<name>`, `minimum`, `maximum`, `exclusiveMinimum`,
+`exclusiveMaximum`, `multipleOf`, `minItems`, `maxItems`,
+`uniqueItems`, `minProperties`, `maxProperties`, `propertyNames`,
+`dependentRequired`, `not`, `oneOf`, `anyOf`, `typeBy.unresolved`, and
+`check.<name>` with a sub-code where the check has one. A check Drupal
+runs is `check.drupal:<constraint plugin id>`, and the sub-code is the
+name its constraint gives the violation's code, lower case and without
+`_ERROR`: `check.drupal:SurfaceUnique.taken`,
+`check.drupal:JsonSchema.not_valid`. Its params are the violation's
+parameters, each named without its `{{ }}`, `@`, `%` or `:`; one about
+a value below the key (a map's member) is filed at that value. A value
+may carry two entries for one problem where both are true: a
+`format.*` and a `pattern` (a date written another way), or a check
+and a keyword (DateTime and `format.date-time`). Every refusal of the
+call, or of what only the module says (a key computed, ruled out,
+required while it holds no value, a variant's keys), keeps the module's
+own snake case code
+(`Pipeline\Violation`'s constants). A refusal of the whole call has an
+empty path. What a storage's own check refuses, after the request's
+values were accepted, keeps its constraint's Symfony code
+(`Violation::codeOf()`).
 
 Every path a result carries, at every door, is a JSON Pointer
 (RFC 6901) into the values: `/contact/email`, `/shelves/1/unit`,
@@ -619,40 +636,71 @@ the form does. Until contract 3 every door answered the dotted path
 (why: [decision](decisions.md#one-result-at-every-door)). In the table, "the
 key" is that key's pointer.
 
+An entry is `{path, code, message}`, and `params` after `message` where
+the code names something: `{"path": "/capacity", "code": "maximum",
+"message": "This value should be between 1 and 400.", "params":
+{"limit": 400}}`.
+
 | Code | Path | Says |
 | --- | --- | --- |
 | `required` | the key | A key, or a property of a map, that must hold a value holds none; also a required output not emitted. |
 | `does_not_apply` | the key | A value was sent for a key a rule ruled out for the values sent. |
-| `unknown_key` | the key | A key the resource does not declare, at any depth, or any key sent to a delete, which takes none; within two edits of a key declared beside it, and fewer than half its length, the message names that key: "Unknown key venue_nmae. Did you mean venue_name?" |
-| `type_mismatch` | the key | A value in a shape its definition cannot hold. |
+| `unknown_key` | the key | A key the resource does not declare, at any depth, refused before the values are validated, or any key sent to a delete, which takes none; within two edits of a key declared beside it, and fewer than half its length, the message names that key: "Unknown key venue_nmae. Did you mean venue_name?" |
+| `type` | the key | A value in a shape its definition cannot hold; `params.expected` (the JSON types, `null` among them for a key a caller may clear) and `params.actual`. A key with variants whose value the chosen variant refuses says "This value does not fit the chosen variant." where nothing below it says more. |
+| `is_null` | empty | The Tool API's own refusal of a write tool's `values` sent null or left out, before the pipeline is asked. |
 | `wrong_variant` | the key | A key sent for a variant its deciding key did not choose. |
 | `no_variant` | the key | A key with variants holds a value while its deciding key holds none. |
 | `cannot_clear` | the key | Null sent for a key its storage always holds. |
 | `secret_in_item` | the secret | A secret stored for a collection's item whose position items added or removed have moved. |
 | `no_schema` | the module's mount | A storage holds settings no config schema describes. |
-| `not_valid` | the key, or the object | A value, or an object's values, a JSON Schema read into the structure refuses, where no constraint of the vocabulary says it ([Reading a schema](reading-a-schema.md#what-is-kept)). |
-| `unresolved` | the key, or the object | A value only a document the schema refers to could decide, which is never fetched. |
+| `unchecked` | the key, or the object | A check the document names that cannot run on this site (`params.check`): a value it would judge is refused, never passed. |
 | `has_data` | `settings` | A field's storage settings would change its columns while it has data. |
 | `access` | empty | The resource's access answer refused the whole call. |
 | `permission` | empty | The operation's permission refused the whole call. |
 | `locked` | empty | The resource may be seen and not changed, so nothing was written. |
 | `not_found` | empty | The call's parameters name nothing, or a read is asked of what an operation creates. |
 | `conflict` | empty | What storage holds changed since the caller read it: the API's `If-Match` no longer names it, a 412. |
-| `taken` | the key | A create names a thing that exists already: its identity is held, "A venue named riverside already exists." (the stock `SurfaceUnique`, and `ConfigEntityStorage`), or a list holds a thing twice that may be held once (a placed block's condition). |
 | `locked` | the key | In `notes`: a value sent for a locked key, not taken. |
 | `computed` | the key | A value sent for a computed key other than the one it holds; in `notes`, the one it holds, sent and not taken ([Computed keys](declaring-a-resource.md#computed-keys)). A key computed unless sent takes the value sent, and is never refused with it. |
 | `stale` | the key | In `stale`: a stored value kept that the key no longer offers, with `stored`. |
-| `not_in_range`, `too_high`, `too_low` | the key | Range: a number outside its bounds. |
-| `too_long`, `too_short` | the key | Length: a string outside its bounds. |
-| `no_such_choice`, `too_few`, `too_many` | the key | Choice, AllowedValues or LabeledChoice: a value not on the list; Count on a list: too few or too many items. |
-| `regex_failed` | the key | Regex: a value not matching its pattern. |
-| `invalid_format` | the key | Email and the other format constraints. |
-| `is_null`, `is_blank` | the key | NotNull, NotBlank, where a definition carries them; `is_null` with an empty path for a tool's `values` sent null or left out, where the tool answers the Tool API's own refusal. |
+| `minimum`, `maximum` | the key | Range: a number outside its bounds, `params.limit`. |
+| `minLength`, `maxLength` | the key | Length or NotBlank: a string outside its bounds, `params.limit` and `params.actual`. |
+| `enum` | the key | A value not on its key's list, `params.value` and `params.allowed` (at most ten, `params.more` counting the rest); not said beside the refusal of the check the list is read from. |
+| `anyOf` | the key | A value none of the shapes of a composite (AtLeastOneOf) holds, `params.matched`. |
+| `minItems`, `maxItems`, `uniqueItems` | the key | Count on a list: too few or too many items; UniqueItems: an item listed twice, `params.indexes`. |
+| `pattern` | the key | Regex: a value not matching its pattern. |
+| `format.email`, `format.uri`, `format.date-time`, `format.date`, `format.uuid` | the key | A value its format refuses: an address with a non-ASCII local part; a URI that is not absolute as RFC 3986 says it, with no scheme or with a character outside ASCII (a host such as `例え.jp` is sent in punycode, `xn--r8jz45g.jp`); a date and time with no offset; a date that is no calendar date. |
+| `check.drupal:Email`, `check.drupal:Uuid`, each with its sub-code | the key | An address or a UUID its format admits and Drupal's constraint refuses: `a@b`, `x@localhost`, a quoted local part, an address literal, the nil UUID. The document names each beside its format (`portable-check`). |
+| `check.drupal:<id>` of a map's own constraint | the property it names, or the map | A rule on a map's keys together (a review deadline's amount and unit), named at the map. Its refusal is filed at the property the constraint names when the values sent hold it and it is no secret; otherwise at the map, and at a secret with no value. |
+| `check.drupal:SurfaceUnique.taken` | the key | A create names a thing that exists already: its identity is held, "A venue named riverside already exists." (the stock `SurfaceUnique`, and `ConfigEntityStorage`), or a list holds a thing twice that may be held once (a placed block's condition). |
+| `check.drupal:SurfaceValidReference` | the key | A reference to nothing the account may refer to. |
+| `check.drupal:JsonSchema.not_valid`, `check.drupal:JsonSchema.unresolved` | the key, or the object | A value, or an object's values, a JSON Schema read into the structure refuses, where no constraint of the vocabulary says it ([Reading a schema](reading-a-schema.md#what-is-kept)); or one only a document the schema refers to could decide, which is never fetched. |
 
-Symfony's codes are listed as the module's examples meet them; any
-other constraint's are its own, read the same way. The codes and the
-result shape are promised from the first tagged release; the messages
-are not ([What is promised](evolution.md#what-is-promised)).
+Contract 5 renamed the codes of what a document expresses, from
+Symfony's names to the dialect's ([Evolution](evolution.md#contract-5)),
+as the same refused values answer them before and after:
+
+| Before | Now |
+| --- | --- |
+| `type_mismatch`, `primitive_type`, `invalid_characters` | `type` |
+| `not_in_range`, `too_low` | `minimum`, `maximum` |
+| `too_high` | `maximum`; `check.drupal:ComplexData.too_high` for a map's own Range |
+| `too_long` | `maxLength` |
+| `too_short`, `is_blank` | `minLength` |
+| `no_such_choice` | `enum` |
+| `too_few` | `minItems` |
+| `too_many` | `maxItems` on a list; `check.drupal:Count.too_many` on a map |
+| `regex_failed` | `pattern`; `format.date` and `pattern` for a date written another way; `check.drupal:Regex.regex_failed` where no keyword says the pattern |
+| `invalid_format` | `format.email`; `check.drupal:Email` with its sub-code for an address the format admits |
+| `taken` | `check.drupal:SurfaceUnique.taken` |
+| `valid_reference` | `check.drupal:SurfaceValidReference` |
+| `not_valid`, `unresolved` | `check.drupal:JsonSchema.not_valid`, `check.drupal:JsonSchema.unresolved` |
+| `extension_exists`, `any_theme_region` and any other check's | `check.drupal:<id>`, with a sub-code where the violation has one |
+| `creatable_bundle` and any other constraint a key's list is read from | `enum` |
+| `primitive_type` for a `uri` | `format.uri` |
+
+The codes and the result shape are promised from the first tagged
+release; the messages are not ([What is promised](evolution.md#what-is-promised)).
 
 ## Locked keys
 

@@ -917,8 +917,8 @@ final class DefinitionMetadata {
    * Replaces whatever arrangement the key had. The engine's seam: an
    * owner or an alter arranges a key with the blueprint's describe(),
    * which lays what it is given over what the key has. Read by the
-   * generated form for every host, and stated by the served contract as
-   * `x-surface.arrangement` when a renderer asks for widget hints. Nothing
+   * generated form for every host, and stated by the served contract in
+   * `x-portable-ui` when a renderer asks for widget hints. Nothing
    * in it changes what is accepted.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition

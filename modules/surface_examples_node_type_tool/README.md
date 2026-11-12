@@ -174,7 +174,8 @@ contribution.
 The pipeline refuses forty-five days on the amount the caller sent, in
 the caller's units
 (`third_party_settings.surface_examples_extras.review_deadline.amount`),
-through a constraint on the amount and unit together, judging business
+through a constraint on the amount and unit together, run as the check
+`check.drupal:SurfaceExamplesExtrasReviewDeadline`, judging business
 days on their converted seconds like any other unit: twenty-two are
 thirty calendar days and accepted, twenty-three are thirty-one and
 refused. The config schema's own Range on the stored seconds is a

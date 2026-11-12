@@ -346,7 +346,8 @@ class ContentEntityStorageTest extends SurfaceKernelTestBase {
       $full[$title] = $emitter->emitFull($this->resources()->build(self::RESOURCE, new OperationContext('update')), self::RESOURCE, 'update')->document;
       $this->assertArrayNotHasKey('values', $full[$title]);
     }
-    $this->assertSame($full['First'], $full['Second']);
+    // As JSON: each check's options are an empty object, one per document.
+    $this->assertSame(json_encode($full['First']), json_encode($full['Second']));
     // The formats this account may use are a runtime refinement.
     $format = $full['First']['schema']['$defs']['field.item:node.page.body']['properties']['format']['x-surface'] ?? [];
     $this->assertTrue($format['live'] ?? FALSE);

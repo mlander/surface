@@ -232,14 +232,14 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
       ->emit($surface, $stored, 'registration.step3', 'configure', widgets: TRUE)->document['schema']['properties']['third_party_settings'];
     $this->assertArrayNotHasKey('title', $served);
     $this->assertArrayNotHasKey('description', $served);
-    $this->assertSame(['fieldset', TRUE], [$served['x-surface']['widget'], $served['x-surface']['group']]);
+    $this->assertSame(['fieldset', TRUE], [$served['x-portable-ui']['widget'], $served['x-surface']['group']]);
     $this->assertSame('Compliance', $served['properties'][self::MODULE]['title']);
-    $this->assertArrayNotHasKey('group', $served['properties'][self::MODULE]['x-surface']);
+    $this->assertArrayNotHasKey('group', $served['properties'][self::MODULE]['x-surface'] ?? []);
     // Placed after the capacity: said on the fieldset, in both, and
     // nothing moved in the schema, where the values are.
     $this->assertSame('capacity', $group[self::MODULE][SurfaceFormBuilderInterface::PLACED_AFTER_KEY]);
     $this->assertSame('capacity', $served['properties'][self::MODULE]['x-surface']['after']);
-    $this->assertArrayNotHasKey('after', $served['x-surface']);
+    $this->assertArrayNotHasKey('after', $served['x-surface'] ?? []);
   }
 
   /**
@@ -522,7 +522,8 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
     $license = $this->mounted($this->surface(), 'license');
     $this->assertSame('The four digits after EV- on the license, such as 2048. Required to host more than 100 people.', (string) $license->getDescription());
     $this->assertSame(['2048'], DefinitionMetadata::getExamples($license));
-    $element = $this->container->get('plugin.manager.surface_widget')->getWidgetFor($license)->buildElement($license, NULL);
+    $element = $this->container->get('surface.form_builder')->buildSurfaceForm($this->surface(), [], new FormState())['third_party_settings']['surface_examples_compliance']['license'];
+    $this->assertSame('textfield', $element['#type']);
     // The example says it in the documents, not as a placeholder: an
     // empty field showing a value reads as filled.
     $this->assertArrayNotHasKey('#placeholder', $element);

@@ -1,4 +1,4 @@
-import type { Extension, Schema } from '../contract';
+import type { Conditional, Extension, PortableUi, Schema } from '../contract';
 import { assertContract, assertSchema, CONTRACT, ContractRefused, defName, inlineSchema, isPart, resolveSchema, resolveVariants, restored, watchedPaths, withoutComputed, withoutSuggested, isSuggested, narrow, narrowingStatus } from '../contract';
 import example3 from './fixtures/example3.json';
 import license from './fixtures/refine-example3-license.json';
@@ -11,36 +11,118 @@ import journal from './fixtures/refine-journal.json';
 const contact: Schema = {
   type: 'object',
   properties: {
-    email: { title: 'Email', type: 'string', format: 'idn-email', 'x-surface': { widget: 'email' } },
-    phone: { title: 'Phone', type: ['string', 'null'], 'x-surface': { widget: 'text' } },
+    email: { title: 'Email', type: 'string', format: 'email', 'x-portable-ui': { widget: 'email' } },
+    phone: { title: 'Phone', type: ['string', 'null'], 'x-portable-ui': { widget: 'text' } },
   },
   additionalProperties: false,
   required: ['email'],
 };
 
-const fieldset = { widget: 'fieldset' as const };
+const fieldset: PortableUi = { widget: 'fieldset' };
 
 describe('resolving a reference', () => {
   it('replaces a reference with its def, the keywords beside it kept in their places', () => {
     const root: Schema = {
       type: 'object',
-      properties: { contact: { title: 'Contact', $ref: '#/$defs/registration.contact', 'x-surface': fieldset } },
+      properties: { contact: { title: 'Contact', $ref: '#/$defs/registration.contact', 'x-portable-ui': fieldset } },
       $defs: { 'registration.contact': contact },
     };
     const resolved = resolveSchema(root.properties!.contact, root);
-    expect(Object.keys(resolved)).toEqual(['title', 'type', 'properties', 'additionalProperties', 'required', 'x-surface']);
+    expect(Object.keys(resolved)).toEqual(['title', 'type', 'properties', 'additionalProperties', 'required', 'x-portable-ui']);
     expect(resolved.title).toBe('Contact');
     expect(resolved.required).toEqual(['email']);
-    expect(resolved['x-surface']?.widget).toBe('fieldset');
+    expect(resolved['x-portable-ui']?.widget).toBe('fieldset');
     expect(resolved).not.toHaveProperty('$ref');
+  });
+
+  it("keeps the groups a def declares under a site's widget hint", () => {
+    const grouped: Schema = { ...contact, 'x-portable-ui': { groups: { reach: { label: 'How to reach you', widget: 'fieldset' } } } };
+    const root: Schema = {
+      type: 'object',
+      properties: { contact: { title: 'Contact', $ref: '#/$defs/registration.contact', 'x-portable-ui': fieldset } },
+      $defs: { 'registration.contact': grouped },
+    };
+    expect(resolveSchema(root.properties!.contact, root)['x-portable-ui']).toEqual({ widget: 'fieldset', groups: { reach: { label: 'How to reach you', widget: 'fieldset' } } });
+  });
+
+  it("joins a def's groups with those a narrowed site declares", () => {
+    // A structure with two groups, attached twice; the second site is
+    // narrowed and declares only the group its own narrowed key names.
+    const grouped: Schema = {
+      ...contact,
+      properties: {
+        email: { ...contact.properties!.email, 'x-portable-ui': { widget: 'email', group: 'reach' } },
+        phone: { ...contact.properties!.phone, 'x-portable-ui': { widget: 'text', group: 'call' } },
+      },
+      'x-portable-ui': { groups: { reach: { label: 'Reach', widget: 'fieldset' }, call: { label: 'Call', widget: 'details', options: { open: false } } } },
+    };
+    const root: Schema = {
+      type: 'object',
+      properties: {
+        first: { $ref: '#/$defs/registration.contact' },
+        second: {
+          $ref: '#/$defs/registration.contact',
+          properties: { email: { type: 'string', minLength: 3, 'x-portable-ui': { widget: 'email', group: 'reach' } } },
+          'x-portable-ui': { groups: { reach: { label: 'Reach us', widget: 'fieldset' } } },
+        },
+      },
+      $defs: { 'registration.contact': grouped },
+    };
+    const inline = inlineSchema(root);
+    expect(inline.properties!.first['x-portable-ui']).toEqual(grouped['x-portable-ui']);
+    expect(inline.properties!.second['x-portable-ui']).toEqual({ groups: { reach: { label: 'Reach us', widget: 'fieldset' }, call: { label: 'Call', widget: 'details', options: { open: false } } } });
+    expect(Object.keys(inline.properties!.second['x-portable-ui']!.groups!)).toEqual(['reach', 'call']);
+    expect(inline.properties!.second.properties!.phone['x-portable-ui']).toEqual({ widget: 'text', group: 'call' });
+  });
+
+  it("keeps a site's own description over its def's, and a structure's description off the key", () => {
+    const item: Schema = { title: 'field.item:node.page.field_featured_image', description: 'The Featured image field (entity_reference) of page, as one item.', type: 'object', properties: { target_id: { type: 'integer' } } };
+    const shape: Schema = { title: 'event.email', description: 'An address mail is sent to.', type: 'string', format: 'email' };
+    const root: Schema = {
+      type: 'object',
+      properties: {
+        field_featured_image: { title: 'Featured image', description: 'Include an image.', $ref: '#/$defs/item' },
+        field_media: { title: 'Media', $ref: '#/$defs/item' },
+        contact: { title: 'Contact', $ref: '#/$defs/shape' },
+        reply: { $ref: '#/$defs/shape', description: 'Where replies go.' },
+      },
+      $defs: { item, shape },
+    };
+    const inline = inlineSchema(root);
+    expect(inline.properties!.field_featured_image.description).toBe('Include an image.');
+    expect(inline.properties!.field_media).not.toHaveProperty('description');
+    expect(inline.properties!.contact.description).toBe('An address mail is sent to.');
+    expect(inline.properties!.reply.description).toBe('Where replies go.');
+  });
+
+  it("joins a mixed-in structure's groups with the frame's, the frame's word standing", () => {
+    const grouped: Schema = {
+      type: 'object',
+      properties: {
+        email: { type: 'string', 'x-portable-ui': { group: 'reach' } },
+        phone: { type: 'string', 'x-portable-ui': { group: 'call' } },
+      },
+      'x-portable-ui': { groups: { reach: { label: 'Reach', widget: 'fieldset' }, call: { label: 'Call', widget: 'details' } } },
+    };
+    const root: Schema = {
+      type: 'object',
+      properties: { name: { type: 'string', 'x-portable-ui': { group: 'call' } }, email: true as unknown as Schema, phone: true as unknown as Schema },
+      allOf: [{ $ref: '#/$defs/contact' } as unknown as Conditional],
+      'x-portable-ui': { groups: { call: { label: 'Ring', widget: 'fieldset' } } },
+      $defs: { contact: grouped },
+    };
+    const inline = inlineSchema(root);
+    expect(inline['x-portable-ui']).toEqual({ groups: { call: { label: 'Ring', widget: 'fieldset' }, reach: { label: 'Reach', widget: 'fieldset' } } });
+    expect(Object.keys(inline['x-portable-ui']!.groups!)).toEqual(['call', 'reach']);
+    expect(inline.properties!.email['x-portable-ui']).toEqual({ group: 'reach' });
   });
 
   it('applies an allOf narrowing: its value for each keyword, properties one by one, required as a union', () => {
     const bin: Schema = {
       type: 'object',
       properties: {
-        bin: { title: 'Bin', type: 'string', 'x-surface': { widget: 'text' } },
-        size: { title: 'Size', type: ['integer', 'null'], minimum: 1, maximum: 10, 'x-surface': { widget: 'number' } },
+        bin: { title: 'Bin', type: 'string', 'x-portable-ui': { widget: 'text' } },
+        size: { title: 'Size', type: ['integer', 'null'], minimum: 1, maximum: 10, 'x-portable-ui': { widget: 'number' } },
       },
       additionalProperties: false,
       required: ['bin'],
@@ -51,13 +133,13 @@ describe('resolving a reference', () => {
         { $ref: '#/$defs/resource_test.cupboard.bin' },
         {
           properties: {
-            bin: { readOnly: true, const: 'left', 'x-surface': { widget: 'text', refined: true } },
+            bin: { readOnly: true, const: 'left', 'x-portable-ui': { widget: 'text' }, 'x-surface': { refined: true } },
             size: { maximum: 4 },
           },
           required: ['size'],
         },
       ],
-      'x-surface': fieldset,
+      'x-portable-ui': fieldset,
     } as unknown as Schema;
     const root: Schema = { type: 'object', properties: { left: site }, $defs: { 'resource_test.cupboard.bin': bin } };
     const resolved = resolveSchema(site, root);
@@ -76,15 +158,15 @@ describe('resolving a reference', () => {
   it('resolves a def inside a def, and two sites sharing one def each with their own label', () => {
     const shelf: Schema = {
       type: 'object',
-      properties: { label: { title: 'Label', $ref: '#/$defs/pantry.label', 'x-surface': fieldset } },
+      properties: { label: { title: 'Label', $ref: '#/$defs/pantry.label', 'x-portable-ui': fieldset } },
       additionalProperties: false,
     };
     const label: Schema = { type: 'object', properties: { text: { title: 'Text', type: 'string' } }, additionalProperties: false };
     const root: Schema = {
       type: 'object',
       properties: {
-        upper: { title: 'Upper shelf', $ref: '#/$defs/pantry.shelf', 'x-surface': fieldset },
-        lower: { title: 'Lower shelf', $ref: '#/$defs/pantry.shelf', 'x-surface': fieldset },
+        upper: { title: 'Upper shelf', $ref: '#/$defs/pantry.shelf', 'x-portable-ui': fieldset },
+        lower: { title: 'Lower shelf', $ref: '#/$defs/pantry.shelf', 'x-portable-ui': fieldset },
       },
       $defs: { 'pantry.shelf': shelf, 'pantry.label': label },
     };
@@ -146,7 +228,8 @@ describe('example 3 as the emitter serves it', () => {
     // Nothing below a conditional carries `x-surface`: the key with
     // variants says which is chosen.
     expect(paid?.['x-surface']).toBeUndefined();
-    expect(inline.properties?.ticket['x-surface']).toMatchObject({ widget: 'variants', by: 'pricing', chosen: 'free' });
+    expect(inline.properties?.ticket['x-surface']).toMatchObject({ by: 'pricing', chosen: 'free' });
+    expect(inline.properties?.ticket['x-portable-ui']).toEqual({ widget: 'variants' });
     expect(paid?.required).toEqual(['price', 'currency']);
   });
 });
@@ -155,8 +238,8 @@ describe('a collection', () => {
   const shelf: Schema = {
     type: 'object',
     properties: {
-      unit: { title: 'Unit', type: 'string', 'x-surface': { widget: 'select' } },
-      height: { title: 'Height', type: 'integer', 'x-surface': { widget: 'number', dependsOn: ['unit'] } },
+      unit: { title: 'Unit', type: 'string', 'x-portable-ui': { widget: 'select' } },
+      height: { title: 'Height', type: 'integer', 'x-portable-ui': { widget: 'number' }, 'x-surface': { dependsOn: ['unit'] } },
     },
     additionalProperties: false,
   };
@@ -168,7 +251,7 @@ describe('a collection', () => {
         type: ['array', 'null'],
         items: { $ref: '#/$defs/resource_test.pantry.shelf' },
         maxItems: 3,
-        'x-surface': { widget: 'list', collection: true },
+        'x-portable-ui': { widget: 'list' }, 'x-surface': { collection: true },
       },
     },
     $defs: { 'resource_test.pantry.shelf': shelf },
@@ -191,12 +274,12 @@ describe('a computed key', () => {
   const venue: Schema = {
     type: 'object',
     properties: {
-      label: { title: 'Name', type: 'string', 'x-surface': { widget: 'text' } },
+      label: { title: 'Name', type: 'string', 'x-portable-ui': { widget: 'text' } },
       slug: {
         title: 'Slug',
         type: ['string', 'null'],
         readOnly: true,
-        'x-surface': { widget: 'text', computed: { from: ['label'], when: 'create' } },
+        'x-portable-ui': { widget: 'text' }, 'x-surface': { computed: { from: ['label'], when: 'create' } },
       },
     },
     additionalProperties: false,
@@ -223,13 +306,13 @@ describe('a machine name computed unless sent', () => {
   const venue: Schema = {
     type: 'object',
     properties: {
-      label: { title: 'Name', type: 'string', 'x-surface': { widget: 'text' } },
+      label: { title: 'Name', type: 'string', 'x-portable-ui': { widget: 'text' } },
       id: {
         title: 'Machine name',
         type: 'string',
         pattern: '^[a-z0-9_]+$',
         maxLength: 32,
-        'x-surface': { widget: 'text', computed: { from: ['label'], when: 'unless_sent' } },
+        'x-portable-ui': { widget: 'text' }, 'x-surface': { computed: { from: ['label'], when: 'unless_sent' } },
       },
     },
     additionalProperties: false,
@@ -256,7 +339,7 @@ describe('a key declared with a shape', () => {
   // A shape is written once, as a def that allows null (whether a key may
   // hold nothing is the key's), and each key that uses it refers to it
   // first, then says its title, what it narrows and its whole x-surface.
-  const text = (dependsOn: string[] = []) => ({ widget: 'text' as const, dependsOn });
+  const text = (dependsOn: string[] = []): Pick<Schema, 'x-portable-ui' | 'x-surface'> => ({ 'x-portable-ui': { widget: 'text' }, ...(dependsOn.length > 0 ? { 'x-surface': { dependsOn } } : {}) });
   const code: Schema = {
     title: 'Stock code',
     description: 'Letters and digits.',
@@ -264,19 +347,19 @@ describe('a key declared with a shape', () => {
     maxLength: 12,
     pattern: '^[A-Z]{2}\\d+$',
     examples: ['AB12'],
-    'x-surface': { patternMessage: 'A stock code is two capitals and digits, such as AB12.' },
+    'x-portable-messages': { pattern: 'A stock code is two capitals and digits, such as AB12.' },
   } as Schema;
   const root: Schema = {
     type: 'object',
     properties: {
-      sku: { $ref: '#/$defs/resource_test.sku', title: 'Stock code', type: 'string', minLength: 4, 'x-surface': { ...text(), patternMessage: 'A stock code is two capitals and digits, such as AB12.' } },
-      spare: { $ref: '#/$defs/resource_test.sku', title: 'Spare code', description: 'Printed on the back.', maxLength: 6, 'x-surface': { ...text(), patternMessage: 'A stock code is two capitals and digits, such as AB12.' } },
-      tag: { title: 'Tag', $ref: '#/$defs/resource_test.shelf_tag', 'x-surface': fieldset },
+      sku: { $ref: '#/$defs/resource_test.sku', title: 'Stock code', type: 'string', minLength: 4, 'x-portable-messages': { pattern: 'A stock code is two capitals and digits, such as AB12.' }, ...text() },
+      spare: { $ref: '#/$defs/resource_test.sku', title: 'Spare code', description: 'Printed on the back.', maxLength: 6, 'x-portable-messages': { pattern: 'A stock code is two capitals and digits, such as AB12.' }, ...text() },
+      tag: { title: 'Tag', $ref: '#/$defs/resource_test.shelf_tag', 'x-portable-ui': fieldset },
     },
     required: ['sku'],
     $defs: {
       'resource_test.sku': code,
-      'resource_test.shelf_tag': { type: 'object', properties: { label: { title: 'Label', type: ['string', 'null'], 'x-surface': text(['sku']) } }, additionalProperties: false },
+      'resource_test.shelf_tag': { type: 'object', properties: { label: { title: 'Label', type: ['string', 'null'], ...text(['sku']) } }, additionalProperties: false },
     },
   };
 
@@ -289,7 +372,8 @@ describe('a key declared with a shape', () => {
       maxLength: 12,
       pattern: '^[A-Z]{2}\\d+$',
       examples: ['AB12'],
-      'x-surface': { ...text(), patternMessage: 'A stock code is two capitals and digits, such as AB12.' },
+      'x-portable-messages': { pattern: 'A stock code is two capitals and digits, such as AB12.' },
+      ...text(),
       minLength: 4,
     });
     expect(inline.properties?.spare).toMatchObject({ title: 'Spare code', description: 'Printed on the back.', type: ['string', 'null'], maxLength: 6, pattern: '^[A-Z]{2}\\d+$' });
@@ -311,27 +395,28 @@ describe('a key declared with a shape', () => {
       expect(isPart(mount)).toBe(true);
       expect(isPart(mount.properties!.license)).toBe(false);
       expect(mount.properties?.license).toMatchObject({ title: 'Event license', type: ['string', 'null'], pattern: '^\\d{4}$' });
-      expect(mount.properties?.license['x-surface']).toMatchObject({ widget: 'text', patternMessage: 'A license number is four digits, such as 2048.' });
+      expect(mount.properties?.license['x-portable-ui']).toMatchObject({ widget: 'text' });
+      expect(mount.properties?.license['x-portable-messages']).toEqual({ pattern: 'A license number is four digits, such as 2048.' });
     }
   });
 });
 
-describe('contract 4 on the wire', () => {
-  const said = (widget: Extension['widget'], more: Partial<Extension> = {}): Extension => ({ widget, ...more });
+describe('contract 5 on the wire', () => {
+  const said = (widget: PortableUi['widget']): Pick<Schema, 'x-portable-ui'> => ({ 'x-portable-ui': { widget } });
 
   it('refuses a document of contract 1, which states no version, and one of any other', () => {
-    expect(CONTRACT).toBe(4);
+    expect(CONTRACT).toBe(5);
     expect(() => assertContract({ schema: { type: 'object' } })).toThrow(new ContractRefused('1'));
-    expect(() => assertContract({ schema: { type: 'object' } })).toThrow('This page reads contract 4; the server sent contract 1.');
-    expect(() => assertContract({ schema: { 'x-surface': { contract: 3 } as Extension } })).toThrow('This page reads contract 4; the server sent contract 3.');
-    expect(assertContract(example3 as unknown as { schema: Schema }).schema['x-surface']?.contract).toBe(4);
+    expect(() => assertContract({ schema: { type: 'object' } })).toThrow('This page reads contract 5; the server sent contract 1.');
+    expect(() => assertContract({ schema: { 'x-surface': { contract: 3 } as Extension } })).toThrow('This page reads contract 5; the server sent contract 3.');
+    expect(assertContract(example3 as unknown as { schema: Schema }).schema['x-surface']?.contract).toBe(5);
   });
 
   it('refuses a full schema, served bare, of any other contract', () => {
     const recorded = license as unknown as { schema: Schema };
-    expect(assertSchema(recorded.schema)['x-surface']?.contract).toBe(4);
+    expect(assertSchema(recorded.schema)['x-surface']?.contract).toBe(5);
     expect(() => assertSchema({ ...recorded.schema, 'x-surface': { ...recorded.schema['x-surface'], contract: 3 } as Extension })).toThrow(
-      'This page reads contract 4; the server sent contract 3.',
+      'This page reads contract 5; the server sent contract 3.',
     );
   });
 
@@ -340,10 +425,10 @@ describe('contract 4 on the wire', () => {
       title: 'pantry.bin',
       type: 'object',
       properties: {
-        size: { title: 'Size', type: ['integer', 'null'], maximum: 10, 'x-surface': said('number') },
-        'a/b': { title: 'Odd', type: 'string', 'x-surface': said('text') },
-        tag: { title: 'Tag', type: 'string', 'x-surface': said('text') },
-        note: { title: 'Note', type: 'string', 'x-surface': said('text') },
+        size: { title: 'Size', type: ['integer', 'null'], maximum: 10, ...said('number') },
+        'a/b': { title: 'Odd', type: 'string', ...said('text') },
+        tag: { title: 'Tag', type: 'string', ...said('text') },
+        note: { title: 'Note', type: 'string', ...said('text') },
       },
       additionalProperties: false,
     };
@@ -354,12 +439,12 @@ describe('contract 4 on the wire', () => {
         { type: 'object', properties: { size: { type: ['integer', 'null'], maximum: 4 }, tag: [], note: { readOnly: true, const: 'kept' } } },
       ],
       'x-surface': {
-        ...said('fieldset', { refined: true }),
+        refined: true,
         within: {
-          '/allOf/1/properties/size': said('number', { refined: true }),
-          '/allOf/1/properties/a~1b': said('text', { dependsOn: ['size'] }),
-          '/allOf/1/properties/tag': said('text', { dependsOn: ['size'] }),
-          '/allOf/1/properties/note': said('text', { dependsOn: ['size'] }),
+          '/allOf/1/properties/size': { refined: true },
+          '/allOf/1/properties/a~1b': { dependsOn: ['size'] },
+          '/allOf/1/properties/tag': { dependsOn: ['size'] },
+          '/allOf/1/properties/note': { dependsOn: ['size'] },
         },
       },
     } as unknown as Schema;
@@ -367,22 +452,22 @@ describe('contract 4 on the wire', () => {
     const right = {
       title: 'Right bin',
       allOf: [{ $ref: '#/$defs/pantry.bin' }, true],
-      'x-surface': { ...said('fieldset'), within: { '/allOf/1/properties/tag': said('text', { dependsOn: ['size'] }) } },
+      'x-surface': { within: { '/allOf/1/properties/tag': { dependsOn: ['size'] } } },
     } as unknown as Schema;
     const root: Schema = { type: 'object', properties: { left: site, right }, $defs: { 'pantry.bin': bin } };
     const back = restored(root).properties!.left as unknown as { allOf: { properties: Record<string, Schema> }[]; 'x-surface': Extension };
-    expect(back['x-surface']).toEqual(said('fieldset', { refined: true }));
-    expect(back.allOf[1].properties.size['x-surface']).toEqual(said('number', { refined: true }));
+    expect(back['x-surface']).toEqual({ refined: true });
+    expect(back.allOf[1].properties.size['x-surface']).toEqual({ refined: true });
     // A property that said nothing else was left out of the narrowing.
-    expect(back.allOf[1].properties['a/b']).toEqual({ 'x-surface': said('text', { dependsOn: ['size'] }) });
+    expect(back.allOf[1].properties['a/b']).toEqual({ 'x-surface': { dependsOn: ['size'] } });
     // An empty narrowing encoded as an empty list.
-    expect(back.allOf[1].properties.tag).toEqual({ 'x-surface': said('text', { dependsOn: ['size'] }) });
-    expect(restored(root).properties?.right.allOf?.[1]).toEqual({ properties: { tag: { 'x-surface': said('text', { dependsOn: ['size'] }) } } });
+    expect(back.allOf[1].properties.tag).toEqual({ 'x-surface': { dependsOn: ['size'] } });
+    expect(restored(root).properties?.right.allOf?.[1]).toEqual({ properties: { tag: { 'x-surface': { dependsOn: ['size'] } } } });
     // What was served is left as it was.
     expect((site as unknown as { 'x-surface': Extension })['x-surface'].within).toBeDefined();
 
     const left = inlineSchema(root).properties!.left;
-    expect(left['x-surface']).toEqual(said('fieldset', { refined: true }));
+    expect(left['x-surface']).toEqual({ refined: true });
     expect(left.title).toBe('Left bin');
     expect(left.properties?.size).toMatchObject({ title: 'Size', maximum: 4, 'x-surface': { refined: true } });
     expect(left.properties?.['a/b']['x-surface']?.dependsOn).toEqual(['size']);
@@ -397,7 +482,9 @@ describe('contract 4 on the wire', () => {
     const mount = inlineSchema(example3.schema as unknown as Schema).properties?.third_party_settings.properties?.surface_examples_compliance as Schema;
     expect(mount['x-surface']).not.toHaveProperty('within');
     expect(mount.properties?.stewards).toMatchObject({ type: 'integer', minimum: 1, description: 'At least 1 steward for 50 attendees.' });
-    expect(mount.properties?.stewards['x-surface']).toEqual(said('number', { dependsOn: ['capacity'], refined: true }));
+    expect(mount.properties?.stewards['x-surface']).toEqual({ dependsOn: ['capacity'], refined: true });
+    // The widget hint stays on the node below the applicator, where the site wrote it.
+    expect(mount.properties?.stewards['x-portable-ui']).toEqual({ widget: 'number' });
   });
 
   it('marks each conditional `x-surface.rules` lists as a declared rule, at the top and in a def', () => {
@@ -425,8 +512,11 @@ describe('contract 4 on the wire', () => {
       { type: 'null' },
     ]);
     expect(raw.properties?.ticket['x-surface']?.variants).toEqual({ free: '#/$defs/registration.step3.ticket.free', paid: '#/$defs/registration.step3.ticket.paid' });
+    // A def is titled by its structure's label, else its id: the def's
+    // name, never the key's, which its site titles.
+    expect(raw.$defs?.['registration.step3.ticket.free'].title).toBe('Free ticket');
     for (const [id, def] of Object.entries(raw.$defs ?? {})) {
-      expect(def.title).toBe(id);
+      expect(typeof def.title === 'string' && def.title !== '', id).toBe(true);
     }
     const inline = inlineSchema(raw);
     expect(inline.properties?.ticket).not.toHaveProperty('anyOf');

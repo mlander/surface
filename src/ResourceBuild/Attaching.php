@@ -23,6 +23,7 @@ use Drupal\surface\Resource\ClosedSiteListInterface;
 use Drupal\surface\Resource\EntrySchemasInterface;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Attachment;
@@ -31,6 +32,7 @@ use Drupal\surface\Port;
 use Drupal\surface\Storage\ConfigEntityStorage;
 use Drupal\surface\Storage\ConfigObjectStorage;
 use Drupal\surface\Variants;
+use PortableSchema\Builder\Schema;
 
 /**
  * The attach phase of the build: children, collections, variants, mounts.
@@ -222,7 +224,7 @@ final class Attaching {
       return FALSE;
     }
     $hash = is_string($hash) ? $hash : ResourceBlueprint::documentHash($root);
-    return $this->noSecret[$hash] ??= SchemaReader::holdsNoSecret($root, fn (string $id): bool => $this->registry->hasShape($id));
+    return $this->noSecret[$hash] ??= SchemaReader::holdsNoSecret($root, fn (string $id): bool => $this->registry->hasShape($id), $hash);
   }
 
   /**
@@ -1054,8 +1056,10 @@ final class Attaching {
       // A provider that answers an entry's schema when it is read: the
       // entry is registered by name, its schema read when it is built.
       $lazy = is_subclass_of($from, EntrySchemasInterface::class);
-      // The defs the entries share, read once for all of them.
-      $shared = $list->defs() === [] ? NULL : SchemaReader::prepared(['$defs' => $list->defs()]);
+      // The defs the entries share, read once for all of them; a document
+      // is read, hashed and registered as its array.
+      $defs = array_map(static fn (Schema $def): array|\stdClass|bool => Schemas::arrayed($def), $list->defs());
+      $shared = $defs === [] ? NULL : SchemaReader::prepared(['$defs' => $defs]);
       $shared_hash = $shared === NULL ? NULL : ResourceBlueprint::documentHash($shared);
       foreach ($list->entries() as $value => $entry) {
         $value = (string) $value;
@@ -1065,7 +1069,7 @@ final class Attaching {
         // A structure the site's code declares is built as declared; any
         // other is read from its schema.
         $id = $definition->id . '.' . $key . '.' . $value;
-        $schema = $entry['schema'] ?? [];
+        $schema = $entry['schema'] === NULL ? [] : (array) Schemas::arrayed($entry['schema']);
         $reference = is_string($schema['$ref'] ?? NULL) && count($schema) === 1 ? SchemaResolver::defName($schema['$ref']) : NULL;
         $shared_def = $shared !== NULL && $reference !== NULL && isset($shared['$defs'][$reference]);
         $pointer = '/$defs/' . str_replace(['~', '/'], ['~0', '~1'], (string) $reference);
@@ -1073,7 +1077,7 @@ final class Attaching {
           isset($entry['structure']) => $this->registry->getDefinition($entry['structure'])->name(),
           $lazy && $entry['schema'] === NULL => $inputs->readListed($id, $from, $value),
           $shared_def => $inputs->readStructure($id, $shared, $pointer, $shared_hash),
-          default => $inputs->readStructure($id, SchemaReader::prepared($schema + ($list->defs() === [] ? [] : ['$defs' => $list->defs()])), ''),
+          default => $inputs->readStructure($id, SchemaReader::prepared($schema + ($defs === [] ? [] : ['$defs' => $defs])), ''),
         };
         $labels[$value] = $entry['label'];
         $site[$value] = TRUE;

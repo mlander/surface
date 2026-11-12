@@ -154,7 +154,7 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
     $refused = $this->problem($this->send('PATCH', self::STEP2, ['room' => 'library_garden', 'capacity' => 20] + self::VALID), 422);
     $this->assertSame('The values were refused', $refused['title']);
     $this->assertSame('One value was refused; nothing was written.', $refused['detail']);
-    $this->assertSame(['/room' => 'no_such_choice'], array_column($refused['errors'], 'code', 'path'));
+    $this->assertSame(['/room' => 'enum'], array_column($refused['errors'], 'code', 'path'));
     // A person's door: the message reads as the form's, by labels alone,
     // while the path and the code are the tool's.
     $this->assertSame('The value you selected is not a valid choice. This applies when Venue is Harbour Centre. Choose Auditorium or Upper deck.', $refused['errors'][0]['message']);

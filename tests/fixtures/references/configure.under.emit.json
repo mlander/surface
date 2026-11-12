@@ -3,11 +3,11 @@
     "operation": "configure",
     "label": "Configure the sponsorship",
     "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Configure the sponsorship",
         "description": "Sets the sponsor's venue, contact and announcement, and what the sponsor is featured beside, linked to and credited on.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "configure",
                 "label": "Configure the sponsorship",
@@ -40,22 +40,29 @@
                     }
                 ],
                 "default": "riverside",
-                "x-surface": {
+                "portable-check": {
+                    "drupal:SurfaceValidReference": {
+                        "entityTypeId": "event_venue"
+                    }
+                },
+                "x-portable-messages": {
+                    "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
+                },
+                "x-portable-ui": {
                     "widget": "select",
-                    "reference": {
-                        "entityType": "event_venue"
-                    },
-                    "emptyOption": {
-                        "show": false,
-                        "label": "- Select -"
-                    },
-                    "checkedOnServer": [
-                        {
-                            "constraint": "SurfaceValidReference",
-                            "message": "Refers to an entity the account may reference"
+                    "options": {
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
                         }
-                    ]
-                }
+                    }
+                },
+                "x-portable-links": [
+                    {
+                        "rel": "lookup",
+                        "href": "/surface-api/event.sponsorship:lookup?key=/venue{&q,limit}"
+                    }
+                ]
             },
             "contact": {
                 "title": "Contact",
@@ -81,22 +88,29 @@
                         "const": null
                     }
                 ],
-                "x-surface": {
+                "portable-check": {
+                    "drupal:SurfaceValidReference": {
+                        "entityTypeId": "user"
+                    }
+                },
+                "x-portable-messages": {
+                    "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
+                },
+                "x-portable-ui": {
                     "widget": "select",
-                    "reference": {
-                        "entityType": "user"
-                    },
-                    "emptyOption": {
-                        "show": true,
-                        "label": "- None -"
-                    },
-                    "checkedOnServer": [
-                        {
-                            "constraint": "SurfaceValidReference",
-                            "message": "Refers to an entity the account may reference"
+                    "options": {
+                        "emptyOption": {
+                            "show": true,
+                            "label": "- None -"
                         }
-                    ]
-                }
+                    }
+                },
+                "x-portable-links": [
+                    {
+                        "rel": "lookup",
+                        "href": "/surface-api/event.sponsorship:lookup?key=/contact{&q,limit}"
+                    }
+                ]
             },
             "page": {
                 "title": "Announcement",
@@ -118,25 +132,32 @@
                         "const": null
                     }
                 ],
-                "x-surface": {
-                    "widget": "select",
-                    "reference": {
-                        "entityType": "node",
+                "portable-check": {
+                    "drupal:SurfaceValidReference": {
+                        "entityTypeId": "node",
                         "bundles": [
                             "article"
                         ]
-                    },
-                    "emptyOption": {
-                        "show": true,
-                        "label": "- None -"
-                    },
-                    "checkedOnServer": [
-                        {
-                            "constraint": "SurfaceValidReference",
-                            "message": "Refers to an entity the account may reference"
+                    }
+                },
+                "x-portable-messages": {
+                    "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
+                },
+                "x-portable-ui": {
+                    "widget": "select",
+                    "options": {
+                        "emptyOption": {
+                            "show": true,
+                            "label": "- None -"
                         }
-                    ]
-                }
+                    }
+                },
+                "x-portable-links": [
+                    {
+                        "rel": "lookup",
+                        "href": "/surface-api/event.sponsorship:lookup?key=/page{&q,limit}"
+                    }
+                ]
             },
             "thing": {
                 "title": "Featured beside",
@@ -152,8 +173,10 @@
                         }
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "fieldset"
+                },
                 "x-surface": {
-                    "widget": "fieldset",
                     "within": {
                         "/allOf/1": {
                             "doesNotApply": {
@@ -179,8 +202,10 @@
                         }
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "fieldset"
+                },
                 "x-surface": {
-                    "widget": "fieldset",
                     "within": {
                         "/allOf/1": {
                             "doesNotApply": {
@@ -206,8 +231,10 @@
                         }
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "fieldset"
+                },
                 "x-surface": {
-                    "widget": "fieldset",
                     "within": {
                         "/allOf/1": {
                             "doesNotApply": {
@@ -248,11 +275,13 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select",
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- None -"
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- None -"
+                                }
                             }
                         }
                     },
@@ -263,14 +292,13 @@
                             "string",
                             "null"
                         ],
+                        "x-portable-ui": {
+                            "widget": "autocomplete"
+                        },
                         "x-surface": {
-                            "widget": "autocomplete",
                             "dependsOn": [
                                 "entity_type"
                             ],
-                            "reference": {
-                                "by": "entity_type"
-                            },
                             "enumerated": true
                         }
                     }
@@ -429,11 +457,13 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select",
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- None -"
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- None -"
+                                }
                             }
                         }
                     },
@@ -444,14 +474,13 @@
                             "string",
                             "null"
                         ],
+                        "x-portable-ui": {
+                            "widget": "autocomplete"
+                        },
                         "x-surface": {
-                            "widget": "autocomplete",
                             "dependsOn": [
                                 "entity_type"
                             ],
-                            "reference": {
-                                "by": "entity_type"
-                            },
                             "enumerated": true
                         }
                     }
@@ -606,11 +635,13 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select",
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- None -"
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- None -"
+                                }
                             }
                         }
                     },
@@ -621,14 +652,13 @@
                             "string",
                             "null"
                         ],
+                        "x-portable-ui": {
+                            "widget": "autocomplete"
+                        },
                         "x-surface": {
-                            "widget": "autocomplete",
                             "dependsOn": [
                                 "entity_type"
                             ],
-                            "reference": {
-                                "by": "entity_type"
-                            },
                             "enumerated": true
                         }
                     }

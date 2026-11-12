@@ -19,9 +19,69 @@ The layer has two halves. `surface.form_builder`
 (`Form\SurfaceFormBuilderInterface`) knows how to turn a data surface
 into a container of elements and read it back. The host traits know how to
 satisfy one host family's protocol using it. The service draws through
-`Form\Drawing`, reads back through `Form\Extracting` and refines over
-AJAX through `Form\Refreshing`, three internal classes
+`Form\Document\DocumentDrawer`, reads back through `Form\Extracting` and
+refines over AJAX through `Form\Refreshing`, three internal classes
 (why: [decision](decisions.md#the-form-builder-draws-extracts-and-refreshes)).
+
+## The form is drawn from the document
+
+The form reads the envelope the data surface serves, as the React app
+does: `buildSurfaceForm()` emits it for the values, with the widget
+hints (`envelope()`, the same `emit()` the HTTP door answers `GET` with),
+and draws it (`drawDocument()`). The drawer reads the schema inline, the
+`values` and the `stale` pointers, and nothing else: no data surface, no
+definition and no Typed Data
+(why: [decision](decisions.md#the-form-is-drawn-from-the-document)).
+Each key is drawn by the rules the React app reads it by: the widget its
+`x-portable-ui.widget` names ([Widgets](widgets.md#the-word-names-the-widget)),
+required where its owner's `required` lists it, its title, description
+and help as plain text, a `readOnly` key disabled with the reason
+`x-surface.locked` gives, groups from its frame's `x-portable-ui.groups`,
+variants from its parent's conditionals, a collection one details per
+item, a key that does not apply as its wrapper alone.
+
+Each change is a new envelope. A rebuild never narrows the document it
+drew: the host settles the edit (the refinement overlay and its discard
+and orphan rules, below) and draws the envelope emitted for the values
+it stands at, the function `POST schema` answers with
+(`NarrowsDocumentsInterface`, `surface.document_narrowing`). A variant a
+deciding key chooses at a frame is in that envelope. One exception: the
+document states one `items` schema for every item of a collection, so
+the drawer narrows each item by the conditionals the items' schema
+enumerates (`DocumentDrawer::narrowedFor()`), as it reads a variant. It
+runs no coded refiner there: an item's key a coded refiner narrows is
+wired to the rebuild, which asks the host. A deferred key inside an
+item, which no conditional ties to the item, is drawn from the document
+its `choose` link serves for the item's value, which the host emits in
+process (`WidgetHostInterface::chosen()`).
+
+A key the values do not hold is drawn at its document `default`, as the
+React app and the HTTP door draw it: a condition chosen in a block's
+visibility posts its context mapping's default, a component switched to
+posts each slot's default kind.
+
+What the host adds is everything the document does not say: the stored
+values and the prefill it draws from, the fingerprint, the stage and the
+flow, the buttons (Save, Next, Back, Cancel) and the confirm and delete
+pages, the access gate of the operation, the cosmetic layer and the
+panel. Two facts a widget asks the host through its context
+(`SurfaceFormBuilderInterface::host()`): the label of the entity a
+reference holds, and the selection handler a reference key's candidates
+are, with its settings, which a reference field's definition holds and
+the document does not carry. A machine name already in use is refused by
+the key's own check in the pipeline (SurfaceUnique), at the element, as
+every door refuses it; core's element is drawn with no `exists` callback
+and no validation of its own. A document locked whole says why at its
+top (`x-surface.locked`), and the drawer draws that note above the
+fields; the host form draws no Save beside it.
+
+A form drawn from a document carries the document's cacheability. A
+chooser whose document holds every bundle's variant carries each
+variant's, a max-age of 0 among them, and every tag the document
+carries reaches the form.
+
+Texts reach the form as the document carries them, plain: a title or a
+description written with markup is drawn as its text.
 
 ## Pick your host family
 
@@ -209,8 +269,11 @@ and reword its texts, and it may not take any of them away, so an empty
 text where the owner gave one is refused. Nothing in an arrangement is a
 rule: no default, no requiredness and no path moves, and both schemas
 are unchanged by it, less the hint below. The served contract states it
-as `x-surface.arrangement` only when a renderer asks for the widget
-hints ([The served contract](served-contract.md#x-surface)).
+in `x-portable-ui` only when a renderer asks for the widget hints: the
+key's `group` by id, its `weight`, its texts as `options`, and each
+group declared once under its frame's `groups`
+([The served contract](served-contract.md#the-dialects-own-keywords)).
+`SchemaReader` reads it back.
 
 What stays for a [cosmetic layer](#the-cosmetic-seam) is what is truly
 one form's: a borrowed element (the content type example puts the three
@@ -223,7 +286,7 @@ A structure asks for the widget that draws it as a whole with
 `#[Structure(widget:)]`, the one word a key's `widget` setting uses
 (`setSetting('widget', 'radios')`): the build sets it on the key
 wherever the structure is attached, unless the owner set one there, and
-the hint `x-surface.widget` says it. A shape's `define()` sets the
+the hint `x-portable-ui.widget` says it. A shape's `define()` sets the
 setting on its definition, which every key of the shape starts from. A
 widget draws and reads back; what is accepted is the keys' definitions,
 which the pipeline holds every door to. Three guards hold that:
@@ -318,9 +381,14 @@ container is pointed at that id instead, and the generated one is
 discarded, including in the `#ajax` already attached to the children.
 
 Every key another key refines against gets an `#ajax` with
-`refreshSurface()` as the callback, at any depth: an attached child's or
-a chosen variant's own dependency is wired too, as a trigger of the
-child's own refiners. One exception, on purpose: an element whose
+`refreshSurface()` as the callback, at any depth: the drawer reads each
+key's `x-surface.dependsOn` (and a frame's `x-surface.doesNotApply`),
+finds each key it names in the key's own frame or the nearest one around
+it that holds it, and wires that key, so an attached child's or a chosen
+variant's own dependency is wired too, as a trigger of the child's own
+refiners. What a change reaches, directly or through others, is what the
+rebuild replaces; an object holding a target the same change reaches is
+not replaced whole. One exception, on purpose: an element whose
 `#type` is a grouping type (`details`, `fieldset`, `container`, which
 is what the fieldset widget renders) is left unwired. A `details` is not an
 input, emits no change event, and an `#ajax` on it never fires, which is
@@ -819,12 +887,12 @@ of losing the value:
   `#surface_stale` (a plain value, per [the serialization rule](storage.md#the-serialization-rule)), and extraction reads an
   empty submission from such an element as that value, so **leaving the
   select alone sends the stored value back**, and a save keeps it as
-  long as nothing it depends on moved in the same submission. Reading it
-  back is `SurfaceWidgetBase`'s job rather than the options
-  widget's: extraction resolves widgets from the data surface as advertised,
-  having no values yet to refine with, so a key that is only a choice
-  once a refiner has narrowed it is built by the select widget and read
-  back by another.
+  long as nothing it depends on moved in the same submission. The
+  document never carries the value (its `values` hold null there, and
+  `stale` names the pointer), so the widget marks the element and the
+  form builder, which holds the values it drew for, puts the value on it.
+  Reading it back is extraction's, beside the widget that drew the
+  element.
 - **The container says which selects those are**, in a hidden input,
   `SurfaceFormBuilderInterface::STALE_MARKER_KEY`, holding their
   dotted paths. The build a submission or a rebuild is processed against

@@ -238,12 +238,53 @@ final class Coercion {
   }
 
   /**
-   * Re-emits a datetime string in the format its definition declares.
+   * Spells a stored datetime as it is served: RFC 3339, with its offset.
    *
-   * A DateOnly constraint declares a date, a DateTime constraint a date
-   * and a time in UTC; with neither, a parsable value is written as
-   * ISO 8601 and a bare date is left alone. Anything not parsed exactly
-   * stays for validation.
+   * Storage holds a date and a time in UTC with no offset
+   * (`Y-m-d\TH:i:s`), as Drupal stores it; the document says `date-time`,
+   * which needs an offset, so what is served and what the validator is
+   * handed says `Z`. A key that holds a date alone (DateOnly) is served as
+   * it is stored, `Y-m-d`, and so is any other value.
+   *
+   * Decision: see
+   * docs/decisions.md#validation-runs-through-the-dialects-validator.
+   *
+   * @param mixed $value
+   *   The value a `datetime_iso8601` key holds.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
+   *   The key's definition, which says whether it holds a date alone.
+   *
+   * @return mixed
+   *   The value, `Z` after a time that carries no offset.
+   */
+  public static function served(mixed $value, ?DataDefinitionInterface $definition = NULL): mixed {
+    if ($definition !== NULL && static::isDateOnly($definition)) {
+      return $value;
+    }
+    return is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$/D', $value) ? $value . 'Z' : $value;
+  }
+
+  /**
+   * Answers whether a datetime key holds a date alone.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   *
+   * @return bool
+   *   TRUE when it holds a DateOnly constraint.
+   */
+  public static function isDateOnly(DataDefinitionInterface $definition): bool {
+    return array_key_exists('DateOnly', $definition->getConstraints());
+  }
+
+  /**
+   * Re-emits a datetime string as it is stored.
+   *
+   * A key that holds a date alone (DateOnly) stores `Y-m-d`. Every other
+   * `datetime_iso8601` key, with a DateTime constraint or none, stores a
+   * date and a time in UTC with no offset, `Y-m-d\TH:i:s`: a value with an
+   * offset is moved to UTC, and a value with none is read as UTC already.
+   * Anything not parsed exactly stays for validation, which refuses it.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
@@ -251,24 +292,13 @@ final class Coercion {
    *   The value sent.
    *
    * @return string
-   *   The value in the declared format, or as it arrived.
+   *   The value as stored, or as it arrived.
    */
   private static function datetime(DataDefinitionInterface $definition, string $value): string {
-    $constraints = $definition->getConstraints();
-    $date_only = array_key_exists('DateOnly', $constraints);
-    if (!$date_only && !array_key_exists('DateTime', $constraints)) {
-      if (preg_match('/^\d{4}-\d{2}-\d{2}$/D', $value)) {
-        return $value;
-      }
-      try {
-        return (new \DateTimeImmutable($value))->format('c');
-      }
-      catch (\Exception) {
-        return $value;
-      }
-    }
-    foreach ($date_only ? self::DATE_INPUT_FORMATS : self::DATETIME_INPUT_FORMATS as $format) {
-      $parsed = \DateTimeImmutable::createFromFormat('!' . $format, $value);
+    $date_only = static::isDateOnly($definition);
+    $formats = $date_only ? self::DATE_INPUT_FORMATS : [self::DATETIME_STORAGE_FORMAT, ...self::DATETIME_INPUT_FORMATS];
+    foreach ($formats as $format) {
+      $parsed = \DateTimeImmutable::createFromFormat('!' . $format, $value, new \DateTimeZone(self::STORAGE_TIMEZONE));
       if ($parsed === FALSE) {
         continue;
       }

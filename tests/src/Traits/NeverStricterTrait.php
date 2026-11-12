@@ -6,12 +6,14 @@ namespace Drupal\Tests\surface\Traits;
 
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Pipeline\TypeMismatchException;
 use Drupal\surface\Pipeline\UnknownKeysException;
 use Drupal\surface\Pipeline\VariantMismatchException;
 use Drupal\surface\Pipeline\Violation;
+use PortableSchema\Builder\Schema;
 
 /**
  * Holds both documents to the pipeline, on the accepted document.
@@ -123,7 +125,7 @@ trait NeverStricterTrait {
    * docs/decisions.md#two-documents-never-stricter-than-the-runtime: a
    * key whose narrowing the schema cannot list (`refine`), one a runtime
    * refiner narrows (`live`), a rule no keyword states
-   * (`checkedOnServer`), an advisory `format`, and a stored value kept
+   * (`portable-check`), an advisory `format`, and a stored value kept
    * stale. A refusal of the whole frame is read at the frame.
    *
    * @param array|\stdClass $schema
@@ -135,7 +137,7 @@ trait NeverStricterTrait {
    *   TRUE when a refused key, or the frame, carries one of the marks.
    */
   protected function inexactAt(array|\stdClass $schema, array $violations): bool {
-    $schema = SchemaResolver::inline(SchemaResolver::restored(json_decode((string) json_encode($schema), TRUE)));
+    $schema = Schemas::decoded(SchemaResolver::inline(SchemaResolver::restored(Schema::from(json_decode((string) json_encode($schema), TRUE)))));
     foreach ($violations as $violation) {
       if ($violation->stale) {
         return TRUE;
@@ -203,9 +205,9 @@ trait NeverStricterTrait {
    *
    * Each documents a widening: a `format` no validator asserts, a rule
    * only the server runs (`refine`, `live` for a runtime refiner or a
-   * runtime access answer, a constraint `checkedOnServer`), or a list the
-   * site decides left out for its size (`deferred`), stated open and
-   * fetched per choice.
+   * runtime access answer, a constraint named under `portable-check`), or
+   * a list the site decides left out for its size (`deferred`), stated
+   * open and fetched per choice.
    *
    * @param array $schema
    *   The object.
@@ -219,7 +221,7 @@ trait NeverStricterTrait {
       || !empty($extension['refine'])
       || !empty($extension['deferred'])
       || !empty($extension['live'])
-      || !empty($extension['checkedOnServer']);
+      || !empty($schema['portable-check']);
   }
 
   /**
