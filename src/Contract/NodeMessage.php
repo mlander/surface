@@ -14,7 +14,9 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
  * message the reader writes (a Regex's or a check's own sentence, what a
  * JsonSchema check holds a value to) is one of these, which a document
  * renders in its own language every time, as when the message was
- * written for each document.
+ * written for each document. The reader builds one with no translation
+ * service, since it uses none: the translation service is looked up when
+ * the message is rendered.
  *
  * Decision: see
  * docs/decisions.md#a-definition-is-read-once-into-a-built-node.

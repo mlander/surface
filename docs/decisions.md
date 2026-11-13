@@ -2530,7 +2530,11 @@ check provider reads that node instead of a definition. No served
 document, refusal or stored value changed.
 
 - **One read.** `Contract\DefinitionSchema::of($definition, $listed)`
-  (`surface.definition_schema`) is the one read of a definition into a
+  (`surface.definition_schema`; since 2026-11-13 a static function of the
+  definition alone, unlisted at every depth: see [A definition is read by
+  a pure function; the projection holds the
+  request](#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request))
+  is the one read of a definition into a
   `Schema`: the built node of the definition at one site. It holds what
   the definition says whatever the request: the title and description,
   the type and the keywords its constraints state, a map's properties
@@ -2540,8 +2544,12 @@ document, refusal or stored value changed.
   and empty option, a stale value, a lock, links, the widget hints, what
   a key depends on, sharing a node as a def, naming it.
   `PropertySchema::property()` is `publishedNode(of($definition,
-  $listed))` with that decoration placed where each keyword always
-  stood; a collection's own keywords are `head()`.
+  $listed))` (since 2026-11-13 `publishedNode(of($definition),
+  $definition, $listed)` on the service, the list decided by the
+  projection: see [A definition is read by a pure
+  function](#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request))
+  with that decoration placed where each keyword always stood; a
+  collection's own keywords are `head()`.
 - **What a node holds.** `portable-check` holds each named check's
   options as the definition holds them (an array, NULL or a scalar), the
   options the check provider runs, where the document publishes fewer.
@@ -2554,18 +2562,28 @@ document, refusal or stored value changed.
   says, a closed list of members, each added for the reader that reads
   it: `constraints`, every declared constraint with its options, the ones
   a keyword states included, read by the check provider (a bridge until
-  the model is the source). It held a second member, `secret`, until
+  the model is the source); since 2026-11-13 also `type`, the data type
+  of every node, read by the projection ([A definition is read by a pure
+  function](#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request)).
+  It held a second member, `secret`, until
   [A shape is a Schema; secrecy is read from a
   node](#a-shape-is-a-schema-secrecy-is-read-from-a-node): the node's own
   `writeOnly` says it. A
   node holds no reference to its definition: a reader that needs the
   definition takes it from the place it found the node at. The data
-  type is no member, since no reader reads it. The emitter's transient keywords for checks and pattern
+  type was no member, since no reader read it (it is one since
+  2026-11-13). The emitter's transient keywords for checks and pattern
   messages are gone: the node holds `portable-check` and
   `x-portable-messages` from the start. The shape marker stays the
   emitter's, since a shape's def is described with the request.
 - **One projection.** `DefinitionSchema::published()`, a node at a time
-  (`publishedNode()`), is the one place a built node becomes a document
+  (`publishedNode()`; since 2026-11-13 methods of the service that take
+  the definition beside the node and hold what needs the request, and
+  `published()` projects a property or an item beside its definition and
+  strips `x-surface-model` at every other keyword position: see [A
+  definition is read by a pure
+  function](#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request)),
+  is the one place a built node becomes a document
   node: each check's options through one table, `CheckOptions::published()`
   (`{entityTypeId, bundles?}` for `SurfaceValidReference`, `{schema}` for
   `JsonSchema`, `{}` for every other plugin), the title, the description
@@ -2576,7 +2594,10 @@ document, refusal or stored value changed.
   whose checks differ only in their options still share one def.
 - **Built once per definition.** The node of a definition a sealed data
   surface holds is kept per definition object and `$listed`, in a
-  `WeakMap`. The code knows a definition is held by one because it was
+  `WeakMap` (since 2026-11-13 per definition object alone, in a static
+  `WeakMap`: there is one node per definition; see [A definition is read
+  by a pure
+  function](#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request)). The code knows a definition is held by one because it was
   handed one: the emitter seals each frame's data surface
   (`DefinitionSchema::seal()`), `hold()` marks a definition `Location`
   hands out, and a node built for such a definition marks its
@@ -2608,7 +2629,8 @@ document, refusal or stored value changed.
   variant, an item of a collection, a property or an item below a plain
   key), never a node of the served document, so two sites one def stands
   for each keep their own options. The node is the definition's own
-  statement, its unlisted form (`of($definition, FALSE)`): whether a key
+  statement, its unlisted form (`of($definition, FALSE)`; since
+  2026-11-13 `of($definition)`, the one form there is): whether a key
   offers a list of values is a fact of the request the emitter adds, so
   no options resolver is asked for the place, and a reader of a place
   reads checks, options and the model from this node, which say the same
@@ -2999,6 +3021,137 @@ baseline unedited and the probe against its base commit.
 (`Drupal\Tests\surface\Values\ValueCorpus`,
 `Drupal\Tests\surface\Values\ValueRecorder`, `ValueBaselineTestBase`,
 `ValueCorpusTest`, `surface_values_test`)
+
+### A definition is read by a pure function; the projection holds the request
+
+Decided 2026-11-13. Reading a definition into its built node needed the
+options service, the constraint plugins and the translation service,
+and ran option resolvers to decide how each child was read. So a node
+could not be read where a data surface is built (`SurfaceBuilder::seal()`
+and `DefinitionMap::fromArrays()` are static and hold no service), and
+what a node said depended on a request. The class is now split by what
+each half needs. No served document, refusal or value changed.
+
+- **The read is a pure function.**
+  `Contract\DefinitionSchema::of(DataDefinitionInterface $definition)`
+  is static and takes nothing else. It uses no service, makes no
+  `\Drupal::` call of its own, runs no options resolver, reads no plugin
+  manager and renders no text. The calls it makes on a definition are
+  `getDataType()`, `getLabel()`, `getDescription()`, `isRequired()`,
+  `getConstraints()`, `getSetting()`, `getPropertyDefinitions()` on a
+  complex definition, `getItemDefinition()` on a list, and through
+  `DefinitionMetadata` `toArray()`, `offsetExists()`, `offsetGet()` and
+  the proposed core getters where the definition offers them. What those
+  do inside core is core's: a `DataDefinition`'s `getConstraints()` asks
+  the typed data manager for its type's default constraints, an entity's
+  `getPropertyDefinitions()` asks the entity field manager, a list's
+  `getItemDefinition()` asks the typed data manager when it builds the
+  item. `head()`, `describe()`, `keywords()`, `type()`, `nullable()` and
+  every helper they call are static and hold to the same rule.
+  `DefinitionReadIsPureTest` scans the read, the 56 methods and
+  constructors it reaches, for `$this`, `Drupal::` with or without the
+  backslash or under another name, `getContainer(`, a call through a
+  variable, a service type, a rendering, a cast, an interpolation or a
+  concatenation of a text, and lists in its docblock what a scan cannot
+  see. `DefinitionReadServiceFreeTest` reads every entry of every example
+  surface while the container records every service id asked of it (the
+  read asks `typed_data_manager` alone, in core's `getConstraints()`) and
+  counting stand-ins for the options resolver manager and the constraint
+  manager count no call, and no text the read rendered.
+- **The node is the definition's own statement at every depth.** Every
+  property of a map and the item of a list are on it, each read by
+  `of()`; no child is read "listed". Every declared check is under
+  `portable-check` with its options, including a list of values
+  (`Choice`, `LabeledChoice`, `AllowedValues`) and one a resolver says
+  its list states. A property a refinement marked as not applying is on
+  the node and in its `required`; the mark stays on the property's
+  definition (`DoesNotApply`), where the projection reads it, until a
+  member holds it. A check the definition gives no message holds none.
+- **Every data type is read; a definition that holds itself is refused.**
+  MODEL's members are `constraints` and `type` (`getDataType()`, on every
+  node). A data type the leaf table has no row for (`decimal`, `binary`,
+  a bare `any`) gets a node with no `type` keyword. A definition with no
+  place for a default or examples (a configurable field, `FieldConfig`,
+  which offers neither the proposed core methods nor array access) has
+  none: the read asks `DefinitionMetadata::canHoldDefaultValue()` and
+  `canHoldExamples()` first. The read's one refusal: a definition met
+  again inside itself (a map that holds itself) is refused with a
+  `LogicException` naming its data type and where it is met again (a
+  JSON Pointer into the node), before the read runs out of memory. Every
+  one of the 252 data types the dev site knows is read.
+- **The unknown-type refusal is the projection's, one node at a time.**
+  `publishedNode()` refuses a value of a type no row is for, with the leaf
+  table's exception and message (`LeafTypes::unwritten()`), naming the
+  type by MODEL's `type` alone, so a hand-built surface with such a type
+  still fails where its document is made and no longer fails where its
+  node is read. A reader that takes a node and does not project it
+  (`BuiltNodes::place()`) gets a node with no `type` keyword, the type in
+  MODEL, and no refusal. `type` is a bridge: it goes before the series
+  closes.
+- **Reading never renders.** A title or description is kept when the
+  definition holds one that is not NULL and not the literal `''`, as the
+  object it holds. A message the reader writes is a `NodeMessage` built
+  with no translation service (`heldMessage()`, `heldTo()`).
+- **The projection holds what needs a service or the request.**
+  `published()` and `publishedNode()` on the service
+  `surface.definition_schema` take the node and the definition it was
+  read from, walked together, and whether the key offers a list
+  (computed when not given). They decide: whether a key offers a list,
+  so the check its list states and that check's message leave
+  `portable-check`, and a map that offers one is said as one value, made
+  from its node (`oneValue()`: its title, description and MODEL
+  `constraints`; no properties, `type`, `required` or
+  `additionalProperties`), so of a listed map's definition the
+  projection reads only whether it is a map and whether it offers a
+  list; whether a list states a check (`SurfaceOptions::isStatedByList()`
+  kept per plugin id, `SurfaceOptions::readsAsList()` kept per plugin id
+  and serialized options); a check's label as its sentence where the
+  definition gives no message or one that renders empty (the label kept
+  per plugin id as its plugin holds it, rendered for each document);
+  a property that does not apply is left out, with its place in
+  `required`; the refusal above; text rendered as plain text, a text
+  that renders empty left out, MODEL stripped. `published()` also strips
+  MODEL from a node at any other keyword position (`allOf`, `$defs`,
+  `patternProperties` and the rest), at every depth. The definition
+  parameter goes when the options resolvers take a node.
+  `PropertySchema::property()` is `publishedNode(of($definition),
+  $definition, $listed)` plus the request's decoration;
+  `publishedTexts()` is the static projection of a title and a
+  description alone; `publishedKeywords()` projects what `keywords()`
+  read for `PropertySchema::signature()`.
+- **The memo stays, static.** `seal()`, `hold()`, the memo and the
+  fingerprint assertion work as before, in static `WeakMap`s keyed by the
+  definition object, one node per definition (there is no listed form).
+  That is safe across kernel tests in one process: an entry lives only
+  while its definition object does, a test builds its own definitions,
+  and a read depends on the definition alone. The assertion names the
+  label by its source string, so it renders nothing (a NULL label is
+  named `null`).
+  `BuiltNodes::place()` returns `of($definition)` and takes no service;
+  `ContractEmitter::definitionSchema()` is gone (no caller, no release).
+
+Where the first plan was wrong: a map that offers a list did not differ
+from its unlisted read only in its properties. It had no `type`,
+`additionalProperties` or `required` either, and its own constraints
+were read as a value's. So the projection says it as one value, made
+from what the node holds (`oneValue()`), rather than dropping the
+properties. The claim "the read is total" was false at first: a
+configurable field refused a read of its default, and a map that holds
+itself recursed until memory ran out.
+
+Later: reading a leaf type's spelling from core's `#[JsonSchema]`
+attribute on its data type class (it would spell `decimal`, durations
+and contrib types without a table, but the blueprint refuses those
+types at declaration and the pipeline has no cast for them, so it
+belongs where host readers produce nodes); the rest of the members, one
+for every fact a definition carries, the mark of a key that does not
+apply among them; the memo, `seal()`, `hold()` and the fingerprint
+assertion go when an `Entry` holds its node.
+
+(`Contract\DefinitionSchema`, `Contract\LeafTypes`, `Contract\BuiltNodes`,
+`DefinitionMetadata`, `PropertySchema`, `ContractEmitter`,
+`DefinitionSchemaTest`, `DefinitionReadIsPureTest`,
+`DefinitionReadServiceFreeTest`, `BuiltNodesTest`)
 
 ### A key that does not apply
 

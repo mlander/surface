@@ -165,10 +165,10 @@ final class PortableValidator {
    *   The provider, for validate().
    */
   public function provider(SurfaceInterface $surface, array $values, SurfacePipelineInterface $pipeline): DrupalCheckProvider {
-    // The provider reads the node at a check's place through the
-    // emitter's reader, so a node built for the document is the one it
-    // reads.
-    return new DrupalCheckProvider($this->runner, $this->constraints, $pipeline, $this->translation, $this->options, new BuiltNodes($this->emitter->definitionSchema()), $surface, $values);
+    // The provider reads the node at a check's place through the one
+    // read (DefinitionSchema::of(), kept for a definition a data surface
+    // holds), so a node built for the document is the one it reads.
+    return new DrupalCheckProvider($this->runner, $this->constraints, $pipeline, $this->translation, $this->options, new BuiltNodes(), $surface, $values);
   }
 
   /**

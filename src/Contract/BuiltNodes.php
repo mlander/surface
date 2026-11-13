@@ -19,15 +19,14 @@ use PortableSchema\Builder\Schema;
  *   reads only the definitions a sealed data surface holds. A place that
  *   is a frame (the top, an item of a collection) has no node; one reached
  *   at a key has that key's.
- * - The node is the definition's own statement at its own site: its
- *   unlisted form, DefinitionSchema::of($definition, FALSE), never a node
- *   of the served document, so two sites a document shares one def for
- *   each keep their own node. Whether a key offers a list of values is a
- *   fact of the request, which the emitter adds, so no options resolver
- *   is asked for the place. A reader of a place reads checks, options
- *   and MODEL from this node (DefinitionSchema::declares(), options(),
- *   model()), which
- *   say the same on the listed form, and never an option set.
+ * - The node is the definition's own statement at its own site,
+ *   DefinitionSchema::of($definition), a pure read of the definition,
+ *   never a node of the served document, so two sites a document shares
+ *   one def for each keep their own node. Whether a key offers a list of
+ *   values is the projection's, which the emitter asks, so no options
+ *   resolver is asked for the place. A reader of a place reads checks,
+ *   options and MODEL from this node (DefinitionSchema::declares(),
+ *   options(), model()), and never an option set.
  * - The definition is handed out beside the node, held by whoever holds
  *   the place: a node holds no reference to it. A reader that needs the
  *   definition (to build the typed value a core constraint reads, to read
@@ -47,16 +46,6 @@ use PortableSchema\Builder\Schema;
  * @internal
  */
 final class BuiltNodes {
-
-  /**
-   * Constructs a BuiltNodes.
-   *
-   * @param \Drupal\surface\Contract\DefinitionSchema $definitions
-   *   The one read of a definition into its built node.
-   */
-  public function __construct(
-    private readonly DefinitionSchema $definitions,
-  ) {}
 
   /**
    * Finds the built node at a JSON Pointer into the values.
@@ -84,6 +73,12 @@ final class BuiltNodes {
   /**
    * Finds what is at a JSON Pointer into the values.
    *
+   * The node is the read, not a document's node: a key of a data type the
+   * leaf table has no row for gets a node with no `type` keyword and its
+   * data type in MODEL (DefinitionSchema::model()), and nothing is
+   * refused here. That refusal is the projection's, one node at a time
+   * (DefinitionSchema::publishedNode()).
+   *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface of the top, as advertised.
    * @param array $values
@@ -95,7 +90,7 @@ final class BuiltNodes {
    *   SurfaceInterface::refine() itself.
    *
    * @return array{node: ?\PortableSchema\Builder\Schema, definition: Definition|null, frame: ?\Drupal\surface\SurfaceInterface, value: mixed}|null
-   *   The built node at the place, its unlisted form, and the definition
+   *   The built node at the place (DefinitionSchema::of()), and the definition
    *   it was read from (both NULL for a frame of its own); the frame at
    *   the place, refined against its values (NULL for a place that is no
    *   frame); and the value there, as accepted. NULL where nothing
@@ -108,8 +103,8 @@ final class BuiltNodes {
     }
     $node = NULL;
     if ($location->definition !== NULL) {
-      $this->definitions->hold($location->definition);
-      $node = $this->definitions->of($location->definition, FALSE);
+      DefinitionSchema::hold($location->definition);
+      $node = DefinitionSchema::of($location->definition);
     }
     return [
       'node' => $node,

@@ -19,7 +19,6 @@ use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Pipeline\ValueState;
@@ -269,7 +268,7 @@ final class ContractEmitter {
   protected array $site = ['pointer' => '', 'steps' => [], 'reached' => TRUE];
 
   /**
-   * Reads each definition into its built node.
+   * Projects each built node to the document form.
    */
   protected readonly DefinitionSchema $definitions;
 
@@ -309,8 +308,8 @@ final class ContractEmitter {
    *   on a site that serves no API (surface_http is not installed), whose
    *   documents carry no lookup link.
    * @param \Drupal\surface\Contract\DefinitionSchema|null $definitions
-   *   The one read of a definition into its built node, which the check
-   *   provider shares (definitionSchema()); without it, one of its own.
+   *   The projection of a built node to a document; without it, one of
+   *   its own.
    */
   public function __construct(
     SurfaceOptions $options,
@@ -322,7 +321,7 @@ final class ContractEmitter {
     ?DefinitionSchema $definitions = NULL,
   ) {
     $this->stringTranslation = $string_translation;
-    $this->definitions = $definitions ?? new DefinitionSchema($options, $string_translation, $constraints);
+    $this->definitions = $definitions ?? new DefinitionSchema($options, $constraints);
     $this->propertySchema = new PropertySchema($options, $string_translation, $constraints, $widgets, $this->definitions);
     $this->conditionals = new Conditionals($this->propertySchema);
     $this->documentHead = new DocumentHead($this->propertySchema);
@@ -614,14 +613,14 @@ final class ContractEmitter {
     $refined = $declared->refine($values, $runtime ? SurfaceInterface::EVERY : $kinds);
     $cacheability->addCacheableDependency($refined);
     // Each definition a data surface holds is read into its node once.
-    $this->definitions->seal($declared);
-    $this->definitions->seal($refined);
+    DefinitionSchema::seal($declared);
+    DefinitionSchema::seal($refined);
     $advertised = $declared->getDefinitions();
     $now = $refined->getDefinitions();
     // What the static refiners alone answer for these values, which is
     // all a conditional may state: a runtime refiner is never run ahead.
     $static = $runtime && $this->conditionals->refinedAtRuntime($advertised) ? $declared->refine($values, $kinds) : $refined;
-    $this->definitions->seal($static);
+    DefinitionSchema::seal($static);
     $ahead = $static->getDefinitions();
     // What the coded ones alone answer: whether their gate is open yet.
     $coded = $runtime && $this->conditionals->hasRules($advertised) ? $declared->refine($values, SurfaceInterface::CODED)->getDefinitions() : $ahead;
@@ -2220,20 +2219,6 @@ final class ContractEmitter {
   }
 
   /**
-   * Gets the one read of a definition into its built node.
-   *
-   * The check provider reads the built node of the place a check is about
-   * (BuiltNodes) through the same reader, so a node built for a document
-   * is the one it reads.
-   *
-   * @return \Drupal\surface\Contract\DefinitionSchema
-   *   The reader.
-   */
-  public function definitionSchema(): DefinitionSchema {
-    return $this->definitions;
-  }
-
-  /**
    * Reports how many combinations were refined and how many remembered.
    *
    * For a performance budget, never for behavior: counts since the
@@ -2277,14 +2262,12 @@ final class ContractEmitter {
    *   The string translation service.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
-   *   The message, as a built node holds it (DefinitionSchema, NodeMessage).
+   *   The message a built node holds (DefinitionSchema::heldTo()), which
+   *   this service translates.
    */
   public static function foreignMessage(array $schema, TranslationInterface $translation): TranslatableMarkup {
-    // Schemas held together as an `allOf` alone are named by what each
-    // says: the message a frame's several schemas were written with.
-    $together = array_keys($schema) === ['allOf'] && is_array($schema['allOf']) && array_is_list($schema['allOf']) && array_filter($schema['allOf'], 'is_array') === $schema['allOf'];
-    $keywords = $together ? array_values(array_unique(array_merge(...array_map(JsonSchemaConstraint::keywords(...), $schema['allOf'])))) : JsonSchemaConstraint::keywords($schema);
-    return new NodeMessage('Checked on the server against the schema it was read from: @keywords.', ['@keywords' => implode(', ', $keywords)], [], $translation);
+    $held = DefinitionSchema::heldTo($schema);
+    return new NodeMessage($held->getUntranslatedString(), $held->getArguments(), $held->getOptions(), $translation);
   }
 
 }

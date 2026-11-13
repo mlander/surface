@@ -136,6 +136,24 @@ final class LeafTypes {
    *   For a value of no row, which the blueprint refuses first.
    */
   public static function spelling(DataDefinitionInterface $definition): array {
+    return static::spelled($definition) ?? throw static::unwritten($definition->getLabel(), $definition->getDataType());
+  }
+
+  /**
+   * Gets the JSON Schema a leaf is written with, or NULL for no row.
+   *
+   * The same rows as spelling(), read without refusing: a reader of a
+   * definition reads every type, and the document refuses the one it
+   * cannot spell where it is made.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   One value: no map and no list.
+   *
+   * @return array|null
+   *   `type`, and `format` where the row has one; empty for `any`, whose
+   *   conditionals or kept schema say it; NULL for a value of no row.
+   */
+  public static function spelled(DataDefinitionInterface $definition): ?array {
     $type = $definition->getDataType();
     if ($type === 'datetime_iso8601' && array_key_exists('DateOnly', $definition->getConstraints())) {
       // A datetime that holds a date alone is a calendar date.
@@ -147,7 +165,22 @@ final class LeafTypes {
     if (static::heldAsAny($definition)) {
       return [];
     }
-    throw new \LogicException(sprintf('"%s" is of the %s type, which no JSON Schema type is written for: the blueprint holds every key to the types %s.', $definition->getLabel() ?? $type, $type, implode(', ', array_keys(self::ROWS))));
+    return NULL;
+  }
+
+  /**
+   * Refuses a value of a type no row is for, where a document is made.
+   *
+   * @param string|\Stringable|null $label
+   *   The key's label, or NULL for none.
+   * @param string $type
+   *   Its data type.
+   *
+   * @return \LogicException
+   *   The refusal, naming the key, its type and the rows.
+   */
+  public static function unwritten(string|\Stringable|null $label, string $type): \LogicException {
+    return new \LogicException(sprintf('"%s" is of the %s type, which no JSON Schema type is written for: the blueprint holds every key to the types %s.', $label ?? $type, $type, implode(', ', array_keys(self::ROWS))));
   }
 
   /**

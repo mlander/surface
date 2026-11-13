@@ -33,7 +33,8 @@ use PortableSchema\Builder\Schema;
  *
  * ContractEmitter walks a document's frames and asks this class for each
  * key that is not a child (property()): the projection of its built node
- * (DefinitionSchema::of(), DefinitionSchema::publishedNode()), which says
+ * (DefinitionSchema::of(), a pure read of the definition, projected by
+ * DefinitionSchema::publishedNode() for the request), which says
  * its type, the keywords its constraints state and what only the server
  * checks, decorated with what the request adds: its allowed values as
  * `oneOf` with their labels, read from the options service, its widget
@@ -87,8 +88,8 @@ final class PropertySchema {
    *   The widget choice, which says what a module's widget claims or
    *   draws; without it, the stock rule alone names the widget.
    * @param \Drupal\surface\Contract\DefinitionSchema|null $definitions
-   *   The one read of a definition into its built node; without it, one
-   *   of its own.
+   *   The projection of a built node to a document; without it, one of
+   *   its own.
    */
   public function __construct(
     protected readonly SurfaceOptions $options,
@@ -98,11 +99,11 @@ final class PropertySchema {
     ?DefinitionSchema $definitions = NULL,
   ) {
     $this->stringTranslation = $string_translation;
-    $this->definitions = $definitions ?? new DefinitionSchema($options, $string_translation, $constraints);
+    $this->definitions = $definitions ?? new DefinitionSchema($options, $constraints);
   }
 
   /**
-   * Reads each definition into its built node.
+   * Projects each built node to the document form.
    */
   protected readonly DefinitionSchema $definitions;
 
@@ -119,7 +120,7 @@ final class PropertySchema {
    *   `x-surface` (PortableKeywords::before()).
    */
   public function listKeywords(DataDefinitionInterface $definition): array {
-    $schema = DefinitionSchema::publishedNode($this->definitions->head($definition));
+    $schema = $this->definitions->publishedNode(DefinitionSchema::head($definition), $definition, FALSE);
     $checks = array_intersect_key($schema->all(), array_flip([PortableKeywords::CHECK, PortableKeywords::MESSAGES]));
     foreach (array_keys($checks) as $keyword) {
       $schema = $schema->without($keyword);
@@ -395,9 +396,11 @@ final class PropertySchema {
     // The node as the document says it; its properties and items are each
     // described below as their own key, and what the request adds goes
     // between what the definition says, where it always stood.
+    // The read is the definition's alone; whether the key offers a list,
+    // and so what its list states, is the projection's.
     // Decision: see
-    // docs/decisions.md#a-definition-is-read-once-into-a-built-node.
-    $schema = DefinitionSchema::publishedNode($this->definitions->of($definition, $listed));
+    // docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request.
+    $schema = $this->definitions->publishedNode(DefinitionSchema::of($definition), $definition, $listed);
     $held = [];
     foreach (['writeOnly', 'default', 'examples', PortableKeywords::CHECK, PortableKeywords::MESSAGES] as $keyword) {
       if ($schema->has($keyword)) {
@@ -736,7 +739,7 @@ final class PropertySchema {
    *   as plain text (DefinitionSchema::describe(), projected).
    */
   public function describe(DataDefinitionInterface $definition): Schema {
-    return DefinitionSchema::publishedNode($this->definitions->describe($definition));
+    return DefinitionSchema::publishedTexts(DefinitionSchema::describe($definition));
   }
 
   /**
@@ -749,7 +752,7 @@ final class PropertySchema {
    *   What DefinitionSchema::type() says.
    */
   protected function type(DataDefinitionInterface $definition): array {
-    return $this->definitions->type($definition);
+    return DefinitionSchema::type($definition);
   }
 
   /**
@@ -777,7 +780,7 @@ final class PropertySchema {
    *   What DefinitionSchema::nullable() says.
    */
   public function nullable(string|array $type, DataDefinitionInterface $definition): string|array {
-    return $this->definitions->nullable($type, $definition);
+    return DefinitionSchema::nullable($type, $definition);
   }
 
   /**
@@ -981,13 +984,13 @@ final class PropertySchema {
     // What the document would say of the constraints: their keywords, the
     // checks with their published options, and the messages as plain text.
     $keywords = Schema::any();
-    foreach ($this->definitions->keywords($definition, $type['type'] ?? NULL, $type, $set !== NULL && !$definition instanceof ListDataDefinitionInterface) as $keyword => $said) {
+    foreach (DefinitionSchema::keywords($definition, $type['type'] ?? NULL, $type) as $keyword => $said) {
       $keywords = $keywords->with((string) $keyword, $said);
     }
     return serialize([
       $definition->getDataType(),
       $definition->isRequired(),
-      Schemas::decoded(DefinitionSchema::publishedNode($keywords)),
+      Schemas::decoded($this->definitions->publishedKeywords($keywords, $set !== NULL && !$definition instanceof ListDataDefinitionInterface)),
       $set === NULL ? NULL : array_keys($set->options),
       $properties,
     ]);

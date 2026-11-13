@@ -984,6 +984,42 @@ final class DefinitionMetadata {
   }
 
   /**
+   * Answers whether a definition has a place to hold a default value.
+   *
+   * It has one where it offers the proposed core methods, or array access
+   * to its definition array. One with neither (a configurable field,
+   * FieldConfig) holds no default: hasDefaultValue() and getDefaultValue()
+   * refuse it, so a reader that must answer for every definition asks
+   * this first.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to inspect.
+   *
+   * @return bool
+   *   TRUE when hasDefaultValue() and getDefaultValue() can read it.
+   */
+  public static function canHoldDefaultValue(DataDefinitionInterface $definition): bool {
+    return (static::supportsDefaultValue($definition) && method_exists($definition, 'hasDefaultValue')) || $definition instanceof \ArrayAccess;
+  }
+
+  /**
+   * Answers whether a definition has a place to hold example values.
+   *
+   * The same rule as canHoldDefaultValue(): the proposed core methods, or
+   * array access to its definition array. One with neither holds no
+   * examples, and getExamples() refuses it.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to inspect.
+   *
+   * @return bool
+   *   TRUE when getExamples() can read it.
+   */
+  public static function canHoldExamples(DataDefinitionInterface $definition): bool {
+    return static::supportsExamples($definition) || $definition instanceof \ArrayAccess;
+  }
+
+  /**
    * Returns whether a definition natively carries a default value.
    *
    * The getter is the arbiter, and it is checked by arity rather than by

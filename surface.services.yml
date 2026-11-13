@@ -177,12 +177,14 @@ services:
   surface.contract_emitter:
     class: Drupal\surface\Contract\ContractEmitter
     arguments: ['@surface.options', '@string_translation', '@validation.constraint', '@surface.site_list_budget', '@surface.widget_choice', '@?Drupal\surface\ResourceBuild\ServedPathsInterface', '@surface.definition_schema']
-  # The one read of a definition into its built node, which the emitter
-  # projects to a document and the check provider runs a check from; a
-  # node of a definition a sealed data surface holds is built once.
+  # Projects a built node to a document: what needs the options service,
+  # the constraint plugins or the request. The read of a definition into
+  # its node is DefinitionSchema::of(), a static function of the
+  # definition, which the check provider runs a check from; a node of a
+  # definition a sealed data surface holds is built once.
   surface.definition_schema:
     class: Drupal\surface\Contract\DefinitionSchema
-    arguments: ['@surface.options', '@string_translation', '@validation.constraint']
+    arguments: ['@surface.options', '@validation.constraint']
   # How many entries of a list the site decides (variants from the site,
   # keys from the site) the documents and the tool listing spell out.
   surface.site_list_budget:

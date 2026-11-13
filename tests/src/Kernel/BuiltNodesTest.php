@@ -9,6 +9,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\BuiltNodes;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeMessage;
+use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\DefinitionMetadata;
@@ -25,15 +26,18 @@ use PortableSchema\Builder\Schema;
  *
  * The rules: BuiltNodes finds the place Location::definitionAt() finds,
  * hands out the definition Location gives, and its node is that
- * definition's unlisted node, with every constraint the definition
- * declares and the options each runs with, which the listed node says
- * alike; a place nothing declares has none. A built node never reaches a
+ * definition's node (DefinitionSchema::of(), one node whether or not the
+ * key offers a list of values), with every constraint the definition
+ * declares and the options each runs with; projected as a key that
+ * offers a list and as one that does not, it differs only in what a list
+ * states; a place nothing declares has none. A built node never reaches a
  * served document: no node of any shipped example's documents, as served
  * or as the Schema the validator reads, holds DefinitionSchema::MODEL, no
  * served document holds an object a client could not read as JSON, and
  * neither a data surface nor a row of the build cache holds a node.
  *
  * @see docs/decisions.md#a-definition-is-read-once-into-a-built-node
+ * @see docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -104,14 +108,17 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
    * gives (the same object where the two calls share the refined levels;
    * where a level is refined or a child bound afresh on each call, a copy
    * of the same class with the same node); its node is that
-   * definition's unlisted node; at() gives the node place() gives; and the
-   * listed node says the same checks, options and MODEL, so a reader of a
-   * place need never ask whether a key offers a list.
+   * definition's node, of(); at() gives the node place() gives; the node
+   * declares every constraint of the definition with the options it holds,
+   * so a reader of a place need never ask whether a key offers a list;
+   * and its projection as listed differs from its projection as unlisted
+   * only in what a list states.
    */
   public function testTheNodeIsAtTheDefinitionsPlace(): void {
     $definitions = $this->container->get('surface.definition_schema');
-    $nodes = new BuiltNodes($definitions);
+    $nodes = new BuiltNodes();
     $asked = 0;
+    $stated = 0;
     $sets = 0;
     $shared = 0;
     $copies = 0;
@@ -142,7 +149,7 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
             $this->assertSame([], array_diff(array_keys(DefinitionSchema::model($place['node'])), DefinitionSchema::MEMBERS), "$at, $how: MODEL holds its members alone.");
             $this->assertSame(DefinitionMetadata::isSecret($place['definition']), Secrets::marked($place['node']), "$at, $how: the node says it is secret where its definition is.");
             $this->assertEquals($location->value, $place['value'], "$at, $how");
-            $this->assertSame($definitions->of($place['definition'], FALSE), $place['node'], "$at, $how: its unlisted node, kept.");
+            $this->assertSame(DefinitionSchema::of($place['definition']), $place['node'], "$at, $how: the node of its definition, kept.");
             $again = $nodes->at($surface, $values, $pointer, $closure);
             $this->assertNotNull($again, "$at, $how");
             if ($location->definition === $place['definition']) {
@@ -155,10 +162,13 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
               // two say the same.
               $copies++;
               $this->assertSame(get_class($location->definition), get_class($place['definition']), "$at, $how");
-              $this->assertSame(static::json($definitions->of($location->definition, FALSE)), static::json($place['node']), "$at, $how: the node of the definition Location gives.");
+              $this->assertSame(static::json(DefinitionSchema::of($location->definition)), static::json($place['node']), "$at, $how: the node of the definition Location gives.");
               $this->assertSame(static::json($place['node']), static::json($again), "$at, $how: at() gives the node place() gives.");
             }
-            $this->assertTheListedFormSaysTheSame($definitions, $place['definition'], $place['node'], "$at, $how");
+            $this->assertDeclaresTheDefinitionsConstraints($place['definition'], $place['node'], "$at, $how");
+            if ($this->assertListedDiffersOnlyInWhatItsListStates($definitions, $place['definition'], $place['node'], "$at, $how")) {
+              $stated++;
+            }
           }
         }
       }
@@ -166,13 +176,12 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
     $this->assertGreaterThan(100, $sets, 'Every example is asked at each of its value sets.');
     $this->assertGreaterThan(1000, $asked, 'Every place of every value set is asked.');
     $this->assertGreaterThan($copies, $shared, 'Most places are the definition object Location gives.');
+    $this->assertGreaterThan(0, $stated, 'Some place holds a check a list states, so the comparison of the two projections can differ.');
   }
 
   /**
-   * Asserts a place's node and its listed node say the same to a reader.
+   * Asserts a place's node declares every constraint its definition does.
    *
-   * @param \Drupal\surface\Contract\DefinitionSchema $definitions
-   *   The reader.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition at the place.
    * @param \PortableSchema\Builder\Schema $node
@@ -180,21 +189,73 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
    * @param string $at
    *   Where, for the message.
    */
-  protected function assertTheListedFormSaysTheSame(DefinitionSchema $definitions, DataDefinitionInterface $definition, Schema $node, string $at): void {
-    $listed = $definitions->of($definition, TRUE);
+  protected function assertDeclaresTheDefinitionsConstraints(DataDefinitionInterface $definition, Schema $node, string $at): void {
     $model = DefinitionSchema::model($node);
-    // A data type's own constraints are made again on each read, so the
-    // two are compared by what they say.
-    $this->assertSame(serialize($model), serialize(DefinitionSchema::model($listed)), "$at: the same MODEL.");
     $constraints = $definition->getConstraints();
     $this->assertSame(array_keys($constraints), array_keys($model['constraints'] ?? []), "$at: every constraint the definition declares.");
     foreach ($constraints as $constraint => $options) {
       $constraint = (string) $constraint;
       $this->assertTrue(DefinitionSchema::declares($node, $constraint), "$at: $constraint");
-      $this->assertSame(DefinitionSchema::declares($node, $constraint), DefinitionSchema::declares($listed, $constraint), "$at: $constraint");
       $this->assertSame(serialize($options), serialize(DefinitionSchema::options($node, $constraint)), "$at: $constraint runs with the options the definition holds.");
-      $this->assertSame(serialize(DefinitionSchema::options($node, $constraint)), serialize(DefinitionSchema::options($listed, $constraint)), "$at: $constraint, listed or not.");
     }
+  }
+
+  /**
+   * Asserts a node projected as listed differs only in what a list states.
+   *
+   * The node projected for a key that offers a list of values and for one
+   * that does not: a map that offers one is one value (no `properties`,
+   * `type`, `required` or `additionalProperties`, the same title and
+   * description); anything else differs only in the list constraints
+   * (DefinitionSchema::LISTED) its list states, which leave
+   * `portable-check` with their messages, and is equal in all else.
+   *
+   * @param \Drupal\surface\Contract\DefinitionSchema $definitions
+   *   The projection.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition at the place.
+   * @param \PortableSchema\Builder\Schema $node
+   *   The node BuiltNodes gave.
+   * @param string $at
+   *   Where, for the message.
+   *
+   * @return bool
+   *   TRUE where the two differ.
+   */
+  protected function assertListedDiffersOnlyInWhatItsListStates(DefinitionSchema $definitions, DataDefinitionInterface $definition, Schema $node, string $at): bool {
+    $unlisted = json_decode(static::json($definitions->publishedNode($node, $definition, FALSE)), TRUE);
+    $listed = json_decode(static::json($definitions->publishedNode($node, $definition, TRUE)), TRUE);
+    if (DefinitionSchema::isMap($definition)) {
+      foreach (['properties', 'type', 'required', 'additionalProperties'] as $keyword) {
+        $this->assertArrayNotHasKey($keyword, $listed, "$at: a map that offers a list is one value.");
+      }
+      $texts = static fn (array $document): array => [
+        $document['title'] ?? NULL,
+        $document['description'] ?? NULL,
+      ];
+      $this->assertSame($texts($unlisted), $texts($listed), "$at: the same title and description.");
+      return TRUE;
+    }
+    $left = array_diff_key((array) ($unlisted[PortableKeywords::CHECK] ?? []), (array) ($listed[PortableKeywords::CHECK] ?? []));
+    foreach (array_keys($left) as $id) {
+      $this->assertContains(substr((string) $id, strlen(PortableKeywords::PROVIDER)), DefinitionSchema::LISTED, "$at: only a check a list states leaves.");
+    }
+    $without = static function (array $document) use ($left): array {
+      foreach ([PortableKeywords::CHECK => '', PortableKeywords::MESSAGES => PortableKeywords::CHECK_CODE] as $keyword => $prefix) {
+        if (!isset($document[$keyword])) {
+          continue;
+        }
+        foreach (array_keys($left) as $id) {
+          unset($document[$keyword][$prefix . $id]);
+        }
+        if ($document[$keyword] === []) {
+          unset($document[$keyword]);
+        }
+      }
+      return $document;
+    };
+    $this->assertSame($without($unlisted), $without($listed), "$at: listed or not, all else is equal.");
+    return $left !== [];
   }
 
   /**

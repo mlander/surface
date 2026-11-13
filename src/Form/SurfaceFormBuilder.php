@@ -247,7 +247,7 @@ class SurfaceFormBuilder implements SurfaceFormBuilderInterface, TrustedCallback
    * {@inheritdoc}
    */
   public function host(SurfaceInterface $surface, array $values): WidgetHostInterface {
-    return new FormWidgetHost($this->entityTypeManager, $this->entityRepository, $this->narrowing, new BuiltNodes($this->emitter->definitionSchema()), $surface, $values);
+    return new FormWidgetHost($this->entityTypeManager, $this->entityRepository, $this->narrowing, new BuiltNodes(), $surface, $values);
   }
 
   /**

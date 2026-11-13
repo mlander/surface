@@ -652,28 +652,43 @@ the record of the rework that brought the module to the pattern.
   role, a list that only shrinks: the lines outside the edges equal
   `OUTSIDE_THE_EDGES`, and the edge files are named in the test
   (`docs/decisions.md#one-adapter-runs-a-constraint-the-typed-data-footprint-is-pinned`).
-- **Built node**: what `Contract\DefinitionSchema::of()`
-  (`surface.definition_schema`), the one read of a definition into a
-  `Schema`, answers for one definition at one site: its keywords,
-  `portable-check` with each check's options as the definition holds
-  them, titles and messages as held (lazy text kept), and
-  `writeOnly` for a secret, and `x-surface-model`, a closed list of
-  members, each with its reader: `constraints` (every declared constraint
-  with its options, read by the check provider; the bridge until the
-  model is the source). A node holds no reference to its definition.
-  `published()` is the one place it becomes a document node
-  (`CheckOptions::published()`, `PlainText::of()`, the model stripped),
-  before anything compares it; the emitter decorates the projection with
-  what the request adds. Kept per definition a sealed data surface holds,
-  under one precondition: such a definition is never written after its
-  node is built (a change works on a copy), which an assertion checks by
+- **Built node**: what `Contract\DefinitionSchema::of()` answers for
+  one definition, a static, pure function of the definition: no service,
+  no request, no options resolver, no plugin manager, no rendering
+  (`DefinitionReadIsPureTest`, `DefinitionReadServiceFreeTest`). The
+  node is the definition's own statement at every depth: its keywords,
+  every property and the item (each read by `of()`), `portable-check`
+  with every declared check and its options as the definition holds
+  them (a list of values included), titles and messages as held (lazy
+  text kept), `writeOnly` for a secret, a property that does not apply
+  (the mark stays on its definition), and `x-surface-model`, a closed
+  list of members, each with its reader: `constraints` (every declared
+  constraint with its options, read by the check provider; the bridge
+  until the model is the source) and `type` (the data type, read by the
+  projection; a bridge). Every data type is read: a type the leaf table
+  has no row for has no `type` keyword, and the projection refuses it
+  where a document is made, one node at a time; a definition with no
+  place for a default or examples (a `FieldConfig`) has none. The read's
+  one refusal: a definition that holds itself (`LogicException`, naming
+  its type and where). A node holds no reference to its definition.
+  `published()`/`publishedNode()` on the service
+  `surface.definition_schema` is the one place it becomes a document
+  node, beside the definition it was read from: whether the key offers a
+  list and what that list states (a listed map said as one value, made
+  from its node), a check's label, a property that does not apply left
+  out, the refusal, `CheckOptions::published()`, `PlainText::of()`, the
+  model stripped (at every keyword position); before anything compares it;
+  the emitter decorates the projection with what the request adds. Kept
+  per definition a sealed data surface holds (static `WeakMap`s), under
+  one precondition: such a definition is never written after its node is
+  built (a change works on a copy), which an assertion checks by
   fingerprint where assertions run. Never in the build cache or a served
   document. `Contract\BuiltNodes::place()` gives the check provider and
-  the form the node at a place, its unlisted form (`of($definition,
-  FALSE)`: whether a key offers a list is the request's, so no options
-  resolver is asked for the place), beside the definition, the frame and
-  the value; never a node of the served document
-  (`docs/decisions.md#a-definition-is-read-once-into-a-built-node`).
+  the form the node at a place (`of($definition)`), beside the
+  definition, the frame and the value; never a node of the served
+  document
+  (`docs/decisions.md#a-definition-is-read-once-into-a-built-node`,
+  `docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request`).
 - **Secrets**: `Contract\Secrets`, the one reader of what is secret,
   from a schema node or a document, holding no definition: `marked()`
   (the node says `writeOnly: true`; the reader, the check provider and
@@ -1016,9 +1031,9 @@ test errored or failed and every gate passed.
   itself, so the full lane has no `--order-by=defects` and no result
   cache; it orders classes slowest first.
 
-On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-12: the
-full lane takes 15m16s at the defaults (phpunit 14m28s) and the fast
-lane 7m33s (phpunit 7m29s). As of 2026-10-23, with a smaller suite, the
+On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-13: the
+full lane takes 15m53s at the defaults (phpunit 15m03s) and the fast
+lane 8m31s (phpunit 8m23s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1049,7 +1064,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2498, Assertions: 115740, Errors: 0, Failures: 0, Skipped: 3. Classes: 346 of 346, 8 at a time, browser classes 4.
+phpunit: Tests: 2505, Assertions: 108795, Errors: 0, Failures: 0, Skipped: 3. Classes: 348 of 348, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1073,8 +1088,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2384, Assertions: 111186, Deprecations: 758, Skipped: 3. Classes:
-293, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2391, Assertions: 104241, Deprecations: 758, Skipped: 3. Classes:
+295, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 
@@ -1414,10 +1429,11 @@ src/Staging/             The store contract (StageStoreInterface, and
                          the config an apply wrote (ConfigWrites).
 src/Contract/            The served contract's emitter (a Portable Schema
                          document): DefinitionSchema reads each definition
-                         into its built node (real check options, lazy
-                         text, x-surface-model) and projects it
-                         (published(), CheckOptions the check options a
-                         document says, NodeMessage a message it holds);
+                         into its built node, a static pure function
+                         (real check options, lazy text, x-surface-model),
+                         and projects it for the request (published(),
+                         CheckOptions the check options a document says,
+                         NodeMessage a message it holds);
                          BuiltNodes finds the node at a place for the
                          check provider and the form; Secrets answers
                          what is secret from a node or a document;
