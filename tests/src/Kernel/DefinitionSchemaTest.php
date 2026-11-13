@@ -41,12 +41,13 @@ use PortableSchema\Builder\Schema;
  * property that does not apply is on it, and a value of any data type is
  * read; published() of it says what the served document says of the key
  * (the committed baselines, for every plain key the examples ship, listed
- * or not) and refuses a type no row is for; the node of a definition a
- * sealed data surface holds is built once, and a refined key's, a new
- * definition, afresh.
+ * or not) and refuses a type no row is for; of() keeps nothing, an
+ * entry reads its node once, and a refined key's, a new definition, is
+ * read for its own entry.
  *
  * @see docs/decisions.md#a-definition-is-read-once-into-a-built-node
  * @see docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request
+ * @see docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -88,7 +89,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
   protected const DECORATION = ['oneOf', 'const', 'readOnly', 'x-portable-ui', 'x-portable-links', 'x-surface'];
 
   /**
-   * The properties of the maps testMemo() reads, and how many offer a list.
+   * The properties of the maps testOfKeepsNothing() reads, and those listed.
    */
   protected const MAP_PROPERTIES = [6, 1];
 
@@ -631,54 +632,52 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a sealed definition's node is built once, a refined key's afresh.
+   * Tests of() keeps nothing, and an entry's node steps with its definition.
    *
-   * There is one node per definition, whether or not the key offers a list
-   * of values: a sealed map's node holds the very node of each property,
-   * listed or not.
+   * The read, of(), reads the definition each time it is called: two
+   * reads are two objects that say the same. A key's node is its entry's
+   * (schema(), the same object on every call), and a map's node holds the
+   * node of each property, listed or not, which says what a read of that
+   * property says (propertyNode()).
    */
-  public function testMemo(): void {
+  public function testOfKeepsNothing(): void {
     $definitions = $this->definitions();
     $loose = DataDefinition::create('string')->setLabel('Loose');
-    $this->assertNotSame(DefinitionSchema::of($loose), DefinitionSchema::of($loose), 'A definition no data surface holds is read afresh.');
+    $this->assertNotSame(DefinitionSchema::of($loose), DefinitionSchema::of($loose), 'A definition is read afresh on each call.');
+    $this->assertSame(static::json($definitions->published(DefinitionSchema::of($loose), $loose)), static::json($definitions->published(DefinitionSchema::of($loose), $loose)), 'Two reads say the same.');
     $label = NULL;
     foreach ($this->examples() as [, , $surface]) {
       foreach ($surface->getDefinitions()->entries() as $entry) {
         if (!$entry->isNested() && $entry->list === NULL && $entry->definition->getDataType() === 'string') {
-          $label = $entry->definition;
-          break;
+          $label = $entry;
+          break 2;
         }
       }
-      if ($label === NULL) {
-        continue;
-      }
-      DefinitionSchema::seal($surface);
-      $node = DefinitionSchema::of($label);
-      $this->assertSame($node, DefinitionSchema::of($label), 'A sealed definition is read once.');
-      $refined = Surface::deepClone($label);
-      $again = DefinitionSchema::of($refined);
-      $this->assertNotSame($node, $again, 'A refined key is a definition of its own.');
-      $this->assertSame(static::json($definitions->published($node, $label)), static::json($definitions->published($again, $refined)));
-      break;
     }
     $this->assertNotNull($label, 'An example holds a string key.');
+    $node = $label->schema();
+    $this->assertSame($node, $label->schema(), 'An entry reads its node once.');
+    $refined = Surface::deepClone($label->definition);
+    $again = $label->withDefinition($refined)->schema();
+    $this->assertNotSame($node, $again, 'A refined key is a definition of its own, read for its own entry.');
+    $this->assertSame(static::json($definitions->published($node, $label->definition)), static::json($definitions->published($again, $refined)));
     $properties = 0;
     $listed = 0;
     foreach ($this->examples() as [, , $surface]) {
-      DefinitionSchema::seal($surface);
       foreach ($surface->getDefinitions()->entries() as $entry) {
         $map = $entry->definition;
         if ($entry->isNested() || $entry->list !== NULL || !$map instanceof MapDataDefinition || $map->getPropertyDefinitions() === []) {
           continue;
         }
-        $built = DefinitionSchema::of($map);
+        $built = $entry->schema();
         $this->assertSame(array_keys($map->getPropertyDefinitions()), array_keys($built->get('properties')), 'Every property is on the node.');
         foreach ($map->getPropertyDefinitions() as $name => $property) {
           $properties++;
           if ($definitions->listed($property)) {
             $listed++;
           }
-          $this->assertSame($built->get('properties')[$name], DefinitionSchema::of($property), "A sealed map's property $name is read once with it, listed or not.");
+          $this->assertSame($built->get('properties')[$name], DefinitionSchema::propertyNode($built, (string) $name), "The map's property $name is the node under its properties.");
+          $this->assertSame(static::json(DefinitionSchema::of($property)), static::json(DefinitionSchema::propertyNode($built, (string) $name)), "The map's property $name says what a read of it says, listed or not.");
         }
       }
     }
@@ -689,128 +688,15 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
         'choices' => ['s', 'm'],
       ]))
       ->setPropertyDefinition('note', DataDefinition::create('string'));
-    DefinitionSchema::hold($hand);
     $built = DefinitionSchema::of($hand);
     foreach ($hand->getPropertyDefinitions() as $name => $property) {
       $properties++;
       if ($definitions->listed($property)) {
         $listed++;
       }
-      $this->assertSame($built->get('properties')[$name], DefinitionSchema::of($property), "The hand-built map's property $name is read once with it, listed or not.");
+      $this->assertSame(static::json(DefinitionSchema::of($property)), static::json(DefinitionSchema::propertyNode($built, (string) $name)), "The hand-built map's property $name says what a read of it says, listed or not.");
     }
     $this->assertSame(self::MAP_PROPERTIES, [$properties, $listed], 'The properties of the maps, and how many of them offer a list.');
-  }
-
-  /**
-   * Tests a held definition written after its node is built fails.
-   *
-   * The memo's precondition (DefinitionSchema): a definition a sealed data
-   * surface holds is never written after its node is built. Where
-   * assertions run, a read of the kept node after a write fails the
-   * assertion, naming the definition and the rule: a label, a constraint
-   * or `required` set on it, a property set below a held map, a map's main
-   * property name, a shape's, a config type's and `each`'s definition
-   * written in place, a property replaced by one of another class with the
-   * same array, and a key of an example written between two emissions.
-   */
-  public function testWrittenHeldDefinitionFailsTheAssertion(): void {
-    if (ini_get('zend.assertions') !== '1') {
-      $this->markTestSkipped('Assertions do not run.');
-    }
-    $writes = [
-      'setLabel' => static fn (DataDefinition $definition): DataDefinition => $definition->setLabel('Street address'),
-      'addConstraint' => static fn (DataDefinition $definition): DataDefinition => $definition->addConstraint('Length', ['max' => 4]),
-      'setRequired' => static fn (DataDefinition $definition): DataDefinition => $definition->setRequired(TRUE),
-    ];
-    foreach ($writes as $write => $change) {
-      $held = DataDefinition::create('string')->setLabel('Address');
-      DefinitionSchema::hold($held);
-      $node = DefinitionSchema::of($held);
-      $this->assertSame($node, DefinitionSchema::of($held), "$write: unchanged, the kept node is read.");
-      $change($held);
-      $this->assertFailsTheAssertion(static fn () => DefinitionSchema::of($held), '(string)', $write);
-    }
-
-    $map = MapDataDefinition::create()->setLabel('Where')
-      ->setPropertyDefinition('city', DataDefinition::create('string')->setLabel('City'));
-    DefinitionSchema::hold($map);
-    DefinitionSchema::of($map);
-    $city = $map->getPropertyDefinition('city');
-    $this->assertInstanceOf(DataDefinition::class, $city);
-    $city->setRequired(TRUE);
-    $this->assertFailsTheAssertion(static fn () => DefinitionSchema::of($map), '"Where" (map)', 'a property below a held map');
-
-    // The fingerprint hashes a map's main property name.
-    $main = MapDataDefinition::create()->setLabel('Main')
-      ->setPropertyDefinition('city', DataDefinition::create('string')->setLabel('City'));
-    DefinitionSchema::hold($main);
-    DefinitionSchema::of($main);
-    $main->setMainPropertyName('city');
-    $this->assertFailsTheAssertion(static fn () => DefinitionSchema::of($main), '"Main" (map)', 'the main property name');
-
-    // It hashes the definitions the array holds: a shape's, a config
-    // type's and `each`'s, each written after the holder's node was built.
-    $writes = [
-      'a shape\'s definition' => static fn (DataDefinition $holder, DataDefinition $inside) => DefinitionMetadata::setShape($holder, 'held', $inside),
-      'a config type\'s definition' => static fn (DataDefinition $holder, DataDefinition $inside) => DefinitionMetadata::setConfigType($holder, 'held', $inside),
-      'each\'s definition' => static fn (DataDefinition $holder, DataDefinition $inside) => DefinitionMetadata::setEach($holder, $inside),
-    ];
-    foreach ($writes as $what => $hold) {
-      $inside = DataDefinition::create('string')->setLabel('Inside');
-      $holder = DataDefinition::create('string')->setLabel('Holder');
-      $hold($holder, $inside);
-      DefinitionSchema::hold($holder);
-      DefinitionSchema::of($holder);
-      $inside->setLabel('Written inside');
-      $this->assertFailsTheAssertion(static fn () => DefinitionSchema::of($holder), '"Holder" (string)', $what);
-    }
-
-    // It hashes the class: a property replaced by one of another class
-    // with the same array is a write.
-    $classed = MapDataDefinition::create()->setLabel('Classed')
-      ->setPropertyDefinition('city', DataDefinition::create('string')->setLabel('City'));
-    DefinitionSchema::hold($classed);
-    DefinitionSchema::of($classed);
-    $city = $classed->getPropertyDefinition('city');
-    $this->assertInstanceOf(DataDefinition::class, $city);
-    $classed->setPropertyDefinition('city', new class($city->toArray()) extends DataDefinition {});
-    $this->assertFailsTheAssertion(static fn () => DefinitionSchema::of($classed), '"Classed" (map)', 'a property of another class');
-
-    $emitter = $this->container->get('surface.contract_emitter');
-    foreach ($this->examples() as [$id, $operation, $surface]) {
-      foreach ($surface->getDefinitions()->entries() as $name => $entry) {
-        if ($entry->isNested() || $entry->list !== NULL || !$entry->definition instanceof DataDefinition || $entry->definition->getDataType() !== 'string') {
-          continue;
-        }
-        $emitter->emit($surface, $surface->getDefaultValues(), $id, $operation);
-        $entry->definition->setLabel('Written after');
-        $this->assertFailsTheAssertion(static fn () => $emitter->emit($surface, $surface->getDefaultValues(), $id, $operation), '"Written after" (string)', "$id:$operation/$name between two emissions");
-        return;
-      }
-    }
-    $this->fail('An example holds a string key.');
-  }
-
-  /**
-   * Asserts a read fails the memo's assertion.
-   *
-   * @param \Closure $read
-   *   The read.
-   * @param string $named
-   *   What the message names of the definition.
-   * @param string $what
-   *   What was written, for the message.
-   */
-  protected function assertFailsTheAssertion(\Closure $read, string $named, string $what): void {
-    try {
-      $read();
-    }
-    catch (\AssertionError $error) {
-      $this->assertStringContainsString($named, $error->getMessage(), $what);
-      $this->assertStringContainsString('is never written after its node is built', $error->getMessage(), $what);
-      return;
-    }
-    $this->fail("$what: the kept node was read after its definition was written.");
   }
 
   /**

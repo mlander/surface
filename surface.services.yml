@@ -180,8 +180,8 @@ services:
   # Projects a built node to a document: what needs the options service,
   # the constraint plugins or the request. The read of a definition into
   # its node is DefinitionSchema::of(), a static function of the
-  # definition, which the check provider runs a check from; a node of a
-  # definition a sealed data surface holds is built once.
+  # definition, which the check provider runs a check from; the node of a
+  # key is kept by its entry (Entry::schema()).
   surface.definition_schema:
     class: Drupal\surface\Contract\DefinitionSchema
     arguments: ['@surface.options', '@validation.constraint']

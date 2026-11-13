@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Cache\MemoryBackend;
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\surface\Contract\BuiltNodes;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\surface\Contract\ContractBaselines;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeMessage;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\Location;
 use Drupal\surface\SurfaceInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -23,27 +26,32 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PortableSchema\Builder\Schema;
 
 /**
- * Tests the check provider's node at a place, and that none is served.
+ * Tests the node at a place is its entry's, and that no node is served.
  *
- * The rules: BuiltNodes finds the place Location::definitionAt() finds,
- * hands out the definition Location gives, and its node is that
- * definition's node (DefinitionSchema::of(), one node whether or not the
- * key offers a list of values), with every constraint the definition
- * declares and the options each runs with; projected as a key that
- * offers a list and as one that does not, it differs only in what a list
- * states; a place nothing declares has none. A built node never reaches a
- * served document: no node of any shipped example's documents, as served
- * or as the Schema the validator reads, holds DefinitionSchema::MODEL, no
- * served document holds an object a client could not read as JSON, and
- * neither a data surface nor a row of the build cache holds a node.
+ * The rules: the node Location::definitionAt() gives beside the
+ * definition at a place is the node of the entry that holds the key
+ * (Entry::schema()), and below a plain key that node walked in step with
+ * the definition (a property's node under `properties`, an item's under
+ * `items`); it says what a fresh read of the place's definition says, with
+ * every constraint the definition declares and the options each runs
+ * with; projected as a key that offers a list and as one that does not,
+ * it differs only in what a list states; a place nothing declares, and a
+ * frame of its own, has none. A built node never reaches a served
+ * document: no node of any shipped example's documents, as served or as
+ * the Schema the validator reads, holds DefinitionSchema::MODEL, no served
+ * document holds an object a client could not read as JSON, and neither a
+ * data surface nor a row of the build cache holds a node, a row written
+ * after every node of its build was read included.
  *
  * @see docs/decisions.md#a-definition-is-read-once-into-a-built-node
  * @see docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request
+ * @see docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class BuiltNodesTest extends SurfaceKernelTestBase {
+class LocationNodeTest extends SurfaceKernelTestBase {
 
+  use DefinitionEqualityTrait;
   use ExampleSurfacesTrait;
   use ExampleValueSetsTrait;
   use UserCreationTrait;
@@ -123,27 +131,32 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the node is found where Location finds the definition.
+   * Tests the node at a place is its entry's node, walked in step.
    *
    * At every place of every value set (valueSets(), places()) of every
-   * pinned example: with SurfaceInterface::refine(), and with the check
-   * provider's own refine closure, place() finds what
-   * Location::definitionAt() finds; its definition is the one Location
-   * gives (the same object where the two calls share the refined levels;
-   * where a level is refined or a child bound afresh on each call, a copy
-   * of the same class with the same node); its node is that
-   * definition's node, of(); at() gives the node place() gives; the node
-   * declares every constraint of the definition with the options it holds,
-   * so a reader of a place need never ask whether a key offers a list;
-   * and its projection as listed differs from its projection as unlisted
-   * only in what a list states.
+   * pinned example, with SurfaceInterface::refine() and with the check
+   * provider's own refine closure: a place with a definition has a node,
+   * a frame of its own and a place nothing declares have none. The node
+   * says what a fresh read of the definition says (nodeDifferences()). At a
+   * key of a frame, it says what that frame's entry's node says; below a
+   * plain key, what the node under its parent place's `properties` or
+   * `items` says. Through the provider's closure, which refines each level
+   * once, it is the very object: the entry's node, the node under its
+   * parent's, and the same on a second ask, so nothing reads it again.
+   * Through refine() itself each call refines afresh, and a key that two
+   * refined entries share is read for each.
+   * The node declares every constraint of the definition with the options
+   * it holds, so a reader of a place need never ask whether a key offers a
+   * list, and its projection as listed differs from its projection as
+   * unlisted only in what a list states.
    */
-  public function testTheNodeIsAtTheDefinitionsPlace(): void {
+  public function testTheNodeAtPlaceIsTheEntryNode(): void {
     $definitions = $this->container->get('surface.definition_schema');
-    $nodes = new BuiltNodes();
     $asked = 0;
     $stated = 0;
     $sets = 0;
+    $atKeys = 0;
+    $inStep = 0;
     $shared = 0;
     $copies = 0;
     foreach ($this->examples() as [$id, $operation, $surface]) {
@@ -155,42 +168,63 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
           $asked++;
           foreach (['refine()' => NULL, 'the provider\'s refine' => $refine] as $how => $closure) {
             $location = Location::definitionAt($surface, $values, $pointer, $closure);
-            $place = $nodes->place($surface, $values, $pointer, $closure);
             if ($location === NULL) {
-              $this->assertNull($place, "$at, $how: nothing is there.");
-              $this->assertNull($nodes->at($surface, $values, $pointer, $closure), "$at, $how");
               continue;
             }
-            $this->assertNotNull($place, "$at, $how");
-            $this->assertSame($location->frame === NULL, $place['frame'] === NULL, "$at, $how");
             if ($location->definition === NULL) {
-              $this->assertNull($place['definition'], "$at, $how");
-              $this->assertNull($place['node'], "$at, $how: a frame of its own has no node.");
+              $this->assertNull($location->node, "$at, $how: a frame of its own has no node.");
               continue;
             }
-            $this->assertNotNull($place['definition'], "$at, $how");
-            $this->assertNotNull($place['node'], "$at, $how");
-            $this->assertSame([], array_diff(array_keys(DefinitionSchema::model($place['node'])), DefinitionSchema::MEMBERS), "$at, $how: MODEL holds its members alone.");
-            $this->assertSame(DefinitionMetadata::isSecret($place['definition']), Secrets::marked($place['node']), "$at, $how: the node says it is secret where its definition is.");
-            $this->assertEquals($location->value, $place['value'], "$at, $how");
-            $this->assertSame(DefinitionSchema::of($place['definition']), $place['node'], "$at, $how: the node of its definition, kept.");
-            $again = $nodes->at($surface, $values, $pointer, $closure);
-            $this->assertNotNull($again, "$at, $how");
-            if ($location->definition === $place['definition']) {
-              $shared++;
-              $this->assertSame($place['node'], $again, "$at, $how: at() gives the node place() gives.");
+            $node = $location->node;
+            $this->assertNotNull($node, "$at, $how: a place with a definition has a node.");
+            $this->assertSame([], array_diff(array_keys(DefinitionSchema::model($node)), DefinitionSchema::MEMBERS), "$at, $how: MODEL holds its members alone.");
+            $this->assertSame(DefinitionMetadata::isSecret($location->definition), Secrets::marked($node), "$at, $how: the node says it is secret where its definition is.");
+            $this->assertSame([], static::nodeDifferences(DefinitionSchema::of($location->definition), $node, "$at, $how"), "$at, $how: the node says what a read of the definition says.");
+            $segments = Location::segments($pointer);
+            $last = (string) array_pop($segments);
+            $parentPointer = implode('', array_map(static fn (string $segment): string => Location::append('', $segment), $segments));
+            $parent = Location::definitionAt($surface, $values, $parentPointer, $closure);
+            $this->assertNotNull($parent, "$at, $how: its parent place is declared.");
+            if ($parent->frame !== NULL) {
+              // A key of a frame: that frame's entry holds the node.
+              $entry = $parent->frame->getDefinitions()->entry($last);
+              $this->assertNotNull($entry, "$at, $how");
+              $this->assertSame(static::json($entry->schema()), static::json($node), "$at, $how: the node of the entry at the key.");
+              if ($closure !== NULL && $entry->definition === $location->definition) {
+                // The same level, refined once: the very node.
+                $this->assertSame($entry->schema(), $node, "$at, $how: the very node of the entry at the key.");
+                $shared++;
+              }
+              elseif ($closure !== NULL) {
+                // A child bound afresh on each call holds a copy: the two
+                // say the same.
+                $copies++;
+              }
+              $atKeys++;
             }
             else {
-              // A level refined afresh on each call (refine() itself, or a
-              // child bound for the values on each call) is a new copy: the
-              // two say the same.
-              $copies++;
-              $this->assertSame(get_class($location->definition), get_class($place['definition']), "$at, $how");
-              $this->assertSame(static::json(DefinitionSchema::of($location->definition)), static::json($place['node']), "$at, $how: the node of the definition Location gives.");
-              $this->assertSame(static::json($place['node']), static::json($again), "$at, $how: at() gives the node place() gives.");
+              // Below a plain key: the node under its parent's node.
+              $this->assertNotNull($parent->node, "$at, $how");
+              $below = ctype_digit($last) && DefinitionSchema::itemNode($parent->node) !== NULL ? DefinitionSchema::itemNode($parent->node) : DefinitionSchema::propertyNode($parent->node, $last);
+              $this->assertNotNull($below, "$at, $how: its parent's node holds it.");
+              $this->assertSame(static::json($below), static::json($node), "$at, $how: the node under its parent's node.");
+              $parentDefinition = $parent->definition;
+              $stepped = $parentDefinition instanceof ListDataDefinitionInterface ? $parentDefinition->getItemDefinition() : ($parentDefinition instanceof ComplexDataDefinitionInterface ? $parentDefinition->getPropertyDefinition($last) : NULL);
+              if ($closure !== NULL && $stepped === $location->definition) {
+                $this->assertSame($below, $node, "$at, $how: the very node under its parent's node.");
+                $shared++;
+              }
+              elseif ($closure !== NULL) {
+                $copies++;
+              }
+              $inStep++;
             }
-            $this->assertDeclaresTheDefinitionsConstraints($place['definition'], $place['node'], "$at, $how");
-            if ($this->assertListedDiffersOnlyInWhatItsListStates($definitions, $place['definition'], $place['node'], "$at, $how")) {
+            $again = Location::definitionAt($surface, $values, $pointer, $closure);
+            if ($closure !== NULL && $again->definition === $location->definition) {
+              $this->assertSame($node, $again->node, "$at, $how: asked again, the same node.");
+            }
+            $this->assertDeclaresTheDefinitionsConstraints($location->definition, $node, "$at, $how");
+            if ($this->assertListedDiffersOnlyInWhatItsListStates($definitions, $location->definition, $node, "$at, $how")) {
               $stated++;
             }
           }
@@ -199,7 +233,9 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
     }
     $this->assertGreaterThan(100, $sets, 'Every example is asked at each of its value sets.');
     $this->assertGreaterThan(1000, $asked, 'Every place of every value set is asked.');
-    $this->assertGreaterThan($copies, $shared, 'Most places are the definition object Location gives.');
+    $this->assertGreaterThan(1000, $atKeys, 'Places at a key of a frame are asked.');
+    $this->assertGreaterThan(10, $inStep, 'Places below a plain key are asked.');
+    $this->assertGreaterThan($copies, $shared, 'Through the provider\'s closure, most places are the very node of the entry Location reads.');
     $this->assertGreaterThan(0, $stated, 'Some place holds a check a list states, so the comparison of the two projections can differ.');
   }
 
@@ -209,7 +245,7 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition at the place.
    * @param \PortableSchema\Builder\Schema $node
-   *   The node BuiltNodes gave.
+   *   The node at the place.
    * @param string $at
    *   Where, for the message.
    */
@@ -239,7 +275,7 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition at the place.
    * @param \PortableSchema\Builder\Schema $node
-   *   The node BuiltNodes gave.
+   *   The node at the place.
    * @param string $at
    *   Where, for the message.
    *
@@ -357,7 +393,18 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
       }
     }
     // The builds the build cache keeps, emitted too, then every row it holds.
+    $resources = $this->container->get('surface.resources');
+    $keep = new \ReflectionMethod($resources, 'keep');
+    $kept = 0;
     foreach ($this->examples(TRUE) as [$id, $operation, $surface]) {
+      // A row written after every node of the build was read is the row
+      // of one whose nodes were never read.
+      $before = serialize($surface);
+      $read = static::readEveryNode($surface);
+      $this->assertGreaterThan(0, $read, "$id: its entries' nodes are read.");
+      $this->assertSame($before, serialize($surface), "$id: reading its nodes leaves the data surface's bytes as they were.");
+      $context = $operation === NULL ? new OperationContext(ContractBaselines::ALONE) : $resources->operation($this->container->get('surface.resource_registry')->getDefinition($id)->name(), $operation);
+      $keep->invoke($resources, 'declared:read-nodes:' . $kept++, $id, $context, $surface, []);
       $contracts = [
         $emitter->emitFull($surface, $id, $operation),
         $emitter->emit($surface, $surface->getDefaultValues(), $id, $operation, NULL, TRUE),
@@ -388,6 +435,41 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
     $this->assertGreaterThan(400, $served);
     $this->assertGreaterThan(50, $narrowed, 'The narrowed documents are covered.');
     $this->assertNotEmpty($rows, 'The build cache holds rows.');
+    $this->assertGreaterThan(0, count(array_filter(array_keys($rows), static fn (string $cid): bool => str_starts_with($cid, 'declared:read-nodes:'))), 'A row written after its nodes were read is covered.');
+  }
+
+  /**
+   * Reads the node of every entry of a data surface and the children in it.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The data surface.
+   * @param array<int, true> $seen
+   *   The data surfaces walked, by object id.
+   *
+   * @return int
+   *   How many entries' nodes were read.
+   */
+  protected static function readEveryNode(SurfaceInterface $surface, array &$seen = []): int {
+    if (isset($seen[spl_object_id($surface)])) {
+      return 0;
+    }
+    $seen[spl_object_id($surface)] = TRUE;
+    $read = 0;
+    foreach ([$surface->getDefinitions(), $surface->getOutputDefinitions()] as $map) {
+      foreach ($map->entries() as $entry) {
+        $entry->schema();
+        $read++;
+        $children = [
+          $entry->attachment?->settledChild(),
+          $entry->list?->item->settledChild(),
+          ...array_map(static fn ($variant) => $variant->settledChild(), array_values($entry->variants->variants ?? [])),
+        ];
+        foreach (array_filter($children) as $child) {
+          $read += static::readEveryNode($child, $seen);
+        }
+      }
+    }
+    return $read;
   }
 
   /**
@@ -425,7 +507,17 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
     // Every class allowed, as the build cache restores a build.
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
     $value = unserialize($serialized);
-    static::schemaObjects($value, $objects);
+    // A service the value holds wakes as the container's live instance,
+    // which the bytes do not hold: the walk does not enter one. Entries
+    // other builds of this request hold keep their read nodes there.
+    $seen = [];
+    foreach ($this->container->getServiceIds() as $service) {
+      if ($this->container->initialized($service)) {
+        $seen[spl_object_id($this->container->get($service))] = TRUE;
+      }
+    }
+    $seen[spl_object_id($this->container)] = TRUE;
+    static::schemaObjects($value, $objects, $seen);
     $this->assertSame([], array_unique($objects), "$what: a Schema holds plain JSON objects alone.");
   }
 

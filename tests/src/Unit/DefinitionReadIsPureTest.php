@@ -60,15 +60,19 @@ class DefinitionReadIsPureTest extends UnitTestCase {
   /**
    * The read's entry points.
    */
-  protected const ENTRIES = ['of', 'head', 'describe'];
+  protected const ENTRIES = ['of', 'head', 'describe', 'propertyNode', 'itemNode', 'shapeNode'];
 
   /**
    * How many methods and constructors the read reaches, entry points too.
    *
    * 56 on 2026-11-13; 60 since the node holds every fact of its
-   * definition: stored(), nested(), nestedNode() and implied().
+   * definition: stored(), nested(), nestedNode() and implied(); 55 since an
+   * entry holds its node and the memo is gone: fingerprinted(), unchanged(),
+   * fingerprint(), comparable() and nestedNode(); 59 with the three steps
+   * a reader takes on a node (propertyNode(), itemNode(), shapeNode()) and
+   * model().
    */
-  protected const REACHED = 60;
+  protected const REACHED = 59;
 
   /**
    * The types a reached method may not take: services and the request.

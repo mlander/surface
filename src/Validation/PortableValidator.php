@@ -8,7 +8,6 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\Validation\ConstraintManager;
-use Drupal\surface\Contract\BuiltNodes;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Schemas;
@@ -165,10 +164,10 @@ final class PortableValidator {
    *   The provider, for validate().
    */
   public function provider(SurfaceInterface $surface, array $values, SurfacePipelineInterface $pipeline): DrupalCheckProvider {
-    // The provider reads the node at a check's place through the one
-    // read (DefinitionSchema::of(), kept for a definition a data surface
-    // holds), so a node built for the document is the one it reads.
-    return new DrupalCheckProvider($this->runner, $this->constraints, $pipeline, $this->translation, $this->options, new BuiltNodes(), $surface, $values);
+    // The provider reads the node at a check's place from the entry that
+    // holds the key (Location::definitionAt()), so a key the document
+    // described already has its node read.
+    return new DrupalCheckProvider($this->runner, $this->constraints, $pipeline, $this->translation, $this->options, $surface, $values);
   }
 
   /**

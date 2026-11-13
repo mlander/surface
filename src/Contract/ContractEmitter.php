@@ -612,15 +612,11 @@ final class ContractEmitter {
     $values = $declared->getPortValues() + $values;
     $refined = $declared->refine($values, $runtime ? SurfaceInterface::EVERY : $kinds);
     $cacheability->addCacheableDependency($refined);
-    // Each definition a data surface holds is read into its node once.
-    DefinitionSchema::seal($declared);
-    DefinitionSchema::seal($refined);
     $advertised = $declared->getDefinitions();
     $now = $refined->getDefinitions();
     // What the static refiners alone answer for these values, which is
     // all a conditional may state: a runtime refiner is never run ahead.
     $static = $runtime && $this->conditionals->refinedAtRuntime($advertised) ? $declared->refine($values, $kinds) : $refined;
-    DefinitionSchema::seal($static);
     $ahead = $static->getDefinitions();
     // What the coded ones alone answer: whether their gate is open yet.
     $coded = $runtime && $this->conditionals->hasRules($advertised) ? $declared->refine($values, SurfaceInterface::CODED)->getDefinitions() : $ahead;
@@ -830,7 +826,7 @@ final class ContractEmitter {
           $orphan => $standing[$prefix . $name],
           default => $values[$name] ?? $declared->getDefault($name),
         };
-        [$properties[$name], $shown[$name]] = $this->propertySchema->property($current->definition, $entry->definition, $value, $prefix . $name, $locked, $depends, $emission);
+        [$properties[$name], $shown[$name]] = $this->propertySchema->property($current->definition, $current->schema(), $entry->definition, $value, $prefix . $name, $locked, $depends, $emission);
         $properties[$name] = $this->linked($properties[$name], $current->definition, $name, $declaring);
         if ($declaring && $entry->locked) {
           // What the context fixed it to is the instance's, not the
@@ -876,7 +872,7 @@ final class ContractEmitter {
           // narrowed for these values): a runtime refiner may have
           // narrowed it for the present moment already, and a conditional
           // says what the coded ones add.
-          $base = $current->definition === $stated->definition ? $properties[$name] : $this->propertySchema->property($stated->definition, NULL, NULL, $prefix . $name, FALSE, [], $emission->withoutStale())[0];
+          $base = $current->definition === $stated->definition ? $properties[$name] : $this->propertySchema->property($stated->definition, $stated->schema(), NULL, NULL, $prefix . $name, FALSE, [], $emission->withoutStale())[0];
           $enumerated = $this->conditionals->enumerate($declared, $static, $entry, $values, $base, $emission);
           if ($enumerated !== NULL && $current->definition === $stated->definition) {
             $properties[$name] = $enumerated['base'];
@@ -919,7 +915,7 @@ final class ContractEmitter {
         // Decision: see docs/decisions.md#a-rule-declared-as-data.
         // The frame's `x-surface.rules` lists each conditional that states
         // one; the key itself carries no marker.
-        [$properties[$name], $stating, $requires] = $this->conditionals->rules($entry, $current->definition, $properties[$name], $stating, $requires, $emission, array_keys($ports));
+        [$properties[$name], $stating, $requires] = $this->conditionals->rules($entry, $current->definition, $properties[$name], $stating, $requires, $emission, array_keys($ports), $current);
       }
       if ($entry->mounted !== [] && !$declaring) {
         // The structures alters attached at their mounts: each module's
@@ -1235,8 +1231,11 @@ final class ContractEmitter {
       // Every port holds a value: the instance is refined for them.
       return [[], []];
     }
-    $definition = $static->getDefinition($entry->name) ?? $entry->definition;
-    $base = $inline ?? $this->conditionals->stated($entry, $definition, $emission);
+    // The key as the static refiners leave it, by the entry that holds it,
+    // whose node is read once.
+    $holder = $static->getDefinitions()->entry($entry->name) ?? $entry;
+    $definition = $holder->definition;
+    $base = $inline ?? $this->conditionals->stated($entry, $definition, $emission, $holder);
     $markers = [];
     $branches = [];
     if ($below === '') {
@@ -1302,7 +1301,7 @@ final class ContractEmitter {
     }
     if ($links !== []) {
       $pseudo = new Entry($entry->name, $definition, refiners: [SurfaceInterface::OWNER => $links]);
-      [, $stated] = $this->conditionals->rules($pseudo, $definition, $base, [], FALSE, $emission);
+      [, $stated] = $this->conditionals->rules($pseudo, $definition, $base, [], FALSE, $emission, holder: $holder);
       array_push($branches, ...$stated);
     }
     return [$branches, $markers];

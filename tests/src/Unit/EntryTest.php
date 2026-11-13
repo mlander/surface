@@ -4,13 +4,21 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Unit;
 
+use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\surface\Attachment;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\Schemas;
+use Drupal\surface\ResourceBuild\Location;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\SurfaceRefinerInterface;
 use Drupal\surface\Entry;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests the single answer a data surface gives about one of its keys.
@@ -21,7 +29,13 @@ use PHPUnit\Framework\Attributes\Group;
  * thing that changes an entry, and it changes exactly one of those
  * seven things.
  *
+ * An entry holds its definition's built node: read on the first
+ * schema() call, the same object after, handed on to an entry with the
+ * same definition, never serialized, and refused at schema(), never at
+ * construction, for a definition that holds itself.
+ *
  * @see \Drupal\surface\Entry
+ * @see docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone
  */
 #[Group('surface')]
 class EntryTest extends UnitTestCase {
@@ -96,6 +110,176 @@ class EntryTest extends UnitTestCase {
       refiners: ['other_module' => [static::refiner()]],
     );
     $this->assertTrue($refined->touchedBy('other_module'));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(): void {
+    parent::setUp();
+    // A definition's constraints ask the typed data manager for its type's
+    // defaults: none here.
+    $typed = $this->createMock(TypedDataManagerInterface::class);
+    $typed->method('getDefaultConstraints')->willReturn([]);
+    $container = new ContainerBuilder();
+    $container->set('typed_data_manager', $typed);
+    \Drupal::setContainer($container);
+  }
+
+  /**
+   * Builds a map with two properties.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The map.
+   */
+  protected static function map(): MapDataDefinition {
+    return MapDataDefinition::create()->setLabel('Where')
+      ->setPropertyDefinition('city', DataDefinition::create('string')->setLabel('City')->setRequired(TRUE))
+      ->setPropertyDefinition('rooms', DataDefinition::create('integer')->setLabel('Rooms'));
+  }
+
+  /**
+   * Writes a node as JSON, MODEL included.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The node.
+   *
+   * @return string
+   *   Its JSON.
+   */
+  protected static function json(Schema $node): string {
+    return (string) json_encode(Schemas::arrayed($node), JSON_PARTIAL_OUTPUT_ON_ERROR);
+  }
+
+  /**
+   * Tests schema() is the read of the definition, read once.
+   */
+  public function testSchemaIsTheDefinitionsNode(): void {
+    $definition = static::map();
+    $entry = new Entry('where', $definition);
+    $node = $entry->schema();
+    $this->assertSame(static::json(DefinitionSchema::of($definition)), static::json($node), 'The node is the read of the definition.');
+    $this->assertSame($node, $entry->schema(), 'A second call returns the same object.');
+    $this->assertSame(['city', 'rooms'], array_keys($node->get('properties')), 'Every property is on it.');
+  }
+
+  /**
+   * Tests an entry made with the same definition keeps the node.
+   */
+  public function testTheNodeTravelsWithTheDefinition(): void {
+    $definition = static::map();
+    $entry = new Entry('where', $definition);
+    $node = $entry->schema();
+
+    $other = static::map()->setLabel('Elsewhere');
+    $narrowed = $entry->withDefinition($other);
+    $this->assertNotSame($node, $narrowed->schema(), 'Another definition starts unread.');
+    $this->assertSame(static::json(DefinitionSchema::of($other)), static::json($narrowed->schema()), 'It reads that definition.');
+    $this->assertSame('Elsewhere', $narrowed->schema()->get('title'));
+
+    $this->assertSame($node, $entry->withDefinition($definition)->schema(), 'The same definition keeps the node.');
+
+    $child = $this->createMock(SurfaceInterface::class);
+    $wired = new Entry('where', $definition, attachment: new Attachment($child, reads: ['venue' => 'venue']));
+    $read = $wired->schema();
+    $bound = $wired->readingFrom(['venue' => 'hall']);
+    $this->assertNotNull($bound);
+    $this->assertNotSame($wired, $bound);
+    $this->assertSame(['venue' => 'hall'], $bound->attachment?->ports);
+    $this->assertSame($read, $bound->schema(), 'readingFrom() hands the node on.');
+  }
+
+  /**
+   * Tests the node never enters a serialized entry.
+   */
+  public function testTheNodeIsNotSerialized(): void {
+    $unread = new Entry('where', static::map());
+    $read = new Entry('where', static::map());
+    $node = $read->schema();
+    $this->assertSame(serialize($unread), serialize($read), 'An entry whose node was read serializes as one never read.');
+    $this->assertStringNotContainsString(DefinitionSchema::MODEL, serialize($read));
+    // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
+    $woken = unserialize(serialize($read));
+    $this->assertInstanceOf(Entry::class, $woken);
+    $again = $woken->schema();
+    $this->assertNotSame($node, $again, 'An unserialized entry reads its node again.');
+    $this->assertSame(['title' => 'Where'], array_intersect_key(Schemas::arrayed($again), ['title' => TRUE]));
+  }
+
+  /**
+   * Tests a definition written after its node was read fails the assertion.
+   */
+  public function testWrittenDefinitionFailsTheAssertion(): void {
+    if ((int) ini_get('zend.assertions') !== 1) {
+      $this->markTestSkipped('Assertions are off.');
+    }
+    $city = DataDefinition::create('string')->setLabel('City')->setRequired(TRUE);
+    $rooms = DataDefinition::create('integer')->setLabel('Rooms');
+    $definition = MapDataDefinition::create()->setLabel('Where')
+      ->setPropertyDefinition('city', $city)
+      ->setPropertyDefinition('rooms', $rooms);
+    $entry = new Entry('where', $definition);
+    $this->assertSame($entry->schema(), $entry->schema(), 'Nothing written: the later ask passes.');
+    $writes = [
+      'a label' => static fn () => $definition->setLabel('Changed'),
+      'a property below' => static fn () => $city->setRequired(FALSE),
+      'a property added' => static fn () => $definition->setPropertyDefinition('street', DataDefinition::create('string')),
+      'a constraint' => static fn () => $rooms->addConstraint('Range', ['min' => 1]),
+      'a setting' => static fn () => $definition->setSetting('kind', 'hall'),
+    ];
+    foreach ($writes as $what => $write) {
+      $entry = new Entry('where', $definition);
+      $entry->schema();
+      $write();
+      try {
+        $entry->schema();
+        $this->fail("$what written after the read is not seen.");
+      }
+      catch (\AssertionError $error) {
+        $this->assertStringContainsString('was written after its node was read', $error->getMessage(), $what);
+      }
+    }
+  }
+
+  /**
+   * Tests a place whose definition has a property its node lacks is refused.
+   */
+  public function testLocationRefusesNodeOutOfStep(): void {
+    // A map that answers for a property it does not list: the read never
+    // sees it, so the node holds none for it.
+    $map = new class(['type' => 'map']) extends MapDataDefinition {
+
+      /**
+       * {@inheritdoc}
+       */
+      public function getPropertyDefinition($name) {
+        return $name === 'ghost' ? DataDefinition::create('string') : parent::getPropertyDefinition($name);
+      }
+
+    };
+    $map->setPropertyDefinition('city', DataDefinition::create('string'));
+    $entry = new Entry('where', $map);
+    $below = new \ReflectionMethod(Location::class, 'below');
+    $found = $below->invoke(NULL, $entry, ['city' => 'Ghent'], ['city']);
+    $this->assertInstanceOf(Location::class, $found);
+    $this->assertSame($entry->schema()->get('properties')['city'], $found->node, 'The node at a place is the one its parent node holds.');
+    $this->assertNull($below->invoke(NULL, $entry, [], ['nothing']), 'A place nothing declares is none.');
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('holds no node at "ghost"');
+    $below->invoke(NULL, $entry, [], ['ghost']);
+  }
+
+  /**
+   * Tests a definition that holds itself is refused at schema(), not before.
+   */
+  public function testSelfHoldingDefinitionIsRefusedAtSchema(): void {
+    $map = MapDataDefinition::create()->setLabel('Loop');
+    $map->setPropertyDefinition('self', $map);
+    $entry = new Entry('loop', $map);
+    $this->assertSame($map, $entry->withDefinition($map)->definition, 'Made, and made again, with nothing read.');
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('holds itself');
+    $entry->schema();
   }
 
   /**

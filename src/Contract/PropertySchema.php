@@ -33,7 +33,7 @@ use PortableSchema\Builder\Schema;
  *
  * ContractEmitter walks a document's frames and asks this class for each
  * key that is not a child (property()): the projection of its built node
- * (DefinitionSchema::of(), a pure read of the definition, projected by
+ * (the node its entry holds, Entry::schema(), projected by
  * DefinitionSchema::publishedNode() for the request), which says
  * its type, the keywords its constraints state and what only the server
  * checks, decorated with what the request adds: its allowed values as
@@ -366,6 +366,11 @@ final class PropertySchema {
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key as it stands, refined.
+   * @param \PortableSchema\Builder\Schema $node
+   *   The definition's built node: its entry's (Entry::schema()), the node
+   *   of the property or item below it that its parent's node holds, or,
+   *   for a definition no entry holds (a conditional's answer), the read
+   *   its caller made (DefinitionSchema::of()). Nothing is read here.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $advertised
    *   The key as advertised, to tell whether it is narrowed now; NULL
    *   when there is nothing to compare with.
@@ -385,7 +390,7 @@ final class PropertySchema {
    * @return array{0: \PortableSchema\Builder\Schema, 1: mixed}
    *   The property schema, and its value as shown.
    */
-  public function property(DataDefinitionInterface $definition, ?DataDefinitionInterface $advertised, mixed $value, string $path, bool $locked, array $depends, Emission $emission): array {
+  public function property(DataDefinitionInterface $definition, Schema $node, ?DataDefinitionInterface $advertised, mixed $value, string $path, bool $locked, array $depends, Emission $emission): array {
     $cacheability = $emission->cacheability;
     $shown = $value;
     $set = $this->optionSet($definition instanceof ListDataDefinitionInterface ? $definition->getItemDefinition() : $definition, $cacheability);
@@ -397,10 +402,12 @@ final class PropertySchema {
     // described below as their own key, and what the request adds goes
     // between what the definition says, where it always stood.
     // The read is the definition's alone; whether the key offers a list,
-    // and so what its list states, is the projection's.
+    // and so what its list states, is the projection's. Below the key, the
+    // node is walked in step with the definition, never read again.
     // Decision: see
-    // docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request.
-    $schema = $this->definitions->publishedNode(DefinitionSchema::of($definition), $definition, $listed);
+    // docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request,
+    // docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone.
+    $schema = $this->definitions->publishedNode($node, $definition, $listed);
     $held = [];
     foreach (['writeOnly', 'default', 'examples', PortableKeywords::CHECK, PortableKeywords::MESSAGES] as $keyword) {
       if ($schema->has($keyword)) {
@@ -411,7 +418,7 @@ final class PropertySchema {
 
     if ($definition instanceof ListDataDefinitionInterface) {
       $item = $definition->getItemDefinition();
-      [$items] = $this->property($item, NULL, NULL, $path . '.*', FALSE, [], $emission->withoutStale());
+      [$items] = $this->property($item, DefinitionSchema::itemNode($node) ?? throw new \LogicException(sprintf('The node at "%s" holds no item node where its definition holds an item.', $path)), NULL, NULL, $path . '.*', FALSE, [], $emission->withoutStale());
       $schema = $schema->with('items', static::neverNull($items));
       // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
       $checkboxes = $set !== NULL && CheckboxesWidget::drawsList($definition, $set);
@@ -442,7 +449,7 @@ final class PropertySchema {
           // A key an alter mounted, ruled out: as at the top of a frame.
           continue;
         }
-        [$properties[$name], $nested[$name]] = $this->property($property, $before[$name] ?? NULL, is_array($value) ? ($value[$name] ?? NULL) : NULL, $path . '.' . $name, FALSE, [], $emission);
+        [$properties[$name], $nested[$name]] = $this->property($property, DefinitionSchema::propertyNode($node, $name) ?? throw new \LogicException(sprintf('The node at "%s" holds no node for the "%s" property its definition holds.', $path, $name)), $before[$name] ?? NULL, is_array($value) ? ($value[$name] ?? NULL) : NULL, $path . '.' . $name, FALSE, [], $emission);
       }
       $schema = $schema->with('properties', $properties);
       $extension = $this->extension($depends, $refined || $this->anyRefined($schema));
@@ -575,7 +582,7 @@ final class PropertySchema {
       // end. Decision: see docs/decisions.md#a-shape-is-a-named-definition.
       $schema = $schema->with(self::SHAPED, [
         'id' => (string) DefinitionMetadata::shapeOf($definition),
-        'def' => $this->shapeDef($this->property($shape, NULL, NULL, $path, FALSE, [], $emission->withoutStale())[0]),
+        'def' => $this->shapeDef($this->property($shape, DefinitionSchema::shapeNode($node) ?? DefinitionSchema::of($shape), NULL, NULL, $path, FALSE, [], $emission->withoutStale())[0]),
       ]);
     }
     return [$schema, $shown];

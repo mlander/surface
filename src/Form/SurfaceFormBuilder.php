@@ -15,7 +15,6 @@ use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Render\ElementInfoManagerInterface;
 use Drupal\Core\Security\TrustedCallbackInterface;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\surface\Contract\BuiltNodes;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\ServedContract;
 use Drupal\surface\Form\Document\DocumentDrawer;
@@ -247,7 +246,7 @@ class SurfaceFormBuilder implements SurfaceFormBuilderInterface, TrustedCallback
    * {@inheritdoc}
    */
   public function host(SurfaceInterface $surface, array $values): WidgetHostInterface {
-    return new FormWidgetHost($this->entityTypeManager, $this->entityRepository, $this->narrowing, new BuiltNodes(), $surface, $values);
+    return new FormWidgetHost($this->entityTypeManager, $this->entityRepository, $this->narrowing, $surface, $values);
   }
 
   /**

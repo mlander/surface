@@ -568,10 +568,10 @@ final class DocumentHead {
     $properties = [];
     $required = [];
     $emission = $emission->withoutStale();
-    foreach ($surface->getOutputDefinitions() as $name => $definition) {
-      [$schema] = $this->propertySchema->property($definition, NULL, NULL, (string) $name, FALSE, [], $emission);
+    foreach ($surface->getOutputDefinitions()->entries() as $name => $entry) {
+      [$schema] = $this->propertySchema->property($entry->definition, $entry->schema(), NULL, NULL, (string) $name, FALSE, [], $emission);
       $properties[(string) $name] = $this->propertySchema->withoutExtension($schema);
-      if ($definition->isRequired()) {
+      if ($entry->definition->isRequired()) {
         $required[] = (string) $name;
       }
     }

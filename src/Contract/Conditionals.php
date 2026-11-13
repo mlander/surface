@@ -231,15 +231,18 @@ final class Conditionals {
    *   The ports of the frame: a rule reading one is not stated here, the
    *   site that wires it states it, and a key it may rule out is not
    *   required here.
+   * @param \Drupal\surface\Entry|null $holder
+   *   The entry that holds $definition, whose node is the definition's;
+   *   NULL for $entry.
    *
    * @return array{0: \PortableSchema\Builder\Schema, 1: \PortableSchema\Builder\Schema[], 2: bool}
    *   The property, the key's conditionals, the coded ones first, and
    *   whether the frame still requires the key.
    */
-  public function rules(Entry $entry, DataDefinitionInterface $definition, Schema $property, array $branches, bool $requires, Emission $emission, array $ports = []): array {
+  public function rules(Entry $entry, DataDefinitionInterface $definition, Schema $property, array $branches, bool $requires, Emission $emission, array $ports = [], ?Entry $holder = NULL): array {
     $name = $entry->name;
     $applicability = $entry->isNested();
-    $base = $applicability ? Schema::any() : $this->stated($entry, $definition, $emission);
+    $base = $applicability ? Schema::any() : $this->stated($entry, $definition, $emission, $holder);
     $declared = [];
     $ruling = [];
     foreach ($entry->refiners as $chain) {
@@ -556,8 +559,9 @@ final class Conditionals {
     $ruled = FALSE;
     $vanishing = [];
     foreach ($combinations as $i => [$combination, $surface]) {
-      $definition = $surface->getDefinition($entry->name) ?? $entry->definition;
-      $schema = $this->answer($entry, $definition, $emission, $applicability);
+      $holder = $surface->getDefinitions()->entry($entry->name) ?? $entry;
+      $definition = $holder->definition;
+      $schema = $this->answer($entry, $definition, $emission, $applicability, $holder);
       // In development and tests only, and for one combination per key:
       // asked again, a static refiner answers the same.
       assert($i > 0 || $this->answersAgain($declared, $entry, array_replace($values, $combination), $schema, $emission, $applicability));
@@ -618,15 +622,17 @@ final class Conditionals {
    * @param bool $applicability
    *   Whether only whether it applies is asked: a key holding a child,
    *   whose parent may say nothing else about it.
+   * @param \Drupal\surface\Entry|null $holder
+   *   The entry that holds $definition; NULL for $entry.
    *
    * @return \PortableSchema\Builder\Schema|false
    *   The key's schema, FALSE where it does not apply.
    */
-  protected function answer(Entry $entry, DataDefinitionInterface $definition, Emission $emission, bool $applicability = FALSE): Schema|false {
+  protected function answer(Entry $entry, DataDefinitionInterface $definition, Emission $emission, bool $applicability = FALSE, ?Entry $holder = NULL): Schema|false {
     if (DoesNotApply::marks($definition)) {
       return FALSE;
     }
-    return $applicability ? Schema::any() : $this->stated($entry, $definition, $emission);
+    return $applicability ? Schema::any() : $this->stated($entry, $definition, $emission, $holder);
   }
 
   /**
@@ -745,15 +751,22 @@ final class Conditionals {
    *   Its definition: as declared, or refined for a combination.
    * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the key's frame.
+   * @param \Drupal\surface\Entry|null $holder
+   *   The entry that holds $definition, whose node is read once: the key's
+   *   in a refined data surface; NULL for $entry. A definition no entry
+   *   holds (a rule's answer, written on a copy) is read afresh.
    *
    * @return \PortableSchema\Builder\Schema
    *   A collection's own keywords, its items being the child's, which no
    *   parent's refiner reaches; any other key's property schema.
    */
-  public function stated(Entry $entry, DataDefinitionInterface $definition, Emission $emission): Schema {
-    return $entry->list !== NULL
-      ? $this->propertySchema->listKeywords($definition)[0]
-      : $this->propertySchema->property($definition, NULL, NULL, $emission->at($entry->name), FALSE, [], $emission->withoutStale())[0];
+  public function stated(Entry $entry, DataDefinitionInterface $definition, Emission $emission, ?Entry $holder = NULL): Schema {
+    if ($entry->list !== NULL) {
+      return $this->propertySchema->listKeywords($definition)[0];
+    }
+    $holder ??= $entry;
+    $node = $holder->definition === $definition ? $holder->schema() : DefinitionSchema::of($definition);
+    return $this->propertySchema->property($definition, $node, NULL, NULL, $emission->at($entry->name), FALSE, [], $emission->withoutStale())[0];
   }
 
   /**
@@ -834,7 +847,8 @@ final class Conditionals {
    *   Naming the key's static refiners and the values.
    */
   protected function answersAgain(SurfaceInterface $declared, Entry $entry, array $values, Schema|false $schema, Emission $emission, bool $applicability = FALSE): bool {
-    $again = $this->answer($entry, $declared->refine($values, $emission->kinds())->getDefinition($entry->name) ?? $entry->definition, $emission, $applicability);
+    $holder = $declared->refine($values, $emission->kinds())->getDefinitions()->entry($entry->name) ?? $entry;
+    $again = $this->answer($entry, $holder->definition, $emission, $applicability, $holder);
     if (json_encode($again === FALSE ? FALSE : $this->propertySchema->withoutExtension($again)) === json_encode($schema === FALSE ? FALSE : $this->propertySchema->withoutExtension($schema))) {
       return TRUE;
     }

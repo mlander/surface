@@ -9,7 +9,8 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 /**
  * A message a built node holds: translated each time it is rendered.
  *
- * The rule: a built node is kept for the process (DefinitionSchema), and
+ * The rule: a built node is kept by its entry for as long as the entry
+ * lives (Entry::schema()), which can be the process, and
  * a TranslatableMarkup keeps the first translation it renders, so a
  * message the reader writes (a Regex's or a check's own sentence, what a
  * JsonSchema check holds a value to) is one of these, which a document

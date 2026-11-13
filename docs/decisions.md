@@ -2595,7 +2595,10 @@ document, refusal or stored value changed.
   stripped. A node is projected before anything compares it, so every
   `Schemas::same()` of the walk sees the published form, and two sites
   whose checks differ only in their options still share one def.
-- **Built once per definition.** The node of a definition a sealed data
+- **Built once per definition.** (Since 2026-11-13 the memo, `seal()`
+  and `hold()` are gone: the entry holds its key's node and `of()` keeps
+  nothing; see
+  [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone).) The node of a definition a sealed data
   surface holds is kept per definition object and `$listed`, in a
   `WeakMap` (since 2026-11-13 per definition object alone, in a static
   `WeakMap`: there is one node per definition; see [A definition is read
@@ -2610,7 +2613,9 @@ document, refusal or stored value changed.
   keeps its node across refinements. A built node never reaches the
   build cache, a served document, `ServedContract`, a log or an
   exception message: it is held in memory only.
-- **The memo's precondition.** A definition a sealed data surface holds,
+- **The memo's precondition.** (Since 2026-11-13 the fingerprint
+  assertion is gone; the rule stands, proven by a test instead: see
+  [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone).) A definition a sealed data surface holds,
   and one `Location` hands out, is never written after its node is
   built; code that changes a definition works on a copy
   (`Surface::deepClone()`), as refiners and conditionals do. Where
@@ -2626,7 +2631,10 @@ document, refusal or stored value changed.
   place is not. Why: nothing in production writes a held definition, but
   the next slices move more readers onto kept nodes, and a stale node
   would serve the old key and raise no error.
-- **The provider reads the node.** `Contract\BuiltNodes::place()` finds
+- **The provider reads the node.** (Since 2026-11-13 `BuiltNodes` is
+  gone: `Location::definitionAt()` gives the node beside the definition,
+  the node of the entry that holds the key walked in step; see
+  [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone).) `Contract\BuiltNodes::place()` finds
   the built node at a place as `Location::definitionAt()` finds the
   definition (each level refined against its own values, a chosen
   variant, an item of a collection, a property or an item below a plain
@@ -2670,7 +2678,8 @@ document, refusal or stored value changed.
   reader after the flip. `OUTSIDE_THE_EDGES` stays 156, so the list
   still only shrinks. `BuiltNodes`, `CheckOptions` and `NodeMessage`
   name no Typed Data; `BuiltNodes` types the definition it hands out
-  through `DefinitionSchema`'s type alias.
+  through `DefinitionSchema`'s type alias (`BuiltNodes` was deleted
+  2026-11-13).
 
 Later: lazy text read by the consumers that render it themselves; a
 frame's own node, built from its entries' nodes, holding the frame's
@@ -3097,7 +3106,8 @@ each half needs. No served document, refusal or value changed.
   type by MODEL's `type` alone, so a hand-built surface with such a type
   still fails where its document is made and no longer fails where its
   node is read. A reader that takes a node and does not project it
-  (`BuiltNodes::place()`) gets a node with no `type` keyword, the type in
+  (`BuiltNodes::place()`; since 2026-11-13 `Location::definitionAt()`)
+  gets a node with no `type` keyword, the type in
   MODEL, and no refusal. `type` is a bridge: it goes before the series
   closes.
 - **Reading never renders.** A title or description is kept when the
@@ -3133,7 +3143,9 @@ each half needs. No served document, refusal or value changed.
   `publishedTexts()` is the static projection of a title and a
   description alone; `publishedKeywords()` projects what `keywords()`
   read for `PropertySchema::signature()`.
-- **The memo stays, static.** `seal()`, `hold()`, the memo and the
+- **The memo stays, static.** (Gone since 2026-11-13, with `seal()`,
+  `hold()`, the fingerprint assertion and `BuiltNodes`: see
+  [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone).) `seal()`, `hold()`, the memo and the
   fingerprint assertion work as before (since 2026-11-13 the fingerprint
   also hashes the class, a map's main property name and every definition
   the array holds: see [A node holds every fact of its
@@ -3165,7 +3177,8 @@ for every fact a definition carries, the mark of a key that does not
 apply among them (done 2026-11-13: see [A node holds every fact of its
 definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it));
 the memo, `seal()`, `hold()` and the fingerprint
-assertion go when an `Entry` holds its node.
+assertion go when an `Entry` holds its node (done 2026-11-13: see
+[An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone)).
 
 (`Contract\DefinitionSchema`, `Contract\LeafTypes`, `Contract\BuiltNodes`,
 `DefinitionMetadata`, `PropertySchema`, `ContractEmitter`,
@@ -3302,7 +3315,9 @@ document, refusal or value changed, and no consumer moved.
 - **What does not change.** `published()` strips MODEL at every depth,
   and so every member, including the nodes a shape, a config type and
   `each` hold. No consumer but the projection reads a new member. The
-  memo, `seal()`, `hold()` and the fingerprint assertion stay; the
+  memo, `seal()`, `hold()` and the fingerprint assertion stay (until
+  2026-11-13, when they went and `BuiltNodes` with them: see
+  [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone)); the
   fingerprint hashes what the read reads: the class, the definition
   array or the getters, a map's main property name, every property and
   item, and every definition the array holds. It does not see an object
@@ -3345,7 +3360,8 @@ properties' nodes.
 
 Later: the `Entry` holds either form, the definition or the node, and
 derives the other on first read, and the memo, `seal()`, the fingerprint
-and `BuiltNodes` go (slice 29); the consumers read members in place of
+and `BuiltNodes` go (slice 29; done 2026-11-13 for the definition-first
+direction, see [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone)); the consumers read members in place of
 `DefinitionMetadata` calls (slices 30 and 31); the bridges go
 (slice 35).
 
@@ -3353,6 +3369,128 @@ and `BuiltNodes` go (slice 29); the consumers read members in place of
 `DefinitionRoundTripTest`, `DefinitionEqualityTrait`,
 `DefinitionEqualityTest`, `ModelMembersTest`, `DefinitionSchemaTest`,
 `BuiltNodesTest`, `DefinitionReadIsPureTest`, `TypedDataFootprintTest`)
+
+### An entry holds its node; the memo is gone
+
+Decided 2026-11-13. A built node was read from a definition by
+`DefinitionSchema::of()` and kept in four static `WeakMap`s keyed by the
+definition object, with `seal()` and `hold()` to say which definitions
+to keep, a fingerprint assertion to notice a definition written after
+its node was read, and `BuiltNodes` to find the node at a place. All of
+it existed because nothing owned the node. The `Entry` owns it now, and
+that code is deleted. No served document, refusal or value changed.
+
+- **The entry holds its node.** `Entry::schema()` returns the built node
+  of the entry's definition: `DefinitionSchema::of($this->definition)`,
+  read on the first call and kept on the entry, so a second call returns
+  the same object. It asks no service. The read is lazy: an entry a
+  refinement makes and nothing describes reads nothing. The read's one
+  refusal, a definition that holds itself, is thrown at the first
+  `schema()` call, never at build. `definition` stays the public
+  constructor member, and `Entry` stays `final`; the node is a private
+  member that no constructor takes.
+- **One direction only.** Every source gives a definition today, so the
+  entry reads its node from its definition. Nothing in `src/` calls
+  `NodeDefinition::of()`. The entry that holds a node a source gave and
+  derives its definition comes when a source produces a node (slice 32).
+- **The node travels with the definition.** An entry made with the same
+  definition object keeps the node: `readingFrom()`, and
+  `withDefinition()` handed the definition it holds. One made with
+  another definition starts unread.
+- **The node is never serialized.** `Entry::__sleep()` names every member
+  but the node, so a serialized entry is the same bytes whether or not
+  its node was read, and the same bytes as before this change: a build
+  cache row does not depend on what was asked before it was written. An
+  unserialized entry reads its node again on the first ask.
+  `SerializedMaps` walks an entry as before (a node is no class it walks
+  into).
+- **Readers walk the node in step.** A reader that walks down from an
+  entry's definition walks the entry's node beside it: a property's node
+  is the one under the parent's `properties`, an item's the one under
+  `items`, a shape's the one MODEL's `shape` holds
+  (`DefinitionSchema::propertyNode()`, `itemNode()`, `shapeNode()`, static
+  and pure). `PropertySchema::property()` takes the node beside the
+  definition, reads nothing itself, and hands each property and item its
+  node; a property or item with no node below its parent's is a fault and
+  throws. The emitter hands
+  it each entry's node, and `Conditionals` the node of the entry that
+  holds the definition it states (the key in a refined data surface, the
+  static one a site reads, a combination's). `Location::definitionAt()`
+  gives the node beside the definition: the node of the entry that holds
+  the key, walked in step below a plain key, asked only of the entry at
+  the place, never a level it passes through. A place with a definition
+  and no node throws: a missing node would answer "no secret, no check"
+  for a key that may have both. The check provider and the form's widget
+  host read the node there; `BuiltNodes` is gone and their constructors
+  lost it. Both refine each level once for their own life
+  (`KeepsRefines`): a refine makes new entries, which have read nothing,
+  so a reader that refined per lookup would read each node again per
+  lookup.
+- **What still reads a definition into a node.** `of()` and `head()`
+  keep nothing: each call reads. Their callers are pinned by file and
+  count (`DefinitionReadCallersTest`): the entry itself;
+  `Conditionals::stated()` for a definition no entry holds (a declared
+  rule's answer, written on a copy; a key described by its definition
+  alone); `PropertySchema::property()` for a shape whose node its key's
+  node does not hold; and `PropertySchema::listKeywords()`, a
+  collection's own keywords without its items (`head()`), which no
+  entry's node is. Since `property()` reads nothing, a caller that stops
+  handing an entry's node on has to call `of()` itself, and the list
+  shows it.
+- **Staleness is asserted and tested.** The rule is unchanged: a
+  definition an entry holds is never written after the entry is made
+  (the builder seals the definitions; refiners write deep copies). With
+  assertions on, every ask of `schema()` after the first reads the
+  definition again and compares it with the kept node, so a write is
+  seen on whatever path makes it, in every test and on a development
+  site; with assertions off nothing is read twice. The comparison
+  (`DefinitionSchema::same()`) holds every object to be the same object
+  on both sides, except the messages the read itself makes, which are
+  compared by what they say and never rendered.
+  `EntryNodeIsNeverStaleTest` reads the node of every entry of every
+  pinned example, built for the account and for no account, and of each
+  refined by every kind of refiner for every value set, at every depth
+  the walk reaches; runs the accept, the validation, every kind of
+  document, the narrowed document, the form's envelope and the tool
+  definitions; then reads each definition afresh and compares it with
+  the kept node. A consumer planted to write a definition it was handed
+  fails it.
+- **What it costs.** Without the memo, a definition two entries share is
+  read once per entry: on the development site 184 definitions are
+  reachable from more than one entry. A refined map that keeps some of
+  its declared properties shares those property objects with the
+  declared map (an alter's mount, refined one property at a time), so
+  each refinement reads them again where the memo had kept them: two
+  definitions more per emit of `registration.step3:configure` (its
+  compliance mount's `license` and the node its shape holds). A lookup
+  of one place below a refined map reads the map's whole node where the
+  memo gave the one node asked for, once per reader since a reader
+  keeps its refines: 57 definitions for one form build of
+  `entity.content:media:create`. Over every operation of the development
+  site, as two accounts, the reads are 2334 against 2316 for every
+  document of every value set, 1267 against 1131 for every form build
+  and 273 against 267 for every validation. Nothing reads a definition
+  again at each depth: that is what walking the node in step prevents.
+  Measured there with assertions off, no operation is slower by minimum
+  by more than 2 percent; building every data surface and reading every
+  entry's node holds 10.8 MB where the memo held 8.1 MB. Both costs end
+  when a source gives a node and a request keeps one refine.
+
+Earlier entries name `BuiltNodes::place()` and `BuiltNodesTest`: the
+first is `Location::definitionAt()` now, the second `LocationNodeTest`.
+
+Later: the node-first entry, for a source that produces a node
+(slice 32); the compiled form of an entry in the build cache (slice 33);
+`definition` stays a member until its readers are gone.
+
+(`Entry`, `Contract\DefinitionSchema`, `Contract\PropertySchema`,
+`Contract\Conditionals`, `Contract\ContractEmitter`,
+`Contract\DocumentHead`, `ResourceBuild\Location`,
+`ResourceBuild\KeepsRefines`, `Validation\DrupalCheckProvider`,
+`Form\FormWidgetHost`, `EntryTest`,
+`LocationNodeTest`, `EntryNodeIsNeverStaleTest`,
+`DefinitionReadCallersTest`, `DefinitionSchemaTest`,
+`DefinitionReadIsPureTest`)
 
 ### A key that does not apply
 
@@ -13427,7 +13565,8 @@ accepted, and the bytes that change are the checks named.
   maps writes them at `items`. Each has the message every check has.
   The constraint table is not read here: no keyword states a map's
   constraint. The provider answers a `drupal:<id>` at a map as at a
-  key (the built node at the place, `BuiltNodes`), an empty map is checked, and a map
+  key (the built node at the place, `BuiltNodes`; since 2026-11-13 the
+  node `Location` gives, see [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone)), an empty map is checked, and a map
   its `type` refuses is not asked. A shape is one scalar definition, so
   a shape's def holds no map. A check newly named at a map lints as
   NARROWS, as any check added does; no adopter holds a contract 5

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Drupal\surface;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Refinement\ApplicabilityInterface;
 use Drupal\surface\Refinement\DeclaredRefiner;
 use Drupal\surface\Refinement\RuntimeRefiner;
+use PortableSchema\Builder\Schema;
 
 /**
  * One key of a data surface, and everything known about it.
@@ -26,10 +28,40 @@ use Drupal\surface\Refinement\RuntimeRefiner;
  * The data surface's own cacheability is not per key and stays on the
  * data surface.
  *
+ * An entry holds its key's built node (schema()): read from the
+ * definition on the first ask and kept, so every consumer that has the
+ * entry reads one node, with no service. The rules:
+ * - The read is lazy: nothing reads the node when an entry is made, so a
+ *   key refined and never described reads nothing. The read's one
+ *   refusal, a definition that holds itself, is thrown at the first
+ *   schema() call, never at build.
+ * - An entry made with the same definition object keeps the node
+ *   (readingFrom(), withDefinition() handed the same definition); one
+ *   made with another definition starts unread.
+ * - The node is never serialized: a build cache row is the same whether
+ *   or not a node was read, and an entry read back from one reads its
+ *   node again on the first ask.
+ * - A definition an entry holds is never written after the entry is
+ *   made: the builder seals the definitions, and a refiner writes a deep
+ *   copy (Surface::deepClone()). EntryNodeIsNeverStaleTest proves it for
+ *   every example surface and value set.
+ * Every source gives a definition today, so the node is the one read
+ * from it (DefinitionSchema::of()).
+ *
+ * Decision: see
+ * docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone.
+ *
  * @see \Drupal\surface\DefinitionMap
  *   The ordered collection of entries a data surface is sealed with.
  */
 final class Entry {
+
+  /**
+   * The built node of the definition, once schema() has read it.
+   *
+   * Not a constructor parameter, and never serialized (__sleep()).
+   */
+  private ?Schema $node = NULL;
 
   /**
    * Constructs an Entry.
@@ -131,7 +163,8 @@ final class Entry {
    * The one mutation refinement makes: everything else about a key (who
    * introduced it, whether it is locked, what it refines against, whose
    * values it carries) is settled at build time and survives
-   * narrowing untouched.
+   * narrowing untouched. Handed the definition it holds, the new entry
+   * keeps the node; handed another, it starts unread.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The narrowed definition.
@@ -140,7 +173,7 @@ final class Entry {
    *   The new entry.
    */
   public function withDefinition(DataDefinitionInterface $definition): static {
-    return new static(
+    $entry = new static(
       $this->name,
       $definition,
       $this->contributor,
@@ -159,6 +192,47 @@ final class Entry {
       $this->runtimeAccess,
       $this->lockedBecause,
     );
+    if ($definition === $this->definition) {
+      $entry->node = $this->node;
+    }
+    return $entry;
+  }
+
+  /**
+   * Gets the built node of the key's definition.
+   *
+   * Read from the definition on the first call (DefinitionSchema::of()) and
+   * kept: every later call returns the same object. It asks no service.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The built node.
+   *
+   * @throws \LogicException
+   *   When the definition holds itself, which no node can be read from.
+   * @throws \AssertionError
+   *   With assertions on, when the definition was written after its node
+   *   was read.
+   */
+  public function schema(): Schema {
+    // With assertions on, each later ask reads the definition again: the
+    // two differ only where the definition was written after the entry
+    // was made, which no code may do (a refiner writes a copy).
+    assert($this->node === NULL || DefinitionSchema::same($this->node, DefinitionSchema::of($this->definition)), sprintf('The definition of the "%s" key was written after its node was read. An entry\'s definition is never written: write a copy and make an entry of it (withDefinition()).', $this->name));
+    return $this->node ??= DefinitionSchema::of($this->definition);
+  }
+
+  /**
+   * Names what an entry serializes: every member but the node.
+   *
+   * The serialized entry is the same whether or not its node was read, so
+   * a build cache row does not depend on what a consumer asked before it
+   * was written.
+   *
+   * @return string[]
+   *   The constructor's members, in their order.
+   */
+  public function __sleep(): array {
+    return array_keys(array_diff_key(get_object_vars($this), ['node' => TRUE]));
   }
 
   /**
@@ -403,7 +477,7 @@ final class Entry {
    *
    * @return static|null
    *   The entry, every attached or mounted child that reads ports bound
-   *   to them; NULL when none reads any.
+   *   to them, with the node already read; NULL when none reads any.
    */
   public function readingFrom(array $values): ?static {
     $attachment = $this->attachment !== NULL && $this->attachment->reads !== [] ? $this->attachment->readFrom($values) : NULL;
@@ -416,7 +490,7 @@ final class Entry {
     if ($attachment === NULL && $mounted === []) {
       return NULL;
     }
-    return new static(
+    $entry = new static(
       $this->name,
       $this->definition,
       $this->contributor,
@@ -435,6 +509,9 @@ final class Entry {
       $this->runtimeAccess,
       $this->lockedBecause,
     );
+    // The same definition: the node read already is its node.
+    $entry->node = $this->node;
+    return $entry;
   }
 
   /**

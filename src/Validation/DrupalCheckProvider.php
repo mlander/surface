@@ -14,7 +14,6 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\Validation\ConstraintManager;
-use Drupal\surface\Contract\BuiltNodes;
 use Drupal\surface\Contract\ConstraintKeywords;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\PortableKeywords;
@@ -25,6 +24,7 @@ use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Pipeline\ViolationMessage;
 use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
 use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraintValidator;
+use Drupal\surface\ResourceBuild\KeepsRefines;
 use Drupal\surface\ResourceBuild\Location;
 use Drupal\surface\SurfaceInterface;
 use PortableSchema\Check\CheckProvider;
@@ -37,14 +37,15 @@ use Symfony\Component\Validator\ConstraintViolationInterface;
  * Answers every `drupal:<plugin id>` check of one validation.
  *
  * The rule: a request is read back to the place it is about, and to the
- * built node there (BuiltNodes, on the data surface refined against the
- * values), never a node of the served document; the constraint of that
+ * built node there (Location::definitionAt(), on the data surface refined
+ * against the values, once per level (KeepsRefines): the node its entry
+ * holds), never a node of the served document; the constraint of that
  * plugin id the node declares runs, with the options the definition holds
  * (storage, key, handler, theme, ...), read from the node
  * (DefinitionSchema::options()), alone, by ConstraintRunner::check() with
  * the definition the node was read from, which the place hands out beside
- * the node (BuiltNodes::place()). The options the document
- * publishes describe the check; they are never what runs. A frame's
+ * the node. The options the document publishes describe the check; they
+ * are never what runs. A frame's
  * `drupal:JsonSchema` is each schema read into that frame, held to the
  * frame's values as the pipeline writes them
  * (SurfacePipelineInterface::document()); an item of a collection whose
@@ -89,6 +90,8 @@ use Symfony\Component\Validator\ConstraintViolationInterface;
  * @internal
  */
 final class DrupalCheckProvider implements CheckProvider {
+
+  use KeepsRefines;
 
   /**
    * The namespace of the checks this answers.
@@ -141,13 +144,6 @@ final class DrupalCheckProvider implements CheckProvider {
   private array $unasked = [];
 
   /**
-   * Each level refined, by the level and its values.
-   *
-   * @var array<string, array{0: \Drupal\surface\SurfaceInterface, 1: \Drupal\surface\SurfaceInterface}>
-   */
-  private array $refined = [];
-
-  /**
    * What is at each place, by its JSON Pointer.
    *
    * @var array<string, array{node: ?\PortableSchema\Builder\Schema, definition: ?\Drupal\Core\TypedData\DataDefinitionInterface, frame: ?\Drupal\surface\SurfaceInterface, value: mixed}|null>
@@ -184,8 +180,6 @@ final class DrupalCheckProvider implements CheckProvider {
    * @param \Drupal\surface\Options\SurfaceOptions $options
    *   The options service, which tells whether a constraint is read as a
    *   list of values.
-   * @param \Drupal\surface\Contract\BuiltNodes $built
-   *   What finds the built node at a place.
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface of the top, as advertised.
    * @param array $values
@@ -197,7 +191,6 @@ final class DrupalCheckProvider implements CheckProvider {
     private readonly SurfacePipelineInterface $pipeline,
     private readonly TranslationInterface $translation,
     private readonly SurfaceOptions $options,
-    private readonly BuiltNodes $built,
     public readonly SurfaceInterface $surface,
     public readonly array $values,
   ) {
@@ -246,11 +239,18 @@ final class DrupalCheckProvider implements CheckProvider {
    *
    * @return array{node: ?\PortableSchema\Builder\Schema, definition: ?\Drupal\Core\TypedData\DataDefinitionInterface, frame: ?\Drupal\surface\SurfaceInterface, value: mixed}|null
    *   The built node there and its definition, the frame there, and the
-   *   value there (BuiltNodes::place()); NULL where nothing declares it.
+   *   value there (Location::definitionAt()); NULL where nothing declares
+   *   it.
    */
   private function at(string $pointer): ?array {
     if (!array_key_exists($pointer, $this->places)) {
-      $this->places[$pointer] = $this->built->place($this->surface, $this->values, $pointer, $this->refine(...));
+      $location = Location::definitionAt($this->surface, $this->values, $pointer, $this->refine(...));
+      $this->places[$pointer] = $location === NULL ? NULL : [
+        'node' => $location->node,
+        'definition' => $location->definition,
+        'frame' => $location->frame,
+        'value' => $location->value,
+      ];
     }
     return $this->places[$pointer];
   }
@@ -297,25 +297,6 @@ final class DrupalCheckProvider implements CheckProvider {
       $listed = TRUE;
     }
     return $listed;
-  }
-
-  /**
-   * Refines a level against its values, once for the provider.
-   *
-   * @param \Drupal\surface\SurfaceInterface $level
-   *   The level.
-   * @param array $values
-   *   Its values.
-   *
-   * @return \Drupal\surface\SurfaceInterface
-   *   It, refined.
-   */
-  private function refine(SurfaceInterface $level, array $values): SurfaceInterface {
-    $key = spl_object_id($level) . ':' . hash('xxh128', serialize($values));
-    if (!isset($this->refined[$key]) || $this->refined[$key][0] !== $level) {
-      $this->refined[$key] = [$level, $level->refine($values)];
-    }
-    return $this->refined[$key][1];
   }
 
   /**

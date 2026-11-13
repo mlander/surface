@@ -684,18 +684,29 @@ the record of the rework that brought the module to the pattern.
   from its node), a check's label, a property that does not apply left
   out, the refusal, `CheckOptions::published()`, `PlainText::of()`, the
   model stripped (at every keyword position); before anything compares it;
-  the emitter decorates the projection with what the request adds. Kept
-  per definition a sealed data surface holds (static `WeakMap`s), under
-  one precondition: such a definition is never written after its node is
-  built (a change works on a copy), which an assertion checks by
-  fingerprint where assertions run. Never in the build cache or a served
-  document. `Contract\BuiltNodes::place()` gives the check provider and
-  the form the node at a place (`of($definition)`), beside the
-  definition, the frame and the value; never a node of the served
-  document
+  the emitter decorates the projection with what the request adds.
+  `of()` keeps nothing: the `Entry` holds its key's node
+  (`Entry::schema()`, read from the definition on the first ask, kept,
+  handed on to an entry with the same definition, never serialized), and
+  a reader that walks down from an entry walks its node in step
+  (`DefinitionSchema::propertyNode()`, `itemNode()`, `shapeNode()`). The
+  rule it rests on: a definition an entry holds is never written after
+  the entry is made (a change works on a copy): with assertions on,
+  every later `schema()` ask compares a fresh read with the kept node
+  (`DefinitionSchema::same()`), and `EntryNodeIsNeverStaleTest` proves
+  it over the examples. `PropertySchema::property()` takes its node
+  from its caller and reads nothing, so what still calls `of()` or
+  `head()` is every read there is, pinned by file
+  (`DefinitionReadCallersTest`). Never in the build cache or a served
+  document. `Location::definitionAt()` gives the check provider and the
+  form the node at a place (the entry's, walked in step; a place with a
+  definition and no node throws) beside the definition, the frame and
+  the value, and both refine each level once (`KeepsRefines`); never a
+  node of the served document
   (`docs/decisions.md#a-definition-is-read-once-into-a-built-node`,
   `docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request`,
-  `docs/decisions.md#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it`).
+  `docs/decisions.md#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it`,
+  `docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone`).
 - **Secrets**: `Contract\Secrets`, the one reader of what is secret,
   from a schema node or a document, holding no definition: `marked()`
   (the node says `writeOnly: true`; the reader, the check provider and
@@ -1039,8 +1050,8 @@ test errored or failed and every gate passed.
   cache; it orders classes slowest first.
 
 On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-13: the
-full lane takes 15m33s at the defaults (phpunit 14m44s) and the fast
-lane 8m20s (phpunit 8m14s). As of 2026-10-23, with a smaller suite, the
+full lane takes 12m28s at the defaults (phpunit 11m44s) and the fast
+lane 6m32s (phpunit 6m26s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1071,7 +1082,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2512, Assertions: 109936, Errors: 0, Failures: 0, Skipped: 3. Classes: 351 of 351, 8 at a time, browser classes 4.
+phpunit: Tests: 2520, Assertions: 102298, Errors: 0, Failures: 0, Skipped: 3. Classes: 353 of 353, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1095,8 +1106,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2398, Assertions: 105382, Deprecations: 773, Skipped: 3. Classes:
-298, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2406, Assertions: 97744, Deprecations: 777, Skipped: 3. Classes:
+300, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 
@@ -1413,13 +1424,14 @@ src/Validation/          A request's values held to their document by the
                          validate(), compiled validators kept by the
                          document's hash), DrupalCheckProvider (every
                          `drupal:<plugin id>` check, run from the built
-                         node at the place (Contract/BuiltNodes), by
+                         node at the place (its entry's, through
+                         ResourceBuild/Location), by
                          ConstraintRunner, the one class that builds a
                          typed value to run a constraint, Surface's own
                          plugins on the plain value), Nodes (the document's nodes at
                          each place of the data), Found (one refusal,
                          said). ResourceBuild/Location.php reads a JSON
-                         Pointer back to its definition and value.
+                         Pointer back to its definition, node and value.
 src/Storage/             Where accepted values are written; settings layouts.
 src/Staging/             The store contract (StageStoreInterface, and
                          the optional ListsStagesInterface), the
@@ -1442,9 +1454,8 @@ src/Contract/            The served contract's emitter (a Portable Schema
                          derives a definition back from a node),
                          and projects it for the request (published(),
                          CheckOptions the check options a document says,
-                         NodeMessage a message it holds);
-                         BuiltNodes finds the node at a place for the
-                         check provider and the form; Secrets answers
+                         NodeMessage a message it holds); of() keeps
+                         nothing, the Entry holds its node; Secrets answers
                          what is secret from a node or a document;
                          ContractEmitter
                          walks the frames, PropertySchema writes each key

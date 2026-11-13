@@ -17,7 +17,6 @@ use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Plugin\SurfaceWidget\DateWidget;
 use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
-use Drupal\surface\SurfaceInterface;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -105,8 +104,8 @@ use PortableSchema\Builder\Schema;
  * - A value of a data type no row is for is refused, with LeafTypes'
  *   message, where its document node is made (publishedNode()), one node
  *   at a time, by MODEL's `type`. A reader that takes a node and does not
- *   project it (BuiltNodes::place()) gets a node with no `type` keyword
- *   and the data type in MODEL, and no refusal.
+ *   project it (Location::definitionAt()) gets a node with no `type`
+ *   keyword and the data type in MODEL, and no refusal.
  * - Each check's options go through CheckOptions::published(); the title,
  *   the description and each message are rendered as plain text
  *   (PlainText::of()); a title, description or message that renders empty
@@ -127,51 +126,23 @@ use PortableSchema\Builder\Schema;
  * A built node is held in memory only: it never reaches the build cache, a
  * served document or ServedContract, a log or an exception message.
  *
- * The memo. The node of a definition a sealed data surface holds is built
- * once per definition object. The code knows a definition is held by one
- * because it was handed one: seal() marks every definition of a data
- * surface (a data surface is sealed by construction), hold() marks the
- * definition it is handed as one a data surface holds (BuiltNodes hands it
- * what Location finds), and a node built for a marked definition marks
- * its properties and items. Any other definition (a copy a conditional
- * narrows, one a test builds and changes) is read afresh each time. The
- * memo is static, in WeakMaps keyed by the definition object, so a reader
- * with no service shares it. That is safe across kernel tests in one
- * process: an entry lives only while its definition object does, a test
- * builds its own definitions, and a read is a function of the definition
- * alone, so no entry can say what another container or request decided.
- *
- * The precondition of the memo: a definition a sealed data surface holds,
- * and one Location hands out, is never written after its node is built.
- * Code that changes a definition works on a copy (Surface::deepClone()), as
- * refiners and conditionals do. Where assertions run, each read of a kept
- * node checks it: the definition's fingerprint (fingerprint()) must equal
- * the one taken when its node was first built, or the assertion fails,
- * naming the definition's label (its source string) and data type. The
- * fingerprint is taken and compared only inside assert(), so production
- * pays nothing. It hashes what the read reads: the definition's class,
- * what its array holds (its type, label, description, required, settings,
- * its own constraints with their options, the module's metadata, every
- * other key), or for a definition that is no DataDefinition what its
- * getters say, a map's main property name, the same of every property and
- * item below it, and the fingerprint of every definition its array holds
- * (a shape's, a config type's, `each`'s, one held in a setting). Text is
- * read as its source string, arguments and options. It does not see
- * inside any other object (a closure, a service, a Computed, an
- * Arrangement): such an object is compared by identity, so one replaced
- * is seen and one changed in place is not; the node holds the same
- * object, so it says the change too.
+ * Nothing is kept here: of() reads the definition each time it is called.
+ * The node of a key is kept by its entry (Entry::schema()), and a reader
+ * that walks down from an entry walks the entry's node in step
+ * (propertyNode(), itemNode()), so no definition is read again at each
+ * depth. A definition two entries share is read once by each.
  *
  * MODEL holds what a node knows that no document says. A built node holds
  * no reference to its definition: a reader that needs the definition takes
- * it from where it found the node (BuiltNodes::place()), or derives one
+ * it from where it found the node (a Location), or derives one
  * from the node (NodeDefinition::of()). Its members are a closed list,
  * MEMBERS, whose docblock says what each holds and who reads it; the
  * bridges among them, which go before the series closes, are BRIDGES.
  *
  * Decision: see
  * docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request,
- * docs/decisions.md#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it.
+ * docs/decisions.md#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it,
+ * docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone.
  *
  * @phpstan-type Definition \Drupal\Core\TypedData\DataDefinitionInterface
  *
@@ -405,36 +376,6 @@ final class DefinitionSchema {
   ];
 
   /**
-   * The built nodes of definitions a data surface holds.
-   *
-   * @var \WeakMap<\Drupal\Core\TypedData\DataDefinitionInterface, \PortableSchema\Builder\Schema>|null
-   */
-  private static ?\WeakMap $built = NULL;
-
-  /**
-   * The definitions a sealed data surface holds.
-   *
-   * @var \WeakMap<\Drupal\Core\TypedData\DataDefinitionInterface, true>|null
-   */
-  private static ?\WeakMap $held = NULL;
-
-  /**
-   * The data surfaces whose definitions are marked.
-   *
-   * @var \WeakMap<\Drupal\surface\SurfaceInterface, true>|null
-   */
-  private static ?\WeakMap $sealed = NULL;
-
-  /**
-   * The fingerprint of each held definition whose node was built.
-   *
-   * Written and read only inside assert() (fingerprinted(), unchanged()).
-   *
-   * @var \WeakMap<\Drupal\Core\TypedData\DataDefinitionInterface, string>|null
-   */
-  private static ?\WeakMap $prints = NULL;
-
-  /**
    * Whether a list states a constraint, by plugin id.
    *
    * A function of the two plugin managers' definitions alone.
@@ -478,45 +419,6 @@ final class DefinitionSchema {
   ) {}
 
   /**
-   * Marks every definition a sealed data surface holds.
-   *
-   * Its keys' and its outputs' definitions; their properties and items
-   * are marked as each node is built.
-   *
-   * @param \Drupal\surface\SurfaceInterface $surface
-   *   The data surface.
-   */
-  public static function seal(SurfaceInterface $surface): void {
-    self::$sealed ??= new \WeakMap();
-    self::$held ??= new \WeakMap();
-    if (isset(self::$sealed[$surface])) {
-      return;
-    }
-    self::$sealed[$surface] = TRUE;
-    foreach ($surface->getDefinitions()->entries() as $entry) {
-      self::$held[$entry->definition] = TRUE;
-    }
-    foreach ($surface->getOutputDefinitions()->entries() as $entry) {
-      self::$held[$entry->definition] = TRUE;
-    }
-  }
-
-  /**
-   * Marks a definition as one a sealed data surface holds.
-   *
-   * Its node is then built once (of()), under the precondition the class
-   * states: it is never written after.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition, one a data surface holds (its key's, or a property
-   *   or item below one), as Location hands it out.
-   */
-  public static function hold(DataDefinitionInterface $definition): void {
-    self::$held ??= new \WeakMap();
-    self::$held[$definition] = TRUE;
-  }
-
-  /**
    * Reads the node of a collection's own definition, without its items.
    *
    * What a collection key says of itself: its title, description, `type`
@@ -535,8 +437,7 @@ final class DefinitionSchema {
     $checks = array_intersect_key($keywords, array_flip([PortableKeywords::CHECK, PortableKeywords::MESSAGES]));
     $schema = Schemas::defaults(static::describe($definition), ['type' => static::nullable('array', $definition)] + array_diff_key($keywords, $checks));
     $schema = Schemas::defaults($schema, $checks);
-    $held = isset(self::$held[$definition]);
-    return $schema->with(self::MODEL, static::annotation($definition, $schema, '', [spl_object_id($definition) => TRUE], $held));
+    return $schema->with(self::MODEL, static::annotation($definition, $schema, '', [spl_object_id($definition) => TRUE]));
   }
 
   /**
@@ -546,8 +447,8 @@ final class DefinitionSchema {
    *   The definition.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The built node: the same object for the same definition a data
-   *   surface holds.
+   *   The built node, read afresh: nothing is kept. An entry keeps the
+   *   node of its definition (Entry::schema()).
    */
   public static function of(DataDefinitionInterface $definition): Schema {
     return self::read($definition, '', []);
@@ -576,19 +477,7 @@ final class DefinitionSchema {
       throw new \LogicException(sprintf('The definition of the %s type at "%s" holds itself: it is met again inside itself, so no node can be read from it.', $definition->getDataType(), $path));
     }
     $above[$id] = TRUE;
-    self::$built ??= new \WeakMap();
-    self::$prints ??= new \WeakMap();
-    $held = isset(self::$held[$definition]);
-    if ($held && isset(self::$built[$definition])) {
-      assert(self::unchanged($definition));
-      return self::$built[$definition];
-    }
-    $node = self::build($definition, $held, $path, $above);
-    if ($held) {
-      assert(isset(self::$prints[$definition]) ? self::unchanged($definition) : self::fingerprinted($definition));
-      self::$built[$definition] = $node;
-    }
-    return $node;
+    return self::build($definition, $path, $above);
   }
 
   /**
@@ -596,9 +485,6 @@ final class DefinitionSchema {
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
-   * @param bool $held
-   *   Whether a sealed data surface holds it, so its properties and items
-   *   are held too.
    * @param string $path
    *   Where it is in the node being read, as a JSON Pointer.
    * @param array<int, true> $above
@@ -607,13 +493,10 @@ final class DefinitionSchema {
    * @return \PortableSchema\Builder\Schema
    *   The built node.
    */
-  private static function build(DataDefinitionInterface $definition, bool $held, string $path, array $above): Schema {
+  private static function build(DataDefinitionInterface $definition, string $path, array $above): Schema {
     $schema = static::describe($definition);
     if ($definition instanceof ListDataDefinitionInterface) {
       $item = $definition->getItemDefinition();
-      if ($held) {
-        self::$held[$item] = TRUE;
-      }
       $list = [
         'type' => static::nullable('array', $definition),
         'items' => static::read($item, $path . '/items', $above),
@@ -626,9 +509,6 @@ final class DefinitionSchema {
       foreach ($definition->getPropertyDefinitions() as $name => $property) {
         // A key an alter mounted and a refinement ruled out is read too:
         // the projection leaves it out (applying()).
-        if ($held) {
-          self::$held[$property] = TRUE;
-        }
         $at = $path . '/properties/' . strtr((string) $name, [
           '~' => '~0',
           '/' => '~1',
@@ -679,7 +559,7 @@ final class DefinitionSchema {
       }
     }
     $schema = Schemas::defaults($schema, $checks);
-    return $schema->with(self::MODEL, static::annotation($definition, $schema, $path, $above, $held));
+    return $schema->with(self::MODEL, static::annotation($definition, $schema, $path, $above));
   }
 
   /**
@@ -708,6 +588,102 @@ final class DefinitionSchema {
    */
   public static function nodeIsMap(Schema $node): bool {
     return !$node->isBoolean() && is_array($node->get('properties'));
+  }
+
+  /**
+   * Gets the node of a property, below a map's node.
+   *
+   * The step a reader takes from a map's definition to one of its
+   * properties, taken on the node: a built map's node holds a node for
+   * every property its definition has, a marked one included.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node.
+   * @param string $name
+   *   The property name.
+   *
+   * @return \PortableSchema\Builder\Schema|null
+   *   The property's node; NULL where the node holds no such property.
+   */
+  public static function propertyNode(Schema $node, string $name): ?Schema {
+    $properties = $node->isBoolean() ? NULL : $node->get('properties');
+    $property = is_array($properties) ? $properties[$name] ?? NULL : NULL;
+    return $property instanceof Schema ? $property : NULL;
+  }
+
+  /**
+   * Gets the node of a list's item, below the list's node.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node.
+   *
+   * @return \PortableSchema\Builder\Schema|null
+   *   The item's node; NULL where the node holds none (one head() read).
+   */
+  public static function itemNode(Schema $node): ?Schema {
+    $item = $node->isBoolean() ? NULL : $node->get('items');
+    return $item instanceof Schema ? $item : NULL;
+  }
+
+  /**
+   * Answers whether two reads of a definition say the same.
+   *
+   * What an assertion compares a kept node with (Entry::schema()). Two
+   * reads of a definition nothing wrote hold the same values and the same
+   * objects, except the messages the read itself makes (NodeMessage),
+   * which are compared by what they say, never rendered. Any other object
+   * is the same only if it is the same object.
+   *
+   * @param mixed $kept
+   *   A node, or a value inside one.
+   * @param mixed $fresh
+   *   The other.
+   *
+   * @return bool
+   *   TRUE where nothing differs.
+   */
+  public static function same(mixed $kept, mixed $fresh): bool {
+    if ($kept === $fresh) {
+      return TRUE;
+    }
+    if ($kept instanceof Schema && $fresh instanceof Schema) {
+      if ($kept->isBoolean() || $fresh->isBoolean()) {
+        return $kept->isBoolean() && $fresh->isBoolean() && $kept->toDocument() === $fresh->toDocument();
+      }
+      return $kept->isRequired() === $fresh->isRequired() && static::same($kept->all(), $fresh->all());
+    }
+    if (is_array($kept) && is_array($fresh)) {
+      if (array_keys($kept) !== array_keys($fresh)) {
+        return FALSE;
+      }
+      foreach ($kept as $key => $value) {
+        if (!static::same($value, $fresh[$key])) {
+          return FALSE;
+        }
+      }
+      return TRUE;
+    }
+    if ($kept instanceof NodeMessage && $fresh instanceof NodeMessage) {
+      return $kept->getUntranslatedString() === $fresh->getUntranslatedString()
+        && static::same($kept->getArguments(), $fresh->getArguments())
+        && static::same($kept->getOptions(), $fresh->getOptions());
+    }
+    return FALSE;
+  }
+
+  /**
+   * Gets the node of the shape a node's definition is declared with.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node.
+   *
+   * @return \PortableSchema\Builder\Schema|null
+   *   The node of the shape's definition (MODEL's `shape`); NULL where none
+   *   is held.
+   */
+  public static function shapeNode(Schema $node): ?Schema {
+    $shape = static::model($node)['shape']['node'] ?? NULL;
+    return $shape instanceof Schema ? $shape : NULL;
   }
 
   /**
@@ -771,14 +747,11 @@ final class DefinitionSchema {
    *   Where the node is, as a JSON Pointer.
    * @param array<int, true> $above
    *   The definitions above it and itself, by object id.
-   * @param bool $held
-   *   Whether a sealed data surface holds the definition, so the
-   *   definitions its members hold are held too.
    *
    * @return array<string, mixed>
    *   The members, in MEMBERS's order.
    */
-  private static function annotation(DataDefinitionInterface $definition, Schema $schema, string $path, array $above, bool $held): array {
+  private static function annotation(DataDefinitionInterface $definition, Schema $schema, string $path, array $above): array {
     $type = $definition->getDataType();
     $members = ['type' => $type];
     $class = get_class($definition);
@@ -793,7 +766,7 @@ final class DefinitionSchema {
       $members['constraints'] = $constraints;
     }
     if ($definition instanceof DataDefinition) {
-      $members += static::stored($definition->toArray(), $type, $schema, $path, $above, $held);
+      $members += static::stored($definition->toArray(), $type, $schema, $path, $above);
     }
     if ($class === MapDataDefinition::class && $definition instanceof ComplexDataDefinitionInterface && $definition->getMainPropertyName() !== NULL) {
       $members['mainProperty'] = $definition->getMainPropertyName();
@@ -820,13 +793,11 @@ final class DefinitionSchema {
    *   Where the node is, as a JSON Pointer.
    * @param array<int, true> $above
    *   The definitions above it and itself, by object id.
-   * @param bool $held
-   *   Whether a sealed data surface holds the definition.
    *
    * @return array<string, mixed>
    *   The members, by name.
    */
-  private static function stored(array $array, string $type, Schema $schema, string $path, array $above, bool $held): array {
+  private static function stored(array $array, string $type, Schema $schema, string $path, array $above): array {
     $members = [];
     $unnamed = [];
     foreach ($array as $key => $value) {
@@ -843,7 +814,7 @@ final class DefinitionSchema {
         $members[$name] = $value;
         continue;
       }
-      $node = static::nested($name, $value, $path . '/' . self::MODEL . '/' . $name, $above, $held);
+      $node = static::nested($name, $value, $path . '/' . self::MODEL . '/' . $name, $above);
       if ($node === NULL) {
         $unnamed[$key] = $value;
         continue;
@@ -871,48 +842,24 @@ final class DefinitionSchema {
    *   Where the member is, as a JSON Pointer.
    * @param array<int, true> $above
    *   The definitions above it, by object id.
-   * @param bool $held
-   *   Whether a sealed data surface holds the definition it is on.
    *
    * @return \PortableSchema\Builder\Schema|array|string|null
    *   `{id, node}` for a shape, `{type, node}` for a config type, a node or
    *   the class for `each`; NULL for a value of another form, which is
    *   kept under `stored`.
    */
-  private static function nested(string $member, mixed $value, string $path, array $above, bool $held): Schema|array|string|null {
+  private static function nested(string $member, mixed $value, string $path, array $above): Schema|array|string|null {
     if ($member === 'each') {
       if (is_string($value)) {
         return $value;
       }
-      return $value instanceof DataDefinitionInterface ? static::nestedNode($value, $path, $above, $held) : NULL;
+      return $value instanceof DataDefinitionInterface ? static::read($value, $path, $above) : NULL;
     }
     $name = $member === 'shape' ? 'id' : 'type';
     if (!is_array($value) || array_keys($value) !== [$name, 'definition'] || !is_string($value[$name]) || !$value['definition'] instanceof DataDefinitionInterface) {
       return NULL;
     }
-    return [$name => $value[$name], 'node' => static::nestedNode($value['definition'], $path . '/node', $above, $held)];
-  }
-
-  /**
-   * Reads a definition held in a member, held as its holder is.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition the member holds.
-   * @param string $path
-   *   Where its node is, as a JSON Pointer.
-   * @param array<int, true> $above
-   *   The definitions above it, by object id.
-   * @param bool $held
-   *   Whether a sealed data surface holds its holder.
-   *
-   * @return \PortableSchema\Builder\Schema
-   *   Its node.
-   */
-  private static function nestedNode(DataDefinitionInterface $definition, string $path, array $above, bool $held): Schema {
-    if ($held) {
-      self::$held[$definition] = TRUE;
-    }
-    return static::read($definition, $path, $above);
+    return [$name => $value[$name], 'node' => static::read($value['definition'], $path . '/node', $above)];
   }
 
   /**
@@ -948,140 +895,6 @@ final class DefinitionSchema {
     $model = static::model($node);
     $type = $model['type'] ?? '';
     return $model['definitionClass'] ?? static::implied(is_string($type) ? $type : '', is_array($node->get('properties')));
-  }
-
-  /**
-   * Takes a held definition's fingerprint, when its node is first built.
-   *
-   * Called only inside assert(), so production never takes one.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
-   *
-   * @return bool
-   *   TRUE, always: the assertion holds.
-   */
-  private static function fingerprinted(DataDefinitionInterface $definition): bool {
-    self::$prints ??= new \WeakMap();
-    self::$prints[$definition] = static::fingerprint($definition);
-    return TRUE;
-  }
-
-  /**
-   * Answers that a held definition was not written since its node was built.
-   *
-   * Called only inside assert(), so production never compares. The
-   * message names the label by its source string, so it renders nothing.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
-   *
-   * @return bool
-   *   TRUE when its fingerprint is the one taken, or none was taken.
-   *
-   * @throws \AssertionError
-   *   When it differs: the kept node no longer says the definition.
-   */
-  private static function unchanged(DataDefinitionInterface $definition): bool {
-    $taken = self::$prints[$definition] ?? NULL;
-    if ($taken === NULL || $taken === static::fingerprint($definition)) {
-      return TRUE;
-    }
-    $label = $definition->getLabel();
-    $named = match (TRUE) {
-      $label instanceof TranslatableMarkup => $label->getUntranslatedString(),
-      is_string($label) => $label,
-      default => get_debug_type($label),
-    };
-    throw new \AssertionError(sprintf('The definition "%s" (%s) was written after its node was built. A definition a sealed data surface holds, or one Location hands out, is never written after its node is built; change a copy (Surface::deepClone()).', $named, $definition->getDataType()));
-  }
-
-  /**
-   * Writes what a definition says, at every depth, as one string.
-   *
-   * What it sees and what it does not is the class's rule: the class, the
-   * definition array, or the getters of a definition that is no
-   * DataDefinition, a map's main property name, the same of its
-   * properties and items, and the fingerprint of every definition the
-   * array holds (a shape's, a config type's, `each`'s, one in a setting);
-   * text by its source string, arguments and options; any other object by
-   * its class and identity. It does not see an object changed in place (an
-   * object in a setting, an Arrangement, a Computed), nor what a class
-   * keeps outside the definition array (a reference's target).
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
-   * @param array<int, true> $seen
-   *   The definitions above, by object id, so a definition that holds
-   *   itself is read once.
-   *
-   * @return string
-   *   The fingerprint.
-   */
-  private static function fingerprint(DataDefinitionInterface $definition, array $seen = []): string {
-    $id = spl_object_id($definition);
-    if (isset($seen[$id])) {
-      return 'above:' . $id;
-    }
-    $seen[$id] = TRUE;
-    $own = $definition instanceof DataDefinition ? $definition->toArray() : [
-      'type' => $definition->getDataType(),
-      'label' => $definition->getLabel(),
-      'description' => $definition->getDescription(),
-      'required' => $definition->isRequired(),
-      'settings' => $definition->getSettings(),
-      'constraints' => $definition->getConstraints(),
-    ];
-    $below = [];
-    if ($definition instanceof ListDataDefinitionInterface) {
-      $below['items'] = static::fingerprint($definition->getItemDefinition(), $seen);
-    }
-    elseif ($definition instanceof ComplexDataDefinitionInterface) {
-      foreach ($definition->getPropertyDefinitions() as $name => $property) {
-        $below[(string) $name] = static::fingerprint($property, $seen);
-      }
-      $below['main property'] = $definition->getMainPropertyName();
-    }
-    return hash('xxh128', serialize([get_class($definition), static::comparable($own, $seen), $below]));
-  }
-
-  /**
-   * Writes a value a definition holds as data a fingerprint can compare.
-   *
-   * @param mixed $value
-   *   The value.
-   * @param array<int, true> $seen
-   *   The definitions above, by object id.
-   *
-   * @return mixed
-   *   Scalars and arrays alone: a TranslatableMarkup as its source string,
-   *   arguments and options; a definition (a shape's, a config type's,
-   *   `each`'s) as its fingerprint; any other object as its class and
-   *   identity.
-   */
-  private static function comparable(mixed $value, array $seen = []): mixed {
-    if ($value instanceof TranslatableMarkup) {
-      return [
-        'text',
-        $value->getUntranslatedString(),
-        static::comparable($value->getArguments(), $seen),
-        static::comparable($value->getOptions(), $seen),
-      ];
-    }
-    if ($value instanceof DataDefinitionInterface) {
-      return ['definition', static::fingerprint($value, $seen)];
-    }
-    if (is_object($value)) {
-      return ['object', get_class($value), spl_object_id($value)];
-    }
-    if (is_array($value)) {
-      $comparable = [];
-      foreach ($value as $key => $inside) {
-        $comparable[$key] = static::comparable($inside, $seen);
-      }
-      return $comparable;
-    }
-    return $value;
   }
 
   /**
