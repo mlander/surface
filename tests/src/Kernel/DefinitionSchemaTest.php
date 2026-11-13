@@ -173,7 +173,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $messages = $built->get(PortableKeywords::MESSAGES);
     $this->assertInstanceOf(TranslatableMarkup::class, $messages['check.drupal:Regex'] ?? NULL, 'A lazy message stays lazy.');
     $model = DefinitionSchema::model($built);
-    $this->assertSame(DefinitionSchema::MEMBERS, array_keys($model));
+    $this->assertSame(['type', 'constraints', 'declared'], array_keys($model), 'MODEL holds the members its definition states, in the order of MEMBERS.');
     $this->assertSame('string', $model['type'], 'MODEL holds the data type.');
     $this->assertFalse(Secrets::marked($built), 'A node says it is secret by writeOnly alone.');
     $this->assertStringNotContainsString('DataDefinition', serialize($model), 'A node holds no reference to its definition.');
@@ -209,7 +209,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $this->assertSame([PortableKeywords::PROVIDER . 'LanguageExists' => []], $built->get(PortableKeywords::CHECK));
     $this->assertNull($built->get(PortableKeywords::MESSAGES), 'A check given no message holds none: its label is the projection\'s.');
     $this->assertSame(['type' => ['string', 'null']], static::json($this->definitions()->published($built->get('items'), $tags->getItemDefinition())), 'The item is a node of its own.');
-    $this->assertSame(DefinitionSchema::MEMBERS, array_keys(DefinitionSchema::model($built->get('items'))));
+    $this->assertSame(['type', 'constraints'], array_keys(DefinitionSchema::model($built->get('items'))), 'The item states its data type and its type\'s constraints alone.');
     $this->assertSame([
       'title' => 'Tags',
       'type' => ['array', 'null'],
@@ -302,7 +302,8 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
    * default and no examples where it has no place for them. A value of a
    * type no row is for has no `type` keyword and MODEL holds the data
    * type; the document refuses it where it is made, with the leaf table's
-   * message. The read's one refusal: a definition that holds itself.
+   * message. The read's one refusal: a definition that holds itself, as a
+   * property or an item, or as its own shape, config type or `each`.
    */
   public function testEveryDataTypeIsRead(): void {
     NodeType::create(['type' => 'surface_read', 'name' => 'Read'])->save();
@@ -487,6 +488,29 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
         $this->assertSame('The definition of the map type at "' . $above . '/properties/again" holds itself: it is met again inside itself, so no node can be read from it.', $refusal->getMessage());
       }
     }
+
+    // A definition held as its own shape, config type or `each` is met
+    // again inside itself through the member that holds it.
+    $shaped = DataDefinition::create('string')->setLabel('Shaped');
+    DefinitionMetadata::setShape($shaped, 'itself', $shaped);
+    $typed = DataDefinition::create('string')->setLabel('Typed');
+    DefinitionMetadata::setConfigType($typed, 'itself', $typed);
+    $each = MapDataDefinition::create()->setLabel('Each');
+    DefinitionMetadata::setEach($each, $each);
+    $members = [
+      'shape' => [$shaped, 'string', '/' . DefinitionSchema::MODEL . '/shape/node'],
+      'config type' => [$typed, 'string', '/' . DefinitionSchema::MODEL . '/configType/node'],
+      'each' => [$each, 'map', '/' . DefinitionSchema::MODEL . '/each'],
+    ];
+    foreach ($members as $member => [$definition, $type, $at]) {
+      try {
+        DefinitionSchema::of($definition);
+        $this->fail("A definition held as its own $member is refused.");
+      }
+      catch (\LogicException $refusal) {
+        $this->assertSame('The definition of the ' . $type . ' type at "' . $at . '" holds itself: it is met again inside itself, so no node can be read from it.', $refusal->getMessage(), $member);
+      }
+    }
   }
 
   /**
@@ -494,11 +518,12 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
    *
    * The projection makes the one value from the map's node (its title,
    * description and MODEL `constraints`), and reads of the definition only
-   * whether it is a map and whether it offers a list. Each kind: its own
-   * checks, required, with a default, nullable, always held, the item of a
-   * list, with a property ruled out, holding a shaped property, and a
-   * variant's member. The expected documents are the ones the module
-   * served before the projection made the one value from the node.
+   * whether it offers a list; whether it is a map comes from the node.
+   * Each kind: its own checks, required, with a default, nullable, always
+   * held, the item of a list, with a property ruled out, holding a shaped
+   * property, and a variant's member. The expected documents are the ones
+   * the module served before the projection made the one value from the
+   * node.
    */
   public function testListedMaps(): void {
     $map = static fn (string $label): MapDataDefinition => MapDataDefinition::create()->setLabel($label)
@@ -683,8 +708,10 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
    * surface holds is never written after its node is built. Where
    * assertions run, a read of the kept node after a write fails the
    * assertion, naming the definition and the rule: a label, a constraint
-   * or `required` set on it, a property set below a held map, and a key of
-   * an example written between two emissions.
+   * or `required` set on it, a property set below a held map, a map's main
+   * property name, a shape's, a config type's and `each`'s definition
+   * written in place, a property replaced by one of another class with the
+   * same array, and a key of an example written between two emissions.
    */
   public function testWrittenHeldDefinitionFailsTheAssertion(): void {
     if (ini_get('zend.assertions') !== '1') {
@@ -712,6 +739,42 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $this->assertInstanceOf(DataDefinition::class, $city);
     $city->setRequired(TRUE);
     $this->assertFailsTheAssertion(static fn () => DefinitionSchema::of($map), '"Where" (map)', 'a property below a held map');
+
+    // The fingerprint hashes a map's main property name.
+    $main = MapDataDefinition::create()->setLabel('Main')
+      ->setPropertyDefinition('city', DataDefinition::create('string')->setLabel('City'));
+    DefinitionSchema::hold($main);
+    DefinitionSchema::of($main);
+    $main->setMainPropertyName('city');
+    $this->assertFailsTheAssertion(static fn () => DefinitionSchema::of($main), '"Main" (map)', 'the main property name');
+
+    // It hashes the definitions the array holds: a shape's, a config
+    // type's and `each`'s, each written after the holder's node was built.
+    $writes = [
+      'a shape\'s definition' => static fn (DataDefinition $holder, DataDefinition $inside) => DefinitionMetadata::setShape($holder, 'held', $inside),
+      'a config type\'s definition' => static fn (DataDefinition $holder, DataDefinition $inside) => DefinitionMetadata::setConfigType($holder, 'held', $inside),
+      'each\'s definition' => static fn (DataDefinition $holder, DataDefinition $inside) => DefinitionMetadata::setEach($holder, $inside),
+    ];
+    foreach ($writes as $what => $hold) {
+      $inside = DataDefinition::create('string')->setLabel('Inside');
+      $holder = DataDefinition::create('string')->setLabel('Holder');
+      $hold($holder, $inside);
+      DefinitionSchema::hold($holder);
+      DefinitionSchema::of($holder);
+      $inside->setLabel('Written inside');
+      $this->assertFailsTheAssertion(static fn () => DefinitionSchema::of($holder), '"Holder" (string)', $what);
+    }
+
+    // It hashes the class: a property replaced by one of another class
+    // with the same array is a write.
+    $classed = MapDataDefinition::create()->setLabel('Classed')
+      ->setPropertyDefinition('city', DataDefinition::create('string')->setLabel('City'));
+    DefinitionSchema::hold($classed);
+    DefinitionSchema::of($classed);
+    $city = $classed->getPropertyDefinition('city');
+    $this->assertInstanceOf(DataDefinition::class, $city);
+    $classed->setPropertyDefinition('city', new class($city->toArray()) extends DataDefinition {});
+    $this->assertFailsTheAssertion(static fn () => DefinitionSchema::of($classed), '"Classed" (map)', 'a property of another class');
 
     $emitter = $this->container->get('surface.contract_emitter');
     foreach ($this->examples() as [$id, $operation, $surface]) {

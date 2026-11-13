@@ -114,6 +114,7 @@ class TypedDataFootprintTest extends UnitTestCase {
   public const EDGES = [
     'modules/surface_examples_entity/src/FieldItemDerivation.php' => 'host reader: reads field item definitions',
     'src/Contract/DefinitionSchema.php' => 'the one read of a definition into a Schema; the host readers\' shared reader after the flip',
+    'src/Contract/NodeDefinition.php' => 'the inverse of the read: makes a definition from a node, the one place Typed Data is made from the model',
     'src/Reader/ConfigSchemaReader.php' => 'host reader: reads config schema',
     'src/Reader/TypedDataReader.php' => 'host reader: reads data type definitions',
     'src/Storage/ConfigEntityStorage.php' => 'host storage validates its own typed values',

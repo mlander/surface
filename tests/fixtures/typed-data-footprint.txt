@@ -50,6 +50,7 @@ emitter src/Contract/ContractEmitter.php
 edge src/Contract/DefinitionSchema.php
 emitter src/Contract/DefinitionWidgetInterface.php
 emitter src/Contract/LeafTypes.php
+edge src/Contract/NodeDefinition.php
 emitter src/Contract/PropertySchema.php
 reader src/Contract/SchemaReader.php
 emitter src/Contract/SiteListBudget.php

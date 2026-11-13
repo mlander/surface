@@ -17,6 +17,7 @@ use Drupal\surface\ResourceBuild\Location;
 use Drupal\surface\SurfaceInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\User;
+use Symfony\Component\HttpFoundation\Request;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PortableSchema\Builder\Schema;
@@ -58,6 +59,7 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
     'tool',
     'surface',
     'surface_http',
+    'surface_openapi',
     'surface_examples',
     'surface_examples_compliance',
     'surface_examples_workflow',
@@ -72,6 +74,28 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
     'node',
     'surface_examples_references',
     'surface_examples_retitle',
+  ];
+
+  /**
+   * The `x-` keywords the walked documents hold, at every depth.
+   *
+   * The served contract's and the OpenAPI document's own keywords. A model
+   * member served under a keyword of its own (`x-settings`) changes the
+   * list.
+   */
+  protected const X_KEYWORDS = [
+    'x-displayName',
+    'x-drupal-permission',
+    'x-portable-links',
+    'x-portable-messages',
+    'x-portable-ui',
+    'x-surface',
+    'x-surface-creates',
+    'x-surface-destructive',
+    'x-surface-dry-run',
+    'x-surface-idempotent',
+    'x-surface-kind',
+    'x-surface-schema',
   ];
 
   /**
@@ -285,13 +309,18 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
    * emitted in full and with its defaults and the hints; and every row the
    * build cache holds after those emits, and each data surface,
    * serialized: no MODEL, no NodeMessage, and no Schema holding an object
-   * other than a plain JSON object.
+   * other than a plain JSON object. Then the OpenAPI document and the
+   * tool definitions hold no MODEL. Every document and the OpenAPI
+   * document are also decoded and walked: the `x-` keywords they hold, at
+   * every depth, are the pinned list (X_KEYWORDS), so a member served
+   * under a keyword of its own is seen.
    */
   public function testNoNodeIsServed(): void {
     $emitter = $this->container->get('surface.contract_emitter');
     $narrowing = $this->container->get('surface.document_narrowing');
     $served = 0;
     $narrowed = 0;
+    $keywords = [];
     foreach (['administrator' => $this->container->get('current_user')->getAccount(), 'anonymous' => User::load(0)] as $who => $account) {
       $this->setCurrentUser($account);
       foreach ($this->examples() as [$id, $operation, $surface]) {
@@ -313,6 +342,7 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
           $at = "$who, $id:$operation, $how";
           $json = (string) json_encode($contract->document, JSON_THROW_ON_ERROR);
           $this->assertStringNotContainsString(DefinitionSchema::MODEL, $json, $at);
+          static::xKeywords(json_decode($json, TRUE), $keywords);
           $this->assertSame([], static::objects($contract->document), $at . ': the document holds plain data alone.');
           $held = [];
           Schemas::map($contract->schema(), static function (Schema $node) use (&$held): Schema {
@@ -334,9 +364,23 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
       ];
       foreach ($contracts as $contract) {
         $served++;
-        $this->assertStringNotContainsString(DefinitionSchema::MODEL, (string) json_encode($contract->document, JSON_THROW_ON_ERROR), "no account, $id:$operation");
+        $json = (string) json_encode($contract->document, JSON_THROW_ON_ERROR);
+        $this->assertStringNotContainsString(DefinitionSchema::MODEL, $json, "no account, $id:$operation");
+        static::xKeywords(json_decode($json, TRUE), $keywords);
       }
     }
+    // The OpenAPI document and the tool definitions.
+    $this->container->get('router.builder')->rebuild();
+    $openapi = $this->container->get('surface.openapi_document')->build(Request::create('https://example.com/surface-api/openapi.json'));
+    $json = (string) json_encode($openapi->document, JSON_THROW_ON_ERROR);
+    $this->assertStringNotContainsString(DefinitionSchema::MODEL, $json, 'the OpenAPI document');
+    $this->assertGreaterThan(10, count((array) (json_decode($json, TRUE)['paths'] ?? [])), 'The OpenAPI document describes the operations.');
+    static::xKeywords(json_decode($json, TRUE), $keywords);
+    $tools = array_filter($this->container->get('plugin.manager.tool')->getDefinitions(), static fn (string $id): bool => str_starts_with($id, 'surface:'), ARRAY_FILTER_USE_KEY);
+    $this->assertGreaterThan(10, count($tools), 'The tool definitions are covered.');
+    $this->assertStringNotContainsString(DefinitionSchema::MODEL, serialize($tools), 'the tool definitions hold no MODEL.');
+    ksort($keywords);
+    $this->assertSame(self::X_KEYWORDS, array_keys($keywords), 'The x- keywords the documents hold.');
     $rows = $this->buildCacheRows();
     foreach ($rows as $cid => $data) {
       $this->assertKeepsNoNode($data, "the build cache's row $cid");
@@ -344,6 +388,26 @@ class BuiltNodesTest extends SurfaceKernelTestBase {
     $this->assertGreaterThan(400, $served);
     $this->assertGreaterThan(50, $narrowed, 'The narrowed documents are covered.');
     $this->assertNotEmpty($rows, 'The build cache holds rows.');
+  }
+
+  /**
+   * Gathers the keys that start with `x-`, at every depth of a document.
+   *
+   * @param mixed $value
+   *   The document, decoded to arrays, or a value in it.
+   * @param array<string, true> $found
+   *   The keys so far; gains these.
+   */
+  protected static function xKeywords(mixed $value, array &$found): void {
+    if (!is_array($value)) {
+      return;
+    }
+    foreach ($value as $key => $inside) {
+      if (str_starts_with((string) $key, 'x-')) {
+        $found[(string) $key] = TRUE;
+      }
+      static::xKeywords($inside, $found);
+    }
   }
 
   /**

@@ -8,14 +8,15 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Computed;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Plugin\SurfaceWidget\DateWidget;
 use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
-use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\SurfaceInterface;
 use PortableSchema\Builder\Schema;
 
@@ -31,7 +32,8 @@ use PortableSchema\Builder\Schema;
  *   node can be read where a data surface is built, with no request.
  * - The calls it makes on a definition are getDataType(), getLabel(),
  *   getDescription(), isRequired(), getConstraints(), getSetting(),
- *   getPropertyDefinitions() on a complex definition, getItemDefinition()
+ *   toArray() on a DataDefinition, getPropertyDefinitions() and
+ *   getMainPropertyName() on a complex definition, getItemDefinition()
  *   on a list, and, through DefinitionMetadata, toArray(), offsetExists()
  *   and offsetGet() where the definition offers them, and isSecret(),
  *   hasDefaultValue(), getDefaultValue() and getExamples() where it offers
@@ -49,17 +51,29 @@ use PortableSchema\Builder\Schema;
  *   a list of values states it, the messages the definition gives
  *   (`x-portable-messages`), `writeOnly` for a secret, which is how a
  *   reader of the node knows it is one (Secrets::marked()), and MODEL.
+ * - The node holds every fact of a DataDefinition, a ListDataDefinition
+ *   or a MapDataDefinition: what a keyword states stays in that keyword,
+ *   and every other fact is a member of MODEL (MEMBERS), so a definition
+ *   of the three classes is derived back from the node alone
+ *   (NodeDefinition::of()) and equals the one read. A shape's, a config
+ *   type's and `each`'s definition are read into nodes their members
+ *   hold. A definition of any other class is read as before: its keywords
+ *   from its getters, its class in `definitionClass`. Its node does not
+ *   hold what the class keeps outside the definition array (a reference's
+ *   target, a field item's field definition, an entity's properties, a
+ *   FieldConfig's `required` and settings), and the inverse refuses it.
  * - A property a refinement marked as not applying (DoesNotApply) is on
- *   the node: the mark is a fact of the definition and is kept there, on
- *   the property's definition, where the projection reads it.
+ *   the node, and so is the mark, in its `doesNotApply` member, where the
+ *   projection reads it.
  * - Every data type is read: a definition of a data type the leaf table
  *   has no row for (LeafTypes) gets a node with no `type` keyword, and
  *   its data type in MODEL; a definition with no place for a default or
  *   examples (DefinitionMetadata::canHoldDefaultValue(), canHoldExamples())
  *   has none. The read's one refusal: a definition met again inside
- *   itself (a map that holds itself) is refused with a LogicException
- *   naming its data type and where it is met again, before the read runs
- *   out of memory.
+ *   itself (a map that holds itself, or a definition held as its own
+ *   shape, config type or `each`) is refused with a LogicException naming
+ *   its data type and where it is met again, before the read runs out of
+ *   memory.
  * - Text stays as the definition holds it: a title, a description and a
  *   message that are a TranslatableMarkup stay one, so a node is the same
  *   in every language until it is projected. A title or description is
@@ -78,15 +92,16 @@ use PortableSchema\Builder\Schema;
  *   one is said as one value, made from its node (oneValue(): its
  *   properties, `type`, `required` and `additionalProperties` are no
  *   keywords of it). Of a listed map's definition the projection reads
- *   only whether it is a map and whether it offers a list.
+ *   only whether it offers a list; whether it is a map comes from its
+ *   node (nodeIsMap()).
  * - Whether a list states a check (SurfaceOptions::isStatedByList(),
  *   SurfaceOptions::readsAsList()), kept on the service by plugin id and
  *   options; a check's label is kept by plugin id as its plugin holds it.
  *   Nothing rendered is kept.
  * - A check's label as its sentence where the definition states no
  *   message, or one that renders empty.
- * - A property that does not apply is left out, and the map's `required`
- *   follows.
+ * - A property that does not apply (its node's `doesNotApply` member) is
+ *   left out, and the map's `required` follows.
  * - A value of a data type no row is for is refused, with LeafTypes'
  *   message, where its document node is made (publishedNode()), one node
  *   at a time, by MODEL's `type`. A reader that takes a node and does not
@@ -100,11 +115,14 @@ use PortableSchema\Builder\Schema;
  *   and the rest), at every depth.
  * A node is projected before anything compares it (Schemas::same()), so
  * every comparison of the walk sees what the document says, and two sites
- * whose checks differ only in their options still share one def. The
- * projection takes the definition beside the node and walks the two
- * together, because the options resolvers and the mark of a key that does
- * not apply are read from the definition; that parameter goes when the
- * options resolvers take a node.
+ * whose checks differ only in their options still share one def. What
+ * the projection knows of a definition it reads from the node: whether
+ * it is a map, a list or one value (nodeIsMap(), isList(), isLeaf()),
+ * whether it is an `any` held as one (heldAsAny()), the mark of a key
+ * that does not apply, and the label its refusal names. It takes the
+ * definition beside the node, and walks the two together, only to hand
+ * each definition to the options resolvers (listed()); that parameter
+ * goes when the options resolvers take a node.
  *
  * A built node is held in memory only: it never reaches the build cache, a
  * served document or ServedContract, a log or an exception message.
@@ -131,33 +149,29 @@ use PortableSchema\Builder\Schema;
  * the one taken when its node was first built, or the assertion fails,
  * naming the definition's label (its source string) and data type. The
  * fingerprint is taken and compared only inside assert(), so production
- * pays nothing. It sees what the definition array holds (its type, label,
- * description, required, settings, its own constraints with their options,
- * the module's metadata), or for a definition that is no DataDefinition
- * what its getters say, and the same of every property and item below it.
- * Text is read as its source string, arguments and options. It does not
- * see inside any other object (a closure, a service, a definition held in
- * a setting): such an object is compared by identity, so one replaced is
- * seen and one changed in place is not.
+ * pays nothing. It hashes what the read reads: the definition's class,
+ * what its array holds (its type, label, description, required, settings,
+ * its own constraints with their options, the module's metadata, every
+ * other key), or for a definition that is no DataDefinition what its
+ * getters say, a map's main property name, the same of every property and
+ * item below it, and the fingerprint of every definition its array holds
+ * (a shape's, a config type's, `each`'s, one held in a setting). Text is
+ * read as its source string, arguments and options. It does not see
+ * inside any other object (a closure, a service, a Computed, an
+ * Arrangement): such an object is compared by identity, so one replaced
+ * is seen and one changed in place is not; the node holds the same
+ * object, so it says the change too.
  *
  * MODEL holds what a node knows that no document says. A built node holds
  * no reference to its definition: a reader that needs the definition takes
- * it from where it found the node (BuiltNodes::place()). Its members are a
- * closed list, MEMBERS, and each has a reader:
- * - `constraints`: every constraint the definition declares, by plugin
- *   id, with its options as held, the ones a keyword states included,
- *   read by the check provider through declares() and options(), and to
- *   word a keyword's refusal by its constraint. A bridge until the model
- *   is the source: a check names only what no keyword states.
- * - `type`: the definition's data type (getDataType()), on every node, so
- *   a node of a type the leaf table has no row for still says what it
- *   holds. Its one reader in this slice is the projection, which names
- *   the type in its refusal of such a node from the member alone
- *   (publishedNode()). A bridge for the pipeline's casts:
- *   it goes before the series closes.
+ * it from where it found the node (BuiltNodes::place()), or derives one
+ * from the node (NodeDefinition::of()). Its members are a closed list,
+ * MEMBERS, whose docblock says what each holds and who reads it; the
+ * bridges among them, which go before the series closes, are BRIDGES.
  *
  * Decision: see
- * docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request.
+ * docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request,
+ * docs/decisions.md#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it.
  *
  * @phpstan-type Definition \Drupal\Core\TypedData\DataDefinitionInterface
  *
@@ -171,9 +185,176 @@ final class DefinitionSchema {
   public const MODEL = 'x-surface-model';
 
   /**
-   * The members MODEL holds, a closed list.
+   * The members MODEL holds, a closed list, in the order a node holds them.
+   *
+   * A member is on a node only where its definition states the fact, and
+   * only where no keyword of the node holds it already; `type` is on every
+   * node. What each holds, and who reads it:
+   * - `type`: the data type (getDataType()). Read by the projection, which
+   *   names it in the refusal of a type no row is for, and by the inverse.
+   * - `definitionClass`: the definition's PHP class, where it is not the
+   *   one implied() names for the node. Read by the projection (whether a
+   *   node is a list, a map or one value) and by the inverse.
+   * - `label`, `description`: the label or description as stored where
+   *   `title` or `description` does not hold it: the literal '' or NULL.
+   *   Read by the inverse; the projection reads `label` for its refusal.
+   * - `required`: the definition's stored `required`, on its own node (the
+   *   parent's `required` keyword keeps its document rule). Read by the
+   *   inverse.
+   * - `readOnly`, `computed`: core's `read-only` and `computed` flags, as
+   *   stored. Read by the inverse.
+   * - `settings`: the settings, whole and as stored. Read by the inverse.
+   * - `constraints`: every constraint the definition declares with its
+   *   type's defaults (getConstraints()), by plugin id, with its options as
+   *   held. Read by the check provider through declares() and options(),
+   *   to word a keyword's refusal, and by oneValue(). The inverse writes
+   *   no definition from it (it writes `declared`): it reads it only to
+   *   refuse a node whose type's defaults are another manager's.
+   * - `declared`: the definition's own constraints (toArray()), as stored.
+   *   Read by the inverse.
+   * - `default`, `examples`: the stored default or examples where the
+   *   keyword does not hold them as stored: an explicit NULL, a map's, a
+   *   secret's, examples with keys. Read by the inverse. A default merged
+   *   from a map's properties (DefinitionMetadata::defaultOf()) is no
+   *   member: it is made from the properties' nodes.
+   * - `secret`: the stored secret flag where `writeOnly` does not state it
+   *   as stored: FALSE, NULL, or a truthy value other than TRUE (beside
+   *   `writeOnly`, which says TRUE). Read by the inverse.
+   * - `variantsBy`, `heldWhole`, `readVariants`, `oneVariant`, `fixed`,
+   *   `grouping`, `alwaysHeld`, `placedAfter`, `variantsFrom`, `ownLabel`,
+   *   `arrangement`: what DefinitionMetadata stores under its keys, as
+   *   stored (an Arrangement and a text are the objects held). Read by
+   *   the inverse; the projection reads `variantsBy` and `heldWhole` for
+   *   an `any` held as one. A reader of the own label falls back to
+   *   `title`, then to the `label` member.
+   * - `compute`, `resolve`: the Computed and the Resolve the definition
+   *   holds, the objects themselves. Read by the inverse.
+   * - `shape`: `{id, node}`, the shape's id and the node of the shape's
+   *   definition; `configType`: `{type, node}`, the config schema type and
+   *   the node of its own definition; `each`: the node of the definition
+   *   every entry has, or the class every entry is. Each node is read by
+   *   read(), so the recursion ends where the definitions held end, and a
+   *   definition met again inside itself is refused. Read by the inverse.
+   * - `doesNotApply`: the mark of a key a refinement ruled out, as stored.
+   *   Read by the projection, which leaves such a property out.
+   * - `mainProperty`: a MapDataDefinition's main property name, where one
+   *   is set. Read by the inverse.
+   * - `stored`: every key of the definition array PLACES does not name (a
+   *   hand definition's own key, core's `class` and `internal`), and a
+   *   value its member cannot hold (a `type` key that is not the data
+   *   type, a shape of another form), as stored. Read by the inverse.
+   * The order of a definition array's keys, and a `type` key that holds
+   * the data type beside none, are no facts: nothing reads them, so no
+   * member holds them.
    */
-  public const MEMBERS = ['constraints', 'type'];
+  public const MEMBERS = [
+    'type',
+    'definitionClass',
+    'label',
+    'description',
+    'required',
+    'readOnly',
+    'computed',
+    'settings',
+    'constraints',
+    'declared',
+    'default',
+    'examples',
+    'secret',
+    'variantsBy',
+    'heldWhole',
+    'readVariants',
+    'oneVariant',
+    'fixed',
+    'grouping',
+    'alwaysHeld',
+    'placedAfter',
+    'variantsFrom',
+    'ownLabel',
+    'arrangement',
+    'compute',
+    'resolve',
+    'shape',
+    'configType',
+    'each',
+    'doesNotApply',
+    'mainProperty',
+    'stored',
+  ];
+
+  /**
+   * The members that are bridges, each to go before the series closes.
+   *
+   * A bridge exists only so a Typed Data definition can be derived back
+   * (NodeDefinition::of()) or because a consumer has not moved yet; every
+   * other member is a fact of Surface's own model and stays. Each bridge,
+   * its readers, and the slice it goes in:
+   * - `type`: the projection (the refusal of a type no row is for), the
+   *   inverse, and the pipeline's casts once they move (slice 30); goes
+   *   before slice 35 closes;
+   * - `definitionClass`: the projection (classOf(), isList(), isLeaf())
+   *   and the inverse; goes in slice 35;
+   * - `readOnly`, `computed`, `declared`, `mainProperty`, `stored`: the
+   *   inverse alone; go in slice 35, when nothing derives a definition;
+   * - `constraints`: the check provider and oneValue(), until they read
+   *   the constraints from the node's own facts (slice 32), and the
+   *   inverse's refusal; goes in slice 35.
+   */
+  public const BRIDGES = [
+    'type',
+    'definitionClass',
+    'readOnly',
+    'computed',
+    'constraints',
+    'declared',
+    'mainProperty',
+    'stored',
+  ];
+
+  /**
+   * Where each key of a definition array is held on its node.
+   *
+   * The member, and the keyword that holds the key's value where it holds
+   * it as stored (NULL for none), by the key, in the order the inverse
+   * writes the keys. The keys DefinitionMetadata and DoesNotApply store
+   * are written as strings here; ModelMembersTest ties each to its
+   * constant.
+   */
+  public const PLACES = [
+    'type' => ['type', NULL],
+    'label' => ['label', 'title'],
+    'description' => ['description', 'description'],
+    'required' => ['required', NULL],
+    'read-only' => ['readOnly', NULL],
+    'computed' => ['computed', NULL],
+    'settings' => ['settings', NULL],
+    'constraints' => ['declared', NULL],
+    'default_value' => ['default', 'default'],
+    'examples' => ['examples', 'examples'],
+    'secret' => ['secret', 'writeOnly'],
+    'surface_variants_by' => ['variantsBy', NULL],
+    'surface_held_whole' => ['heldWhole', NULL],
+    'surface_read_variants' => ['readVariants', NULL],
+    'surface_one_variant' => ['oneVariant', NULL],
+    'surface_fixed' => ['fixed', NULL],
+    'surface_grouping' => ['grouping', NULL],
+    'surface_always_held' => ['alwaysHeld', NULL],
+    'surface_placed_after' => ['placedAfter', NULL],
+    'surface_variants_from' => ['variantsFrom', NULL],
+    'surface_own_label' => ['ownLabel', NULL],
+    'surface_arrangement' => ['arrangement', NULL],
+    'surface_computed' => ['compute', NULL],
+    'surface_resolve' => ['resolve', NULL],
+    'surface_shape' => ['shape', NULL],
+    'surface_config_type' => ['configType', NULL],
+    'surface_each' => ['each', NULL],
+    'surface_does_not_apply' => ['doesNotApply', NULL],
+  ];
+
+  /**
+   * The members that hold a node read from a definition the array holds.
+   */
+  protected const NESTED = ['shape', 'configType', 'each'];
 
   /**
    * A placeholder the server fills in a check's message.
@@ -353,7 +534,9 @@ final class DefinitionSchema {
     $keywords = static::keywords($definition, 'array');
     $checks = array_intersect_key($keywords, array_flip([PortableKeywords::CHECK, PortableKeywords::MESSAGES]));
     $schema = Schemas::defaults(static::describe($definition), ['type' => static::nullable('array', $definition)] + array_diff_key($keywords, $checks));
-    return Schemas::defaults($schema, $checks)->with(self::MODEL, static::annotation($definition));
+    $schema = Schemas::defaults($schema, $checks);
+    $held = isset(self::$held[$definition]);
+    return $schema->with(self::MODEL, static::annotation($definition, $schema, '', [spl_object_id($definition) => TRUE], $held));
   }
 
   /**
@@ -495,7 +678,8 @@ final class DefinitionSchema {
         $schema = $schema->with('examples', array_values($examples));
       }
     }
-    return Schemas::defaults($schema, $checks)->with(self::MODEL, static::annotation($definition));
+    $schema = Schemas::defaults($schema, $checks);
+    return $schema->with(self::MODEL, static::annotation($definition, $schema, $path, $above, $held));
   }
 
   /**
@@ -513,23 +697,257 @@ final class DefinitionSchema {
   }
 
   /**
+   * Answers whether a built node is read as a map of properties.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node.
+   *
+   * @return bool
+   *   TRUE where it holds `properties`: what isMap() answers for the
+   *   definition it was read from.
+   */
+  public static function nodeIsMap(Schema $node): bool {
+    return !$node->isBoolean() && is_array($node->get('properties'));
+  }
+
+  /**
+   * Answers whether a built node was read from a list definition.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node (of(), head()).
+   *
+   * @return bool
+   *   TRUE where its class (classOf()) is a list definition.
+   */
+  public static function isList(Schema $node): bool {
+    return !$node->isBoolean() && is_a(static::classOf($node), ListDataDefinitionInterface::class, TRUE);
+  }
+
+  /**
+   * Answers whether a built node was read from one value's definition.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node.
+   *
+   * @return bool
+   *   TRUE where its class is neither complex nor a list: what
+   *   LeafTypes::isLeaf() answers for its definition.
+   */
+  public static function isLeaf(Schema $node): bool {
+    $class = static::classOf($node);
+    return !is_a($class, ComplexDataDefinitionInterface::class, TRUE) && !is_a($class, ListDataDefinitionInterface::class, TRUE);
+  }
+
+  /**
+   * Answers whether a built node is an `any` the module holds as one.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node.
+   *
+   * @return bool
+   *   What LeafTypes::heldAsAny() answers for its definition: an `any`
+   *   that marks variants (`variantsBy`, a string) or is held whole
+   *   (`heldWhole`, set and not NULL).
+   */
+  public static function heldAsAny(Schema $node): bool {
+    $model = static::model($node);
+    return ($model['type'] ?? NULL) === LeafTypes::ANY && (is_string($model['variantsBy'] ?? NULL) || isset($model['heldWhole']));
+  }
+
+  /**
    * Writes a definition's MODEL.
+   *
+   * The members MEMBERS names, each where the definition states its fact
+   * and no keyword of the node holds it: `type` always, `definitionClass`,
+   * `constraints` where there are any, and for a DataDefinition what its
+   * array holds (stored()); for a definition that is no DataDefinition
+   * (a FieldConfig) the getters say no more.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   Its node's keywords, MODEL aside.
+   * @param string $path
+   *   Where the node is, as a JSON Pointer.
+   * @param array<int, true> $above
+   *   The definitions above it and itself, by object id.
+   * @param bool $held
+   *   Whether a sealed data surface holds the definition, so the
+   *   definitions its members hold are held too.
    *
-   * @return array{constraints: array<string, mixed>, type: string}
-   *   The members, MEMBERS.
+   * @return array<string, mixed>
+   *   The members, in MEMBERS's order.
    */
-  private static function annotation(DataDefinitionInterface $definition): array {
+  private static function annotation(DataDefinitionInterface $definition, Schema $schema, string $path, array $above, bool $held): array {
+    $type = $definition->getDataType();
+    $members = ['type' => $type];
+    $class = get_class($definition);
+    if ($class !== static::implied($type, $schema->has('properties'))) {
+      $members['definitionClass'] = $class;
+    }
     $constraints = [];
     foreach ($definition->getConstraints() as $id => $options) {
       $constraints[(string) $id] = $options;
     }
-    return [
-      'constraints' => $constraints,
-      'type' => $definition->getDataType(),
-    ];
+    if ($constraints !== []) {
+      $members['constraints'] = $constraints;
+    }
+    if ($definition instanceof DataDefinition) {
+      $members += static::stored($definition->toArray(), $type, $schema, $path, $above, $held);
+    }
+    if ($class === MapDataDefinition::class && $definition instanceof ComplexDataDefinitionInterface && $definition->getMainPropertyName() !== NULL) {
+      $members['mainProperty'] = $definition->getMainPropertyName();
+    }
+    return array_merge(array_intersect_key(array_fill_keys(self::MEMBERS, NULL), $members), $members);
+  }
+
+  /**
+   * Places each key of a definition array the node's keywords do not hold.
+   *
+   * A key whose keyword (PLACES) holds the very value stored is that
+   * keyword's; every other key of PLACES is its member, as stored; a
+   * shape's, a config type's and `each`'s definition are read into their
+   * nodes (nested()); a key PLACES does not name, or a value its member
+   * cannot hold, is under `stored`. The order of the keys is not read.
+   *
+   * @param array $array
+   *   The definition array, toArray().
+   * @param string $type
+   *   The definition's data type.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The node's keywords.
+   * @param string $path
+   *   Where the node is, as a JSON Pointer.
+   * @param array<int, true> $above
+   *   The definitions above it and itself, by object id.
+   * @param bool $held
+   *   Whether a sealed data surface holds the definition.
+   *
+   * @return array<string, mixed>
+   *   The members, by name.
+   */
+  private static function stored(array $array, string $type, Schema $schema, string $path, array $above, bool $held): array {
+    $members = [];
+    $unnamed = [];
+    foreach ($array as $key => $value) {
+      $place = self::PLACES[$key] ?? NULL;
+      if ($place === NULL || ($place[0] === 'type' && $value !== $type)) {
+        $unnamed[$key] = $value;
+        continue;
+      }
+      [$name, $keyword] = $place;
+      if ($name === 'type' || ($keyword !== NULL && $schema->has($keyword) && $schema->get($keyword) === $value)) {
+        continue;
+      }
+      if (!in_array($name, self::NESTED, TRUE)) {
+        $members[$name] = $value;
+        continue;
+      }
+      $node = static::nested($name, $value, $path . '/' . self::MODEL . '/' . $name, $above, $held);
+      if ($node === NULL) {
+        $unnamed[$key] = $value;
+        continue;
+      }
+      $members[$name] = $node;
+    }
+    if ($unnamed !== []) {
+      $members['stored'] = $unnamed;
+    }
+    return $members;
+  }
+
+  /**
+   * Reads the definition a shape, a config type or `each` holds.
+   *
+   * Through read(), so a definition met again inside itself is refused
+   * there as anywhere, and the recursion ends where the definitions held
+   * end.
+   *
+   * @param string $member
+   *   `shape`, `configType` or `each`.
+   * @param mixed $value
+   *   What the definition array holds for it.
+   * @param string $path
+   *   Where the member is, as a JSON Pointer.
+   * @param array<int, true> $above
+   *   The definitions above it, by object id.
+   * @param bool $held
+   *   Whether a sealed data surface holds the definition it is on.
+   *
+   * @return \PortableSchema\Builder\Schema|array|string|null
+   *   `{id, node}` for a shape, `{type, node}` for a config type, a node or
+   *   the class for `each`; NULL for a value of another form, which is
+   *   kept under `stored`.
+   */
+  private static function nested(string $member, mixed $value, string $path, array $above, bool $held): Schema|array|string|null {
+    if ($member === 'each') {
+      if (is_string($value)) {
+        return $value;
+      }
+      return $value instanceof DataDefinitionInterface ? static::nestedNode($value, $path, $above, $held) : NULL;
+    }
+    $name = $member === 'shape' ? 'id' : 'type';
+    if (!is_array($value) || array_keys($value) !== [$name, 'definition'] || !is_string($value[$name]) || !$value['definition'] instanceof DataDefinitionInterface) {
+      return NULL;
+    }
+    return [$name => $value[$name], 'node' => static::nestedNode($value['definition'], $path . '/node', $above, $held)];
+  }
+
+  /**
+   * Reads a definition held in a member, held as its holder is.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition the member holds.
+   * @param string $path
+   *   Where its node is, as a JSON Pointer.
+   * @param array<int, true> $above
+   *   The definitions above it, by object id.
+   * @param bool $held
+   *   Whether a sealed data surface holds its holder.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   Its node.
+   */
+  private static function nestedNode(DataDefinitionInterface $definition, string $path, array $above, bool $held): Schema {
+    if ($held) {
+      self::$held[$definition] = TRUE;
+    }
+    return static::read($definition, $path, $above);
+  }
+
+  /**
+   * Names the class the inverse makes for a node that names none.
+   *
+   * @param string $type
+   *   The node's data type.
+   * @param bool $properties
+   *   Whether the node holds `properties`.
+   *
+   * @return string
+   *   ListDataDefinition for a list, MapDataDefinition for a node with
+   *   properties, DataDefinition for any other.
+   */
+  public static function implied(string $type, bool $properties): string {
+    return match (TRUE) {
+      $type === 'list' => ListDataDefinition::class,
+      $properties => MapDataDefinition::class,
+      default => DataDefinition::class,
+    };
+  }
+
+  /**
+   * Names the class of the definition a node was read from.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node.
+   *
+   * @return string
+   *   Its `definitionClass` member, else the class implied().
+   */
+  public static function classOf(Schema $node): string {
+    $model = static::model($node);
+    $type = $model['type'] ?? '';
+    return $model['definitionClass'] ?? static::implied(is_string($type) ? $type : '', is_array($node->get('properties')));
   }
 
   /**
@@ -581,10 +999,15 @@ final class DefinitionSchema {
   /**
    * Writes what a definition says, at every depth, as one string.
    *
-   * What it sees and what it does not is the class's rule: the definition
-   * array, or the getters of a definition that is no DataDefinition, and
-   * the same of its properties and items; text by its source string,
-   * arguments and options; any other object by its class and identity.
+   * What it sees and what it does not is the class's rule: the class, the
+   * definition array, or the getters of a definition that is no
+   * DataDefinition, a map's main property name, the same of its
+   * properties and items, and the fingerprint of every definition the
+   * array holds (a shape's, a config type's, `each`'s, one in a setting);
+   * text by its source string, arguments and options; any other object by
+   * its class and identity. It does not see an object changed in place (an
+   * object in a setting, an Arrangement, a Computed), nor what a class
+   * keeps outside the definition array (a reference's target).
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
@@ -617,8 +1040,9 @@ final class DefinitionSchema {
       foreach ($definition->getPropertyDefinitions() as $name => $property) {
         $below[(string) $name] = static::fingerprint($property, $seen);
       }
+      $below['main property'] = $definition->getMainPropertyName();
     }
-    return hash('xxh128', serialize([get_class($definition), static::comparable($own), $below]));
+    return hash('xxh128', serialize([get_class($definition), static::comparable($own, $seen), $below]));
   }
 
   /**
@@ -626,25 +1050,36 @@ final class DefinitionSchema {
    *
    * @param mixed $value
    *   The value.
+   * @param array<int, true> $seen
+   *   The definitions above, by object id.
    *
    * @return mixed
    *   Scalars and arrays alone: a TranslatableMarkup as its source string,
-   *   arguments and options; any other object as its class and identity.
+   *   arguments and options; a definition (a shape's, a config type's,
+   *   `each`'s) as its fingerprint; any other object as its class and
+   *   identity.
    */
-  private static function comparable(mixed $value): mixed {
+  private static function comparable(mixed $value, array $seen = []): mixed {
     if ($value instanceof TranslatableMarkup) {
       return [
         'text',
         $value->getUntranslatedString(),
-        static::comparable($value->getArguments()),
-        static::comparable($value->getOptions()),
+        static::comparable($value->getArguments(), $seen),
+        static::comparable($value->getOptions(), $seen),
       ];
+    }
+    if ($value instanceof DataDefinitionInterface) {
+      return ['definition', static::fingerprint($value, $seen)];
     }
     if (is_object($value)) {
       return ['object', get_class($value), spl_object_id($value)];
     }
     if (is_array($value)) {
-      return array_map(static::comparable(...), $value);
+      $comparable = [];
+      foreach ($value as $key => $inside) {
+        $comparable[$key] = static::comparable($inside, $seen);
+      }
+      return $comparable;
     }
     return $value;
   }
@@ -966,9 +1401,9 @@ final class DefinitionSchema {
    * @param \PortableSchema\Builder\Schema|null $node
    *   A built node, or NULL.
    *
-   * @return array{constraints?: array<string, mixed>, type?: string}
-   *   The members; empty for no node, or a node no definition was read
-   *   into.
+   * @return array<string, mixed>
+   *   The members (MEMBERS) by name; empty for no node, or a node no
+   *   definition was read into.
    */
   public static function model(?Schema $node): array {
     $model = $node?->get(self::MODEL);
@@ -1068,12 +1503,12 @@ final class DefinitionSchema {
    */
   private function projected(Schema $built, DataDefinitionInterface $definition, ?bool $listed = NULL): Schema {
     $node = $this->publishedNode($built, $definition, $listed);
-    if ($definition instanceof ListDataDefinitionInterface) {
+    if (static::isList($built)) {
       $item = $node->get('items');
-      return $item instanceof Schema ? $node->with('items', $this->projected($item, $definition->getItemDefinition())) : $node;
+      return $item instanceof Schema && $definition instanceof ListDataDefinitionInterface ? $node->with('items', $this->projected($item, $definition->getItemDefinition())) : $node;
     }
     $properties = $node->get('properties');
-    if (!is_array($properties) || !static::isMap($definition)) {
+    if (!is_array($properties) || !static::nodeIsMap($built)) {
       return $node;
     }
     $definitions = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinitions() : [];
@@ -1116,7 +1551,10 @@ final class DefinitionSchema {
     if ($node->isBoolean()) {
       return $node;
     }
-    $map = static::isMap($definition);
+    // What the definition is (a map, a list, one value) is read from the
+    // node it was read into, before a listed map is said as one value.
+    $read = $node;
+    $map = static::nodeIsMap($read);
     if ($map) {
       $listed ??= $this->listed($definition);
     }
@@ -1125,11 +1563,13 @@ final class DefinitionSchema {
       $map = FALSE;
     }
     elseif ($map) {
-      $node = static::applying($node, $definition);
+      $node = static::applying($node);
     }
-    $value = !$map && !$definition instanceof ListDataDefinitionInterface;
-    if ($value && LeafTypes::isLeaf($definition) && !$node->has('type') && !LeafTypes::heldAsAny($definition)) {
-      throw LeafTypes::unwritten($definition->getLabel(), (string) (static::model($node)['type'] ?? ''));
+    $value = !$map && !static::isList($read);
+    if ($value && static::isLeaf($read) && !$node->has('type') && !static::heldAsAny($read)) {
+      $model = static::model($read);
+      $label = $read->has('title') ? $read->get('title') : ($model['label'] ?? NULL);
+      throw LeafTypes::unwritten(is_string($label) || $label instanceof \Stringable ? $label : NULL, is_string($model['type'] ?? NULL) ? $model['type'] : '');
     }
     // A list's own checks and a map's are never stated by a list of its
     // values, so the options service is asked only for a value's.
@@ -1203,21 +1643,21 @@ final class DefinitionSchema {
    * Decision: see docs/decisions.md#a-key-that-does-not-apply.
    *
    * @param \PortableSchema\Builder\Schema $node
-   *   The map's built node.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The map, whose properties' definitions hold the mark.
+   *   The map's built node, whose properties' nodes hold the mark in their
+   *   `doesNotApply` member.
    *
    * @return \PortableSchema\Builder\Schema
    *   The node, without them.
    */
-  private static function applying(Schema $node, DataDefinitionInterface $definition): Schema {
+  private static function applying(Schema $node): Schema {
     $properties = $node->get('properties');
-    if (!is_array($properties) || !$definition instanceof ComplexDataDefinitionInterface) {
+    if (!is_array($properties)) {
       return $node;
     }
     $out = [];
-    foreach ($definition->getPropertyDefinitions() as $name => $property) {
-      if (DoesNotApply::marks($property)) {
+    foreach ($properties as $name => $property) {
+      // DoesNotApply::marks(): a mark that is set and not empty.
+      if ($property instanceof Schema && !empty(static::model($property)['doesNotApply'])) {
         $out[(string) $name] = TRUE;
       }
     }

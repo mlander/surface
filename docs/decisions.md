@@ -2565,6 +2565,9 @@ document, refusal or stored value changed.
   the model is the source); since 2026-11-13 also `type`, the data type
   of every node, read by the projection ([A definition is read by a pure
   function](#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request)).
+  Since 2026-11-13 the members hold every fact of the definition, a
+  closed list of 32 (see [A node holds every fact of its
+  definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)).
   It held a second member, `secret`, until
   [A shape is a Schema; secrecy is read from a
   node](#a-shape-is-a-schema-secrecy-is-read-from-a-node): the node's own
@@ -2820,7 +2823,10 @@ check's message made with `t()` on `addSchema()`, and a shape's
 - **The built node says it.** A secret definition's built node carries
   `writeOnly: true`, so the check provider asks `Secrets::marked()` of
   the node at the place, and the model annotation's `secret` member is
-  gone: `x-surface-model` holds `constraints` alone. The reader marks a
+  gone: `x-surface-model` holds `constraints` alone (since 2026-11-13 it
+  holds every fact of a definition, `secret` as stored among them where
+  `writeOnly` does not state it: see [A node holds every fact of its
+  definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)). The reader marks a
   definition secret where `Secrets::marked()` says so of the node it
   reads, and the string widget and a widget that declines secrets ask
   the same.
@@ -3066,11 +3072,17 @@ each half needs. No served document, refusal or value changed.
   its list states. A property a refinement marked as not applying is on
   the node and in its `required`; the mark stays on the property's
   definition (`DoesNotApply`), where the projection reads it, until a
-  member holds it. A check the definition gives no message holds none.
+  member holds it (since 2026-11-13 the `doesNotApply` member holds it
+  and the projection reads the member: see [A node holds every fact of its
+  definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)). A
+  check the definition gives no message holds none.
 - **Every data type is read; a definition that holds itself is refused.**
   MODEL's members are `constraints` and `type` (`getDataType()`, on every
-  node). A data type the leaf table has no row for (`decimal`, `binary`,
-  a bare `any`) gets a node with no `type` keyword. A definition with no
+  node; since 2026-11-13 a closed list of 32, one place for every fact:
+  see [A node holds every fact of its
+  definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)). A data
+  type the leaf table has no row for (`decimal`, `binary`, a bare `any`)
+  gets a node with no `type` keyword. A definition with no
   place for a default or examples (a configurable field, `FieldConfig`,
   which offers neither the proposed core methods nor array access) has
   none: the read asks `DefinitionMetadata::canHoldDefaultValue()` and
@@ -3103,7 +3115,9 @@ each half needs. No served document, refusal or value changed.
   `constraints`; no properties, `type`, `required` or
   `additionalProperties`), so of a listed map's definition the
   projection reads only whether it is a map and whether it offers a
-  list; whether a list states a check (`SurfaceOptions::isStatedByList()`
+  list (since 2026-11-13 whether it is a map comes from its node: see
+  [A node holds every fact of its
+  definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)); whether a list states a check (`SurfaceOptions::isStatedByList()`
   kept per plugin id, `SurfaceOptions::readsAsList()` kept per plugin id
   and serialized options); a check's label as its sentence where the
   definition gives no message or one that renders empty (the label kept
@@ -3120,7 +3134,10 @@ each half needs. No served document, refusal or value changed.
   description alone; `publishedKeywords()` projects what `keywords()`
   read for `PropertySchema::signature()`.
 - **The memo stays, static.** `seal()`, `hold()`, the memo and the
-  fingerprint assertion work as before, in static `WeakMap`s keyed by the
+  fingerprint assertion work as before (since 2026-11-13 the fingerprint
+  also hashes the class, a map's main property name and every definition
+  the array holds: see [A node holds every fact of its
+  definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)), in static `WeakMap`s keyed by the
   definition object, one node per definition (there is no listed form).
   That is safe across kernel tests in one process: an entry lives only
   while its definition object does, a test builds its own definitions,
@@ -3145,13 +3162,197 @@ and contrib types without a table, but the blueprint refuses those
 types at declaration and the pipeline has no cast for them, so it
 belongs where host readers produce nodes); the rest of the members, one
 for every fact a definition carries, the mark of a key that does not
-apply among them; the memo, `seal()`, `hold()` and the fingerprint
+apply among them (done 2026-11-13: see [A node holds every fact of its
+definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it));
+the memo, `seal()`, `hold()` and the fingerprint
 assertion go when an `Entry` holds its node.
 
 (`Contract\DefinitionSchema`, `Contract\LeafTypes`, `Contract\BuiltNodes`,
 `DefinitionMetadata`, `PropertySchema`, `ContractEmitter`,
 `DefinitionSchemaTest`, `DefinitionReadIsPureTest`,
 `DefinitionReadServiceFreeTest`, `BuiltNodesTest`)
+
+### A node holds every fact of its definition, and a definition is derived back from it
+
+Decided 2026-11-13. A built node said what a document says and two
+model-only members; the rest of what a definition carries (its settings,
+its stored `required`, a NULL default, what `DefinitionMetadata` stores,
+a `Computed`, a `Resolve`, a shape's definition) was on the definition
+only, so every consumer still read the definition. Now every fact of a
+`DataDefinition`, a `ListDataDefinition` or a `MapDataDefinition` has a
+place on the node, such a definition is derived back from the node
+alone, and the round trip proves the node lacks nothing. No served
+document, refusal or value changed, and no consumer moved.
+
+- **One place for each fact.** Where the document reads a fact, its
+  keyword holds it, as before: `title`, `description`, `type`, `format`,
+  `items`, `properties`, `additionalProperties`, `required` on the
+  parent, `default`, `examples`, `writeOnly`, `portable-check`,
+  `x-portable-messages`. Every other fact is a member of
+  `x-surface-model`. A member is on a node only where the definition
+  states the fact and no keyword holds the value as stored; `type` is on
+  every node. The members are a closed list of 32,
+  `DefinitionSchema::MEMBERS`, whose docblock says what each holds and
+  who reads it; `DefinitionSchema::PLACES` names, for each key of a
+  definition array, its member and the keyword that may hold it, the
+  keys `DefinitionMetadata` and `DoesNotApply` store written as strings.
+  `ModelMembersTest` pins both lists and ties each storage constant of
+  the two classes (protected, read by reflection) to a place, and each
+  place to a constant or one of core's keys.
+- **What is no fact.** The order of a definition array's keys and an
+  unwritten `type` key are not facts: nothing reads them, so no member
+  holds them. The comparator compares a definition's own array as a map
+  (the same keys, the same value per key, a `type` key that holds the
+  data type the same as none); an array inside a value (settings, a
+  constraint's options, examples, a default) is compared in order. A
+  `type` key that is not the data type is a fact and goes under
+  `stored`.
+- **The three classes, and what other classes keep.** A definition of
+  any other class is read as before: its keywords from its getters, its
+  class in `definitionClass`. Its node does not hold what the class keeps
+  outside the definition array, and the inverse refuses it. The known
+  cases: a `DataReferenceDefinition`'s target, a
+  `FieldItemDataDefinition`'s field definition, an
+  `EntityDataDefinition`'s properties (core's own cached objects), and a
+  `FieldConfig`'s and a `BaseFieldDefinition`'s `required` and settings
+  (a `FieldConfig` answers `isRequired()` TRUE with no `required` member;
+  a `BaseFieldDefinition`'s `getSettings()` reads its item definition, so
+  48 of the 275 host definitions on the dev site say settings the node
+  does not hold).
+- **Bridges.** `DefinitionSchema::BRIDGES` lists the members that exist
+  only so a Typed Data definition can be derived back or because a
+  consumer has not moved yet. Each, its readers and the slice it goes
+  in: `type` (the projection, the inverse, the pipeline's casts once they
+  move in slice 30; goes before slice 35 closes); `definitionClass` (the
+  projection through `classOf()`, `isList()` and `isLeaf()`, and the
+  inverse; slice 35); `readOnly` and `computed` (core's two flags),
+  `declared` (the definition's own constraints), `mainProperty` and
+  `stored` (every key the module has no name for, as stored), read by the
+  inverse alone (slice 35); `constraints` (the merged list, read by the
+  check provider and `oneValue()` until they read the node's own facts in
+  slice 32, and by the inverse's refusal; slice 35). The proof of the
+  last slice greps for these names. Every other member is a fact of
+  Surface's own model and stays.
+- **Text stays the author's.** Wherever the definition holds a text
+  (label, description, own label, an arrangement's texts, a constraint's
+  message option, a `Computed` or `Resolve` field), the node holds the
+  same object. Reading renders none of them; the purity scan and the
+  counting test reach every new method of the read (60 methods and
+  constructors).
+- **Nested definitions are nodes.** A shape is `{id, node}`, a config
+  type `{type, node}`, `each` a node or the class every entry is. Each
+  node is read by the same function, through the guard against a
+  definition that holds itself (which covers a definition held as its
+  own shape, config type or `each`), so the recursion ends where the
+  definitions held end.
+- **The inverse is an edge.** `Contract\NodeDefinition::of(Schema $node)`
+  is static and reads the node alone. It derives three classes, by exact
+  class, with their constructors: `DataDefinition`, `ListDataDefinition`,
+  `MapDataDefinition`. A node of any other class (the cases above, a
+  subclass of the three) is refused with a `LogicException` naming the
+  class. A node of a data type core's typed data manager does not define
+  is refused with a `LogicException` naming the type: the definition was
+  read from another manager's definition (typed config's `label`,
+  `uuid`, `mapping`). So is a node whose derived definition does not give
+  the constraints the node was read with: on the dev site a typed config
+  `text` key whose own constraints replace the type's, where the tool
+  module defines a typed data `text`, so the type is core's but its
+  defaults were typed config's. Its one service call is
+  `\Drupal::typedDataManager()->hasDefinition()`; it uses no Surface
+  service.
+  It is the one place Typed Data is made from the model, an `EDGES`
+  entry of `TypedDataFootprintTest` (153 files outside the edges,
+  unchanged).
+- **What a derived definition shares.** The inverse makes a new
+  definition wherever the node holds a node: properties, items, a shape,
+  a config type, `each`. Every other value is the object the node holds,
+  which is the object the definition holds. Nothing is cloned. A value
+  under a setting or a key the module has no name for is opaque to the
+  read: a definition object there stays a definition object, in the node
+  and in the derived definition, and a write through it is a write to
+  the original's. No refusal: no example, test module or dev-site surface
+  holds one, and a deep scan of settings on every read would cost every
+  read for none.
+- **The round trip is the full one.** For a definition `$d` of the three
+  classes, `NodeDefinition::of(DefinitionSchema::of($d))` has the same
+  class, `toArray()` equal as a map at the top and in order below it,
+  the same `getDataType()`, `getClass()`, `isRequired()`, `isReadOnly()`,
+  `isComputed()`, `getSettings()` and `getConstraints()` (`===`), equal
+  properties, main property and item, and an equal answer from every
+  public static getter of `DefinitionMetadata` (found by reflection);
+  every object but a `NodeMessage` is the same object. At every depth the
+  node's `constraints` member is `getConstraints()`. The node read from
+  the derived definition equals the node it was derived from. A
+  `NodeMessage`, which the read makes anew on each read, is equal by
+  class and content. A node serialized and unserialized derives an equal
+  definition, objects equal by class and content. The comparator
+  (`DefinitionEqualityTrait`) does not compare the typed data manager a
+  definition holds; `DefinitionEqualityTest` pins one pair for each
+  difference it must report and the two non-facts it must not.
+  `DefinitionRoundTripTest` walks every data surface of the 19 example
+  modules and of `surface_values_test`, declared and refined by each
+  value set, and every definition reachable from an entry at every
+  depth, with counts pinned as literals, then one hand case for each
+  fact the examples do not state, and the refusals.
+- **The projection reads the node.** Whether a definition is a map, a
+  list or one value, whether an `any` is held as one, the mark of a key
+  that does not apply (`doesNotApply`) and the label its refusal names
+  come from the node. The projection walks the definitions only to hand
+  each to the options resolvers (`listed()`).
+- **What does not change.** `published()` strips MODEL at every depth,
+  and so every member, including the nodes a shape, a config type and
+  `each` hold. No consumer but the projection reads a new member. The
+  memo, `seal()`, `hold()` and the fingerprint assertion stay; the
+  fingerprint hashes what the read reads: the class, the definition
+  array or the getters, a map's main property name, every property and
+  item, and every definition the array holds. It does not see an object
+  changed in place. `BuiltNodesTest` sweeps every served document and
+  the OpenAPI document for MODEL and pins the `x-` keywords they hold at
+  any depth, so a member served under a keyword of its own is seen; the
+  tool definitions are swept for MODEL.
+
+What stays Typed Data: the read (`DefinitionSchema`) and the inverse
+(`NodeDefinition`), both edges.
+
+"Written when": where the definition states the fact and no keyword
+holds the value as stored.
+
+| Member | Holds | Bridge | Written when | Read by |
+|---|---|---|---|---|
+| `type` | the data type, `getDataType()` | yes | always | the projection, the inverse |
+| `definitionClass` | the PHP class | yes | the class is not the one the node implies (a list, a map with properties, else `DataDefinition`) | the projection, the inverse |
+| `label`, `description` | the stored label or description | no | the key is stored and `title` or `description` does not hold it: the literal `''` or NULL | the inverse; `label` the projection's refusal |
+| `required` | the stored `required` | no | the key is stored | the inverse |
+| `readOnly`, `computed` | core's `read-only` and `computed`, as stored | yes | the key is stored | the inverse |
+| `settings` | the settings, whole | no | the key is stored | the inverse |
+| `constraints` | every constraint with its type's defaults, `getConstraints()` | yes | there is one | the check provider, `oneValue()`; the inverse only to refuse (it writes `declared`) |
+| `declared` | the definition's own constraints, `toArray()['constraints']` | yes | the key is stored | the inverse |
+| `default`, `examples` | the stored default or examples | no | the keyword does not hold them as stored: an explicit NULL, a map's, a secret's, examples with keys | the inverse |
+| `secret` | the stored secret flag | no | `writeOnly` does not hold it as stored: FALSE, NULL, or a truthy value other than TRUE (beside `writeOnly`, which says TRUE) | the inverse |
+| `variantsBy`, `heldWhole`, `readVariants`, `oneVariant`, `fixed`, `grouping`, `alwaysHeld`, `placedAfter`, `variantsFrom`, `ownLabel`, `arrangement` | what `DefinitionMetadata` stores, as stored | no | the key is stored | the inverse; `variantsBy` and `heldWhole` the projection |
+| `compute`, `resolve` | the `Computed` and the `Resolve`, the objects held | no | the key is stored | the inverse |
+| `shape`, `configType` | `{id, node}`, `{type, node}` | no | the key holds the form the setter writes | the inverse |
+| `each` | a node, or the class every entry is | no | the key holds a definition or a string | the inverse |
+| `doesNotApply` | the mark of a key ruled out | no | the key is stored | the projection |
+| `mainProperty` | a `MapDataDefinition`'s main property name | yes | an exact `MapDataDefinition` with one set | the inverse |
+| `stored` | the keys the module has no name for, as stored; a value a member cannot hold | yes | there is one | the inverse |
+
+Row notes. A reader of the own label falls back to `title`, then to the
+`label` member (`ownLabel` ?? `title` ?? `label`: a label of `''` has no
+`title`). A default merged from a map's properties
+(`DefinitionMetadata::defaultOf()`) is no member: it is made from the
+properties' nodes.
+
+Later: the `Entry` holds either form, the definition or the node, and
+derives the other on first read, and the memo, `seal()`, the fingerprint
+and `BuiltNodes` go (slice 29); the consumers read members in place of
+`DefinitionMetadata` calls (slices 30 and 31); the bridges go
+(slice 35).
+
+(`Contract\DefinitionSchema`, `Contract\NodeDefinition`,
+`DefinitionRoundTripTest`, `DefinitionEqualityTrait`,
+`DefinitionEqualityTest`, `ModelMembersTest`, `DefinitionSchemaTest`,
+`BuiltNodesTest`, `DefinitionReadIsPureTest`, `TypedDataFootprintTest`)
 
 ### A key that does not apply
 

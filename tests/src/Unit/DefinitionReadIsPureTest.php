@@ -44,10 +44,12 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * Schema's), which is not followed; a callable passed as a value and
  * called by another function (`array_map($f, ...)`); a text made a string
  * by a function (`sprintf()`, `implode()`, `strtr()`), by a comparison
- * with a string or by a concatenation whose operand is no variable (a
- * call's result); and a service reached through an object the definition
- * holds. DefinitionReadServiceFreeTest runs the read and sees what it asks
- * of the container.
+ * with a string (a loose `in_array()` with no third argument,
+ * `array_search()`, `array_unique()`, `sort()` over values that may be
+ * text) or by a concatenation whose operand is no variable (a call's
+ * result); and a service reached through an object the definition holds.
+ * DefinitionReadServiceFreeTest runs the read and sees what it asks of
+ * the container.
  *
  * Decision: see
  * docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request.
@@ -62,8 +64,11 @@ class DefinitionReadIsPureTest extends UnitTestCase {
 
   /**
    * How many methods and constructors the read reaches, entry points too.
+   *
+   * 56 on 2026-11-13; 60 since the node holds every fact of its
+   * definition: stored(), nested(), nestedNode() and implied().
    */
-  protected const REACHED = 56;
+  protected const REACHED = 60;
 
   /**
    * The types a reached method may not take: services and the request.
