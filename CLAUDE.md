@@ -1017,8 +1017,8 @@ test errored or failed and every gate passed.
   cache; it orders classes slowest first.
 
 On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-12: the
-full lane takes 12m09s at the defaults (phpunit 11m00s) and the fast
-lane 8m02s (phpunit 7m51s). As of 2026-10-23, with a smaller suite, the
+full lane takes 15m16s at the defaults (phpunit 14m28s) and the fast
+lane 7m33s (phpunit 7m29s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1049,7 +1049,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2488, Assertions: 115530, Errors: 0, Failures: 0, Skipped: 3. Classes: 341 of 341, 8 at a time, browser classes 4.
+phpunit: Tests: 2498, Assertions: 115740, Errors: 0, Failures: 0, Skipped: 3. Classes: 346 of 346, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1073,8 +1073,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2374, Assertions: 110976, Deprecations: 698, Skipped: 3. Classes:
-288, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2384, Assertions: 111186, Deprecations: 758, Skipped: 3. Classes:
+293, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 
@@ -1327,7 +1327,10 @@ so the rule is this sentence. `npm test` is not part of
   list of files that use Typed Data,
   `tests/fixtures/typed-data-footprint.txt`, by `TypedDataFootprintTest`
   with `SURFACE_FOOTPRINT_WRITE=1` (a file new to it is written
-  `unassigned`, and its role is the one word written by hand).
+  `unassigned`, and its role is the one word written by hand), and the
+  value baseline, `tests/fixtures/values/`, by the four
+  `ValueBaseline*Test` classes over `ValueBaselineTestBase`, each
+  writing its own group's files, with `SURFACE_VALUES_WRITE=1`.
   Never edit any of them by hand.
 - Commit messages are one line.
 

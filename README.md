@@ -1,5 +1,10 @@
 # Surface API
 
+> **Status: a proof of concept for Drupal core.** This project is on
+> drupal.org for its issue queue and its repository while the idea is
+> prototyped. It will have no full release. The goal is for its parts to
+> move into core once they are ready.
+
 > **Installing from `main` takes two extra commands for now.** The module
 > requires `fago/portable-schema`, and the schema builder it uses is not in
 > fago's repository yet. Until it is merged there, the package comes from

@@ -1,0 +1,8 @@
+name: Surface API Values Test
+type: module
+description: 'Test support for the value baseline: keys of every type, setting and rule the pipeline casts or keeps differently, which no example declares.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface

@@ -2841,6 +2841,165 @@ a shape's alters as a `Schema` in, a `Schema` out.
 `DrupalCheckProvider`, `StringWidget`, `ShapesTest`, `ShapeTextsTest`,
 `SecretsTest`, `SecretsParityTest`, `AddSchemaTest`, `PublicSurfaceTest`)
 
+### Values are pinned before the model changes hands
+
+Decided 2026-11-12. Until now the proofs compared documents and
+refusals with a base commit, never values. A change in what `accept()`
+coerces, what `kept()` writes back or what `outbound()` serves passed
+every one of them. The slices that change how the model is held and who
+reads it are measured against a value baseline and a value probe, both
+built on the untouched tree. No file under `src` changed.
+
+- **One corpus.** `Drupal\Tests\surface\Values\ValueCorpus` yields the
+  inputs. Each input changes one thing of a base set of values and is
+  named `<pointer> <kind>`. The corpus reads the data surface's full
+  document, so it needs no service. It finds every place the document
+  holds: through its defs, its branches, each variant and each list's
+  items. Its docblock states each kind as a rule, so a later slice adds
+  a kind in one place. It uses no randomness and no clock. It lives in
+  `tests/src/Values`, apart from the test classes, because the probe
+  loads it outside a test.
+  - A leaf is sent its stored value, its default, each option and near
+    misses of it, numbers and numeric strings, booleans and the words
+    PHP reads as booleans, a number beyond the integer range, nothing,
+    an array and a JSON string. A date or integer place is also sent
+    each datetime input format, and the storage format at three times
+    of day.
+  - A map and a list are sent JSON of either shape, a string that is
+    no JSON, an empty array, a number and the wrong shape. A list is
+    also sent a null item, keyed items and a bare item. A list whose
+    items hold a secret is sent as many items as are stored, and more.
+  - A secret is sent the clear marker, `''`, `NULL` and nothing, over a
+    stored secret and over none.
+  - A key with variants is sent each variant, another variant's keys,
+    and a secret left in another variant.
+  - Every member of a variant is asked under its own variant. The base
+    is changed for it: the deciding key holds the variant, and the key
+    holds the defaults the variant's members declare. The stored values
+    stay the caller's.
+  - A place asked a second time, under a variant the base does not
+    choose or below a place a later value set opens, is sent a shorter
+    list of kinds: its stored value, its default, its options and near
+    misses of them, a number and a numeric string, `TRUE` and a boolean
+    word, `''`, `NULL`, nothing, and every secret, variant and item
+    secret kind. Every kind under every variant made the baseline
+    4.4 MB and one class run for 11 minutes.
+  - A locked or computed key is sent a value of its own.
+  - The whole surface is sent an empty input, the base echoed, an
+    unknown key sent and stored, and a key one letter off a declared
+    one.
+  - A value set after the first asks fewer places: those where it
+    differs from the earlier value set nearest it, those below the
+    deepest of them, and those that depend on one. Below a key whose
+    `dependsOn` names a place that differs, every place is asked a
+    second time, other than for a change of its own deciding key, which
+    the first value set's cases under each variant already ask. Asking every place
+    under each value set made the test run for an hour and its fixtures
+    7 MB.
+- **One recorder.** `Drupal\Tests\surface\Values\ValueRecorder`
+  records, for a pipeline it is handed, what `accept()` answers with
+  every PHP type (`'1'` and `1` differ, and so does key order) or what
+  it throws.
+  - A refusal `accept()` throws as an unknown key, a type mismatch or a
+    variant mismatch is also recorded as the violations a door sends
+    for it.
+  - For an accepted case it records the notes and unmatched secrets
+    `accept()` collected, and `kept()`, `document()`, `outbound()` and
+    `validate()`. It records what a read serves of the stored values.
+  - `document` is recorded as the accepted values only when it makes
+    the same tokens, so a map written as an array where an object is
+    due shows in the record itself.
+  - A value JSON cannot write is an error that names the case. Nothing
+    is recorded in part.
+  - A data surface whose operation creates, and every test surface, is
+    also recorded as a create over nothing stored: the base values, an
+    empty input, an unknown key, each place left out and each computed
+    key sent a value. `accept()` and `validate()` are told it creates,
+    and `kept()` is asked with no input, as `submit()` asks it for a
+    create.
+  - Per data surface it records `Outbound::secrets()` with no closure
+    and with the tool door's.
+  - A text is recorded as its rendering and its class.
+  - It reads the pipeline's own `Accepting` and `Validating`, and throws,
+    naming the pipeline's class, when the pipeline holds neither.
+  - It never calls `submit()`, `prepare()`, `commit()` or `outputs()`.
+- **The value baseline.** `ValueBaselineTestBase` runs the corpus over
+  every value set of every example surface the secrets parity walks and
+  the test surfaces of `surface_values_test`. It holds each record to
+  `tests/fixtures/values/`, one file per data surface, written with
+  `SURFACE_VALUES_WRITE=1`. Four classes split the walk by fixture
+  name, each with its own counts, so no class runs long. The block
+  placement create's value sets are split across two fixtures, since
+  validating one of its cases takes about 20 ms.
+  - A fixture holds each value set's own values and its base case's
+    record. The first value set's are held whole, a later set's as
+    their difference from the first's.
+  - Each other case is held on the line of the place it changes, as its
+    difference from the case before it on that line or from the base
+    case, whichever is shorter. A case recorded as the base case is
+    counted by kind.
+  - A line names each place and token by the start of its hash, so a
+    place or a token added to a data surface leaves every other line as
+    it was.
+  - A comparison holds each value set's own values first. A value set
+    whose values changed is reported as such, and its cases are not
+    compared.
+  - A failure gives the count of differing cases by data surface and by
+    record before the first cases whole.
+  - `SURFACE_VALUES_ONLY=<text>` limits a comparing run to the data
+    surfaces whose name holds the text. Such a run compares no count and
+    always fails once it has compared, so a lane cannot pass with it
+    set. It has no effect on a writing run.
+  - The counts are literals, so a walk that reached nothing cannot pass.
+- **A test surface for what no example reaches.** The branches of
+  `Coercion`, `Accepting`, `SurfacePipeline` and `Outbound` were
+  counted over the baseline's cases by copies of the four classes
+  loaded in place of the tree's, never by editing the tree. Each
+  branch no example reaches has a key in `surface_values_test`, and so
+  does a second witness for a rule one example alone reaches.
+  - A resource holds what a blueprint declares, and an alter mounts two
+    keys in it and rules one out.
+  - A data surface built by hand holds what a blueprint never sets
+    itself: a key its storage always holds, a grouping map, an empty
+    label, a map's own default, a NULL default, locked keys, and maps
+    with no properties.
+  - The emitter writes no document for what the blueprint refuses
+    (`decimal`, a bare `any`). That data surface's places are read from
+    a document stated beside it, and a test holds the stated document
+    to the data surface's places and types.
+  - Four branches have no case. Two datetime input formats never parse
+    first: an earlier format reads every value they read. A float that is
+    not finite is never sent: JSON has none, and a form posts strings.
+    `document()`'s arm for a key no entry declares is never reached:
+    `accept()` answers declared keys only.
+- **The value probe.** For the dev site's resources, which a kernel
+  test cannot hold, the same corpus and recorder run over every
+  operation as user 1 and as anonymous, in two processes. One process
+  loads the base commit's classes before the autoloader can reach them,
+  and the other runs the tree's. It counts what builds, not what is
+  asked.
+
+Not covered, and pinned elsewhere:
+- Storage layouts: `FlatVariantsLayoutTest`, `ConfigEntityStorageTest`
+  and `NodeTypeToolComparisonTest`.
+- `prepare()` and `commit()`: `ConfigObjectStorageTest` and
+  `SurfaceStorageAccessorTest`.
+- The tool door's own input casting: the tests that use
+  `DoorAgreementTrait`.
+- The form door's own casting: `InputCoercionMatrixTest`.
+- The HTTP door's JSON decoding: the `surface_http` tests.
+- Widgets: `StockWidgetsAjaxTest` and the functional form tests.
+- Resources that need a subject the kernel test does not create: the
+  probe covers the dev site's.
+- Text in a language other than English: nothing records it.
+
+Later: each slice that changes a reader of the model runs the value
+baseline unedited and the probe against its base commit.
+
+(`Drupal\Tests\surface\Values\ValueCorpus`,
+`Drupal\Tests\surface\Values\ValueRecorder`, `ValueBaselineTestBase`,
+`ValueCorpusTest`, `surface_values_test`)
+
 ### A key that does not apply
 
 A refiner says a key does not apply to the values it watches by
