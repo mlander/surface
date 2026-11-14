@@ -7,12 +7,13 @@ namespace Drupal\surface\Pipeline;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceAccess;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMetadata;
+use PortableSchema\Builder\Schema;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 use Drupal\surface\Validation\ConstraintRunner;
@@ -149,7 +150,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
     $document = new \stdClass();
     foreach ($values as $name => $value) {
       $entry = $surface->getDefinitions()->entry((string) $name);
-      if ($value === NULL && $entry !== NULL && DefinitionMetadata::isSecret($entry->definition)) {
+      if ($value === NULL && $entry !== NULL && Secrets::marked($entry->schema())) {
         // A secret that holds nothing is written left out: null is no value
         // of it, and both schemas say so.
         // Decision: see docs/decisions.md#a-secret-is-optional-never-nullable.
@@ -158,10 +159,10 @@ final class SurfacePipeline implements SurfacePipelineInterface {
       $child = $entry?->childFor($values);
       $document->{$name} = match (TRUE) {
         $entry === NULL => $value,
-        !is_array($value) => static::documentValue($entry->definition, $value),
+        !is_array($value) => static::documentValue($entry->schema(), $value),
         $child !== NULL => $this->document($child, $value),
         $entry->list !== NULL => array_map(fn (mixed $item): mixed => is_array($item) ? $this->document($entry->list->item->child, $item) : $item, array_values($value)),
-        default => static::documentValue($entry->definition, $value),
+        default => static::documentValue($entry->schema(), $value),
       };
     }
     return $document;
@@ -170,28 +171,32 @@ final class SurfacePipeline implements SurfacePipelineInterface {
   /**
    * Writes one value of an accepted document with every map an object.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The value's definition.
+   * @param \PortableSchema\Builder\Schema $node
+   *   The value's node: its entry's (Entry::schema()), or one below it.
    * @param mixed $value
    *   The value.
    *
    * @return mixed
    *   The value, each map in it an object, each list a list, and each
    *   datetime with its offset.
+   *
+   * @throws \LogicException
+   *   When a list's node holds no node for its item.
    */
-  protected static function documentValue(DataDefinitionInterface $definition, mixed $value): mixed {
+  protected static function documentValue(Schema $node, mixed $value): mixed {
     if (!is_array($value)) {
       // A datetime with its offset, as it is served.
-      return $definition->getDataType() === 'datetime_iso8601' ? Coercion::served($value, $definition) : $value;
+      return NodeFacts::dataType($node) === 'datetime_iso8601' ? Coercion::served($value, DefinitionSchema::declares($node, 'DateOnly')) : $value;
     }
-    if ($definition instanceof ListDataDefinitionInterface) {
-      return array_map(static fn (mixed $item): mixed => static::documentValue($definition->getItemDefinition(), $item), array_values($value));
+    if (DefinitionSchema::isList($node)) {
+      $item_node = DefinitionSchema::itemNode($node) ?? throw new \LogicException('A list\'s node holds no node for its item: a built node holds one.');
+      return array_map(static fn (mixed $item): mixed => static::documentValue($item_node, $item), array_values($value));
     }
-    if (!$definition instanceof ComplexDataDefinitionInterface) {
+    if (DefinitionSchema::isLeaf($node)) {
       return $value;
     }
     $map = new \stdClass();
-    $properties = $definition->getPropertyDefinitions();
+    $properties = NodeFacts::properties($node);
     foreach ($value as $key => $item) {
       $map->{$key} = isset($properties[$key]) ? static::documentValue($properties[$key], $item) : $item;
     }
@@ -230,7 +235,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
       }
       $kept[$name] = $values[$name];
       $child = $entry->list === NULL ? $entry->childFor($values) : NULL;
-      if ($sent && $child === NULL && $entry->list === NULL && !is_array($values[$name]) && array_key_exists($name, $current) && $this->heldAlike($entry->definition, $values[$name], $current[$name])) {
+      if ($sent && $child === NULL && $entry->list === NULL && !is_array($values[$name]) && array_key_exists($name, $current) && $this->heldAlike($entry->schema(), $entry->definition, $values[$name], $current[$name])) {
         $kept[$name] = $current[$name];
         continue;
       }
@@ -252,7 +257,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
       }
       $kept[$name] = ($child !== NULL
         ? $this->kept($child, $values[$name], $own, $below)
-        : $this->keptInMap($entry->definition, $values[$name], $own, $below)) + $aside;
+        : $this->keptInMap($entry->schema(), $entry->definition, $values[$name], $own, $below)) + $aside;
     }
     return array_diff_key($kept + $values, $unwritten);
   }
@@ -260,8 +265,14 @@ final class SurfacePipeline implements SurfacePipelineInterface {
   /**
    * Puts back what storage holds under a map's properties left out.
    *
+   * The map's node says what it holds; its definition is walked in step
+   * only to hand a property's to heldAlike(), whose accept reads a key's
+   * choices from the options service, which takes a definition.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The map's node, as declared.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The map, as declared.
+   *   The map's definition, which the node was read from.
    * @param array $value
    *   The accepted map.
    * @param array $stored
@@ -272,13 +283,13 @@ final class SurfacePipeline implements SurfacePipelineInterface {
    * @return array
    *   The map to write.
    */
-  protected function keptInMap(DataDefinitionInterface $definition, array $value, array $stored, ?array $input = NULL): array {
-    if (!$definition instanceof ComplexDataDefinitionInterface || $definition instanceof ListDataDefinitionInterface) {
+  protected function keptInMap(Schema $node, DataDefinitionInterface $definition, array $value, array $stored, ?array $input = NULL): array {
+    if (DefinitionSchema::isLeaf($node) || DefinitionSchema::isList($node)) {
       return $value;
     }
     $kept = [];
     $unwritten = [];
-    foreach ($definition->getPropertyDefinitions() as $property => $property_definition) {
+    foreach (NodeFacts::properties($node) as $property => $property_node) {
       if (!array_key_exists($property, $value)) {
         if (array_key_exists($property, $stored)) {
           $kept[$property] = $stored[$property];
@@ -286,16 +297,16 @@ final class SurfacePipeline implements SurfacePipelineInterface {
         continue;
       }
       $sent = $input !== NULL && array_key_exists($property, $input);
-      if ($input !== NULL && !array_key_exists($property, $stored) && static::isDefault($value[$property], DefinitionMetadata::defaultOf($property_definition))) {
+      if ($input !== NULL && !array_key_exists($property, $stored) && static::isDefault($value[$property], NodeFacts::defaultOf($property_node))) {
         $unwritten[$property] = TRUE;
         continue;
       }
-      if ($sent && !is_array($value[$property]) && array_key_exists($property, $stored) && $this->heldAlike($property_definition, $value[$property], $stored[$property])) {
+      if ($sent && !is_array($value[$property]) && array_key_exists($property, $stored) && $this->heldAlike($property_node, Accepting::propertyDefinition($definition, $property), $value[$property], $stored[$property])) {
         $kept[$property] = $stored[$property];
         continue;
       }
       $kept[$property] = is_array($value[$property]) && is_array($stored[$property] ?? NULL)
-        ? $this->keptInMap($property_definition, $value[$property], $stored[$property], $input === NULL ? NULL : (is_array($input[$property] ?? NULL) ? $input[$property] : []))
+        ? $this->keptInMap($property_node, Accepting::propertyDefinition($definition, $property), $value[$property], $stored[$property], $input === NULL ? NULL : (is_array($input[$property] ?? NULL) ? $input[$property] : []))
         : $value[$property];
     }
     return array_diff_key($kept + $value, $unwritten);
@@ -337,8 +348,11 @@ final class SurfacePipeline implements SurfacePipelineInterface {
    *
    * Decision: see docs/decisions.md#absent-keeps-null-clears.
    *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The key's or the property's node.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key or the property.
+   *   The definition the node was read from, which the accept hands the
+   *   options service for the key's choices (Accepting::acceptValue()).
    * @param mixed $accepted
    *   The accepted value, not an array.
    * @param mixed $stored
@@ -347,12 +361,12 @@ final class SurfacePipeline implements SurfacePipelineInterface {
    * @return bool
    *   TRUE when the two are one value.
    */
-  protected function heldAlike(DataDefinitionInterface $definition, mixed $accepted, mixed $stored): bool {
-    if (DefinitionMetadata::isSecret($definition) || $definition instanceof ListDataDefinitionInterface || is_array($stored)) {
+  protected function heldAlike(Schema $node, DataDefinitionInterface $definition, mixed $accepted, mixed $stored): bool {
+    if (Secrets::marked($node) || DefinitionSchema::isList($node) || is_array($stored)) {
       return FALSE;
     }
     try {
-      return Accepting::sameValue($accepted, $this->accepting->acceptValue($definition, $stored, $stored, ''));
+      return Accepting::sameValue($accepted, $this->accepting->acceptValue($node, $definition, $stored, $stored, ''));
     }
     catch (\InvalidArgumentException) {
       return FALSE;

@@ -2866,7 +2866,10 @@ check's message made with `t()` on `addSchema()`, and a shape's
 
 Later, by slice: `Outbound`'s secret trees, `Accepting`'s secret reads,
 `SurfacePipeline`'s, `Validating`'s, `Variants::keptSecrets()` and the
-stage's kept secrets read built nodes through `Secrets` in slice 26;
+stage's kept secrets read built nodes through `Secrets` in slice 26
+(2026-11-13: done for all but `Validating`'s, which slice 31 takes; the
+stage's kept secrets follow `Outbound::secrets()`. See [The value
+pipeline reads nodes](#the-value-pipeline-reads-nodes).);
 `EncryptedStorageLayout`, `ConfigSchemaGenerator`,
 `HeldToConfigSchemaTrait`, `InputDefinitions`, `ResourceCode`,
 `SiteCatalog` and `FlatVariantsLayout` in slice 27; `KeyPaths`,
@@ -3005,7 +3008,9 @@ built on the untouched tree. No file under `src` changed.
     a document stated beside it, and a test holds the stated document
     to the data surface's places and types.
   - Four branches have no case. Two datetime input formats never parse
-    first: an earlier format reads every value they read. A float that is
+    first: an earlier format reads every value they read. (2026-11-13:
+    the two formats are removed, see [The value pipeline reads
+    nodes](#the-value-pipeline-reads-nodes).) A float that is
     not finite is never sent: JSON has none, and a form posts strings.
     `document()`'s arm for a key no entry declares is never reached:
     `accept()` answers declared keys only.
@@ -3024,6 +3029,8 @@ Not covered, and pinned elsewhere:
 - The tool door's own input casting: the tests that use
   `DoorAgreementTrait`.
 - The form door's own casting: `InputCoercionMatrixTest`.
+- A site default or a fixed value read in its key's type (`KeyPaths`,
+  through `Coercion`): `KeyPathsCoercionTest`, since 2026-11-13.
 - The HTTP door's JSON decoding: the `surface_http` tests.
 - Widgets: `StockWidgetsAjaxTest` and the functional form tests.
 - Resources that need a subject the kernel test does not create: the
@@ -3491,6 +3498,171 @@ Later: the node-first entry, for a source that produces a node
 `LocationNodeTest`, `EntryNodeIsNeverStaleTest`,
 `DefinitionReadCallersTest`, `DefinitionSchemaTest`,
 `DefinitionReadIsPureTest`)
+
+### The value pipeline reads nodes
+
+Decided 2026-11-13. The pipeline (what takes a submitted value in,
+decides what is kept, what the validator is handed and what goes out)
+read every fact about a key from its Typed Data definition. Each entry
+now gives its node with no service (`Entry::schema()`), and the node
+holds every fact of its definition, so the pipeline reads the facts from
+the node. No value, refusal or served byte changed.
+
+- **Who reads nodes.** `Pipeline\Coercion`, `Pipeline\Accepting`,
+  `Pipeline\SurfacePipeline` (`document()`, `documentValue()`,
+  `kept()`, `keptInMap()`, `heldAlike()`), `Pipeline\Outbound`
+  (`declared()`, `secretsOf()`) and `Variants::keptSecrets()` and
+  `ownSecrets()`. `Violation::typeMismatch()` and
+  `TypeMismatchException` took a type's name, never a definition, and
+  are unchanged.
+- **How a walk gets its node.** Where the pipeline has an entry it asks
+  `$entry->schema()`. Where it walks down a map's properties or a
+  list's item it walks the node (`NodeFacts::properties()`,
+  `DefinitionSchema::itemNode()`); a list's node with no node for its
+  item throws, since a missing node would answer "no secret". A walk
+  into a child frame, a collection item or a variant takes that child's
+  entries, as before. Nothing in the pipeline calls
+  `DefinitionSchema::of()`; `DefinitionReadCallersTest` is unchanged.
+- **The definition beside the node, and why.** Two contracts still take
+  a definition until slice 32: the options service
+  (`SurfaceOptions::resolve()`), which gives a key's choices for a near
+  miss to snap onto, and a computed key's `Computed::of()` and
+  `Computed::value()`. So `Accepting::acceptValue()`, `acceptList()`,
+  `acceptSecret()` and `coerce()`, and `SurfacePipeline::keptInMap()`
+  and `heldAlike()`, take the node and the definition it was read from,
+  walked in step (`Accepting::propertyDefinition()`, which throws when
+  the two are out of step); the definition is read for the options
+  service alone, and each docblock says so. `documentValue()` and
+  `secretsOf()` need no definition and take none.
+- **One table, handed facts.** `Coercion` takes no definition:
+  `scalar($type, $dateOnly, $value, $choices)` and
+  `served($value, $dateOnly)`. The pipeline hands it the data type and
+  the DateOnly flag from the node; `KeyPaths`, which holds only a
+  definition (slice 31), reads the two from its definition and reads no
+  node. `Coercion::isDateOnly()` is gone. The two datetime input formats
+  that could never parse first (`Y-m-d\TH:i:sO` and `Y-m-d H:i:sO`; PHP
+  reads `O` and `P` alike) are removed; the value baseline stayed at
+  zero differences.
+- **One class reads the facts.** `Contract\NodeFacts` (static, pure,
+  internal) has one method per fact the pipeline needs, each naming the
+  call it stands for. It reaches the members through
+  `DefinitionSchema::model()`, so pipeline code names no member. The
+  node readers already on `DefinitionSchema` (`model()`, `declares()`,
+  `options()`, `isList()`, `nodeIsMap()`, `isLeaf()`, `heldAsAny()`,
+  `classOf()`, `propertyNode()`, `itemNode()`, `shapeNode()`) and
+  `Secrets::marked()` stay where they are; none moved.
+  `DefinitionReadIsPureTest` scans every public method of `NodeFacts`
+  (20 methods reached, nothing refused).
+
+| Reader | Stands for |
+|---|---|
+| `NodeFacts::dataType()` | `getDataType()` |
+| `NodeFacts::hasConstraints()` | `getConstraints() !== []` |
+| `NodeFacts::isRequired()` | `isRequired()`, the key's own stored flag |
+| `NodeFacts::isAlwaysHeld()` | `DefinitionMetadata::isAlwaysHeld()` |
+| `NodeFacts::isGrouping()` | `DefinitionMetadata::isGrouping()` |
+| `NodeFacts::holdsValue()` | `DefinitionMetadata::holdsValue()` |
+| `NodeFacts::isNullable()` | `!holdsValue() && !isSecret()` (`Accepting::isNullable()`, gone) |
+| `NodeFacts::settings()` | `getSettings()` |
+| `NodeFacts::label()` | `getLabel()` |
+| `NodeFacts::ownLabel()` | `DefinitionMetadata::ownLabel()` |
+| `NodeFacts::hasDefault()` | `DefinitionMetadata::hasDefaultValue()` |
+| `NodeFacts::default()` | `DefinitionMetadata::getDefaultValue()` |
+| `NodeFacts::defaultOf()` | `DefinitionMetadata::defaultOf()` |
+| `NodeFacts::properties()` | `getPropertyDefinitions()` of a map |
+| `Secrets::marked()` | `DefinitionMetadata::isSecret()` |
+| `DefinitionSchema::declares($node, 'DateOnly')` | `array_key_exists('DateOnly', getConstraints())` (`Coercion::isDateOnly()`, gone) |
+| `DefinitionSchema::isList()` | `instanceof ListDataDefinitionInterface` |
+| `DefinitionSchema::nodeIsMap()` | `DefinitionSchema::isMap()` |
+| `DefinitionSchema::isLeaf()` | neither complex nor a list |
+| `DefinitionSchema::itemNode()`, `propertyNode()` | `getItemDefinition()`, `getPropertyDefinition()` |
+
+- **Behavior kept, each pinned by the value baseline.** A datetime is
+  served with its offset only where an entry holds it (at the top, in a
+  child frame, in a collection item), never inside a plain map or a
+  plain list of maps (`Outbound::declared()`); the validator's
+  document (`documentValue()`) adds it at every depth, as before.
+  Choices are the options service's option keys, never a node's
+  `oneOf` or `enum`. `required` is the key's own flag, not its parent's
+  `required` keyword, which leaves out secrets and computed keys. A
+  type refusal names the data type id and its params the JSON types. A
+  bare `any`, a `decimal` and a `binary` are accepted as before. A
+  label of `''` reads as `''` (`NodeFacts::label()`), so a sentence
+  that falls back to the key's name for no label keeps saying `''`
+  where it did. `Secrets::absent()` still answers "no secret" for a
+  `$ref` it cannot resolve where `at()` answers secret: changing it
+  changes an answer, so it is not done here.
+- **What stays on the definition, and who takes it.** In the classes
+  above: `Computed::of()` and `Computed::value()` in `acceptLevel()`
+  and `acceptComputed()`, and the options service in `coerce()`
+  (slice 32, the public contracts); the refinement's marker in
+  `withoutWhatDoesNotApply()` and `Outbound::project()`
+  (`DoesNotApply::marks()`, `inside()`, `leftOut()`): a refined entry
+  is new and has read nothing, so reading its node for one flag would
+  read a node per refined key per refine (slice 33, when a request
+  keeps one refine); the label of a secret inside a collection item in
+  `Accepting::unmatchedSecret()`, found through
+  `Validating::definitionAt()` (slice 31). `Validating`'s own checks,
+  `Conforming`, `KeyPaths`, the storage layouts, the tool door's inputs,
+  the form and the config schema writer read definitions until slices
+  31 and 34; `Validating` hands `acceptValue()` the entry's node beside
+  its definition.
+- **Proof.** `NodeFactsParityTest` holds each reader to its call, by
+  strict equality, for every entry of every example data surface,
+  declared and refined by each value set, and every definition below it
+  at every depth (1,067 definitions), and for hand cases of what no
+  example states. The same comparison over the development site (2,226
+  definitions of 262 builds and their refines) found no disagreement.
+  The value baseline and the probe show no difference.
+  `KeyPathsCoercionTest` pins the table where a site default or a fixed
+  value is read, which the value baseline does not reach.
+  `SurfacePipelineCastingTest` hands each casting row to the table too,
+  with the facts read from the row's node.
+- **The footprint.** `Pipeline/Coercion.php` and `Pipeline/Outbound.php`
+  name no Typed Data and left the list: `OUTSIDE_THE_EDGES` is 151.
+  `NodeFacts` names none.
+- **What it costs.** A request that makes a document reads no more
+  than before: an entry keeps its node, so accept and the document
+  share it, and accept plus validate is 0.5 percent slower by minimum.
+  A request that makes no document now reads nodes the base never
+  read, one per key, because the node is still read from the
+  definition. Measured over 171 operations of the development site on
+  fresh builds with assertions off, by the sum of each operation's
+  minimum: a first accept 25.3 ms against 17.0; a read (`outbound()`
+  then `document()` of what storage holds) 133.8 ms against 119.1; what
+  goes out after a commit 114.3 ms against 107.8; a whole write request
+  (accept, validate, kept, what goes out) 428.6 ms against 420.2, 2
+  percent. The largest single rise is 0.7 ms, for a read of
+  `entity.content:media:create`. A second accept on the same build is
+  4 percent slower. In nodes read over 262 builds: a write request
+  2,220 against 1,348, a first read 1,593 against none. Two things in
+  it are waste, known and left: a key that holds a child frame is read
+  whole for one flag (`isGrouping`) or for its secrets, and the child's
+  keys are then read again by the child's own entries (432 nodes read
+  twice over 51 operations). The tool definitions' rebuild reads 468
+  more nodes (`InputDefinitions::secrets()` asks `Outbound::secrets()`
+  over declared builds, whose nodes nothing else reads there): 4 ms on
+  a 71 ms rebuild. With assertions on, every later `schema()` ask reads
+  the definition again, so a write request is 13 percent slower there.
+  All of it is the cost of reading a node from a definition, and it
+  ends when a source gives the node (slice 32) and a request reads a
+  compiled surface (slice 33): no cache or memo is added to hide it
+  before then.
+- **What pins it.** The value baseline has no datetime in a list, no
+  list of lists, no default over a nested default, no key labeled with
+  the empty string and no secret two maps down. `PipelineHandCasesTest`
+  pins what the pipeline accepts, keeps, notes, hands the validator and
+  sends out for each (tests/fixtures/pipeline-hand-cases.json, written
+  again with `SURFACE_HAND_CASES_WRITE=1`); each case fails under a
+  planted fault no other test saw. A label is handed back as the
+  definition holds it, a number included: the locked note names it.
+
+(`PipelineHandCasesTest`, `Contract\NodeFacts`, `Pipeline\Coercion`,
+`Pipeline\Accepting`,
+`Pipeline\SurfacePipeline`, `Pipeline\Outbound`, `Variants`,
+`ResourceBuild\KeyPaths`, `NodeFactsParityTest`, `NodeFactsParityTrait`,
+`KeyPathsCoercionTest`, `SurfacePipelineCastingTest`,
+`DefinitionReadIsPureTest`, `TypedDataFootprintTest`)
 
 ### A key that does not apply
 

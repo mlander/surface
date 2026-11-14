@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Pipeline;
 
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attachment;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
 use Drupal\surface\Refinement\DoesNotApply;
+use PortableSchema\Builder\Schema;
 
 /**
  * What any door may hand a caller of a set of values: the read's answer.
@@ -76,7 +75,9 @@ final class Outbound {
    *
    * @return array
    *   The declared keys of the values, in the order they were in, a
-   *   datetime key's with its offset (Coercion::served()).
+   *   datetime key's with its offset (Coercion::served()): one an entry
+   *   holds, never one inside a plain map or a plain list of maps. What a
+   *   key is comes from its entry's node.
    */
   public static function declared(SurfaceInterface $surface, array $values): array {
     $definitions = $surface->getDefinitions();
@@ -93,11 +94,11 @@ final class Outbound {
       elseif (is_array($value) && ($child = $entry->childFor($values)) !== NULL) {
         $value = static::declared($child, $value);
       }
-      elseif ($entry->definition->getDataType() === 'datetime_iso8601') {
+      elseif (NodeFacts::dataType($node = $entry->schema()) === 'datetime_iso8601') {
         // Served with its offset.
         // Decision: see
         // docs/decisions.md#validation-runs-through-the-dialects-validator.
-        $value = Coercion::served($value, $entry->definition);
+        $value = Coercion::served($value, DefinitionSchema::declares($node, 'DateOnly'));
       }
       $declared[$name] = $value;
     }
@@ -107,7 +108,7 @@ final class Outbound {
   /**
    * Finds every key a data surface marks secret, at any depth.
    *
-   * A secret is a scalar key of its own (DefinitionMetadata::setSecret()
+   * A secret is a scalar key of its own (the setter that marks one
    * refuses anything else), but it can sit anywhere: on the data surface,
    * in a plain map such as a module's mounted settings, in an attached
    * child, or in any variant. The secrets at a key with variants are
@@ -169,7 +170,7 @@ final class Outbound {
    *   answers, or empty when nothing at it is.
    */
   public static function secretsAt(Entry $entry, ?\Closure $walks = NULL): true|array {
-    $found = static::secretsOf($entry->definition);
+    $found = static::secretsOf($entry->schema());
     // A variant not built yet whose document states no secret holds none:
     // it is left unsettled.
     $variants = $entry->variants === NULL || ($walks !== NULL && !$walks($entry)) ? [] : array_filter($entry->variants->variants, static fn (Attachment $variant): bool => !$variant->holdsNoSecretUnsettled());
@@ -188,33 +189,36 @@ final class Outbound {
   }
 
   /**
-   * Finds the secrets inside one core data definition.
+   * Finds the secrets inside one key's node.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node: an entry's (Entry::schema()), or one below it.
    *
    * @return true|array
    *   TRUE when it is secret, or a list whose items are; the secrets
    *   among a map's properties, keyed like them, or under EACH among a
    *   list's items; empty when none.
+   *
+   * @throws \LogicException
+   *   When a list's node holds no node for its item: a built node holds
+   *   one, and a missing one would answer "no secret" for one that may be.
    */
-  public static function secretsOf(DataDefinitionInterface $definition): true|array {
-    if (DefinitionMetadata::isSecret($definition)) {
+  public static function secretsOf(Schema $node): true|array {
+    if (Secrets::marked($node)) {
       return TRUE;
     }
-    if ($definition instanceof ListDataDefinitionInterface) {
+    if (DefinitionSchema::isList($node)) {
       // A list of secrets is secret; a list of maps keeps each item's
       // secrets under EACH, and the rest of every item is read.
-      $item = static::secretsOf($definition->getItemDefinition());
+      $item_node = DefinitionSchema::itemNode($node) ?? throw new \LogicException('A list\'s node holds no node for its item: a built node holds one.');
+      $item = static::secretsOf($item_node);
       return $item === [] || $item === TRUE ? $item : [self::EACH => $item];
     }
     $secrets = [];
-    if ($definition instanceof ComplexDataDefinitionInterface) {
-      foreach ($definition->getPropertyDefinitions() as $name => $property) {
-        $found = static::secretsOf($property);
-        if ($found !== []) {
-          $secrets[(string) $name] = $found;
-        }
+    foreach (NodeFacts::properties($node) as $name => $property) {
+      $found = static::secretsOf($property);
+      if ($found !== []) {
+        $secrets[(string) $name] = $found;
       }
     }
     return $secrets;

@@ -707,6 +707,20 @@ the record of the rework that brought the module to the pattern.
   `docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request`,
   `docs/decisions.md#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it`,
   `docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone`).
+- **The value pipeline reads nodes**: `Coercion`, `Accepting`,
+  `SurfacePipeline`'s document and kept walks, `Outbound` and
+  `Variants::keptSecrets()`/`ownSecrets()` read a key's facts from its
+  entry's node (`Entry::schema()`), walked down a map's properties and a
+  list's item, through `Contract\NodeFacts` (one static, pure reader per
+  fact, each naming the definition call it stands for), the node readers
+  of `DefinitionSchema` and `Secrets::marked()`; pipeline code names no
+  member. `Coercion` takes facts (`scalar($type, $dateOnly, ...)`,
+  `served($value, $dateOnly)`), never a definition. The definition is
+  carried beside the node only for the options service (a key's choices)
+  and `Computed`, until slice 32; the refinement's marks and
+  `Validating`'s own checks stay on definitions until slices 33 and 31.
+  `NodeFactsParityTest` holds each reader to its call
+  (`docs/decisions.md#the-value-pipeline-reads-nodes`).
 - **Secrets**: `Contract\Secrets`, the one reader of what is secret,
   from a schema node or a document, holding no definition: `marked()`
   (the node says `writeOnly: true`; the reader, the check provider and
@@ -1050,8 +1064,8 @@ test errored or failed and every gate passed.
   cache; it orders classes slowest first.
 
 On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-13: the
-full lane takes 12m28s at the defaults (phpunit 11m44s) and the fast
-lane 6m32s (phpunit 6m26s). As of 2026-10-23, with a smaller suite, the
+full lane takes 15m51s at the defaults (phpunit 15m08s) and the fast
+lane 8m12s (phpunit 8m04s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1082,7 +1096,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2520, Assertions: 102298, Errors: 0, Failures: 0, Skipped: 3. Classes: 353 of 353, 8 at a time, browser classes 4.
+phpunit: Tests: 2526, Assertions: 102433, Errors: 0, Failures: 0, Skipped: 3. Classes: 356 of 356, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1106,8 +1120,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2406, Assertions: 97744, Deprecations: 777, Skipped: 3. Classes:
-300, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2412, Assertions: 97879, Deprecations: 792, Skipped: 3. Classes:
+303, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 
@@ -1354,6 +1368,9 @@ so the rule is this sentence. `npm test` is not part of
   `modules/surface_openapi/tests/fixtures/openapi/examples.json`, by
   `OpenApiDocumentTest` with `SURFACE_OPENAPI_EXAMPLES_WRITE=1` (the
   official OpenAPI 3.1 schema beside it is vendored, not generated), and
+  what the value pipeline does with shapes no example has,
+  `tests/fixtures/pipeline-hand-cases.json`, by `PipelineHandCasesTest`
+  with `SURFACE_HAND_CASES_WRITE=1`, and
   the React app's fixtures,
   `modules/surface_examples_react/app/src/test/fixtures/`, by
   `ReactFixturesTest` with `SURFACE_REACT_FIXTURES_WRITE=1`, and the
@@ -1415,7 +1432,8 @@ src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
                          SurfacePipeline.php keeps the write path and
                          the document, over its three verbs: Accepting.php,
-                         Validating.php, Conforming.php. The storage
+                         Validating.php, Conforming.php; Coercion.php the
+                         casting table, handed a key's facts. The storage
                          interfaces; TransactionalStorageInterface is
                          what a storage implements to be staged.
 src/Validation/          A request's values held to their document by the
@@ -1455,7 +1473,9 @@ src/Contract/            The served contract's emitter (a Portable Schema
                          and projects it for the request (published(),
                          CheckOptions the check options a document says,
                          NodeMessage a message it holds); of() keeps
-                         nothing, the Entry holds its node; Secrets answers
+                         nothing, the Entry holds its node; NodeFacts reads
+                         the facts the value pipeline needs from a node;
+                         Secrets answers
                          what is secret from a node or a document;
                          ContractEmitter
                          walks the frames, PropertySchema writes each key

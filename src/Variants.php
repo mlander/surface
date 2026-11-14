@@ -7,6 +7,7 @@ namespace Drupal\surface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Pipeline\ValueState;
 
 /**
@@ -267,8 +268,8 @@ final class Variants {
       foreach ($this->variants as $other => $variant) {
         // One not built yet that is known to hold no secret is not built
         // to be asked.
-        $definition = (string) $other === $id || $variant->holdsNoSecretUnsettled() ? NULL : $variant->child->getDefinition($key);
-        if ($definition !== NULL && DefinitionMetadata::isSecret($definition)) {
+        $entry = (string) $other === $id || $variant->holdsNoSecretUnsettled() ? NULL : $variant->child->getDefinitions()->entry((string) $key);
+        if ($entry !== NULL && Secrets::marked($entry->schema())) {
           // A secret that holds nothing has nothing to keep.
           if ($value[$key] !== NULL && $value[$key] !== '') {
             $kept[$key] = $value[$key];
@@ -293,8 +294,8 @@ final class Variants {
    */
   public function ownSecrets(string $id, array $value): array {
     $own = [];
-    foreach ($this->variant($id)->child->getDefinitions()->toArray() as $key => $definition) {
-      if (array_key_exists($key, $value) && DefinitionMetadata::isSecret($definition)) {
+    foreach ($this->variant($id)->child->getDefinitions()->entries() as $key => $entry) {
+      if (array_key_exists($key, $value) && Secrets::marked($entry->schema())) {
         $own[$key] = $value[$key];
       }
     }

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Pipeline;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
-
 /**
  * The coercion table, the Tool API's, applied to every door.
  *
@@ -28,6 +26,11 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * What holds nothing (NULL, and the empty string, which is how a form
  * says nothing) never reaches this class: the pipeline reads it first,
  * as a cleared key, which a required key refuses (docs/semantics.md).
+ *
+ * It takes no definition: a caller hands it the facts it reads, the data
+ * type and whether the key holds a date alone, from the key's node
+ * (NodeFacts::dataType(), DefinitionSchema::declares() for DateOnly), or
+ * from a definition where the caller holds only that (KeyPaths).
  *
  * @see \Drupal\tool\EventSubscriber\InputTypeCoercionSubscriber
  * @see docs/semantics.md#the-coercion-table
@@ -52,14 +55,14 @@ final class Coercion {
   /**
    * The input formats for a target declaring a date and a time.
    *
-   * Every one carries a timezone, so no zone is ever guessed.
+   * Every one carries a timezone, so no zone is ever guessed. PHP reads
+   * `P` and `O` alike (`+02:00` and `+0200`), so no row spells the offset
+   * with `O`: such a row could never be the first to parse.
    */
   private const DATETIME_INPUT_FORMATS = [
     \DateTimeInterface::RFC3339,
-    \DateTimeInterface::ISO8601,
     'Y-m-d\TH:i:s.uP',
     'Y-m-d H:i:sP',
-    'Y-m-d H:i:sO',
   ];
 
   /**
@@ -104,8 +107,11 @@ final class Coercion {
   /**
    * Coerces one configured value that is not a structure to its type.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition the value belongs to.
+   * @param string $type
+   *   The key's data type (`integer`, `datetime_iso8601`).
+   * @param bool $dateOnly
+   *   Whether the key holds a date alone (a DateOnly check), which is read
+   *   for a `datetime_iso8601` key only.
    * @param mixed $value
    *   The raw value; never NULL or the empty string.
    * @param array $choices
@@ -113,11 +119,10 @@ final class Coercion {
    *   for a key that declares none.
    *
    * @return mixed
-   *   The value in the definition's type, or untouched when the intended
-   *   value is not unambiguous.
+   *   The value in the key's type, or untouched when the intended value
+   *   is not unambiguous.
    */
-  public static function scalar(DataDefinitionInterface $definition, mixed $value, array $choices = []): mixed {
-    $type = $definition->getDataType();
+  public static function scalar(string $type, bool $dateOnly, mixed $value, array $choices = []): mixed {
 
     // A case or whitespace near miss of a declared choice ("Article" for
     // "article"), when exactly one choice matches.
@@ -140,7 +145,7 @@ final class Coercion {
     }
 
     if ($type === 'datetime_iso8601') {
-      return is_string($value) && !is_numeric($value) ? self::datetime($definition, $value) : $value;
+      return is_string($value) && !is_numeric($value) ? self::datetime($dateOnly, $value) : $value;
     }
 
     if ($type === 'timestamp') {
@@ -251,30 +256,17 @@ final class Coercion {
    *
    * @param mixed $value
    *   The value a `datetime_iso8601` key holds.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
-   *   The key's definition, which says whether it holds a date alone.
+   * @param bool $dateOnly
+   *   Whether the key holds a date alone (a DateOnly check).
    *
    * @return mixed
    *   The value, `Z` after a time that carries no offset.
    */
-  public static function served(mixed $value, ?DataDefinitionInterface $definition = NULL): mixed {
-    if ($definition !== NULL && static::isDateOnly($definition)) {
+  public static function served(mixed $value, bool $dateOnly = FALSE): mixed {
+    if ($dateOnly) {
       return $value;
     }
     return is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$/D', $value) ? $value . 'Z' : $value;
-  }
-
-  /**
-   * Answers whether a datetime key holds a date alone.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key's definition.
-   *
-   * @return bool
-   *   TRUE when it holds a DateOnly constraint.
-   */
-  public static function isDateOnly(DataDefinitionInterface $definition): bool {
-    return array_key_exists('DateOnly', $definition->getConstraints());
   }
 
   /**
@@ -286,16 +278,15 @@ final class Coercion {
    * offset is moved to UTC, and a value with none is read as UTC already.
    * Anything not parsed exactly stays for validation, which refuses it.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   * @param bool $date_only
+   *   Whether the key holds a date alone.
    * @param string $value
    *   The value sent.
    *
    * @return string
    *   The value as stored, or as it arrived.
    */
-  private static function datetime(DataDefinitionInterface $definition, string $value): string {
-    $date_only = static::isDateOnly($definition);
+  private static function datetime(bool $date_only, string $value): string {
     $formats = $date_only ? self::DATE_INPUT_FORMATS : [self::DATETIME_STORAGE_FORMAT, ...self::DATETIME_INPUT_FORMATS];
     foreach ($formats as $format) {
       $parsed = \DateTimeImmutable::createFromFormat('!' . $format, $value, new \DateTimeZone(self::STORAGE_TIMEZONE));

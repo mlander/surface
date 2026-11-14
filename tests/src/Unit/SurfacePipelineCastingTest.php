@@ -19,10 +19,13 @@ use Drupal\surface\Surface;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Validation\ConstraintRunner;
 use Drupal\surface\Validation\PortableValidator;
 use PortableSchema\Registry;
+use Drupal\surface\Pipeline\Coercion;
 use Drupal\surface\Pipeline\SurfacePipeline;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\TypeMismatchException;
@@ -50,6 +53,12 @@ use Symfony\Component\Validator\ConstraintViolationList;
  * caller that holds a data surface and some strings needs nothing else.
  * The coercion table is the Tool API's (InputTypeCoercionSubscriber);
  * InputCoercionMatrixTest holds the form and the tool to it.
+ *
+ * The pipeline reads a key's facts from the key's node, which its entry
+ * reads from the definition each row hands it. Each row of the casting
+ * table is also handed to the table itself (Coercion::scalar()) with the
+ * two facts read from the definition's node (DefinitionSchema::of()): the
+ * data type and whether the key holds a date alone.
  *
  * @see \Drupal\surface\Pipeline\SurfacePipeline
  * @see docs/semantics.md
@@ -153,6 +162,11 @@ class SurfacePipelineCastingTest extends UnitTestCase {
   #[DataProvider('castingMatrix')]
   public function testCasting(DataDefinitionInterface $definition, mixed $input, mixed $expected): void {
     $this->assertSame($expected, $this->accept($definition, $input));
+    if (ValueState::isConfigured($input)) {
+      // The table, handed what the pipeline reads from the key's node.
+      $node = DefinitionSchema::of($definition);
+      $this->assertSame($expected, Coercion::scalar(NodeFacts::dataType($node), DefinitionSchema::declares($node, 'DateOnly'), $input));
+    }
   }
 
   /**

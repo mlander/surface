@@ -1,0 +1,345 @@
+{
+    "a default over a nested default": {
+        "accept": {
+            "": "a[\"m\"]",
+            "/m": "a[\"p\",\"x\"]",
+            "/m/p": "a[\"q\"]",
+            "/m/p/q": "a[\"r\",\"s\"]",
+            "/m/p/q/r": "town",
+            "/m/p/q/s": "ts of q",
+            "/m/x": "tsent"
+        },
+        "notes": {
+            "": "l0"
+        },
+        "unmatched": {
+            "": "l0"
+        },
+        "kept": {
+            "": "a[\"m\"]",
+            "/m": "a[\"x\"]",
+            "/m/x": "tsent"
+        },
+        "document": {
+            "": "o[\"m\"]",
+            "/m": "o[\"p\",\"x\"]",
+            "/m/p": "o[\"q\"]",
+            "/m/p/q": "o[\"r\",\"s\"]",
+            "/m/p/q/r": "town",
+            "/m/p/q/s": "ts of q",
+            "/m/x": "tsent"
+        },
+        "outbound": {
+            "": "t= accept"
+        }
+    },
+    "a computed key and its source labeled with the empty string": {
+        "accept": {
+            "": "a[\"src\",\"comp\"]",
+            "/src": "tSome Title",
+            "/comp": "tsome_title"
+        },
+        "notes": {
+            "": "a[\"comp  computed\"]",
+            "/comp  computed": "t[[],' is computed from ; the value sent was not taken.','TranslatableMarkup']"
+        },
+        "unmatched": {
+            "": "l0"
+        },
+        "kept": {
+            "": "t= accept"
+        },
+        "document": {
+            "": "o[\"src\",\"comp\"]",
+            "/src": "tSome Title",
+            "/comp": "tsome_title"
+        },
+        "outbound": {
+            "": "t= accept"
+        }
+    },
+    "a locked key labeled with the empty string": {
+        "accept": {
+            "": "a[\"k\"]",
+            "/k": "theld"
+        },
+        "notes": {
+            "": "a[\"k  locked\"]",
+            "/k  locked": "t[[],' is locked and kept as stored; the value sent was not taken.','TranslatableMarkup']"
+        },
+        "unmatched": {
+            "": "l0"
+        },
+        "kept": {
+            "": "t= accept"
+        },
+        "document": {
+            "": "o[\"k\"]",
+            "/k": "theld"
+        },
+        "outbound": {
+            "": "t= accept"
+        }
+    },
+    "a locked key whose label is a number": {
+        "accept": {
+            "": "a[\"k\"]",
+            "/k": "theld"
+        },
+        "notes": {
+            "": "a[\"k  locked\"]",
+            "/k  locked": "t[[],'5 is locked and kept as stored; the value sent was not taken.','TranslatableMarkup']"
+        },
+        "unmatched": {
+            "": "l0"
+        },
+        "kept": {
+            "": "t= accept"
+        },
+        "document": {
+            "": "o[\"k\"]",
+            "/k": "theld"
+        },
+        "outbound": {
+            "": "t= accept"
+        }
+    },
+    "a locked secret sent what it holds": {
+        "accept": {
+            "": "a[\"pin\"]",
+            "/pin": "theld"
+        },
+        "notes": {
+            "": "a[\"pin  locked\"]",
+            "/pin  locked": "t[[],'PIN is locked and kept as stored; the value sent was not taken.','TranslatableMarkup']"
+        },
+        "unmatched": {
+            "": "l0"
+        },
+        "kept": {
+            "": "t= accept"
+        },
+        "document": {
+            "": "o[\"pin\"]",
+            "/pin": "theld"
+        },
+        "outbound": {
+            "": "l0"
+        }
+    },
+    "a choice in a map over a stored near miss": {
+        "accept": {
+            "": "a[\"m\",\"n\"]",
+            "/m": "a[\"a\",\"c\",\"n\"]",
+            "/m/a": "tx",
+            "/m/c": "tarticle",
+            "/m/n": "s1",
+            "/n": "snull"
+        },
+        "notes": {
+            "": "l0"
+        },
+        "unmatched": {
+            "": "l0"
+        },
+        "kept": {
+            "": "a[\"m\"]",
+            "/m": "a[\"a\",\"c\",\"n\"]",
+            "/m/a": "tx",
+            "/m/c": "tArticle",
+            "/m/n": "s1"
+        },
+        "document": {
+            "": "o[\"m\",\"n\"]",
+            "/m": "o[\"a\",\"c\",\"n\"]",
+            "/m/a": "tx",
+            "/m/c": "tarticle",
+            "/m/n": "s1",
+            "/n": "snull"
+        },
+        "outbound": {
+            "": "t= accept"
+        }
+    },
+    "a number in a map over the same number stored as text": {
+        "accept": {
+            "": "a[\"m\",\"n\"]",
+            "/m": "a[\"a\",\"c\",\"n\"]",
+            "/m/a": "tx",
+            "/m/c": "tpage",
+            "/m/n": "s5",
+            "/n": "snull"
+        },
+        "notes": {
+            "": "l0"
+        },
+        "unmatched": {
+            "": "l0"
+        },
+        "kept": {
+            "": "a[\"m\"]",
+            "/m": "a[\"a\",\"c\",\"n\"]",
+            "/m/a": "tx",
+            "/m/c": "tpage",
+            "/m/n": "t5"
+        },
+        "document": {
+            "": "o[\"m\",\"n\"]",
+            "/m": "o[\"a\",\"c\",\"n\"]",
+            "/m/a": "tx",
+            "/m/c": "tpage",
+            "/m/n": "s5",
+            "/n": "snull"
+        },
+        "outbound": {
+            "": "t= accept"
+        }
+    },
+    "a secret in a map over the same secret stored as text": {
+        "accept": {
+            "": "a[\"m\"]",
+            "/m": "a[\"pin\",\"a\"]",
+            "/m/pin": "s5",
+            "/m/a": "tx"
+        },
+        "notes": {
+            "": "l0"
+        },
+        "unmatched": {
+            "": "l0"
+        },
+        "kept": {
+            "": "t= accept"
+        },
+        "document": {
+            "": "o[\"m\"]",
+            "/m": "o[\"pin\",\"a\"]",
+            "/m/pin": "s5",
+            "/m/a": "tx"
+        },
+        "outbound": {
+            "": "a[\"m\"]",
+            "/m": "a[\"a\"]",
+            "/m/a": "tx"
+        }
+    },
+    "a list of lists": {
+        "accept": {
+            "": "a[\"grid\"]",
+            "/grid": "l2",
+            "/grid/0": "l2",
+            "/grid/0/0": "s1",
+            "/grid/0/1": "s2",
+            "/grid/1": "l1",
+            "/grid/1/0": "s3"
+        },
+        "notes": {
+            "": "l0"
+        },
+        "unmatched": {
+            "": "l0"
+        },
+        "kept": {
+            "": "t= accept"
+        },
+        "document": {
+            "": "o[\"grid\"]",
+            "/grid": "l2",
+            "/grid/0": "l2",
+            "/grid/0/0": "s1",
+            "/grid/0/1": "s2",
+            "/grid/1": "l1",
+            "/grid/1/0": "s3"
+        },
+        "outbound": {
+            "": "t= accept"
+        }
+    },
+    "dates and times in a list and in a map": {
+        "accept": {
+            "": "a[\"at\",\"dates\",\"times\",\"slots\"]",
+            "/at": "t2026-01-02T03:04:05",
+            "/dates": "l2",
+            "/dates/0": "t2026-01-02T03:04:05",
+            "/dates/1": "t2026-02-03 04:05:06",
+            "/times": "a[\"when\",\"day\"]",
+            "/times/when": "t2026-01-02T03:04:05",
+            "/times/day": "t2026-01-02",
+            "/slots": "l1",
+            "/slots/0": "a[\"when\",\"day\"]",
+            "/slots/0/when": "t2026-03-04T05:06:07",
+            "/slots/0/day": "t2026-03-04"
+        },
+        "notes": {
+            "": "l0"
+        },
+        "unmatched": {
+            "": "l0"
+        },
+        "kept": {
+            "": "t= accept"
+        },
+        "document": {
+            "": "o[\"at\",\"dates\",\"times\",\"slots\"]",
+            "/at": "t2026-01-02T03:04:05Z",
+            "/dates": "l2",
+            "/dates/0": "t2026-01-02T03:04:05Z",
+            "/dates/1": "t2026-02-03 04:05:06",
+            "/times": "o[\"when\",\"day\"]",
+            "/times/when": "t2026-01-02T03:04:05Z",
+            "/times/day": "t2026-01-02",
+            "/slots": "l1",
+            "/slots/0": "o[\"when\",\"day\"]",
+            "/slots/0/when": "t2026-03-04T05:06:07Z",
+            "/slots/0/day": "t2026-03-04"
+        },
+        "outbound": {
+            "": "a[\"at\",\"dates\",\"times\",\"slots\"]",
+            "/at": "t2026-01-02T03:04:05Z",
+            "/dates": "l2",
+            "/dates/0": "t2026-01-02T03:04:05",
+            "/dates/1": "t2026-02-03 04:05:06",
+            "/times": "a[\"when\",\"day\"]",
+            "/times/when": "t2026-01-02T03:04:05",
+            "/times/day": "t2026-01-02",
+            "/slots": "l1",
+            "/slots/0": "a[\"when\",\"day\"]",
+            "/slots/0/when": "t2026-03-04T05:06:07",
+            "/slots/0/day": "t2026-03-04"
+        }
+    },
+    "a secret two maps down": {
+        "accept": {
+            "": "a[\"m\"]",
+            "/m": "a[\"middle\"]",
+            "/m/middle": "a[\"inner\"]",
+            "/m/middle/inner": "a[\"pin\",\"a\"]",
+            "/m/middle/inner/pin": "tkept",
+            "/m/middle/inner/a": "tsent"
+        },
+        "notes": {
+            "": "l0"
+        },
+        "unmatched": {
+            "": "l0"
+        },
+        "kept": {
+            "": "t= accept"
+        },
+        "document": {
+            "": "o[\"m\"]",
+            "/m": "o[\"middle\"]",
+            "/m/middle": "o[\"inner\"]",
+            "/m/middle/inner": "o[\"pin\",\"a\"]",
+            "/m/middle/inner/pin": "tkept",
+            "/m/middle/inner/a": "tsent"
+        },
+        "outbound": {
+            "": "a[\"m\"]",
+            "/m": "a[\"middle\"]",
+            "/m/middle": "a[\"inner\"]",
+            "/m/middle/inner": "a[\"a\"]",
+            "/m/middle/inner/a": "tsent"
+        }
+    }
+}

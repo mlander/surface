@@ -110,8 +110,11 @@ class StageStoreTest extends SurfaceKernelTestBase {
     $this->stages()->write($record);
     $this->assertGreaterThan(time() + 1000, $expiry());
 
-    // Expired: read as nothing, and named nothing.
-    $database->update('key_value_expire')->fields(['expire' => time() - 1])
+    // Expired: read as nothing, and named nothing. The store reads expiry
+    // against the request time, which a slow run leaves seconds behind
+    // time().
+    $now = $this->container->get('datetime.time')->getRequestTime();
+    $database->update('key_value_expire')->fields(['expire' => $now - 1])
       ->condition('collection', StageStore::COLLECTION)->condition('name', $id)->execute();
     $this->assertNull($this->stages()->read($id));
     $this->assertNamesNothing($id);

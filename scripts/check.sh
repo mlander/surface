@@ -351,7 +351,7 @@ $config['globRoot'] = $module;
 // generated, and holds the values its corpus sends and places and tokens
 // named by the start of their hash. The OpenAPI 3.1 schema is the
 // OpenAPI Initiative's file, copied unchanged.
-$config['ignorePaths'] = ['.git/**', '**/node_modules/**', '.cspell-project-words.txt', 'modules/surface_examples_react/dist/**', '**/package-lock.json', 'docs/reviews-*/**', 'tests/fixtures/contracts/**', 'tests/fixtures/values/**', 'modules/surface_openapi/tests/fixtures/openapi/oas-*.json'];
+$config['ignorePaths'] = ['.git/**', '**/node_modules/**', '.cspell-project-words.txt', 'modules/surface_examples_react/dist/**', '**/package-lock.json', 'docs/reviews-*/**', 'tests/fixtures/contracts/**', 'tests/fixtures/values/**', 'tests/fixtures/pipeline-hand-cases.json', 'modules/surface_openapi/tests/fixtures/openapi/oas-*.json'];
 foreach ($config['dictionaryDefinitions'] as &$dictionary) {
   $dictionary['path'] = $core . '/' . ltrim($dictionary['path'], './');
 }

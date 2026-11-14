@@ -23,6 +23,7 @@ use Drupal\surface\Collection;
 use Drupal\surface\Validation\DrupalCheckProvider;
 use Drupal\surface\Validation\Found;
 use Drupal\surface\Validation\PortableValidator;
+use PortableSchema\Builder\Schema;
 
 /**
  * The validate verb of the pipeline: accepted values held to the rules.
@@ -394,7 +395,7 @@ final class Validating {
     $name = $entry->name;
     $held = $computed->value($name, $values, $current, $entry->definition, $this->creates);
     try {
-      $held = $this->accepting->acceptValue($entry->definition, $held, $held, $name);
+      $held = $this->accepting->acceptValue($entry->schema(), $entry->definition, $held, $held, $name);
     }
     catch (\InvalidArgumentException) {
       // Compared as computed.
@@ -440,11 +441,12 @@ final class Validating {
     }
     $named = [];
     foreach ($violations as $violation) {
-      $definition = $violation->key === '' ? NULL : $surface->getDefinition($violation->key);
+      $entry = $violation->key === '' ? NULL : $surface->getDefinitions()->entry($violation->key);
+      $definition = $entry?->definition;
       $computed = Computed::of($definition);
       // A key computed unless sent holding a value its sources do not give
       // holds the caller's own: its refusals stand as they are.
-      if ($computed === NULL || $violation->code === Violation::COMPUTED || ($computed->takesSent() && !$this->holdsComputed($violation->key, $definition, $computed, $values, $current))) {
+      if ($entry === NULL || $computed === NULL || $violation->code === Violation::COMPUTED || ($computed->takesSent() && !$this->holdsComputed($violation->key, $entry->schema(), $entry->definition, $computed, $values, $current))) {
         $named[] = $violation;
         continue;
       }
@@ -462,8 +464,10 @@ final class Validating {
    *
    * @param string $key
    *   The key.
+   * @param \PortableSchema\Builder\Schema $node
+   *   Its node, which the accept reads (Accepting::acceptValue()).
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   Its definition.
+   *   Its definition, which its value is computed with.
    * @param \Drupal\surface\Computed $computed
    *   What it is computed from.
    * @param array $values
@@ -475,13 +479,13 @@ final class Validating {
    *   TRUE when it holds the value computed, or what is stored where it is
    *   not computed again: no value of the caller's own.
    */
-  protected function holdsComputed(string $key, DataDefinitionInterface $definition, Computed $computed, array $values, array $current): bool {
+  protected function holdsComputed(string $key, Schema $node, DataDefinitionInterface $definition, Computed $computed, array $values, array $current): bool {
     if ($values === []) {
       return FALSE;
     }
     $held = $computed->value($key, $values, $current, $definition);
     try {
-      $held = $this->accepting->acceptValue($definition, $held, $held, $key);
+      $held = $this->accepting->acceptValue($node, $definition, $held, $held, $key);
     }
     catch (\InvalidArgumentException) {
       // Compared as computed.

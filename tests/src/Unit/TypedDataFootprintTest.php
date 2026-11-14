@@ -133,9 +133,12 @@ class TypedDataFootprintTest extends UnitTestCase {
    * its unwrap of a typed list, 11 files that the service ids and typed
    * config found, and 3 services files. Lowered on 2026-11-12 to 153: a
    * shape is a Schema, so ShapeInterface and the two example shapes,
-   * PhoneNumber and License, name no Typed Data.
+   * PhoneNumber and License, name no Typed Data. Lowered on 2026-11-13 to
+   * 151: the value pipeline reads nodes, so Pipeline/Coercion.php (handed
+   * a key's facts) and Pipeline/Outbound.php (it reads secrets and a
+   * datetime's type from an entry's node) name no Typed Data.
    */
-  public const OUTSIDE_THE_EDGES = 153;
+  public const OUTSIDE_THE_EDGES = 151;
 
   /**
    * Finds the files that use Typed Data.

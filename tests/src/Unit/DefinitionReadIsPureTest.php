@@ -12,6 +12,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -23,7 +24,9 @@ use Symfony\Component\HttpFoundation\RequestStack;
  *
  * DefinitionSchema::of(), head() and describe(), every static method of
  * the module they reach and the constructor of every module class they
- * make (`new X(`), are read from their source. None may:
+ * make (`new X(`), are read from their source, and so is every reader of
+ * a node the value pipeline uses (NodeFacts) and what it reaches. None
+ * may:
  * - use `$this` (a constructor may), or be an instance method (but a
  *   constructor);
  * - take a service by its type;
@@ -75,6 +78,15 @@ class DefinitionReadIsPureTest extends UnitTestCase {
   protected const REACHED = 59;
 
   /**
+   * How many methods the node readers reach, their entry points too.
+   *
+   * NodeFacts's 14 public methods, and the 6 readers of DefinitionSchema
+   * and Secrets they reach: model(), isLeaf(), isList(), classOf(),
+   * implied() and Secrets::marked().
+   */
+  protected const NODE_READERS_REACHED = 20;
+
+  /**
    * The types a reached method may not take: services and the request.
    */
   protected const SERVICES = [
@@ -117,6 +129,21 @@ class DefinitionReadIsPureTest extends UnitTestCase {
     [$found, $seen] = static::scan(self::ENTRIES);
     $this->assertSame([], $found, 'The read uses no service and renders no text.');
     $this->assertCount(self::REACHED, $seen, 'The scan follows the read into the methods it calls: ' . implode(', ', $seen));
+  }
+
+  /**
+   * Tests every reader of a node the value pipeline uses.
+   *
+   * Each public method of NodeFacts is an entry point.
+   */
+  public function testTheNodeReadersReachNoServiceAndRenderNothing(): void {
+    $entries = [];
+    foreach ((new \ReflectionClass(NodeFacts::class))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+      $entries[] = $method->getName();
+    }
+    [$found, $seen] = static::scan($entries, NodeFacts::class);
+    $this->assertSame([], $found, 'The node readers use no service and render no text.');
+    $this->assertCount(self::NODE_READERS_REACHED, $seen, 'The scan follows the readers into the methods they call: ' . implode(', ', $seen));
   }
 
   /**
@@ -169,17 +196,19 @@ class DefinitionReadIsPureTest extends UnitTestCase {
   }
 
   /**
-   * Scans methods of DefinitionSchema and every module method they reach.
+   * Scans methods of a class and every module method they reach.
    *
    * @param string[] $entries
    *   The methods to start from.
+   * @param string $class
+   *   Their class: DefinitionSchema, or NodeFacts.
    *
    * @return array{0: list<string>, 1: list<string>}
    *   What each reached method does that the read may not, and the methods
    *   reached, by class and name.
    */
-  protected static function scan(array $entries): array {
-    $queue = array_map(static fn (string $method): array => [DefinitionSchema::class, $method], $entries);
+  protected static function scan(array $entries, string $class = DefinitionSchema::class): array {
+    $queue = array_map(static fn (string $method): array => [$class, $method], $entries);
     $seen = [];
     $found = [];
     while ($queue !== []) {

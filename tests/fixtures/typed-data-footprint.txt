@@ -70,9 +70,7 @@ pipeline src/Options/OptionsProvider.php
 constraints src/Options/SurfaceOptions.php
 constraints src/Options/SurfaceOptionsResolverInterface.php
 pipeline src/Pipeline/Accepting.php
-pipeline src/Pipeline/Coercion.php
 pipeline src/Pipeline/Conforming.php
-pipeline src/Pipeline/Outbound.php
 pipeline src/Pipeline/PipelineGuard.php
 storage src/Pipeline/Storage/PluginConfigurationStorage.php
 pipeline src/Pipeline/SurfacePipeline.php

@@ -564,7 +564,13 @@ final class KeyPaths {
         // throws for an array rather than saying it does not fit.
         throw new \InvalidArgumentException(sprintf('it holds one %s, not a list or a map.', $definition->getDataType()));
       }
-      return is_array($raw) ? $raw : Coercion::scalar($definition, $raw);
+      if (is_array($raw)) {
+        return $raw;
+      }
+      // The two facts the table reads, from the definition this reader
+      // holds: its data type, and whether it holds a date alone.
+      $type = $definition->getDataType();
+      return Coercion::scalar($type, $type === 'datetime_iso8601' && array_key_exists('DateOnly', $definition->getConstraints()), $raw);
     }
     $map = Coercion::decoded($raw, FALSE);
     if (!is_array($map)) {
