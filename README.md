@@ -1,5 +1,14 @@
 # Surface API
 
+> **This project has moved to drupal.org.**
+>
+> - Project page: <https://www.drupal.org/project/surface>
+> - Code: <https://git.drupalcode.org/project/surface>, on the `1.0.x` branch
+> - Issues: <https://www.drupal.org/project/issues/surface>
+>
+> This repository is no longer updated. Please open issues and merge
+> requests on drupal.org.
+
 You describe once what a thing on your site accepts: each value, its
 type, and what it allows. From that one description the module makes
 the settings form, a Tool API tool and the command line
