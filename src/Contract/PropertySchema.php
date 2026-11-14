@@ -18,6 +18,7 @@ use Drupal\surface\Plugin\SurfaceWidget\OptionsWidget;
 use Drupal\surface\Plugin\SurfaceWidget\RadiosWidget;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Options\OptionSet;
+use Drupal\surface\Pipeline\Outbound;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Resource\Arrangement;
@@ -414,7 +415,9 @@ final class PropertySchema {
    *   on, and its stale paths the dotted paths of stale values.
    *
    * @return array{0: \PortableSchema\Builder\Schema, 1: mixed}
-   *   The property schema, and its value as shown.
+   *   The property schema, and its value as shown: a secret below the key
+   *   as nothing held, as the frame shows a secret key, and left out of
+   *   a list's items, a list of secrets as nothing held.
    */
   public function property(DataDefinitionInterface $definition, Schema $node, ?DataDefinitionInterface $advertised, ?Schema $advertised_node, mixed $value, string $path, bool $locked, array $depends, Emission $emission): array {
     $cacheability = $emission->cacheability;
@@ -465,7 +468,15 @@ final class PropertySchema {
         $json => [],
         default => PortableUi::write($this->word('list')),
       };
-      $shown = is_array($value) ? array_values($value) : $value;
+      // A list's items are shown whole: a secret inside them is left out,
+      // and a list of secrets holds nothing shown.
+      // Decision: see docs/decisions.md#a-secret-is-not-served-at-any-depth.
+      $secrets = is_array($value) ? Outbound::secretsOf($node) : [];
+      $shown = match (TRUE) {
+        !is_array($value) => $value,
+        $secrets === TRUE => NULL,
+        default => array_values($secrets === [] ? $value : Outbound::withoutSecrets($value, $secrets)),
+      };
     }
     elseif (!$listed && DefinitionSchema::nodeIsMap($node)) {
       $properties = [];
@@ -478,7 +489,11 @@ final class PropertySchema {
           continue;
         }
         $was = isset($before[$name]) && $advertised !== NULL ? static::propertyDefinition($advertised, $name, $path) : NULL;
-        [$properties[$name], $nested[$name]] = $this->property(static::propertyDefinition($definition, $name, $path), $property_node, $was, $was === NULL ? NULL : $before[$name], is_array($value) ? ($value[$name] ?? NULL) : NULL, $path . '.' . $name, FALSE, [], $emission);
+        // A secret below the key is shown as nothing held, as the frame
+        // shows a secret key.
+        // Decision: see docs/decisions.md#a-secret-is-not-served-at-any-depth.
+        $inner = is_array($value) && !Secrets::marked($property_node) ? ($value[$name] ?? NULL) : NULL;
+        [$properties[$name], $nested[$name]] = $this->property(static::propertyDefinition($definition, $name, $path), $property_node, $was, $was === NULL ? NULL : $before[$name], $inner, $path . '.' . $name, FALSE, [], $emission);
       }
       $schema = $schema->with('properties', $properties);
       $extension = $this->extension($depends, $refined || $this->anyRefined($schema));

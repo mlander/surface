@@ -1469,7 +1469,10 @@ final class InputDefinitions {
    * For a `values` input built in a context that changes a thing that
    * exists, so a caller reads what is there, not what a new one would
    * start from. A key storage holds nothing for keeps its declared
-   * default. A secret keeps none: its stored value is never read back. A
+   * default. A secret keeps none: its stored value is never read back, at
+   * any depth. A key that holds a value whole (a map, a list of maps, a
+   * collection, a mount) defaults to it less every secret inside it, and a
+   * list of secrets keeps none. A
    * child is walked key by key through the data surface that describes the
    * stored value (for variants, the variant its stored deciding key chooses,
    * and only when the stored value fits it), so a secret inside a child
@@ -1494,7 +1497,13 @@ final class InputDefinitions {
         continue;
       }
       if (!$entry->isNested()) {
-        $property->setDefaultValue($stored[$name]);
+        // What is secret below the key, as the read finds it, asked only
+        // of a key that holds no variant, so none is built for it.
+        // Decision: see docs/decisions.md#a-secret-is-not-served-at-any-depth.
+        $below = Outbound::secretsAt($entry);
+        if ($below !== TRUE) {
+          $property->setDefaultValue($below === [] || !is_array($stored[$name]) ? $stored[$name] : Outbound::withoutSecrets([$name => $stored[$name]], [$name => $below])[$name]);
+        }
         continue;
       }
       $child = $entry->childFor($stored);

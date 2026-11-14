@@ -781,6 +781,18 @@ the record of the rework that brought the module to the pattern.
   secrets reads built nodes; `SecretsParityTest` holds the documents of
   every example module's declarations to the definitions
   (`docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-node`).
+  A secret is served at no depth: each door treats one in a map, a list
+  of maps, a collection's items, a child, a variant or a mount as it
+  treats a secret key. The tool door's update defaults leave it out of a
+  value held whole (`InputDefinitions::withStored()`); a document shows
+  it as null where it draws an element and leaves it out of a list's
+  items and of variants nothing has chosen (`PropertySchema::property()`,
+  `ContractEmitter::variants()`); the read and every projection already
+  left it out (`Outbound::project()`). `NestedSecretsTest` states the
+  rule door by door, and the formatter's settings summary prints no
+  line for a secret. Known gap: `EncryptedStorageLayout` encrypts
+  secret keys at the top level only
+  (`docs/decisions.md#a-secret-is-not-served-at-any-depth`).
 - **Runner**: the one service that runs an operation,
   `Operation\OperationRunner` (`surface.runner`, typed
   `OperationRunnerInterface`), modeled on the Tool API's `ToolRunner`:
@@ -1105,8 +1117,8 @@ test errored or failed and every gate passed.
   cache; it orders classes slowest first.
 
 On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-14: the
-full lane takes 16m49s at the defaults (phpunit 15m52s) and the fast
-lane 10m49s (phpunit 10m36s). As of 2026-10-23, with a smaller suite, the
+full lane takes 15m36s at the defaults (phpunit 14m52s) and the fast
+lane 9m02s (phpunit 8m56s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1137,7 +1149,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2548, Assertions: 102642, Errors: 0, Failures: 0, Skipped: 3. Classes: 362 of 362, 8 at a time, browser classes 4.
+phpunit: Tests: 2555, Assertions: 102669, Errors: 0, Failures: 0, Skipped: 3. Classes: 363 of 363, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1161,8 +1173,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2434, Assertions: 98088, Deprecations: 807, Skipped: 3. Classes:
-309, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2441, Assertions: 98115, Deprecations: 807, Skipped: 3. Classes:
+310, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 

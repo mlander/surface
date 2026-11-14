@@ -8,13 +8,13 @@
       "fromSurface narrowing": "9a81135e3298",
       "withLookups": "9a81135e3298",
       "withDependencies": "a490052743f9",
-      "withStored": "9c34155eff56",
+      "withStored": "7fbee79c86a5",
       "shapeOf": "00858c23bcb8",
       "withoutRequired": "3fc44200bddd",
       "outputFromInput": "dade7dd159ac",
       "secrets": "2ad9df4a60a7",
       "outputs": "39347ff402b6",
-      "values update": "ab0dc40e03ef",
+      "values update": "8e0aeac58372",
       "values create": "3cc1aad7963d",
       "stored": "3a8bf7e97565",
       "secretKeys": "ed596757db3f",
@@ -28,11 +28,11 @@
       "flow placed grouped": "8c9682db0b87"
     },
     "plain | values": {
-      "stored": "fa4bbdd41780",
+      "stored": "2fa434786fb3",
       "narrow": "5e462b5b2443",
       "out": "eaea61183a94",
       "req": "b11abee70bb5",
-      "full": "9c0379705b17"
+      "full": "281b13c64e5e"
     },
     "plain | key": {
       "gate": "16895652c5b6",

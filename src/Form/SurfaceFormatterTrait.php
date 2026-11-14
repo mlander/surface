@@ -11,6 +11,7 @@ use Drupal\Core\Field\FormatterInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\SurfaceHostTrait;
 use PortableSchema\Builder\Schema;
@@ -374,6 +375,12 @@ trait SurfaceFormatterTrait {
    */
   protected function appendSettingSummary(array &$summary, Schema $node, string|\Stringable $label, mixed $value): void {
     if ($value === NULL || $value === '' || $value === []) {
+      return;
+    }
+    // A secret is never printed: the summary says nothing of it, at the
+    // top or inside a map, as a read leaves it out.
+    // Decision: see docs/decisions.md#a-secret-is-not-served-at-any-depth.
+    if (Secrets::marked($node)) {
       return;
     }
     if (is_array($value) && DefinitionSchema::isComplex($node)) {

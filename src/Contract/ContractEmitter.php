@@ -21,6 +21,7 @@ use Drupal\surface\DefinitionMap;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\Pipeline\Outbound;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Refinement\DeclaredRefiner;
 use Drupal\surface\Refinement\DoesNotApply;
@@ -2123,8 +2124,15 @@ final class ContractEmitter {
       $property = static::extended($property, ['chosen' => $chosen]);
     }
     // Variants nothing has chosen keep what the key holds: it has no
-    // element, so it says nothing about it.
-    $shown = $held;
+    // element, so it says nothing about it, less every secret any
+    // variant keeps there.
+    // Decision: see docs/decisions.md#a-secret-is-not-served-at-any-depth.
+    $secrets = is_array($held) ? Outbound::secretsAt($entry) : [];
+    $shown = match (TRUE) {
+      $secrets === [] => $held,
+      $secrets === TRUE => NULL,
+      default => Outbound::withoutSecrets($held, $secrets),
+    };
     $listed = $variants->variants;
     $deferred = FALSE;
     if ($this->budget?->variantsOver($variants, $cacheability)) {

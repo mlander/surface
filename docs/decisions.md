@@ -9194,6 +9194,57 @@ tool projects](#every-door-projects-what-the-read-tool-projects)).
 (`Pipeline\Outbound::secrets()`, `Pipeline\Outbound::EACH`,
 `OperationInputs::stored()`, `ReadToolTest`)
 
+### A secret is not served at any depth
+
+A key marked secret is treated the same wherever it sits: at the top of
+a data surface, in a map, in a map inside a map, in a list of maps, as
+a list of secrets, in a collection's items, in an attached child, in a
+variant, chosen or not, and in the map other modules mount keys in.
+Each door that serves values treats a secret below the top as it treats
+a secret key (decided 2026-11-14; until then the tool door's defaults
+and the documents served a stored secret below the top level, and a
+document echoed one the caller sent):
+
+- **The tool door's `values` input for an update.** A secret key has no
+  default. A key whose stored value is held whole (a map, a list of
+  maps, a collection, a mount) defaults to that value less every secret
+  inside it, and a list of secrets has no default
+  (`InputDefinitions::withStored()`, with `OperationInputs::values()`).
+- **A document's `values`**, of every kind: emitted, with hints, over
+  what was sent, narrowed; the HTTP API's read and the form, whose
+  container keeps the document's values and draws from them. A secret
+  key shows as null. Below the top, a secret where the document draws
+  an element shows as null too; one inside a value the document holds
+  whole (a list's items, variants nothing has chosen) is left out of
+  it, and a list of secrets shows as null (`PropertySchema::property()`,
+  `ContractEmitter::variants()`). A secret the caller sent is not shown
+  back either.
+- **Unchanged, already right at every depth:** the read tool's output,
+  the write's accepted values, the drush run command's output and
+  OpenAPI's examples (`Outbound::project()`), the stage record
+  (`StagedSecrets`), and every refusal's message and parameters.
+
+What a caller may do stays: send a new value for a secret below the
+top, clear it with the clear marker, or leave it out to keep what is
+stored. The fix serves less and accepts the same. Where the secrets are
+is read from built nodes, one way: `Outbound::secrets()`, `secretsAt()`
+and `secretsOf()` give the tree a door holding a whole value applies
+with `Outbound::withoutSecrets()`, and a door that walks values beside
+their nodes asks `Secrets::marked()` of each.
+
+*Known gap, open:* storage. `EncryptedStorageLayout::secretKeys()`
+encrypts secret keys at the top level only, so a secret below the top
+level is stored unencrypted by that layout. Changing that changes what
+is written to storage and needs a plan for values already stored, which
+is the owner's decision.
+
+The field formatter's settings summary
+(`SurfaceFormatterTrait::settingsSummary()`) printed every stored value,
+a secret key at the top as well as one below it. It prints no line for a
+secret now, at any depth, as a read leaves a secret out.
+
+(`NestedSecretsTest`, `DoorCorpusTest`, `HandCorpusTest`)
+
 ### A static tool definition is no account's
 
 A derived tool's definition is cached for every account, so it is built
