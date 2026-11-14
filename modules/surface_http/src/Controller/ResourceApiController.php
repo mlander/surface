@@ -9,6 +9,7 @@ use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\GeneratedUrl;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\Choices;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\ServedContract;
@@ -318,9 +319,9 @@ final class ResourceApiController implements ContainerInjectionInterface {
     $pointer = str_starts_with($key, '/') ? $key : '/' . $key;
     $path = array_map(static fn (string $segment): string => str_replace(['~1', '~0'], ['/', '~'], $segment), explode('/', substr($pointer, 1)));
     $type = $request->query->get('type');
-    $definition = $key === '' ? NULL : $this->references->definitionAt($served->surface, $path, is_string($type) && $type !== '' ? $type : NULL);
-    $found = $definition === NULL ? NULL : References::target($definition);
-    if ($definition === NULL || $found === NULL) {
+    $node = $key === '' ? NULL : $this->references->nodeAt($served->surface, $path, is_string($type) && $type !== '' ? $type : NULL);
+    $found = $node === NULL ? NULL : References::targetIn($node);
+    if ($node === NULL || $found === NULL) {
       $detail = (string) $this->t('No key of @resource at @pointer refers to one entity type: name a reference key, and the type for a key that refers to an entity of any type.', [
         '@resource' => $served->definition->id,
         '@pointer' => $pointer,
@@ -328,8 +329,8 @@ final class ResourceApiController implements ContainerInjectionInterface {
       throw new ProblemException(404, $detail);
     }
     $limit = $request->query->get('limit');
-    [$handler, $settings] = References::handlerOf($definition);
-    $items = $this->references->lookup($found['entityType'], $found['bundles'], (string) $request->query->get('q', ''), is_numeric($limit) ? (int) $limit : self::LOOKUP_LIMIT, $definition->getDataType(), $handler, $settings);
+    [$handler, $settings] = References::handlerIn($node);
+    $items = $this->references->lookup($found['entityType'], $found['bundles'], (string) $request->query->get('q', ''), is_numeric($limit) ? (int) $limit : self::LOOKUP_LIMIT, NodeFacts::dataType($node), $handler, $settings);
     return $this->respond(['key' => $pointer] + $found + ['items' => $items]);
   }
 

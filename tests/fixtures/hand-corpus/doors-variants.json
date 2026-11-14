@@ -1,0 +1,2334 @@
+{
+  "surface": "variants",
+  "rows": 153,
+  "digests": {
+    "plain | door": {
+      "fromSurface": "161f94a439c5",
+      "fromSurface stored": "161f94a439c5",
+      "fromSurface narrowing": "161f94a439c5",
+      "withLookups": "161f94a439c5",
+      "withDependencies": "161f94a439c5",
+      "withStored": "05cab9336889",
+      "shapeOf": "9181346af7c5",
+      "withoutRequired": "1349b6c90e6e",
+      "outputFromInput": "81c62fe37a08",
+      "secrets": "28e772fbf6bb",
+      "outputs": "39347ff402b6",
+      "values update": "1f03d41b5319",
+      "values create": "c4dbd9d69df1",
+      "stored": "4a0c3136e55f",
+      "secretKeys": "39347ff402b6",
+      "config schema": "aefcf3d07549",
+      "config schema held+install": "aa9630dd890b",
+      "config schema installed empty": "c6ad7e37857d",
+      "config schema translated": "e76ef0c5f256",
+      "wider generated": "1c4ed849a085",
+      "ResourceCode": "982ef17d85dd",
+      "flow placed whole": "36e6fb3259d6",
+      "flow placed grouped": "5ddfb99e50cf"
+    },
+    "plain | values": {
+      "stored": "535fbc45d41f",
+      "b": "4eb5a4dd97e5",
+      "a wrong": "14a64496d02c",
+      "flat a": "abdd6800c7a0"
+    },
+    "plain | key": {
+      "kind": "1a22a6277a1e",
+      "settings": "ac96faf4a613",
+      "kind2": "bba317990a44",
+      "flat": "7ecc82c56869",
+      "kind4": "3db2ac562619",
+      "labeled": "dc0ebdb3b5d2",
+      "kind3": "43ce1e2b4ba7",
+      "req_v": "4a22169ee977"
+    },
+    "plain | path": {
+      "nope": "1bf169f7d887",
+      "nope.deeper": "ed8a9f9798ca",
+      "settings.shell.kname": "48bec1473d53",
+      "settings.shell.ksec": "43a6d1f1cf9d",
+      "settings.k": "b900cb2e2c9d",
+      "settings.only_a": "cfec7c31dfb8",
+      "settings.nn": "410bd5f16ee3",
+      "settings.rq": "ddb84c4db386",
+      "settings.vsec": "6d5c662daa71",
+      "settings.vm": "e25d1123d7ec",
+      "settings.vm.x": "3eca4408b824",
+      "settings.vm.nope": "4249f7570567",
+      "settings.vl": "16018de07bdd",
+      "settings.vl.0": "04058385bc7e",
+      "settings.shell": "4adc2118a60a",
+      "settings.shell.nope": "8d8a25688a9b",
+      "settings.only_b": "4438dfd5886d",
+      "flat.shell.kname": "8ba2425694c7",
+      "flat.shell.ksec": "cff1d400c8c2",
+      "flat.k": "d6cd479b879f",
+      "flat.only_a": "f01946b0d3a4",
+      "flat.nn": "b50f4aa0f291",
+      "flat.rq": "de8ed10600b7",
+      "flat.vsec": "b165af0ef629",
+      "flat.vm": "57a1c31faa72",
+      "flat.vm.x": "075f32e7487b",
+      "flat.vm.nope": "e21ab3d0a66e",
+      "flat.vl": "a32ab4f556a5",
+      "flat.vl.0": "dced85e253b4",
+      "flat.shell": "f415e1b29693",
+      "flat.shell.nope": "ba8ac88453ed",
+      "flat.only_b": "1f63d755eb98",
+      "labeled.shell.kname": "babfad806a3a",
+      "labeled.shell.ksec": "1da459cbda96",
+      "labeled.k": "ff2298b18471",
+      "labeled.only_a": "d9629f5c32c6",
+      "labeled.nn": "ecf53c518d49",
+      "labeled.rq": "b863c941b668",
+      "labeled.vsec": "661da117132f",
+      "labeled.vm": "866d10ec0281",
+      "labeled.vm.x": "aaca6c72b09c",
+      "labeled.vm.nope": "c769f6445976",
+      "labeled.vl": "a5a8d120ad31",
+      "labeled.vl.0": "86abc3830608",
+      "labeled.shell": "a8bc9736b612",
+      "labeled.shell.nope": "a9315bd7c142",
+      "labeled.only_b": "1d836388dfed",
+      "req_v.k": "605060aef6a4",
+      "req_v.nn": "9a2e90af2946",
+      "req_v.rq": "1b75c6556000",
+      "req_v.only_b": "138ca8d9769c",
+      "kind": "43e53293fc3e",
+      "settings": "19c5f00b9e5c",
+      "kind2": "c141e653c139",
+      "flat": "0197f33fcf7f",
+      "kind4": "dbd3edc5dddf",
+      "labeled": "0e74f6f60e8f",
+      "kind3": "b7a178c98ee2",
+      "req_v": "2f9e7b28ad15"
+    },
+    "plain | nodes": {
+      "nope": "85cf5ad1bdc5",
+      "nope.deeper": "85cf5ad1bdc5",
+      "settings.shell.kname": "85cf5ad1bdc5",
+      "settings.shell.ksec": "85cf5ad1bdc5",
+      "settings.k": "85cf5ad1bdc5",
+      "settings.only_a": "85cf5ad1bdc5",
+      "settings.nn": "85cf5ad1bdc5",
+      "settings.rq": "85cf5ad1bdc5",
+      "settings.vsec": "85cf5ad1bdc5",
+      "settings.vm": "85cf5ad1bdc5",
+      "settings.vm.x": "85cf5ad1bdc5",
+      "settings.vm.nope": "85cf5ad1bdc5",
+      "settings.vl": "85cf5ad1bdc5",
+      "settings.vl.0": "85cf5ad1bdc5",
+      "settings.shell": "85cf5ad1bdc5",
+      "settings.shell.nope": "85cf5ad1bdc5",
+      "settings.only_b": "85cf5ad1bdc5",
+      "flat.shell.kname": "85cf5ad1bdc5",
+      "flat.shell.ksec": "85cf5ad1bdc5",
+      "flat.k": "85cf5ad1bdc5",
+      "flat.only_a": "85cf5ad1bdc5",
+      "flat.nn": "85cf5ad1bdc5",
+      "flat.rq": "85cf5ad1bdc5",
+      "flat.vsec": "85cf5ad1bdc5",
+      "flat.vm": "85cf5ad1bdc5",
+      "flat.vm.x": "85cf5ad1bdc5",
+      "flat.vm.nope": "85cf5ad1bdc5",
+      "flat.vl": "85cf5ad1bdc5",
+      "flat.vl.0": "85cf5ad1bdc5",
+      "flat.shell": "85cf5ad1bdc5",
+      "flat.shell.nope": "85cf5ad1bdc5",
+      "flat.only_b": "85cf5ad1bdc5",
+      "labeled.shell.kname": "85cf5ad1bdc5",
+      "labeled.shell.ksec": "85cf5ad1bdc5",
+      "labeled.k": "85cf5ad1bdc5",
+      "labeled.only_a": "85cf5ad1bdc5",
+      "labeled.nn": "85cf5ad1bdc5",
+      "labeled.rq": "85cf5ad1bdc5",
+      "labeled.vsec": "85cf5ad1bdc5",
+      "labeled.vm": "85cf5ad1bdc5",
+      "labeled.vm.x": "85cf5ad1bdc5",
+      "labeled.vm.nope": "85cf5ad1bdc5",
+      "labeled.vl": "85cf5ad1bdc5",
+      "labeled.vl.0": "85cf5ad1bdc5",
+      "labeled.shell": "85cf5ad1bdc5",
+      "labeled.shell.nope": "85cf5ad1bdc5",
+      "labeled.only_b": "85cf5ad1bdc5",
+      "req_v.k": "85cf5ad1bdc5",
+      "req_v.nn": "85cf5ad1bdc5",
+      "req_v.rq": "85cf5ad1bdc5",
+      "req_v.only_b": "85cf5ad1bdc5",
+      "kind": "85cf5ad1bdc5",
+      "settings": "85cf5ad1bdc5",
+      "kind2": "85cf5ad1bdc5",
+      "flat": "85cf5ad1bdc5",
+      "kind4": "85cf5ad1bdc5",
+      "labeled": "85cf5ad1bdc5",
+      "kind3": "85cf5ad1bdc5",
+      "req_v": "85cf5ad1bdc5"
+    }
+  },
+  "records": {
+    "plain | door | flow placed whole": [
+      {
+        "kind": 1,
+        "settings": 1,
+        "kind2": 1,
+        "flat": 1,
+        "kind4": 1,
+        "labeled": 1,
+        "kind3": 1,
+        "req_v": 1
+      },
+      []
+    ],
+    "plain | values | b": {
+      "withoutNonScalars": [
+        {
+          "kind": "b",
+          "settings": {
+            "k": 2
+          }
+        },
+        []
+      ],
+      "fromSurface refined": {
+        "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+        "type": "map",
+        "label": "L",
+        "description": "D",
+        "required": false,
+        "getDefaultValue": null,
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": [],
+        "settings": [],
+        "array": {
+          "type": "map",
+          "label": "L",
+          "description": "D",
+          "required": false
+        },
+        "properties": {
+          "kind": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Kind",
+            "description": "",
+            "required": false,
+            "getDefaultValue": "a",
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "a",
+                  "b"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Kind",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "a",
+                    "b"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "settings": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": "Settings",
+            "description": "Settings desc",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "Settings",
+              "description": "Settings desc",
+              "required": false
+            },
+            "properties": {
+              "k": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "integer",
+                "label": "K in b",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "Range": {
+                    "min": 1
+                  },
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "integer",
+                  "label": "K in b",
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "Range": {
+                      "min": 1
+                    },
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "nn": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "integer",
+                "label": "NotNull in b",
+                "description": "",
+                "required": true,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "NotNull": [],
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "integer",
+                  "label": "NotNull in b",
+                  "description": "",
+                  "required": true,
+                  "constraints": {
+                    "NotNull": [],
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "rq": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Optional in b",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Optional in b",
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "only_b": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Only b",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "Choice": {
+                    "choices": [
+                      "p",
+                      "q"
+                    ]
+                  },
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Only b",
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "Choice": {
+                      "choices": [
+                        "p",
+                        "q"
+                      ]
+                    },
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          },
+          "kind2": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Kind two",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "a",
+                  "b"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Kind two",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "a",
+                    "b"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "flat": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": "Flat",
+            "description": {
+              "@text": "Its keys depend on kind2. a: k, only_a, nn, rq, vsec, vm, vl, shell; b: k, nn, rq, only_b."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "Flat",
+              "description": {
+                "@text": "Its keys depend on kind2. a: k, only_a, nn, rq, vsec, vm, vl, shell; b: k, nn, rq, only_b."
+              },
+              "required": false
+            },
+            "properties": {
+              "k": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "K in a",
+                "description": {
+                  "@text": "From a Only when kind2 is a, b."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "K in a",
+                  "description": {
+                    "@text": "From a Only when kind2 is a, b."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "only_a": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "integer",
+                "label": "Only a",
+                "description": {
+                  "@text": "Only when kind2 is a."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "integer",
+                  "label": "Only a",
+                  "description": {
+                    "@text": "Only when kind2 is a."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "nn": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Declares NotNull",
+                "description": {
+                  "@text": "Only when kind2 is a, b."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "NotNull": [],
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Declares NotNull",
+                  "description": {
+                    "@text": "Only when kind2 is a, b."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "NotNull": [],
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "rq": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Required in a",
+                "description": {
+                  "@text": "Only when kind2 is a, b."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Required in a",
+                  "description": {
+                    "@text": "Only when kind2 is a, b."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "vsec": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Variant secret",
+                "description": {
+                  "@text": "Only when kind2 is a. Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Variant secret",
+                  "description": {
+                    "@text": "Only when kind2 is a. Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "vm": {
+                "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                "type": "map",
+                "label": "Variant map",
+                "description": {
+                  "@text": "Only when kind2 is a."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": [],
+                "settings": [],
+                "array": {
+                  "type": "map",
+                  "label": "Variant map",
+                  "description": {
+                    "@text": "Only when kind2 is a."
+                  },
+                  "required": false
+                },
+                "properties": {
+                  "x": {
+                    "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                    "type": "string",
+                    "label": "X",
+                    "description": "",
+                    "required": true,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": {
+                      "PrimitiveType": [],
+                      "NotNull": []
+                    },
+                    "settings": [],
+                    "array": {
+                      "type": "string",
+                      "label": "X",
+                      "description": "",
+                      "required": true,
+                      "constraints": {
+                        "PrimitiveType": [],
+                        "NotNull": []
+                      }
+                    }
+                  }
+                }
+              },
+              "vl": {
+                "class": "Drupal\\tool\\TypedData\\ListInputDefinition",
+                "type": "list",
+                "label": "Variant list",
+                "description": {
+                  "@text": "Only when kind2 is a."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "isConvertedFromMultiple": false,
+                "constraints": [],
+                "settings": [],
+                "array": {
+                  "type": "list",
+                  "label": "Variant list",
+                  "description": {
+                    "@text": "Only when kind2 is a."
+                  },
+                  "required": false
+                },
+                "item": {
+                  "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                  "type": "string",
+                  "label": "Vi",
+                  "description": "",
+                  "required": false,
+                  "getDefaultValue": null,
+                  "isLocked": false,
+                  "getExamples": [],
+                  "isMultiple": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
+                  "settings": [],
+                  "array": {
+                    "type": "string",
+                    "label": "Vi",
+                    "description": "",
+                    "required": false,
+                    "constraints": {
+                      "PrimitiveType": []
+                    }
+                  }
+                }
+              },
+              "shell": {
+                "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                "type": "map",
+                "label": "Shell member",
+                "description": {
+                  "@text": "A child in a variant Only when kind2 is a."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": [],
+                "settings": [],
+                "array": {
+                  "type": "map",
+                  "label": "Shell member",
+                  "description": {
+                    "@text": "A child in a variant Only when kind2 is a."
+                  },
+                  "required": false
+                },
+                "properties": {
+                  "kname": {
+                    "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                    "type": "string",
+                    "label": "Kid name",
+                    "description": "",
+                    "required": true,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": {
+                      "PrimitiveType": [],
+                      "NotNull": []
+                    },
+                    "settings": [],
+                    "array": {
+                      "type": "string",
+                      "label": "Kid name",
+                      "description": "",
+                      "required": true,
+                      "constraints": {
+                        "PrimitiveType": [],
+                        "NotNull": []
+                      }
+                    }
+                  },
+                  "ksec": {
+                    "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                    "type": "string",
+                    "label": "Kid secret",
+                    "description": {
+                      "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                    },
+                    "required": false,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": {
+                      "PrimitiveType": []
+                    },
+                    "settings": [],
+                    "array": {
+                      "type": "string",
+                      "label": "Kid secret",
+                      "description": {
+                        "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                      },
+                      "required": false,
+                      "constraints": {
+                        "PrimitiveType": []
+                      }
+                    }
+                  }
+                }
+              },
+              "only_b": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Only b",
+                "description": {
+                  "@text": "Only when kind2 is b."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "Choice": {
+                    "choices": [
+                      "p",
+                      "q"
+                    ]
+                  },
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Only b",
+                  "description": {
+                    "@text": "Only when kind2 is b."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "Choice": {
+                      "choices": [
+                        "p",
+                        "q"
+                      ]
+                    },
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          },
+          "kind4": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Kind four",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "LabeledChoice": {
+                "choices": [
+                  "a",
+                  "b"
+                ],
+                "labels": {
+                  "a": "Alpha",
+                  "b": "Beta"
+                }
+              },
+              "PrimitiveType": [],
+              "Choice": {
+                "choices": [
+                  "a",
+                  "b"
+                ]
+              }
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Kind four",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "LabeledChoice": {
+                  "choices": [
+                    "a",
+                    "b"
+                  ],
+                  "labels": {
+                    "a": "Alpha",
+                    "b": "Beta"
+                  }
+                },
+                "PrimitiveType": [],
+                "Choice": {
+                  "choices": [
+                    "a",
+                    "b"
+                  ]
+                }
+              }
+            }
+          },
+          "labeled": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": "Labeled variants",
+            "description": {
+              "@text": "Its keys depend on kind4. a: k, only_a, nn, rq, vsec, vm, vl, shell; b: k, nn, rq, only_b."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "Labeled variants",
+              "description": {
+                "@text": "Its keys depend on kind4. a: k, only_a, nn, rq, vsec, vm, vl, shell; b: k, nn, rq, only_b."
+              },
+              "required": false
+            },
+            "properties": {
+              "k": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "K in a",
+                "description": {
+                  "@text": "From a Only when kind4 is a, b."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "K in a",
+                  "description": {
+                    "@text": "From a Only when kind4 is a, b."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "only_a": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "integer",
+                "label": "Only a",
+                "description": {
+                  "@text": "Only when kind4 is a."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "integer",
+                  "label": "Only a",
+                  "description": {
+                    "@text": "Only when kind4 is a."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "nn": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Declares NotNull",
+                "description": {
+                  "@text": "Only when kind4 is a, b."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "NotNull": [],
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Declares NotNull",
+                  "description": {
+                    "@text": "Only when kind4 is a, b."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "NotNull": [],
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "rq": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Required in a",
+                "description": {
+                  "@text": "Only when kind4 is a, b."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Required in a",
+                  "description": {
+                    "@text": "Only when kind4 is a, b."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "vsec": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Variant secret",
+                "description": {
+                  "@text": "Only when kind4 is a. Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Variant secret",
+                  "description": {
+                    "@text": "Only when kind4 is a. Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "vm": {
+                "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                "type": "map",
+                "label": "Variant map",
+                "description": {
+                  "@text": "Only when kind4 is a."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": [],
+                "settings": [],
+                "array": {
+                  "type": "map",
+                  "label": "Variant map",
+                  "description": {
+                    "@text": "Only when kind4 is a."
+                  },
+                  "required": false
+                },
+                "properties": {
+                  "x": {
+                    "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                    "type": "string",
+                    "label": "X",
+                    "description": "",
+                    "required": true,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": {
+                      "PrimitiveType": [],
+                      "NotNull": []
+                    },
+                    "settings": [],
+                    "array": {
+                      "type": "string",
+                      "label": "X",
+                      "description": "",
+                      "required": true,
+                      "constraints": {
+                        "PrimitiveType": [],
+                        "NotNull": []
+                      }
+                    }
+                  }
+                }
+              },
+              "vl": {
+                "class": "Drupal\\tool\\TypedData\\ListInputDefinition",
+                "type": "list",
+                "label": "Variant list",
+                "description": {
+                  "@text": "Only when kind4 is a."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "isConvertedFromMultiple": false,
+                "constraints": [],
+                "settings": [],
+                "array": {
+                  "type": "list",
+                  "label": "Variant list",
+                  "description": {
+                    "@text": "Only when kind4 is a."
+                  },
+                  "required": false
+                },
+                "item": {
+                  "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                  "type": "string",
+                  "label": "Vi",
+                  "description": "",
+                  "required": false,
+                  "getDefaultValue": null,
+                  "isLocked": false,
+                  "getExamples": [],
+                  "isMultiple": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
+                  "settings": [],
+                  "array": {
+                    "type": "string",
+                    "label": "Vi",
+                    "description": "",
+                    "required": false,
+                    "constraints": {
+                      "PrimitiveType": []
+                    }
+                  }
+                }
+              },
+              "shell": {
+                "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                "type": "map",
+                "label": "Shell member",
+                "description": {
+                  "@text": "A child in a variant Only when kind4 is a."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": [],
+                "settings": [],
+                "array": {
+                  "type": "map",
+                  "label": "Shell member",
+                  "description": {
+                    "@text": "A child in a variant Only when kind4 is a."
+                  },
+                  "required": false
+                },
+                "properties": {
+                  "kname": {
+                    "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                    "type": "string",
+                    "label": "Kid name",
+                    "description": "",
+                    "required": true,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": {
+                      "PrimitiveType": [],
+                      "NotNull": []
+                    },
+                    "settings": [],
+                    "array": {
+                      "type": "string",
+                      "label": "Kid name",
+                      "description": "",
+                      "required": true,
+                      "constraints": {
+                        "PrimitiveType": [],
+                        "NotNull": []
+                      }
+                    }
+                  },
+                  "ksec": {
+                    "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                    "type": "string",
+                    "label": "Kid secret",
+                    "description": {
+                      "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                    },
+                    "required": false,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": {
+                      "PrimitiveType": []
+                    },
+                    "settings": [],
+                    "array": {
+                      "type": "string",
+                      "label": "Kid secret",
+                      "description": {
+                        "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                      },
+                      "required": false,
+                      "constraints": {
+                        "PrimitiveType": []
+                      }
+                    }
+                  }
+                }
+              },
+              "only_b": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Only b",
+                "description": {
+                  "@text": "Only when kind4 is b."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "Choice": {
+                    "choices": [
+                      "p",
+                      "q"
+                    ]
+                  },
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Only b",
+                  "description": {
+                    "@text": "Only when kind4 is b."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "Choice": {
+                      "choices": [
+                        "p",
+                        "q"
+                      ]
+                    },
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          },
+          "kind3": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": {
+              "@text": "string value"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "x"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": {
+                "@text": "string value"
+              },
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "x"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "req_v": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": "Required variants",
+            "description": {
+              "@text": "Its keys depend on kind3. x: k, nn, rq, only_b."
+            },
+            "required": true,
+            "getDefaultValue": {
+              "k": null,
+              "nn": null,
+              "rq": null,
+              "only_b": null
+            },
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "Required variants",
+              "description": {
+                "@text": "Its keys depend on kind3. x: k, nn, rq, only_b."
+              },
+              "required": true
+            },
+            "properties": {
+              "k": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "integer",
+                "label": "K in b",
+                "description": {
+                  "@text": "Only when kind3 is x."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "Range": {
+                    "min": 1
+                  },
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "integer",
+                  "label": "K in b",
+                  "description": {
+                    "@text": "Only when kind3 is x."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "Range": {
+                      "min": 1
+                    },
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "nn": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "integer",
+                "label": "NotNull in b",
+                "description": {
+                  "@text": "Only when kind3 is x."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "NotNull": [],
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "integer",
+                  "label": "NotNull in b",
+                  "description": {
+                    "@text": "Only when kind3 is x."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "NotNull": [],
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "rq": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Optional in b",
+                "description": {
+                  "@text": "Only when kind3 is x."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Optional in b",
+                  "description": {
+                    "@text": "Only when kind3 is x."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "only_b": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Only b",
+                "description": {
+                  "@text": "Only when kind3 is x."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "Choice": {
+                    "choices": [
+                      "p",
+                      "q"
+                    ]
+                  },
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Only b",
+                  "description": {
+                    "@text": "Only when kind3 is x."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "Choice": {
+                      "choices": [
+                        "p",
+                        "q"
+                      ]
+                    },
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "secrets refined": {
+        "settings": {
+          "vsec": true,
+          "shell": {
+            "ksec": true
+          }
+        },
+        "flat": {
+          "vsec": true,
+          "shell": {
+            "ksec": true
+          }
+        },
+        "labeled": {
+          "vsec": true,
+          "shell": {
+            "ksec": true
+          }
+        }
+      },
+      "secretKeys refined": [],
+      "pathsOf": {
+        "kind": "b",
+        "settings": {
+          "k": 2
+        }
+      },
+      "heldOn": {
+        "thrown": "LogicException",
+        "message": "query: \"q.settings\" on hand is inside \"q.settings\", a key with variants, each starting from its own defaults, so a value does not reach it."
+      },
+      "heldOn strings": {
+        "thrown": "LogicException",
+        "message": "query: \"q.settings\" on hand is inside \"q.settings\", a key with variants, each starting from its own defaults, so a value does not reach it."
+      },
+      "heldOn json": {
+        "thrown": "LogicException",
+        "message": "query: \"q.settings\" on hand is inside \"q.settings\", a key with variants, each starting from its own defaults, so a value does not reach it."
+      },
+      "encrypted": null,
+      "flat": {
+        "to": {
+          "kind": "b",
+          "settings": {
+            "k": 2
+          }
+        },
+        "from": {
+          "kind": "b",
+          "settings": {
+            "k": 2
+          }
+        },
+        "schema": {
+          "flat": {
+            "spread": true
+          }
+        }
+      },
+      "panel": [
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>kind</code>"
+              }
+            },
+            "string",
+            "Kind",
+            {
+              "@text": "no"
+            },
+            "\"a\"",
+            {
+              "data": {
+                "#markup": "one of a, b"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "kind"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>settings</code>"
+              }
+            },
+            "variants",
+            "Settings",
+            {
+              "@text": "no"
+            },
+            "{\"k\":null,\"only_a\":4,\"nn\":null,\"rq\":null,\"vsec\":null,\"vm\":null,\"vl\":[\"d\"],\"shell\":{\"kname\":null,\"ksec\":null}}",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "A part chosen by kind: a → derived, b → derived"
+                }
+              }
+            },
+            "kind",
+            "the b variant"
+          ],
+          "surface-key": "settings"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>settings.k</code>"
+              }
+            },
+            "integer",
+            "K in b",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "at least 1"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "settings.k"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>settings.nn</code>"
+              }
+            },
+            "integer",
+            "NotNull in b",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "settings.nn"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>settings.rq</code>"
+              }
+            },
+            "string",
+            "Optional in b",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "settings.rq"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>settings.only_b</code>"
+              }
+            },
+            "string",
+            "Only b",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of p, q"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "settings.only_b"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>kind2</code>"
+              }
+            },
+            "string",
+            "Kind two",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of a, b"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "kind2"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>flat</code>"
+              }
+            },
+            "variants",
+            "Flat",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "A part chosen by kind2: a → derived, b → derived"
+                }
+              }
+            },
+            "kind2",
+            "not chosen yet"
+          ],
+          "surface-key": "flat"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>kind4</code>"
+              }
+            },
+            "string",
+            "Kind four",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of Alpha, Beta"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "kind4"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>labeled</code>"
+              }
+            },
+            "variants",
+            "Labeled variants",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "A part chosen by kind4: a → derived, b → derived"
+                }
+              }
+            },
+            "kind4",
+            "not chosen yet"
+          ],
+          "surface-key": "labeled"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>kind3</code>"
+              }
+            },
+            "string",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of x"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "kind3"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>req_v</code>"
+              }
+            },
+            "variants",
+            "Required variants",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "A part chosen by kind3: x → derived"
+                }
+              }
+            },
+            "kind3",
+            "not chosen yet"
+          ],
+          "surface-key": "req_v"
+        }
+      ],
+      "formatter": [
+        {
+          "@text": "Kind: b"
+        },
+        {
+          "@text": "Settings: 1 item"
+        }
+      ]
+    },
+    "plain | key | req_v": {
+      "fromDefinition": {
+        "class": "Drupal\\tool\\TypedData\\InputDefinition",
+        "type": "any",
+        "label": "Required variants",
+        "description": "",
+        "required": true,
+        "getDefaultValue": null,
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": {
+          "NotNull": []
+        },
+        "settings": [],
+        "array": {
+          "type": "any",
+          "label": "Required variants",
+          "description": "",
+          "required": true,
+          "constraints": {
+            "NotNull": []
+          }
+        }
+      },
+      "outputFromDefinition": {
+        "class": "Drupal\\tool\\TypedData\\OutputDefinition",
+        "type": "any",
+        "label": "Required variants",
+        "description": "",
+        "required": true,
+        "getDefaultValue": null,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": {
+          "NotNull": []
+        },
+        "settings": [],
+        "array": {
+          "type": "any",
+          "label": "Required variants",
+          "description": "",
+          "required": true,
+          "constraints": {
+            "NotNull": []
+          },
+          "nullable": false
+        }
+      },
+      "fromVariants": {
+        "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+        "type": "map",
+        "label": "Required variants",
+        "description": {
+          "@text": "Its keys depend on kind3. x: k, nn, rq, only_b."
+        },
+        "required": true,
+        "getDefaultValue": {
+          "k": null,
+          "nn": null,
+          "rq": null,
+          "only_b": null
+        },
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": [],
+        "settings": [],
+        "array": {
+          "type": "map",
+          "label": "Required variants",
+          "description": {
+            "@text": "Its keys depend on kind3. x: k, nn, rq, only_b."
+          },
+          "required": true
+        },
+        "properties": {
+          "k": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "integer",
+            "label": "K in b",
+            "description": {
+              "@text": "Only when kind3 is x."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Range": {
+                "min": 1
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "integer",
+              "label": "K in b",
+              "description": {
+                "@text": "Only when kind3 is x."
+              },
+              "required": false,
+              "constraints": {
+                "Range": {
+                  "min": 1
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "nn": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "integer",
+            "label": "NotNull in b",
+            "description": {
+              "@text": "Only when kind3 is x."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "NotNull": [],
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "integer",
+              "label": "NotNull in b",
+              "description": {
+                "@text": "Only when kind3 is x."
+              },
+              "required": false,
+              "constraints": {
+                "NotNull": [],
+                "PrimitiveType": []
+              }
+            }
+          },
+          "rq": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Optional in b",
+            "description": {
+              "@text": "Only when kind3 is x."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Optional in b",
+              "description": {
+                "@text": "Only when kind3 is x."
+              },
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "only_b": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Only b",
+            "description": {
+              "@text": "Only when kind3 is x."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "p",
+                  "q"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Only b",
+              "description": {
+                "@text": "Only when kind3 is x."
+              },
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "p",
+                    "q"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          }
+        }
+      },
+      "held builder": [
+        [
+          "abc",
+          "abc"
+        ],
+        [
+          "5",
+          "5"
+        ],
+        [
+          "1.5",
+          "1.5"
+        ],
+        [
+          "true",
+          "true"
+        ],
+        [
+          "0",
+          "0"
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.req_v\" on hand to \"\", which the key does not accept: This value should not be null."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.req_v\" on hand to \"\", which the key does not accept: This value should not be null."
+          }
+        ],
+        [
+          "2026-01-01",
+          "2026-01-01"
+        ],
+        [
+          "2026-01-01T10:00:00",
+          "2026-01-01T10:00:00"
+        ],
+        [
+          "2026-01-01T10:00:00+02:00",
+          "2026-01-01T10:00:00+02:00"
+        ],
+        [
+          "[\"a\",\"b\"]",
+          "[\"a\",\"b\"]"
+        ],
+        [
+          "{\"a\":1}",
+          "{\"a\":1}"
+        ],
+        [
+          [
+            "a",
+            "b"
+          ],
+          [
+            "a",
+            "b"
+          ]
+        ],
+        [
+          {
+            "a": 1
+          },
+          {
+            "a": 1
+          }
+        ],
+        [
+          5,
+          5
+        ],
+        [
+          1.5,
+          1.5
+        ],
+        [
+          true,
+          true
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.req_v\" on hand to null, which the key does not accept: This value should not be null."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.req_v\" on hand to null, which the key does not accept: This value should not be null."
+          }
+        ],
+        [
+          "SECRETRAW",
+          "SECRETRAW"
+        ]
+      ],
+      "wider": {
+        "string 1": {
+          "req_v": "it is a group of keys, which the schema types string"
+        },
+        "string 0": {
+          "req_v": "it is a group of keys, which the schema types string"
+        },
+        "string nullable 1": {
+          "req_v": "it is a group of keys, which the schema types string"
+        },
+        "string nullable 0": {
+          "req_v": "it is a group of keys, which the schema types string"
+        },
+        "integer 1": {
+          "req_v": "it is a group of keys, which the schema types integer"
+        },
+        "integer 0": {
+          "req_v": "it is a group of keys, which the schema types integer"
+        },
+        "integer nullable 1": {
+          "req_v": "it is a group of keys, which the schema types integer"
+        },
+        "integer nullable 0": {
+          "req_v": "it is a group of keys, which the schema types integer"
+        },
+        "boolean 1": {
+          "req_v": "it is a group of keys, which the schema types boolean"
+        },
+        "boolean 0": {
+          "req_v": "it is a group of keys, which the schema types boolean"
+        },
+        "float 1": {
+          "req_v": "it is a group of keys, which the schema types float"
+        },
+        "float 0": {
+          "req_v": "it is a group of keys, which the schema types float"
+        },
+        "ignore 1": [],
+        "ignore 0": [],
+        "mapping 1": {
+          "req_v.k": "the schema does not describe it",
+          "req_v.nn": "the schema does not describe it",
+          "req_v.rq": "the schema does not describe it",
+          "req_v.only_b": "the schema does not describe it"
+        },
+        "mapping 0": {
+          "req_v.k": "the schema does not describe it",
+          "req_v.nn": "the schema does not describe it",
+          "req_v.rq": "the schema does not describe it",
+          "req_v.only_b": "the schema does not describe it"
+        },
+        "sequence string 1": {
+          "req_v": "it is a group of keys, which the schema types sequence"
+        },
+        "sequence string 0": {
+          "req_v": "it is a group of keys, which the schema types sequence"
+        },
+        "sequence mapping 1": {
+          "req_v": "it is a group of keys, which the schema types sequence"
+        },
+        "sequence mapping 0": {
+          "req_v": "it is a group of keys, which the schema types sequence"
+        },
+        "constrained 1": {
+          "req_v": "it is a group of keys, which the schema types string"
+        },
+        "constrained 0": {
+          "req_v": "it is a group of keys, which the schema types string"
+        },
+        "loose 1": {
+          "req_v": "it is a group of keys, which the schema types string"
+        },
+        "loose 0": {
+          "req_v": "it is a group of keys, which the schema types string"
+        }
+      }
+    },
+    "plain | path | kind2": {
+      "reachedOn": {
+        "class": "Drupal\\Core\\TypedData\\DataDefinition",
+        "type": "string",
+        "label": "Kind two",
+        "description": null,
+        "required": false,
+        "constraints": {
+          "Choice": {
+            "choices": [
+              "a",
+              "b"
+            ]
+          },
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "string",
+          "label": "Kind two",
+          "constraints": {
+            "Choice": {
+              "choices": [
+                "a",
+                "b"
+              ]
+            }
+          }
+        }
+      },
+      "reachedOn fixes": {
+        "class": "Drupal\\Core\\TypedData\\DataDefinition",
+        "type": "string",
+        "label": "Kind two",
+        "description": null,
+        "required": false,
+        "constraints": {
+          "Choice": {
+            "choices": [
+              "a",
+              "b"
+            ]
+          },
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "string",
+          "label": "Kind two",
+          "constraints": {
+            "Choice": {
+              "choices": [
+                "a",
+                "b"
+              ]
+            }
+          }
+        }
+      },
+      "heldOn raws": [
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ]
+      ],
+      "definitionAt": {
+        "NULL": null,
+        "'node'": null,
+        "'user'": null,
+        "'taxonomy_term'": null
+      }
+    },
+    "plain | nodes | nope": {
+      "NULL": null,
+      "'node'": null,
+      "'user'": null,
+      "'taxonomy_term'": null
+    }
+  }
+}

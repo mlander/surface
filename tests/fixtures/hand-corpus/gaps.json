@@ -59,24 +59,24 @@
       "narrowed gb one": "ec8fae38e7bf"
     },
     "plain | stored": {
-      "nothing": "2d3d1959e5ad",
-      "gate narrow": "2d3d1959e5ad",
-      "gate open": "156799e8295e",
-      "sc b": "2d3d1959e5ad",
-      "sc0 b": "2d3d1959e5ad",
-      "ss b": "2d3d1959e5ad",
-      "narrowed kept": "1deb80fe47ef",
-      "stale sent": "2b3f5c751dae",
-      "stale changed": "eba55fe8f671",
-      "src long": "6e83ecfbb4ce",
-      "vault one left": "78a18e5fc89b",
-      "vault moved": "c6eabc8fbf36",
-      "coll two": "7004c9d355da",
-      "tags x": "b408365936ff",
-      "gi 2": "4131f9b8e483",
-      "gi text": "d41fe24cd53c",
-      "gb true": "120e9fe45b2a",
-      "gb one": "50b60154caf7",
+      "nothing": "1e6ddd6bb812",
+      "gate narrow": "1e6ddd6bb812",
+      "gate open": "e425f5567d19",
+      "sc b": "1e6ddd6bb812",
+      "sc0 b": "1e6ddd6bb812",
+      "ss b": "1e6ddd6bb812",
+      "narrowed kept": "0d28b5ee4061",
+      "stale sent": "5dea481b191a",
+      "stale changed": "1b4080c6ca2e",
+      "src long": "82db026a3d2e",
+      "vault one left": "9fb7c3c3a54e",
+      "vault moved": "f3349fb5789f",
+      "coll two": "1fff559f32bd",
+      "tags x": "5efa6a4082e9",
+      "gi 2": "4bc7a211565b",
+      "gi text": "6d66c212cdc9",
+      "gb true": "ac0b6de7f682",
+      "gb one": "85f11daeadcc",
       "doc full": "ff84616f4898",
       "doc hints": "af57de23ed71",
       "doc case gate narrow": "7a8380a46cf7",
@@ -120,24 +120,24 @@
       "doc emitFull hints": "315740dff989"
     },
     "texts | stored": {
-      "nothing": "dda9935eac41",
-      "gate narrow": "dda9935eac41",
-      "gate open": "779cad3f98b5",
-      "sc b": "dda9935eac41",
-      "sc0 b": "dda9935eac41",
-      "ss b": "dda9935eac41",
-      "narrowed kept": "be43e0285368",
-      "stale sent": "355264deeb07",
-      "stale changed": "65e59bc8dc62",
-      "src long": "a080d011eafc",
-      "vault one left": "35bac7c6fc1c",
-      "vault moved": "30d6b698b232",
-      "coll two": "687d501eefb3",
-      "tags x": "78e97c6df2e2",
-      "gi 2": "ee71af5dbe97",
-      "gi text": "0fec0d59922a",
-      "gb true": "f3b5297cd465",
-      "gb one": "323cfa41783f",
+      "nothing": "fe0c4d723d04",
+      "gate narrow": "fe0c4d723d04",
+      "gate open": "446114c48b09",
+      "sc b": "fe0c4d723d04",
+      "sc0 b": "fe0c4d723d04",
+      "ss b": "fe0c4d723d04",
+      "narrowed kept": "102508222b15",
+      "stale sent": "552e9e2d7e66",
+      "stale changed": "1f0f0a402660",
+      "src long": "be0b671f549c",
+      "vault one left": "85a4ae3fa40a",
+      "vault moved": "c7cf663e2e7c",
+      "coll two": "0658e8fa4a31",
+      "tags x": "4baef44218fb",
+      "gi 2": "addb709f9d21",
+      "gi text": "b762cee514dd",
+      "gb true": "17312895d470",
+      "gb one": "170f630bb73c",
       "doc full": "04caf24f468f",
       "doc hints": "fddf4ca3aacf",
       "doc case gate narrow": "1174e06b061c",
@@ -443,13 +443,12 @@
             "key": "ss",
             "path": "",
             "message": {
-              "@source": "@label keeps the value @value, which is no longer available. Choose a new one when you can.",
+              "@source": "@label keeps the value it holds, which is no longer available. Choose a new one when you can.",
               "arguments": {
-                "@label": "Stale secret",
-                "@value": "b"
+                "@label": "Stale secret"
               },
               "options": [],
-              "text": "Stale secret keeps the value b, which is no longer available. Choose a new one when you can."
+              "text": "Stale secret keeps the value it holds, which is no longer available. Choose a new one when you can."
             },
             "code": "stale",
             "stale": true,
@@ -497,13 +496,12 @@
             "key": "sts",
             "path": "",
             "message": {
-              "@source": "@label keeps the value @value, which is no longer available. Choose a new one when you can.",
+              "@source": "@label keeps the value it holds, which is no longer available. Choose a new one when you can.",
               "arguments": {
-                "@label": "Secret pick",
-                "@value": "gone"
+                "@label": "Secret pick"
               },
               "options": [],
-              "text": "Secret pick keeps the value gone, which is no longer available. Choose a new one when you can."
+              "text": "Secret pick keeps the value it holds, which is no longer available. Choose a new one when you can."
             },
             "code": "stale",
             "stale": true,
@@ -598,13 +596,12 @@
             "key": "ss",
             "path": "",
             "message": {
-              "@source": "@label keeps the value @value, which is no longer available. Choose a new one when you can.",
+              "@source": "@label keeps the value it holds, which is no longer available. Choose a new one when you can.",
               "arguments": {
-                "@label": "Stale secret",
-                "@value": "b"
+                "@label": "Stale secret"
               },
               "options": [],
-              "text": "Stale secret keeps the value b, which is no longer available. Choose a new one when you can."
+              "text": "Stale secret keeps the value it holds, which is no longer available. Choose a new one when you can."
             },
             "code": "stale",
             "stale": true,

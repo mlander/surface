@@ -23,7 +23,7 @@ use Drupal\surface\Variants;
 /**
  * The data surfaces of the hand corpus, built by hand, with their cases.
  *
- * Six surfaces hold what no example surface holds, each with what
+ * Seven surfaces hold what no example surface holds, each with what
  * storage holds and the inputs it is sent:
  * - `required`: required and always-held keys left out, NULL, '' and
  *   '0', at the top, in a map, a map in a map, a list of maps, a required
@@ -54,13 +54,17 @@ use Drupal\surface\Variants;
  *   publishes; lists watched by a refiner; choices a document casts, and
  *   variants a number and a boolean decide; stored values held as text
  *   and as a number where the key is a number and a boolean.
+ * - `faults`: three faults slice 31b fixes, pinned before the fix: a
+ *   secret gone stale, whose refusal must not print what is stored; a key
+ *   always held, a Choice of numbers with a default, sent null; and, in
+ *   its own form, a Choice of booleans, which every document lists.
  */
 final class HandSurfaces {
 
   /**
    * The names of the surfaces.
    */
-  public const NAMES = ['required', 'frames', 'ruled', 'narrow', 'docs', 'gaps'];
+  public const NAMES = ['required', 'frames', 'ruled', 'narrow', 'docs', 'gaps', 'faults'];
 
   /**
    * The labels every label rule is tried with: '', '0', none and markup.
@@ -89,6 +93,7 @@ final class HandSurfaces {
       'narrow' => static::narrow(),
       'docs' => static::docs(),
       'gaps' => static::gaps(),
+      'faults' => static::faults(),
       default => throw new \InvalidArgumentException("No hand surface $name."),
     };
   }
@@ -756,6 +761,40 @@ final class HandSurfaces {
     // A number and a boolean stored as text and as a number, which the
     // documents over what is stored cast.
     $alternates = ['texts' => [$sealed, $stored + ['gi' => '2', 'gb' => 1], TRUE]];
+    return [$sealed, $stored, $cases, $alternates];
+  }
+
+  /**
+   * Builds the `faults` surface.
+   *
+   * @return array{0: \Drupal\surface\SurfaceInterface, 1: array<string, mixed>, 2: array<string, array<string, mixed>>, 3: array<string, array{0: \Drupal\surface\SurfaceInterface, 1: array<string, mixed>, 2: bool}>}
+   *   As build() returns it.
+   */
+  protected static function faults(): array {
+    $builder = new SurfaceBuilder();
+    $builder->setDefinition('gate', static::choice('string', 'Gate', ['open', 'narrow']))->setDefault('gate', 'open');
+    // A secret narrowed where something is stored: stale.
+    $builder->setDefinition('fs', static::secret(static::string('Fault secret')));
+    $builder->addRefinement('fs', ['gate']);
+    $builder->addRefiner('fs', new HandRefiner(['narrow' => [['choice', '', ['a']]]]));
+    // Always held, a Choice of numbers, with a default.
+    $builder->setDefinition('fh', static::held(static::withDefault(static::choice('integer', 'Held number', [1, 2, 3]), 2)));
+    $stored = ['gate' => 'narrow', 'fs' => 'b', 'fh' => 2];
+    $cases = [
+      'gate narrow' => ['gate' => 'narrow'],
+      'fs b' => ['fs' => 'b'],
+      'narrowed kept' => ['gate' => 'narrow', 'fs' => 'b'],
+      'fh cleared' => ['fh' => NULL],
+      'fh 3' => ['fh' => 3],
+      'fb true' => ['fb' => TRUE],
+    ];
+    $sealed = $builder->seal();
+    // A Choice of booleans, in a form of its own, so the documents of the
+    // other keys are not lost with it.
+    $booleans = (new SurfaceBuilder())
+      ->setDefinition('fb', static::choice('boolean', 'Fault flag', [TRUE, FALSE]))
+      ->seal();
+    $alternates = ['booleans' => [$booleans, ['fb' => TRUE], FALSE]];
     return [$sealed, $stored, $cases, $alternates];
   }
 

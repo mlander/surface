@@ -136,9 +136,11 @@ class TypedDataFootprintTest extends UnitTestCase {
    * PhoneNumber and License, name no Typed Data. Lowered on 2026-11-13 to
    * 151: the value pipeline reads nodes, so Pipeline/Coercion.php (handed
    * a key's facts) and Pipeline/Outbound.php (it reads secrets and a
-   * datetime's type from an entry's node) name no Typed Data.
+   * datetime's type from an entry's node) name no Typed Data. Lowered on
+   * 2026-11-14 to 150: Form/SurfaceFormatterTrait.php reads a key's label
+   * and properties from its entry's node.
    */
-  public const OUTSIDE_THE_EDGES = 151;
+  public const OUTSIDE_THE_EDGES = 150;
 
   /**
    * Finds the files that use Typed Data.

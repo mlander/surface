@@ -3695,7 +3695,9 @@ value changed.
   `namingSources()` reads the node of the plain key a violation is filed
   under.
 - **One rule for a key that holds a child frame.** An attached child,
-  variants, a collection and a mount (`Validating::isShell()`) are
+  variants, a collection and a mount (`Validating::isShell()`, since
+  2026-11-14 `Entry::isShell()`: see [The remaining readers read
+  nodes](#the-remaining-readers-read-nodes)) are
   shells: the key's definition holds the child's keys, so its node is
   the child's whole tree, which the child's own entries then read
   again. A shell's own facts are read from its definition until a source
@@ -3785,7 +3787,11 @@ value changed.
 - **What stays on the definition, and why.** The contracts that take
   one until slice 32: the options service and its resolvers,
   `Computed::value()`, the refiners, the widget claims and `WidgetChoice`
-  (31b), `References::target()`, `ConstraintRunner`. A key that holds a
+  (31b), `References::target()`, `ConstraintRunner`. (2026-11-14: the
+  lookup link reads `References::targetIn()` from the node; the widget
+  claims and `WidgetChoice` stay for slice 32, since their interface is
+  public: see [The remaining readers read
+  nodes](#the-remaining-readers-read-nodes).) A key that holds a
   child, variants or a list of children: its definition holds the
   child's keys (`Attachment::mapOf()`), so its node would be the
   child's whole tree, read for a title or a flag; the emitter's deferred,
@@ -3866,7 +3872,7 @@ value changed.
   row and one whole record of each kind, 967 KB in all. Of the 85
   planted faults, every one is now caught by a test the lanes run but
   three that cannot change an answer: `PropertySchema::nullable()` has
-  no caller; a map's signature without its properties, since a map is
+  no caller (removed 2026-11-14); a map's signature without its properties, since a map is
   marked refined when any property is and each property compares its
   own; and the secret half of a shell's nullability, since a complex
   definition cannot be marked secret. Written on this slice's code and
@@ -3901,6 +3907,276 @@ value changed.
 `Contract\DocumentHead`, `NodeFactsParityTest`, `NodeFactsParityTrait`,
 `DefinitionReadCallersTest`, `DefinitionReadIsPureTest`,
 `HandCorpusTest`, `HandCorpusNarrowTest`)
+
+### The remaining readers read nodes
+
+Decided 2026-11-14. What still read a key's facts from its definition
+and is no public contract reads them from the key's node: key paths,
+the secret keys a storage encrypts, references, the tool door's inputs
+and outputs, the config schema writer and its check, the code
+generator, `drush surface:run`, the contract panel, a compiled flow and
+the formatter's summary. No served byte, refusal or value changed but
+the two faults below, fixed on purpose.
+
+- **One rule, as before.** A fact is read from the node where the walk
+  holds one; a walk that steps down a map's properties or a list's item
+  steps the node in step (`DefinitionSchema::propertyNode()`,
+  `itemNode()`). The definition is carried beside the node only for
+  what takes one: the options service, the constraint runner, the PHP
+  class a data type maps to. A key that holds a child frame is a shell
+  (`Entry::isShell()`, moved from `Validating`, one place): its own
+  facts are read from its definition until slice 32. A mount (the map
+  other modules' keys sit in) is one too for its own facts, but it is a
+  plain map whose node is its own tree: a walk into a module's part
+  reads the mount's node, which is right (`KeyPaths::reached()`,
+  `HeldToConfigSchemaTrait`, `ConfigSchemaGenerator::thirdParty()`, the
+  formatter).
+- **Key paths.** `KeyPaths::reachedOn()` finds the key's node and
+  definition together (`reached()`), and its checks (a secret, computed,
+  a map, fixed, `each`) read the node; `heldOn()` hands the node to
+  `held()`, which reads the type and the DateOnly flag from it and walks
+  a list's item and a map's properties in step (`accepted()`,
+  `violation()`; the definition goes to `ConstraintRunner::conforms()`
+  alone). `pathsOf()` reads a map's properties from its node, and reads
+  no node for a value that is no array, which it names whole. What a
+  build writes (`writeDefaults()`, `resolve()`, `setDefault()`, and a
+  context's fixed value in `Declaring`) is a builder's definitions before
+  sealing, which no entry holds: such a caller hands `held()` no node,
+  and `held()` reads that definition's own facts (the data type, the
+  DateOnly flag, a secret, computed, a list's item, a map's properties)
+  from the definition, as the build did before, and reads no node.
+- **Storage.** `EncryptedStorageLayout::secretKeys()` reads
+  `Secrets::marked()` on each plain key's node. `FlatVariantsLayout`
+  reads `each` only for a key that holds an attachment, a shell: it
+  stays on the definition. `ReferenceStorageLayout` walks definitions
+  through properties, items and `each` for the stored layout; it is the
+  storage side of references and stays for slice 32, listed below.
+- **References.** `References::targetIn()` and `handlerIn()` read a
+  key's reference check from its node, beside `target()` and
+  `handlerOf()`; `nodeAt()` gives the node at a place, as
+  `definitionAt()` gives the definition, both through one walk
+  (`placeAt()`) that reads each plain key's node. The lookup
+  (`ResourceApiController::lookup()`), the emitter's lookup link
+  (`ContractEmitter::linked()` no longer takes a definition;
+  `linksBelow()` asks `refers()`), the OpenAPI document's reference keys
+  and the tool door's lookup note read the node. A shell's reference
+  check is read from its definition; its node is read only to hand
+  `nodeAt()` what it gives when that definition has one, which no shell
+  the module builds does (a reference is one value). `settle()` writes
+  builder definitions: it stays. `Gating` reads a builder's definitions:
+  it stays.
+- **The tool door.** `InputDefinitions::fromNode()` converts a plain key
+  from its node: label, description, data type, required, secret,
+  default, constraints, items and properties; the definition beside it
+  goes to the options service alone. A shell is never asked for its
+  node: its own facts are read from its definition (`headOf()`), and
+  what lies below it is converted from the child's entries, each from
+  its own node (`fromChild()`, `whole()`, `wholeMap()`), the node
+  `withLookups()`, `withStored()` and `secrets()` read too. A child's key
+  advertised with another definition than its entry's, which no entry
+  holds, goes through the public `fromDefinition()`. Variants advertised
+  as one map no longer copy a plain key's definition: `fromVariants()`
+  hands each such key's entry node with the sentence naming its
+  variants, and `fromNode()` says the key optional, with no default and
+  the sentence appended, as the copy said it; the `NotNull` typed data
+  adds for a required key is left out, as `getConstraints()` leaves it
+  out of a copy that is not required (a data type whose own constraints
+  hold NotNull would differ; none exists). A shell among them keeps the
+  copy. A deferred key and the variants' own placeholder keep their
+  definitions. The public
+  `fromDefinition()` and `outputFromDefinition()` take an optional node
+  and read one only for a definition handed alone; every caller in the
+  module hands the entry's node (`OperationInputs::parameterInput()`).
+  `OperationInputs` reads a computed key from its node. A tool's
+  definitions read the entries' nodes that `secrets()` reads already.
+- **The config schema writer and its check.**
+  `ConfigSchemaGenerator::definition()`, `plainMapping()`,
+  `translated()`, `clearable()`, `constraints()` and `carried()` read
+  nodes (`carried()` reads the constraints a key declares,
+  `NodeFacts::declaredConstraints()`); the variants' deciding key is
+  handed as its node (`ChoiceSet::fromConstraints()`). A collection's
+  declared constraints come from its own node without items (`head()`,
+  the one call this adds), its required and secret flags from its
+  definition. A shell's node is not read: a key its storage keeps
+  otherwise is written from the shell's definition (`translated()`
+  takes it, and `shellClearable()` answers the three-way rule from it);
+  what every entry of a map of entries from the site is, a definition
+  set on the shell that no entry holds, is read into its own node
+  (`DefinitionSchema::of()`, listed in `DefinitionReadCallersTest`);
+  another variant's secret kept beside a variant's keys takes a shell's
+  label from its definition, and a shell is a secret there only where
+  its definition was marked other than through `setSecret()`, which
+  refuses a map and a list. `HeldToConfigSchemaTrait::definitionWider()` and
+  `constraintsWider()` read nodes. The PHP class a data type maps to
+  (`getClass()`, in `type()` and `definitionWider()`) has no member and
+  takes the typed data manager: the definition is walked in step for it.
+- **The generator and the forms.** `ResourceCode` reads a plain key's
+  label, description, type, default, required, secret, always held,
+  constraints and settings from its node, and a map's properties and a
+  list's item below it; a shell keeps its definition. `RunCommand`,
+  `CompiledFlow`, the plain rows of `ContractPanel` and
+  `SurfaceFormatterTrait` read nodes; the formatter's summary takes a
+  shell's label from its definition and the keys below an attached
+  child or a chosen variant from the child's entries
+  (`appendFrameSummary()`), a mount from its node; the panel's shells and their
+  properties, and a variant's definition made per call
+  (`Variants::definitionFor()`), keep their definitions.
+  `Extracting::definitionAt()` stays: its one fact, whether a place is a
+  list, would read a node off a refined entry for one flag.
+- **Readers added.** `DefinitionSchema::isComplex()` (`instanceof
+  ComplexDataDefinitionInterface`, by the class the node was read from;
+  in `NodeFactsParityTest`), `References::targetIn()`, `handlerIn()`
+  and `nodeAt()`, `ChoiceSet::fromConstraints()`. `mainProperty`,
+  `examples` and the stored secret got no reader: nothing moved here
+  reads them. `PropertySchema::nullable()`, which had no caller, is
+  gone.
+- **Three faults fixed.** A secret gone stale was refused with
+  its stored value in the sentence ("Stale secret keeps the value b,
+  ..."), although the value was held out of `stored`: now "Stale secret
+  keeps the value it holds, which is no longer available. Choose a new
+  one when you can." `Validating::cannotBeCleared()` handed
+  `Named::value()` an option label that is a number (a Choice of
+  numbers is labeled by its numbers), which threw; the label is cast at
+  the call, as `conditions()` casts it. A Choice of booleans made every
+  document throw (`PlainText::of()` handed `TRUE`): an option labeled by
+  a boolean is now titled as the document writes the value, "true" or
+  "false" (`PropertySchema::choices()`), and any other label that is no
+  text is cast to a string. The hand corpus pins all three (`faults`,
+  written before the fixes), and the rows of `gaps` and `narrow` that
+  held a stale secret's value changed with the first.
+- **The door corpus.** A review planted 78 faults in the readers this
+  moved, and the tests the lanes run missed 34; most changed what a door
+  serves on a surface no example holds. `DoorCorpusTest` and
+  `DoorCorpusNarrowTest` run the hand corpus's seven surfaces and four
+  more (`DoorSurfaces`: keys of every kind, variants, references,
+  children) through the tool door's converters and per-run inputs, the
+  key paths, the references, both storage layouts, the config schema
+  writer and the schema check, `ResourceCode`, the panel, the formatter
+  and the flow's placing, 4,669 rows by digest in
+  `tests/fixtures/hand-corpus/doors-*.json` (written with
+  `SURFACE_HAND_CORPUS_WRITE=1`; `DoorCorpusRecorder` says what each row
+  holds). Run with the slice's base sources, every row but the
+  `nodes` rows, whose readers the base does not have, is equal. Kernel
+  tests cover the rest: the lookup's handler, settings and id type read
+  off the key's node (`LookupHandlerSettingsTest`,
+  `ReferenceLookupTest`, which also holds the OpenAPI lookup path's
+  keys), `drush surface:run`'s types (`RunCommandTest`) and a computed
+  key a create's first step need not draw (`FlowFormTest`).
+- **Faults recorded, not fixed here.** A secret stored below the top
+  level (in a map, a map in a map, a list of maps, a collection's item
+  or a mount) is served: `InputDefinitions::withStored()` writes it into the
+  advertised default, `ContractEmitter::emit()` serves it in `/values`
+  when it sits in a map, and `EncryptedStorageLayout::secretKeys()`
+  encrypts top-level keys only. It is the same at the base; the door
+  corpus pins what is served, and the change after this one fixes it
+  by itself. A label or description that is a number or a boolean makes
+  the tool door, the config schema writer, the generator and the
+  formatter throw, and variants decided by numbers make the config
+  schema writer throw: a label is text, which slice 32's authoring door
+  refuses otherwise. Both are the same at the base.
+
+- **Proof.** The value baseline shows zero differences in 39,109 cases
+  as user 1 and 3,737 as anonymous; the documents (684 and 364 with
+  subjects; 309, 74, 309 and 2,996 without) and the validation corpus
+  (3,004 and 997 cases) none; the door digests none of 8,344, which now
+  also hold every tool's whole input and output tree, the config schema
+  files the generator writes, `KeyPaths::heldOn()` per operation and per
+  path, and each storage layout's `toStorage()` and `fromStorage()`. The
+  development site's parity script finds no disagreement over 2,226
+  definitions for any reader, `isComplex()` included. The hand corpus
+  differs only in the rows of the three faults: 48 of `faults`, 36 of
+  `gaps` and 122 of `narrow`. After the door corpus and its fixes the
+  same proofs show the same zeros, and the hand corpus's own files are
+  unchanged.
+- **What it costs.** Counted over the development site's operations on
+  fresh builds, a build, a write request, a read, the form and the
+  documents read no node they did not read before. Two phases read
+  more, each for a walk that now reads its own facts from a node: what
+  a save lays out reads 476 nodes as user 1 and 96 as anonymous, the
+  top-level nodes `EncryptedStorageLayout::secretKeys()` reads where
+  nothing read them yet on that build (about 30 microseconds an
+  operation); and one tool definitions' rebuild reads 799 nodes where
+  it read 468 (3,995 against 2,340 over five rebuilds), 78.6 ms against
+  73.3 at the minimum (7 percent). At the base a rebuild read nodes only
+  in `secrets()`, for the read tools' outputs (468); now `secrets()`
+  reads 205 of those, the inputs of every tool 464 and the read tools'
+  shared rest, the outputs 71 and the parameters 50. The write tools'
+  inputs and outputs are listing surfaces built for them alone, which
+  no other reader asks, so each of their keys is read once to be said.
+  No shell is read, and no node twice. Measured again after the door
+  corpus (8 rounds, assertions off): the rebuild is 6 percent slower by
+  the minimum (74.1 ms against 78.5). A form's query values,
+  `pathsOf()` then `heldOn()` per path, read 563 nodes where the base
+  read none: `pathsOf()` reads 16 now (a map's value only), and
+  `heldOn()` reads the rest, each key's own facts (a secret, computed,
+  fixed, its type), about 36 microseconds an operation (5.4 ms against
+  11.5 over the operations). What a save lays out reads 572 nodes,
+  which the same request's accept has read, and the config schema
+  command 687 a run where it read none, 2 percent slower, and reads
+  three definitions twice a run, against none at the base: one more
+  than before `entry()` read what every entry of a map of entries is
+  into a node of its own. Every read of a shell's node happens in the
+  phases that read one at the base, and the same number of times.
+
+**The definition reads left, by edge (the slice 32 work list).** In
+`src/` and `modules/*/src`, a read of a definition's fact is one of:
+
+- *The options service and its resolvers*
+  (`SurfaceOptions::resolve()`, `SurfaceOptionsResolverInterface`, 15
+  resolvers): every caller that holds a node hands the definition beside
+  it (`Validating`, `Accepting`, `InputDefinitions::constraints()` and
+  `withLookups()`, `ContractPanel::allows()`, `Extracting`,
+  `PropertySchema`, `WidgetChoice::optionSet()`).
+- *`Computed::value()` and `ComputesValueInterface::compute()`* (15
+  implementers), and `Computed::of()` on a shell.
+- *The refiners* (`SurfaceRefinerInterface`, 13 implementers) and what a
+  refinement writes (`Surface::refine()`, `DoesNotApply`, `Narrowing`,
+  `DeclaredRefiner`, `Conditionals::appliedAt()`).
+- *The widget claims* (`DefinitionWidgetInterface::drawsDefinition()`,
+  19 implementers, and the reads in each plugin) and `WidgetChoice`
+  (`claimed()`, `forDefinition()`, `valueWord()`, `optionSet()`),
+  `SiteCatalog`'s claim.
+- *`ConstraintRunner`* (`conforms()`, `check()`, `typed()`), and
+  `KeyPaths::violation()`'s copy that is not required.
+- *Ports* (`SurfaceInterface::getPortDefinition()`), read in
+  `Validating::placeAt()`.
+- *The builders and readers that make definitions*: `SurfaceBuilder`,
+  `Surface`, `Declaring`, `Attaching`, `Binding`, `Shapes`,
+  `MapBlueprint`, `ShapeBlueprint`, `Mixing`, `Gating`, `Resources`,
+  `KeyPaths::writeDefaults()`/`resolve()`/`setDefault()`,
+  `References::settle()`, `Reader\TypedDataReader`,
+  `Reader\ConfigSchemaReader`, `Contract\SchemaReader`,
+  `Variants\ConfigSchemaTypes`, `DefinitionMetadata` itself,
+  `DefinitionSchema`'s own read.
+- *Core's config and entity APIs*: the storage adapters
+  (`ConfigObjectStorage`, `ConfigEntityStorage`, `FieldSettingsStorage`,
+  `BaseFieldOverrideStorage`, the examples' field storages),
+  `DefinitionTypedData`, `SurfaceFieldTypeTrait`,
+  `HeldToConfigSchemaTrait::mountedLayouts()`, the `getClass()` reads.
+- *Shells*: every site that reads a key holding a child frame from its
+  definition, named above and in [The validator's checks and the
+  document read nodes](#the-validators-checks-and-the-document-read-nodes).
+- *The tool door's reads of the write tools' listing surfaces* (see
+  What it costs), and the shells' own facts everywhere above.
+- *Walks of their own, not moved*: `ReferenceStorageLayout` (25 reads),
+  `Extracting::definitionAt()`, `ContractPanel::propertyRows()`,
+  `Variants::definitionFor()`, `SiteListBudget`, `Location`,
+  `Collection`, `SerializedMaps`, and the examples' derivations
+  (`FieldItemDerivation`, `ContentEntityResources`,
+  `FieldItemStructures`, `ConceptPanel`).
+
+The scan behind the list, every match of a definition getter, a
+metadata getter, `instanceof` a list or a complex definition,
+`Computed::of()`, `ChoiceSet::of()` and the reference readers, finds
+614 lines in 109 files, against 669 at the slice's base.
+
+The public interfaces that take or return a definition, for slice 32:
+`SurfaceInterface` (`getDefinition()`, `getDefinitions()`,
+`getPortDefinition()`, `getOutputDefinitions()`; one implementer),
+`DefinitionWidgetInterface` (19), `SurfaceOptionsResolverInterface`
+(15) and `SurfaceOptions::resolve()`, `ComputesValueInterface` (15),
+`SurfaceRefinerInterface` (13), `HeldToConfigSchemaInterface` (2, it
+takes a surface), `StorageLayoutInterface` (values only).
 
 ### A key that does not apply
 
@@ -11901,7 +12177,9 @@ that holds nothing out (`SurfacePipelineInterface::document()`,
 required secret never set is still refused by the pipeline as missing.
 Before 2026-10-18 a required secret
 was in `required` and its type refused the `null` its own `values`
-carried. (`PropertySchema::required()`, `InputDefinitions::fromDefinition()`)
+carried. (`PropertySchema::required()`, `InputDefinitions::fromDefinition()`;
+since 2026-11-14 `fromNode()`, which reads the key's node: see [The
+remaining readers read nodes](#the-remaining-readers-read-nodes).)
 
 ### One coercion table, the Tool API's
 
@@ -13562,7 +13840,8 @@ say is run by a check on the server.
   of the joining above. Manifests for the library's checks.
   *Done 2026-11-11 in [The checks the document names](#the-checks-the-document-names)*, but `iri` and the manifests,
   which stay in its Later.
-  `References::definitionAt()`, `Validating::definitionAt()` (since
+  `References::definitionAt()` (since 2026-11-14 beside `nodeAt()`,
+  which gives the node), `Validating::definitionAt()` (since
   2026-11-13 `nodeAt()` and `placeAt()`, which give the node) and
   `Extracting::definitionAt()` answer other questions than
   `Location::definitionAt()` and stay their own: the first finds a

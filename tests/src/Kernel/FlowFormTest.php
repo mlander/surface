@@ -10,13 +10,19 @@ use Drupal\Core\Cache\CacheableResponseInterface;
 use Drupal\Core\Form\EnforcedResponseException;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteBuildEvent;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\Url;
 use Drupal\node\Entity\NodeType;
 use Drupal\surface\Access\OperationRouteSubscriber;
+use Drupal\surface\Compute\MachineName;
+use Drupal\surface\Computed;
+use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Form\CompiledFlow;
 use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Resource\Compute;
 use Drupal\surface\Staging\StageStore;
 use Drupal\surface\Storage\StageStorage;
+use Drupal\surface\SurfaceBuilder;
 use Drupal\surface_stage_test\Resource\LedgerResource;
 use Drupal\surface_stage_test\Storage\ItineraryStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -255,6 +261,40 @@ class FlowFormTest extends SurfaceKernelTestBase {
     $this->assertRefused($refusal);
     $this->visit('/surface-test/itinerary/trip/flow?stage=' . $update . '&step=2');
     $this->assertRefused($refusal);
+  }
+
+  /**
+   * Tests a key the build computes is no input the first step must draw.
+   *
+   * CompiledFlow::refusal() over a create built by hand: a required key
+   * with no default drawn at step 2 is refused, unless the build computes
+   * it from other keys, which no step takes as input. Whether a key is
+   * computed is read off its node.
+   */
+  public function testComputedKeyIsNoInputOfTheFirstStep(): void {
+    $registry = $this->container->get('surface.resource_registry');
+    $resource = $registry->getDefinition('stage_test.itinerary');
+    $operation = $registry->getOperation($resource->name(), 'create');
+    $this->assertTrue($operation->creates);
+    $slug = DataDefinition::create('string')->setLabel('Slug')->setRequired(TRUE);
+    DefinitionMetadata::setComputed($slug, new Computed(['title'], MachineName::class, Compute::ON_CREATE));
+    $built = (new SurfaceBuilder())
+      ->setDefinition('title', DataDefinition::create('string')->setLabel('Title')->setRequired(TRUE))
+      ->setDefinition('slug', $slug)
+      ->setDefinition('note', DataDefinition::create('string')->setLabel('Note')->setRequired(TRUE))
+      ->seal();
+    $refusal = static function (array $first, array $second) use ($built, $resource, $operation): ?string {
+      $flow = CompiledFlow::onRoute(new Route('/hand/flow', [
+        '_form' => SurfaceOperationForm::class,
+        '_surface_resource' => 'stage_test.itinerary',
+        '_surface_operation' => 'create',
+        CompiledFlow::ROUTE => ['steps' => [['keys' => $first], ['keys' => $second]]],
+      ]), 'hand.flow');
+      return $flow?->refusal($built, $resource, $operation, 'hand.flow');
+    };
+    $this->assertNull($refusal(['title', 'note'], ['slug']), 'The computed key is drawn at step 2, and nothing refuses it.');
+    $refused = 'The hand.flow route\'s flow creates through the "create" operation of stage_test.itinerary and draws its required key "note", which has no default, at step 2: each step is validated as the whole create, so a required key with no default is drawn at the first step.';
+    $this->assertSame($refused, $refusal(['title', 'slug'], ['note']));
   }
 
   /**

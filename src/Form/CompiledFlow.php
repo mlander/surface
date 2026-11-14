@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Form;
 
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Computed;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Flow\FlowInterface;
@@ -677,9 +678,10 @@ final class CompiledFlow {
     $first = array_key_first($steps);
     $at = [];
     $groups = [];
-    foreach ($surface->getDefinitions() as $key => $definition) {
+    foreach ($surface->getDefinitions()->entries() as $key => $entry) {
       $key = (string) $key;
-      $group = DefinitionMetadata::arrangementOf($definition)?->group?->id;
+      // A shell's own facts are read from its definition (Entry::isShell()).
+      $group = ($entry->isShell() ? DefinitionMetadata::arrangementOf($entry->definition) : NodeFacts::arrangement($entry->schema()))?->group?->id;
       if ($group !== NULL) {
         $groups[$group] = TRUE;
       }
@@ -815,14 +817,16 @@ final class CompiledFlow {
     }
     if ($operation->creates) {
       $definitions = $surface->getDefinitions();
-      foreach ($definitions as $key => $definition) {
+      foreach ($definitions->entries() as $key => $entry) {
         $key = (string) $key;
-        // A key the build locks, or computes from others, is no input.
-        $computed = Computed::of($definition);
+        // A key the build locks, or computes from others, is no input. A
+        // shell's own facts are read from its definition (Entry::isShell()).
+        $node = $entry->isShell() ? NULL : $entry->schema();
+        $computed = $node === NULL ? Computed::of($entry->definition) : NodeFacts::compute($node);
         if ($definitions->isLocked($key) || ($computed !== NULL && !$computed->takesSent())) {
           continue;
         }
-        if ($definition->isRequired() && $surface->getDefault($key) === NULL && ($at[$key] ?? 0) !== 1) {
+        if (($node === NULL ? $entry->definition->isRequired() : NodeFacts::isRequired($node)) && $surface->getDefault($key) === NULL && ($at[$key] ?? 0) !== 1) {
           return sprintf('The %s route\'s flow creates through the "%s" operation of %s and draws its required key "%s", which has no default, %s: each step is validated as the whole create, so a required key with no default is drawn at the first step.', $name, $operation->id, $resource->id, $key, isset($at[$key]) ? 'at step ' . $at[$key] : 'at no step');
         }
       }

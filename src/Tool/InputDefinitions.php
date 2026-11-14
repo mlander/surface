@@ -16,6 +16,8 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attachment;
 use Drupal\surface\Contract\Choices;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\PlainText;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Contract\SiteListBudget;
@@ -36,6 +38,7 @@ use Drupal\tool\TypedData\MapInputDefinition;
 use Drupal\tool\TypedData\MapOutputDefinition;
 use Drupal\tool\TypedData\OutputDefinition;
 use Drupal\tool\TypedData\OutputDefinitionInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Turns a data surface into the Tool API's definitions.
@@ -331,8 +334,11 @@ final class InputDefinitions {
       if (!$property instanceof DataDefinition) {
         continue;
       }
-      $target = References::target($entry->definition);
-      $bare = $entry->definition->getSetting(References::TARGETS) !== NULL;
+      // A plain key's facts from its node; a shell's own from its
+      // definition (Entry::isShell()).
+      $node = $entry->isShell() ? NULL : $entry->schema();
+      $target = $node === NULL ? References::target($entry->definition) : References::targetIn($node);
+      $bare = ($node === NULL ? $entry->definition->getSetting(References::TARGETS) : NodeFacts::setting($node, References::TARGETS)) !== NULL;
       if (($target === NULL || $this->options->resolve($entry->definition) !== NULL) && !$bare) {
         continue;
       }
@@ -650,16 +656,14 @@ final class InputDefinitions {
         // A collection is a list of the child's maps, its Count carried as
         // the list's constraint, each item converted the way the child's
         // own entries say.
-        $list = $this->fromDefinition($entry->definition);
-        if ($list instanceof ListInputDefinition) {
-          $this->enter($entry->name, '0');
-          $list->setItemDefinition($this->fromChild($entry->list->child(), $item, $narrowing));
-        }
-        return $list;
+        // A shell (Entry::isShell()): the list's own facts are read from
+        // its definition, its item from the child's own entries.
+        $this->enter($entry->name, '0');
+        return $this->headOf($entry->definition, item: $this->fromChild($entry->list->child(), $item, $narrowing));
       }
       $child = $entry->attachment?->child;
       if ($child === NULL || !$entry->definition instanceof ComplexDataDefinitionInterface) {
-        return $this->fromDefinition($entry->definition);
+        return $this->whole($entry, $entry->definition);
       }
       $this->enter($entry->name);
       return $this->fromChild($child, $entry->definition, $narrowing);
@@ -895,7 +899,8 @@ final class InputDefinitions {
    * @param \Drupal\surface\SurfaceInterface $child
    *   The child.
    * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $definition
-   *   The map it is advertised as at the key.
+   *   The map it is advertised as at the key: a shell (Entry::isShell()),
+   *   whose own facts are read from it, never from its node.
    * @param string|null $narrowing
    *   The narrowing tool's id, or NULL (fromSurface()).
    *
@@ -903,33 +908,166 @@ final class InputDefinitions {
    *   The map input.
    */
   protected function fromChild(SurfaceInterface $child, ComplexDataDefinitionInterface $definition, ?string $narrowing = NULL): InputDefinitionInterface {
-    $map = $this->fromDefinition($definition);
-    if ($map instanceof MapInputDefinition) {
-      $properties = $definition->getPropertyDefinitions();
-      foreach ($child->getDefinitions()->entries() as $name => $child_entry) {
-        $property = $properties[$name] ?? $child_entry->definition;
-        $converted = match (TRUE) {
-          $this->deferred($child_entry) => $this->leftOut($child_entry, $property, $narrowing),
-          $child_entry->variants !== NULL && isset($properties[$name]) && DefinitionMetadata::variantsBy($properties[$name]) !== NULL => $this->variantsAt((string) $name, $child_entry->variants, $properties[$name], $narrowing),
-          $child_entry->list !== NULL => $this->fromEntry($child_entry->withDefinition($property), $narrowing),
-          default => $this->fromDefinition($property),
-        };
-        // As at the top: a key the child's refiners may rule out, by the
-        // child's own values or by a port, is optional in a listing.
-        // Decision: see docs/decisions.md#a-key-that-does-not-apply.
-        static::optionalWhereRuledOut($converted, $child_entry->mayNotApply());
-        if ($child->getDefinitions()->isLocked((string) $name)) {
-          // As at the top: an entry of a map of keys from the site its
-          // provider locked, say.
-          static::lock($converted);
-        }
-        if ($child_entry->runtimeAccess) {
-          $this->runtimeAccessNote($converted);
-        }
-        $map->setPropertyDefinition((string) $name, $converted);
-      }
+    $properties = $definition->getPropertyDefinitions();
+    if ($properties === []) {
+      return $this->headOf($definition);
     }
-    return $map;
+    $converted_all = [];
+    foreach ($child->getDefinitions()->entries() as $name => $child_entry) {
+      $property = $properties[$name] ?? $child_entry->definition;
+      $converted = match (TRUE) {
+        $this->deferred($child_entry) => $this->leftOut($child_entry, $property, $narrowing),
+        $child_entry->variants !== NULL && isset($properties[$name]) && DefinitionMetadata::variantsBy($properties[$name]) !== NULL => $this->variantsAt((string) $name, $child_entry->variants, $properties[$name], $narrowing),
+        $child_entry->list !== NULL => $this->fromEntry($child_entry->withDefinition($property), $narrowing),
+        default => $this->whole($child_entry, $property),
+      };
+      // As at the top: a key the child's refiners may rule out, by the
+      // child's own values or by a port, is optional in a listing.
+      // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+      static::optionalWhereRuledOut($converted, $child_entry->mayNotApply());
+      if ($child->getDefinitions()->isLocked((string) $name)) {
+        // As at the top: an entry of a map of keys from the site its
+        // provider locked, say.
+        static::lock($converted);
+      }
+      if ($child_entry->runtimeAccess) {
+        $this->runtimeAccessNote($converted);
+      }
+      $converted_all[(string) $name] = $converted;
+    }
+    // In the order the map advertises its properties, then the child's
+    // keys it does not advertise, as each key replaced its property.
+    $ordered = [];
+    foreach ($properties as $name => $property) {
+      $ordered[(string) $name] = $converted_all[(string) $name] ?? $this->fromDefinition($property);
+    }
+    return $this->headOf($definition, $ordered + $converted_all);
+  }
+
+  /**
+   * Converts one key of a child whole, as its definition says it.
+   *
+   * A plain key from its entry's node. A key that holds a child frame is a
+   * shell (Entry::isShell()), never asked for its node: an attached child
+   * is converted from its own entries, each from its node, a collection
+   * likewise, its own facts and its item's from their definitions.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The child's key.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition the child is advertised with at the key.
+   *
+   * @return \Drupal\tool\TypedData\InputDefinitionInterface
+   *   The input definition.
+   */
+  protected function whole(Entry $entry, DataDefinitionInterface $definition): InputDefinitionInterface {
+    if ($definition !== $entry->definition) {
+      // Advertised otherwise than the key's own definition, which no
+      // entry holds.
+      return $this->fromDefinition($definition);
+    }
+    if (!$entry->isShell()) {
+      return $this->fromNode($entry->schema(), $definition);
+    }
+    if ($entry->attachment !== NULL && $entry->variants === NULL && $entry->mounted === [] && $definition instanceof ComplexDataDefinitionInterface) {
+      return $this->headOf($definition, $this->wholeMap($entry->attachment->child, $definition));
+    }
+    $item = $definition instanceof ListDataDefinitionInterface ? $definition->getItemDefinition() : NULL;
+    if ($entry->list !== NULL && $item instanceof ComplexDataDefinitionInterface) {
+      return $this->headOf($definition, item: $this->headOf($item, $this->wholeMap($entry->list->child(), $item)));
+    }
+    if ($entry->mounted !== [] && $entry->attachment === NULL && $entry->variants === NULL && $definition instanceof ComplexDataDefinitionInterface) {
+      // A mount: each module's part from the keys mounted there.
+      $parts = [];
+      foreach ($definition->getPropertyDefinitions() as $module => $part) {
+        $mounted = $entry->mounted[(string) $module] ?? NULL;
+        $parts[(string) $module] = $mounted !== NULL && $part instanceof ComplexDataDefinitionInterface
+          ? $this->headOf($part, $this->wholeMap($mounted->child, $part))
+          : $this->fromDefinition($part);
+      }
+      return $this->headOf($definition, $parts);
+    }
+    return $this->fromDefinition($definition);
+  }
+
+  /**
+   * Converts each property of a map a child advertises, whole.
+   *
+   * @param \Drupal\surface\SurfaceInterface $child
+   *   The child.
+   * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $map
+   *   The map it is advertised as.
+   *
+   * @return array<string, \Drupal\tool\TypedData\InputDefinitionInterface>
+   *   The properties, in the map's order.
+   */
+  protected function wholeMap(SurfaceInterface $child, ComplexDataDefinitionInterface $map): array {
+    $properties = [];
+    foreach ($map->getPropertyDefinitions() as $name => $property) {
+      $entry = $child->getDefinitions()->entry((string) $name);
+      $properties[(string) $name] = $entry === NULL ? $this->fromDefinition($property) : $this->whole($entry, $property);
+    }
+    return $properties;
+  }
+
+  /**
+   * Converts a shell's own facts, read from its definition.
+   *
+   * A key that holds a child frame (Entry::isShell()): its label,
+   * description, required, default and constraints are its definition's,
+   * as fromNode() reads them from a plain key's node; what is below it is
+   * handed in, converted from the child's entries.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The shell's definition.
+   * @param array<string, \Drupal\tool\TypedData\InputDefinitionInterface> $properties
+   *   A map's properties, converted; none for a map that has none.
+   * @param \Drupal\tool\TypedData\InputDefinitionInterface|null $item
+   *   A list's item, converted; NULL for a map.
+   *
+   * @return \Drupal\tool\TypedData\InputDefinitionInterface
+   *   The input definition.
+   */
+  protected function headOf(DataDefinitionInterface $definition, array $properties = [], ?InputDefinitionInterface $item = NULL): InputDefinitionInterface {
+    $label = $this->label($definition);
+    $description = $this->description($definition);
+    $constraints = $this->constraintsOf($definition->getConstraints(), $definition);
+    $secret = DefinitionMetadata::isSecret($definition);
+    $required = $definition->isRequired() && !$secret;
+    $default = !$secret && DefinitionMetadata::hasDefaultValue($definition)
+      ? DefinitionMetadata::getDefaultValue($definition)
+      : NULL;
+    if ($secret) {
+      $description = $this->secretNote($description);
+    }
+    if ($item !== NULL) {
+      return new ListInputDefinition(
+        label: $label,
+        description: $description,
+        required: $required,
+        default_value: $default,
+        constraints: $constraints,
+        item_definition: $item,
+      );
+    }
+    if ($properties !== []) {
+      return new MapInputDefinition(
+        label: $label,
+        description: $description,
+        required: $required,
+        default_value: $default,
+        constraints: $constraints,
+        property_definitions: $properties,
+      );
+    }
+    return new InputDefinition(
+      data_type: $definition->getDataType(),
+      label: $label,
+      description: $description,
+      required: $required,
+      default_value: $default,
+      constraints: $constraints,
+    );
   }
 
   /**
@@ -983,6 +1121,11 @@ final class InputDefinitions {
    * not keep: it refuses a key from another variant by name, and judges
    * the chosen variant's keys by that variant's own rules. A key two
    * variants share is advertised with the first variant's definition.
+   * A plain key is said from its node with the NotNull typed data adds
+   * for a required key left out by hand (constraints()), where a copy
+   * marked optional would have none: a data type whose own constraints
+   * include NotNull would keep it on a copy and lose it here, and no such
+   * type exists in core or the module. A shell keeps the copy.
    *
    * @param \Drupal\surface\Variants $variants
    *   The variant table.
@@ -1029,20 +1172,26 @@ final class InputDefinitions {
         $properties[$name]->setRequired(FALSE);
         continue;
       }
-      // A copy, said the way the union means it: optional, with no
-      // default, and the variants it belongs to named. Only its own
-      // flags change, so a shallow clone leaves the variant untouched.
-      $union = clone $definition;
+      // Said the way the union means it: optional, with no default, and
+      // the variants it belongs to named (fromNode()'s $only). The
+      // variant's own key is read, nothing is copied or written.
       $note = $this->t('Only when @by is @values.', [
         '@by' => $variants->by,
         '@values' => implode(', ', $owners[$name]),
       ]);
-      if ($union instanceof DataDefinition) {
-        $union->setRequired(FALSE);
-        $union->setDescription($this->appended($this->description($definition), $note));
+      if ($entries[$name]->isShell()) {
+        // A shell is never asked for its node: a copy of its definition
+        // says it the way the union means it.
+        $union = clone $definition;
+        if ($union instanceof DataDefinition) {
+          $union->setRequired(FALSE);
+          $union->setDescription($this->appended($this->description($definition), $note));
+        }
+        DefinitionMetadata::setDefaultValue($union, NULL);
+        $properties[$name] = $this->fromDefinition($union);
+        continue;
       }
-      DefinitionMetadata::setDefaultValue($union, NULL);
-      $properties[$name] = $this->fromDefinition($union);
+      $properties[$name] = $this->fromNode($entries[$name]->schema(), $definition, $note);
     }
     $note = $this->t('Its keys depend on @by. @table.', [
       '@by' => $variants->by,
@@ -1091,8 +1240,8 @@ final class InputDefinitions {
    */
   public function outputsFromSurface(SurfaceInterface $surface): array {
     $outputs = [];
-    foreach ($surface->getOutputDefinitions() as $name => $definition) {
-      $outputs[$name] = $this->outputFromDefinition($definition);
+    foreach ($surface->getOutputDefinitions()->entries() as $name => $entry) {
+      $outputs[$name] = $this->outputFromDefinition($entry->definition, $entry->schema());
     }
     return $outputs;
   }
@@ -1100,34 +1249,43 @@ final class InputDefinitions {
   /**
    * Converts one core data definition into one output definition.
    *
+   * Its facts are read from its node; the definition is stepped down in
+   * step for the options service (constraints()).
+   *
+   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+   *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to convert.
+   * @param \PortableSchema\Builder\Schema|null $node
+   *   Its node: an entry's (Entry::schema()), or one stepped down to; NULL
+   *   for a definition no entry holds, whose node is read here.
    *
    * @return \Drupal\tool\TypedData\OutputDefinitionInterface
    *   The output definition.
    */
-  public function outputFromDefinition(DataDefinitionInterface $definition): OutputDefinitionInterface {
-    $label = $this->label($definition);
-    $description = $this->description($definition);
-    $constraints = $this->constraints($definition);
-    $required = $definition->isRequired();
+  public function outputFromDefinition(DataDefinitionInterface $definition, ?Schema $node = NULL): OutputDefinitionInterface {
+    $node ??= DefinitionSchema::of($definition);
+    $label = $this->labelOf($node);
+    $description = $this->describe(NodeFacts::description($node));
+    $constraints = $this->constraints($node, $definition);
+    $required = NodeFacts::isRequired($node);
 
-    if ($definition instanceof ListDataDefinitionInterface) {
+    if (DefinitionSchema::isList($node)) {
+      assert($definition instanceof ListDataDefinitionInterface);
       return new ListOutputDefinition(
         label: $label,
         required: $required,
         description: $description,
         constraints: $constraints,
-        item_definition: $this->outputFromDefinition($definition->getItemDefinition()),
+        item_definition: $this->outputFromDefinition($definition->getItemDefinition(), static::itemOf($node)),
       );
     }
-    $properties = $definition instanceof ComplexDataDefinitionInterface
-      ? $definition->getPropertyDefinitions()
-      : [];
+    $properties = NodeFacts::properties($node);
     if ($properties !== []) {
+      assert($definition instanceof ComplexDataDefinitionInterface);
       $property_definitions = [];
-      foreach ($properties as $name => $property_definition) {
-        $property_definitions[$name] = $this->outputFromDefinition($property_definition);
+      foreach ($properties as $name => $property_node) {
+        $property_definitions[$name] = $this->outputFromDefinition(static::definitionOf($definition, (string) $name), $property_node);
       }
       return new MapOutputDefinition(
         label: $label,
@@ -1141,7 +1299,7 @@ final class InputDefinitions {
     // output carries none, which is the one place the two directions of
     // this bridge differ in substance rather than in class.
     return new OutputDefinition(
-      data_type: $definition->getDataType(),
+      data_type: NodeFacts::dataType($node),
       label: $label,
       required: $required,
       description: $description,
@@ -1154,47 +1312,84 @@ final class InputDefinitions {
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to convert.
+   * @param \PortableSchema\Builder\Schema|null $node
+   *   Its node: an entry's (Entry::schema()); NULL for a definition no
+   *   entry holds, whose node is read here.
    *
    * @return \Drupal\tool\TypedData\InputDefinitionInterface
    *   The input definition.
    */
-  public function fromDefinition(DataDefinitionInterface $definition): InputDefinitionInterface {
-    $label = $this->label($definition);
-    $description = $this->description($definition);
-    $constraints = $this->constraints($definition);
-    $secret = DefinitionMetadata::isSecret($definition);
+  public function fromDefinition(DataDefinitionInterface $definition, ?Schema $node = NULL): InputDefinitionInterface {
+    return $this->fromNode($node ?? DefinitionSchema::of($definition), $definition);
+  }
+
+  /**
+   * Converts one key, read from its node, into one input definition.
+   *
+   * The key's facts (its label, description, data type, whether it is
+   * required or a secret, its default, its constraints, its items and
+   * properties) are read from its node; the definition is stepped down in
+   * step for the options service alone (constraints()).
+   *
+   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The key's node.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   Its definition.
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup|null $only
+   *   For a key of variants advertised as one map (fromVariants()), the
+   *   sentence naming the variants it belongs to: the key is then said
+   *   optional, with no default, the sentence appended to its description,
+   *   as a copy of a DataDefinition so written would say it. NULL for any
+   *   other key.
+   *
+   * @return \Drupal\tool\TypedData\InputDefinitionInterface
+   *   The input definition.
+   */
+  protected function fromNode(Schema $node, DataDefinitionInterface $definition, ?TranslatableMarkup $only = NULL): InputDefinitionInterface {
+    $label = $this->labelOf($node);
+    $description = $this->describe(NodeFacts::description($node));
+    // A key of a class other than DataDefinition holds no description or
+    // flag a union could write.
+    $union = $only !== NULL && is_a(DefinitionSchema::classOf($node), DataDefinition::class, TRUE);
+    $constraints = $this->constraints($node, $definition, $union);
+    $secret = Secrets::marked($node);
+    if ($union) {
+      $description = $this->describe($this->appended($description, $only));
+    }
     // A secret is optional whatever it requires: left out or null, the
     // stored secret stands, and the pipeline refuses one never set.
     // Decision: see docs/decisions.md#a-secret-is-optional-never-nullable.
-    $required = $definition->isRequired() && !$secret;
+    $required = !$union && NodeFacts::isRequired($node) && !$secret;
     // A secret carries no default across. A default is a value the
     // advertised schema shows to every caller, and a secret's whole
     // claim is that its value is never read back; a data surface that
     // declares one anyway is saying something it cannot mean.
-    $default = !$secret && DefinitionMetadata::hasDefaultValue($definition)
-      ? DefinitionMetadata::getDefaultValue($definition)
+    $default = $only === NULL && !$secret && NodeFacts::hasDefault($node)
+      ? NodeFacts::default($node)
       : NULL;
     if ($secret) {
       $description = $this->secretNote($description);
     }
 
-    if ($definition instanceof ListDataDefinitionInterface) {
+    if (DefinitionSchema::isList($node)) {
+      assert($definition instanceof ListDataDefinitionInterface);
       return new ListInputDefinition(
         label: $label,
         description: $description,
         required: $required,
         default_value: $default,
         constraints: $constraints,
-        item_definition: $this->fromDefinition($definition->getItemDefinition()),
+        item_definition: $this->fromNode(static::itemOf($node), $definition->getItemDefinition()),
       );
     }
-    $properties = $definition instanceof ComplexDataDefinitionInterface
-      ? $definition->getPropertyDefinitions()
-      : [];
+    $properties = NodeFacts::properties($node);
     if ($properties !== []) {
+      assert($definition instanceof ComplexDataDefinitionInterface);
       $property_definitions = [];
-      foreach ($properties as $name => $property_definition) {
-        $property_definitions[$name] = $this->fromDefinition($property_definition);
+      foreach ($properties as $name => $property_node) {
+        $property_definitions[$name] = $this->fromNode($property_node, static::definitionOf($definition, (string) $name));
       }
       return new MapInputDefinition(
         label: $label,
@@ -1206,13 +1401,66 @@ final class InputDefinitions {
       );
     }
     return new InputDefinition(
-      data_type: $definition->getDataType(),
+      data_type: NodeFacts::dataType($node),
       label: $label,
       description: $description,
       required: $required,
       default_value: $default,
       constraints: $constraints,
     );
+  }
+
+  /**
+   * Gets the node of a list's item.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The list's node.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   Its item's node.
+   *
+   * @throws \LogicException
+   *   Where the node holds none: a built list's node holds its item's.
+   */
+  protected static function itemOf(Schema $node): Schema {
+    return DefinitionSchema::itemNode($node) ?? throw new \LogicException('A list\'s node holds no node of its item: a built node holds one.');
+  }
+
+  /**
+   * Gets a property's node, in step with its definition.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The map's node.
+   * @param string $name
+   *   A property its definition holds.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The property's node.
+   *
+   * @throws \LogicException
+   *   Where the node holds none: a built map's node holds one for every
+   *   property.
+   */
+  protected static function propertyOf(Schema $node, string $name): Schema {
+    return DefinitionSchema::propertyNode($node, $name) ?? throw new \LogicException(sprintf('The node holds no property "%s" where its definition holds one: a built node holds one for every property.', $name));
+  }
+
+  /**
+   * Gets a property's definition, in step with its node.
+   *
+   * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $map
+   *   The map's definition.
+   * @param string $name
+   *   A property its node holds.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The property's definition.
+   *
+   * @throws \LogicException
+   *   Where the definition holds none.
+   */
+  protected static function definitionOf(ComplexDataDefinitionInterface $map, string $name): DataDefinitionInterface {
+    return $map->getPropertyDefinition($name) ?? throw new \LogicException(sprintf('The node holds a property "%s" its definition does not.', $name));
   }
 
   /**
@@ -1242,7 +1490,7 @@ final class InputDefinitions {
     $properties = $map->getPropertyDefinitions();
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $property = $properties[$name] ?? NULL;
-      if (!$property instanceof InputDefinitionInterface || !array_key_exists($name, $stored) || DefinitionMetadata::isSecret($entry->definition)) {
+      if (!$property instanceof InputDefinitionInterface || !array_key_exists($name, $stored) || ($entry->isShell() ? DefinitionMetadata::isSecret($entry->definition) : Secrets::marked($entry->schema()))) {
         continue;
       }
       if (!$entry->isNested()) {
@@ -1509,8 +1757,15 @@ final class InputDefinitions {
    * placeholders alone. A message spelled Drupal's way, `%max`, is
    * copied as it is, so every door meets the one source the author wrote.
    *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The key's node, whose constraints are read.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition to read.
+   *   Its definition, which the options service is handed.
+   * @param bool $optional
+   *   TRUE for a key said optional though it is required (a key of a
+   *   union, fromNode()): the NotNull typed data adds for a required key
+   *   is left out, as getConstraints() leaves it out of a key that is not
+   *   required, unless the key declares it.
    *
    * @return array<string, mixed>
    *   The constraints, keyed by constraint name.
@@ -1518,8 +1773,29 @@ final class InputDefinitions {
    * @throws \LogicException
    *   When an option holds an object that has no scalar spelling.
    */
-  protected function constraints(DataDefinitionInterface $definition): array {
-    $constraints = $definition->getConstraints();
+  protected function constraints(Schema $node, DataDefinitionInterface $definition, bool $optional = FALSE): array {
+    $constraints = NodeFacts::constraints($node);
+    if ($optional && NodeFacts::isRequired($node) && !array_key_exists('NotNull', NodeFacts::declaredConstraints($node))) {
+      unset($constraints['NotNull']);
+    }
+    return $this->constraintsOf($constraints, $definition);
+  }
+
+  /**
+   * Converts a key's constraints, as constraints() says.
+   *
+   * @param array $constraints
+   *   The constraints the key runs: its node's, or a shell's definition's.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition, which the options service is handed.
+   *
+   * @return array<string, mixed>
+   *   The constraints, keyed by constraint name.
+   *
+   * @throws \LogicException
+   *   When an option holds an object that has no scalar spelling.
+   */
+  protected function constraintsOf(array $constraints, DataDefinitionInterface $definition): array {
     if (!isset($constraints[self::CHOICE])) {
       $set = $this->options->resolve($definition);
       if ($set !== NULL && $set->options !== []) {
@@ -1660,9 +1936,36 @@ final class InputDefinitions {
    *   The label, as plain text: a tool listing renders no markup.
    */
   protected function label(DataDefinitionInterface $definition): TranslatableMarkup|string {
-    $label = $definition->getLabel();
+    return $this->labeled($definition->getLabel(), $definition->getDataType());
+  }
+
+  /**
+   * Gets a key's label, from its node, as label() gives a definition's.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The key's node.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup|string
+   *   The label, as plain text.
+   */
+  protected function labelOf(Schema $node): TranslatableMarkup|string {
+    return $this->labeled(NodeFacts::label($node), NodeFacts::dataType($node));
+  }
+
+  /**
+   * Gives a label as plain text, or names the data type for none.
+   *
+   * @param mixed $label
+   *   The label, as held; NULL or '' for none.
+   * @param string $type
+   *   The data type.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup|string
+   *   The label, as plain text: a tool listing renders no markup.
+   */
+  protected function labeled(mixed $label, string $type): TranslatableMarkup|string {
     if ($label === NULL || (string) $label === '') {
-      return $this->t('@type value', ['@type' => $definition->getDataType()]);
+      return $this->t('@type value', ['@type' => $type]);
     }
     return PlainTextMarkup::of($label);
   }
@@ -1683,7 +1986,20 @@ final class InputDefinitions {
    *   none.
    */
   protected function description(DataDefinitionInterface $definition): TranslatableMarkup|string {
-    $description = $definition->getDescription();
+    return $this->describe($definition->getDescription());
+  }
+
+  /**
+   * Gives a description as plain text, or nothing for none.
+   *
+   * @param mixed $description
+   *   The description, as held (description(), NodeFacts::description());
+   *   NULL for none.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup|string
+   *   The description as plain text, empty for none.
+   */
+  protected function describe(mixed $description): TranslatableMarkup|string {
     if ($description === NULL) {
       return '';
     }

@@ -10,6 +10,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Computed;
 use Drupal\surface\Contract\Choices;
 use Drupal\surface\SurfaceInterface;
@@ -836,7 +837,13 @@ final class OperationInputs {
     $properties = array_diff_key($map->getPropertyDefinitions(), array_flip($known));
     if (!$computed) {
       // One computed unless sent is a value a caller may give.
-      $properties = array_filter($properties, static fn (string $name): bool => Computed::of($built->getDefinition($name))?->takesSent() !== FALSE || $built->getDefinitions()->isLocked($name), ARRAY_FILTER_USE_KEY);
+      // A plain key's facts from its node; a shell's own from its
+      // definition (Entry::isShell()).
+      $computed = static function (string $name) use ($built): ?Computed {
+        $entry = $built->getDefinitions()->entry($name);
+        return $entry === NULL ? NULL : ($entry->isShell() ? Computed::of($entry->definition) : NodeFacts::compute($entry->schema()));
+      };
+      $properties = array_filter($properties, static fn (string $name): bool => $computed($name)?->takesSent() !== FALSE || $built->getDefinitions()->isLocked($name), ARRAY_FILTER_USE_KEY);
     }
     $map->setPropertyDefinitions($properties);
     $map->setRequired(array_filter($properties, static fn (DataDefinitionInterface $property): bool => $property->isRequired()) !== []);
@@ -1227,7 +1234,7 @@ final class OperationInputs {
     $label = ucfirst(str_replace('_', ' ', $parameter->name));
     $key = $neutral?->getDefinitions()->entry($parameter->name);
     if ($key !== NULL && $key->attachment === NULL && $key->variants === NULL && $key->list === NULL) {
-      $input = $this->inputDefinitions->fromDefinition($key->definition);
+      $input = $this->inputDefinitions->fromDefinition($key->definition, $key->schema());
       $input->setRequired(!$parameter->optional);
       return $input;
     }

@@ -529,6 +529,30 @@ final class Entry {
   }
 
   /**
+   * Answers whether this key holds a child frame, so its node is a shell.
+   *
+   * An attached child, variants, a collection or a mount: the key's
+   * definition holds the child's keys, so its node is the child's whole
+   * tree, which the child's own entries read again. Its own facts are
+   * read from its definition until a source gives the node; a plain
+   * key's are read from its node (schema()).
+   *
+   * A mount (the map other modules' keys sit in) answers TRUE here, so
+   * its own facts are read from its definition too. It is a plain map,
+   * though: its node is its own tree, and a walk that steps into a
+   * module's part reads it, which is right.
+   *
+   * Decision: see
+   * docs/decisions.md#the-validators-checks-and-the-document-read-nodes.
+   *
+   * @return bool
+   *   TRUE for a key that holds a child frame.
+   */
+  public function isShell(): bool {
+    return $this->isNested() || $this->list !== NULL || $this->mounted !== [];
+  }
+
+  /**
    * Gets the child every item of a collection is, if this key is one.
    *
    * @return \Drupal\surface\SurfaceInterface|null

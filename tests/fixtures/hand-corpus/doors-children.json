@@ -1,0 +1,1266 @@
+{
+  "surface": "children",
+  "rows": 64,
+  "digests": {
+    "plain | door": {
+      "fromSurface": "59504c0b46db",
+      "fromSurface stored": "59504c0b46db",
+      "fromSurface narrowing": "59504c0b46db",
+      "withLookups": "59504c0b46db",
+      "withDependencies": "59504c0b46db",
+      "withStored": "29abf95efd43",
+      "shapeOf": "af52ed91a20a",
+      "withoutRequired": "b7ebb7188480",
+      "outputFromInput": "5c0e5698785b",
+      "secrets": "30a27b6e7441",
+      "outputs": "39347ff402b6",
+      "values update": "bc1eb464746c",
+      "values create": "2d866286d445",
+      "stored": "dddde9e8217c",
+      "secretKeys": "39347ff402b6",
+      "config schema": "12ea5744997e",
+      "config schema held+install": "aff1a580eee2",
+      "config schema installed empty": "3181e97b7e9d",
+      "config schema translated": "a103230d68eb",
+      "wider generated": "e54aaff63fe5",
+      "ResourceCode": "d6d1dadfa29c",
+      "flow placed whole": "28a4cf2cb3b4",
+      "flow placed grouped": "7c579a9fa157"
+    },
+    "plain | values": {
+      "stored": "8796efb0633a",
+      "coll many": "eecd0c18e905"
+    },
+    "plain | key": {
+      "att": "351ee90713d5",
+      "coll": "b96eca7814ae",
+      "third_party_settings": "1d7b23e7f276"
+    },
+    "plain | path": {
+      "nope": "1bf169f7d887",
+      "nope.deeper": "ed8a9f9798ca",
+      "att.name": "3cfaa2aa332e",
+      "att.pin": "4ac5863ad163",
+      "att.n": "3f759e3b94b1",
+      "coll.0.name": "3f0af6ebcdb1",
+      "coll.0.pin": "1dfb091b6947",
+      "coll.0.n": "505b5345d9d9",
+      "att": "5b73b52033f3",
+      "att.nope": "6f297c460298",
+      "coll": "b7cf9539862b",
+      "coll.0": "07df4235dfc5",
+      "coll.0.nope": "408cccd25a0c",
+      "third_party_settings": "b8e937687917",
+      "third_party_settings.surface": "22c3b8aca436",
+      "third_party_settings.surface.mounted": "957f78682f70",
+      "third_party_settings.surface.nope": "784e3b71cb70",
+      "third_party_settings.nope": "4dd306536a2c"
+    },
+    "plain | nodes": {
+      "nope": "85cf5ad1bdc5",
+      "nope.deeper": "85cf5ad1bdc5",
+      "att.name": "85cf5ad1bdc5",
+      "att.pin": "85cf5ad1bdc5",
+      "att.n": "85cf5ad1bdc5",
+      "coll.0.name": "85cf5ad1bdc5",
+      "coll.0.pin": "85cf5ad1bdc5",
+      "coll.0.n": "85cf5ad1bdc5",
+      "att": "85cf5ad1bdc5",
+      "att.nope": "85cf5ad1bdc5",
+      "coll": "85cf5ad1bdc5",
+      "coll.0": "85cf5ad1bdc5",
+      "coll.0.nope": "85cf5ad1bdc5",
+      "third_party_settings": "85cf5ad1bdc5",
+      "third_party_settings.surface": "85cf5ad1bdc5",
+      "third_party_settings.surface.mounted": "85cf5ad1bdc5",
+      "third_party_settings.surface.nope": "85cf5ad1bdc5",
+      "third_party_settings.nope": "85cf5ad1bdc5"
+    }
+  },
+  "records": {
+    "plain | door | flow placed whole": [
+      {
+        "att": 1,
+        "coll": 1,
+        "third_party_settings": 1
+      },
+      []
+    ],
+    "plain | values | coll many": {
+      "withoutNonScalars": [
+        {
+          "coll": [
+            {
+              "name": "a"
+            },
+            {
+              "name": "b"
+            },
+            {
+              "name": "c"
+            }
+          ]
+        },
+        []
+      ],
+      "fromSurface refined": {
+        "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+        "type": "map",
+        "label": "L",
+        "description": "D",
+        "required": false,
+        "getDefaultValue": null,
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": [],
+        "settings": [],
+        "array": {
+          "type": "map",
+          "label": "L",
+          "description": "D",
+          "required": false
+        },
+        "properties": {
+          "att": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": {
+              "@text": "map value"
+            },
+            "description": "0",
+            "required": true,
+            "getDefaultValue": {
+              "name": null,
+              "pin": null,
+              "n": 1
+            },
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "NotNull": []
+            },
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": {
+                "@text": "map value"
+              },
+              "description": "0",
+              "required": true,
+              "constraints": {
+                "NotNull": []
+              }
+            },
+            "properties": {
+              "name": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Kid name",
+                "description": "",
+                "required": true,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": [],
+                  "NotNull": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Kid name",
+                  "description": "",
+                  "required": true,
+                  "constraints": {
+                    "PrimitiveType": [],
+                    "NotNull": []
+                  }
+                }
+              },
+              "pin": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Kid PIN",
+                "description": {
+                  "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Kid PIN",
+                  "description": {
+                    "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                  },
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "n": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "integer",
+                "label": "Kid n",
+                "description": "",
+                "required": false,
+                "getDefaultValue": 1,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "integer",
+                  "label": "Kid n",
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          },
+          "coll": {
+            "class": "Drupal\\tool\\TypedData\\ListInputDefinition",
+            "type": "list",
+            "label": "Collection",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "isConvertedFromMultiple": false,
+            "constraints": {
+              "Count": {
+                "max": 2
+              }
+            },
+            "settings": [],
+            "array": {
+              "type": "list",
+              "label": "Collection",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Count": {
+                  "max": 2
+                }
+              }
+            },
+            "item": {
+              "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+              "type": "map",
+              "label": {
+                "@text": "map value"
+              },
+              "description": "",
+              "required": false,
+              "getDefaultValue": null,
+              "isLocked": false,
+              "getExamples": [],
+              "isMultiple": false,
+              "constraints": [],
+              "settings": [],
+              "array": {
+                "type": "map",
+                "label": {
+                  "@text": "map value"
+                },
+                "description": "",
+                "required": false
+              },
+              "properties": {
+                "name": {
+                  "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                  "type": "string",
+                  "label": "Kid name",
+                  "description": "",
+                  "required": true,
+                  "getDefaultValue": null,
+                  "isLocked": false,
+                  "getExamples": [],
+                  "isMultiple": false,
+                  "constraints": {
+                    "PrimitiveType": [],
+                    "NotNull": []
+                  },
+                  "settings": [],
+                  "array": {
+                    "type": "string",
+                    "label": "Kid name",
+                    "description": "",
+                    "required": true,
+                    "constraints": {
+                      "PrimitiveType": [],
+                      "NotNull": []
+                    }
+                  }
+                },
+                "pin": {
+                  "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                  "type": "string",
+                  "label": "Kid PIN",
+                  "description": {
+                    "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                  },
+                  "required": false,
+                  "getDefaultValue": null,
+                  "isLocked": false,
+                  "getExamples": [],
+                  "isMultiple": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
+                  "settings": [],
+                  "array": {
+                    "type": "string",
+                    "label": "Kid PIN",
+                    "description": {
+                      "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                    },
+                    "required": false,
+                    "constraints": {
+                      "PrimitiveType": []
+                    }
+                  }
+                },
+                "n": {
+                  "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                  "type": "integer",
+                  "label": "Kid n",
+                  "description": "",
+                  "required": false,
+                  "getDefaultValue": 1,
+                  "isLocked": false,
+                  "getExamples": [],
+                  "isMultiple": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
+                  "settings": [],
+                  "array": {
+                    "type": "integer",
+                    "label": "Kid n",
+                    "description": "",
+                    "required": false,
+                    "constraints": {
+                      "PrimitiveType": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "third_party_settings": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": {
+              "@text": "Third party settings"
+            },
+            "description": {
+              "@text": "Settings added by other modules."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": {
+                "@text": "Third party settings"
+              },
+              "description": {
+                "@text": "Settings added by other modules."
+              },
+              "required": false
+            },
+            "properties": {
+              "surface": {
+                "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                "type": "map",
+                "label": "Surface API",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": [],
+                "settings": [],
+                "array": {
+                  "type": "map",
+                  "label": "Surface API",
+                  "description": "",
+                  "required": false
+                },
+                "properties": {
+                  "mounted": {
+                    "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                    "type": "string",
+                    "label": "Mounted",
+                    "description": "From a module",
+                    "required": true,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": {
+                      "PrimitiveType": [],
+                      "NotNull": []
+                    },
+                    "settings": [],
+                    "array": {
+                      "type": "string",
+                      "label": "Mounted",
+                      "description": "From a module",
+                      "required": true,
+                      "constraints": {
+                        "PrimitiveType": [],
+                        "NotNull": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "secrets refined": {
+        "att": {
+          "pin": true
+        },
+        "coll": {
+          "@each": {
+            "pin": true
+          }
+        }
+      },
+      "secretKeys refined": [],
+      "pathsOf": {
+        "coll": [
+          {
+            "name": "a"
+          },
+          {
+            "name": "b"
+          },
+          {
+            "name": "c"
+          }
+        ]
+      },
+      "heldOn": {
+        "thrown": "LogicException",
+        "message": "query: \"q.coll\" on hand is inside \"q.coll\", a collection, each item starting from its structure's defaults, so a value does not reach it."
+      },
+      "heldOn strings": {
+        "thrown": "LogicException",
+        "message": "query: \"q.coll\" on hand is inside \"q.coll\", a collection, each item starting from its structure's defaults, so a value does not reach it."
+      },
+      "heldOn json": {
+        "thrown": "LogicException",
+        "message": "query: \"q.coll\" on hand is inside \"q.coll\", a collection, each item starting from its structure's defaults, so a value does not reach it."
+      },
+      "encrypted": null,
+      "flat": null,
+      "panel": [
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>att</code>"
+              }
+            },
+            "part",
+            "",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "A fixed part: a sealed data surface"
+                }
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "att"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>att.name</code>"
+              }
+            },
+            "string",
+            "Kid name",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "att.name"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>att.pin</code>"
+              }
+            },
+            "string",
+            "Kid PIN",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "att.pin"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>att.n</code>"
+              }
+            },
+            "integer",
+            "Kid n",
+            {
+              "@text": "no"
+            },
+            "1",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "att.n"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>coll</code>"
+              }
+            },
+            "collection",
+            "Collection",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "A list of a sealed data surface, at most 2 items"
+                }
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "coll"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>coll.*.name</code>"
+              }
+            },
+            "string",
+            "Kid name",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "coll.*.name"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>coll.*.pin</code>"
+              }
+            },
+            "string",
+            "Kid PIN",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "coll.*.pin"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>coll.*.n</code>"
+              }
+            },
+            "integer",
+            "Kid n",
+            {
+              "@text": "no"
+            },
+            "1",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "coll.*.n"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>third_party_settings</code>"
+              }
+            },
+            "map",
+            "Third party settings",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "Keys other modules added"
+                }
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "third_party_settings"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>third_party_settings.surface.mounted</code>"
+              }
+            },
+            "string",
+            "Mounted",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "third_party_settings.surface.mounted"
+        }
+      ],
+      "formatter": [
+        {
+          "@text": "Collection: 3 items"
+        }
+      ]
+    },
+    "plain | key | third_party_settings": {
+      "fromDefinition": {
+        "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+        "type": "map",
+        "label": {
+          "@text": "Third party settings"
+        },
+        "description": {
+          "@text": "Settings added by other modules."
+        },
+        "required": false,
+        "getDefaultValue": null,
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": [],
+        "settings": [],
+        "array": {
+          "type": "map",
+          "label": {
+            "@text": "Third party settings"
+          },
+          "description": {
+            "@text": "Settings added by other modules."
+          },
+          "required": false
+        },
+        "properties": {
+          "surface": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": "Surface API",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "Surface API",
+              "description": "",
+              "required": false
+            },
+            "properties": {
+              "mounted": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Mounted",
+                "description": "From a module",
+                "required": true,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": [],
+                  "NotNull": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Mounted",
+                  "description": "From a module",
+                  "required": true,
+                  "constraints": {
+                    "PrimitiveType": [],
+                    "NotNull": []
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputFromDefinition": {
+        "class": "Drupal\\tool\\TypedData\\MapOutputDefinition",
+        "type": "map",
+        "label": {
+          "@text": "Third party settings"
+        },
+        "description": {
+          "@text": "Settings added by other modules."
+        },
+        "required": false,
+        "getDefaultValue": null,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": [],
+        "settings": [],
+        "array": {
+          "type": "map",
+          "label": {
+            "@text": "Third party settings"
+          },
+          "description": {
+            "@text": "Settings added by other modules."
+          },
+          "required": false,
+          "nullable": false
+        },
+        "properties": {
+          "surface": {
+            "class": "Drupal\\tool\\TypedData\\MapOutputDefinition",
+            "type": "map",
+            "label": "Surface API",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "Surface API",
+              "description": "",
+              "required": false,
+              "nullable": false
+            },
+            "properties": {
+              "mounted": {
+                "class": "Drupal\\tool\\TypedData\\OutputDefinition",
+                "type": "string",
+                "label": "Mounted",
+                "description": "From a module",
+                "required": true,
+                "getDefaultValue": null,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": [],
+                  "NotNull": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Mounted",
+                  "description": "From a module",
+                  "required": true,
+                  "constraints": {
+                    "PrimitiveType": [],
+                    "NotNull": []
+                  },
+                  "nullable": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "held builder": [
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to \"abc\", which the key does not accept: it holds a map, written as a JSON object."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to \"5\", which the key does not accept: it holds a map, written as a JSON object."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to \"1.5\", which the key does not accept: it holds a map, written as a JSON object."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to \"true\", which the key does not accept: it holds a map, written as a JSON object."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to \"0\", which the key does not accept: it holds a map, written as a JSON object."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          null,
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to \"2026-01-01\", which the key does not accept: it holds a map, written as a JSON object."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to \"2026-01-01T10:00:00\", which the key does not accept: it holds a map, written as a JSON object."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to \"2026-01-01T10:00:00+02:00\", which the key does not accept: it holds a map, written as a JSON object."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to \"[\\\"a\\\",\\\"b\\\"]\", which the key does not accept: it holds a map, written as a JSON object."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to \"{\\\"a\\\":1}\", which the key does not accept: it declares no key \"a\"."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to [\"a\",\"b\"], which the key does not accept: it declares no key \"0\"."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to {\"a\":1}, which the key does not accept: it declares no key \"a\"."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to 5, which the key does not accept: it holds a map, written as a JSON object."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to 1.5, which the key does not accept: it holds a map, written as a JSON object."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to true, which the key does not accept: it holds a map, written as a JSON object."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          null,
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.third_party_settings\" on hand to \"SECRETRAW\", which the key does not accept: it holds a map, written as a JSON object."
+          },
+          {
+            "thrown": "LogicException",
+            "message": "query: \"q.third_party_settings\" on hand holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path."
+          }
+        ]
+      ],
+      "wider": {
+        "string 1": {
+          "third_party_settings": "it is a group of keys, which the schema types string"
+        },
+        "string 0": {
+          "third_party_settings": "it is a group of keys, which the schema types string"
+        },
+        "string nullable 1": {
+          "third_party_settings": "it is a group of keys, which the schema types string"
+        },
+        "string nullable 0": {
+          "third_party_settings": "it is a group of keys, which the schema types string"
+        },
+        "integer 1": {
+          "third_party_settings": "it is a group of keys, which the schema types integer"
+        },
+        "integer 0": {
+          "third_party_settings": "it is a group of keys, which the schema types integer"
+        },
+        "integer nullable 1": {
+          "third_party_settings": "it is a group of keys, which the schema types integer"
+        },
+        "integer nullable 0": {
+          "third_party_settings": "it is a group of keys, which the schema types integer"
+        },
+        "boolean 1": {
+          "third_party_settings": "it is a group of keys, which the schema types boolean"
+        },
+        "boolean 0": {
+          "third_party_settings": "it is a group of keys, which the schema types boolean"
+        },
+        "float 1": {
+          "third_party_settings": "it is a group of keys, which the schema types float"
+        },
+        "float 0": {
+          "third_party_settings": "it is a group of keys, which the schema types float"
+        },
+        "ignore 1": [],
+        "ignore 0": [],
+        "mapping 1": {
+          "third_party_settings.surface": "the schema does not describe it"
+        },
+        "mapping 0": {
+          "third_party_settings.surface": "the schema does not describe it"
+        },
+        "sequence string 1": {
+          "third_party_settings": "it is a group of keys, which the schema types sequence"
+        },
+        "sequence string 0": {
+          "third_party_settings": "it is a group of keys, which the schema types sequence"
+        },
+        "sequence mapping 1": {
+          "third_party_settings": "it is a group of keys, which the schema types sequence"
+        },
+        "sequence mapping 0": {
+          "third_party_settings": "it is a group of keys, which the schema types sequence"
+        },
+        "constrained 1": {
+          "third_party_settings": "it is a group of keys, which the schema types string"
+        },
+        "constrained 0": {
+          "third_party_settings": "it is a group of keys, which the schema types string"
+        },
+        "loose 1": {
+          "third_party_settings": "it is a group of keys, which the schema types string"
+        },
+        "loose 0": {
+          "third_party_settings": "it is a group of keys, which the schema types string"
+        }
+      }
+    },
+    "plain | path | att.n": {
+      "reachedOn": {
+        "class": "Drupal\\Core\\TypedData\\DataDefinition",
+        "type": "integer",
+        "label": "Kid n",
+        "description": null,
+        "required": false,
+        "constraints": {
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "integer",
+          "label": "Kid n",
+          "default_value": 1
+        }
+      },
+      "reachedOn fixes": {
+        "class": "Drupal\\Core\\TypedData\\DataDefinition",
+        "type": "integer",
+        "label": "Kid n",
+        "description": null,
+        "required": false,
+        "constraints": {
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "integer",
+          "label": "Kid n",
+          "default_value": 1
+        }
+      },
+      "heldOn raws": [
+        [
+          [],
+          []
+        ],
+        [
+          {
+            "att.n": 5
+          },
+          {
+            "att.n": 5
+          }
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          {
+            "att.n": 0
+          },
+          {
+            "att.n": 0
+          }
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          {
+            "att.n": 5
+          },
+          {
+            "att.n": 5
+          }
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          {
+            "att.n": 1
+          },
+          {
+            "att.n": 1
+          }
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ]
+      ],
+      "definitionAt": {
+        "NULL": null,
+        "'node'": null,
+        "'user'": null,
+        "'taxonomy_term'": null
+      }
+    },
+    "plain | nodes | nope": {
+      "NULL": null,
+      "'node'": null,
+      "'user'": null,
+      "'taxonomy_term'": null
+    }
+  }
+}

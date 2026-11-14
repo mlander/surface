@@ -742,6 +742,26 @@ the record of the rework that brought the module to the pattern.
   definition stays beside the node for the options service, the widget
   claims, `References::target()` and `Computed`
   (`docs/decisions.md#the-validators-checks-and-the-document-read-nodes`).
+- **The remaining readers read nodes**: `KeyPaths` (`reachedOn()`,
+  `heldOn()`, `held()`, `pathsOf()`), `EncryptedStorageLayout`'s secret
+  keys, `References` (`targetIn()`, `handlerIn()`, `nodeAt()` beside the
+  definition forms), the tool door (`InputDefinitions::fromNode()`,
+  outputs, `OperationInputs`), `ConfigSchemaGenerator` and
+  `HeldToConfigSchemaTrait`, `ResourceCode`, `RunCommand`, the contract
+  panel's plain rows, `CompiledFlow` and the formatter's summary read a
+  plain key's facts from its entry's node, stepped down in step with the
+  definition, which goes on only to the options service, the constraint
+  runner and `getClass()`. A shell (`Entry::isShell()`: attached,
+  variants, a collection, a mount) keeps its own facts on its
+  definition, and the tool door, the config schema writer and the
+  formatter take what lies below a shell from the child's entries. A
+  mount is a plain map whose node is its own tree: a walk into a
+  module's part reads it. A builder's definition before sealing has no
+  entry: `KeyPaths::held()` reads its facts from it; the tool door's
+  public converters read the node of a definition handed alone
+  (`DefinitionReadCallersTest`). What reads a definition still
+  is listed by edge in the decision, the slice 32 work list
+  (`docs/decisions.md#the-remaining-readers-read-nodes`).
 - **Secrets**: `Contract\Secrets`, the one reader of what is secret,
   from a schema node or a document, holding no definition: `marked()`
   (the node says `writeOnly: true`; the reader, the check provider and
@@ -1084,9 +1104,9 @@ test errored or failed and every gate passed.
   itself, so the full lane has no `--order-by=defects` and no result
   cache; it orders classes slowest first.
 
-On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-13: the
-full lane takes 17m17s at the defaults (phpunit 16m24s) and the fast
-lane 9m16s (phpunit 9m06s). As of 2026-10-23, with a smaller suite, the
+On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-14: the
+full lane takes 16m49s at the defaults (phpunit 15m52s) and the fast
+lane 10m49s (phpunit 10m36s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1117,7 +1137,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2532, Assertions: 102484, Errors: 0, Failures: 0, Skipped: 3. Classes: 358 of 358, 8 at a time, browser classes 4.
+phpunit: Tests: 2548, Assertions: 102642, Errors: 0, Failures: 0, Skipped: 3. Classes: 362 of 362, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1141,8 +1161,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2418, Assertions: 97930, Deprecations: 801, Skipped: 3. Classes:
-305, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2434, Assertions: 98088, Deprecations: 807, Skipped: 3. Classes:
+309, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 
@@ -1394,7 +1414,12 @@ so the rule is this sentence. `npm test` is not part of
   with `SURFACE_HAND_CASES_WRITE=1`, and the hand corpus of the
   validator's checks and the documents, `tests/fixtures/hand-corpus/`,
   by `HandCorpusTest` and `HandCorpusNarrowTest` with
-  `SURFACE_HAND_CORPUS_WRITE=1`, and
+  `SURFACE_HAND_CORPUS_WRITE=1`, and its door corpus beside it,
+  `tests/fixtures/hand-corpus/doors-*.json` (what the tool door, the key
+  paths, the references, the storage layouts, the config schema writer,
+  the generator, the panel, the formatter and the flow make of the same
+  surfaces and four more), by `DoorCorpusTest` and `DoorCorpusNarrowTest`
+  with the same flag, and
   the React app's fixtures,
   `modules/surface_examples_react/app/src/test/fixtures/`, by
   `ReactFixturesTest` with `SURFACE_REACT_FIXTURES_WRITE=1`, and the

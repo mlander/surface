@@ -700,6 +700,23 @@ final class DefinitionSchema {
   }
 
   /**
+   * Answers whether a node was read from a complex definition.
+   *
+   * Stands for `instanceof ComplexDataDefinitionInterface`: a map, a map
+   * with no properties, and any other complex class (a field item), by
+   * the class the node was read from (classOf()).
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node.
+   *
+   * @return bool
+   *   TRUE where its class is a complex definition.
+   */
+  public static function isComplex(Schema $node): bool {
+    return !$node->isBoolean() && is_a(static::classOf($node), ComplexDataDefinitionInterface::class, TRUE);
+  }
+
+  /**
    * Answers whether a built node was read from one value's definition.
    *
    * @param \PortableSchema\Builder\Schema $node

@@ -1,0 +1,664 @@
+{
+  "surface": "faults",
+  "rows": 80,
+  "digests": {
+    "plain | door": {
+      "fromSurface": "04a560557583",
+      "fromSurface stored": "04a560557583",
+      "fromSurface narrowing": "04a560557583",
+      "withLookups": "04a560557583",
+      "withDependencies": "cd324fe4e3d6",
+      "withStored": "0b1c9f4642f1",
+      "shapeOf": "32c038b4a7d9",
+      "withoutRequired": "04a560557583",
+      "outputFromInput": "90dc1556b5f1",
+      "secrets": "02bc83da9309",
+      "outputs": "39347ff402b6",
+      "values update": "16b3b9d07e4a",
+      "values create": "76b751eb98d8",
+      "stored": "c6ad03cc0db8",
+      "secretKeys": "a4220db3980e",
+      "config schema": "ad1b50d99125",
+      "config schema held+install": "3086628cf6d2",
+      "config schema installed empty": "5e59bab84f3f",
+      "config schema translated": "518021d852fd",
+      "wider generated": "215207bb5f99",
+      "ResourceCode": "97799fd19810",
+      "flow placed whole": "487807b2638c",
+      "flow placed grouped": "012a71892290"
+    },
+    "plain | values": {
+      "stored": "d4c56dd53f38",
+      "gate narrow": "4208fd6f0c0b",
+      "fs b": "d48a2988b23b",
+      "narrowed kept": "75c432a4ddcc",
+      "fh cleared": "36532fa8c75c",
+      "fh 3": "db18ceb19a70",
+      "fb true": "2b95ab80aa93"
+    },
+    "plain | key": {
+      "gate": "f228a06be48b",
+      "fs": "581352baa18e",
+      "fh": "fd90d982a089"
+    },
+    "plain | path": {
+      "nope": "1bf169f7d887",
+      "nope.deeper": "ed8a9f9798ca",
+      "gate": "fa9c9db4397d",
+      "fs": "c360b6c2b2f0",
+      "fh": "32f29f632434"
+    },
+    "plain | nodes": {
+      "nope": "85cf5ad1bdc5",
+      "nope.deeper": "85cf5ad1bdc5",
+      "gate": "85cf5ad1bdc5",
+      "fs": "85cf5ad1bdc5",
+      "fh": "85cf5ad1bdc5"
+    },
+    "booleans | door": {
+      "fromSurface": "0ac773ff2047",
+      "fromSurface stored": "0ac773ff2047",
+      "fromSurface narrowing": "0ac773ff2047",
+      "withLookups": "0ac773ff2047",
+      "withDependencies": "0ac773ff2047",
+      "withStored": "8bbcee2789c5",
+      "shapeOf": "604b686a7e1e",
+      "withoutRequired": "0ac773ff2047",
+      "outputFromInput": "a9530f9d655b",
+      "secrets": "39347ff402b6",
+      "outputs": "39347ff402b6",
+      "values update": "25072e3d3886",
+      "values create": "117adf931465",
+      "stored": "11dddb63d613",
+      "secretKeys": "39347ff402b6",
+      "config schema": "21aa17ce7d32",
+      "config schema held+install": "70ec31129e37",
+      "config schema installed empty": "21aa17ce7d32",
+      "config schema translated": "e025c0ad7596",
+      "wider generated": "69a03c9fe9d7",
+      "ResourceCode": "7d719001dcec",
+      "flow placed whole": "f7e20e29b41b",
+      "flow placed grouped": "a8e8e334a06f"
+    },
+    "booleans | values": {
+      "stored": "5e1c2c5f39a0",
+      "gate narrow": "a4a856e09de3",
+      "fs b": "45ad4ef1de2f",
+      "narrowed kept": "7da8650809e6",
+      "fh cleared": "66423718cbef",
+      "fh 3": "b098279c3a25",
+      "fb true": "5e1c2c5f39a0"
+    },
+    "booleans | key": {
+      "fb": "7f836ee4adbd"
+    },
+    "booleans | path": {
+      "nope": "1bf169f7d887",
+      "nope.deeper": "ed8a9f9798ca",
+      "fb": "b33ea894588a"
+    },
+    "booleans | nodes": {
+      "nope": "85cf5ad1bdc5",
+      "nope.deeper": "85cf5ad1bdc5",
+      "fb": "85cf5ad1bdc5"
+    }
+  },
+  "records": {
+    "plain | door | secretKeys": [
+      "fs"
+    ],
+    "booleans | values | stored": {
+      "withoutNonScalars": [
+        {
+          "fb": true
+        },
+        []
+      ],
+      "fromSurface refined": {
+        "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+        "type": "map",
+        "label": "L",
+        "description": "D",
+        "required": false,
+        "getDefaultValue": null,
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": [],
+        "settings": [],
+        "array": {
+          "type": "map",
+          "label": "L",
+          "description": "D",
+          "required": false
+        },
+        "properties": {
+          "fb": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "boolean",
+            "label": "Fault flag",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  true,
+                  false
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "boolean",
+              "label": "Fault flag",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    true,
+                    false
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          }
+        }
+      },
+      "secrets refined": [],
+      "secretKeys refined": [],
+      "pathsOf": {
+        "fb": true
+      },
+      "heldOn": {
+        "fb": true
+      },
+      "heldOn strings": {
+        "fb": true
+      },
+      "heldOn json": {
+        "fb": true
+      },
+      "encrypted": null,
+      "flat": null,
+      "panel": [
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>fb</code>"
+              }
+            },
+            "boolean",
+            "Fault flag",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of 1, "
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "fb"
+        }
+      ],
+      "formatter": [
+        {
+          "@text": "Fault flag: yes"
+        }
+      ]
+    },
+    "booleans | key | fb": {
+      "fromDefinition": {
+        "class": "Drupal\\tool\\TypedData\\InputDefinition",
+        "type": "boolean",
+        "label": "Fault flag",
+        "description": "",
+        "required": false,
+        "getDefaultValue": null,
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": {
+          "Choice": {
+            "choices": [
+              true,
+              false
+            ]
+          },
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "boolean",
+          "label": "Fault flag",
+          "description": "",
+          "required": false,
+          "constraints": {
+            "Choice": {
+              "choices": [
+                true,
+                false
+              ]
+            },
+            "PrimitiveType": []
+          }
+        }
+      },
+      "outputFromDefinition": {
+        "class": "Drupal\\tool\\TypedData\\OutputDefinition",
+        "type": "boolean",
+        "label": "Fault flag",
+        "description": "",
+        "required": false,
+        "getDefaultValue": null,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": {
+          "Choice": {
+            "choices": [
+              true,
+              false
+            ]
+          },
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "boolean",
+          "label": "Fault flag",
+          "description": "",
+          "required": false,
+          "constraints": {
+            "Choice": {
+              "choices": [
+                true,
+                false
+              ]
+            },
+            "PrimitiveType": []
+          },
+          "nullable": false
+        }
+      },
+      "held builder": [
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.fb\" on hand to \"abc\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.fb\" on hand to \"abc\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.fb\" on hand to \"5\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.fb\" on hand to \"5\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.fb\" on hand to \"1.5\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.fb\" on hand to \"1.5\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          true,
+          true
+        ],
+        [
+          false,
+          false
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.fb\" on hand to \"2026-01-01\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.fb\" on hand to \"2026-01-01\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.fb\" on hand to \"2026-01-01T10:00:00\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.fb\" on hand to \"2026-01-01T10:00:00\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.fb\" on hand to \"2026-01-01T10:00:00+02:00\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.fb\" on hand to \"2026-01-01T10:00:00+02:00\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.fb\" on hand to \"[\\\"a\\\",\\\"b\\\"]\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.fb\" on hand to \"[\\\"a\\\",\\\"b\\\"]\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.fb\" on hand to \"{\\\"a\\\":1}\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.fb\" on hand to \"{\\\"a\\\":1}\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.fb\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one boolean, not a list or a map."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.fb\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one boolean, not a list or a map."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.fb\" on hand to {\"a\":1}, which the key does not accept: it holds one boolean, not a list or a map."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.fb\" on hand to {\"a\":1}, which the key does not accept: it holds one boolean, not a list or a map."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.fb\" on hand to 5, which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.fb\" on hand to 5, which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.fb\" on hand to 1.5, which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.fb\" on hand to 1.5, which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          true,
+          true
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.fb\" on hand to \"SECRETRAW\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.fb\" on hand to \"SECRETRAW\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ]
+      ],
+      "wider": {
+        "string 1": {
+          "fb": "it is a boolean, which the schema types string, a string"
+        },
+        "string 0": {
+          "fb": "it is a boolean, which the schema types string, a string"
+        },
+        "string nullable 1": {
+          "fb": "it is a boolean, which the schema types string, a string"
+        },
+        "string nullable 0": {
+          "fb": "it is a boolean, which the schema types string, a string"
+        },
+        "integer 1": {
+          "fb": "it is a boolean, which the schema types integer, an integer"
+        },
+        "integer 0": {
+          "fb": "it is a boolean, which the schema types integer, an integer"
+        },
+        "integer nullable 1": {
+          "fb": "it is a boolean, which the schema types integer, an integer"
+        },
+        "integer nullable 0": {
+          "fb": "it is a boolean, which the schema types integer, an integer"
+        },
+        "boolean 1": {
+          "fb": "it may be cleared, which the schema refuses: boolean is not nullable"
+        },
+        "boolean 0": [],
+        "float 1": {
+          "fb": "it is a boolean, which the schema types float, a float"
+        },
+        "float 0": {
+          "fb": "it is a boolean, which the schema types float, a float"
+        },
+        "ignore 1": [],
+        "ignore 0": [],
+        "mapping 1": {
+          "fb": "it is one value, which the schema types mapping, a mapping"
+        },
+        "mapping 0": {
+          "fb": "it is one value, which the schema types mapping, a mapping"
+        },
+        "sequence string 1": {
+          "fb": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence string 0": {
+          "fb": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence mapping 1": {
+          "fb": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence mapping 0": {
+          "fb": "it is one value, which the schema types sequence, a sequence"
+        },
+        "constrained 1": {
+          "fb": "it is a boolean, which the schema types string, a string"
+        },
+        "constrained 0": {
+          "fb": "it is a boolean, which the schema types string, a string"
+        },
+        "loose 1": {
+          "fb": "it is a boolean, which the schema types string, a string"
+        },
+        "loose 0": {
+          "fb": "it is a boolean, which the schema types string, a string"
+        }
+      }
+    },
+    "plain | path | gate": {
+      "reachedOn": {
+        "class": "Drupal\\Core\\TypedData\\DataDefinition",
+        "type": "string",
+        "label": "Gate",
+        "description": null,
+        "required": false,
+        "constraints": {
+          "Choice": {
+            "choices": [
+              "open",
+              "narrow"
+            ]
+          },
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "string",
+          "label": "Gate",
+          "constraints": {
+            "Choice": {
+              "choices": [
+                "open",
+                "narrow"
+              ]
+            }
+          },
+          "default_value": "open"
+        }
+      },
+      "reachedOn fixes": {
+        "class": "Drupal\\Core\\TypedData\\DataDefinition",
+        "type": "string",
+        "label": "Gate",
+        "description": null,
+        "required": false,
+        "constraints": {
+          "Choice": {
+            "choices": [
+              "open",
+              "narrow"
+            ]
+          },
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "string",
+          "label": "Gate",
+          "constraints": {
+            "Choice": {
+              "choices": [
+                "open",
+                "narrow"
+              ]
+            }
+          },
+          "default_value": "open"
+        }
+      },
+      "heldOn raws": [
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ]
+      ],
+      "definitionAt": {
+        "NULL": null,
+        "'node'": null,
+        "'user'": null,
+        "'taxonomy_term'": null
+      }
+    },
+    "plain | nodes | nope": {
+      "NULL": null,
+      "'node'": null,
+      "'user'": null,
+      "'taxonomy_term'": null
+    }
+  }
+}

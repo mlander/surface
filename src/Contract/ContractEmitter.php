@@ -837,7 +837,7 @@ final class ContractEmitter {
         // advertised node is not read for nothing.
         $moved = $entry->definition !== $current->definition;
         [$properties[$name], $shown[$name]] = $this->propertySchema->property($current->definition, $node, $moved ? $entry->definition : NULL, $moved ? $entry->schema() : NULL, $value, $prefix . $name, $locked, $depends, $emission);
-        $properties[$name] = $this->linked($properties[$name], $node, $current->definition, $name, $declaring);
+        $properties[$name] = $this->linked($properties[$name], $node, $name, $declaring);
         if ($declaring && $entry->locked) {
           // What the context fixed it to is the instance's, not the
           // declaration's: the reference site says it.
@@ -1847,6 +1847,26 @@ final class ContractEmitter {
   }
 
   /**
+   * Answers whether a key refers to an entity type, or one a sibling names.
+   *
+   * A plain key's facts are read from its node; a shell's own from its
+   * definition (Entry::isShell()).
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The key.
+   *
+   * @return bool
+   *   TRUE for a reference key, or the id of a reference to any type.
+   */
+  protected static function refers(Entry $entry): bool {
+    if ($entry->isShell()) {
+      return References::target($entry->definition) !== NULL || $entry->definition->getSetting(References::TARGETS) !== NULL;
+    }
+    $node = $entry->schema();
+    return References::targetIn($node) !== NULL || NodeFacts::setting($node, References::TARGETS) !== NULL;
+  }
+
+  /**
    * Answers whether a child holds a key a link is written at.
    *
    * A key that refers to an entity, where the lookup reaches it, or a list
@@ -1890,7 +1910,7 @@ final class ContractEmitter {
           return TRUE;
         }
       }
-      elseif ($reached && $this->lookup !== NULL && (References::target($entry->definition) !== NULL || $entry->definition->getSetting(References::TARGETS) !== NULL)) {
+      elseif ($reached && $this->lookup !== NULL && static::refers($entry)) {
         return TRUE;
       }
     }
@@ -1914,9 +1934,6 @@ final class ContractEmitter {
    *   The key's schema.
    * @param \PortableSchema\Builder\Schema $node
    *   The key's built node, as it stands.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key as it stands, for the entity type it refers to
-   *   (References::target(), which takes a definition until slice 32).
    * @param string $name
    *   The key.
    * @param bool $declaring
@@ -1925,14 +1942,14 @@ final class ContractEmitter {
    * @return \PortableSchema\Builder\Schema
    *   The schema, with the link where it has one.
    */
-  protected function linked(Schema $property, Schema $node, DataDefinitionInterface $definition, string $name, bool $declaring): Schema {
+  protected function linked(Schema $property, Schema $node, string $name, bool $declaring): Schema {
     if ($this->lookup === NULL || !$this->site['reached'] || $declaring) {
       return $property;
     }
     $pointer = $this->site['pointer'] . '/' . Choices::escape($name);
     return match (TRUE) {
       NodeFacts::setting($node, References::TARGETS) !== NULL => PortableLinks::set($property, PortableLinks::lookup($this->lookup, $pointer, References::TYPE_KEY)),
-      References::target($definition) !== NULL => PortableLinks::set($property, PortableLinks::lookup($this->lookup, $pointer)),
+      References::targetIn($node) !== NULL => PortableLinks::set($property, PortableLinks::lookup($this->lookup, $pointer)),
       default => $property,
     };
   }

@@ -25,9 +25,9 @@ use PortableSchema\Builder\Schema;
  * nothing rendered, nothing kept.
  *
  * The other readers of a node the pipeline uses stay where they are:
- * DefinitionSchema::isList(), nodeIsMap(), isLeaf(), declares() (the
- * DateOnly flag), propertyNode() and itemNode(); Secrets::marked() (a
- * secret).
+ * DefinitionSchema::isList(), isComplex(), nodeIsMap(), isLeaf(),
+ * declares() (the DateOnly flag), propertyNode() and itemNode();
+ * Secrets::marked() (a secret).
  *
  * Every answer holds for the three classes a node holds every fact of
  * (DataDefinition, ListDataDefinition, MapDataDefinition). A node read from

@@ -1,0 +1,5317 @@
+{
+  "surface": "kinds",
+  "rows": 320,
+  "digests": {
+    "plain | door": {
+      "fromSurface": "9a81135e3298",
+      "fromSurface stored": "9a81135e3298",
+      "fromSurface narrowing": "9a81135e3298",
+      "withLookups": "9a81135e3298",
+      "withDependencies": "a490052743f9",
+      "withStored": "9c34155eff56",
+      "shapeOf": "00858c23bcb8",
+      "withoutRequired": "3fc44200bddd",
+      "outputFromInput": "dade7dd159ac",
+      "secrets": "2ad9df4a60a7",
+      "outputs": "39347ff402b6",
+      "values update": "ab0dc40e03ef",
+      "values create": "3cc1aad7963d",
+      "stored": "3a8bf7e97565",
+      "secretKeys": "ed596757db3f",
+      "config schema": "c92a3a272c19",
+      "config schema held+install": "9e14bbc9c8c6",
+      "config schema installed empty": "e6baae6ed55a",
+      "config schema translated": "ac2f6a6b14c7",
+      "wider generated": "7519e9ce3805",
+      "ResourceCode": "66073842f6b9",
+      "flow placed whole": "09e2d9cd946d",
+      "flow placed grouped": "8c9682db0b87"
+    },
+    "plain | values": {
+      "stored": "fa4bbdd41780",
+      "narrow": "5e462b5b2443",
+      "out": "eaea61183a94",
+      "req": "b11abee70bb5",
+      "full": "9c0379705b17"
+    },
+    "plain | key": {
+      "gate": "16895652c5b6",
+      "l_blank": "3d404845e2ad",
+      "lr_blank": "09724e7f18db",
+      "lm_blank": "353bc977bd8a",
+      "ll_blank": "e8c969b3f956",
+      "lc_blank": "d23f9fc26484",
+      "l_zero": "046fb5f5dc51",
+      "lr_zero": "f2c59e954d39",
+      "lm_zero": "c1c6f7ca80b7",
+      "ll_zero": "a34d156393d7",
+      "lc_zero": "e64883015247",
+      "l_none": "e28c289e296f",
+      "lr_none": "066b878e958d",
+      "lm_none": "0c8ec03b516a",
+      "ll_none": "103d2c17f704",
+      "lc_none": "d6d848ee0785",
+      "l_mk": "66b0bbfd42cd",
+      "lr_mk": "bf67b9b39091",
+      "lm_mk": "5426c49fdb8f",
+      "ll_mk": "da02dac1e610",
+      "lc_mk": "58edcc5af947",
+      "req": "5383ce7fa4cb",
+      "held": "6c5c4c0fe95d",
+      "held_bool": "3982b55da000",
+      "sec": "11545dc15044",
+      "sec_d": "26ea5b54afc7",
+      "sec_held": "2c28ff36ae53",
+      "src": "376791126d32",
+      "comp": "c6511651c22f",
+      "ucomp": "54f476e393b8",
+      "lk": "4b7addb43dd2",
+      "fixed": "50c2c0bb2b43",
+      "d_null": "39c64df5825d",
+      "d_int": "50c645aaa304",
+      "d_bool": "25c33587e0ca",
+      "d_map": "fbd25f5200b4",
+      "d_mapnull": "2695f0261074",
+      "rd": "141c5a31586e",
+      "empty_map": "e4daf033be75",
+      "reworded": "88c463e12e2d",
+      "d_list": "8899ac44074a",
+      "mm": "8d5484194063",
+      "lom": "f64a253e39d8",
+      "lol": "19607aeecfe7",
+      "c_str": "e1faed9b2ff9",
+      "c_int": "90a320268b9b",
+      "c_flt": "9994d1abcbc3",
+      "c_bool": "7ef98749988c",
+      "lc_bool": "611493b15f35",
+      "lc_num": "f3841f43f391",
+      "ts": "581f1c764e7d",
+      "dt": "41e9d8014776",
+      "do": "a897bf2e9b23",
+      "bool": "6712e0364a3a",
+      "flt": "d3c6dbe19c0f",
+      "email": "45d5a0e36793",
+      "uri": "0b8ff265b22c",
+      "cons": "a22bcf1691b2",
+      "any": "47a1c2714d24",
+      "narrowed": "5fe782621477",
+      "sec_stale": "26c025ba926a",
+      "sec_len": "c647921df09d",
+      "sec_int": "be1e4e809365",
+      "sec_email": "fc4639822b44",
+      "lsec": "b2be301b76a9",
+      "ruled": "3d99d438a567",
+      "each": "b1310d87764c",
+      "third_party_settings": "97c369341092"
+    },
+    "plain | path": {
+      "nope": "1bf169f7d887",
+      "nope.deeper": "ed8a9f9798ca",
+      "gate": "6ca9d957afff",
+      "l_blank": "49cab12dfa48",
+      "lr_blank": "853d41dc2f30",
+      "lm_blank": "ec4e699338f6",
+      "lm_blank.p": "9f5c5557bf1e",
+      "lm_blank.nope": "c967f21b19d2",
+      "ll_blank": "79dc2736d081",
+      "ll_blank.0": "33fdf2f48ede",
+      "lc_blank": "320482d25015",
+      "l_zero": "e2e27a2edae1",
+      "lr_zero": "7f7bbcb8989e",
+      "lm_zero": "8a204e60880c",
+      "lm_zero.p": "4124f694202a",
+      "lm_zero.nope": "882ab135ecd1",
+      "ll_zero": "769b1d980496",
+      "ll_zero.0": "5fde4760e3a3",
+      "lc_zero": "34c3788897fc",
+      "l_none": "dea0ee671525",
+      "lr_none": "2195edc3f79e",
+      "lm_none": "11e62f1f56bb",
+      "lm_none.p": "e39afa06edea",
+      "lm_none.nope": "dc2ae90b8202",
+      "ll_none": "becae0850756",
+      "ll_none.0": "631446a2ef22",
+      "lc_none": "42f5f690c899",
+      "l_mk": "e8fce82f9838",
+      "lr_mk": "9eec4e53c5c1",
+      "lm_mk": "4df207b94669",
+      "lm_mk.p": "8a8094b566c0",
+      "lm_mk.nope": "7edc498934c8",
+      "ll_mk": "0ea861d25f9f",
+      "ll_mk.0": "1386c334788b",
+      "lc_mk": "d35bbcf0f815",
+      "req": "dbbd3b809989",
+      "held": "9b4b3254541f",
+      "held_bool": "adaa94057eea",
+      "sec": "ea5a9897ba0b",
+      "sec_d": "9a1412234802",
+      "sec_held": "7e26feb1de58",
+      "src": "10f953e38ee8",
+      "comp": "efae780425c9",
+      "ucomp": "2ef76a4cc962",
+      "lk": "e32d611a2d94",
+      "fixed": "e32d611a2d94",
+      "d_null": "e2605099096a",
+      "d_int": "cd1ac93bb969",
+      "d_bool": "917f279fef59",
+      "d_map": "c5e8cd14b5be",
+      "d_map.a": "7b651415847c",
+      "d_map.b": "0dba1ba5478f",
+      "d_map.c": "edd77e355c29",
+      "d_map.nope": "7fef04ae975d",
+      "d_mapnull": "4a4dc96a767b",
+      "d_mapnull.a": "f275fb2b7576",
+      "d_mapnull.nope": "ab5c6fbf1ec5",
+      "rd": "782db20603f8",
+      "empty_map": "359de8670032",
+      "empty_map.nope": "9981c39f64fd",
+      "reworded": "e3ac30fee2b5",
+      "d_list": "2f0daf22314c",
+      "d_list.0": "79322ca8a834",
+      "mm": "c0e6f6608e7f",
+      "mm.in": "e11221b81a8e",
+      "mm.in.deep": "7833a0c4607b",
+      "mm.in.dsec": "cdd91bc168ef",
+      "mm.in.nope": "3b6b74244967",
+      "mm.t": "1827bb3c72b8",
+      "mm.nope": "64e745a0e0d6",
+      "lom": "4338586b9fa0",
+      "lom.0": "5ae1d09b02e5",
+      "lom.0.n": "09a8b806daff",
+      "lom.0.rsec": "90ce6ca8591d",
+      "lom.0.k": "6dcd8fd0b7cb",
+      "lom.0.nope": "5833bd66d212",
+      "lol": "01cc44af4d7f",
+      "lol.0": "06ed2ad465ca",
+      "lol.0.0": "e42d9fd608fc",
+      "c_str": "ebfc68423258",
+      "c_int": "089e352909a5",
+      "c_flt": "1f13921888ae",
+      "c_bool": "762b507914e3",
+      "lc_bool": "02eb7510d317",
+      "lc_num": "4ceefd010cf2",
+      "ts": "5561cffb2bc3",
+      "dt": "5a4613ed43fd",
+      "do": "d30e6d99ab87",
+      "bool": "a07fe3e65363",
+      "flt": "41c0f6e9576c",
+      "email": "6113bafce96d",
+      "uri": "d90ef536d84c",
+      "cons": "b3f5e4799d4e",
+      "any": "c8329d8e071b",
+      "narrowed": "02515330716a",
+      "sec_stale": "a73185787c8b",
+      "sec_len": "082a2ba8b052",
+      "sec_int": "bc2c5a917070",
+      "sec_email": "fac453c81c21",
+      "lsec": "6492a6f0f84c",
+      "ruled": "673de742636e",
+      "each": "7e1dca745674",
+      "each.nope": "bba544f88b8b",
+      "third_party_settings": "b8e937687917",
+      "third_party_settings.surface": "22c3b8aca436",
+      "third_party_settings.surface.mk": "d81b96792754",
+      "third_party_settings.surface.mk.a": "d2c28d571e73",
+      "third_party_settings.surface.mk.ms": "5c890ae9d7d4",
+      "third_party_settings.surface.mk.nope": "ff82b373bdd1",
+      "third_party_settings.surface.mk2": "d2dc9f323c32",
+      "third_party_settings.surface.nope": "784e3b71cb70",
+      "third_party_settings.nope": "4dd306536a2c"
+    },
+    "plain | nodes": {
+      "nope": "85cf5ad1bdc5",
+      "nope.deeper": "85cf5ad1bdc5",
+      "gate": "85cf5ad1bdc5",
+      "l_blank": "85cf5ad1bdc5",
+      "lr_blank": "85cf5ad1bdc5",
+      "lm_blank": "85cf5ad1bdc5",
+      "lm_blank.p": "85cf5ad1bdc5",
+      "lm_blank.nope": "85cf5ad1bdc5",
+      "ll_blank": "85cf5ad1bdc5",
+      "ll_blank.0": "85cf5ad1bdc5",
+      "lc_blank": "85cf5ad1bdc5",
+      "l_zero": "85cf5ad1bdc5",
+      "lr_zero": "85cf5ad1bdc5",
+      "lm_zero": "85cf5ad1bdc5",
+      "lm_zero.p": "85cf5ad1bdc5",
+      "lm_zero.nope": "85cf5ad1bdc5",
+      "ll_zero": "85cf5ad1bdc5",
+      "ll_zero.0": "85cf5ad1bdc5",
+      "lc_zero": "85cf5ad1bdc5",
+      "l_none": "85cf5ad1bdc5",
+      "lr_none": "85cf5ad1bdc5",
+      "lm_none": "85cf5ad1bdc5",
+      "lm_none.p": "85cf5ad1bdc5",
+      "lm_none.nope": "85cf5ad1bdc5",
+      "ll_none": "85cf5ad1bdc5",
+      "ll_none.0": "85cf5ad1bdc5",
+      "lc_none": "85cf5ad1bdc5",
+      "l_mk": "85cf5ad1bdc5",
+      "lr_mk": "85cf5ad1bdc5",
+      "lm_mk": "85cf5ad1bdc5",
+      "lm_mk.p": "85cf5ad1bdc5",
+      "lm_mk.nope": "85cf5ad1bdc5",
+      "ll_mk": "85cf5ad1bdc5",
+      "ll_mk.0": "85cf5ad1bdc5",
+      "lc_mk": "85cf5ad1bdc5",
+      "req": "85cf5ad1bdc5",
+      "held": "85cf5ad1bdc5",
+      "held_bool": "85cf5ad1bdc5",
+      "sec": "85cf5ad1bdc5",
+      "sec_d": "85cf5ad1bdc5",
+      "sec_held": "85cf5ad1bdc5",
+      "src": "85cf5ad1bdc5",
+      "comp": "85cf5ad1bdc5",
+      "ucomp": "85cf5ad1bdc5",
+      "lk": "85cf5ad1bdc5",
+      "fixed": "85cf5ad1bdc5",
+      "d_null": "85cf5ad1bdc5",
+      "d_int": "85cf5ad1bdc5",
+      "d_bool": "85cf5ad1bdc5",
+      "d_map": "85cf5ad1bdc5",
+      "d_map.a": "85cf5ad1bdc5",
+      "d_map.b": "85cf5ad1bdc5",
+      "d_map.c": "85cf5ad1bdc5",
+      "d_map.nope": "85cf5ad1bdc5",
+      "d_mapnull": "85cf5ad1bdc5",
+      "d_mapnull.a": "85cf5ad1bdc5",
+      "d_mapnull.nope": "85cf5ad1bdc5",
+      "rd": "85cf5ad1bdc5",
+      "empty_map": "85cf5ad1bdc5",
+      "empty_map.nope": "85cf5ad1bdc5",
+      "reworded": "85cf5ad1bdc5",
+      "d_list": "85cf5ad1bdc5",
+      "d_list.0": "85cf5ad1bdc5",
+      "mm": "85cf5ad1bdc5",
+      "mm.in": "85cf5ad1bdc5",
+      "mm.in.deep": "85cf5ad1bdc5",
+      "mm.in.dsec": "85cf5ad1bdc5",
+      "mm.in.nope": "85cf5ad1bdc5",
+      "mm.t": "85cf5ad1bdc5",
+      "mm.nope": "85cf5ad1bdc5",
+      "lom": "85cf5ad1bdc5",
+      "lom.0": "85cf5ad1bdc5",
+      "lom.0.n": "85cf5ad1bdc5",
+      "lom.0.rsec": "85cf5ad1bdc5",
+      "lom.0.k": "85cf5ad1bdc5",
+      "lom.0.nope": "85cf5ad1bdc5",
+      "lol": "85cf5ad1bdc5",
+      "lol.0": "85cf5ad1bdc5",
+      "lol.0.0": "85cf5ad1bdc5",
+      "c_str": "85cf5ad1bdc5",
+      "c_int": "85cf5ad1bdc5",
+      "c_flt": "85cf5ad1bdc5",
+      "c_bool": "85cf5ad1bdc5",
+      "lc_bool": "85cf5ad1bdc5",
+      "lc_num": "85cf5ad1bdc5",
+      "ts": "85cf5ad1bdc5",
+      "dt": "85cf5ad1bdc5",
+      "do": "85cf5ad1bdc5",
+      "bool": "85cf5ad1bdc5",
+      "flt": "85cf5ad1bdc5",
+      "email": "85cf5ad1bdc5",
+      "uri": "85cf5ad1bdc5",
+      "cons": "85cf5ad1bdc5",
+      "any": "85cf5ad1bdc5",
+      "narrowed": "85cf5ad1bdc5",
+      "sec_stale": "85cf5ad1bdc5",
+      "sec_len": "85cf5ad1bdc5",
+      "sec_int": "85cf5ad1bdc5",
+      "sec_email": "85cf5ad1bdc5",
+      "lsec": "85cf5ad1bdc5",
+      "ruled": "85cf5ad1bdc5",
+      "each": "85cf5ad1bdc5",
+      "each.nope": "85cf5ad1bdc5",
+      "third_party_settings": "85cf5ad1bdc5",
+      "third_party_settings.surface": "85cf5ad1bdc5",
+      "third_party_settings.surface.mk": "85cf5ad1bdc5",
+      "third_party_settings.surface.mk.a": "85cf5ad1bdc5",
+      "third_party_settings.surface.mk.ms": "85cf5ad1bdc5",
+      "third_party_settings.surface.mk.nope": "85cf5ad1bdc5",
+      "third_party_settings.surface.mk2": "85cf5ad1bdc5",
+      "third_party_settings.surface.nope": "85cf5ad1bdc5",
+      "third_party_settings.nope": "85cf5ad1bdc5"
+    }
+  },
+  "records": {
+    "plain | door | secretKeys": [
+      "sec",
+      "sec_d",
+      "sec_held",
+      "sec_stale",
+      "sec_len",
+      "sec_int",
+      "sec_email",
+      "lsec"
+    ],
+    "plain | values | narrow": {
+      "withoutNonScalars": [
+        {
+          "gate": "narrow"
+        },
+        []
+      ],
+      "fromSurface refined": {
+        "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+        "type": "map",
+        "label": "L",
+        "description": "D",
+        "required": false,
+        "getDefaultValue": null,
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": [],
+        "settings": [],
+        "array": {
+          "type": "map",
+          "label": "L",
+          "description": "D",
+          "required": false
+        },
+        "properties": {
+          "gate": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Gate",
+            "description": "",
+            "required": false,
+            "getDefaultValue": "open",
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "open",
+                  "narrow",
+                  "out",
+                  "req"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Gate",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "open",
+                    "narrow",
+                    "out",
+                    "req"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "l_blank": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": {
+              "@text": "string value"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": {
+                "@text": "string value"
+              },
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "lr_blank": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "integer",
+            "label": {
+              "@text": "integer value"
+            },
+            "description": "",
+            "required": true,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": [],
+              "NotNull": []
+            },
+            "settings": [],
+            "array": {
+              "type": "integer",
+              "label": {
+                "@text": "integer value"
+              },
+              "description": "",
+              "required": true,
+              "constraints": {
+                "PrimitiveType": [],
+                "NotNull": []
+              }
+            }
+          },
+          "lm_blank": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": {
+              "@text": "map value"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": {
+                "@text": "map value"
+              },
+              "description": "",
+              "required": false
+            },
+            "properties": {
+              "p": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": {
+                  "@text": "string value"
+                },
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": {
+                    "@text": "string value"
+                  },
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          },
+          "ll_blank": {
+            "class": "Drupal\\tool\\TypedData\\ListInputDefinition",
+            "type": "list",
+            "label": {
+              "@text": "list value"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "isConvertedFromMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "list",
+              "label": {
+                "@text": "list value"
+              },
+              "description": "",
+              "required": false
+            },
+            "item": {
+              "class": "Drupal\\tool\\TypedData\\InputDefinition",
+              "type": "string",
+              "label": {
+                "@text": "string value"
+              },
+              "description": "",
+              "required": false,
+              "getDefaultValue": null,
+              "isLocked": false,
+              "getExamples": [],
+              "isMultiple": false,
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "settings": [],
+              "array": {
+                "type": "string",
+                "label": {
+                  "@text": "string value"
+                },
+                "description": "",
+                "required": false,
+                "constraints": {
+                  "PrimitiveType": []
+                }
+              }
+            }
+          },
+          "lc_blank": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": {
+              "@text": "string value"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "LabeledChoice": {
+                "choices": {
+                  "a": "",
+                  "b": "Bee"
+                }
+              },
+              "PrimitiveType": [],
+              "Choice": {
+                "choices": [
+                  "a",
+                  "b"
+                ]
+              }
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": {
+                "@text": "string value"
+              },
+              "description": "",
+              "required": false,
+              "constraints": {
+                "LabeledChoice": {
+                  "choices": {
+                    "a": "",
+                    "b": "Bee"
+                  }
+                },
+                "PrimitiveType": [],
+                "Choice": {
+                  "choices": [
+                    "a",
+                    "b"
+                  ]
+                }
+              }
+            }
+          },
+          "l_zero": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "0",
+            "description": "0",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "0",
+              "description": "0",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "lr_zero": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "integer",
+            "label": "0",
+            "description": "",
+            "required": true,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": [],
+              "NotNull": []
+            },
+            "settings": [],
+            "array": {
+              "type": "integer",
+              "label": "0",
+              "description": "",
+              "required": true,
+              "constraints": {
+                "PrimitiveType": [],
+                "NotNull": []
+              }
+            }
+          },
+          "lm_zero": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": "0",
+            "description": "0",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "0",
+              "description": "0",
+              "required": false
+            },
+            "properties": {
+              "p": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "0",
+                "description": "0",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "0",
+                  "description": "0",
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          },
+          "ll_zero": {
+            "class": "Drupal\\tool\\TypedData\\ListInputDefinition",
+            "type": "list",
+            "label": "0",
+            "description": "0",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "isConvertedFromMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "list",
+              "label": "0",
+              "description": "0",
+              "required": false
+            },
+            "item": {
+              "class": "Drupal\\tool\\TypedData\\InputDefinition",
+              "type": "string",
+              "label": "0",
+              "description": "",
+              "required": false,
+              "getDefaultValue": null,
+              "isLocked": false,
+              "getExamples": [],
+              "isMultiple": false,
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "settings": [],
+              "array": {
+                "type": "string",
+                "label": "0",
+                "description": "",
+                "required": false,
+                "constraints": {
+                  "PrimitiveType": []
+                }
+              }
+            }
+          },
+          "lc_zero": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "0",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "LabeledChoice": {
+                "choices": {
+                  "a": "0",
+                  "b": "Bee"
+                }
+              },
+              "PrimitiveType": [],
+              "Choice": {
+                "choices": [
+                  "a",
+                  "b"
+                ]
+              }
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "0",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "LabeledChoice": {
+                  "choices": {
+                    "a": "0",
+                    "b": "Bee"
+                  }
+                },
+                "PrimitiveType": [],
+                "Choice": {
+                  "choices": [
+                    "a",
+                    "b"
+                  ]
+                }
+              }
+            }
+          },
+          "l_none": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": {
+              "@text": "string value"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": {
+                "@text": "string value"
+              },
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "lr_none": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "integer",
+            "label": {
+              "@text": "integer value"
+            },
+            "description": "",
+            "required": true,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": [],
+              "NotNull": []
+            },
+            "settings": [],
+            "array": {
+              "type": "integer",
+              "label": {
+                "@text": "integer value"
+              },
+              "description": "",
+              "required": true,
+              "constraints": {
+                "PrimitiveType": [],
+                "NotNull": []
+              }
+            }
+          },
+          "lm_none": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": {
+              "@text": "map value"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": {
+                "@text": "map value"
+              },
+              "description": "",
+              "required": false
+            },
+            "properties": {
+              "p": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": {
+                  "@text": "string value"
+                },
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": {
+                    "@text": "string value"
+                  },
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          },
+          "ll_none": {
+            "class": "Drupal\\tool\\TypedData\\ListInputDefinition",
+            "type": "list",
+            "label": {
+              "@text": "list value"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "isConvertedFromMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "list",
+              "label": {
+                "@text": "list value"
+              },
+              "description": "",
+              "required": false
+            },
+            "item": {
+              "class": "Drupal\\tool\\TypedData\\InputDefinition",
+              "type": "string",
+              "label": {
+                "@text": "string value"
+              },
+              "description": "",
+              "required": false,
+              "getDefaultValue": null,
+              "isLocked": false,
+              "getExamples": [],
+              "isMultiple": false,
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "settings": [],
+              "array": {
+                "type": "string",
+                "label": {
+                  "@text": "string value"
+                },
+                "description": "",
+                "required": false,
+                "constraints": {
+                  "PrimitiveType": []
+                }
+              }
+            }
+          },
+          "lc_none": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": {
+              "@text": "string value"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "LabeledChoice": {
+                "choices": {
+                  "a": "A",
+                  "b": "Bee"
+                }
+              },
+              "PrimitiveType": [],
+              "Choice": {
+                "choices": [
+                  "a",
+                  "b"
+                ]
+              }
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": {
+                "@text": "string value"
+              },
+              "description": "",
+              "required": false,
+              "constraints": {
+                "LabeledChoice": {
+                  "choices": {
+                    "a": "A",
+                    "b": "Bee"
+                  }
+                },
+                "PrimitiveType": [],
+                "Choice": {
+                  "choices": [
+                    "a",
+                    "b"
+                  ]
+                }
+              }
+            }
+          },
+          "l_mk": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": {
+              "@text": "Marked up"
+            },
+            "description": {
+              "@text": "Marked up"
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": {
+                "@text": "Marked up"
+              },
+              "description": {
+                "@text": "Marked up"
+              },
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "lr_mk": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "integer",
+            "label": {
+              "@text": "Marked up"
+            },
+            "description": "",
+            "required": true,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": [],
+              "NotNull": []
+            },
+            "settings": [],
+            "array": {
+              "type": "integer",
+              "label": {
+                "@text": "Marked up"
+              },
+              "description": "",
+              "required": true,
+              "constraints": {
+                "PrimitiveType": [],
+                "NotNull": []
+              }
+            }
+          },
+          "lm_mk": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": {
+              "@text": "Marked up"
+            },
+            "description": {
+              "@text": "Marked up"
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": {
+                "@text": "Marked up"
+              },
+              "description": {
+                "@text": "Marked up"
+              },
+              "required": false
+            },
+            "properties": {
+              "p": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": {
+                  "@text": "Marked up"
+                },
+                "description": {
+                  "@text": "Marked up"
+                },
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": {
+                    "@text": "Marked up"
+                  },
+                  "description": {
+                    "@text": "Marked up"
+                  },
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          },
+          "ll_mk": {
+            "class": "Drupal\\tool\\TypedData\\ListInputDefinition",
+            "type": "list",
+            "label": {
+              "@text": "Marked up"
+            },
+            "description": {
+              "@text": "Marked up"
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "isConvertedFromMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "list",
+              "label": {
+                "@text": "Marked up"
+              },
+              "description": {
+                "@text": "Marked up"
+              },
+              "required": false
+            },
+            "item": {
+              "class": "Drupal\\tool\\TypedData\\InputDefinition",
+              "type": "string",
+              "label": {
+                "@text": "Marked up"
+              },
+              "description": "",
+              "required": false,
+              "getDefaultValue": null,
+              "isLocked": false,
+              "getExamples": [],
+              "isMultiple": false,
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "settings": [],
+              "array": {
+                "type": "string",
+                "label": {
+                  "@text": "Marked up"
+                },
+                "description": "",
+                "required": false,
+                "constraints": {
+                  "PrimitiveType": []
+                }
+              }
+            }
+          },
+          "lc_mk": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": {
+              "@text": "Marked up"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "LabeledChoice": {
+                "choices": {
+                  "a": "Marked up",
+                  "b": "Bee"
+                }
+              },
+              "PrimitiveType": [],
+              "Choice": {
+                "choices": [
+                  "a",
+                  "b"
+                ]
+              }
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": {
+                "@text": "Marked up"
+              },
+              "description": "",
+              "required": false,
+              "constraints": {
+                "LabeledChoice": {
+                  "choices": {
+                    "a": "Marked up",
+                    "b": "Bee"
+                  }
+                },
+                "PrimitiveType": [],
+                "Choice": {
+                  "choices": [
+                    "a",
+                    "b"
+                  ]
+                }
+              }
+            }
+          },
+          "req": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Req",
+            "description": "",
+            "required": true,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": [],
+              "NotNull": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Req",
+              "description": "",
+              "required": true,
+              "constraints": {
+                "PrimitiveType": [],
+                "NotNull": []
+              }
+            }
+          },
+          "held": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Held",
+            "description": "",
+            "required": false,
+            "getDefaultValue": "hv",
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Held",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "held_bool": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "boolean",
+            "label": "Held bool",
+            "description": "",
+            "required": false,
+            "getDefaultValue": true,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "boolean",
+              "label": "Held bool",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "sec": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Sec",
+            "description": {
+              "@text": "Secret desc Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": [],
+              "NotNull": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Sec",
+              "description": {
+                "@text": "Secret desc Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "required": false,
+              "constraints": {
+                "PrimitiveType": [],
+                "NotNull": []
+              }
+            }
+          },
+          "sec_d": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Sec default",
+            "description": {
+              "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Sec default",
+              "description": {
+                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "sec_held": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Sec held",
+            "description": {
+              "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Sec held",
+              "description": {
+                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "src": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Source",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Source",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "comp": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Comp",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Comp",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "ucomp": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Ucomp",
+            "description": "",
+            "required": true,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": [],
+              "NotNull": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Ucomp",
+              "description": "",
+              "required": true,
+              "constraints": {
+                "PrimitiveType": [],
+                "NotNull": []
+              }
+            }
+          },
+          "lk": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Locked",
+            "description": "",
+            "required": false,
+            "getDefaultValue": "fixed",
+            "isLocked": true,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Locked",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "fixed": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Fixed",
+            "description": "",
+            "required": false,
+            "getDefaultValue": "fx",
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Fixed",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "d_null": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Null default",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Null default",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "d_int": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "integer",
+            "label": "Int default",
+            "description": "",
+            "required": false,
+            "getDefaultValue": 0,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "integer",
+              "label": "Int default",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "d_bool": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "boolean",
+            "label": "Bool default",
+            "description": "",
+            "required": false,
+            "getDefaultValue": false,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "boolean",
+              "label": "Bool default",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "d_map": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": "Map default",
+            "description": "",
+            "required": false,
+            "getDefaultValue": {
+              "a": "ma"
+            },
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "Map default",
+              "description": "",
+              "required": false
+            },
+            "properties": {
+              "a": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "A",
+                "description": "",
+                "required": false,
+                "getDefaultValue": "pa",
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "A",
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "b": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "integer",
+                "label": "B",
+                "description": "",
+                "required": false,
+                "getDefaultValue": 2,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "integer",
+                  "label": "B",
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "c": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "C",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "C",
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          },
+          "d_mapnull": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": "Map default null",
+            "description": "",
+            "required": false,
+            "getDefaultValue": {
+              "a": null
+            },
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "Map default null",
+              "description": "",
+              "required": false
+            },
+            "properties": {
+              "a": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "A",
+                "description": "",
+                "required": false,
+                "getDefaultValue": "pa",
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "A",
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          },
+          "rd": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "integer",
+            "label": "Required default",
+            "description": "",
+            "required": true,
+            "getDefaultValue": 3,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": [],
+              "NotNull": []
+            },
+            "settings": [],
+            "array": {
+              "type": "integer",
+              "label": "Required default",
+              "description": "",
+              "required": true,
+              "constraints": {
+                "PrimitiveType": [],
+                "NotNull": []
+              }
+            }
+          },
+          "empty_map": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "map",
+            "label": "Empty map",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "Empty map",
+              "description": "",
+              "required": false
+            }
+          },
+          "reworded": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Reworded label",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Reworded label",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "d_list": {
+            "class": "Drupal\\tool\\TypedData\\ListInputDefinition",
+            "type": "list",
+            "label": "List default",
+            "description": "",
+            "required": false,
+            "getDefaultValue": [
+              "x",
+              "y"
+            ],
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "isConvertedFromMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "list",
+              "label": "List default",
+              "description": "",
+              "required": false
+            },
+            "item": {
+              "class": "Drupal\\tool\\TypedData\\InputDefinition",
+              "type": "string",
+              "label": "I",
+              "description": "",
+              "required": false,
+              "getDefaultValue": null,
+              "isLocked": false,
+              "getExamples": [],
+              "isMultiple": false,
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "settings": [],
+              "array": {
+                "type": "string",
+                "label": "I",
+                "description": "",
+                "required": false,
+                "constraints": {
+                  "PrimitiveType": []
+                }
+              }
+            }
+          },
+          "mm": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": "Map in map",
+            "description": "",
+            "required": true,
+            "getDefaultValue": {
+              "in": null,
+              "t": 1700000000
+            },
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "NotNull": []
+            },
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "Map in map",
+              "description": "",
+              "required": true,
+              "constraints": {
+                "NotNull": []
+              }
+            },
+            "properties": {
+              "in": {
+                "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                "type": "map",
+                "label": "In",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": [],
+                "settings": [],
+                "array": {
+                  "type": "map",
+                  "label": "In",
+                  "description": "",
+                  "required": false
+                },
+                "properties": {
+                  "deep": {
+                    "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                    "type": "integer",
+                    "label": "Deep",
+                    "description": "",
+                    "required": true,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": {
+                      "Range": {
+                        "min": 1,
+                        "max": 9
+                      },
+                      "PrimitiveType": [],
+                      "NotNull": []
+                    },
+                    "settings": [],
+                    "array": {
+                      "type": "integer",
+                      "label": "Deep",
+                      "description": "",
+                      "required": true,
+                      "constraints": {
+                        "Range": {
+                          "min": 1,
+                          "max": 9
+                        },
+                        "PrimitiveType": [],
+                        "NotNull": []
+                      }
+                    }
+                  },
+                  "dsec": {
+                    "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                    "type": "string",
+                    "label": "Deep secret",
+                    "description": {
+                      "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                    },
+                    "required": false,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": {
+                      "PrimitiveType": []
+                    },
+                    "settings": [],
+                    "array": {
+                      "type": "string",
+                      "label": "Deep secret",
+                      "description": {
+                        "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                      },
+                      "required": false,
+                      "constraints": {
+                        "PrimitiveType": []
+                      }
+                    }
+                  }
+                }
+              },
+              "t": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "timestamp",
+                "label": "Ts",
+                "description": "",
+                "required": false,
+                "getDefaultValue": 1700000000,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "timestamp",
+                  "label": "Ts",
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          },
+          "lom": {
+            "class": "Drupal\\tool\\TypedData\\ListInputDefinition",
+            "type": "list",
+            "label": "List of maps",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "isConvertedFromMultiple": false,
+            "constraints": {
+              "Count": {
+                "min": 1,
+                "max": 3
+              }
+            },
+            "settings": [],
+            "array": {
+              "type": "list",
+              "label": "List of maps",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Count": {
+                  "min": 1,
+                  "max": 3
+                }
+              }
+            },
+            "item": {
+              "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+              "type": "map",
+              "label": "Row",
+              "description": "",
+              "required": false,
+              "getDefaultValue": null,
+              "isLocked": false,
+              "getExamples": [],
+              "isMultiple": false,
+              "constraints": [],
+              "settings": [],
+              "array": {
+                "type": "map",
+                "label": "Row",
+                "description": "",
+                "required": false
+              },
+              "properties": {
+                "n": {
+                  "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                  "type": "string",
+                  "label": "N",
+                  "description": "",
+                  "required": true,
+                  "getDefaultValue": null,
+                  "isLocked": false,
+                  "getExamples": [],
+                  "isMultiple": false,
+                  "constraints": {
+                    "PrimitiveType": [],
+                    "NotNull": []
+                  },
+                  "settings": [],
+                  "array": {
+                    "type": "string",
+                    "label": "N",
+                    "description": "",
+                    "required": true,
+                    "constraints": {
+                      "PrimitiveType": [],
+                      "NotNull": []
+                    }
+                  }
+                },
+                "rsec": {
+                  "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                  "type": "string",
+                  "label": "Row secret",
+                  "description": {
+                    "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                  },
+                  "required": false,
+                  "getDefaultValue": null,
+                  "isLocked": false,
+                  "getExamples": [],
+                  "isMultiple": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
+                  "settings": [],
+                  "array": {
+                    "type": "string",
+                    "label": "Row secret",
+                    "description": {
+                      "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                    },
+                    "required": false,
+                    "constraints": {
+                      "PrimitiveType": []
+                    }
+                  }
+                },
+                "k": {
+                  "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                  "type": "integer",
+                  "label": "K",
+                  "description": "",
+                  "required": false,
+                  "getDefaultValue": null,
+                  "isLocked": false,
+                  "getExamples": [],
+                  "isMultiple": false,
+                  "constraints": {
+                    "Choice": {
+                      "choices": [
+                        1,
+                        2
+                      ]
+                    },
+                    "PrimitiveType": []
+                  },
+                  "settings": [],
+                  "array": {
+                    "type": "integer",
+                    "label": "K",
+                    "description": "",
+                    "required": false,
+                    "constraints": {
+                      "Choice": {
+                        "choices": [
+                          1,
+                          2
+                        ]
+                      },
+                      "PrimitiveType": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "lol": {
+            "class": "Drupal\\tool\\TypedData\\ListInputDefinition",
+            "type": "list",
+            "label": "List of lists",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "isConvertedFromMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "list",
+              "label": "List of lists",
+              "description": "",
+              "required": false
+            },
+            "item": {
+              "class": "Drupal\\tool\\TypedData\\ListInputDefinition",
+              "type": "list",
+              "label": "Inner",
+              "description": "",
+              "required": false,
+              "getDefaultValue": null,
+              "isLocked": false,
+              "getExamples": [],
+              "isMultiple": false,
+              "isConvertedFromMultiple": false,
+              "constraints": [],
+              "settings": [],
+              "array": {
+                "type": "list",
+                "label": "Inner",
+                "description": "",
+                "required": false
+              },
+              "item": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "float",
+                "label": "F",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "Range": {
+                    "min": 0
+                  },
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "float",
+                  "label": "F",
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "Range": {
+                      "min": 0
+                    },
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          },
+          "c_str": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Choice str",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "x",
+                  "y"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Choice str",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "x",
+                    "y"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "c_int": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "integer",
+            "label": "Choice int",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "integer",
+              "label": "Choice int",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    1,
+                    2,
+                    3
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "c_flt": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "float",
+            "label": "Choice float",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  1.5,
+                  2.5
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "float",
+              "label": "Choice float",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    1.5,
+                    2.5
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "c_bool": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "boolean",
+            "label": "Choice bool",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  true,
+                  false
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "boolean",
+              "label": "Choice bool",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    true,
+                    false
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "lc_bool": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "boolean",
+            "label": "Labeled bool",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "LabeledChoice": {
+                "choices": {
+                  "1": "Yes",
+                  "0": "No"
+                }
+              },
+              "PrimitiveType": [],
+              "Choice": {
+                "choices": [
+                  1,
+                  0
+                ]
+              }
+            },
+            "settings": [],
+            "array": {
+              "type": "boolean",
+              "label": "Labeled bool",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "LabeledChoice": {
+                  "choices": {
+                    "1": "Yes",
+                    "0": "No"
+                  }
+                },
+                "PrimitiveType": [],
+                "Choice": {
+                  "choices": [
+                    1,
+                    0
+                  ]
+                }
+              }
+            }
+          },
+          "lc_num": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "integer",
+            "label": "Labeled num",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "LabeledChoice": {
+                "choices": {
+                  "1": 10,
+                  "2": 20
+                }
+              },
+              "PrimitiveType": [],
+              "Choice": {
+                "choices": [
+                  1,
+                  2
+                ]
+              }
+            },
+            "settings": [],
+            "array": {
+              "type": "integer",
+              "label": "Labeled num",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "LabeledChoice": {
+                  "choices": {
+                    "1": 10,
+                    "2": 20
+                  }
+                },
+                "PrimitiveType": [],
+                "Choice": {
+                  "choices": [
+                    1,
+                    2
+                  ]
+                }
+              }
+            }
+          },
+          "ts": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "timestamp",
+            "label": "When",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "timestamp",
+              "label": "When",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "dt": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "datetime_iso8601",
+            "label": "Date time",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "datetime_iso8601",
+              "label": "Date time",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "do": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "datetime_iso8601",
+            "label": "Date only",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "DateOnly": [],
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "datetime_iso8601",
+              "label": "Date only",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "DateOnly": [],
+                "PrimitiveType": []
+              }
+            }
+          },
+          "bool": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "boolean",
+            "label": "Bool",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "boolean",
+              "label": "Bool",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "flt": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "float",
+            "label": "Float",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "float",
+              "label": "Float",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "email": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "email",
+            "label": "Email",
+            "description": "",
+            "required": true,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": [],
+              "Email": [],
+              "NotNull": []
+            },
+            "settings": [],
+            "array": {
+              "type": "email",
+              "label": "Email",
+              "description": "",
+              "required": true,
+              "constraints": {
+                "PrimitiveType": [],
+                "Email": [],
+                "NotNull": []
+              }
+            }
+          },
+          "uri": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "uri",
+            "label": "Uri",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "uri",
+              "label": "Uri",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "cons": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Constrained",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Length": {
+                "min": 2,
+                "max": 5
+              },
+              "Regex": {
+                "pattern": "/^[a-z]+$/"
+              },
+              "NotBlank": [],
+              "NotNull": [],
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Constrained",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Length": {
+                  "min": 2,
+                  "max": 5
+                },
+                "Regex": {
+                  "pattern": "/^[a-z]+$/"
+                },
+                "NotBlank": [],
+                "NotNull": [],
+                "PrimitiveType": []
+              }
+            }
+          },
+          "any": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "any",
+            "label": "Any",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "any",
+              "label": "Any",
+              "description": "",
+              "required": false
+            }
+          },
+          "narrowed": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Narrowed",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "a"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Narrowed",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "a"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "sec_stale": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Stale secret",
+            "description": {
+              "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "a"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Stale secret",
+              "description": {
+                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "a"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "sec_len": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Short secret",
+            "description": {
+              "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Length": {
+                "max": 3
+              },
+              "Regex": {
+                "pattern": "/^[a-z]+$/"
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Short secret",
+              "description": {
+                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "required": false,
+              "constraints": {
+                "Length": {
+                  "max": 3
+                },
+                "Regex": {
+                  "pattern": "/^[a-z]+$/"
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "sec_int": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "integer",
+            "label": "Int secret",
+            "description": {
+              "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Range": {
+                "max": 3
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "integer",
+              "label": "Int secret",
+              "description": {
+                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "required": false,
+              "constraints": {
+                "Range": {
+                  "max": 3
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "sec_email": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "email",
+            "label": "Email secret",
+            "description": {
+              "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": [],
+              "Email": []
+            },
+            "settings": [],
+            "array": {
+              "type": "email",
+              "label": "Email secret",
+              "description": {
+                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "required": false,
+              "constraints": {
+                "PrimitiveType": [],
+                "Email": []
+              }
+            }
+          },
+          "lsec": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Locked secret",
+            "description": {
+              "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": true,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Locked secret",
+              "description": {
+                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "ruled": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Ruled",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Ruled",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "each": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "map",
+            "label": "Each map",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "Each map",
+              "description": "",
+              "required": false
+            }
+          },
+          "third_party_settings": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": {
+              "@text": "Third party settings"
+            },
+            "description": {
+              "@text": "Settings added by other modules."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": {
+                "@text": "Third party settings"
+              },
+              "description": {
+                "@text": "Settings added by other modules."
+              },
+              "required": false
+            },
+            "properties": {
+              "surface": {
+                "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                "type": "map",
+                "label": "Surface API",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": [],
+                "settings": [],
+                "array": {
+                  "type": "map",
+                  "label": "Surface API",
+                  "description": "",
+                  "required": false
+                },
+                "properties": {
+                  "mk": {
+                    "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                    "type": "map",
+                    "label": "Mounted map",
+                    "description": "",
+                    "required": false,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": [],
+                    "settings": [],
+                    "array": {
+                      "type": "map",
+                      "label": "Mounted map",
+                      "description": "",
+                      "required": false
+                    },
+                    "properties": {
+                      "a": {
+                        "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                        "type": "string",
+                        "label": "Ay",
+                        "description": "",
+                        "required": true,
+                        "getDefaultValue": null,
+                        "isLocked": false,
+                        "getExamples": [],
+                        "isMultiple": false,
+                        "constraints": {
+                          "PrimitiveType": [],
+                          "NotNull": []
+                        },
+                        "settings": [],
+                        "array": {
+                          "type": "string",
+                          "label": "Ay",
+                          "description": "",
+                          "required": true,
+                          "constraints": {
+                            "PrimitiveType": [],
+                            "NotNull": []
+                          }
+                        }
+                      },
+                      "ms": {
+                        "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                        "type": "string",
+                        "label": "Mount secret",
+                        "description": {
+                          "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                        },
+                        "required": false,
+                        "getDefaultValue": null,
+                        "isLocked": false,
+                        "getExamples": [],
+                        "isMultiple": false,
+                        "constraints": {
+                          "PrimitiveType": []
+                        },
+                        "settings": [],
+                        "array": {
+                          "type": "string",
+                          "label": "Mount secret",
+                          "description": {
+                            "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                          },
+                          "required": false,
+                          "constraints": {
+                            "PrimitiveType": []
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "mk2": {
+                    "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                    "type": "string",
+                    "label": "Mounted two",
+                    "description": "",
+                    "required": false,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": {
+                      "Choice": {
+                        "choices": [
+                          "p",
+                          "q"
+                        ]
+                      },
+                      "PrimitiveType": []
+                    },
+                    "settings": [],
+                    "array": {
+                      "type": "string",
+                      "label": "Mounted two",
+                      "description": "",
+                      "required": false,
+                      "constraints": {
+                        "Choice": {
+                          "choices": [
+                            "p",
+                            "q"
+                          ]
+                        },
+                        "PrimitiveType": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "secrets refined": {
+        "sec": true,
+        "sec_d": true,
+        "sec_held": true,
+        "mm": {
+          "in": {
+            "dsec": true
+          }
+        },
+        "lom": {
+          "@each": {
+            "rsec": true
+          }
+        },
+        "sec_stale": true,
+        "sec_len": true,
+        "sec_int": true,
+        "sec_email": true,
+        "lsec": true,
+        "third_party_settings": {
+          "surface": {
+            "mk": {
+              "ms": true
+            }
+          }
+        }
+      },
+      "secretKeys refined": [
+        "sec",
+        "sec_d",
+        "sec_held",
+        "sec_stale",
+        "sec_len",
+        "sec_int",
+        "sec_email",
+        "lsec"
+      ],
+      "pathsOf": {
+        "gate": "narrow"
+      },
+      "heldOn": {
+        "gate": "narrow"
+      },
+      "heldOn strings": {
+        "gate": "narrow"
+      },
+      "heldOn json": {
+        "gate": "narrow"
+      },
+      "encrypted": {
+        "to": {
+          "gate": "narrow"
+        },
+        "from": {
+          "gate": "narrow"
+        }
+      },
+      "flat": null,
+      "panel": [
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>gate</code>"
+              }
+            },
+            "string",
+            "Gate",
+            {
+              "@text": "no"
+            },
+            "\"open\"",
+            {
+              "data": {
+                "#markup": "one of open, narrow, out, req"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "gate"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>l_blank</code>"
+              }
+            },
+            "string",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "l_blank"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lr_blank</code>"
+              }
+            },
+            "integer",
+            "",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lr_blank"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lm_blank</code>"
+              }
+            },
+            "map",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "Keys other modules added"
+                }
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lm_blank"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lm_blank.p</code>"
+              }
+            },
+            "string",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lm_blank.p"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>ll_blank</code>"
+              }
+            },
+            "list",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "ll_blank"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lc_blank</code>"
+              }
+            },
+            "string",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of , Bee"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lc_blank"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>l_zero</code>"
+              }
+            },
+            "string",
+            "0",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "l_zero"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lr_zero</code>"
+              }
+            },
+            "integer",
+            "0",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lr_zero"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lm_zero</code>"
+              }
+            },
+            "map",
+            "0",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "Keys other modules added"
+                }
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lm_zero"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lm_zero.p</code>"
+              }
+            },
+            "string",
+            "0",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lm_zero.p"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>ll_zero</code>"
+              }
+            },
+            "list",
+            "0",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "ll_zero"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lc_zero</code>"
+              }
+            },
+            "string",
+            "0",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of 0, Bee"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lc_zero"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>l_none</code>"
+              }
+            },
+            "string",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "l_none"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lr_none</code>"
+              }
+            },
+            "integer",
+            "",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lr_none"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lm_none</code>"
+              }
+            },
+            "map",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "Keys other modules added"
+                }
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lm_none"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lm_none.p</code>"
+              }
+            },
+            "string",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lm_none.p"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>ll_none</code>"
+              }
+            },
+            "list",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "ll_none"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lc_none</code>"
+              }
+            },
+            "string",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of A, Bee"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lc_none"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>l_mk</code>"
+              }
+            },
+            "string",
+            "Marked up",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "l_mk"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lr_mk</code>"
+              }
+            },
+            "integer",
+            "Marked up",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lr_mk"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lm_mk</code>"
+              }
+            },
+            "map",
+            "Marked up",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "Keys other modules added"
+                }
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lm_mk"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lm_mk.p</code>"
+              }
+            },
+            "string",
+            "Marked up",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lm_mk.p"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>ll_mk</code>"
+              }
+            },
+            "list",
+            "Marked up",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "ll_mk"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lc_mk</code>"
+              }
+            },
+            "string",
+            "Marked up",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of Marked up, Bee"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lc_mk"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>req</code>"
+              }
+            },
+            "string",
+            "Req",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "req"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>held</code>"
+              }
+            },
+            "string",
+            "Held",
+            {
+              "@text": "no"
+            },
+            "\"hv\"",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "held"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>held_bool</code>"
+              }
+            },
+            "boolean",
+            "Held bool",
+            {
+              "@text": "no"
+            },
+            "true",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "held_bool"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>sec</code>"
+              }
+            },
+            "string",
+            "Sec",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "sec"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>sec_d</code>"
+              }
+            },
+            "string",
+            "Sec default",
+            {
+              "@text": "no"
+            },
+            "\"nope\"",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "sec_d"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>sec_held</code>"
+              }
+            },
+            "string",
+            "Sec held",
+            {
+              "@text": "no"
+            },
+            "\"sh\"",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "sec_held"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>src</code>"
+              }
+            },
+            "string",
+            "Source",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "src"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>comp</code>"
+              }
+            },
+            "string",
+            "Comp",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "comp"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>ucomp</code>"
+              }
+            },
+            "string",
+            "Ucomp",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "ucomp"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lk</code>"
+              }
+            },
+            "string",
+            "Locked",
+            {
+              "@text": "no"
+            },
+            "\"fixed\"",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "locked"
+          ],
+          "surface-key": "lk"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>fixed</code>"
+              }
+            },
+            "string",
+            "Fixed",
+            {
+              "@text": "no"
+            },
+            "\"fx\"",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "fixed"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>d_null</code>"
+              }
+            },
+            "string",
+            "Null default",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "d_null"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>d_int</code>"
+              }
+            },
+            "integer",
+            "Int default",
+            {
+              "@text": "no"
+            },
+            "0",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "d_int"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>d_bool</code>"
+              }
+            },
+            "boolean",
+            "Bool default",
+            {
+              "@text": "no"
+            },
+            "false",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "d_bool"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>d_map</code>"
+              }
+            },
+            "map",
+            "Map default",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "Keys other modules added"
+                }
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "d_map"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>d_map.a</code>"
+              }
+            },
+            "string",
+            "A",
+            {
+              "@text": "no"
+            },
+            "\"pa\"",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "d_map.a"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>d_map.b</code>"
+              }
+            },
+            "integer",
+            "B",
+            {
+              "@text": "no"
+            },
+            "2",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "d_map.b"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>d_map.c</code>"
+              }
+            },
+            "string",
+            "C",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "d_map.c"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>d_mapnull</code>"
+              }
+            },
+            "map",
+            "Map default null",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "Keys other modules added"
+                }
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "d_mapnull"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>d_mapnull.a</code>"
+              }
+            },
+            "string",
+            "A",
+            {
+              "@text": "no"
+            },
+            "\"pa\"",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "d_mapnull.a"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>rd</code>"
+              }
+            },
+            "integer",
+            "Required default",
+            {
+              "@text": "yes"
+            },
+            "3",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "rd"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>empty_map</code>"
+              }
+            },
+            "map",
+            "Empty map",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "empty_map"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>reworded</code>"
+              }
+            },
+            "string",
+            "Reworded label",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "reworded"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>d_list</code>"
+              }
+            },
+            "list",
+            "List default",
+            {
+              "@text": "no"
+            },
+            "[\"x\",\"y\"]",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "d_list"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>mm</code>"
+              }
+            },
+            "map",
+            "Map in map",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "Keys other modules added"
+                }
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "mm"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>mm.in.deep</code>"
+              }
+            },
+            "integer",
+            "Deep",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "from 1 to 9"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "mm.in.deep"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>mm.in.dsec</code>"
+              }
+            },
+            "string",
+            "Deep secret",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "mm.in.dsec"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>mm.t</code>"
+              }
+            },
+            "timestamp",
+            "Ts",
+            {
+              "@text": "no"
+            },
+            "1700000000",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "mm.t"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lom</code>"
+              }
+            },
+            "list",
+            "List of maps",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "from 1 to 3 items"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lom"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lol</code>"
+              }
+            },
+            "list",
+            "List of lists",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lol"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>c_str</code>"
+              }
+            },
+            "string",
+            "Choice str",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of x, y"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "c_str"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>c_int</code>"
+              }
+            },
+            "integer",
+            "Choice int",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of 1, 2, 3"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "c_int"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>c_flt</code>"
+              }
+            },
+            "float",
+            "Choice float",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of 1.5, 2.5"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "c_flt"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>c_bool</code>"
+              }
+            },
+            "boolean",
+            "Choice bool",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of 1, "
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "c_bool"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lc_bool</code>"
+              }
+            },
+            "boolean",
+            "Labeled bool",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of Yes, No"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lc_bool"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lc_num</code>"
+              }
+            },
+            "integer",
+            "Labeled num",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of 10, 20"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "lc_num"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>ts</code>"
+              }
+            },
+            "timestamp",
+            "When",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "ts"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>dt</code>"
+              }
+            },
+            "datetime_iso8601",
+            "Date time",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "dt"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>do</code>"
+              }
+            },
+            "datetime_iso8601",
+            "Date only",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "DateOnly []"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "do"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>bool</code>"
+              }
+            },
+            "boolean",
+            "Bool",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "bool"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>flt</code>"
+              }
+            },
+            "float",
+            "Float",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "flt"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>email</code>"
+              }
+            },
+            "email",
+            "Email",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "an email address"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "email"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>uri</code>"
+              }
+            },
+            "uri",
+            "Uri",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "uri"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>cons</code>"
+              }
+            },
+            "string",
+            "Constrained",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "from 2 to 5 characters; matches a required format: <code>/^[a-z]+$/</code>; not blank"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "cons"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>any</code>"
+              }
+            },
+            "any",
+            "Any",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "any"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>narrowed</code>"
+              }
+            },
+            "string",
+            "Narrowed",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of a"
+              }
+            },
+            "gate",
+            "narrowed"
+          ],
+          "surface-key": "narrowed"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>sec_stale</code>"
+              }
+            },
+            "string",
+            "Stale secret",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of a"
+              }
+            },
+            "gate",
+            "narrowed"
+          ],
+          "surface-key": "sec_stale"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>sec_len</code>"
+              }
+            },
+            "string",
+            "Short secret",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "at most 3 characters; matches a required format: <code>/^[a-z]+$/</code>"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "sec_len"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>sec_int</code>"
+              }
+            },
+            "integer",
+            "Int secret",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "at most 3"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "sec_int"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>sec_email</code>"
+              }
+            },
+            "email",
+            "Email secret",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "an email address"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "sec_email"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>lsec</code>"
+              }
+            },
+            "string",
+            "Locked secret",
+            {
+              "@text": "no"
+            },
+            "\"SECRETLOCK\"",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "locked"
+          ],
+          "surface-key": "lsec"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>ruled</code>"
+              }
+            },
+            "string",
+            "Ruled",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "ruled"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>each</code>"
+              }
+            },
+            "map",
+            "Each map",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "each"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>third_party_settings</code>"
+              }
+            },
+            "map",
+            "Third party settings",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "Keys other modules added"
+                }
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "third_party_settings"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>third_party_settings.surface.mk.a</code>"
+              }
+            },
+            "string",
+            "Ay",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "third_party_settings.surface.mk.a"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>third_party_settings.surface.mk.ms</code>"
+              }
+            },
+            "string",
+            "Mount secret",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "third_party_settings.surface.mk.ms"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>third_party_settings.surface.mk2</code>"
+              }
+            },
+            "string",
+            "Mounted two",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of p, q"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "third_party_settings.surface.mk2"
+        }
+      ],
+      "formatter": [
+        {
+          "@text": "Gate: narrow"
+        }
+      ]
+    },
+    "plain | key | any": {
+      "fromDefinition": {
+        "class": "Drupal\\tool\\TypedData\\InputDefinition",
+        "type": "any",
+        "label": "Any",
+        "description": "",
+        "required": false,
+        "getDefaultValue": null,
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": [],
+        "settings": [],
+        "array": {
+          "type": "any",
+          "label": "Any",
+          "description": "",
+          "required": false
+        }
+      },
+      "outputFromDefinition": {
+        "class": "Drupal\\tool\\TypedData\\OutputDefinition",
+        "type": "any",
+        "label": "Any",
+        "description": "",
+        "required": false,
+        "getDefaultValue": null,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": [],
+        "settings": [],
+        "array": {
+          "type": "any",
+          "label": "Any",
+          "description": "",
+          "required": false,
+          "nullable": false
+        }
+      },
+      "held builder": [
+        [
+          "abc",
+          "abc"
+        ],
+        [
+          "5",
+          "5"
+        ],
+        [
+          "1.5",
+          "1.5"
+        ],
+        [
+          "true",
+          "true"
+        ],
+        [
+          "0",
+          "0"
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          "2026-01-01",
+          "2026-01-01"
+        ],
+        [
+          "2026-01-01T10:00:00",
+          "2026-01-01T10:00:00"
+        ],
+        [
+          "2026-01-01T10:00:00+02:00",
+          "2026-01-01T10:00:00+02:00"
+        ],
+        [
+          "[\"a\",\"b\"]",
+          "[\"a\",\"b\"]"
+        ],
+        [
+          "{\"a\":1}",
+          "{\"a\":1}"
+        ],
+        [
+          [
+            "a",
+            "b"
+          ],
+          [
+            "a",
+            "b"
+          ]
+        ],
+        [
+          {
+            "a": 1
+          },
+          {
+            "a": 1
+          }
+        ],
+        [
+          5,
+          5
+        ],
+        [
+          1.5,
+          1.5
+        ],
+        [
+          true,
+          true
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          "SECRETRAW",
+          "SECRETRAW"
+        ]
+      ],
+      "wider": {
+        "string 1": [],
+        "string 0": [],
+        "string nullable 1": [],
+        "string nullable 0": [],
+        "integer 1": [],
+        "integer 0": [],
+        "integer nullable 1": [],
+        "integer nullable 0": [],
+        "boolean 1": [],
+        "boolean 0": [],
+        "float 1": [],
+        "float 0": [],
+        "ignore 1": [],
+        "ignore 0": [],
+        "mapping 1": [],
+        "mapping 0": [],
+        "sequence string 1": [],
+        "sequence string 0": [],
+        "sequence mapping 1": [],
+        "sequence mapping 0": [],
+        "constrained 1": [],
+        "constrained 0": [],
+        "loose 1": [],
+        "loose 0": []
+      }
+    },
+    "plain | path | lk": {
+      "reachedOn": null,
+      "reachedOn fixes": null,
+      "heldOn raws": [
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ]
+      ],
+      "definitionAt": {
+        "NULL": null,
+        "'node'": null,
+        "'user'": null,
+        "'taxonomy_term'": null
+      }
+    },
+    "plain | nodes | nope": {
+      "NULL": null,
+      "'node'": null,
+      "'user'": null,
+      "'taxonomy_term'": null
+    }
+  }
+}

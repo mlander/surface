@@ -250,7 +250,7 @@ final class Validating {
       // Decision: see
       // docs/decisions.md#the-validators-checks-and-the-document-read-nodes.
       $definition = $entry->definition;
-      $node = static::isShell($entry) ? NULL : $entry->schema();
+      $node = $entry->isShell() ? NULL : $entry->schema();
       $value = $values[$name] ?? NULL;
       $computed = $entry->locked ? NULL : ($node === NULL ? Computed::of($definition) : NodeFacts::compute($node));
       // A key computed unless sent holds either: nothing to refuse.
@@ -332,7 +332,7 @@ final class Validating {
           $by = $refined->getDefinitions()->entry($entry->variants->by);
           $errors[] = new Violation($name, '', $this->t('@label depends on @by, which holds no value.', [
             '@label' => static::ownLabel($entry, $node) ?? $name,
-            '@by' => Named::key(($by === NULL ? NULL : static::ownLabel($by, static::isShell($by) ? NULL : $by->schema())) ?? $entry->variants->by, $this->frame[0] . $entry->variants->by),
+            '@by' => Named::key(($by === NULL ? NULL : static::ownLabel($by, $by->isShell() ? NULL : $by->schema())) ?? $entry->variants->by, $this->frame[0] . $entry->variants->by),
           ]), Violation::NO_VARIANT);
         }
         continue;
@@ -465,7 +465,7 @@ final class Validating {
     $named = [];
     foreach ($violations as $violation) {
       $entry = $violation->key === '' ? NULL : $surface->getDefinitions()->entry($violation->key);
-      $node = $entry === NULL || static::isShell($entry) ? NULL : $entry->schema();
+      $node = $entry === NULL || $entry->isShell() ? NULL : $entry->schema();
       $computed = $entry === NULL ? NULL : ($node === NULL ? Computed::of($entry->definition) : NodeFacts::compute($node));
       // A key computed unless sent holding a value its sources do not give
       // holds the caller's own: its refusals stand as they are.
@@ -758,28 +758,6 @@ final class Validating {
   }
 
   /**
-   * Answers whether a key holds a child frame, so its node is a shell.
-   *
-   * An attached child, variants, a collection or a mount: the key's
-   * definition holds the child's keys, so its node is the child's whole
-   * tree, which the child's own entries read again. Its own facts are
-   * read from its definition until a source gives the node; a plain
-   * key's are read from its node.
-   *
-   * Decision: see
-   * docs/decisions.md#the-validators-checks-and-the-document-read-nodes.
-   *
-   * @param \Drupal\surface\Entry $entry
-   *   The key's entry.
-   *
-   * @return bool
-   *   TRUE for a key that holds a child frame.
-   */
-  protected static function isShell(Entry $entry): bool {
-    return $entry->isNested() || $entry->list !== NULL || $entry->mounted !== [];
-  }
-
-  /**
    * Reads a key's own label as getLabel() gives it.
    *
    * @param \Drupal\surface\Entry $entry
@@ -932,8 +910,11 @@ final class Validating {
         ? $this->t('@label cannot be cleared: it always holds a value, on by default. Leave it out to keep what it holds.', ['@label' => $label], $context)
         : $this->t('@label cannot be cleared: it always holds a value, off by default. Leave it out to keep what it holds.', ['@label' => $label], $context);
     }
-    $shown = $set !== NULL && isset($set->options[$value])
-      ? Named::value($set->options[$value], (string) $value)
+    // An option label that is no text (a Choice of numbers is labeled by
+    // its numbers) is cast at the call, as conditions() casts it.
+    $option = $set === NULL ? NULL : $set->options[$value] ?? NULL;
+    $shown = $option !== NULL
+      ? Named::value(is_string($option) || $option instanceof \Stringable ? $option : (string) $option, (string) $value)
       : (string) $default;
     return $this->t('@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.', [
       '@label' => $label,
@@ -1536,7 +1517,8 @@ final class Validating {
    *   The refined node, for its label and whether it is a secret.
    * @param mixed $value
    *   The stale value, which the message names so that whoever reads it
-   *   knows what is about to be kept.
+   *   knows what is about to be kept; a secret's is never named, the
+   *   sentence says a value is kept.
    * @param string $name
    *   The key.
    *
@@ -1544,10 +1526,17 @@ final class Validating {
    *   The stale entry.
    */
   protected function staleViolation(Schema $node, mixed $value, string $name): Violation {
+    $label = NodeFacts::label($node) ?? $name;
+    if (Secrets::marked($node)) {
+      // Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+      return new Violation($name, '', $this->t('@label keeps the value it holds, which is no longer available. Choose a new one when you can.', [
+        '@label' => $label,
+      ]), Violation::STALE, TRUE, NULL);
+    }
     return new Violation($name, '', $this->t('@label keeps the value @value, which is no longer available. Choose a new one when you can.', [
-      '@label' => NodeFacts::label($node) ?? $name,
+      '@label' => $label,
       '@value' => (string) $value,
-    ]), Violation::STALE, TRUE, Secrets::marked($node) ? NULL : $value);
+    ]), Violation::STALE, TRUE, $value);
   }
 
 }

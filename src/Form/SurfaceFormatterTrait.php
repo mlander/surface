@@ -9,10 +9,11 @@ use Drupal\Core\Entity\EntityFormInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Field\FormatterInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\SurfaceHostTrait;
+use PortableSchema\Builder\Schema;
 
 /**
  * Implements the field formatter settings protocol from a structure.
@@ -295,11 +296,63 @@ trait SurfaceFormatterTrait {
    */
   public function settingsSummary(): array {
     $summary = [];
-    $settings = $this->getSettings();
-    foreach ($this->getSurface()->getDefinitions() as $name => $definition) {
-      $this->appendSettingSummary($summary, $definition, $definition->getLabel() ?? $name, $settings[$name] ?? NULL);
-    }
+    $this->appendFrameSummary($summary, $this->getSurface(), $this->getSettings());
     return $summary ?: [$this->t('Not configured')];
+  }
+
+  /**
+   * Appends the lines of one frame's keys, in the frame's order.
+   *
+   * A plain key's facts, and the keys of a map below it, are read from its
+   * node. A key that holds a child frame is a shell (Entry::isShell()):
+   * its own label is read from its definition, and the keys below it from
+   * the child's entries, each with its own node. A mount is a plain map,
+   * whose node is its own tree, so it is read as one. A collection, and
+   * variants nothing has chosen, hold no keys of their own here: a value
+   * there is one line.
+   *
+   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+   *
+   * @param array $summary
+   *   The summary lines, appended to by reference.
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The frame.
+   * @param array $values
+   *   The values stored for it.
+   */
+  protected function appendFrameSummary(array &$summary, SurfaceInterface $surface, array $values): void {
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      $value = $values[$name] ?? NULL;
+      if (!$entry->isShell()) {
+        $node = $entry->schema();
+        $this->appendSettingSummary($summary, $node, NodeFacts::label($node) ?? $name, $value);
+        continue;
+      }
+      $label = $entry->definition->getLabel() ?? $name;
+      if ($entry->mounted !== [] && !$entry->isNested() && $entry->list === NULL) {
+        $this->appendSettingSummary($summary, $entry->schema(), $label, $value);
+        continue;
+      }
+      if ($value === NULL || $value === '' || $value === []) {
+        continue;
+      }
+      $child = NULL;
+      if ($entry->attachment !== NULL) {
+        $child = $entry->attachment->child;
+      }
+      elseif ($entry->variants !== NULL && $entry->definition->getDataType() !== 'any') {
+        // Variants chosen when the data surface was sealed (a locked
+        // deciding key): the key is that variant's map.
+        $by = $surface->getDefinitions()->entry($entry->variants->by);
+        $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? ($by === NULL ? NULL : NodeFacts::defaultOf($by->schema())));
+        $child = $chosen === NULL ? NULL : $entry->variants->variant($chosen)->child;
+      }
+      if ($child !== NULL && is_array($value)) {
+        $this->appendFrameSummary($summary, $child, $value);
+        continue;
+      }
+      $this->appendLine($summary, $label, $value);
+    }
   }
 
   /**
@@ -311,31 +364,45 @@ trait SurfaceFormatterTrait {
    *
    * @param array $summary
    *   The summary lines, appended to by reference.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition the value belongs to.
+   * @param \PortableSchema\Builder\Schema $node
+   *   The node of the key the value belongs to.
    * @param string|\Stringable $label
    *   The label to print for this value, still the definition's own
    *   object so the row is translated rather than assembled.
    * @param mixed $value
    *   The stored value.
    */
-  protected function appendSettingSummary(array &$summary, DataDefinitionInterface $definition, string|\Stringable $label, mixed $value): void {
+  protected function appendSettingSummary(array &$summary, Schema $node, string|\Stringable $label, mixed $value): void {
     if ($value === NULL || $value === '' || $value === []) {
       return;
     }
-    if (is_array($value) && $definition instanceof ComplexDataDefinitionInterface) {
-      foreach ($definition->getPropertyDefinitions() as $property_name => $property_definition) {
+    if (is_array($value) && DefinitionSchema::isComplex($node)) {
+      foreach (NodeFacts::properties($node) as $property_name => $property) {
         if (array_key_exists($property_name, $value)) {
           $this->appendSettingSummary(
             $summary,
-            $property_definition,
-            $property_definition->getLabel() ?? $property_name,
+            $property,
+            NodeFacts::label($property) ?? $property_name,
             $value[$property_name],
           );
         }
       }
       return;
     }
+    $this->appendLine($summary, $label, $value);
+  }
+
+  /**
+   * Appends one "Label: value" line.
+   *
+   * @param array $summary
+   *   The summary lines, appended to by reference.
+   * @param string|\Stringable $label
+   *   The label to print.
+   * @param mixed $value
+   *   The stored value, not empty.
+   */
+  protected function appendLine(array &$summary, string|\Stringable $label, mixed $value): void {
     if (is_bool($value)) {
       $value = $value ? $this->t('yes') : $this->t('no');
     }

@@ -1,0 +1,1825 @@
+{
+  "surface": "ruled",
+  "rows": 332,
+  "digests": {
+    "plain | door": {
+      "fromSurface": "478c25f07051",
+      "fromSurface stored": "478c25f07051",
+      "fromSurface narrowing": "478c25f07051",
+      "withLookups": "478c25f07051",
+      "withDependencies": "acc73fcb39f1",
+      "withStored": "541789ac6427",
+      "shapeOf": "1b05e8d3c9bf",
+      "withoutRequired": "aeee6c9a3a8c",
+      "outputFromInput": "19abd4839618",
+      "secrets": "39347ff402b6",
+      "outputs": "39347ff402b6",
+      "values update": "ab5416a67958",
+      "values create": "00473dc0be56",
+      "stored": "cf48d8f5f357",
+      "secretKeys": "39347ff402b6",
+      "config schema": "3e46b5af13af",
+      "config schema held+install": "a68fef499702",
+      "config schema installed empty": "dbd64c5edcf5",
+      "config schema translated": "2f9bab3e93eb",
+      "wider generated": "6002fda5c8f5",
+      "ResourceCode": "76656438917f",
+      "flow placed whole": "b80c43a1aa85",
+      "flow placed grouped": "3fd53fe3e3eb"
+    },
+    "plain | values": {
+      "stored": "fd05ae8c9388",
+      "open m1 out": "321ccb58d853",
+      "open m1 {}": "05656f0c87c0",
+      "open m1 r": "cd3719d91771",
+      "open m1 sub": "6b8af283a8d1",
+      "open m1 sub {}": "570298b1ec7e",
+      "open m1 sub y": "7912b9f783c2",
+      "open m1 li": "109f2fb816e3",
+      "open m1 li y": "c2490eeedd94",
+      "open m1 cx": "0a83eaeb5a53",
+      "open m1 cx zm": "da54f01e548b",
+      "open m1 cx full": "8ee8acc038b7",
+      "open m1 full": "b26236806797",
+      "open m2 {}": "3fd80b98fc4b",
+      "open m2 null": "72b489cf5549",
+      "open tps {}": "605747cebb71",
+      "open tps mk {}": "4a04dc8a5b71",
+      "open tps mk in": "36dfa5b61330",
+      "open tps full": "236081eb8dee",
+      "r m1 out": "6ff7ba5ba753",
+      "r m1 {}": "ac2859712d14",
+      "r m1 r": "1471d6628205",
+      "r m1 sub": "e23edc8d5781",
+      "r m1 sub {}": "22ea7aa27011",
+      "r m1 sub y": "758a4c786c62",
+      "r m1 li": "802213244307",
+      "r m1 li y": "6bdfda31648f",
+      "r m1 cx": "d24516fd3bfe",
+      "r m1 cx zm": "ed5d76af5273",
+      "r m1 cx full": "c42f36d7efa8",
+      "r m1 full": "8f56ce7eeb51",
+      "r m2 {}": "85af62446509",
+      "r m2 null": "9a8f9cf534bc",
+      "r tps {}": "2e09b928bcae",
+      "r tps mk {}": "8fb82eb97500",
+      "r tps mk in": "8903079120c4",
+      "r tps full": "ae65741daa8c",
+      "sub m1 out": "5f1de943a10c",
+      "sub m1 {}": "1d9db189ffb1",
+      "sub m1 r": "99c47f6966c1",
+      "sub m1 sub": "245d10632ad8",
+      "sub m1 sub {}": "1011851c215a",
+      "sub m1 sub y": "b46660ca75c9",
+      "sub m1 li": "cd32c9befe80",
+      "sub m1 li y": "971b342e6868",
+      "sub m1 cx": "0ad6a122566b",
+      "sub m1 cx zm": "8378de554753",
+      "sub m1 cx full": "6fa7d3feb123",
+      "sub m1 full": "dc85c5eff6fd",
+      "sub m2 {}": "7c57dcc5128c",
+      "sub m2 null": "8cc3f473860c",
+      "sub tps {}": "3b9001170563",
+      "sub tps mk {}": "b744b5eb149d",
+      "sub tps mk in": "8a7c63788385",
+      "sub tps full": "34a5a28f79eb",
+      "subx m1 out": "6f0c90b82f90",
+      "subx m1 {}": "feced1db15bf",
+      "subx m1 r": "787a4efd24f7",
+      "subx m1 sub": "d9788aaa737f",
+      "subx m1 sub {}": "3cc079ceca21",
+      "subx m1 sub y": "db2d208cf8b2",
+      "subx m1 li": "9c29d9a46ddb",
+      "subx m1 li y": "1a6a529aa6c1",
+      "subx m1 cx": "f2dfa802c491",
+      "subx m1 cx zm": "350b06477164",
+      "subx m1 cx full": "0793fb8e8a77",
+      "subx m1 full": "54ce0e15788f",
+      "subx m2 {}": "827a0ad79fc8",
+      "subx m2 null": "6c27fd306b88",
+      "subx tps {}": "f03468c4b210",
+      "subx tps mk {}": "85764cc3acf1",
+      "subx tps mk in": "1820ad750d1a",
+      "subx tps full": "9822482af53b",
+      "li m1 out": "c31c8b949614",
+      "li m1 {}": "1920439b0cc8",
+      "li m1 r": "209716fd7b96",
+      "li m1 sub": "e07479d3cb32",
+      "li m1 sub {}": "7690e2a8bd0a",
+      "li m1 sub y": "0750cdc78783",
+      "li m1 li": "5f819e0937b3",
+      "li m1 li y": "1de278ec0c59",
+      "li m1 cx": "2c9d698ebe64",
+      "li m1 cx zm": "6da7f8461d4e",
+      "li m1 cx full": "a2de75b961fb",
+      "li m1 full": "501040a6ba47",
+      "li m2 {}": "9905fbe4a50c",
+      "li m2 null": "39fdcdccd7fd",
+      "li tps {}": "2352702bcf7b",
+      "li tps mk {}": "2ffe7d986276",
+      "li tps mk in": "bda07b45bfbe",
+      "li tps full": "bd8e9cded7fe",
+      "cx m1 out": "e156dabf7c77",
+      "cx m1 {}": "173678d44422",
+      "cx m1 r": "aa4f9095d778",
+      "cx m1 sub": "2c0cbb7e16e9",
+      "cx m1 sub {}": "3ccf80a71758",
+      "cx m1 sub y": "089652a79ade",
+      "cx m1 li": "9515a1ebae00",
+      "cx m1 li y": "074240eaba2f",
+      "cx m1 cx": "7206190a4ed9",
+      "cx m1 cx zm": "6a45aa4e782d",
+      "cx m1 cx full": "cb71a4a1905c",
+      "cx m1 full": "fd4d7c066d5a",
+      "cx m2 {}": "e30e4ae4098c",
+      "cx m2 null": "ff030732fd30",
+      "cx tps {}": "8faa4d9c6540",
+      "cx tps mk {}": "694a1135a03e",
+      "cx tps mk in": "00aae20a3dc7",
+      "cx tps full": "8346c314020d",
+      "cxzm m1 out": "e7ade635511c",
+      "cxzm m1 {}": "a5bef5c3bdb9",
+      "cxzm m1 r": "ae1df869ac35",
+      "cxzm m1 sub": "b81f452b6214",
+      "cxzm m1 sub {}": "9e75b1ab9d78",
+      "cxzm m1 sub y": "a06f69229829",
+      "cxzm m1 li": "c317b62e7d52",
+      "cxzm m1 li y": "0ef01e221f1b",
+      "cxzm m1 cx": "ca37c67fbaa7",
+      "cxzm m1 cx zm": "30c6a32489cb",
+      "cxzm m1 cx full": "6ecb6d3fbd9b",
+      "cxzm m1 full": "9436a947ab7e",
+      "cxzm m2 {}": "339d6be78927",
+      "cxzm m2 null": "06e9240cb92c",
+      "cxzm tps {}": "3b26000451c5",
+      "cxzm tps mk {}": "a1f5f7348a45",
+      "cxzm tps mk in": "ea36b510d5dc",
+      "cxzm tps full": "31653499d4b7",
+      "two m1 out": "b685e8eb00d2",
+      "two m1 {}": "e54ab6dbdf5e",
+      "two m1 r": "f77d33f4b202",
+      "two m1 sub": "f1827d3308f9",
+      "two m1 sub {}": "28de92ba523c",
+      "two m1 sub y": "4bfd5b14d6ff",
+      "two m1 li": "ea65eee7d7c7",
+      "two m1 li y": "96daf36fdd3c",
+      "two m1 cx": "bbc1a1dc4841",
+      "two m1 cx zm": "d7569af66d3c",
+      "two m1 cx full": "155d2d7498b2",
+      "two m1 full": "1c2fb91101cc",
+      "two m2 {}": "76edab14ce91",
+      "two m2 null": "d712ac4defaa",
+      "two tps {}": "cc21c5ff0694",
+      "two tps mk {}": "bbc1d5e1c012",
+      "two tps mk in": "986c97e90d47",
+      "two tps full": "5ea2c27b8320",
+      "all m1 out": "9c5d58be4fa5",
+      "all m1 {}": "b951436183c8",
+      "all m1 r": "50f722649b38",
+      "all m1 sub": "0c99acf28203",
+      "all m1 sub {}": "d079e5af7f8b",
+      "all m1 sub y": "64382e018afb",
+      "all m1 li": "2448f6c73eb9",
+      "all m1 li y": "797863f386cd",
+      "all m1 cx": "fd4b30b8f30a",
+      "all m1 cx zm": "865bf38683b0",
+      "all m1 cx full": "4d2b17945a9d",
+      "all m1 full": "f1ec45904295",
+      "all m2 {}": "a6583bd8296c",
+      "all m2 null": "f654b348bced",
+      "all tps {}": "2f6fc22c21a8",
+      "all tps mk {}": "9a656fdf8073",
+      "all tps mk in": "8cd1123d0a06",
+      "all tps full": "46bbad43cafe",
+      "mnt m1 out": "eb9ccbf4f952",
+      "mnt m1 {}": "ffcfcc1682e4",
+      "mnt m1 r": "d65b009ecbc3",
+      "mnt m1 sub": "56bed14ea9a6",
+      "mnt m1 sub {}": "31fc9385bd8c",
+      "mnt m1 sub y": "11049e5a81b3",
+      "mnt m1 li": "dc80786135bc",
+      "mnt m1 li y": "8baa324a069c",
+      "mnt m1 cx": "0d13b0074aca",
+      "mnt m1 cx zm": "87228035bb8e",
+      "mnt m1 cx full": "7edcb7170db1",
+      "mnt m1 full": "e3521bb400b9",
+      "mnt m2 {}": "8c21b820bd4b",
+      "mnt m2 null": "8e4bad47701f",
+      "mnt tps {}": "1992fc665a9a",
+      "mnt tps mk {}": "7e9569e394de",
+      "mnt tps mk in": "e45ded198ca9",
+      "mnt tps full": "44262a7e65a4",
+      "mntin m1 out": "710697cfdf51",
+      "mntin m1 {}": "784795078c83",
+      "mntin m1 r": "309d7c907dda",
+      "mntin m1 sub": "06cdcdd5b9ae",
+      "mntin m1 sub {}": "f9e7811e4594",
+      "mntin m1 sub y": "9bedba82cde3",
+      "mntin m1 li": "b88a95f822b4",
+      "mntin m1 li y": "38fcc51b6227",
+      "mntin m1 cx": "2bec572b9bcd",
+      "mntin m1 cx zm": "50a80cdc7d3e",
+      "mntin m1 cx full": "c551ad1579ea",
+      "mntin m1 full": "639e663a7d43",
+      "mntin m2 {}": "391db8c134f8",
+      "mntin m2 null": "a25d97c87542",
+      "mntin tps {}": "4c6b31388441",
+      "mntin tps mk {}": "953e1bf4b2b7",
+      "mntin tps mk in": "a8daaf8e49db",
+      "mntin tps full": "8aa4bd10f1a5",
+      "subreq m1 out": "1c181f503e9d",
+      "subreq m1 {}": "466bd15e589b",
+      "subreq m1 r": "9d90a87cced3",
+      "subreq m1 sub": "aa7a53fae5f8",
+      "subreq m1 sub {}": "89fde204994c",
+      "subreq m1 sub y": "9a2ec093c1f2",
+      "subreq m1 li": "766144d7c3c6",
+      "subreq m1 li y": "37ef963baeea",
+      "subreq m1 cx": "d1e468be9aea",
+      "subreq m1 cx zm": "0c2c85e2c591",
+      "subreq m1 cx full": "4e954eafd544",
+      "subreq m1 full": "3f0277174f46",
+      "subreq m2 {}": "2318c189924f",
+      "subreq m2 null": "7dd04ba4b021",
+      "subreq tps {}": "74aea74b227e",
+      "subreq tps mk {}": "03bfbfe2f502",
+      "subreq tps mk in": "118fae20d181",
+      "subreq tps full": "f078451ab9e1",
+      "__out m1 out": "046f84882f1c",
+      "__out m1 {}": "3c1ff0f23b30",
+      "__out m1 r": "2d6da1e0e269",
+      "__out m1 sub": "b18c33911c02",
+      "__out m1 sub {}": "1c1a51efa721",
+      "__out m1 sub y": "620e5801287c",
+      "__out m1 li": "5037d68bc0d7",
+      "__out m1 li y": "8ba1b46c7718",
+      "__out m1 cx": "d0639a1f3ba4",
+      "__out m1 cx zm": "fa70891d9a96",
+      "__out m1 cx full": "d29538c6893f",
+      "__out m1 full": "d34c846dd337",
+      "__out m2 {}": "ebe675c7d9e4",
+      "__out m2 null": "87927261b200",
+      "__out tps {}": "7aef3586cca7",
+      "__out tps mk {}": "c71fb24223e5",
+      "__out tps mk in": "f564ce6bee81",
+      "__out tps full": "f9f45be64a76"
+    },
+    "plain | key": {
+      "gate": "74b5419b7a2c",
+      "m1": "a576cde21bc7",
+      "m2": "535798b0152c",
+      "third_party_settings": "5cfc29d75393"
+    },
+    "plain | path": {
+      "nope": "1bf169f7d887",
+      "nope.deeper": "ed8a9f9798ca",
+      "gate": "5712d94ed542",
+      "m1": "1cc2eaf997d8",
+      "m1.r": "c27ae43ae805",
+      "m1.s": "a8d7601eb114",
+      "m1.sub": "ad7efe12a4fe",
+      "m1.sub.x": "2a65e7dd0297",
+      "m1.sub.y": "ecf8026a648e",
+      "m1.sub.nope": "3925be0a167e",
+      "m1.li": "445ad1445603",
+      "m1.li.0": "96b115eed7ab",
+      "m1.li.0.y": "759502c08fee",
+      "m1.li.0.nope": "407341c5869f",
+      "m1.cx": "c820ed49adbf",
+      "m1.cx.z": "98e0cf2a4c75",
+      "m1.cx.zm": "a672c8764547",
+      "m1.cx.zm.w": "6ae555f760bc",
+      "m1.cx.zm.nope": "6ffd84bc4f9d",
+      "m1.cx.nope": "0cd2d4e1d00a",
+      "m1.nope": "3ba7e7050f19",
+      "m2": "71cc18cbaa64",
+      "m2.r": "da9012b9f585",
+      "m2.nope": "911d43ecb1ff",
+      "third_party_settings": "b8e937687917",
+      "third_party_settings.surface": "22c3b8aca436",
+      "third_party_settings.surface.mk": "d81b96792754",
+      "third_party_settings.surface.mk.a": "d2c28d571e73",
+      "third_party_settings.surface.mk.in": "79604dfbdaf4",
+      "third_party_settings.surface.mk.in.deep": "4b235f70f117",
+      "third_party_settings.surface.mk.in.nope": "25aa83b603f3",
+      "third_party_settings.surface.mk.nope": "ff82b373bdd1",
+      "third_party_settings.surface.mk2": "63809c1577ed",
+      "third_party_settings.surface.nope": "784e3b71cb70",
+      "third_party_settings.nope": "4dd306536a2c"
+    },
+    "plain | nodes": {
+      "nope": "85cf5ad1bdc5",
+      "nope.deeper": "85cf5ad1bdc5",
+      "gate": "85cf5ad1bdc5",
+      "m1": "85cf5ad1bdc5",
+      "m1.r": "85cf5ad1bdc5",
+      "m1.s": "85cf5ad1bdc5",
+      "m1.sub": "85cf5ad1bdc5",
+      "m1.sub.x": "85cf5ad1bdc5",
+      "m1.sub.y": "85cf5ad1bdc5",
+      "m1.sub.nope": "85cf5ad1bdc5",
+      "m1.li": "85cf5ad1bdc5",
+      "m1.li.0": "85cf5ad1bdc5",
+      "m1.li.0.y": "85cf5ad1bdc5",
+      "m1.li.0.nope": "85cf5ad1bdc5",
+      "m1.cx": "85cf5ad1bdc5",
+      "m1.cx.z": "85cf5ad1bdc5",
+      "m1.cx.zm": "85cf5ad1bdc5",
+      "m1.cx.zm.w": "85cf5ad1bdc5",
+      "m1.cx.zm.nope": "85cf5ad1bdc5",
+      "m1.cx.nope": "85cf5ad1bdc5",
+      "m1.nope": "85cf5ad1bdc5",
+      "m2": "85cf5ad1bdc5",
+      "m2.r": "85cf5ad1bdc5",
+      "m2.nope": "85cf5ad1bdc5",
+      "third_party_settings": "85cf5ad1bdc5",
+      "third_party_settings.surface": "85cf5ad1bdc5",
+      "third_party_settings.surface.mk": "85cf5ad1bdc5",
+      "third_party_settings.surface.mk.a": "85cf5ad1bdc5",
+      "third_party_settings.surface.mk.in": "85cf5ad1bdc5",
+      "third_party_settings.surface.mk.in.deep": "85cf5ad1bdc5",
+      "third_party_settings.surface.mk.in.nope": "85cf5ad1bdc5",
+      "third_party_settings.surface.mk.nope": "85cf5ad1bdc5",
+      "third_party_settings.surface.mk2": "85cf5ad1bdc5",
+      "third_party_settings.surface.nope": "85cf5ad1bdc5",
+      "third_party_settings.nope": "85cf5ad1bdc5"
+    }
+  },
+  "records": {
+    "plain | door | flow placed whole": [
+      {
+        "gate": 1,
+        "m1": 1,
+        "m2": 1,
+        "third_party_settings": 1
+      },
+      []
+    ],
+    "plain | values | __out m1 out": {
+      "withoutNonScalars": [
+        [],
+        []
+      ],
+      "fromSurface refined": {
+        "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+        "type": "map",
+        "label": "L",
+        "description": "D",
+        "required": false,
+        "getDefaultValue": null,
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": [],
+        "settings": [],
+        "array": {
+          "type": "map",
+          "label": "L",
+          "description": "D",
+          "required": false
+        },
+        "properties": {
+          "gate": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Gate",
+            "description": "",
+            "required": false,
+            "getDefaultValue": "open",
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "open",
+                  "r",
+                  "sub",
+                  "subx",
+                  "li",
+                  "cx",
+                  "cxzm",
+                  "two",
+                  "all",
+                  "mnt",
+                  "mntin",
+                  "subreq"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Gate",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "open",
+                    "r",
+                    "sub",
+                    "subx",
+                    "li",
+                    "cx",
+                    "cxzm",
+                    "two",
+                    "all",
+                    "mnt",
+                    "mntin",
+                    "subreq"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "m1": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": "M one",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "M one",
+              "description": "",
+              "required": false
+            },
+            "properties": {
+              "r": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Arr",
+                "description": "",
+                "required": true,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": [],
+                  "NotNull": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Arr",
+                  "description": "",
+                  "required": true,
+                  "constraints": {
+                    "PrimitiveType": [],
+                    "NotNull": []
+                  }
+                }
+              },
+              "s": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Ess",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Ess",
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "sub": {
+                "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                "type": "map",
+                "label": "Sub",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": [],
+                "settings": [],
+                "array": {
+                  "type": "map",
+                  "label": "Sub",
+                  "description": "",
+                  "required": false
+                },
+                "properties": {
+                  "x": {
+                    "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                    "type": "integer",
+                    "label": "Ex",
+                    "description": "",
+                    "required": true,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": {
+                      "PrimitiveType": [],
+                      "NotNull": []
+                    },
+                    "settings": [],
+                    "array": {
+                      "type": "integer",
+                      "label": "Ex",
+                      "description": "",
+                      "required": true,
+                      "constraints": {
+                        "PrimitiveType": [],
+                        "NotNull": []
+                      }
+                    }
+                  },
+                  "y": {
+                    "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                    "type": "string",
+                    "label": "Why",
+                    "description": "",
+                    "required": false,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": {
+                      "PrimitiveType": []
+                    },
+                    "settings": [],
+                    "array": {
+                      "type": "string",
+                      "label": "Why",
+                      "description": "",
+                      "required": false,
+                      "constraints": {
+                        "PrimitiveType": []
+                      }
+                    }
+                  }
+                }
+              },
+              "li": {
+                "class": "Drupal\\tool\\TypedData\\ListInputDefinition",
+                "type": "list",
+                "label": "Li",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "isConvertedFromMultiple": false,
+                "constraints": [],
+                "settings": [],
+                "array": {
+                  "type": "list",
+                  "label": "Li",
+                  "description": "",
+                  "required": false
+                },
+                "item": {
+                  "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                  "type": "map",
+                  "label": "Row",
+                  "description": "",
+                  "required": false,
+                  "getDefaultValue": null,
+                  "isLocked": false,
+                  "getExamples": [],
+                  "isMultiple": false,
+                  "constraints": [],
+                  "settings": [],
+                  "array": {
+                    "type": "map",
+                    "label": "Row",
+                    "description": "",
+                    "required": false
+                  },
+                  "properties": {
+                    "y": {
+                      "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                      "type": "string",
+                      "label": "Yrow",
+                      "description": "",
+                      "required": true,
+                      "getDefaultValue": null,
+                      "isLocked": false,
+                      "getExamples": [],
+                      "isMultiple": false,
+                      "constraints": {
+                        "PrimitiveType": [],
+                        "NotNull": []
+                      },
+                      "settings": [],
+                      "array": {
+                        "type": "string",
+                        "label": "Yrow",
+                        "description": "",
+                        "required": true,
+                        "constraints": {
+                          "PrimitiveType": [],
+                          "NotNull": []
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "cx": {
+                "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                "type": "map",
+                "label": "Complex",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": [],
+                "settings": [],
+                "array": {
+                  "type": "map",
+                  "label": "Complex",
+                  "description": "",
+                  "required": false
+                },
+                "properties": {
+                  "z": {
+                    "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                    "type": "string",
+                    "label": "Zed",
+                    "description": "",
+                    "required": true,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": {
+                      "PrimitiveType": [],
+                      "NotNull": []
+                    },
+                    "settings": [],
+                    "array": {
+                      "type": "string",
+                      "label": "Zed",
+                      "description": "",
+                      "required": true,
+                      "constraints": {
+                        "PrimitiveType": [],
+                        "NotNull": []
+                      }
+                    }
+                  },
+                  "zm": {
+                    "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                    "type": "map",
+                    "label": "ZM",
+                    "description": "",
+                    "required": false,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": [],
+                    "settings": [],
+                    "array": {
+                      "type": "map",
+                      "label": "ZM",
+                      "description": "",
+                      "required": false
+                    },
+                    "properties": {
+                      "w": {
+                        "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                        "type": "string",
+                        "label": "Wu",
+                        "description": "",
+                        "required": true,
+                        "getDefaultValue": null,
+                        "isLocked": false,
+                        "getExamples": [],
+                        "isMultiple": false,
+                        "constraints": {
+                          "PrimitiveType": [],
+                          "NotNull": []
+                        },
+                        "settings": [],
+                        "array": {
+                          "type": "string",
+                          "label": "Wu",
+                          "description": "",
+                          "required": true,
+                          "constraints": {
+                            "PrimitiveType": [],
+                            "NotNull": []
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "m2": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": "M two",
+            "description": "",
+            "required": true,
+            "getDefaultValue": {
+              "r": null
+            },
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "NotNull": []
+            },
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "M two",
+              "description": "",
+              "required": true,
+              "constraints": {
+                "NotNull": []
+              }
+            },
+            "properties": {
+              "r": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Arr2",
+                "description": "",
+                "required": true,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": [],
+                  "NotNull": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Arr2",
+                  "description": "",
+                  "required": true,
+                  "constraints": {
+                    "PrimitiveType": [],
+                    "NotNull": []
+                  }
+                }
+              }
+            }
+          },
+          "third_party_settings": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": {
+              "@text": "Third party settings"
+            },
+            "description": {
+              "@text": "Settings added by other modules."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": {
+                "@text": "Third party settings"
+              },
+              "description": {
+                "@text": "Settings added by other modules."
+              },
+              "required": false
+            },
+            "properties": {
+              "surface": {
+                "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                "type": "map",
+                "label": "Surface API",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": [],
+                "settings": [],
+                "array": {
+                  "type": "map",
+                  "label": "Surface API",
+                  "description": "",
+                  "required": false
+                },
+                "properties": {
+                  "mk": {
+                    "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                    "type": "map",
+                    "label": "Mounted map",
+                    "description": "",
+                    "required": false,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": [],
+                    "settings": [],
+                    "array": {
+                      "type": "map",
+                      "label": "Mounted map",
+                      "description": "",
+                      "required": false
+                    },
+                    "properties": {
+                      "a": {
+                        "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                        "type": "string",
+                        "label": "Ay",
+                        "description": "",
+                        "required": true,
+                        "getDefaultValue": null,
+                        "isLocked": false,
+                        "getExamples": [],
+                        "isMultiple": false,
+                        "constraints": {
+                          "PrimitiveType": [],
+                          "NotNull": []
+                        },
+                        "settings": [],
+                        "array": {
+                          "type": "string",
+                          "label": "Ay",
+                          "description": "",
+                          "required": true,
+                          "constraints": {
+                            "PrimitiveType": [],
+                            "NotNull": []
+                          }
+                        }
+                      },
+                      "in": {
+                        "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+                        "type": "map",
+                        "label": {
+                          "@text": "map value"
+                        },
+                        "description": "",
+                        "required": false,
+                        "getDefaultValue": null,
+                        "isLocked": false,
+                        "getExamples": [],
+                        "isMultiple": false,
+                        "constraints": [],
+                        "settings": [],
+                        "array": {
+                          "type": "map",
+                          "label": {
+                            "@text": "map value"
+                          },
+                          "description": "",
+                          "required": false
+                        },
+                        "properties": {
+                          "deep": {
+                            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                            "type": "string",
+                            "label": "Deep",
+                            "description": "",
+                            "required": true,
+                            "getDefaultValue": null,
+                            "isLocked": false,
+                            "getExamples": [],
+                            "isMultiple": false,
+                            "constraints": {
+                              "PrimitiveType": [],
+                              "NotNull": []
+                            },
+                            "settings": [],
+                            "array": {
+                              "type": "string",
+                              "label": "Deep",
+                              "description": "",
+                              "required": true,
+                              "constraints": {
+                                "PrimitiveType": [],
+                                "NotNull": []
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "mk2": {
+                    "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                    "type": "string",
+                    "label": "Mounted two",
+                    "description": "",
+                    "required": true,
+                    "getDefaultValue": null,
+                    "isLocked": false,
+                    "getExamples": [],
+                    "isMultiple": false,
+                    "constraints": {
+                      "PrimitiveType": [],
+                      "NotNull": []
+                    },
+                    "settings": [],
+                    "array": {
+                      "type": "string",
+                      "label": "Mounted two",
+                      "description": "",
+                      "required": true,
+                      "constraints": {
+                        "PrimitiveType": [],
+                        "NotNull": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "secrets refined": [],
+      "secretKeys refined": [],
+      "pathsOf": [],
+      "heldOn": [],
+      "heldOn strings": [],
+      "heldOn json": [],
+      "encrypted": null,
+      "flat": null,
+      "panel": [
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>gate</code>"
+              }
+            },
+            "string",
+            "Gate",
+            {
+              "@text": "no"
+            },
+            "\"open\"",
+            {
+              "data": {
+                "#markup": "one of open, r, sub, subx, li, cx, cxzm, two, all, mnt, mntin, subreq"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "gate"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>m1</code>"
+              }
+            },
+            "map",
+            "M one",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "Keys other modules added"
+                }
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "m1"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>m1.r</code>"
+              }
+            },
+            "string",
+            "Arr",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "m1.r"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>m1.s</code>"
+              }
+            },
+            "string",
+            "Ess",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "m1.s"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>m1.sub.x</code>"
+              }
+            },
+            "integer",
+            "Ex",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "m1.sub.x"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>m1.sub.y</code>"
+              }
+            },
+            "string",
+            "Why",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "m1.sub.y"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>m1.li</code>"
+              }
+            },
+            "list",
+            "Li",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "m1.li"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>m1.cx.z</code>"
+              }
+            },
+            "string",
+            "Zed",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "m1.cx.z"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>m1.cx.zm.w</code>"
+              }
+            },
+            "string",
+            "Wu",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "m1.cx.zm.w"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>m2</code>"
+              }
+            },
+            "map",
+            "M two",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "Keys other modules added"
+                }
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "m2"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>m2.r</code>"
+              }
+            },
+            "string",
+            "Arr2",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "m2.r"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>third_party_settings</code>"
+              }
+            },
+            "map",
+            "Third party settings",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "Keys other modules added"
+                }
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "third_party_settings"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>third_party_settings.surface.mk.a</code>"
+              }
+            },
+            "string",
+            "Ay",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "third_party_settings.surface.mk.a"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>third_party_settings.surface.mk.in.deep</code>"
+              }
+            },
+            "string",
+            "Deep",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "third_party_settings.surface.mk.in.deep"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>third_party_settings.surface.mk2</code>"
+              }
+            },
+            "string",
+            "Mounted two",
+            {
+              "@text": "yes"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "third_party_settings.surface.mk2"
+        }
+      ],
+      "formatter": [
+        {
+          "@text": "Not configured"
+        }
+      ]
+    },
+    "plain | key | gate": {
+      "fromDefinition": {
+        "class": "Drupal\\tool\\TypedData\\InputDefinition",
+        "type": "string",
+        "label": "Gate",
+        "description": "",
+        "required": false,
+        "getDefaultValue": "open",
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": {
+          "Choice": {
+            "choices": [
+              "open",
+              "r",
+              "sub",
+              "subx",
+              "li",
+              "cx",
+              "cxzm",
+              "two",
+              "all",
+              "mnt",
+              "mntin",
+              "subreq"
+            ]
+          },
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "string",
+          "label": "Gate",
+          "description": "",
+          "required": false,
+          "constraints": {
+            "Choice": {
+              "choices": [
+                "open",
+                "r",
+                "sub",
+                "subx",
+                "li",
+                "cx",
+                "cxzm",
+                "two",
+                "all",
+                "mnt",
+                "mntin",
+                "subreq"
+              ]
+            },
+            "PrimitiveType": []
+          }
+        }
+      },
+      "outputFromDefinition": {
+        "class": "Drupal\\tool\\TypedData\\OutputDefinition",
+        "type": "string",
+        "label": "Gate",
+        "description": "",
+        "required": false,
+        "getDefaultValue": null,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": {
+          "Choice": {
+            "choices": [
+              "open",
+              "r",
+              "sub",
+              "subx",
+              "li",
+              "cx",
+              "cxzm",
+              "two",
+              "all",
+              "mnt",
+              "mntin",
+              "subreq"
+            ]
+          },
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "string",
+          "label": "Gate",
+          "description": "",
+          "required": false,
+          "constraints": {
+            "Choice": {
+              "choices": [
+                "open",
+                "r",
+                "sub",
+                "subx",
+                "li",
+                "cx",
+                "cxzm",
+                "two",
+                "all",
+                "mnt",
+                "mntin",
+                "subreq"
+              ]
+            },
+            "PrimitiveType": []
+          },
+          "nullable": false
+        }
+      },
+      "held builder": [
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to \"abc\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to \"abc\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to \"5\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to \"5\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to \"1.5\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to \"1.5\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to \"true\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to \"true\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to \"0\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to \"0\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to \"2026-01-01\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to \"2026-01-01\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to \"2026-01-01T10:00:00\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to \"2026-01-01T10:00:00\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to \"2026-01-01T10:00:00+02:00\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to \"2026-01-01T10:00:00+02:00\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to \"[\\\"a\\\",\\\"b\\\"]\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to \"[\\\"a\\\",\\\"b\\\"]\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to \"{\\\"a\\\":1}\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to \"{\\\"a\\\":1}\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to 5, which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to 5, which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to 1.5, which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to 1.5, which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to true, which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to true, which the key does not accept: The value you selected is not a valid choice."
+          }
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.gate\" on hand to \"SECRETRAW\", which the key does not accept: The value you selected is not a valid choice."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.gate\" on hand to \"SECRETRAW\", which the key does not accept: The value you selected is not a valid choice."
+          }
+        ]
+      ],
+      "wider": {
+        "string 1": {
+          "gate": "it may be cleared, which the schema refuses: string is not nullable"
+        },
+        "string 0": [],
+        "string nullable 1": [],
+        "string nullable 0": [],
+        "integer 1": {
+          "gate": "it is a string, which the schema types integer, an integer"
+        },
+        "integer 0": {
+          "gate": "it is a string, which the schema types integer, an integer"
+        },
+        "integer nullable 1": {
+          "gate": "it is a string, which the schema types integer, an integer"
+        },
+        "integer nullable 0": {
+          "gate": "it is a string, which the schema types integer, an integer"
+        },
+        "boolean 1": {
+          "gate": "it is a string, which the schema types boolean, a boolean"
+        },
+        "boolean 0": {
+          "gate": "it is a string, which the schema types boolean, a boolean"
+        },
+        "float 1": {
+          "gate": "it is a string, which the schema types float, a float"
+        },
+        "float 0": {
+          "gate": "it is a string, which the schema types float, a float"
+        },
+        "ignore 1": [],
+        "ignore 0": [],
+        "mapping 1": {
+          "gate": "it is one value, which the schema types mapping, a mapping"
+        },
+        "mapping 0": {
+          "gate": "it is one value, which the schema types mapping, a mapping"
+        },
+        "sequence string 1": {
+          "gate": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence string 0": {
+          "gate": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence mapping 1": {
+          "gate": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence mapping 0": {
+          "gate": "it is one value, which the schema types sequence, a sequence"
+        },
+        "constrained 1": {
+          "gate": "it may be blank, which the schema's NotBlank refuses"
+        },
+        "constrained 0": {
+          "gate": "it may be blank, which the schema's NotBlank refuses"
+        },
+        "loose 1": {
+          "gate": "it may be less than -100, which the schema refuses"
+        },
+        "loose 0": {
+          "gate": "it may be less than -100, which the schema refuses"
+        }
+      }
+    },
+    "plain | path | m1.sub.x": {
+      "reachedOn": {
+        "class": "Drupal\\Core\\TypedData\\DataDefinition",
+        "type": "integer",
+        "label": "Ex",
+        "description": null,
+        "required": true,
+        "constraints": {
+          "PrimitiveType": [],
+          "NotNull": []
+        },
+        "settings": [],
+        "array": {
+          "type": "integer",
+          "label": "Ex",
+          "required": true
+        }
+      },
+      "reachedOn fixes": {
+        "class": "Drupal\\Core\\TypedData\\DataDefinition",
+        "type": "integer",
+        "label": "Ex",
+        "description": null,
+        "required": true,
+        "constraints": {
+          "PrimitiveType": [],
+          "NotNull": []
+        },
+        "settings": [],
+        "array": {
+          "type": "integer",
+          "label": "Ex",
+          "required": true
+        }
+      },
+      "heldOn raws": [
+        [
+          [],
+          []
+        ],
+        [
+          {
+            "m1.sub.x": 5
+          },
+          {
+            "m1.sub.x": 5
+          }
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          {
+            "m1.sub.x": 0
+          },
+          {
+            "m1.sub.x": 0
+          }
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          {
+            "m1.sub.x": 5
+          },
+          {
+            "m1.sub.x": 5
+          }
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          {
+            "m1.sub.x": 1
+          },
+          {
+            "m1.sub.x": 1
+          }
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ]
+      ],
+      "definitionAt": {
+        "NULL": null,
+        "'node'": null,
+        "'user'": null,
+        "'taxonomy_term'": null
+      }
+    },
+    "plain | nodes | nope": {
+      "NULL": null,
+      "'node'": null,
+      "'user'": null,
+      "'taxonomy_term'": null
+    }
+  }
+}

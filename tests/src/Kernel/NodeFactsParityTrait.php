@@ -50,6 +50,7 @@ trait NodeFactsParityTrait {
     'isList' => 'instanceof ListDataDefinitionInterface',
     'isMap' => 'DefinitionSchema::isMap()',
     'isLeaf' => 'neither complex nor a list',
+    'isComplex' => 'instanceof ComplexDataDefinitionInterface',
     'properties' => 'array_keys(getPropertyDefinitions())',
     'description' => 'getDescription()',
     'constraints' => 'getConstraints()',
@@ -167,6 +168,7 @@ trait NodeFactsParityTrait {
       'isList' => [DefinitionSchema::isList($node), $list],
       'isMap' => [DefinitionSchema::nodeIsMap($node), DefinitionSchema::isMap($definition)],
       'isLeaf' => [DefinitionSchema::isLeaf($node), !$complex && !$list],
+      'isComplex' => [DefinitionSchema::isComplex($node), $complex],
       'properties' => [
         array_keys(NodeFacts::properties($node)),
         DefinitionSchema::isMap($definition) && $complex ? array_keys($definition->getPropertyDefinitions()) : [],

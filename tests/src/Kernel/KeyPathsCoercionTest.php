@@ -60,6 +60,13 @@ class KeyPathsCoercionTest extends SurfaceKernelTestBase {
         '1700000000',
         1700000000,
       ],
+      // The type decides: the same text is a date for a datetime key and
+      // a number of seconds for a timestamp key.
+      'a timestamp from a text date' => [
+        DataDefinition::create('timestamp'),
+        '2026-11-13T10:00:00+02:00',
+        1794556800,
+      ],
       'a datetime moved to UTC' => [
         DataDefinition::create('datetime_iso8601'),
         '2026-11-13T10:00:00+02:00',

@@ -14,12 +14,16 @@ use Drupal\Core\TypedData\Type\BooleanInterface;
 use Drupal\Core\TypedData\Type\FloatInterface;
 use Drupal\Core\TypedData\Type\IntegerInterface;
 use Drupal\Core\TypedData\Type\StringInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\ResourceBuild\RefinesInputRefiner;
+use PortableSchema\Builder\Schema;
 
 /**
  * Says where a resource is wider than the config schema its storage writes.
@@ -277,7 +281,10 @@ trait HeldToConfigSchemaTrait {
           $this->mapWider($mounted->child->getDefinitions(), $definition, $path . '.' . $module, static::fullyValidatable($definition), $wider);
         }
         else {
-          $this->definitionWider($part, $definition, $path . '.' . $module, static::fullyValidatable($definition), $wider);
+          // A module's plain part: its node is the one the mount's node
+          // holds, which the walk steps into.
+          $part_node = DefinitionSchema::propertyNode($entry->schema(), (string) $module) ?? throw new \LogicException(sprintf('The node of the "%s" key holds no node at "%s" where its definition holds one: a built node holds one for every property.', $entry->name, $module));
+          $this->definitionWider($part_node, $part, $definition, $path . '.' . $module, static::fullyValidatable($definition), $wider);
         }
       }
       return;
@@ -312,7 +319,9 @@ trait HeldToConfigSchemaTrait {
       $this->mapWider($entry->attachment->child->getDefinitions(), $schema, $path, $strict, $wider);
       return;
     }
-    $this->definitionWider($entry->definition, $schema, $path, $strict, $wider);
+    // A plain key's facts are read from its node; the shells above keep
+    // their own on their definitions (Entry::isShell()).
+    $this->definitionWider($entry->schema(), $entry->definition, $schema, $path, $strict, $wider);
   }
 
   /**
@@ -367,6 +376,14 @@ trait HeldToConfigSchemaTrait {
   /**
    * Compares one definition with its schema, a map's or a list's too.
    *
+   * Its facts are read from its node; the definition is stepped down in
+   * step for the PHP class a value's data type maps to, which the typed
+   * data manager answers and no node holds.
+   *
+   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The definition's node.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    * @param array $schema
@@ -380,18 +397,21 @@ trait HeldToConfigSchemaTrait {
    * @param bool $item
    *   TRUE for a list's item, which is never null.
    */
-  protected function definitionWider(DataDefinitionInterface $definition, array $schema, string $path, bool $strict, array &$wider, bool $item = FALSE): void {
+  protected function definitionWider(Schema $node, DataDefinitionInterface $definition, array $schema, string $path, bool $strict, array &$wider, bool $item = FALSE): void {
     $type = (string) ($schema['type'] ?? 'undefined');
-    if ($definition instanceof ListDataDefinitionInterface) {
+    if (DefinitionSchema::isList($node)) {
+      assert($definition instanceof ListDataDefinitionInterface);
       if (!$this->isA($schema, Sequence::class)) {
         $wider[$path] = sprintf('it is a list, which the schema types %s', $type);
         return;
       }
-      $this->constraintsWider($definition, $schema, $path, $wider);
-      $this->definitionWider($definition->getItemDefinition(), $this->merged($schema['sequence'] ?? []), $path, $strict, $wider, TRUE);
+      $this->constraintsWider($definition, $schema, $path, $wider, $node);
+      $items = DefinitionSchema::itemNode($node) ?? throw new \LogicException('A list\'s node holds no node of its item: a built node holds one.');
+      $this->definitionWider($items, $definition->getItemDefinition(), $this->merged($schema['sequence'] ?? []), $path, $strict, $wider, TRUE);
       return;
     }
-    if ($definition instanceof ComplexDataDefinitionInterface) {
+    if (DefinitionSchema::isComplex($node)) {
+      assert($definition instanceof ComplexDataDefinitionInterface);
       if (!$this->isA($schema, Mapping::class)) {
         $wider[$path] = sprintf('it is a group of keys, which the schema types %s', $type);
         return;
@@ -401,11 +421,12 @@ trait HeldToConfigSchemaTrait {
           $wider[$path . '.' . $name] = 'the schema does not describe it';
           continue;
         }
-        $this->definitionWider($property, $this->merged($schema['mapping'][$name]), $path . '.' . $name, $strict, $wider);
+        $property_node = DefinitionSchema::propertyNode($node, (string) $name) ?? throw new \LogicException(sprintf('The node holds no property "%s" where its definition holds one: a built node holds one for every property.', $name));
+        $this->definitionWider($property_node, $property, $this->merged($schema['mapping'][$name]), $path . '.' . $name, $strict, $wider);
       }
       return;
     }
-    if ($definition->getDataType() === 'any') {
+    if (NodeFacts::dataType($node) === 'any') {
       return;
     }
     $mine = static::kind((string) $definition->getClass());
@@ -419,11 +440,11 @@ trait HeldToConfigSchemaTrait {
       $wider[$path] = sprintf('it is %s, which the schema types %s, %s', $a($mine), $type, $a($theirs));
       return;
     }
-    if (!$item && $strict && empty($schema['nullable']) && !DefinitionMetadata::holdsValue($definition) && !DefinitionMetadata::isSecret($definition)) {
+    if (!$item && $strict && empty($schema['nullable']) && !NodeFacts::holdsValue($node) && !Secrets::marked($node)) {
       $wider[$path] = sprintf('it may be cleared, which the schema refuses: %s is not nullable', $type);
       return;
     }
-    $this->constraintsWider($definition, $schema, $path, $wider);
+    $this->constraintsWider($definition, $schema, $path, $wider, $node);
   }
 
   /**
@@ -437,10 +458,14 @@ trait HeldToConfigSchemaTrait {
    *   Its dotted path.
    * @param array<string, string> $wider
    *   Where the resource is wider, added to.
+   * @param \PortableSchema\Builder\Schema|null $node
+   *   Its node, whose facts are read; NULL for a collection, a shell
+   *   whose own facts are read from its definition (Entry::isShell()).
    */
-  protected function constraintsWider(DataDefinitionInterface $definition, array $schema, string $path, array &$wider): void {
-    $mine = $definition->getConstraints();
-    $choices = ChoiceSet::of($definition)?->values;
+  protected function constraintsWider(DataDefinitionInterface $definition, array $schema, string $path, array &$wider, ?Schema $node = NULL): void {
+    $mine = $node === NULL ? $definition->getConstraints() : NodeFacts::constraints($node);
+    $choices = ChoiceSet::fromConstraints($mine)?->values;
+    $holds = $node === NULL ? DefinitionMetadata::holdsValue($definition) : NodeFacts::holdsValue($node);
     foreach ((array) ($schema['constraints'] ?? []) as $name => $options) {
       $options = is_array($options) ? $options : [];
       $why = match ((string) $name) {
@@ -449,7 +474,7 @@ trait HeldToConfigSchemaTrait {
         'Range' => static::boundsWider($options, $mine['Range'] ?? NULL, $choices, ''),
         'Count' => static::boundsWider($options, $mine['Count'] ?? NULL, NULL, 'items'),
         'Choice' => static::choiceWider($options, $choices),
-        'NotBlank' => !empty($options['allowNull']) || DefinitionMetadata::holdsValue($definition) || isset($mine['NotBlank']) || (int) ($mine['Length']['min'] ?? 0) >= 1 ? NULL : 'it may be blank, which the schema\'s NotBlank refuses',
+        'NotBlank' => !empty($options['allowNull']) || $holds || isset($mine['NotBlank']) || (int) ($mine['Length']['min'] ?? 0) >= 1 ? NULL : 'it may be blank, which the schema\'s NotBlank refuses',
         'Email' => isset($mine['Email']) ? NULL : 'it is not held to an email address, as the schema\'s Email is',
         default => NULL,
       };

@@ -6,10 +6,10 @@ namespace Drupal\surface\Drush\Generators\Resource;
 
 use Drupal\Component\Utility\Unicode;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
@@ -17,6 +17,7 @@ use Drupal\surface\Reference\References;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\DeclaredRefiner;
 use Drupal\surface\Refinement\Rule;
+use PortableSchema\Builder\Schema;
 
 /**
  * Writes the defineInputs() of a built resource back out as PHP.
@@ -316,6 +317,10 @@ final class ResourceCode {
     $name = $entry->name;
     $at = $path . $name;
     $definition = $entry->definition;
+    // A plain key's facts are read from its node; a key that holds a child
+    // frame is a shell (Entry::isShell()), whose own facts are read from
+    // its definition.
+    $node = $entry->isShell() ? NULL : $entry->schema();
     $comments = $this->leftComments($at, $name, $entry->attachment === NULL && $entry->list === NULL);
     if ($entry->variants !== NULL) {
       $comments[] = sprintf('From the schema, not written here: %s holds variants chosen by %s. Declare each as a #[Variant] structure and attach them with attachVariants(%s, by: %s).', $this->named($name), $this->named($entry->variants->by), $this->ref($name), $this->ref($entry->variants->by));
@@ -327,7 +332,7 @@ final class ResourceCode {
       $this->comments++;
       return $this->comment($comments);
     }
-    [$label, $unlabeled] = $this->label($definition, $name);
+    [$label, $unlabeled] = $this->label($node === NULL ? (DefinitionMetadata::ownLabel($definition) ?? $definition->getLabel()) : (NodeFacts::ownLabel($node) ?? NodeFacts::label($node)), $name);
     if ($unlabeled) {
       $this->unlabeled[] = $name;
     }
@@ -335,7 +340,8 @@ final class ResourceCode {
       $child = $entry->list !== NULL ? $entry->list->item : $entry->attachment;
       $class = $this->structure($child->child, $child->source ?? $at, $name, $label);
       if ($entry->list !== NULL) {
-        $count = $this->constraintsOf($definition)['Count'] ?? [];
+        $declared = $definition instanceof DataDefinition ? ($definition->toArray()['constraints'] ?? []) : [];
+        $count = is_array($declared) ? $declared['Count'] ?? [] : [];
         $bounds = '';
         foreach (['min', 'max'] as $bound) {
           $bounds .= isset($count[$bound]) ? sprintf(', %s: %s', $bound, PhpLiteral::scalar($count[$bound])) : '';
@@ -345,25 +351,26 @@ final class ResourceCode {
       else {
         $head = sprintf('$inputs->attach(%s, %s::class, %s)', $this->ref($name), $class, PhpLiteral::translated($label));
       }
-      $calls = $this->described($definition);
+      $calls = $this->described($definition->getDescription(), (bool) $definition->isRequired());
     }
     else {
+      assert($node !== NULL);
       $default = $surface->getDefault($name);
-      $head = $this->declaration($name, $definition, $label, $default);
+      $head = $this->declaration($name, $node, $label, $default);
       $calls = [
-        ...$this->described($definition),
-        ...$this->constraintCalls($definition, $this->named($name), $comments),
+        ...$this->describedBy($node),
+        ...$this->constraintCalls($node, $this->named($name), $comments),
       ];
     }
     if ($entry->locked) {
       $comments[] = sprintf('The schema makes %s readOnly, at the value it starts from: lock it with an access class, or leave it out.', $this->named($name));
       $this->comments++;
     }
-    if (DefinitionMetadata::isSecret($definition)) {
+    if ($node === NULL ? DefinitionMetadata::isSecret($definition) : Secrets::marked($node)) {
       $comments[] = sprintf('The schema makes %s writeOnly: a secret, which a storage holds apart. See docs/declaring-a-resource.md.', $this->named($name));
       $this->comments++;
     }
-    if (DefinitionMetadata::isAlwaysHeld($definition) && !$definition->isRequired()) {
+    if ($node === NULL ? DefinitionMetadata::isAlwaysHeld($definition) && !$definition->isRequired() : NodeFacts::isAlwaysHeld($node) && !NodeFacts::isRequired($node)) {
       $this->alwaysHeld[] = $at;
     }
     return ($comments === [] ? '' : $this->comment($comments) . "\n") . static::chain($head, $calls);
@@ -374,8 +381,8 @@ final class ResourceCode {
    *
    * @param string $name
    *   The key.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   Its definition.
+   * @param \PortableSchema\Builder\Schema $node
+   *   Its node.
    * @param string $label
    *   Its label.
    * @param mixed $default
@@ -384,41 +391,57 @@ final class ResourceCode {
    * @return string
    *   The call, as it opens the statement.
    */
-  protected function declaration(string $name, DataDefinitionInterface $definition, string $label, mixed $default): string {
+  protected function declaration(string $name, Schema $node, string $label, mixed $default): string {
     $default_argument = $default === NULL ? '' : ', default: ' . PhpLiteral::write($default, self::INDENT);
-    if ($definition instanceof ListDataDefinitionInterface) {
-      return sprintf('$inputs->addList(%s, %s, %s%s)', $this->ref($name), $this->item($definition->getItemDefinition(), self::INDENT + 2), PhpLiteral::translated($label), $default_argument);
+    if (DefinitionSchema::isList($node)) {
+      return sprintf('$inputs->addList(%s, %s, %s%s)', $this->ref($name), $this->item(static::itemOf($node), self::INDENT + 2), PhpLiteral::translated($label), $default_argument);
     }
-    if ($definition instanceof ComplexDataDefinitionInterface) {
-      return $this->map('$inputs', $this->ref($name), $definition, $label, is_array($default) ? $default : [], self::INDENT);
+    if (DefinitionSchema::isComplex($node)) {
+      return $this->map('$inputs', $this->ref($name), $node, $label, is_array($default) ? $default : [], self::INDENT);
     }
-    return sprintf('$inputs->add(%s, %s, %s%s)', $this->ref($name), PhpLiteral::string($this->type($definition)), PhpLiteral::translated($label), $default_argument);
+    return sprintf('$inputs->add(%s, %s, %s%s)', $this->ref($name), PhpLiteral::string(NodeFacts::dataType($node)), PhpLiteral::translated($label), $default_argument);
+  }
+
+  /**
+   * Gets the node of a list's item.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The list's node.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   Its item's node.
+   *
+   * @throws \LogicException
+   *   Where the node holds none: a built list's node holds its item's.
+   */
+  protected static function itemOf(Schema $node): Schema {
+    return DefinitionSchema::itemNode($node) ?? throw new \LogicException('A list\'s node holds no node of its item: a built node holds one.');
   }
 
   /**
    * Writes a list's item.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $item
-   *   The item's definition.
+   * @param \PortableSchema\Builder\Schema $item
+   *   The item's node.
    * @param int $indent
    *   The indentation of its chained calls.
    *
    * @return string
    *   Its type, or its definition where it says more.
    */
-  protected function item(DataDefinitionInterface $item, int $indent): string {
+  protected function item(Schema $item, int $indent): string {
     $calls = [];
-    $own = DefinitionMetadata::ownLabel($item);
+    $own = NodeFacts::ownLabel($item);
     if ($own !== NULL && (string) $own !== '') {
       $calls[] = '->setLabel(' . PhpLiteral::translated(static::text($own)) . ')';
     }
     $comments = [];
     $calls = [...$calls, ...$this->constraintCalls($item, '', $comments, $indent)];
     if ($calls === []) {
-      return PhpLiteral::string($this->type($item));
+      return PhpLiteral::string(NodeFacts::dataType($item));
     }
     $this->uses[DataDefinition::class] = TRUE;
-    return 'DataDefinition::create(' . PhpLiteral::string($this->type($item)) . ')' . static::calls($calls, $indent);
+    return 'DataDefinition::create(' . PhpLiteral::string(NodeFacts::dataType($item)) . ')' . static::calls($calls, $indent);
   }
 
   /**
@@ -429,8 +452,8 @@ final class ResourceCode {
    *   map.
    * @param string $key
    *   The key, as the call names it.
-   * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $map
-   *   The map.
+   * @param \PortableSchema\Builder\Schema $map
+   *   The map's node.
    * @param string $label
    *   Its label.
    * @param array $default
@@ -441,26 +464,26 @@ final class ResourceCode {
    * @return string
    *   The call, its callable's statements on lines of their own.
    */
-  protected function map(string $receiver, string $key, ComplexDataDefinitionInterface $map, string $label, array $default, int $indent): string {
+  protected function map(string $receiver, string $key, Schema $map, string $label, array $default, int $indent): string {
     $inner = $indent + 2;
     $lines = '';
-    foreach ($map->getPropertyDefinitions() as $name => $property) {
+    foreach (NodeFacts::properties($map) as $name => $property) {
       $name = (string) $name;
-      [$property_label] = $this->label($property, $name);
-      $starts = $default[$name] ?? (DefinitionMetadata::hasDefaultValue($property) ? DefinitionMetadata::getDefaultValue($property) : NULL);
+      [$property_label] = $this->label(NodeFacts::ownLabel($property) ?? NodeFacts::label($property), $name);
+      $starts = $default[$name] ?? (NodeFacts::hasDefault($property) ? NodeFacts::default($property) : NULL);
       $argument = $starts === NULL ? '' : ', default: ' . PhpLiteral::write($starts, $inner);
       $comments = [];
-      if ($property instanceof ComplexDataDefinitionInterface && !$property instanceof ListDataDefinitionInterface) {
+      if (DefinitionSchema::isComplex($property) && !DefinitionSchema::isList($property)) {
         $head = $this->map('$map', PhpLiteral::string($name), $property, $property_label, is_array($starts) ? $starts : [], $inner);
-        $calls = $this->described($property);
+        $calls = $this->describedBy($property);
       }
-      elseif ($property instanceof ListDataDefinitionInterface) {
-        $head = sprintf('$map->addList(%s, %s, %s%s)', PhpLiteral::string($name), $this->item($property->getItemDefinition(), $inner + 2), PhpLiteral::translated($property_label), $argument);
-        $calls = [...$this->described($property), ...$this->constraintCalls($property, '', $comments, $inner + 2)];
+      elseif (DefinitionSchema::isList($property)) {
+        $head = sprintf('$map->addList(%s, %s, %s%s)', PhpLiteral::string($name), $this->item(static::itemOf($property), $inner + 2), PhpLiteral::translated($property_label), $argument);
+        $calls = [...$this->describedBy($property), ...$this->constraintCalls($property, '', $comments, $inner + 2)];
       }
       else {
-        $head = sprintf('$map->add(%s, %s, %s%s)', PhpLiteral::string($name), PhpLiteral::string($this->type($property)), PhpLiteral::translated($property_label), $argument);
-        $calls = [...$this->described($property), ...$this->constraintCalls($property, '', $comments, $inner + 2)];
+        $head = sprintf('$map->add(%s, %s, %s%s)', PhpLiteral::string($name), PhpLiteral::string(NodeFacts::dataType($property)), PhpLiteral::translated($property_label), $argument);
+        $calls = [...$this->describedBy($property), ...$this->constraintCalls($property, '', $comments, $inner + 2)];
       }
       $lines .= "\n" . str_repeat(' ', $inner) . $head . static::calls($calls, $inner + 2) . ';';
     }
@@ -518,22 +541,36 @@ final class ResourceCode {
   /**
    * Writes a definition's description and whether it is required.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   * @param mixed $description
+   *   The description, as the definition holds it; NULL for none.
+   * @param bool $required
+   *   Whether it is required.
    *
    * @return string[]
    *   The chained calls.
    */
-  protected function described(DataDefinitionInterface $definition): array {
+  protected function described(mixed $description, bool $required): array {
     $calls = [];
-    $description = $definition->getDescription();
-    if ($description !== NULL && (string) $description !== '') {
+    if ((is_string($description) || $description instanceof \Stringable) && (string) $description !== '') {
       $calls[] = '->setDescription(' . PhpLiteral::translated(static::text($description)) . ')';
     }
-    if ($definition->isRequired()) {
+    if ($required) {
       $calls[] = '->setRequired(TRUE)';
     }
     return $calls;
+  }
+
+  /**
+   * Writes a key's description and whether it is required, from its node.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The key's node.
+   *
+   * @return string[]
+   *   The chained calls (described()).
+   */
+  protected function describedBy(Schema $node): array {
+    return $this->described(NodeFacts::description($node), NodeFacts::isRequired($node));
   }
 
   /**
@@ -541,8 +578,8 @@ final class ResourceCode {
    *
    * A JsonSchema constraint is written as a comment naming its keywords.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   * @param \PortableSchema\Builder\Schema $node
+   *   The key's node.
    * @param string $at
    *   The key, as a comment names it; empty for a list's item.
    * @param string[] $comments
@@ -553,9 +590,9 @@ final class ResourceCode {
    * @return string[]
    *   The chained calls.
    */
-  protected function constraintCalls(DataDefinitionInterface $definition, string $at, array &$comments, int $indent = self::INDENT + 2): array {
+  protected function constraintCalls(Schema $node, string $at, array &$comments, int $indent = self::INDENT + 2): array {
     $calls = [];
-    foreach ($this->constraintsOf($definition) as $constraint => $options) {
+    foreach (NodeFacts::declaredConstraints($node) as $constraint => $options) {
       $constraint = (string) $constraint;
       if ($constraint === 'JsonSchema') {
         $schema = is_array($options['schema'] ?? NULL) ? $options['schema'] : [];
@@ -571,8 +608,9 @@ final class ResourceCode {
         || ($constraint === 'LabeledChoice' && count($path) === 2 && $path[0] === 'choices' && is_string($path[1]));
       $calls[] = sprintf('->addConstraint(%s, %s)', PhpLiteral::string($constraint), PhpLiteral::write(is_array($options) ? $options : [], $indent, $translate));
     }
-    $settings = $definition instanceof DataDefinition ? ($definition->toArray()['settings'] ?? []) : [];
-    $settings = is_array($settings) ? $settings : [];
+    // What the definition's array holds: a DataDefinition's settings are
+    // its stored settings, and a node of another class holds none.
+    $settings = is_a(DefinitionSchema::classOf($node), DataDefinition::class, TRUE) ? NodeFacts::settings($node) : [];
     // The build writes the content mark on a reference key itself.
     unset($settings[References::CONTENT]);
     foreach ($settings as $setting => $value) {
@@ -613,20 +651,6 @@ final class ResourceCode {
     }
     unset($options['choices']);
     return ['labels' => $ordered] + $options;
-  }
-
-  /**
-   * Gives the constraints a definition declares itself.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
-   *
-   * @return array<string, mixed>
-   *   Its own constraints, not those of its type.
-   */
-  protected function constraintsOf(DataDefinitionInterface $definition): array {
-    $constraints = $definition instanceof DataDefinition ? ($definition->toArray()['constraints'] ?? []) : [];
-    return is_array($constraints) ? $constraints : [];
   }
 
   /**
@@ -736,33 +760,22 @@ final class ResourceCode {
   /**
    * Gives a definition's label, or its key's name for one with none.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   * @param mixed $label
+   *   The label its owner gave it, else its label, as held; NULL for none.
    * @param string $name
    *   The key.
    *
    * @return array{0: string, 1: bool}
    *   The label, and whether it was made from the name.
    */
-  protected function label(DataDefinitionInterface $definition, string $name): array {
-    $label = DefinitionMetadata::ownLabel($definition) ?? $definition->getLabel();
+  protected function label(mixed $label, string $name): array {
+    if (!is_string($label) && !$label instanceof \Stringable) {
+      $label = $label === NULL ? NULL : (string) $label;
+    }
     if ($label === NULL || (string) $label === '') {
       return [Unicode::ucfirst(str_replace('_', ' ', $name)), TRUE];
     }
     return [static::text($label), FALSE];
-  }
-
-  /**
-   * Gives the data type a key is declared with.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
-   *
-   * @return string
-   *   Its type.
-   */
-  protected function type(DataDefinitionInterface $definition): string {
-    return $definition->getDataType();
   }
 
   /**

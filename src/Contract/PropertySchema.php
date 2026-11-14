@@ -850,23 +850,6 @@ final class PropertySchema {
   }
 
   /**
-   * Allows null beside a type, for an optional key a caller may clear.
-   *
-   * Stands for DefinitionSchema::nullable(), rule for rule.
-   *
-   * @param string|array $type
-   *   The JSON type.
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's built node.
-   *
-   * @return string|array
-   *   The type, or the type and null.
-   */
-  public function nullable(string|array $type, Schema $node): string|array {
-    return is_array($type) || !NodeFacts::isNullable($node) ? $type : [$type, 'null'];
-  }
-
-  /**
    * Says an item of a list as never null.
    *
    * An item is not a key a caller clears: accept() drops an empty item
@@ -985,8 +968,14 @@ final class PropertySchema {
   protected function choices(OptionSet $set, Schema $node): array {
     $choices = [];
     foreach ($set->options as $value => $label) {
-      // A Choice of numbers is labeled by them, as numbers.
-      $title = PlainText::of(is_int($label) || is_float($label) ? (string) $label : $label);
+      // A Choice of numbers is labeled by them, as numbers; a Choice of
+      // booleans as the document writes the value, "true" or "false".
+      // Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+      $title = PlainText::of(match (TRUE) {
+        is_bool($label) => $label ? 'true' : 'false',
+        is_string($label), $label instanceof \Stringable => $label,
+        default => (string) $label,
+      });
       $choice = Schema::any()->with('const', $this->cast($value, $node))->with('title', $title);
       if (isset($set->descriptions[$value])) {
         $choice = $choice->with('description', PlainText::of($set->descriptions[$value]));

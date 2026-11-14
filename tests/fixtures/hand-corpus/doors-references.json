@@ -1,0 +1,523 @@
+{
+  "surface": "references",
+  "rows": 101,
+  "digests": {
+    "plain | door": {
+      "fromSurface": "1720e3948b0f",
+      "fromSurface stored": "1720e3948b0f",
+      "fromSurface narrowing": "1720e3948b0f",
+      "withLookups": "46206a81bd39",
+      "withDependencies": "f89b0b7aa2af",
+      "withStored": "a125daa40420",
+      "shapeOf": "f5638806d10f",
+      "withoutRequired": "c0fdbac577ae",
+      "outputFromInput": "0ff263471f43",
+      "secrets": "39347ff402b6",
+      "outputs": "39347ff402b6",
+      "values update": "2227e296cc93",
+      "values create": "0c11ee2464ef",
+      "stored": "46f74b2e65b3",
+      "secretKeys": "39347ff402b6",
+      "config schema": "dbc0d8faf018",
+      "config schema held+install": "7b621013bdb9",
+      "config schema installed empty": "f4ad5005eb80",
+      "config schema translated": "6a17ebd9b0fd",
+      "wider generated": "620530ee55dd",
+      "ResourceCode": "a8a55f96edfc",
+      "flow placed whole": "56e74828a395",
+      "flow placed grouped": "b73a738276cd"
+    },
+    "plain | values": {
+      "stored": "40f4810ce410",
+      "narrow": "fb0fe08822e3"
+    },
+    "plain | key": {
+      "gate": "f228a06be48b",
+      "node": "127d5f56ba2a",
+      "node_id": "0836a594540c",
+      "user": "d51c8e9af778",
+      "nodes": "3d07f3799c71",
+      "rmap": "47acc643c0b6",
+      "narrowed": "7a05e89174cb",
+      "child": "599c06dff3fe",
+      "kids": "f8a91e8d5e80",
+      "vkind": "205edd5f47e3",
+      "vars": "fa3facf27219",
+      "entity_type": "4f195611684f",
+      "id": "0e2969056f0a",
+      "anyref": "75073e292e40"
+    },
+    "plain | path": {
+      "nope": "1bf169f7d887",
+      "nope.deeper": "ed8a9f9798ca",
+      "child.author": "3b3a1c6a2ee8",
+      "child.page": "b1c99bb9b15c",
+      "kids.0.author": "0a2d33499692",
+      "kids.0.page": "98388f541337",
+      "vars.vref": "9db1e554336c",
+      "anyref.entity_type": "a237d26d0d54",
+      "anyref.id": "c086547b06df",
+      "gate": "fa9c9db4397d",
+      "node": "23c348605934",
+      "node_id": "c079b0edc420",
+      "user": "7456ec9b710f",
+      "nodes": "23018cfadb78",
+      "nodes.0": "9a2349ca8e48",
+      "rmap": "10d4a0a9cc2c",
+      "rmap.who": "7430c1b87798",
+      "rmap.what": "fd1e0a0612d2",
+      "rmap.nope": "23824c56bc1e",
+      "narrowed": "a9b4d5b91cfd",
+      "child": "11a5f3990475",
+      "child.nope": "3ff75f1a3e04",
+      "kids": "569e3671d472",
+      "kids.0": "93c2a52e7ddc",
+      "kids.0.nope": "eae267e41b5d",
+      "vkind": "b678452d5e6a",
+      "vars": "577f1bc4b2d7",
+      "entity_type": "a0f0ae3609a9",
+      "id": "eaf33bf1f031",
+      "anyref": "df1140d9c878",
+      "anyref.nope": "f867a9b500c2"
+    },
+    "plain | nodes": {
+      "nope": "85cf5ad1bdc5",
+      "nope.deeper": "85cf5ad1bdc5",
+      "child.author": "5a96729420cc",
+      "child.page": "ada6595bec87",
+      "kids.0.author": "85cf5ad1bdc5",
+      "kids.0.page": "85cf5ad1bdc5",
+      "vars.vref": "85cf5ad1bdc5",
+      "anyref.entity_type": "85cf5ad1bdc5",
+      "anyref.id": "6ddacd18369c",
+      "gate": "85cf5ad1bdc5",
+      "node": "b22806c62cae",
+      "node_id": "e727667eb0a3",
+      "user": "5a96729420cc",
+      "nodes": "85cf5ad1bdc5",
+      "nodes.0": "85cf5ad1bdc5",
+      "rmap": "85cf5ad1bdc5",
+      "rmap.who": "85cf5ad1bdc5",
+      "rmap.what": "85cf5ad1bdc5",
+      "rmap.nope": "85cf5ad1bdc5",
+      "narrowed": "f5add92b77ca",
+      "child": "85cf5ad1bdc5",
+      "child.nope": "85cf5ad1bdc5",
+      "kids": "85cf5ad1bdc5",
+      "kids.0": "85cf5ad1bdc5",
+      "kids.0.nope": "85cf5ad1bdc5",
+      "vkind": "85cf5ad1bdc5",
+      "vars": "85cf5ad1bdc5",
+      "entity_type": "85cf5ad1bdc5",
+      "id": "6ddacd18369c",
+      "anyref": "6ddacd18369c",
+      "anyref.nope": "85cf5ad1bdc5"
+    }
+  },
+  "records": {
+    "plain | door | flow placed whole": [
+      {
+        "gate": 1,
+        "node": 1,
+        "node_id": 1,
+        "user": 1,
+        "nodes": 1,
+        "rmap": 1,
+        "narrowed": 1,
+        "child": 1,
+        "kids": 1,
+        "vkind": 1,
+        "vars": 1,
+        "entity_type": 1,
+        "id": 1,
+        "anyref": 1
+      },
+      []
+    ],
+    "plain | values | narrow": {
+      "withoutNonScalars": [
+        {
+          "gate": "narrow"
+        },
+        []
+      ],
+      "fromSurface refined": {
+        "thrown": "LogicException",
+        "message": "Refining \"narrowed\" for the declaring class widened what it was given: the options of the SurfaceValidReference constraint were replaced. Refinement may only narrow; widening is a build-time act, and the build is over."
+      },
+      "secrets refined": {
+        "thrown": "LogicException",
+        "message": "Refining \"narrowed\" for the declaring class widened what it was given: the options of the SurfaceValidReference constraint were replaced. Refinement may only narrow; widening is a build-time act, and the build is over."
+      },
+      "secretKeys refined": {
+        "thrown": "LogicException",
+        "message": "Refining \"narrowed\" for the declaring class widened what it was given: the options of the SurfaceValidReference constraint were replaced. Refinement may only narrow; widening is a build-time act, and the build is over."
+      },
+      "pathsOf": {
+        "gate": "narrow"
+      },
+      "heldOn": {
+        "gate": "narrow"
+      },
+      "heldOn strings": {
+        "gate": "narrow"
+      },
+      "heldOn json": {
+        "gate": "narrow"
+      },
+      "encrypted": null,
+      "flat": null,
+      "panel": {
+        "thrown": "LogicException",
+        "message": "Refining \"narrowed\" for the declaring class widened what it was given: the options of the SurfaceValidReference constraint were replaced. Refinement may only narrow; widening is a build-time act, and the build is over."
+      },
+      "formatter": [
+        {
+          "@text": "Gate: narrow"
+        }
+      ]
+    },
+    "plain | key | id": {
+      "fromDefinition": {
+        "class": "Drupal\\tool\\TypedData\\InputDefinition",
+        "type": "string",
+        "label": "ID",
+        "description": "",
+        "required": false,
+        "getDefaultValue": null,
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": {
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "string",
+          "label": "ID",
+          "description": "",
+          "required": false,
+          "constraints": {
+            "PrimitiveType": []
+          }
+        }
+      },
+      "outputFromDefinition": {
+        "class": "Drupal\\tool\\TypedData\\OutputDefinition",
+        "type": "string",
+        "label": "ID",
+        "description": "",
+        "required": false,
+        "getDefaultValue": null,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": {
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "string",
+          "label": "ID",
+          "description": "",
+          "required": false,
+          "constraints": {
+            "PrimitiveType": []
+          },
+          "nullable": false
+        }
+      },
+      "held builder": [
+        [
+          "abc",
+          "abc"
+        ],
+        [
+          "5",
+          "5"
+        ],
+        [
+          "1.5",
+          "1.5"
+        ],
+        [
+          "true",
+          "true"
+        ],
+        [
+          "0",
+          "0"
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          "2026-01-01",
+          "2026-01-01"
+        ],
+        [
+          "2026-01-01T10:00:00",
+          "2026-01-01T10:00:00"
+        ],
+        [
+          "2026-01-01T10:00:00+02:00",
+          "2026-01-01T10:00:00+02:00"
+        ],
+        [
+          "[\"a\",\"b\"]",
+          "[\"a\",\"b\"]"
+        ],
+        [
+          "{\"a\":1}",
+          "{\"a\":1}"
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.id\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.id\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.id\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.id\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
+          }
+        ],
+        [
+          "5",
+          "5"
+        ],
+        [
+          "1.5",
+          "1.5"
+        ],
+        [
+          true,
+          true
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          "SECRETRAW",
+          "SECRETRAW"
+        ]
+      ],
+      "wider": {
+        "string 1": {
+          "id": "it may be cleared, which the schema refuses: string is not nullable"
+        },
+        "string 0": [],
+        "string nullable 1": [],
+        "string nullable 0": [],
+        "integer 1": {
+          "id": "it is a string, which the schema types integer, an integer"
+        },
+        "integer 0": {
+          "id": "it is a string, which the schema types integer, an integer"
+        },
+        "integer nullable 1": {
+          "id": "it is a string, which the schema types integer, an integer"
+        },
+        "integer nullable 0": {
+          "id": "it is a string, which the schema types integer, an integer"
+        },
+        "boolean 1": {
+          "id": "it is a string, which the schema types boolean, a boolean"
+        },
+        "boolean 0": {
+          "id": "it is a string, which the schema types boolean, a boolean"
+        },
+        "float 1": {
+          "id": "it is a string, which the schema types float, a float"
+        },
+        "float 0": {
+          "id": "it is a string, which the schema types float, a float"
+        },
+        "ignore 1": [],
+        "ignore 0": [],
+        "mapping 1": {
+          "id": "it is one value, which the schema types mapping, a mapping"
+        },
+        "mapping 0": {
+          "id": "it is one value, which the schema types mapping, a mapping"
+        },
+        "sequence string 1": {
+          "id": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence string 0": {
+          "id": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence mapping 1": {
+          "id": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence mapping 0": {
+          "id": "it is one value, which the schema types sequence, a sequence"
+        },
+        "constrained 1": {
+          "id": "it may be blank, which the schema's NotBlank refuses"
+        },
+        "constrained 0": {
+          "id": "it may be blank, which the schema's NotBlank refuses"
+        },
+        "loose 1": {
+          "id": "it may be more than 99 characters long, which the schema refuses"
+        },
+        "loose 0": {
+          "id": "it may be more than 99 characters long, which the schema refuses"
+        }
+      }
+    },
+    "plain | path | vkind": {
+      "reachedOn": {
+        "class": "Drupal\\Core\\TypedData\\DataDefinition",
+        "type": "string",
+        "label": "Vkind",
+        "description": null,
+        "required": false,
+        "constraints": {
+          "Choice": {
+            "choices": [
+              "a"
+            ]
+          },
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "string",
+          "label": "Vkind",
+          "constraints": {
+            "Choice": {
+              "choices": [
+                "a"
+              ]
+            }
+          }
+        }
+      },
+      "reachedOn fixes": {
+        "class": "Drupal\\Core\\TypedData\\DataDefinition",
+        "type": "string",
+        "label": "Vkind",
+        "description": null,
+        "required": false,
+        "constraints": {
+          "Choice": {
+            "choices": [
+              "a"
+            ]
+          },
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "string",
+          "label": "Vkind",
+          "constraints": {
+            "Choice": {
+              "choices": [
+                "a"
+              ]
+            }
+          }
+        }
+      },
+      "heldOn raws": [
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ]
+      ],
+      "definitionAt": {
+        "NULL": null,
+        "'node'": null,
+        "'user'": null,
+        "'taxonomy_term'": null
+      }
+    },
+    "plain | nodes | nope": {
+      "NULL": null,
+      "'node'": null,
+      "'user'": null,
+      "'taxonomy_term'": null
+    }
+  }
+}

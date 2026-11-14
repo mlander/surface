@@ -44,6 +44,17 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *   collection's own node, without its items, which no entry's node is
    *   (a list's node holds its items, the child's whole tree), for its
    *   keywords, its default, its arrangement and its signature.
+   * - src/Tool/InputDefinitions.php, of(): the public converters,
+   *   fromDefinition() and outputFromDefinition(), read the node of a
+   *   definition a caller hands with no node; every caller in the module
+   *   hands the entry's node with it.
+   * - src/Storage/ConfigSchemaGenerator.php, head(): entry() reads a
+   *   collection's own node, without its items, for the constraints it
+   *   declares, as PropertySchema's listNode() does.
+   * - src/Storage/ConfigSchemaGenerator.php, of(): entry() reads what
+   *   every entry of a map of entries from the site is, a definition set
+   *   on the shell's definition that no entry holds, so the shell's node
+   *   (the child's whole tree) is not read for it.
    * - src/Pipeline/Validating.php, of(): placeAt() reads a port's node. A
    *   port has no entry: the container hands the child a bare definition
    *   (SurfaceInterface::getPortDefinition()), whose label a refusal
@@ -58,6 +69,8 @@ class DefinitionReadCallersTest extends UnitTestCase {
     'src/Contract/PropertySchema.php' => ['head' => 1, 'of' => 1],
     'src/Entry.php' => ['of' => 2],
     'src/Pipeline/Validating.php' => ['of' => 1],
+    'src/Storage/ConfigSchemaGenerator.php' => ['head' => 1, 'of' => 1],
+    'src/Tool/InputDefinitions.php' => ['of' => 2],
   ];
 
   /**

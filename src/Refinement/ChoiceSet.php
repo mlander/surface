@@ -70,7 +70,22 @@ final class ChoiceSet {
    *   so allows anything its type allows.
    */
   public static function of(DataDefinitionInterface $definition): ?ChoiceSet {
-    $constraints = $definition->getConstraints();
+    return static::fromConstraints($definition->getConstraints());
+  }
+
+  /**
+   * Reads the choice constraint a list of constraints holds, if it holds one.
+   *
+   * What of() reads, for a reader that holds a key's constraints as its
+   * node holds them (NodeFacts::constraints()).
+   *
+   * @param array $constraints
+   *   The constraints, options by plugin id.
+   *
+   * @return \Drupal\surface\Refinement\ChoiceSet|null
+   *   As of() answers.
+   */
+  public static function fromConstraints(array $constraints): ?ChoiceSet {
     foreach (self::CONSTRAINTS as $name) {
       if (array_key_exists($name, $constraints)) {
         return self::fromOptions($name, (array) $constraints[$name]);

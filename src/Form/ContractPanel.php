@@ -13,6 +13,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\SurfaceOptions;
@@ -23,6 +24,7 @@ use Drupal\surface\ResourceBuild\ServedPathsInterface;
 use Drupal\surface\Entry;
 use Drupal\tool\Normalizer\ToolDefinitionSerializer;
 use Drupal\tool\Tool\ToolManager;
+use PortableSchema\Builder\Schema;
 
 /**
  * Shows the contract an operation form's data surface emits, now.
@@ -119,7 +121,8 @@ final class ContractPanel implements SurfaceFormPanelInterface {
     $refined = $declared->refine($values);
     $rows = [];
     foreach ($refined->getDefinitions()->entries() as $name => $entry) {
-      $this->entryRows($rows, (string) $name, $entry, $declared->getDefinition((string) $name), $refined, $values);
+      $declared_entry = $declared->getDefinitions()->entry((string) $name);
+      $this->entryRows($rows, (string) $name, $entry, $declared_entry?->definition, $refined, $values, $declared_entry);
     }
     $resource_id = $this->registry->getDefinition($served->resource)->id;
     $tool_id = 'surface:' . $resource_id . ':' . $served->operation->id;
@@ -245,8 +248,13 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    *   The refined data surface the key belongs to.
    * @param array $values
    *   The values it was refined by.
+   * @param \Drupal\surface\Entry|null $declared_entry
+   *   The key's entry as declared, or NULL: a plain key's facts are read
+   *   from its node and the refined key's (Entry::schema()); a key that
+   *   holds a child frame is a shell (Entry::isShell()), whose own facts,
+   *   and its properties', are read from its definition.
    */
-  protected function entryRows(array &$rows, string $path, Entry $entry, ?DataDefinitionInterface $declared, SurfaceInterface $refined, array $values): void {
+  protected function entryRows(array &$rows, string $path, Entry $entry, ?DataDefinitionInterface $declared, SurfaceInterface $refined, array $values, ?Entry $declared_entry = NULL): void {
     $definition = $entry->definition;
     $depends = $refined->getDefinitions()->dependencies($entry->name);
     if ($entry->variants !== NULL) {
@@ -296,14 +304,19 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       $this->propertyRows($rows, $path, $definition, $declared instanceof ComplexDataDefinitionInterface ? $declared->getPropertyDefinitions() : [], $depends);
       return;
     }
+    // A plain key: its facts from its node, the refined key's and the
+    // declared key's.
+    $node = $entry->schema();
+    $declared_node = $declared_entry === NULL || $declared_entry->isShell() ? NULL : $declared_entry->schema();
     $rows[] = $this->row(
       $path,
-      $definition->getDataType(),
+      NodeFacts::dataType($node),
       $definition,
       $refined->getDefault($entry->name),
-      $this->allows($definition),
+      $this->allows($definition, $node),
       $depends,
-      $this->status($declared, $definition, $entry->locked, $entry->isRefinedAtRuntime()),
+      $this->status($declared, $definition, $entry->locked, $entry->isRefinedAtRuntime(), $declared_node, $node),
+      $node,
     );
   }
 
@@ -358,17 +371,22 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    *   The keys it depends on.
    * @param string|\Stringable $status
    *   Whether it is as declared right now.
+   * @param \PortableSchema\Builder\Schema|null $node
+   *   The key's node, refined, whose label and flag are read; NULL for a
+   *   shell or a property of one, read from its definition.
    *
    * @return array
    *   The table row.
    */
-  protected function row(string $path, string|\Stringable $type, DataDefinitionInterface $definition, mixed $default, string|\Stringable $allows, array $depends, string|\Stringable $status): array {
+  protected function row(string $path, string|\Stringable $type, DataDefinitionInterface $definition, mixed $default, string|\Stringable $allows, array $depends, string|\Stringable $status, ?Schema $node = NULL): array {
+    $label = $node === NULL ? $definition->getLabel() : NodeFacts::label($node);
+    $required = $node === NULL ? $definition->isRequired() : NodeFacts::isRequired($node);
     return [
       'data' => [
         ['data' => ['#markup' => '<code>' . htmlspecialchars($path) . '</code>']],
         (string) $type,
-        (string) ($definition->getLabel() ?? ''),
-        $definition->isRequired() ? $this->t('yes') : $this->t('no'),
+        (string) ($label ?? ''),
+        $required ? $this->t('yes') : $this->t('no'),
         $default === NULL || $default === [] ? '—' : (string) json_encode($default, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
         // Safe HTML: every phrase escaped, a pattern set in code.
         ['data' => ['#markup' => $allows]],
@@ -383,12 +401,15 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    * Says what a definition allows, in words.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   *   The definition, which the options service is handed.
+   * @param \PortableSchema\Builder\Schema|null $node
+   *   Its node, whose constraints are read; NULL for a shell or a property
+   *   of one, whose constraints are read from its definition.
    *
    * @return string
    *   One phrase per constraint, or "anything of its type".
    */
-  protected function allows(DataDefinitionInterface $definition): string {
+  protected function allows(DataDefinitionInterface $definition, ?Schema $node = NULL): string {
     $phrases = [];
     $set = $this->options->resolve($definition);
     if ($set !== NULL) {
@@ -396,7 +417,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
         '@values' => implode(', ', array_map('strval', $set->options)),
       ]);
     }
-    foreach ($definition->getConstraints() as $name => $options) {
+    foreach ($node === NULL ? $definition->getConstraints() : NodeFacts::constraints($node) as $name => $options) {
       $listed = $set !== NULL && in_array($name, ['Choice', 'LabeledChoice', 'AllowedValues'], TRUE);
       if ($listed || in_array($name, self::SAID_ELSEWHERE, TRUE)) {
         continue;
@@ -480,15 +501,20 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    * @param bool $runtime
    *   Whether a runtime refiner narrows it, which the table says because
    *   no schema does.
+   * @param \PortableSchema\Builder\Schema|null $declared_node
+   *   The declared key's node; NULL to read its definition.
+   * @param \PortableSchema\Builder\Schema|null $refined_node
+   *   The refined key's node; NULL to read its definition.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The status.
    */
-  protected function status(?DataDefinitionInterface $declared, DataDefinitionInterface $refined, bool $locked, bool $runtime = FALSE): TranslatableMarkup {
+  protected function status(?DataDefinitionInterface $declared, DataDefinitionInterface $refined, bool $locked, bool $runtime = FALSE, ?Schema $declared_node = NULL, ?Schema $refined_node = NULL): TranslatableMarkup {
     if ($locked) {
       return $this->t('locked');
     }
-    $narrowed = $declared !== NULL && ($declared->isRequired() !== $refined->isRequired() || $this->allows($declared) !== $this->allows($refined));
+    $required = static fn (DataDefinitionInterface $definition, ?Schema $node): bool => $node === NULL ? (bool) $definition->isRequired() : NodeFacts::isRequired($node);
+    $narrowed = $declared !== NULL && ($required($declared, $declared_node) !== $required($refined, $refined_node) || $this->allows($declared, $declared_node) !== $this->allows($refined, $refined_node));
     return match (TRUE) {
       // Narrowed by whatever refines it, and a rule only the site applies
       // checks it too: which of them narrowed it is not known here.

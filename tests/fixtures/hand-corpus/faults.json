@@ -1,0 +1,276 @@
+{
+  "surface": "faults",
+  "rows": 90,
+  "digests": {
+    "plain | none": {
+      "nothing": "e04b0ca0a264",
+      "gate narrow": "a736390e8075",
+      "fs b": "a8c6a1182940",
+      "narrowed kept": "a3cbb9f29e2b",
+      "fh cleared": "3ada2663de73",
+      "fh 3": "ed842648c2b2",
+      "fb true": "9811ea658bfa",
+      "doc full": "08513e969663",
+      "doc hints": "10ee83ce4ee9",
+      "doc case gate narrow": "7dcb2ff51954",
+      "narrowed gate narrow": "acdc7b711756",
+      "doc case fs b": "f54f13930966",
+      "narrowed fs b": "de04f0c0843f",
+      "doc case narrowed kept": "7dcb2ff51954",
+      "narrowed narrowed kept": "3d06b1560d69",
+      "doc case fh cleared": "f54f13930966",
+      "narrowed fh cleared": "2af162b27513",
+      "doc case fh 3": "6f03c2c86df1",
+      "narrowed fh 3": "1aeda029e156",
+      "doc case fb true": "bcd6b31fb328",
+      "narrowed fb true": "35bb9f2f71a9"
+    },
+    "plain | stored": {
+      "nothing": "fc2b0c4ef802",
+      "gate narrow": "fc2b0c4ef802",
+      "fs b": "fc2b0c4ef802",
+      "narrowed kept": "c303168b6a1d",
+      "fh cleared": "a251abdf70ec",
+      "fh 3": "6df5942c9c0a",
+      "fb true": "bdeb99060a81",
+      "doc full": "0094c878ba2c",
+      "doc hints": "7dcb2ff51954",
+      "doc case gate narrow": "7dcb2ff51954",
+      "narrowed gate narrow": "6913c9494261",
+      "doc case fs b": "7dcb2ff51954",
+      "narrowed fs b": "4fa0efb3b649",
+      "doc case narrowed kept": "7dcb2ff51954",
+      "narrowed narrowed kept": "4fa0efb3b649",
+      "doc case fh cleared": "7dcb2ff51954",
+      "narrowed fh cleared": "def7024e363d",
+      "doc case fh 3": "781f67826617",
+      "narrowed fh 3": "0bc59a97f6c4",
+      "doc case fb true": "bcd6b31fb328",
+      "narrowed fb true": "42b1ab4873a9"
+    },
+    "plain": {
+      "doc empty": "08513e969663",
+      "doc emitFull": "17489e2cffc9",
+      "doc emitFull hints": "8d3d74a4bf9f"
+    },
+    "booleans | none": {
+      "nothing": "75c803716a03",
+      "gate narrow": "7c73edce04e4",
+      "fs b": "86e061beddf0",
+      "narrowed kept": "a59512c917e7",
+      "fh cleared": "b99d970c81fb",
+      "fh 3": "b99d970c81fb",
+      "fb true": "b337cf227757",
+      "doc full": "a8856612c91e",
+      "doc hints": "42db6455f2b8",
+      "doc case gate narrow": "e9270c1db047",
+      "narrowed gate narrow": "5fc21f630c34",
+      "doc case fs b": "32f6da756aa1",
+      "narrowed fs b": "9c771b13c14f",
+      "doc case narrowed kept": "09e54a3141ac",
+      "narrowed narrowed kept": "c08fd16fb2bd",
+      "doc case fh cleared": "151a8192641b",
+      "narrowed fh cleared": "8ef0f8d4b104",
+      "doc case fh 3": "151a8192641b",
+      "narrowed fh 3": "eba35a1d513f",
+      "doc case fb true": "3b89c6e5099e",
+      "narrowed fb true": "afa9cf7bbe85"
+    },
+    "booleans | stored": {
+      "nothing": "df43f1aa8b4b",
+      "gate narrow": "a6c8a9d02002",
+      "fs b": "8b3dbe0bdd06",
+      "narrowed kept": "2ad6ca5f98a6",
+      "fh cleared": "ba7f957b08c0",
+      "fh 3": "ba7f957b08c0",
+      "fb true": "df43f1aa8b4b",
+      "doc full": "1df115ea58b6",
+      "doc hints": "3b89c6e5099e",
+      "doc case gate narrow": "e9270c1db047",
+      "narrowed gate narrow": "eb32531f1021",
+      "doc case fs b": "32f6da756aa1",
+      "narrowed fs b": "ced273a60a4d",
+      "doc case narrowed kept": "09e54a3141ac",
+      "narrowed narrowed kept": "8235f38e600d",
+      "doc case fh cleared": "151a8192641b",
+      "narrowed fh cleared": "c89f9c1779e7",
+      "doc case fh 3": "151a8192641b",
+      "narrowed fh 3": "585b5275cadf",
+      "doc case fb true": "3b89c6e5099e",
+      "narrowed fb true": "afa9cf7bbe85"
+    },
+    "booleans": {
+      "doc empty": "a8856612c91e",
+      "doc emitFull": "b6ee19678d81",
+      "doc emitFull hints": "1506b0b6c96e"
+    }
+  },
+  "records": {
+    "booleans | stored | nothing": {
+      "accept": {
+        "fb": true
+      },
+      "notes": [],
+      "unmatched": [],
+      "validate": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": [],
+        "staleEntries": []
+      },
+      "kept": {
+        "fb": true
+      },
+      "validate raw": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": [],
+        "staleEntries": []
+      }
+    },
+    "booleans | none | narrowed fh 3": {
+      "document": {
+        "resource": "surface.form",
+        "operation": null,
+        "label": null,
+        "schema": {
+          "$schema": "https://portable-schema.dev/v1/schema",
+          "x-surface": {
+            "contract": 5,
+            "version": 1
+          },
+          "type": "object",
+          "properties": {
+            "fb": {
+              "title": "Fault flag",
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": true,
+                  "title": "true"
+                },
+                {
+                  "const": false,
+                  "title": "false"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "values": {
+          "fb": null
+        },
+        "stale": []
+      },
+      "values": {
+        "fh": 3
+      },
+      "discarded": []
+    },
+    "booleans | doc emitFull": {
+      "resource": "hand",
+      "operation": "op",
+      "label": "Op label",
+      "schema": {
+        "$schema": "https://portable-schema.dev/v1/schema",
+        "title": "Op label",
+        "x-surface": {
+          "contract": 5,
+          "version": 1
+        },
+        "type": "object",
+        "properties": {
+          "fb": {
+            "title": "Fault flag",
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": true,
+                "title": "true"
+              },
+              {
+                "const": false,
+                "title": "false"
+              },
+              {
+                "const": null
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "booleans | none | doc case fb true": {
+      "resource": "hand",
+      "operation": "op",
+      "label": null,
+      "schema": {
+        "$schema": "https://portable-schema.dev/v1/schema",
+        "x-surface": {
+          "contract": 5,
+          "version": 1
+        },
+        "type": "object",
+        "properties": {
+          "fb": {
+            "title": "Fault flag",
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": true,
+                "title": "true"
+              },
+              {
+                "const": false,
+                "title": "false"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- Keep 1 (no longer offered) -"
+                }
+              }
+            },
+            "x-surface": {
+              "stale": true
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "values": {
+        "fb": null
+      },
+      "stale": [
+        "/fb"
+      ]
+    }
+  }
+}

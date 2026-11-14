@@ -11,10 +11,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Pins the validator's own checks and the documents on hand-built surfaces.
  *
- * The surfaces `required`, `frames`, `ruled`, `docs` and `gaps` of the
- * hand corpus (HandSurfaces says what each holds) are run through accept(),
- * validate(), kept() and every kind of document, and each row's record
- * is compared with its digest in tests/fixtures/hand-corpus/ (written
+ * The surfaces `required`, `frames`, `ruled`, `docs`, `gaps` and
+ * `faults` of the hand corpus (HandSurfaces says what each holds) are run
+ * through accept(), validate(), kept() and every kind of document, and
+ * each row's record is compared with its digest in
+ * tests/fixtures/hand-corpus/ (written
  * again with SURFACE_HAND_CORPUS_WRITE=1); HandCorpusNarrowTest runs
  * `narrow`. The value baseline walks the examples, which hold none of
  * these shapes, and a planted fault in the validator's checks or in the
@@ -50,6 +51,7 @@ class HandCorpusTest extends SurfaceKernelTestBase {
     'ruled' => 1413,
     'docs' => 93,
     'gaps' => 165,
+    'faults' => 90,
   ];
 
   /**

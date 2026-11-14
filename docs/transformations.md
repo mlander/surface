@@ -227,7 +227,7 @@ every connector:
 ```php
 $key = $neutral?->getDefinitions()->entry($parameter->name);
 if ($key !== NULL && $key->attachment === NULL && $key->variants === NULL && $key->list === NULL) {
-  $input = $this->inputDefinitions->fromDefinition($key->definition);
+  $input = $this->inputDefinitions->fromDefinition($key->definition, $key->schema());
   $input->setRequired(!$parameter->optional);
   return $input;
 }

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Unit;
 
+use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Surface;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\DefinitionMetadata;
@@ -30,6 +32,21 @@ use PHPUnit\Framework\Attributes\Group;
  */
 #[Group('surface')]
 class EncryptedStorageLayoutTest extends UnitTestCase {
+
+  /**
+   * {@inheritdoc}
+   *
+   * The layout reads which keys are secret from each key's node, and a
+   * node is read with the constraints typed data gives a definition.
+   */
+  protected function setUp(): void {
+    parent::setUp();
+    $typed_data = $this->createMock(TypedDataManagerInterface::class);
+    $typed_data->method('getDefaultConstraints')->willReturn([]);
+    $container = new ContainerBuilder();
+    $container->set('typed_data_manager', $typed_data);
+    \Drupal::setContainer($container);
+  }
 
   /**
    * Builds the data surface the layout reads its secret keys from.

@@ -25,7 +25,10 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Entry;
 use Drupal\surface\SurfaceInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * What a key that refers to an entity is, and which entities it may name.
@@ -538,6 +541,25 @@ final class References {
   }
 
   /**
+   * Reads which entity type and bundles a key refers to, from its node.
+   *
+   * As target() reads it, from the key's node: the options of its
+   * CONSTRAINT.
+   *
+   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The key's built node.
+   *
+   * @return array{entityType: string, bundles: string[]}|null
+   *   As target() answers.
+   */
+  public static function targetIn(Schema $node): ?array {
+    $options = NodeFacts::constraints($node)[self::CONSTRAINT] ?? NULL;
+    return is_array($options) ? static::targetOf($options) : NULL;
+  }
+
+  /**
    * Reads which entity type and bundles CONSTRAINT's options name.
    *
    * @param array $options
@@ -573,6 +595,21 @@ final class References {
    */
   public static function handlerOf(DataDefinitionInterface $definition): array {
     return static::handlerFrom($definition->getConstraints()[self::CONSTRAINT] ?? NULL);
+  }
+
+  /**
+   * Reads which selection handler a key's candidates are, from its node.
+   *
+   * As handlerOf() reads it, from the key's node.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The key's built node.
+   *
+   * @return array{0: string, 1: array}
+   *   As handlerOf() answers.
+   */
+  public static function handlerIn(Schema $node): array {
+    return static::handlerFrom(NodeFacts::constraints($node)[self::CONSTRAINT] ?? NULL);
   }
 
   /**
@@ -616,6 +653,54 @@ final class References {
    *   at the path refers to one entity type.
    */
   public function definitionAt(SurfaceInterface $surface, array $path, ?string $entity_type_id = NULL): ?DataDefinitionInterface {
+    return $this->placeAt($surface, $path, $entity_type_id)[1] ?? NULL;
+  }
+
+  /**
+   * Finds the node of what a key of a built resource refers to, by its path.
+   *
+   * As definitionAt() finds the key, giving its node, which targetIn() and
+   * handlerIn() read.
+   *
+   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The resource, built.
+   * @param string[] $path
+   *   The keys, from the top.
+   * @param string|null $entity_type_id
+   *   For a reference to any entity type, the entity type to look an id up
+   *   of.
+   *
+   * @return \PortableSchema\Builder\Schema|null
+   *   The key's node, as definitionAt() finds the key; NULL where it finds
+   *   none.
+   */
+  public function nodeAt(SurfaceInterface $surface, array $path, ?string $entity_type_id = NULL): ?Schema {
+    return $this->placeAt($surface, $path, $entity_type_id)[0] ?? NULL;
+  }
+
+  /**
+   * Finds the node and the definition of a key that refers to one type.
+   *
+   * The key's facts are read from its entry's node (Entry::schema()). A
+   * key that holds a child frame is a shell (Entry::isShell()), whose own
+   * facts are read from its definition: no shell refers to an entity type,
+   * so no shell's node is read.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The resource, built.
+   * @param string[] $path
+   *   The keys, from the top.
+   * @param string|null $entity_type_id
+   *   For a reference to any entity type, the entity type.
+   *
+   * @return array{0: \PortableSchema\Builder\Schema, 1: \Drupal\Core\TypedData\DataDefinitionInterface}|null
+   *   The key's node and definition, refined for the entity type handed
+   *   to a reference to any entity type; NULL when no key at the path
+   *   refers to one entity type.
+   */
+  protected function placeAt(SurfaceInterface $surface, array $path, ?string $entity_type_id): ?array {
     $name = array_shift($path);
     $entry = $name === NULL ? NULL : $surface->getDefinitions()->entry($name);
     if ($entry === NULL) {
@@ -627,15 +712,17 @@ final class References {
       $path = ['id'];
     }
     if ($path !== []) {
-      return $child === NULL ? NULL : $this->definitionAt($child, $path, $entity_type_id);
+      return $child === NULL ? NULL : $this->placeAt($child, $path, $entity_type_id);
     }
-    if (static::target($entry->definition) !== NULL) {
-      return $entry->definition;
+    $found = static::referring($entry);
+    if ($found !== NULL) {
+      return $found;
     }
-    if ($entry->definition->getSetting(self::TARGETS) === NULL) {
+    if (($entry->isShell() ? $entry->definition->getSetting(self::TARGETS) : NodeFacts::setting($entry->schema(), self::TARGETS)) === NULL) {
       return NULL;
     }
-    $type = $surface->getDefinition(self::TYPE_KEY)?->getConstraints()[self::TYPE_CONSTRAINT] ?? NULL;
+    $types = $surface->getDefinitions()->entry(self::TYPE_KEY);
+    $type = $types === NULL ? NULL : NodeFacts::constraints($types->schema())[self::TYPE_CONSTRAINT] ?? NULL;
     if ($entity_type_id === NULL || !is_array($type)) {
       return NULL;
     }
@@ -643,8 +730,29 @@ final class References {
     if (!isset($allowed[$entity_type_id])) {
       return NULL;
     }
-    $refined = $surface->refine([self::TYPE_KEY => $entity_type_id], FALSE)->getDefinition($name);
-    return $refined !== NULL && static::target($refined) !== NULL ? $refined : NULL;
+    $refined = $surface->refine([self::TYPE_KEY => $entity_type_id], FALSE)->getDefinitions()->entry($name);
+    return $refined === NULL ? NULL : static::referring($refined);
+  }
+
+  /**
+   * Gives a key's node and definition, if it refers to one entity type.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The key.
+   *
+   * @return array{0: \PortableSchema\Builder\Schema, 1: \Drupal\Core\TypedData\DataDefinitionInterface}|null
+   *   Its node and definition; NULL for a key that refers to no one entity
+   *   type. A shell's own CONSTRAINT is read from its definition. Its node
+   *   is read only where its definition has one, to hand nodeAt() what it
+   *   gives: a reference is one value, so no shell the module builds has
+   *   one.
+   */
+  protected static function referring(Entry $entry): ?array {
+    if ($entry->isShell()) {
+      return static::target($entry->definition) === NULL ? NULL : [$entry->schema(), $entry->definition];
+    }
+    $node = $entry->schema();
+    return static::targetIn($node) === NULL ? NULL : [$node, $entry->definition];
   }
 
   /**

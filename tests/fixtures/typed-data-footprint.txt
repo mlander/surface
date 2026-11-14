@@ -65,7 +65,6 @@ door src/Form/ContractPanel.php
 door src/Form/Extracting.php
 door src/Form/SurfaceFieldTypeTrait.php
 door src/Form/SurfaceFormBuilderInterface.php
-door src/Form/SurfaceFormatterTrait.php
 pipeline src/Options/OptionsProvider.php
 constraints src/Options/SurfaceOptions.php
 constraints src/Options/SurfaceOptionsResolverInterface.php

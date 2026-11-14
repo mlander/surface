@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Storage;
 
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 
@@ -123,6 +124,12 @@ final class EncryptedStorageLayout implements StorageLayoutInterface {
   /**
    * Names the keys a data surface declared secret.
    *
+   * Read from each key's node (Secrets::marked()); a key that holds a
+   * child frame is a shell, whose own flag is read from its definition
+   * (Entry::isShell()).
+   *
+   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+   *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface to read.
    *
@@ -131,8 +138,8 @@ final class EncryptedStorageLayout implements StorageLayoutInterface {
    */
   public static function secretKeys(SurfaceInterface $surface): array {
     $keys = [];
-    foreach ($surface->getDefinitions() as $name => $definition) {
-      if (DefinitionMetadata::isSecret($definition)) {
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      if ($entry->isShell() ? DefinitionMetadata::isSecret($entry->definition) : Secrets::marked($entry->schema())) {
         $keys[] = (string) $name;
       }
     }

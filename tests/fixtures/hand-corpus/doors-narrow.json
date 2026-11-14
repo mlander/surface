@@ -1,0 +1,4118 @@
+{
+  "surface": "narrow",
+  "rows": 2095,
+  "digests": {
+    "plain | door": {
+      "fromSurface": "5018d2b19419",
+      "fromSurface stored": "5018d2b19419",
+      "fromSurface narrowing": "5018d2b19419",
+      "withLookups": "5018d2b19419",
+      "withDependencies": "e778b6aef0f1",
+      "withStored": "20a6d365bb2f",
+      "shapeOf": "36d4b0c13e22",
+      "withoutRequired": "5018d2b19419",
+      "outputFromInput": "622d35ef274b",
+      "secrets": "9c87915be608",
+      "outputs": "39347ff402b6",
+      "values update": "218d6f4b7564",
+      "values create": "23c5b178dc28",
+      "stored": "03ce2be78960",
+      "secretKeys": "6d9332799eab",
+      "config schema": "01391fabe44d",
+      "config schema held+install": "de69e627a35e",
+      "config schema installed empty": "b149e8d5d000",
+      "config schema translated": "8b9c5f4facf4",
+      "wider generated": "f628a4412e77",
+      "ResourceCode": "4353c1290411",
+      "flow placed whole": "9f5e2ffb7840",
+      "flow placed grouped": "4892cb5ceb2b"
+    },
+    "plain | values": {
+      "stored": "647f9da7f6f4",
+      "open c #0": "d4b75c8157df",
+      "open c #1": "c2ef46e5bf09",
+      "open c #2": "9ed859581f45",
+      "open c #3": "2a9dad0308e3",
+      "open c #4": "2985361ca66a",
+      "open cs #0": "2d519bc04abd",
+      "open cs #1": "fbaeb00818d0",
+      "open cs #2": "4737bc3e4325",
+      "open cs #3": "cfdc37283d50",
+      "open cl #0": "44ecaca052a2",
+      "open cl #1": "6e0f88d23f10",
+      "open cl #2": "48ab69139335",
+      "open cm #0": "b1c8cdef1264",
+      "open cm #1": "eb2688c69449",
+      "open cm #2": "ae9752209550",
+      "open q #0": "8c13c4a0c7b6",
+      "open q #1": "6068119886ed",
+      "open q #2": "a6c2b0f4add3",
+      "open q #3": "c5404a747e80",
+      "open q0 #0": "248dbb6e1333",
+      "open q0 #1": "6fc890bbdb43",
+      "open q0 #2": "e8695fe0f75d",
+      "open t #0": "7f1ed8612f17",
+      "open t #1": "309fcda21fda",
+      "open ci #0": "58fc4cde2095",
+      "open ci #1": "3c1ff6c25c54",
+      "open ci #2": "135e7079ff88",
+      "open ci #3": "0cddad8ab4cf",
+      "narrow c #0": "96c1160625d6",
+      "narrow c #1": "4e4ecfdb431c",
+      "narrow c #2": "eb6ce05ef4e1",
+      "narrow c #3": "b9a38cc75cc4",
+      "narrow c #4": "edad78584485",
+      "narrow cs #0": "f0c04fc66caa",
+      "narrow cs #1": "51b326e51ca0",
+      "narrow cs #2": "3096e2afe815",
+      "narrow cs #3": "a158536918a3",
+      "narrow cl #0": "947515dec94c",
+      "narrow cl #1": "b2ec3c84440c",
+      "narrow cl #2": "b54b677b1aac",
+      "narrow cm #0": "2537962f5f35",
+      "narrow cm #1": "e9c16614c8ba",
+      "narrow cm #2": "eb74119f112d",
+      "narrow q #0": "0f61df937b63",
+      "narrow q #1": "633e79f6422d",
+      "narrow q #2": "3cfc25fa18f7",
+      "narrow q #3": "e50625d4e42a",
+      "narrow q0 #0": "6e1ac622d8ff",
+      "narrow q0 #1": "2ffc2107f811",
+      "narrow q0 #2": "5fecce16b6c7",
+      "narrow t #0": "0ef4a828c920",
+      "narrow t #1": "34a7c575e46c",
+      "narrow ci #0": "890ba318e833",
+      "narrow ci #1": "9b430590e172",
+      "narrow ci #2": "133081e3cd3f",
+      "narrow ci #3": "330944459949",
+      "req c #0": "663178406f6c",
+      "req c #1": "de0f2a89bded",
+      "req c #2": "14bf7fc18aa5",
+      "req c #3": "328666e6f8ba",
+      "req c #4": "e7649c4d3a04",
+      "req cs #0": "d03dceaa01f1",
+      "req cs #1": "92f837b033cb",
+      "req cs #2": "0d97265fb1f0",
+      "req cs #3": "6d6156864803",
+      "req cl #0": "bbf46fbe35d5",
+      "req cl #1": "02eec5aaf420",
+      "req cl #2": "6478a2432cab",
+      "req cm #0": "5d6702527985",
+      "req cm #1": "47b19d7f30f6",
+      "req cm #2": "a8837fa9f6ab",
+      "req q #0": "423b64f12518",
+      "req q #1": "0ba01aa75a08",
+      "req q #2": "590ac43725d2",
+      "req q #3": "83540ecc5c5d",
+      "req q0 #0": "c91139f692a6",
+      "req q0 #1": "02b474446b5e",
+      "req q0 #2": "be94d1e03fe3",
+      "req t #0": "a4b1cdf9a805",
+      "req t #1": "22d4be2251d9",
+      "req ci #0": "fb9905aefd6f",
+      "req ci #1": "befc2669d4b2",
+      "req ci #2": "13c65cd3d08b",
+      "req ci #3": "bf48d5398c22",
+      "clone c #0": "404a77171a26",
+      "clone c #1": "ef1a82d93292",
+      "clone c #2": "2d659f1edf8d",
+      "clone c #3": "66ed48bef14f",
+      "clone c #4": "02dd89128a02",
+      "clone cs #0": "163a0eaed819",
+      "clone cs #1": "9e77005abbbb",
+      "clone cs #2": "aa7f5084adfe",
+      "clone cs #3": "093e86b04ddc",
+      "clone cl #0": "0ea420491642",
+      "clone cl #1": "09ec91ef8bb4",
+      "clone cl #2": "466be2f2c3f1",
+      "clone cm #0": "6c56deeaadfe",
+      "clone cm #1": "096337cb1b90",
+      "clone cm #2": "b2a4413919cf",
+      "clone q #0": "2e18be665822",
+      "clone q #1": "f1442f6fb83c",
+      "clone q #2": "138c5648463a",
+      "clone q #3": "3c9b995ebf77",
+      "clone q0 #0": "5756d0020da5",
+      "clone q0 #1": "6013aa02e1bc",
+      "clone q0 #2": "fbd36da075d9",
+      "clone t #0": "70b30e91edba",
+      "clone t #1": "9051e25d08f3",
+      "clone ci #0": "701de4146632",
+      "clone ci #1": "baae7bec138f",
+      "clone ci #2": "a42a935cb413",
+      "clone ci #3": "87bde31df3eb",
+      "same c #0": "87319dad6797",
+      "same c #1": "8e6e20f1ec06",
+      "same c #2": "02621f24a019",
+      "same c #3": "f1534243df8f",
+      "same c #4": "c86e039c8b6b",
+      "same cs #0": "ef202d4fd990",
+      "same cs #1": "58434db76ee8",
+      "same cs #2": "93f6b2772cdd",
+      "same cs #3": "79cdcc23097e",
+      "same cl #0": "6bf7a0aa2beb",
+      "same cl #1": "335c4a59b010",
+      "same cl #2": "66f9199a6c8a",
+      "same cm #0": "7450a0c63997",
+      "same cm #1": "1db602613833",
+      "same cm #2": "cb47452ee833",
+      "same q #0": "8d420d4708fb",
+      "same q #1": "14bf0f6aedaf",
+      "same q #2": "058962357471",
+      "same q #3": "bf7b96194a70",
+      "same q0 #0": "e7c015dae31c",
+      "same q0 #1": "d9e40441db1f",
+      "same q0 #2": "4e473b766e3d",
+      "same t #0": "06050bedf18e",
+      "same t #1": "08152f6c90f2",
+      "same ci #0": "865e0721da40",
+      "same ci #1": "2e8fb212f4b6",
+      "same ci #2": "764e19636258",
+      "same ci #3": "04161bbdb2a8",
+      "label c #0": "786aadba4f74",
+      "label c #1": "067244f3caa3",
+      "label c #2": "99f311dd263f",
+      "label c #3": "42e58dff31d2",
+      "label c #4": "fdbe7b0c6e5e",
+      "label cs #0": "16d77a49634e",
+      "label cs #1": "5a77b7a5ff96",
+      "label cs #2": "195ffbbb9a59",
+      "label cs #3": "40fb512d912f",
+      "label cl #0": "f4a054f402eb",
+      "label cl #1": "4a16b9a68234",
+      "label cl #2": "99dd5f673bb1",
+      "label cm #0": "d780bd981f89",
+      "label cm #1": "3019b82a7410",
+      "label cm #2": "f411fe41cc7c",
+      "label q #0": "06e02faec4d0",
+      "label q #1": "135f0ef66d25",
+      "label q #2": "b4f9591975bd",
+      "label q #3": "8212eb3a490b",
+      "label q0 #0": "cfe1e4c16d9b",
+      "label q0 #1": "934a83834d42",
+      "label q0 #2": "0937ea37086a",
+      "label t #0": "d102079f1519",
+      "label t #1": "9d0e3b628325",
+      "label ci #0": "7df729e0c5eb",
+      "label ci #1": "e98f66fb3c10",
+      "label ci #2": "bf226d7d51bf",
+      "label ci #3": "f3208c2e880e",
+      "len c #0": "dc51875e0aa7",
+      "len c #1": "9c5ee84a69d0",
+      "len c #2": "a1e2e5ffdb8f",
+      "len c #3": "be1e9f8157a4",
+      "len c #4": "2b7abd66bfed",
+      "len cs #0": "4ebc9a8395d4",
+      "len cs #1": "f720ca5dcf3b",
+      "len cs #2": "d2034b3c0d22",
+      "len cs #3": "01ef57833510",
+      "len cl #0": "521e59e48008",
+      "len cl #1": "e3a52d4a559d",
+      "len cl #2": "baaa1eb5522b",
+      "len cm #0": "1e8259e6bc4b",
+      "len cm #1": "8437ecf52cbe",
+      "len cm #2": "0afdd6fba033",
+      "len q #0": "97272a67f3f6",
+      "len q #1": "e7ff89dc3c2d",
+      "len q #2": "9a632382aa84",
+      "len q #3": "2d596d18d5fe",
+      "len q0 #0": "7eef7a4afdb1",
+      "len q0 #1": "493f1820ca61",
+      "len q0 #2": "b7216981a2ae",
+      "len t #0": "2303ac46a95a",
+      "len t #1": "e9ef6e991b79",
+      "len ci #0": "15010b74ddc6",
+      "len ci #1": "e3ecc6be9f32",
+      "len ci #2": "2c84c6d35899",
+      "len ci #3": "c6394c49a9ff",
+      "__out c #0": "068ca8541e82",
+      "__out c #1": "deafb3a4b242",
+      "__out c #2": "527ebf318cb3",
+      "__out c #3": "e8e7c8aca9cd",
+      "__out c #4": "02578dd0c9b8",
+      "__out cs #0": "bf671fffe228",
+      "__out cs #1": "0818803a8af5",
+      "__out cs #2": "1740f55f279c",
+      "__out cs #3": "9a55eeb6d834",
+      "__out cl #0": "8c30f673024b",
+      "__out cl #1": "f9eff08727fd",
+      "__out cl #2": "745479fd94ea",
+      "__out cm #0": "e7cf69ac508c",
+      "__out cm #1": "1cfc048b5c93",
+      "__out cm #2": "0ae2ae4f2f3c",
+      "__out q #0": "7bfea67dcff7",
+      "__out q #1": "6bcb453e8b1f",
+      "__out q #2": "7e699f3fdbfd",
+      "__out q #3": "510f41a5466b",
+      "__out q0 #0": "f6629446dc93",
+      "__out q0 #1": "89aae582d068",
+      "__out q0 #2": "6cf8aff87150",
+      "__out t #0": "0f87498b3438",
+      "__out t #1": "55743c900cfa",
+      "__out ci #0": "6004a2597e63",
+      "__out ci #1": "16c79872881f",
+      "__out ci #2": "8de7bb46b960",
+      "__out ci #3": "0ba5c91299f9",
+      "gi 1 true qm": "0daac7e2a98c",
+      "gi 1 true qm null": "f09d3686fa6c",
+      "gi 1 true cb": "4b5e54e7f2cb",
+      "gi 1 false qm": "6f4d5c0c93d2",
+      "gi 1 false qm null": "24d752c3c2b9",
+      "gi 1 false cb": "4b5e54e7f2cb",
+      "gi 1 NULL qm": "e930df41410c",
+      "gi 1 NULL qm null": "88a2cdb3262f",
+      "gi 1 NULL cb": "4b5e54e7f2cb",
+      "gi 2 true qm": "c32502938898",
+      "gi 2 true qm null": "b97adc8831b0",
+      "gi 2 true cb": "69f864f4c395",
+      "gi 2 false qm": "400beb97c39d",
+      "gi 2 false qm null": "0d1573e1ec17",
+      "gi 2 false cb": "69f864f4c395",
+      "gi 2 NULL qm": "35b9e9662485",
+      "gi 2 NULL qm null": "e5ffccd9ba0d",
+      "gi 2 NULL cb": "69f864f4c395",
+      "gi 3 true qm": "e95159ca7ac3",
+      "gi 3 true qm null": "108edd7a30de",
+      "gi 3 true cb": "55223ffb83b5",
+      "gi 3 false qm": "a1e0e4306ea0",
+      "gi 3 false qm null": "de8dd1b78842",
+      "gi 3 false cb": "55223ffb83b5",
+      "gi 3 NULL qm": "aaf9cddd1efd",
+      "gi 3 NULL qm null": "2f8e4b76772e",
+      "gi 3 NULL cb": "55223ffb83b5",
+      "gi '2' true qm": "179e73846257",
+      "gi '2' true qm null": "34c4f4ec00dd",
+      "gi '2' true cb": "ba5875c02d2a",
+      "gi '2' false qm": "96d5536149a3",
+      "gi '2' false qm null": "e22b9d59c767",
+      "gi '2' false cb": "ba5875c02d2a",
+      "gi '2' NULL qm": "eaa406416555",
+      "gi '2' NULL qm null": "c0128422d815",
+      "gi '2' NULL cb": "ba5875c02d2a",
+      "gi NULL true qm": "ba709bc2914b",
+      "gi NULL true qm null": "d6076070e8e6",
+      "gi NULL true cb": "146ba345455b",
+      "gi NULL false qm": "101be8e35b34",
+      "gi NULL false qm null": "cd6877057f90",
+      "gi NULL false cb": "146ba345455b",
+      "gi NULL NULL qm": "cfd5f356df56",
+      "gi NULL NULL qm null": "823e948a3df0",
+      "gi NULL NULL cb": "146ba345455b",
+      "comp sent": "6f61b55be71c",
+      "comp sent src": "dcf34dcdcb53",
+      "comp null": "3281d08b063e",
+      "comp bad src": "f59bcf792bb4",
+      "comp0 sent": "e19e0fa479bc",
+      "comp0 sent src": "ff216dc775d5",
+      "comp0 null": "a0e3d2fa75a2",
+      "comp0 bad src": "0a540bfa3dcc",
+      "compn sent": "8f9865da36dc",
+      "compn sent src": "84cf451614a2",
+      "compn null": "0d60ff0ad69e",
+      "compn bad src": "ec191404a2c1",
+      "ucomp sent": "4c64ef4efdb6",
+      "ucomp sent src": "712ce91dd10b",
+      "ucomp null": "817fd8f160fb",
+      "ucomp bad src": "ecf421d351f9",
+      "ucomp0 sent": "02ecd2519c19",
+      "ucomp0 sent src": "bb54a7966603",
+      "ucomp0 null": "a9e2eac6ebbf",
+      "ucomp0 bad src": "df0c0a012c9b",
+      "ucompn sent": "a25bbdca0247",
+      "ucompn sent src": "c93bcadc4b72",
+      "ucompn null": "5adf894f91bf",
+      "ucompn bad src": "bd5d2f484edd",
+      "pk 'a'": "1debeadcd111",
+      "pk2 'a'": "765ab023e47e",
+      "pk 'b'": "bab6321cf0bc",
+      "pk2 'b'": "643b2de31041",
+      "pk 'zz'": "6190f7e7e1c2",
+      "pk2 'zz'": "990080d6260f",
+      "pk NULL": "6bb2c9f91fc2",
+      "pk2 NULL": "08ef2bcfc3ca"
+    },
+    "plain | key": {
+      "gate": "323c247e9b25",
+      "gi": "1a11325ae1bb",
+      "gb": "0d59a0deb58e",
+      "gf": "5799d5c7b3bc",
+      "gs": "ee3f114ae934",
+      "c": "85c7f7b95067",
+      "cs": "fd2c34bea1b3",
+      "cl": "6df21b028f7f",
+      "cm": "ba1868fb8e63",
+      "q": "826c10603e6f",
+      "q0": "99bb93b9a370",
+      "qm": "c270046a41d4",
+      "t": "4bb04d63dbfe",
+      "ci": "0c7e6836ff77",
+      "cb": "37f57970721a",
+      "pk": "66b5e2206acf",
+      "pk2": "a097ae98caaf",
+      "src": "376791126d32",
+      "src0": "6b5d0e1af260",
+      "srcn": "bd3909364264",
+      "comp": "61b56a0db375",
+      "ucomp": "227862e89cd3",
+      "comp0": "63147ecc3cee",
+      "ucomp0": "04f085884a6f",
+      "compn": "77ce41608cb6",
+      "ucompn": "3dc4dd9953cb"
+    },
+    "plain | path": {
+      "nope": "1bf169f7d887",
+      "nope.deeper": "ed8a9f9798ca",
+      "gate": "1a745a8d632b",
+      "gi": "da33ef640816",
+      "gb": "48928303831d",
+      "gf": "1cba24d95748",
+      "gs": "0c92cd97c063",
+      "c": "1dcb4b3971ea",
+      "cs": "fb6508fc5ec8",
+      "cl": "1818cc258fd9",
+      "cl.0": "c52aa0c2131f",
+      "cm": "ec062dac7ef4",
+      "cm.p": "58db03e21132",
+      "cm.q": "ec12484918ad",
+      "cm.nope": "eb0ad1d58b7c",
+      "q": "4887e7b46923",
+      "q0": "bf865fa0422f",
+      "qm": "ca8c2d0f7b85",
+      "qm.inner": "bb111de010a4",
+      "qm.nope": "4e607c1cf0e0",
+      "t": "79d9dbc1bdbb",
+      "ci": "f536896b80ba",
+      "cb": "1e107172e80f",
+      "pk": "6cec262d5324",
+      "pk2": "9623e2e63a38",
+      "src": "10f953e38ee8",
+      "src0": "aa1be738c0b5",
+      "srcn": "17100b6157e7",
+      "comp": "efae780425c9",
+      "ucomp": "2ef76a4cc962",
+      "comp0": "3732be0c9bce",
+      "ucomp0": "4c099d0a0469",
+      "compn": "d72e005ed13a",
+      "ucompn": "f60f55f1bf5f"
+    },
+    "plain | nodes": {
+      "nope": "85cf5ad1bdc5",
+      "nope.deeper": "85cf5ad1bdc5",
+      "gate": "85cf5ad1bdc5",
+      "gi": "85cf5ad1bdc5",
+      "gb": "85cf5ad1bdc5",
+      "gf": "85cf5ad1bdc5",
+      "gs": "85cf5ad1bdc5",
+      "c": "85cf5ad1bdc5",
+      "cs": "85cf5ad1bdc5",
+      "cl": "85cf5ad1bdc5",
+      "cl.0": "85cf5ad1bdc5",
+      "cm": "85cf5ad1bdc5",
+      "cm.p": "85cf5ad1bdc5",
+      "cm.q": "85cf5ad1bdc5",
+      "cm.nope": "85cf5ad1bdc5",
+      "q": "85cf5ad1bdc5",
+      "q0": "85cf5ad1bdc5",
+      "qm": "85cf5ad1bdc5",
+      "qm.inner": "85cf5ad1bdc5",
+      "qm.nope": "85cf5ad1bdc5",
+      "t": "85cf5ad1bdc5",
+      "ci": "85cf5ad1bdc5",
+      "cb": "85cf5ad1bdc5",
+      "pk": "85cf5ad1bdc5",
+      "pk2": "85cf5ad1bdc5",
+      "src": "85cf5ad1bdc5",
+      "src0": "85cf5ad1bdc5",
+      "srcn": "85cf5ad1bdc5",
+      "comp": "85cf5ad1bdc5",
+      "ucomp": "85cf5ad1bdc5",
+      "comp0": "85cf5ad1bdc5",
+      "ucomp0": "85cf5ad1bdc5",
+      "compn": "85cf5ad1bdc5",
+      "ucompn": "85cf5ad1bdc5"
+    },
+    "ported | door": {
+      "fromSurface": "5018d2b19419",
+      "fromSurface stored": "5018d2b19419",
+      "fromSurface narrowing": "5018d2b19419",
+      "withLookups": "5018d2b19419",
+      "withDependencies": "e778b6aef0f1",
+      "withStored": "20a6d365bb2f",
+      "shapeOf": "36d4b0c13e22",
+      "withoutRequired": "5018d2b19419",
+      "outputFromInput": "622d35ef274b",
+      "secrets": "9c87915be608",
+      "outputs": "39347ff402b6",
+      "values update": "218d6f4b7564",
+      "values create": "23c5b178dc28",
+      "stored": "03ce2be78960",
+      "secretKeys": "6d9332799eab",
+      "config schema": "01391fabe44d",
+      "config schema held+install": "de69e627a35e",
+      "config schema installed empty": "b149e8d5d000",
+      "config schema translated": "8b9c5f4facf4",
+      "wider generated": "f628a4412e77",
+      "ResourceCode": "4353c1290411",
+      "flow placed whole": "9f5e2ffb7840",
+      "flow placed grouped": "4892cb5ceb2b"
+    },
+    "ported | values": {
+      "stored": "0548d9743f0b",
+      "open c #0": "62860386a2ce",
+      "open c #1": "b2da10fe474e",
+      "open c #2": "62ec99192f0e",
+      "open c #3": "b51e14596ce3",
+      "open c #4": "ea808a4015fb",
+      "open cs #0": "f9e301738689",
+      "open cs #1": "5280818b2909",
+      "open cs #2": "c79c4720bd60",
+      "open cs #3": "50317823ada8",
+      "open cl #0": "0264d8eed4b8",
+      "open cl #1": "b55de323d483",
+      "open cl #2": "fb5851e2ddec",
+      "open cm #0": "1eb91debcc2b",
+      "open cm #1": "048f6b8000fe",
+      "open cm #2": "49619319ace0",
+      "open q #0": "c88dd2989139",
+      "open q #1": "74221ece498a",
+      "open q #2": "d3629edd40d2",
+      "open q #3": "61100c659fef",
+      "open q0 #0": "c6920e840f56",
+      "open q0 #1": "f31f3efd70a1",
+      "open q0 #2": "ac8de75c1c7b",
+      "open t #0": "39c824fa5990",
+      "open t #1": "3ebd4fd18c77",
+      "open ci #0": "bcdc5d65f553",
+      "open ci #1": "05456ab97592",
+      "open ci #2": "947907f5307f",
+      "open ci #3": "c221014c02e1",
+      "narrow c #0": "bd5962acb23d",
+      "narrow c #1": "755f7241337c",
+      "narrow c #2": "eb8836cf1b9a",
+      "narrow c #3": "9fe783211205",
+      "narrow c #4": "3707a87353f5",
+      "narrow cs #0": "1d35e78a8cb4",
+      "narrow cs #1": "2458d923d524",
+      "narrow cs #2": "42acdb1fc5e5",
+      "narrow cs #3": "50e82720341f",
+      "narrow cl #0": "bf7cd33de350",
+      "narrow cl #1": "22e2ca0c4f6f",
+      "narrow cl #2": "d6fd07b392cc",
+      "narrow cm #0": "c4757e24a640",
+      "narrow cm #1": "bd716446dd8c",
+      "narrow cm #2": "806f4e9e70c1",
+      "narrow q #0": "f3bc3a26434a",
+      "narrow q #1": "4fedae0f88e9",
+      "narrow q #2": "03a689adaf38",
+      "narrow q #3": "3a00b4e774de",
+      "narrow q0 #0": "0eaf8f29124f",
+      "narrow q0 #1": "30b1649ee85a",
+      "narrow q0 #2": "708d37d15af6",
+      "narrow t #0": "f16f4078cd41",
+      "narrow t #1": "fc3f3c8e070c",
+      "narrow ci #0": "f3d577684346",
+      "narrow ci #1": "2c3a694a56a7",
+      "narrow ci #2": "03f996ad9196",
+      "narrow ci #3": "bb4c08ef439d",
+      "req c #0": "460fa35a2c39",
+      "req c #1": "a54b11eb5227",
+      "req c #2": "d5e9a86b8616",
+      "req c #3": "9a3482d6f887",
+      "req c #4": "4f05d1268c55",
+      "req cs #0": "9e66316369e8",
+      "req cs #1": "a155e36e7bf1",
+      "req cs #2": "f19161354080",
+      "req cs #3": "5801a5e7b458",
+      "req cl #0": "15ab23c820c1",
+      "req cl #1": "4904d4d7aa2e",
+      "req cl #2": "86af18a52af5",
+      "req cm #0": "6284bdc8b4a3",
+      "req cm #1": "634c09c2a895",
+      "req cm #2": "cd7dd8e741a4",
+      "req q #0": "c390dbf5c0b4",
+      "req q #1": "1bba4074542b",
+      "req q #2": "98e2d6ac5d07",
+      "req q #3": "b9ca67a105b6",
+      "req q0 #0": "07e596874f57",
+      "req q0 #1": "eccea88921fd",
+      "req q0 #2": "81398e9a3c35",
+      "req t #0": "a7529c9ee183",
+      "req t #1": "a8beb3ee0860",
+      "req ci #0": "9c27a556b8c5",
+      "req ci #1": "67663c8d3d85",
+      "req ci #2": "a9d6d329a065",
+      "req ci #3": "880f9fe9fb3f",
+      "clone c #0": "90f90544cc44",
+      "clone c #1": "1de07647eb13",
+      "clone c #2": "58ffe713ccb2",
+      "clone c #3": "59e3b3ca20fe",
+      "clone c #4": "10a2c013b9bf",
+      "clone cs #0": "a059513173ab",
+      "clone cs #1": "e3c9021974f2",
+      "clone cs #2": "4f832f457d71",
+      "clone cs #3": "5a2c6c30bd13",
+      "clone cl #0": "aa944af99c9d",
+      "clone cl #1": "facd46fae718",
+      "clone cl #2": "9c259f11879e",
+      "clone cm #0": "ff27ffcaff3f",
+      "clone cm #1": "cb155be6bf62",
+      "clone cm #2": "0b6d8de37bbd",
+      "clone q #0": "bc4f885b43d1",
+      "clone q #1": "5e2857226b8b",
+      "clone q #2": "00e458346283",
+      "clone q #3": "90f6197ed3de",
+      "clone q0 #0": "e51bbd24b120",
+      "clone q0 #1": "0bd83a781b99",
+      "clone q0 #2": "2e4dbf850487",
+      "clone t #0": "534e6f89e97c",
+      "clone t #1": "d1df9190d4a7",
+      "clone ci #0": "3a41cee83a25",
+      "clone ci #1": "d86cd28888f0",
+      "clone ci #2": "cba2f16e3d67",
+      "clone ci #3": "9bb8dd13e65b",
+      "same c #0": "e6325f938040",
+      "same c #1": "d3163c4317cf",
+      "same c #2": "02fc0a5bd7b4",
+      "same c #3": "84879a5ab66d",
+      "same c #4": "ccdcfcbf71d2",
+      "same cs #0": "b1d7829668f9",
+      "same cs #1": "e8817f0f6e99",
+      "same cs #2": "576c28620e84",
+      "same cs #3": "d0de57feddb5",
+      "same cl #0": "7284548ddb3a",
+      "same cl #1": "175f29b011a2",
+      "same cl #2": "7d4d1eec22fb",
+      "same cm #0": "6a0da99a5af4",
+      "same cm #1": "531ceaa01255",
+      "same cm #2": "aa0e7df917b1",
+      "same q #0": "f43c696ba0f4",
+      "same q #1": "cf90ad790335",
+      "same q #2": "b5ea7383cc9e",
+      "same q #3": "23d068ad9358",
+      "same q0 #0": "e1045aaa6dbd",
+      "same q0 #1": "79464fb25848",
+      "same q0 #2": "2c3ee237387e",
+      "same t #0": "fbaf83568d56",
+      "same t #1": "a0d066b130b9",
+      "same ci #0": "f488b3f98b5a",
+      "same ci #1": "882ad9fcc7b4",
+      "same ci #2": "19c5bbbb59c6",
+      "same ci #3": "6654e7bf7da6",
+      "label c #0": "3ff121cec787",
+      "label c #1": "036ad79cbdb6",
+      "label c #2": "c0a7c8749d43",
+      "label c #3": "c0953979a91d",
+      "label c #4": "74521f13f6ab",
+      "label cs #0": "141c35219efe",
+      "label cs #1": "9553a3e4db9c",
+      "label cs #2": "325635096d85",
+      "label cs #3": "9526f7df5eb4",
+      "label cl #0": "81be77daae2a",
+      "label cl #1": "377a55c4dffd",
+      "label cl #2": "f2da212eedd9",
+      "label cm #0": "e0141a6c90c5",
+      "label cm #1": "45f287b1c4ba",
+      "label cm #2": "75892e981301",
+      "label q #0": "73fd171e0cab",
+      "label q #1": "7df97b72aab3",
+      "label q #2": "b9e1bd27d78f",
+      "label q #3": "9a238157c877",
+      "label q0 #0": "79754bb20e22",
+      "label q0 #1": "70b5d681363f",
+      "label q0 #2": "8d1c98de2a73",
+      "label t #0": "cb0fa82eaa77",
+      "label t #1": "34968b181d18",
+      "label ci #0": "a6e95fe059c4",
+      "label ci #1": "46bafe076bc3",
+      "label ci #2": "08de1c820e2c",
+      "label ci #3": "dda935e23552",
+      "len c #0": "4b552f70bc77",
+      "len c #1": "9d76372ad45e",
+      "len c #2": "2ded4e554b50",
+      "len c #3": "74bf556c2652",
+      "len c #4": "aeb6a792b07b",
+      "len cs #0": "6ea1a46e7b80",
+      "len cs #1": "fbc522a33999",
+      "len cs #2": "f50e8fe383eb",
+      "len cs #3": "fed2234d0221",
+      "len cl #0": "266727be6132",
+      "len cl #1": "1253b27aa21e",
+      "len cl #2": "aaac6709ee16",
+      "len cm #0": "f9d2e9063e50",
+      "len cm #1": "15a00b85be56",
+      "len cm #2": "f0e276bfc899",
+      "len q #0": "4405d77bc224",
+      "len q #1": "4a67d7a36520",
+      "len q #2": "14c3a549334f",
+      "len q #3": "fc930bbe09aa",
+      "len q0 #0": "30395b3a46e6",
+      "len q0 #1": "7963f93e619d",
+      "len q0 #2": "67d63092973a",
+      "len t #0": "482d10817736",
+      "len t #1": "554d173de9b3",
+      "len ci #0": "57b70a0d6894",
+      "len ci #1": "91aad117f86a",
+      "len ci #2": "dbe80b9ec8a1",
+      "len ci #3": "554897ea7d70",
+      "__out c #0": "35e0b176eb68",
+      "__out c #1": "9df036a08790",
+      "__out c #2": "9b66a1ccb030",
+      "__out c #3": "547721d67afc",
+      "__out c #4": "2c950ec08970",
+      "__out cs #0": "baacbe7da6a6",
+      "__out cs #1": "6093dc79a882",
+      "__out cs #2": "5a310955c1e1",
+      "__out cs #3": "356859e0470a",
+      "__out cl #0": "316c5396d1fb",
+      "__out cl #1": "f46350a2462e",
+      "__out cl #2": "4206c0bb40a8",
+      "__out cm #0": "52b853a47abc",
+      "__out cm #1": "d83b930832a8",
+      "__out cm #2": "561812bc84f4",
+      "__out q #0": "725d1fd01652",
+      "__out q #1": "453c1b940aa4",
+      "__out q #2": "d6d69806f16a",
+      "__out q #3": "e6267385d83c",
+      "__out q0 #0": "f0386e01f68d",
+      "__out q0 #1": "e8b568405195",
+      "__out q0 #2": "b3333939b2d0",
+      "__out t #0": "1174ba86fc7c",
+      "__out t #1": "4b3247873570",
+      "__out ci #0": "ecaac7537611",
+      "__out ci #1": "98c1d6d14240",
+      "__out ci #2": "051bcbe7d4f1",
+      "__out ci #3": "ff42c36460ac",
+      "gi 1 true qm": "f5cccea86381",
+      "gi 1 true qm null": "b785d23b34ed",
+      "gi 1 true cb": "70032aabfd63",
+      "gi 1 false qm": "c2ab13bdae18",
+      "gi 1 false qm null": "7ab09319da19",
+      "gi 1 false cb": "70032aabfd63",
+      "gi 1 NULL qm": "420f47038d0d",
+      "gi 1 NULL qm null": "47718146f9b5",
+      "gi 1 NULL cb": "70032aabfd63",
+      "gi 2 true qm": "3c2cfe8159e0",
+      "gi 2 true qm null": "cee9e5635c10",
+      "gi 2 true cb": "e872d20bd5bc",
+      "gi 2 false qm": "aa38b8650bab",
+      "gi 2 false qm null": "5753a9dff2e0",
+      "gi 2 false cb": "e872d20bd5bc",
+      "gi 2 NULL qm": "08aec81b2f80",
+      "gi 2 NULL qm null": "18038bfed71b",
+      "gi 2 NULL cb": "e872d20bd5bc",
+      "gi 3 true qm": "2e0b3d31e8f2",
+      "gi 3 true qm null": "01f24657882e",
+      "gi 3 true cb": "60ac262e5a28",
+      "gi 3 false qm": "30ab1cc84dfa",
+      "gi 3 false qm null": "e5272fb15a3f",
+      "gi 3 false cb": "60ac262e5a28",
+      "gi 3 NULL qm": "819195d87136",
+      "gi 3 NULL qm null": "99443533710d",
+      "gi 3 NULL cb": "60ac262e5a28",
+      "gi '2' true qm": "87dddd21ecaa",
+      "gi '2' true qm null": "e0a28f900fc6",
+      "gi '2' true cb": "14d5b87bbbfe",
+      "gi '2' false qm": "4f1efa15e5f8",
+      "gi '2' false qm null": "307da68ad666",
+      "gi '2' false cb": "14d5b87bbbfe",
+      "gi '2' NULL qm": "42d2c38eb52a",
+      "gi '2' NULL qm null": "90ce2ac31bcf",
+      "gi '2' NULL cb": "14d5b87bbbfe",
+      "gi NULL true qm": "8b87bea1f4bd",
+      "gi NULL true qm null": "8e25e3543254",
+      "gi NULL true cb": "98b1a9ee8058",
+      "gi NULL false qm": "c8c5241a9e48",
+      "gi NULL false qm null": "8e488b51fb29",
+      "gi NULL false cb": "98b1a9ee8058",
+      "gi NULL NULL qm": "b873ce0ce024",
+      "gi NULL NULL qm null": "d1d6fe2b436f",
+      "gi NULL NULL cb": "98b1a9ee8058",
+      "comp sent": "00539042c29a",
+      "comp sent src": "30e9178f780a",
+      "comp null": "7219f712469e",
+      "comp bad src": "1a9e342091ac",
+      "comp0 sent": "0311ffcef40d",
+      "comp0 sent src": "a5a0da91faeb",
+      "comp0 null": "bad541929777",
+      "comp0 bad src": "52fd5a94a290",
+      "compn sent": "7e63243acd45",
+      "compn sent src": "2e00d0fe9b2e",
+      "compn null": "c313e6134a03",
+      "compn bad src": "792e73009775",
+      "ucomp sent": "be4f0a058cd7",
+      "ucomp sent src": "f3aa6faf69a7",
+      "ucomp null": "a6f5edc367c8",
+      "ucomp bad src": "a009c80e3f8b",
+      "ucomp0 sent": "f694e344a77f",
+      "ucomp0 sent src": "e73129ba54dc",
+      "ucomp0 null": "2815fb6eef6c",
+      "ucomp0 bad src": "b90971404b79",
+      "ucompn sent": "63a507adecf5",
+      "ucompn sent src": "c35adfcfca1d",
+      "ucompn null": "da27f6b7eae9",
+      "ucompn bad src": "20d050ae3f9f",
+      "pk 'a'": "98b4cb7ba3a3",
+      "pk2 'a'": "5f3ad573c0e3",
+      "pk 'b'": "c78d5a655be4",
+      "pk2 'b'": "a95734fcc182",
+      "pk 'zz'": "23f1bd99618b",
+      "pk2 'zz'": "f5737c639420",
+      "pk NULL": "ef0dfb5d9466",
+      "pk2 NULL": "5e2911af32cf"
+    },
+    "ported | key": {
+      "gate": "323c247e9b25",
+      "gi": "1a11325ae1bb",
+      "gb": "0d59a0deb58e",
+      "gf": "5799d5c7b3bc",
+      "gs": "ee3f114ae934",
+      "c": "85c7f7b95067",
+      "cs": "fd2c34bea1b3",
+      "cl": "6df21b028f7f",
+      "cm": "ba1868fb8e63",
+      "q": "826c10603e6f",
+      "q0": "99bb93b9a370",
+      "qm": "c270046a41d4",
+      "t": "4bb04d63dbfe",
+      "ci": "0c7e6836ff77",
+      "cb": "37f57970721a",
+      "pk": "66b5e2206acf",
+      "pk2": "a097ae98caaf",
+      "src": "376791126d32",
+      "src0": "6b5d0e1af260",
+      "srcn": "bd3909364264",
+      "comp": "61b56a0db375",
+      "ucomp": "227862e89cd3",
+      "comp0": "63147ecc3cee",
+      "ucomp0": "04f085884a6f",
+      "compn": "77ce41608cb6",
+      "ucompn": "3dc4dd9953cb"
+    },
+    "ported | path": {
+      "nope": "1bf169f7d887",
+      "nope.deeper": "ed8a9f9798ca",
+      "gate": "1a745a8d632b",
+      "gi": "da33ef640816",
+      "gb": "48928303831d",
+      "gf": "1cba24d95748",
+      "gs": "0c92cd97c063",
+      "c": "1dcb4b3971ea",
+      "cs": "fb6508fc5ec8",
+      "cl": "1818cc258fd9",
+      "cl.0": "c52aa0c2131f",
+      "cm": "ec062dac7ef4",
+      "cm.p": "58db03e21132",
+      "cm.q": "ec12484918ad",
+      "cm.nope": "eb0ad1d58b7c",
+      "q": "4887e7b46923",
+      "q0": "bf865fa0422f",
+      "qm": "ca8c2d0f7b85",
+      "qm.inner": "bb111de010a4",
+      "qm.nope": "4e607c1cf0e0",
+      "t": "79d9dbc1bdbb",
+      "ci": "f536896b80ba",
+      "cb": "1e107172e80f",
+      "pk": "6cec262d5324",
+      "pk2": "9623e2e63a38",
+      "src": "10f953e38ee8",
+      "src0": "aa1be738c0b5",
+      "srcn": "17100b6157e7",
+      "comp": "efae780425c9",
+      "ucomp": "2ef76a4cc962",
+      "comp0": "3732be0c9bce",
+      "ucomp0": "4c099d0a0469",
+      "compn": "d72e005ed13a",
+      "ucompn": "f60f55f1bf5f"
+    },
+    "ported | nodes": {
+      "nope": "85cf5ad1bdc5",
+      "nope.deeper": "85cf5ad1bdc5",
+      "gate": "85cf5ad1bdc5",
+      "gi": "85cf5ad1bdc5",
+      "gb": "85cf5ad1bdc5",
+      "gf": "85cf5ad1bdc5",
+      "gs": "85cf5ad1bdc5",
+      "c": "85cf5ad1bdc5",
+      "cs": "85cf5ad1bdc5",
+      "cl": "85cf5ad1bdc5",
+      "cl.0": "85cf5ad1bdc5",
+      "cm": "85cf5ad1bdc5",
+      "cm.p": "85cf5ad1bdc5",
+      "cm.q": "85cf5ad1bdc5",
+      "cm.nope": "85cf5ad1bdc5",
+      "q": "85cf5ad1bdc5",
+      "q0": "85cf5ad1bdc5",
+      "qm": "85cf5ad1bdc5",
+      "qm.inner": "85cf5ad1bdc5",
+      "qm.nope": "85cf5ad1bdc5",
+      "t": "85cf5ad1bdc5",
+      "ci": "85cf5ad1bdc5",
+      "cb": "85cf5ad1bdc5",
+      "pk": "85cf5ad1bdc5",
+      "pk2": "85cf5ad1bdc5",
+      "src": "85cf5ad1bdc5",
+      "src0": "85cf5ad1bdc5",
+      "srcn": "85cf5ad1bdc5",
+      "comp": "85cf5ad1bdc5",
+      "ucomp": "85cf5ad1bdc5",
+      "comp0": "85cf5ad1bdc5",
+      "ucomp0": "85cf5ad1bdc5",
+      "compn": "85cf5ad1bdc5",
+      "ucompn": "85cf5ad1bdc5"
+    },
+    "portedR | door": {
+      "fromSurface": "5018d2b19419",
+      "fromSurface stored": "5018d2b19419",
+      "fromSurface narrowing": "5018d2b19419",
+      "withLookups": "5018d2b19419",
+      "withDependencies": "e778b6aef0f1",
+      "withStored": "20a6d365bb2f",
+      "shapeOf": "36d4b0c13e22",
+      "withoutRequired": "5018d2b19419",
+      "outputFromInput": "622d35ef274b",
+      "secrets": "9c87915be608",
+      "outputs": "39347ff402b6",
+      "values update": "218d6f4b7564",
+      "values create": "23c5b178dc28",
+      "stored": "03ce2be78960",
+      "secretKeys": "6d9332799eab",
+      "config schema": "01391fabe44d",
+      "config schema held+install": "de69e627a35e",
+      "config schema installed empty": "b149e8d5d000",
+      "config schema translated": "8b9c5f4facf4",
+      "wider generated": "f628a4412e77",
+      "ResourceCode": "4353c1290411",
+      "flow placed whole": "9f5e2ffb7840",
+      "flow placed grouped": "4892cb5ceb2b"
+    },
+    "portedR | values": {
+      "stored": "5f3653245dc5",
+      "open c #0": "d0b4a3e12313",
+      "open c #1": "3062808eb81f",
+      "open c #2": "53c93a9d8962",
+      "open c #3": "df7d76de4397",
+      "open c #4": "9c059a97f98b",
+      "open cs #0": "417ae9be2b85",
+      "open cs #1": "5643e6dd93bc",
+      "open cs #2": "83b01786d18e",
+      "open cs #3": "5a24bf04eed4",
+      "open cl #0": "a079cc8231f6",
+      "open cl #1": "176bd2c5fd64",
+      "open cl #2": "6bf80d78c7b0",
+      "open cm #0": "e9b6d346ae9a",
+      "open cm #1": "da551a116a96",
+      "open cm #2": "1cfeb87aa877",
+      "open q #0": "26785db0598d",
+      "open q #1": "762e1ad422f1",
+      "open q #2": "f778a55a1634",
+      "open q #3": "99706f795c5f",
+      "open q0 #0": "b11d859e1be1",
+      "open q0 #1": "d1c7ccd1921e",
+      "open q0 #2": "897c660af740",
+      "open t #0": "01630675d3d0",
+      "open t #1": "268417902660",
+      "open ci #0": "e5ac356a033f",
+      "open ci #1": "4a9cc8062f7b",
+      "open ci #2": "e38e7dea07cd",
+      "open ci #3": "39d72ce9d444",
+      "narrow c #0": "91afce5f6db0",
+      "narrow c #1": "8cfb79a5eb72",
+      "narrow c #2": "d9f8f99f44f7",
+      "narrow c #3": "dd51e89a6606",
+      "narrow c #4": "a1048b566dcc",
+      "narrow cs #0": "28cb3caf0617",
+      "narrow cs #1": "7273c56012f5",
+      "narrow cs #2": "018f15fd5d6f",
+      "narrow cs #3": "9ff140f1e14e",
+      "narrow cl #0": "5d2b8cf06ec2",
+      "narrow cl #1": "8f96080c003e",
+      "narrow cl #2": "ee23e7d1422d",
+      "narrow cm #0": "e077ca810ce2",
+      "narrow cm #1": "2c6882bd8701",
+      "narrow cm #2": "4c950ce1e1f3",
+      "narrow q #0": "21a4c9df6106",
+      "narrow q #1": "e5bf3d481a47",
+      "narrow q #2": "d185e6e9f5f6",
+      "narrow q #3": "f0b4f27d0e2a",
+      "narrow q0 #0": "239be65e0021",
+      "narrow q0 #1": "7e8232b6acdb",
+      "narrow q0 #2": "14d9919d3760",
+      "narrow t #0": "e2fe1b047f04",
+      "narrow t #1": "b7403fbbda3e",
+      "narrow ci #0": "a21af80f189a",
+      "narrow ci #1": "ab7cb9b06ae8",
+      "narrow ci #2": "4eaf8338fc6c",
+      "narrow ci #3": "931a2d655fad",
+      "req c #0": "b62b5ba77699",
+      "req c #1": "588cfb3291ab",
+      "req c #2": "08b44ea18bd3",
+      "req c #3": "04f865e92814",
+      "req c #4": "77a33b390366",
+      "req cs #0": "6f48c5b0c9b5",
+      "req cs #1": "9b5eb1479c17",
+      "req cs #2": "a0fda5239981",
+      "req cs #3": "5f132c827391",
+      "req cl #0": "c1ec118bfa22",
+      "req cl #1": "99a3d6fee7ef",
+      "req cl #2": "aa28c2337998",
+      "req cm #0": "ea812bfd3432",
+      "req cm #1": "27d38cd0a2d1",
+      "req cm #2": "9c0c157bf70a",
+      "req q #0": "5c655ca032d5",
+      "req q #1": "17101e0278f9",
+      "req q #2": "edb377569051",
+      "req q #3": "fb0c6d22ab38",
+      "req q0 #0": "f87745b2ff5b",
+      "req q0 #1": "3d380f44347c",
+      "req q0 #2": "ba3f25410b55",
+      "req t #0": "8dcefab2446a",
+      "req t #1": "0bc5258a0882",
+      "req ci #0": "168ceb7d5ad3",
+      "req ci #1": "0007a62b4483",
+      "req ci #2": "c524e850e1d1",
+      "req ci #3": "b6fd4f667dbb",
+      "clone c #0": "acef6113deae",
+      "clone c #1": "0c0a03449d00",
+      "clone c #2": "be91abf16d34",
+      "clone c #3": "e63ecc03b6aa",
+      "clone c #4": "5dd87508ea4f",
+      "clone cs #0": "ca38a67c65bf",
+      "clone cs #1": "bff558e5c127",
+      "clone cs #2": "b78711495f76",
+      "clone cs #3": "736c20557563",
+      "clone cl #0": "7387e82e7676",
+      "clone cl #1": "2aa9f2da1b72",
+      "clone cl #2": "78dda52b9094",
+      "clone cm #0": "12638db9e4e1",
+      "clone cm #1": "acf5d1197ccb",
+      "clone cm #2": "8990976c3e87",
+      "clone q #0": "5281c388ded9",
+      "clone q #1": "07d5b3adf983",
+      "clone q #2": "b5ab657563f9",
+      "clone q #3": "2128c84145aa",
+      "clone q0 #0": "a4a81b9a4693",
+      "clone q0 #1": "cf67c7090ac9",
+      "clone q0 #2": "3088665612e2",
+      "clone t #0": "3894f2816f02",
+      "clone t #1": "7d68cbd1bae1",
+      "clone ci #0": "b29796ed1643",
+      "clone ci #1": "8334ab7ef363",
+      "clone ci #2": "c7a4639ba84a",
+      "clone ci #3": "3ed7cfe1080c",
+      "same c #0": "2d141eb3535f",
+      "same c #1": "9200a868dd4e",
+      "same c #2": "63fa6d958c3e",
+      "same c #3": "6190739950d7",
+      "same c #4": "a6bc7ff28ad6",
+      "same cs #0": "4924d2561c26",
+      "same cs #1": "e64b932667f2",
+      "same cs #2": "716bc7fcc5c4",
+      "same cs #3": "d99627f21e75",
+      "same cl #0": "5ac3097fa08e",
+      "same cl #1": "2d34d82cf6b1",
+      "same cl #2": "4a5376ef7ec4",
+      "same cm #0": "d175a45b29f6",
+      "same cm #1": "eadb52f89c2f",
+      "same cm #2": "27d24f6a1788",
+      "same q #0": "fb28176efe98",
+      "same q #1": "14a825c2d72e",
+      "same q #2": "b405c2fa5db8",
+      "same q #3": "659d0641274f",
+      "same q0 #0": "541193d86661",
+      "same q0 #1": "42f5d62c65f2",
+      "same q0 #2": "b4289c3a6abb",
+      "same t #0": "87a12d4d5268",
+      "same t #1": "d91b0b70f7e6",
+      "same ci #0": "de3c17e1ef6a",
+      "same ci #1": "b296f9ca6e64",
+      "same ci #2": "6ee048059d2c",
+      "same ci #3": "f3cb6747ebaf",
+      "label c #0": "6b6329e5cb31",
+      "label c #1": "647960403704",
+      "label c #2": "5c2e557b39bd",
+      "label c #3": "f1e8986802c6",
+      "label c #4": "fd09b9c48672",
+      "label cs #0": "38b58441bb19",
+      "label cs #1": "1b710737c2eb",
+      "label cs #2": "08723174d8fa",
+      "label cs #3": "986ab079240c",
+      "label cl #0": "97bdc0ac6edb",
+      "label cl #1": "4e3b4066bca8",
+      "label cl #2": "631f652f6163",
+      "label cm #0": "4c42974870c0",
+      "label cm #1": "64c37b86b03e",
+      "label cm #2": "a92aa6b8202c",
+      "label q #0": "3bb42a113133",
+      "label q #1": "d705b45d0e6d",
+      "label q #2": "d5f66ae7b650",
+      "label q #3": "56289e8f4f70",
+      "label q0 #0": "6c71336e08ca",
+      "label q0 #1": "746ae692b923",
+      "label q0 #2": "13026bdecd6c",
+      "label t #0": "b95f1ec60258",
+      "label t #1": "917959f852e6",
+      "label ci #0": "9270cfb681ee",
+      "label ci #1": "eecdd633516f",
+      "label ci #2": "15086ece4aa0",
+      "label ci #3": "f1cb3e773da7",
+      "len c #0": "014195a77548",
+      "len c #1": "0c2c783607ab",
+      "len c #2": "128aade65b45",
+      "len c #3": "9b50afa773ca",
+      "len c #4": "4587cb922530",
+      "len cs #0": "49afdd5e19e7",
+      "len cs #1": "71a2a260a10a",
+      "len cs #2": "e25f98af0165",
+      "len cs #3": "7dea596fda76",
+      "len cl #0": "2e7fac3f34a1",
+      "len cl #1": "76ddc20b9946",
+      "len cl #2": "a106686422de",
+      "len cm #0": "dcc5f7656409",
+      "len cm #1": "1ae9eb77df9a",
+      "len cm #2": "db3c8ef5bc82",
+      "len q #0": "56a1203dff2b",
+      "len q #1": "ea6fabb22367",
+      "len q #2": "c927e32d11c2",
+      "len q #3": "416f044a52ca",
+      "len q0 #0": "17cca9d89231",
+      "len q0 #1": "d41325117414",
+      "len q0 #2": "96fabc66fd7b",
+      "len t #0": "8c8d536c93f4",
+      "len t #1": "4f992e0d1015",
+      "len ci #0": "e836c14812be",
+      "len ci #1": "4cb85ff9c8c7",
+      "len ci #2": "2aa24ec6d424",
+      "len ci #3": "abf1daf07d00",
+      "__out c #0": "9bce8c0a75a9",
+      "__out c #1": "759627769c78",
+      "__out c #2": "9dd3f58660dd",
+      "__out c #3": "44ee57a93c7a",
+      "__out c #4": "e79e3139487a",
+      "__out cs #0": "7e47feb5aea8",
+      "__out cs #1": "736988188f0a",
+      "__out cs #2": "5c07b39b629a",
+      "__out cs #3": "885a9d465fd6",
+      "__out cl #0": "dc602d472a1a",
+      "__out cl #1": "65b8c136ec9b",
+      "__out cl #2": "e07be7d26e07",
+      "__out cm #0": "9e3288448539",
+      "__out cm #1": "6eb6350330e9",
+      "__out cm #2": "603f770c315a",
+      "__out q #0": "394af48c0b81",
+      "__out q #1": "1c1e8df9b712",
+      "__out q #2": "64f66f2090b5",
+      "__out q #3": "f11e123bf522",
+      "__out q0 #0": "71f8f12f7673",
+      "__out q0 #1": "38e003e09dcb",
+      "__out q0 #2": "8c5f40f67067",
+      "__out t #0": "4adc54298d9b",
+      "__out t #1": "a8581ed28d3d",
+      "__out ci #0": "ffe9f4beea96",
+      "__out ci #1": "920da02207ca",
+      "__out ci #2": "1c94cfc60385",
+      "__out ci #3": "1a5064cc6bfd",
+      "gi 1 true qm": "c3bc1719e1cf",
+      "gi 1 true qm null": "872a2061d2b5",
+      "gi 1 true cb": "da2a1f3122df",
+      "gi 1 false qm": "e401e1f2b473",
+      "gi 1 false qm null": "40906d9ed1e9",
+      "gi 1 false cb": "da2a1f3122df",
+      "gi 1 NULL qm": "4e22e5b293b3",
+      "gi 1 NULL qm null": "720af0f12b86",
+      "gi 1 NULL cb": "da2a1f3122df",
+      "gi 2 true qm": "52a95a695975",
+      "gi 2 true qm null": "095f772a3dfd",
+      "gi 2 true cb": "eddb3533a67f",
+      "gi 2 false qm": "8539c99c742b",
+      "gi 2 false qm null": "d7181080ad59",
+      "gi 2 false cb": "eddb3533a67f",
+      "gi 2 NULL qm": "b743940d14da",
+      "gi 2 NULL qm null": "8e4ac08c2026",
+      "gi 2 NULL cb": "eddb3533a67f",
+      "gi 3 true qm": "ee0c5abd8188",
+      "gi 3 true qm null": "38b0a6bb2a58",
+      "gi 3 true cb": "81389e7b19df",
+      "gi 3 false qm": "87d8b762bcfd",
+      "gi 3 false qm null": "b74c3ad0dd7d",
+      "gi 3 false cb": "81389e7b19df",
+      "gi 3 NULL qm": "4b983c9bf400",
+      "gi 3 NULL qm null": "6e7217608cd3",
+      "gi 3 NULL cb": "81389e7b19df",
+      "gi '2' true qm": "67b13f479330",
+      "gi '2' true qm null": "bf2ed9ec4864",
+      "gi '2' true cb": "4f0c74b0551f",
+      "gi '2' false qm": "7ae12cb328a4",
+      "gi '2' false qm null": "9de3e7d26773",
+      "gi '2' false cb": "4f0c74b0551f",
+      "gi '2' NULL qm": "75716e21890f",
+      "gi '2' NULL qm null": "d957b96a3ae4",
+      "gi '2' NULL cb": "4f0c74b0551f",
+      "gi NULL true qm": "84253c47d051",
+      "gi NULL true qm null": "235b8f50e886",
+      "gi NULL true cb": "5a333a01422a",
+      "gi NULL false qm": "6e9238b5f2c5",
+      "gi NULL false qm null": "8d8a2e2ae0f3",
+      "gi NULL false cb": "5a333a01422a",
+      "gi NULL NULL qm": "8764e642e4ea",
+      "gi NULL NULL qm null": "a8c91dc40102",
+      "gi NULL NULL cb": "5a333a01422a",
+      "comp sent": "cad0b3439896",
+      "comp sent src": "6ed4e7cff434",
+      "comp null": "8d6bb36a74e8",
+      "comp bad src": "30f386e6bd6a",
+      "comp0 sent": "cb787c06cdc7",
+      "comp0 sent src": "e6473673df10",
+      "comp0 null": "8447b2fc6e37",
+      "comp0 bad src": "39ec483531d2",
+      "compn sent": "f58f9f2bdb32",
+      "compn sent src": "f0a17c5e3eed",
+      "compn null": "a1c9b2b3771b",
+      "compn bad src": "4a0bbb07c2a7",
+      "ucomp sent": "bbb820a42ec5",
+      "ucomp sent src": "aa657b32a22e",
+      "ucomp null": "73eadffca490",
+      "ucomp bad src": "e330d2c417e2",
+      "ucomp0 sent": "b8bb97d2d240",
+      "ucomp0 sent src": "7e99979132a4",
+      "ucomp0 null": "d5cb7dbb1656",
+      "ucomp0 bad src": "dda1c3357497",
+      "ucompn sent": "0b2248178afd",
+      "ucompn sent src": "a65cf7d7cdfb",
+      "ucompn null": "b7bb9d1f630e",
+      "ucompn bad src": "9e5e86d26470",
+      "pk 'a'": "60615b18f7ea",
+      "pk2 'a'": "af32739a1daf",
+      "pk 'b'": "5011812b3e13",
+      "pk2 'b'": "32bcaaa4d70f",
+      "pk 'zz'": "1a6da2f03dc0",
+      "pk2 'zz'": "605d8994396f",
+      "pk NULL": "39a4c79b0af5",
+      "pk2 NULL": "84841dc996df"
+    },
+    "portedR | key": {
+      "gate": "323c247e9b25",
+      "gi": "1a11325ae1bb",
+      "gb": "0d59a0deb58e",
+      "gf": "5799d5c7b3bc",
+      "gs": "ee3f114ae934",
+      "c": "85c7f7b95067",
+      "cs": "fd2c34bea1b3",
+      "cl": "6df21b028f7f",
+      "cm": "ba1868fb8e63",
+      "q": "826c10603e6f",
+      "q0": "99bb93b9a370",
+      "qm": "c270046a41d4",
+      "t": "4bb04d63dbfe",
+      "ci": "0c7e6836ff77",
+      "cb": "37f57970721a",
+      "pk": "66b5e2206acf",
+      "pk2": "a097ae98caaf",
+      "src": "376791126d32",
+      "src0": "6b5d0e1af260",
+      "srcn": "bd3909364264",
+      "comp": "61b56a0db375",
+      "ucomp": "227862e89cd3",
+      "comp0": "63147ecc3cee",
+      "ucomp0": "04f085884a6f",
+      "compn": "77ce41608cb6",
+      "ucompn": "3dc4dd9953cb"
+    },
+    "portedR | path": {
+      "nope": "1bf169f7d887",
+      "nope.deeper": "ed8a9f9798ca",
+      "gate": "1a745a8d632b",
+      "gi": "da33ef640816",
+      "gb": "48928303831d",
+      "gf": "1cba24d95748",
+      "gs": "0c92cd97c063",
+      "c": "1dcb4b3971ea",
+      "cs": "fb6508fc5ec8",
+      "cl": "1818cc258fd9",
+      "cl.0": "c52aa0c2131f",
+      "cm": "ec062dac7ef4",
+      "cm.p": "58db03e21132",
+      "cm.q": "ec12484918ad",
+      "cm.nope": "eb0ad1d58b7c",
+      "q": "4887e7b46923",
+      "q0": "bf865fa0422f",
+      "qm": "ca8c2d0f7b85",
+      "qm.inner": "bb111de010a4",
+      "qm.nope": "4e607c1cf0e0",
+      "t": "79d9dbc1bdbb",
+      "ci": "f536896b80ba",
+      "cb": "1e107172e80f",
+      "pk": "6cec262d5324",
+      "pk2": "9623e2e63a38",
+      "src": "10f953e38ee8",
+      "src0": "aa1be738c0b5",
+      "srcn": "17100b6157e7",
+      "comp": "efae780425c9",
+      "ucomp": "2ef76a4cc962",
+      "comp0": "3732be0c9bce",
+      "ucomp0": "4c099d0a0469",
+      "compn": "d72e005ed13a",
+      "ucompn": "f60f55f1bf5f"
+    },
+    "portedR | nodes": {
+      "nope": "85cf5ad1bdc5",
+      "nope.deeper": "85cf5ad1bdc5",
+      "gate": "85cf5ad1bdc5",
+      "gi": "85cf5ad1bdc5",
+      "gb": "85cf5ad1bdc5",
+      "gf": "85cf5ad1bdc5",
+      "gs": "85cf5ad1bdc5",
+      "c": "85cf5ad1bdc5",
+      "cs": "85cf5ad1bdc5",
+      "cl": "85cf5ad1bdc5",
+      "cl.0": "85cf5ad1bdc5",
+      "cm": "85cf5ad1bdc5",
+      "cm.p": "85cf5ad1bdc5",
+      "cm.q": "85cf5ad1bdc5",
+      "cm.nope": "85cf5ad1bdc5",
+      "q": "85cf5ad1bdc5",
+      "q0": "85cf5ad1bdc5",
+      "qm": "85cf5ad1bdc5",
+      "qm.inner": "85cf5ad1bdc5",
+      "qm.nope": "85cf5ad1bdc5",
+      "t": "85cf5ad1bdc5",
+      "ci": "85cf5ad1bdc5",
+      "cb": "85cf5ad1bdc5",
+      "pk": "85cf5ad1bdc5",
+      "pk2": "85cf5ad1bdc5",
+      "src": "85cf5ad1bdc5",
+      "src0": "85cf5ad1bdc5",
+      "srcn": "85cf5ad1bdc5",
+      "comp": "85cf5ad1bdc5",
+      "ucomp": "85cf5ad1bdc5",
+      "comp0": "85cf5ad1bdc5",
+      "ucomp0": "85cf5ad1bdc5",
+      "compn": "85cf5ad1bdc5",
+      "ucompn": "85cf5ad1bdc5"
+    },
+    "staleSt | door": {
+      "fromSurface": "5018d2b19419",
+      "fromSurface stored": "5018d2b19419",
+      "fromSurface narrowing": "5018d2b19419",
+      "withLookups": "5018d2b19419",
+      "withDependencies": "e778b6aef0f1",
+      "withStored": "6f860c59ab83",
+      "shapeOf": "36d4b0c13e22",
+      "withoutRequired": "5018d2b19419",
+      "outputFromInput": "622d35ef274b",
+      "secrets": "9c87915be608",
+      "outputs": "39347ff402b6",
+      "values update": "94c38e3cde97",
+      "values create": "23c5b178dc28",
+      "stored": "1e7b5f8a37ac",
+      "secretKeys": "6d9332799eab",
+      "config schema": "01391fabe44d",
+      "config schema held+install": "3102abd10aa9",
+      "config schema installed empty": "b149e8d5d000",
+      "config schema translated": "8b9c5f4facf4",
+      "wider generated": "f628a4412e77",
+      "ResourceCode": "4353c1290411",
+      "flow placed whole": "9f5e2ffb7840",
+      "flow placed grouped": "4892cb5ceb2b"
+    },
+    "staleSt | values": {
+      "stored": "c064ec441b32",
+      "open c #0": "d4b75c8157df",
+      "open c #1": "c2ef46e5bf09",
+      "open c #2": "9ed859581f45",
+      "open c #3": "2a9dad0308e3",
+      "open c #4": "2985361ca66a",
+      "open cs #0": "2d519bc04abd",
+      "open cs #1": "fbaeb00818d0",
+      "open cs #2": "4737bc3e4325",
+      "open cs #3": "cfdc37283d50",
+      "open cl #0": "44ecaca052a2",
+      "open cl #1": "6e0f88d23f10",
+      "open cl #2": "48ab69139335",
+      "open cm #0": "b1c8cdef1264",
+      "open cm #1": "eb2688c69449",
+      "open cm #2": "ae9752209550",
+      "open q #0": "8c13c4a0c7b6",
+      "open q #1": "6068119886ed",
+      "open q #2": "a6c2b0f4add3",
+      "open q #3": "c5404a747e80",
+      "open q0 #0": "248dbb6e1333",
+      "open q0 #1": "6fc890bbdb43",
+      "open q0 #2": "e8695fe0f75d",
+      "open t #0": "7f1ed8612f17",
+      "open t #1": "309fcda21fda",
+      "open ci #0": "58fc4cde2095",
+      "open ci #1": "3c1ff6c25c54",
+      "open ci #2": "135e7079ff88",
+      "open ci #3": "0cddad8ab4cf",
+      "narrow c #0": "96c1160625d6",
+      "narrow c #1": "4e4ecfdb431c",
+      "narrow c #2": "eb6ce05ef4e1",
+      "narrow c #3": "b9a38cc75cc4",
+      "narrow c #4": "edad78584485",
+      "narrow cs #0": "f0c04fc66caa",
+      "narrow cs #1": "51b326e51ca0",
+      "narrow cs #2": "3096e2afe815",
+      "narrow cs #3": "a158536918a3",
+      "narrow cl #0": "947515dec94c",
+      "narrow cl #1": "b2ec3c84440c",
+      "narrow cl #2": "b54b677b1aac",
+      "narrow cm #0": "2537962f5f35",
+      "narrow cm #1": "e9c16614c8ba",
+      "narrow cm #2": "eb74119f112d",
+      "narrow q #0": "0f61df937b63",
+      "narrow q #1": "633e79f6422d",
+      "narrow q #2": "3cfc25fa18f7",
+      "narrow q #3": "e50625d4e42a",
+      "narrow q0 #0": "6e1ac622d8ff",
+      "narrow q0 #1": "2ffc2107f811",
+      "narrow q0 #2": "5fecce16b6c7",
+      "narrow t #0": "0ef4a828c920",
+      "narrow t #1": "34a7c575e46c",
+      "narrow ci #0": "890ba318e833",
+      "narrow ci #1": "9b430590e172",
+      "narrow ci #2": "133081e3cd3f",
+      "narrow ci #3": "330944459949",
+      "req c #0": "663178406f6c",
+      "req c #1": "de0f2a89bded",
+      "req c #2": "14bf7fc18aa5",
+      "req c #3": "328666e6f8ba",
+      "req c #4": "e7649c4d3a04",
+      "req cs #0": "d03dceaa01f1",
+      "req cs #1": "92f837b033cb",
+      "req cs #2": "0d97265fb1f0",
+      "req cs #3": "6d6156864803",
+      "req cl #0": "bbf46fbe35d5",
+      "req cl #1": "02eec5aaf420",
+      "req cl #2": "6478a2432cab",
+      "req cm #0": "5d6702527985",
+      "req cm #1": "47b19d7f30f6",
+      "req cm #2": "a8837fa9f6ab",
+      "req q #0": "423b64f12518",
+      "req q #1": "0ba01aa75a08",
+      "req q #2": "590ac43725d2",
+      "req q #3": "83540ecc5c5d",
+      "req q0 #0": "c91139f692a6",
+      "req q0 #1": "02b474446b5e",
+      "req q0 #2": "be94d1e03fe3",
+      "req t #0": "a4b1cdf9a805",
+      "req t #1": "22d4be2251d9",
+      "req ci #0": "fb9905aefd6f",
+      "req ci #1": "befc2669d4b2",
+      "req ci #2": "13c65cd3d08b",
+      "req ci #3": "bf48d5398c22",
+      "clone c #0": "404a77171a26",
+      "clone c #1": "ef1a82d93292",
+      "clone c #2": "2d659f1edf8d",
+      "clone c #3": "66ed48bef14f",
+      "clone c #4": "02dd89128a02",
+      "clone cs #0": "163a0eaed819",
+      "clone cs #1": "9e77005abbbb",
+      "clone cs #2": "aa7f5084adfe",
+      "clone cs #3": "093e86b04ddc",
+      "clone cl #0": "0ea420491642",
+      "clone cl #1": "09ec91ef8bb4",
+      "clone cl #2": "466be2f2c3f1",
+      "clone cm #0": "6c56deeaadfe",
+      "clone cm #1": "096337cb1b90",
+      "clone cm #2": "b2a4413919cf",
+      "clone q #0": "2e18be665822",
+      "clone q #1": "f1442f6fb83c",
+      "clone q #2": "138c5648463a",
+      "clone q #3": "3c9b995ebf77",
+      "clone q0 #0": "5756d0020da5",
+      "clone q0 #1": "6013aa02e1bc",
+      "clone q0 #2": "fbd36da075d9",
+      "clone t #0": "70b30e91edba",
+      "clone t #1": "9051e25d08f3",
+      "clone ci #0": "701de4146632",
+      "clone ci #1": "baae7bec138f",
+      "clone ci #2": "a42a935cb413",
+      "clone ci #3": "87bde31df3eb",
+      "same c #0": "87319dad6797",
+      "same c #1": "8e6e20f1ec06",
+      "same c #2": "02621f24a019",
+      "same c #3": "f1534243df8f",
+      "same c #4": "c86e039c8b6b",
+      "same cs #0": "ef202d4fd990",
+      "same cs #1": "58434db76ee8",
+      "same cs #2": "93f6b2772cdd",
+      "same cs #3": "79cdcc23097e",
+      "same cl #0": "6bf7a0aa2beb",
+      "same cl #1": "335c4a59b010",
+      "same cl #2": "66f9199a6c8a",
+      "same cm #0": "7450a0c63997",
+      "same cm #1": "1db602613833",
+      "same cm #2": "cb47452ee833",
+      "same q #0": "8d420d4708fb",
+      "same q #1": "14bf0f6aedaf",
+      "same q #2": "058962357471",
+      "same q #3": "bf7b96194a70",
+      "same q0 #0": "e7c015dae31c",
+      "same q0 #1": "d9e40441db1f",
+      "same q0 #2": "4e473b766e3d",
+      "same t #0": "06050bedf18e",
+      "same t #1": "08152f6c90f2",
+      "same ci #0": "865e0721da40",
+      "same ci #1": "2e8fb212f4b6",
+      "same ci #2": "764e19636258",
+      "same ci #3": "04161bbdb2a8",
+      "label c #0": "786aadba4f74",
+      "label c #1": "067244f3caa3",
+      "label c #2": "99f311dd263f",
+      "label c #3": "42e58dff31d2",
+      "label c #4": "fdbe7b0c6e5e",
+      "label cs #0": "16d77a49634e",
+      "label cs #1": "5a77b7a5ff96",
+      "label cs #2": "195ffbbb9a59",
+      "label cs #3": "40fb512d912f",
+      "label cl #0": "f4a054f402eb",
+      "label cl #1": "4a16b9a68234",
+      "label cl #2": "99dd5f673bb1",
+      "label cm #0": "d780bd981f89",
+      "label cm #1": "3019b82a7410",
+      "label cm #2": "f411fe41cc7c",
+      "label q #0": "06e02faec4d0",
+      "label q #1": "135f0ef66d25",
+      "label q #2": "b4f9591975bd",
+      "label q #3": "8212eb3a490b",
+      "label q0 #0": "cfe1e4c16d9b",
+      "label q0 #1": "934a83834d42",
+      "label q0 #2": "0937ea37086a",
+      "label t #0": "d102079f1519",
+      "label t #1": "9d0e3b628325",
+      "label ci #0": "7df729e0c5eb",
+      "label ci #1": "e98f66fb3c10",
+      "label ci #2": "bf226d7d51bf",
+      "label ci #3": "f3208c2e880e",
+      "len c #0": "dc51875e0aa7",
+      "len c #1": "9c5ee84a69d0",
+      "len c #2": "a1e2e5ffdb8f",
+      "len c #3": "be1e9f8157a4",
+      "len c #4": "2b7abd66bfed",
+      "len cs #0": "4ebc9a8395d4",
+      "len cs #1": "f720ca5dcf3b",
+      "len cs #2": "d2034b3c0d22",
+      "len cs #3": "01ef57833510",
+      "len cl #0": "521e59e48008",
+      "len cl #1": "e3a52d4a559d",
+      "len cl #2": "baaa1eb5522b",
+      "len cm #0": "1e8259e6bc4b",
+      "len cm #1": "8437ecf52cbe",
+      "len cm #2": "0afdd6fba033",
+      "len q #0": "97272a67f3f6",
+      "len q #1": "e7ff89dc3c2d",
+      "len q #2": "9a632382aa84",
+      "len q #3": "2d596d18d5fe",
+      "len q0 #0": "7eef7a4afdb1",
+      "len q0 #1": "493f1820ca61",
+      "len q0 #2": "b7216981a2ae",
+      "len t #0": "2303ac46a95a",
+      "len t #1": "e9ef6e991b79",
+      "len ci #0": "15010b74ddc6",
+      "len ci #1": "e3ecc6be9f32",
+      "len ci #2": "2c84c6d35899",
+      "len ci #3": "c6394c49a9ff",
+      "__out c #0": "068ca8541e82",
+      "__out c #1": "deafb3a4b242",
+      "__out c #2": "527ebf318cb3",
+      "__out c #3": "e8e7c8aca9cd",
+      "__out c #4": "02578dd0c9b8",
+      "__out cs #0": "bf671fffe228",
+      "__out cs #1": "0818803a8af5",
+      "__out cs #2": "1740f55f279c",
+      "__out cs #3": "9a55eeb6d834",
+      "__out cl #0": "8c30f673024b",
+      "__out cl #1": "f9eff08727fd",
+      "__out cl #2": "745479fd94ea",
+      "__out cm #0": "e7cf69ac508c",
+      "__out cm #1": "1cfc048b5c93",
+      "__out cm #2": "0ae2ae4f2f3c",
+      "__out q #0": "7bfea67dcff7",
+      "__out q #1": "6bcb453e8b1f",
+      "__out q #2": "7e699f3fdbfd",
+      "__out q #3": "510f41a5466b",
+      "__out q0 #0": "f6629446dc93",
+      "__out q0 #1": "89aae582d068",
+      "__out q0 #2": "6cf8aff87150",
+      "__out t #0": "0f87498b3438",
+      "__out t #1": "55743c900cfa",
+      "__out ci #0": "6004a2597e63",
+      "__out ci #1": "16c79872881f",
+      "__out ci #2": "8de7bb46b960",
+      "__out ci #3": "0ba5c91299f9",
+      "gi 1 true qm": "0daac7e2a98c",
+      "gi 1 true qm null": "f09d3686fa6c",
+      "gi 1 true cb": "4b5e54e7f2cb",
+      "gi 1 false qm": "6f4d5c0c93d2",
+      "gi 1 false qm null": "24d752c3c2b9",
+      "gi 1 false cb": "4b5e54e7f2cb",
+      "gi 1 NULL qm": "e930df41410c",
+      "gi 1 NULL qm null": "88a2cdb3262f",
+      "gi 1 NULL cb": "4b5e54e7f2cb",
+      "gi 2 true qm": "c32502938898",
+      "gi 2 true qm null": "b97adc8831b0",
+      "gi 2 true cb": "69f864f4c395",
+      "gi 2 false qm": "400beb97c39d",
+      "gi 2 false qm null": "0d1573e1ec17",
+      "gi 2 false cb": "69f864f4c395",
+      "gi 2 NULL qm": "35b9e9662485",
+      "gi 2 NULL qm null": "e5ffccd9ba0d",
+      "gi 2 NULL cb": "69f864f4c395",
+      "gi 3 true qm": "e95159ca7ac3",
+      "gi 3 true qm null": "108edd7a30de",
+      "gi 3 true cb": "55223ffb83b5",
+      "gi 3 false qm": "a1e0e4306ea0",
+      "gi 3 false qm null": "de8dd1b78842",
+      "gi 3 false cb": "55223ffb83b5",
+      "gi 3 NULL qm": "aaf9cddd1efd",
+      "gi 3 NULL qm null": "2f8e4b76772e",
+      "gi 3 NULL cb": "55223ffb83b5",
+      "gi '2' true qm": "179e73846257",
+      "gi '2' true qm null": "34c4f4ec00dd",
+      "gi '2' true cb": "ba5875c02d2a",
+      "gi '2' false qm": "96d5536149a3",
+      "gi '2' false qm null": "e22b9d59c767",
+      "gi '2' false cb": "ba5875c02d2a",
+      "gi '2' NULL qm": "eaa406416555",
+      "gi '2' NULL qm null": "c0128422d815",
+      "gi '2' NULL cb": "ba5875c02d2a",
+      "gi NULL true qm": "ba709bc2914b",
+      "gi NULL true qm null": "d6076070e8e6",
+      "gi NULL true cb": "146ba345455b",
+      "gi NULL false qm": "101be8e35b34",
+      "gi NULL false qm null": "cd6877057f90",
+      "gi NULL false cb": "146ba345455b",
+      "gi NULL NULL qm": "cfd5f356df56",
+      "gi NULL NULL qm null": "823e948a3df0",
+      "gi NULL NULL cb": "146ba345455b",
+      "comp sent": "6f61b55be71c",
+      "comp sent src": "dcf34dcdcb53",
+      "comp null": "3281d08b063e",
+      "comp bad src": "f59bcf792bb4",
+      "comp0 sent": "e19e0fa479bc",
+      "comp0 sent src": "ff216dc775d5",
+      "comp0 null": "a0e3d2fa75a2",
+      "comp0 bad src": "0a540bfa3dcc",
+      "compn sent": "8f9865da36dc",
+      "compn sent src": "84cf451614a2",
+      "compn null": "0d60ff0ad69e",
+      "compn bad src": "ec191404a2c1",
+      "ucomp sent": "4c64ef4efdb6",
+      "ucomp sent src": "712ce91dd10b",
+      "ucomp null": "817fd8f160fb",
+      "ucomp bad src": "ecf421d351f9",
+      "ucomp0 sent": "02ecd2519c19",
+      "ucomp0 sent src": "bb54a7966603",
+      "ucomp0 null": "a9e2eac6ebbf",
+      "ucomp0 bad src": "df0c0a012c9b",
+      "ucompn sent": "a25bbdca0247",
+      "ucompn sent src": "c93bcadc4b72",
+      "ucompn null": "5adf894f91bf",
+      "ucompn bad src": "bd5d2f484edd",
+      "pk 'a'": "1debeadcd111",
+      "pk2 'a'": "765ab023e47e",
+      "pk 'b'": "bab6321cf0bc",
+      "pk2 'b'": "643b2de31041",
+      "pk 'zz'": "6190f7e7e1c2",
+      "pk2 'zz'": "990080d6260f",
+      "pk NULL": "6bb2c9f91fc2",
+      "pk2 NULL": "08ef2bcfc3ca"
+    },
+    "staleSt | key": {
+      "gate": "323c247e9b25",
+      "gi": "1a11325ae1bb",
+      "gb": "0d59a0deb58e",
+      "gf": "5799d5c7b3bc",
+      "gs": "ee3f114ae934",
+      "c": "85c7f7b95067",
+      "cs": "fd2c34bea1b3",
+      "cl": "6df21b028f7f",
+      "cm": "ba1868fb8e63",
+      "q": "826c10603e6f",
+      "q0": "99bb93b9a370",
+      "qm": "c270046a41d4",
+      "t": "4bb04d63dbfe",
+      "ci": "0c7e6836ff77",
+      "cb": "37f57970721a",
+      "pk": "66b5e2206acf",
+      "pk2": "a097ae98caaf",
+      "src": "376791126d32",
+      "src0": "6b5d0e1af260",
+      "srcn": "bd3909364264",
+      "comp": "61b56a0db375",
+      "ucomp": "227862e89cd3",
+      "comp0": "63147ecc3cee",
+      "ucomp0": "04f085884a6f",
+      "compn": "77ce41608cb6",
+      "ucompn": "3dc4dd9953cb"
+    },
+    "staleSt | path": {
+      "nope": "1bf169f7d887",
+      "nope.deeper": "ed8a9f9798ca",
+      "gate": "1a745a8d632b",
+      "gi": "da33ef640816",
+      "gb": "48928303831d",
+      "gf": "1cba24d95748",
+      "gs": "0c92cd97c063",
+      "c": "1dcb4b3971ea",
+      "cs": "fb6508fc5ec8",
+      "cl": "1818cc258fd9",
+      "cl.0": "c52aa0c2131f",
+      "cm": "ec062dac7ef4",
+      "cm.p": "58db03e21132",
+      "cm.q": "ec12484918ad",
+      "cm.nope": "eb0ad1d58b7c",
+      "q": "4887e7b46923",
+      "q0": "bf865fa0422f",
+      "qm": "ca8c2d0f7b85",
+      "qm.inner": "bb111de010a4",
+      "qm.nope": "4e607c1cf0e0",
+      "t": "79d9dbc1bdbb",
+      "ci": "f536896b80ba",
+      "cb": "1e107172e80f",
+      "pk": "6cec262d5324",
+      "pk2": "9623e2e63a38",
+      "src": "10f953e38ee8",
+      "src0": "aa1be738c0b5",
+      "srcn": "17100b6157e7",
+      "comp": "efae780425c9",
+      "ucomp": "2ef76a4cc962",
+      "comp0": "3732be0c9bce",
+      "ucomp0": "4c099d0a0469",
+      "compn": "d72e005ed13a",
+      "ucompn": "f60f55f1bf5f"
+    },
+    "staleSt | nodes": {
+      "nope": "85cf5ad1bdc5",
+      "nope.deeper": "85cf5ad1bdc5",
+      "gate": "85cf5ad1bdc5",
+      "gi": "85cf5ad1bdc5",
+      "gb": "85cf5ad1bdc5",
+      "gf": "85cf5ad1bdc5",
+      "gs": "85cf5ad1bdc5",
+      "c": "85cf5ad1bdc5",
+      "cs": "85cf5ad1bdc5",
+      "cl": "85cf5ad1bdc5",
+      "cl.0": "85cf5ad1bdc5",
+      "cm": "85cf5ad1bdc5",
+      "cm.p": "85cf5ad1bdc5",
+      "cm.q": "85cf5ad1bdc5",
+      "cm.nope": "85cf5ad1bdc5",
+      "q": "85cf5ad1bdc5",
+      "q0": "85cf5ad1bdc5",
+      "qm": "85cf5ad1bdc5",
+      "qm.inner": "85cf5ad1bdc5",
+      "qm.nope": "85cf5ad1bdc5",
+      "t": "85cf5ad1bdc5",
+      "ci": "85cf5ad1bdc5",
+      "cb": "85cf5ad1bdc5",
+      "pk": "85cf5ad1bdc5",
+      "pk2": "85cf5ad1bdc5",
+      "src": "85cf5ad1bdc5",
+      "src0": "85cf5ad1bdc5",
+      "srcn": "85cf5ad1bdc5",
+      "comp": "85cf5ad1bdc5",
+      "ucomp": "85cf5ad1bdc5",
+      "comp0": "85cf5ad1bdc5",
+      "ucomp0": "85cf5ad1bdc5",
+      "compn": "85cf5ad1bdc5",
+      "ucompn": "85cf5ad1bdc5"
+    },
+    "staleReq | door": {
+      "fromSurface": "5018d2b19419",
+      "fromSurface stored": "5018d2b19419",
+      "fromSurface narrowing": "5018d2b19419",
+      "withLookups": "5018d2b19419",
+      "withDependencies": "e778b6aef0f1",
+      "withStored": "195756872b42",
+      "shapeOf": "36d4b0c13e22",
+      "withoutRequired": "5018d2b19419",
+      "outputFromInput": "622d35ef274b",
+      "secrets": "9c87915be608",
+      "outputs": "39347ff402b6",
+      "values update": "53ce1c47ed05",
+      "values create": "23c5b178dc28",
+      "stored": "bfa0ab77f6b3",
+      "secretKeys": "6d9332799eab",
+      "config schema": "01391fabe44d",
+      "config schema held+install": "3160d1c34743",
+      "config schema installed empty": "b149e8d5d000",
+      "config schema translated": "8b9c5f4facf4",
+      "wider generated": "f628a4412e77",
+      "ResourceCode": "4353c1290411",
+      "flow placed whole": "9f5e2ffb7840",
+      "flow placed grouped": "4892cb5ceb2b"
+    },
+    "staleReq | values": {
+      "stored": "22cfac6eee73",
+      "open c #0": "d4b75c8157df",
+      "open c #1": "c2ef46e5bf09",
+      "open c #2": "9ed859581f45",
+      "open c #3": "2a9dad0308e3",
+      "open c #4": "2985361ca66a",
+      "open cs #0": "2d519bc04abd",
+      "open cs #1": "fbaeb00818d0",
+      "open cs #2": "4737bc3e4325",
+      "open cs #3": "cfdc37283d50",
+      "open cl #0": "44ecaca052a2",
+      "open cl #1": "6e0f88d23f10",
+      "open cl #2": "48ab69139335",
+      "open cm #0": "b1c8cdef1264",
+      "open cm #1": "eb2688c69449",
+      "open cm #2": "ae9752209550",
+      "open q #0": "8c13c4a0c7b6",
+      "open q #1": "6068119886ed",
+      "open q #2": "a6c2b0f4add3",
+      "open q #3": "c5404a747e80",
+      "open q0 #0": "248dbb6e1333",
+      "open q0 #1": "6fc890bbdb43",
+      "open q0 #2": "e8695fe0f75d",
+      "open t #0": "7f1ed8612f17",
+      "open t #1": "309fcda21fda",
+      "open ci #0": "58fc4cde2095",
+      "open ci #1": "3c1ff6c25c54",
+      "open ci #2": "135e7079ff88",
+      "open ci #3": "0cddad8ab4cf",
+      "narrow c #0": "96c1160625d6",
+      "narrow c #1": "4e4ecfdb431c",
+      "narrow c #2": "eb6ce05ef4e1",
+      "narrow c #3": "b9a38cc75cc4",
+      "narrow c #4": "edad78584485",
+      "narrow cs #0": "f0c04fc66caa",
+      "narrow cs #1": "51b326e51ca0",
+      "narrow cs #2": "3096e2afe815",
+      "narrow cs #3": "a158536918a3",
+      "narrow cl #0": "947515dec94c",
+      "narrow cl #1": "b2ec3c84440c",
+      "narrow cl #2": "b54b677b1aac",
+      "narrow cm #0": "2537962f5f35",
+      "narrow cm #1": "e9c16614c8ba",
+      "narrow cm #2": "eb74119f112d",
+      "narrow q #0": "0f61df937b63",
+      "narrow q #1": "633e79f6422d",
+      "narrow q #2": "3cfc25fa18f7",
+      "narrow q #3": "e50625d4e42a",
+      "narrow q0 #0": "6e1ac622d8ff",
+      "narrow q0 #1": "2ffc2107f811",
+      "narrow q0 #2": "5fecce16b6c7",
+      "narrow t #0": "0ef4a828c920",
+      "narrow t #1": "34a7c575e46c",
+      "narrow ci #0": "890ba318e833",
+      "narrow ci #1": "9b430590e172",
+      "narrow ci #2": "133081e3cd3f",
+      "narrow ci #3": "330944459949",
+      "req c #0": "663178406f6c",
+      "req c #1": "de0f2a89bded",
+      "req c #2": "14bf7fc18aa5",
+      "req c #3": "328666e6f8ba",
+      "req c #4": "e7649c4d3a04",
+      "req cs #0": "d03dceaa01f1",
+      "req cs #1": "92f837b033cb",
+      "req cs #2": "0d97265fb1f0",
+      "req cs #3": "6d6156864803",
+      "req cl #0": "bbf46fbe35d5",
+      "req cl #1": "02eec5aaf420",
+      "req cl #2": "6478a2432cab",
+      "req cm #0": "5d6702527985",
+      "req cm #1": "47b19d7f30f6",
+      "req cm #2": "a8837fa9f6ab",
+      "req q #0": "423b64f12518",
+      "req q #1": "0ba01aa75a08",
+      "req q #2": "590ac43725d2",
+      "req q #3": "83540ecc5c5d",
+      "req q0 #0": "c91139f692a6",
+      "req q0 #1": "02b474446b5e",
+      "req q0 #2": "be94d1e03fe3",
+      "req t #0": "a4b1cdf9a805",
+      "req t #1": "22d4be2251d9",
+      "req ci #0": "fb9905aefd6f",
+      "req ci #1": "befc2669d4b2",
+      "req ci #2": "13c65cd3d08b",
+      "req ci #3": "bf48d5398c22",
+      "clone c #0": "404a77171a26",
+      "clone c #1": "ef1a82d93292",
+      "clone c #2": "2d659f1edf8d",
+      "clone c #3": "66ed48bef14f",
+      "clone c #4": "02dd89128a02",
+      "clone cs #0": "163a0eaed819",
+      "clone cs #1": "9e77005abbbb",
+      "clone cs #2": "aa7f5084adfe",
+      "clone cs #3": "093e86b04ddc",
+      "clone cl #0": "0ea420491642",
+      "clone cl #1": "09ec91ef8bb4",
+      "clone cl #2": "466be2f2c3f1",
+      "clone cm #0": "6c56deeaadfe",
+      "clone cm #1": "096337cb1b90",
+      "clone cm #2": "b2a4413919cf",
+      "clone q #0": "2e18be665822",
+      "clone q #1": "f1442f6fb83c",
+      "clone q #2": "138c5648463a",
+      "clone q #3": "3c9b995ebf77",
+      "clone q0 #0": "5756d0020da5",
+      "clone q0 #1": "6013aa02e1bc",
+      "clone q0 #2": "fbd36da075d9",
+      "clone t #0": "70b30e91edba",
+      "clone t #1": "9051e25d08f3",
+      "clone ci #0": "701de4146632",
+      "clone ci #1": "baae7bec138f",
+      "clone ci #2": "a42a935cb413",
+      "clone ci #3": "87bde31df3eb",
+      "same c #0": "87319dad6797",
+      "same c #1": "8e6e20f1ec06",
+      "same c #2": "02621f24a019",
+      "same c #3": "f1534243df8f",
+      "same c #4": "c86e039c8b6b",
+      "same cs #0": "ef202d4fd990",
+      "same cs #1": "58434db76ee8",
+      "same cs #2": "93f6b2772cdd",
+      "same cs #3": "79cdcc23097e",
+      "same cl #0": "6bf7a0aa2beb",
+      "same cl #1": "335c4a59b010",
+      "same cl #2": "66f9199a6c8a",
+      "same cm #0": "7450a0c63997",
+      "same cm #1": "1db602613833",
+      "same cm #2": "cb47452ee833",
+      "same q #0": "8d420d4708fb",
+      "same q #1": "14bf0f6aedaf",
+      "same q #2": "058962357471",
+      "same q #3": "bf7b96194a70",
+      "same q0 #0": "e7c015dae31c",
+      "same q0 #1": "d9e40441db1f",
+      "same q0 #2": "4e473b766e3d",
+      "same t #0": "06050bedf18e",
+      "same t #1": "08152f6c90f2",
+      "same ci #0": "865e0721da40",
+      "same ci #1": "2e8fb212f4b6",
+      "same ci #2": "764e19636258",
+      "same ci #3": "04161bbdb2a8",
+      "label c #0": "786aadba4f74",
+      "label c #1": "067244f3caa3",
+      "label c #2": "99f311dd263f",
+      "label c #3": "42e58dff31d2",
+      "label c #4": "fdbe7b0c6e5e",
+      "label cs #0": "16d77a49634e",
+      "label cs #1": "5a77b7a5ff96",
+      "label cs #2": "195ffbbb9a59",
+      "label cs #3": "40fb512d912f",
+      "label cl #0": "f4a054f402eb",
+      "label cl #1": "4a16b9a68234",
+      "label cl #2": "99dd5f673bb1",
+      "label cm #0": "d780bd981f89",
+      "label cm #1": "3019b82a7410",
+      "label cm #2": "f411fe41cc7c",
+      "label q #0": "06e02faec4d0",
+      "label q #1": "135f0ef66d25",
+      "label q #2": "b4f9591975bd",
+      "label q #3": "8212eb3a490b",
+      "label q0 #0": "cfe1e4c16d9b",
+      "label q0 #1": "934a83834d42",
+      "label q0 #2": "0937ea37086a",
+      "label t #0": "d102079f1519",
+      "label t #1": "9d0e3b628325",
+      "label ci #0": "7df729e0c5eb",
+      "label ci #1": "e98f66fb3c10",
+      "label ci #2": "bf226d7d51bf",
+      "label ci #3": "f3208c2e880e",
+      "len c #0": "dc51875e0aa7",
+      "len c #1": "9c5ee84a69d0",
+      "len c #2": "a1e2e5ffdb8f",
+      "len c #3": "be1e9f8157a4",
+      "len c #4": "2b7abd66bfed",
+      "len cs #0": "4ebc9a8395d4",
+      "len cs #1": "f720ca5dcf3b",
+      "len cs #2": "d2034b3c0d22",
+      "len cs #3": "01ef57833510",
+      "len cl #0": "521e59e48008",
+      "len cl #1": "e3a52d4a559d",
+      "len cl #2": "baaa1eb5522b",
+      "len cm #0": "1e8259e6bc4b",
+      "len cm #1": "8437ecf52cbe",
+      "len cm #2": "0afdd6fba033",
+      "len q #0": "97272a67f3f6",
+      "len q #1": "e7ff89dc3c2d",
+      "len q #2": "9a632382aa84",
+      "len q #3": "2d596d18d5fe",
+      "len q0 #0": "7eef7a4afdb1",
+      "len q0 #1": "493f1820ca61",
+      "len q0 #2": "b7216981a2ae",
+      "len t #0": "2303ac46a95a",
+      "len t #1": "e9ef6e991b79",
+      "len ci #0": "15010b74ddc6",
+      "len ci #1": "e3ecc6be9f32",
+      "len ci #2": "2c84c6d35899",
+      "len ci #3": "c6394c49a9ff",
+      "__out c #0": "068ca8541e82",
+      "__out c #1": "deafb3a4b242",
+      "__out c #2": "527ebf318cb3",
+      "__out c #3": "e8e7c8aca9cd",
+      "__out c #4": "02578dd0c9b8",
+      "__out cs #0": "bf671fffe228",
+      "__out cs #1": "0818803a8af5",
+      "__out cs #2": "1740f55f279c",
+      "__out cs #3": "9a55eeb6d834",
+      "__out cl #0": "8c30f673024b",
+      "__out cl #1": "f9eff08727fd",
+      "__out cl #2": "745479fd94ea",
+      "__out cm #0": "e7cf69ac508c",
+      "__out cm #1": "1cfc048b5c93",
+      "__out cm #2": "0ae2ae4f2f3c",
+      "__out q #0": "7bfea67dcff7",
+      "__out q #1": "6bcb453e8b1f",
+      "__out q #2": "7e699f3fdbfd",
+      "__out q #3": "510f41a5466b",
+      "__out q0 #0": "f6629446dc93",
+      "__out q0 #1": "89aae582d068",
+      "__out q0 #2": "6cf8aff87150",
+      "__out t #0": "0f87498b3438",
+      "__out t #1": "55743c900cfa",
+      "__out ci #0": "6004a2597e63",
+      "__out ci #1": "16c79872881f",
+      "__out ci #2": "8de7bb46b960",
+      "__out ci #3": "0ba5c91299f9",
+      "gi 1 true qm": "0daac7e2a98c",
+      "gi 1 true qm null": "f09d3686fa6c",
+      "gi 1 true cb": "4b5e54e7f2cb",
+      "gi 1 false qm": "6f4d5c0c93d2",
+      "gi 1 false qm null": "24d752c3c2b9",
+      "gi 1 false cb": "4b5e54e7f2cb",
+      "gi 1 NULL qm": "e930df41410c",
+      "gi 1 NULL qm null": "88a2cdb3262f",
+      "gi 1 NULL cb": "4b5e54e7f2cb",
+      "gi 2 true qm": "c32502938898",
+      "gi 2 true qm null": "b97adc8831b0",
+      "gi 2 true cb": "69f864f4c395",
+      "gi 2 false qm": "400beb97c39d",
+      "gi 2 false qm null": "0d1573e1ec17",
+      "gi 2 false cb": "69f864f4c395",
+      "gi 2 NULL qm": "35b9e9662485",
+      "gi 2 NULL qm null": "e5ffccd9ba0d",
+      "gi 2 NULL cb": "69f864f4c395",
+      "gi 3 true qm": "e95159ca7ac3",
+      "gi 3 true qm null": "108edd7a30de",
+      "gi 3 true cb": "55223ffb83b5",
+      "gi 3 false qm": "a1e0e4306ea0",
+      "gi 3 false qm null": "de8dd1b78842",
+      "gi 3 false cb": "55223ffb83b5",
+      "gi 3 NULL qm": "aaf9cddd1efd",
+      "gi 3 NULL qm null": "2f8e4b76772e",
+      "gi 3 NULL cb": "55223ffb83b5",
+      "gi '2' true qm": "179e73846257",
+      "gi '2' true qm null": "34c4f4ec00dd",
+      "gi '2' true cb": "ba5875c02d2a",
+      "gi '2' false qm": "96d5536149a3",
+      "gi '2' false qm null": "e22b9d59c767",
+      "gi '2' false cb": "ba5875c02d2a",
+      "gi '2' NULL qm": "eaa406416555",
+      "gi '2' NULL qm null": "c0128422d815",
+      "gi '2' NULL cb": "ba5875c02d2a",
+      "gi NULL true qm": "ba709bc2914b",
+      "gi NULL true qm null": "d6076070e8e6",
+      "gi NULL true cb": "146ba345455b",
+      "gi NULL false qm": "101be8e35b34",
+      "gi NULL false qm null": "cd6877057f90",
+      "gi NULL false cb": "146ba345455b",
+      "gi NULL NULL qm": "cfd5f356df56",
+      "gi NULL NULL qm null": "823e948a3df0",
+      "gi NULL NULL cb": "146ba345455b",
+      "comp sent": "6f61b55be71c",
+      "comp sent src": "dcf34dcdcb53",
+      "comp null": "3281d08b063e",
+      "comp bad src": "f59bcf792bb4",
+      "comp0 sent": "e19e0fa479bc",
+      "comp0 sent src": "ff216dc775d5",
+      "comp0 null": "a0e3d2fa75a2",
+      "comp0 bad src": "0a540bfa3dcc",
+      "compn sent": "8f9865da36dc",
+      "compn sent src": "84cf451614a2",
+      "compn null": "0d60ff0ad69e",
+      "compn bad src": "ec191404a2c1",
+      "ucomp sent": "4c64ef4efdb6",
+      "ucomp sent src": "712ce91dd10b",
+      "ucomp null": "817fd8f160fb",
+      "ucomp bad src": "ecf421d351f9",
+      "ucomp0 sent": "02ecd2519c19",
+      "ucomp0 sent src": "bb54a7966603",
+      "ucomp0 null": "a9e2eac6ebbf",
+      "ucomp0 bad src": "df0c0a012c9b",
+      "ucompn sent": "a25bbdca0247",
+      "ucompn sent src": "c93bcadc4b72",
+      "ucompn null": "5adf894f91bf",
+      "ucompn bad src": "bd5d2f484edd",
+      "pk 'a'": "1debeadcd111",
+      "pk2 'a'": "765ab023e47e",
+      "pk 'b'": "bab6321cf0bc",
+      "pk2 'b'": "643b2de31041",
+      "pk 'zz'": "6190f7e7e1c2",
+      "pk2 'zz'": "990080d6260f",
+      "pk NULL": "6bb2c9f91fc2",
+      "pk2 NULL": "08ef2bcfc3ca"
+    },
+    "staleReq | key": {
+      "gate": "323c247e9b25",
+      "gi": "1a11325ae1bb",
+      "gb": "0d59a0deb58e",
+      "gf": "5799d5c7b3bc",
+      "gs": "ee3f114ae934",
+      "c": "85c7f7b95067",
+      "cs": "fd2c34bea1b3",
+      "cl": "6df21b028f7f",
+      "cm": "ba1868fb8e63",
+      "q": "826c10603e6f",
+      "q0": "99bb93b9a370",
+      "qm": "c270046a41d4",
+      "t": "4bb04d63dbfe",
+      "ci": "0c7e6836ff77",
+      "cb": "37f57970721a",
+      "pk": "66b5e2206acf",
+      "pk2": "a097ae98caaf",
+      "src": "376791126d32",
+      "src0": "6b5d0e1af260",
+      "srcn": "bd3909364264",
+      "comp": "61b56a0db375",
+      "ucomp": "227862e89cd3",
+      "comp0": "63147ecc3cee",
+      "ucomp0": "04f085884a6f",
+      "compn": "77ce41608cb6",
+      "ucompn": "3dc4dd9953cb"
+    },
+    "staleReq | path": {
+      "nope": "1bf169f7d887",
+      "nope.deeper": "ed8a9f9798ca",
+      "gate": "1a745a8d632b",
+      "gi": "da33ef640816",
+      "gb": "48928303831d",
+      "gf": "1cba24d95748",
+      "gs": "0c92cd97c063",
+      "c": "1dcb4b3971ea",
+      "cs": "fb6508fc5ec8",
+      "cl": "1818cc258fd9",
+      "cl.0": "c52aa0c2131f",
+      "cm": "ec062dac7ef4",
+      "cm.p": "58db03e21132",
+      "cm.q": "ec12484918ad",
+      "cm.nope": "eb0ad1d58b7c",
+      "q": "4887e7b46923",
+      "q0": "bf865fa0422f",
+      "qm": "ca8c2d0f7b85",
+      "qm.inner": "bb111de010a4",
+      "qm.nope": "4e607c1cf0e0",
+      "t": "79d9dbc1bdbb",
+      "ci": "f536896b80ba",
+      "cb": "1e107172e80f",
+      "pk": "6cec262d5324",
+      "pk2": "9623e2e63a38",
+      "src": "10f953e38ee8",
+      "src0": "aa1be738c0b5",
+      "srcn": "17100b6157e7",
+      "comp": "efae780425c9",
+      "ucomp": "2ef76a4cc962",
+      "comp0": "3732be0c9bce",
+      "ucomp0": "4c099d0a0469",
+      "compn": "d72e005ed13a",
+      "ucompn": "f60f55f1bf5f"
+    },
+    "staleReq | nodes": {
+      "nope": "85cf5ad1bdc5",
+      "nope.deeper": "85cf5ad1bdc5",
+      "gate": "85cf5ad1bdc5",
+      "gi": "85cf5ad1bdc5",
+      "gb": "85cf5ad1bdc5",
+      "gf": "85cf5ad1bdc5",
+      "gs": "85cf5ad1bdc5",
+      "c": "85cf5ad1bdc5",
+      "cs": "85cf5ad1bdc5",
+      "cl": "85cf5ad1bdc5",
+      "cl.0": "85cf5ad1bdc5",
+      "cm": "85cf5ad1bdc5",
+      "cm.p": "85cf5ad1bdc5",
+      "cm.q": "85cf5ad1bdc5",
+      "cm.nope": "85cf5ad1bdc5",
+      "q": "85cf5ad1bdc5",
+      "q0": "85cf5ad1bdc5",
+      "qm": "85cf5ad1bdc5",
+      "qm.inner": "85cf5ad1bdc5",
+      "qm.nope": "85cf5ad1bdc5",
+      "t": "85cf5ad1bdc5",
+      "ci": "85cf5ad1bdc5",
+      "cb": "85cf5ad1bdc5",
+      "pk": "85cf5ad1bdc5",
+      "pk2": "85cf5ad1bdc5",
+      "src": "85cf5ad1bdc5",
+      "src0": "85cf5ad1bdc5",
+      "srcn": "85cf5ad1bdc5",
+      "comp": "85cf5ad1bdc5",
+      "ucomp": "85cf5ad1bdc5",
+      "comp0": "85cf5ad1bdc5",
+      "ucomp0": "85cf5ad1bdc5",
+      "compn": "85cf5ad1bdc5",
+      "ucompn": "85cf5ad1bdc5"
+    }
+  },
+  "records": {
+    "plain | door | secretKeys": [
+      "cs"
+    ],
+    "ported | values | __out ci #2": {
+      "withoutNonScalars": [
+        {
+          "ci": 9
+        },
+        []
+      ],
+      "fromSurface refined": {
+        "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+        "type": "map",
+        "label": "L",
+        "description": "D",
+        "required": false,
+        "getDefaultValue": null,
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": [],
+        "settings": [],
+        "array": {
+          "type": "map",
+          "label": "L",
+          "description": "D",
+          "required": false
+        },
+        "properties": {
+          "gate": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Gate",
+            "description": "",
+            "required": false,
+            "getDefaultValue": "open",
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "open",
+                  "narrow",
+                  "req",
+                  "clone",
+                  "same",
+                  "label",
+                  "len"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Gate",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "open",
+                    "narrow",
+                    "req",
+                    "clone",
+                    "same",
+                    "label",
+                    "len"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "gi": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Gate int",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "1",
+                  "2",
+                  "3"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Gate int",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "1",
+                    "2",
+                    "3"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "gb": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "boolean",
+            "label": "Gate bool",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "boolean",
+              "label": "Gate bool",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "gf": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Gate float",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "1.5",
+                  "2.5"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Gate float",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "1.5",
+                    "2.5"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "gs": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": {
+              "@text": "string value"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "1",
+                  "02",
+                  "x"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": {
+                "@text": "string value"
+              },
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "1",
+                    "02",
+                    "x"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "c": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Cee",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "LabeledChoice": {
+                "choices": {
+                  "a": "Alpha",
+                  "b": "Beta",
+                  "c": "Gamma"
+                }
+              },
+              "PrimitiveType": [],
+              "Choice": {
+                "choices": [
+                  "a",
+                  "b",
+                  "c"
+                ]
+              }
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Cee",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "LabeledChoice": {
+                  "choices": {
+                    "a": "Alpha",
+                    "b": "Beta",
+                    "c": "Gamma"
+                  }
+                },
+                "PrimitiveType": [],
+                "Choice": {
+                  "choices": [
+                    "a",
+                    "b",
+                    "c"
+                  ]
+                }
+              }
+            }
+          },
+          "cs": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Secret choice",
+            "description": {
+              "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "a",
+                  "b",
+                  "c"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Secret choice",
+              "description": {
+                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "a",
+                    "b",
+                    "c"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "cl": {
+            "class": "Drupal\\tool\\TypedData\\ListInputDefinition",
+            "type": "list",
+            "label": "Choice list",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "isConvertedFromMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "list",
+              "label": "Choice list",
+              "description": "",
+              "required": false
+            },
+            "item": {
+              "class": "Drupal\\tool\\TypedData\\InputDefinition",
+              "type": "string",
+              "label": "One",
+              "description": "",
+              "required": false,
+              "getDefaultValue": null,
+              "isLocked": false,
+              "getExamples": [],
+              "isMultiple": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "a",
+                    "b",
+                    "c"
+                  ]
+                },
+                "PrimitiveType": []
+              },
+              "settings": [],
+              "array": {
+                "type": "string",
+                "label": "One",
+                "description": "",
+                "required": false,
+                "constraints": {
+                  "Choice": {
+                    "choices": [
+                      "a",
+                      "b",
+                      "c"
+                    ]
+                  },
+                  "PrimitiveType": []
+                }
+              }
+            }
+          },
+          "cm": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": "Choice map",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "Choice map",
+              "description": "",
+              "required": false
+            },
+            "properties": {
+              "p": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Pee",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "Choice": {
+                    "choices": [
+                      "a",
+                      "b",
+                      "c"
+                    ]
+                  },
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Pee",
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "Choice": {
+                      "choices": [
+                        "a",
+                        "b",
+                        "c"
+                      ]
+                    },
+                    "PrimitiveType": []
+                  }
+                }
+              },
+              "q": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Queue",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Queue",
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          },
+          "q": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Optional",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Optional",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "q0": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": {
+              "@text": "string value"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": {
+                "@text": "string value"
+              },
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "qm": {
+            "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+            "type": "map",
+            "label": "Qmap",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": [],
+            "settings": [],
+            "array": {
+              "type": "map",
+              "label": "Qmap",
+              "description": "",
+              "required": false
+            },
+            "properties": {
+              "inner": {
+                "class": "Drupal\\tool\\TypedData\\InputDefinition",
+                "type": "string",
+                "label": "Inner",
+                "description": "",
+                "required": false,
+                "getDefaultValue": null,
+                "isLocked": false,
+                "getExamples": [],
+                "isMultiple": false,
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "settings": [],
+                "array": {
+                  "type": "string",
+                  "label": "Inner",
+                  "description": "",
+                  "required": false,
+                  "constraints": {
+                    "PrimitiveType": []
+                  }
+                }
+              }
+            }
+          },
+          "t": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Text",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Text",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "ci": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "integer",
+            "label": "Int choice",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "integer",
+              "label": "Int choice",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    1,
+                    2,
+                    3
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "cb": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "boolean",
+            "label": "Bool",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "boolean",
+              "label": "Bool",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "pk": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Port key",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "a"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Port key",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "a"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "pk2": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Port key two",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "Choice": {
+                "choices": [
+                  "a",
+                  "b",
+                  "c"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Port key two",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "Choice": {
+                  "choices": [
+                    "a",
+                    "b",
+                    "c"
+                  ]
+                },
+                "PrimitiveType": []
+              }
+            }
+          },
+          "src": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Source",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Source",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "src0": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": {
+              "@text": "string value"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": {
+                "@text": "string value"
+              },
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "srcn": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": {
+              "@text": "string value"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": {
+                "@text": "string value"
+              },
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "comp": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Computed",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Computed",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "ucomp": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Unless",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Unless",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "comp0": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": {
+              "@text": "string value"
+            },
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": {
+                "@text": "string value"
+              },
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "ucomp0": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Unless",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Unless",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "compn": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Computed",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Computed",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          },
+          "ucompn": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "string",
+            "label": "Unless",
+            "description": "",
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "type": "string",
+              "label": "Unless",
+              "description": "",
+              "required": false,
+              "constraints": {
+                "PrimitiveType": []
+              }
+            }
+          }
+        }
+      },
+      "secrets refined": {
+        "cs": true
+      },
+      "secretKeys refined": [
+        "cs"
+      ],
+      "pathsOf": {
+        "ci": 9
+      },
+      "heldOn": [],
+      "heldOn strings": [],
+      "heldOn json": [],
+      "encrypted": {
+        "to": {
+          "ci": 9
+        },
+        "from": {
+          "ci": 9
+        }
+      },
+      "flat": null,
+      "panel": [
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>gate</code>"
+              }
+            },
+            "string",
+            "Gate",
+            {
+              "@text": "no"
+            },
+            "\"open\"",
+            {
+              "data": {
+                "#markup": "one of open, narrow, req, clone, same, label, len"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "gate"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>gi</code>"
+              }
+            },
+            "string",
+            "Gate int",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of 1, 2, 3"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "gi"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>gb</code>"
+              }
+            },
+            "boolean",
+            "Gate bool",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "gb"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>gf</code>"
+              }
+            },
+            "string",
+            "Gate float",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of 1.5, 2.5"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "gf"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>gs</code>"
+              }
+            },
+            "string",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of 1, 02, x"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "gs"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>c</code>"
+              }
+            },
+            "string",
+            "Cee",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of Alpha, Beta, Gamma"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "c"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>cs</code>"
+              }
+            },
+            "string",
+            "Secret choice",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of a, b, c"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "cs"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>cl</code>"
+              }
+            },
+            "list",
+            "Choice list",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "cl"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>cm</code>"
+              }
+            },
+            "map",
+            "Choice map",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "Keys other modules added"
+                }
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "cm"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>cm.p</code>"
+              }
+            },
+            "string",
+            "Pee",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of a, b, c"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "cm.p"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>cm.q</code>"
+              }
+            },
+            "string",
+            "Queue",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "cm.q"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>q</code>"
+              }
+            },
+            "string",
+            "Optional",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "q"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>q0</code>"
+              }
+            },
+            "string",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate, gf, gs",
+            "as declared"
+          ],
+          "surface-key": "q0"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>qm</code>"
+              }
+            },
+            "map",
+            "Qmap",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": {
+                  "@text": "Keys other modules added"
+                }
+              }
+            },
+            "gi, gb",
+            "as declared"
+          ],
+          "surface-key": "qm"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>qm.inner</code>"
+              }
+            },
+            "string",
+            "Inner",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gi, gb",
+            "as declared"
+          ],
+          "surface-key": "qm.inner"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>t</code>"
+              }
+            },
+            "string",
+            "Text",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gate, gb",
+            "as declared"
+          ],
+          "surface-key": "t"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>ci</code>"
+              }
+            },
+            "integer",
+            "Int choice",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of 1, 2, 3"
+              }
+            },
+            "gate",
+            "as declared"
+          ],
+          "surface-key": "ci"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>cb</code>"
+              }
+            },
+            "boolean",
+            "Bool",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "gi",
+            "as declared"
+          ],
+          "surface-key": "cb"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>pk</code>"
+              }
+            },
+            "string",
+            "Port key",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of a"
+              }
+            },
+            "pl",
+            "narrowed"
+          ],
+          "surface-key": "pk"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>pk2</code>"
+              }
+            },
+            "string",
+            "Port key two",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "one of a, b, c"
+              }
+            },
+            "pn, gs",
+            "as declared"
+          ],
+          "surface-key": "pk2"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>src</code>"
+              }
+            },
+            "string",
+            "Source",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "src"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>src0</code>"
+              }
+            },
+            "string",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "src0"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>srcn</code>"
+              }
+            },
+            "string",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "srcn"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>comp</code>"
+              }
+            },
+            "string",
+            "Computed",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "comp"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>ucomp</code>"
+              }
+            },
+            "string",
+            "Unless",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "ucomp"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>comp0</code>"
+              }
+            },
+            "string",
+            "",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "comp0"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>ucomp0</code>"
+              }
+            },
+            "string",
+            "Unless",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "ucomp0"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>compn</code>"
+              }
+            },
+            "string",
+            "Computed",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "compn"
+        },
+        {
+          "data": [
+            {
+              "data": {
+                "#markup": "<code>ucompn</code>"
+              }
+            },
+            "string",
+            "Unless",
+            {
+              "@text": "no"
+            },
+            "—",
+            {
+              "data": {
+                "#markup": "anything of its type"
+              }
+            },
+            "—",
+            "as declared"
+          ],
+          "surface-key": "ucompn"
+        }
+      ],
+      "formatter": [
+        {
+          "@text": "Int choice: 9"
+        }
+      ]
+    },
+    "plain | key | t": {
+      "fromDefinition": {
+        "class": "Drupal\\tool\\TypedData\\InputDefinition",
+        "type": "string",
+        "label": "Text",
+        "description": "",
+        "required": false,
+        "getDefaultValue": null,
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": {
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "string",
+          "label": "Text",
+          "description": "",
+          "required": false,
+          "constraints": {
+            "PrimitiveType": []
+          }
+        }
+      },
+      "outputFromDefinition": {
+        "class": "Drupal\\tool\\TypedData\\OutputDefinition",
+        "type": "string",
+        "label": "Text",
+        "description": "",
+        "required": false,
+        "getDefaultValue": null,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": {
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "string",
+          "label": "Text",
+          "description": "",
+          "required": false,
+          "constraints": {
+            "PrimitiveType": []
+          },
+          "nullable": false
+        }
+      },
+      "held builder": [
+        [
+          "abc",
+          "abc"
+        ],
+        [
+          "5",
+          "5"
+        ],
+        [
+          "1.5",
+          "1.5"
+        ],
+        [
+          "true",
+          "true"
+        ],
+        [
+          "0",
+          "0"
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          "2026-01-01",
+          "2026-01-01"
+        ],
+        [
+          "2026-01-01T10:00:00",
+          "2026-01-01T10:00:00"
+        ],
+        [
+          "2026-01-01T10:00:00+02:00",
+          "2026-01-01T10:00:00+02:00"
+        ],
+        [
+          "[\"a\",\"b\"]",
+          "[\"a\",\"b\"]"
+        ],
+        [
+          "{\"a\":1}",
+          "{\"a\":1}"
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.t\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.t\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
+          }
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.t\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.t\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
+          }
+        ],
+        [
+          "5",
+          "5"
+        ],
+        [
+          "1.5",
+          "1.5"
+        ],
+        [
+          true,
+          true
+        ],
+        [
+          null,
+          null
+        ],
+        [
+          "SECRETRAW",
+          "SECRETRAW"
+        ]
+      ],
+      "wider": {
+        "string 1": {
+          "t": "it may be cleared, which the schema refuses: string is not nullable"
+        },
+        "string 0": [],
+        "string nullable 1": [],
+        "string nullable 0": [],
+        "integer 1": {
+          "t": "it is a string, which the schema types integer, an integer"
+        },
+        "integer 0": {
+          "t": "it is a string, which the schema types integer, an integer"
+        },
+        "integer nullable 1": {
+          "t": "it is a string, which the schema types integer, an integer"
+        },
+        "integer nullable 0": {
+          "t": "it is a string, which the schema types integer, an integer"
+        },
+        "boolean 1": {
+          "t": "it is a string, which the schema types boolean, a boolean"
+        },
+        "boolean 0": {
+          "t": "it is a string, which the schema types boolean, a boolean"
+        },
+        "float 1": {
+          "t": "it is a string, which the schema types float, a float"
+        },
+        "float 0": {
+          "t": "it is a string, which the schema types float, a float"
+        },
+        "ignore 1": [],
+        "ignore 0": [],
+        "mapping 1": {
+          "t": "it is one value, which the schema types mapping, a mapping"
+        },
+        "mapping 0": {
+          "t": "it is one value, which the schema types mapping, a mapping"
+        },
+        "sequence string 1": {
+          "t": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence string 0": {
+          "t": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence mapping 1": {
+          "t": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence mapping 0": {
+          "t": "it is one value, which the schema types sequence, a sequence"
+        },
+        "constrained 1": {
+          "t": "it may be blank, which the schema's NotBlank refuses"
+        },
+        "constrained 0": {
+          "t": "it may be blank, which the schema's NotBlank refuses"
+        },
+        "loose 1": {
+          "t": "it may be more than 99 characters long, which the schema refuses"
+        },
+        "loose 0": {
+          "t": "it may be more than 99 characters long, which the schema refuses"
+        }
+      }
+    },
+    "plain | path | cb": {
+      "reachedOn": {
+        "class": "Drupal\\Core\\TypedData\\DataDefinition",
+        "type": "boolean",
+        "label": "Bool",
+        "description": null,
+        "required": false,
+        "constraints": {
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "boolean",
+          "label": "Bool"
+        }
+      },
+      "reachedOn fixes": {
+        "class": "Drupal\\Core\\TypedData\\DataDefinition",
+        "type": "boolean",
+        "label": "Bool",
+        "description": null,
+        "required": false,
+        "constraints": {
+          "PrimitiveType": []
+        },
+        "settings": [],
+        "array": {
+          "type": "boolean",
+          "label": "Bool"
+        }
+      },
+      "heldOn raws": [
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          {
+            "cb": true
+          },
+          {
+            "cb": true
+          }
+        ],
+        [
+          {
+            "cb": false
+          },
+          {
+            "cb": false
+          }
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          {
+            "cb": true
+          },
+          {
+            "cb": true
+          }
+        ],
+        [
+          [],
+          []
+        ],
+        [
+          [],
+          []
+        ]
+      ],
+      "definitionAt": {
+        "NULL": null,
+        "'node'": null,
+        "'user'": null,
+        "'taxonomy_term'": null
+      }
+    },
+    "plain | nodes | nope": {
+      "NULL": null,
+      "'node'": null,
+      "'user'": null,
+      "'taxonomy_term'": null
+    }
+  }
+}
