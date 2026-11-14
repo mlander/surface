@@ -1,0 +1,5131 @@
+{
+  "surface": "docs",
+  "rows": 93,
+  "digests": {
+    "plain | none": {
+      "nothing": "2ca5b47619fa",
+      "gate narrow": "137f9dd5e254",
+      "gate req": "f846c7106218",
+      "gate out": "3097bca61ff2",
+      "gate label": "75474a879c11",
+      "gi 1": "68667eec3d19",
+      "gi 2": "b4e351a51112",
+      "gb t": "99a47c79396b",
+      "gb f": "74fa20d4e8bd",
+      "gf": "5ea9efb389ee",
+      "gt": "7749ef755f16",
+      "gd": "1fd14f8d6492",
+      "gdo": "9ec4fdcbc563",
+      "kind b": "243cf43ebf6d",
+      "kindf a": "be1f13eb5890",
+      "doc full": "a8491d771ee0",
+      "doc hints": "15b4d84285a9",
+      "doc case gate narrow": "b2518ee2c4a9",
+      "narrowed gate narrow": "a371e3c30734",
+      "doc case gate req": "f07f91154abf",
+      "narrowed gate req": "1ab2064a9ce4",
+      "doc case gate out": "0926001addaf",
+      "narrowed gate out": "e9caa9f0e8b9",
+      "doc case gate label": "a9c2ee4aecf8",
+      "narrowed gate label": "9cca8a653d85",
+      "doc case gi 1": "895d12f74682",
+      "narrowed gi 1": "fd4f421c9981",
+      "doc case gi 2": "ebbf22efab0d",
+      "narrowed gi 2": "aa70ef004db2",
+      "doc case gb t": "240c1180d5ad",
+      "narrowed gb t": "b58162baf21e",
+      "doc case gb f": "7834f15478c7",
+      "narrowed gb f": "de222cf9ae49",
+      "doc case gf": "621a059ae12f",
+      "narrowed gf": "0472b6a81e43",
+      "doc case gt": "e0bd81fbde01",
+      "narrowed gt": "1eef973d3a96",
+      "doc case gd": "28d2c4683fe2",
+      "narrowed gd": "3ec91c16505a",
+      "doc case gdo": "0b26b4a02c1f",
+      "narrowed gdo": "02ea5dbf3059",
+      "doc case kind b": "f73febfca219",
+      "narrowed kind b": "08f07252c4b9",
+      "doc case kindf a": "adcb0b89f74a",
+      "narrowed kindf a": "efe8cddbc519"
+    },
+    "plain | stored": {
+      "nothing": "a93db0e2adc6",
+      "gate narrow": "b770d4fac2f9",
+      "gate req": "3d3a91eb05a7",
+      "gate out": "1b983646cb00",
+      "gate label": "5b39adcbce60",
+      "gi 1": "b55806cc7534",
+      "gi 2": "dc15b6412492",
+      "gb t": "775292f9e72e",
+      "gb f": "05cf47f7c06f",
+      "gf": "57b372dfd790",
+      "gt": "16c36b75a069",
+      "gd": "49c23ec453cb",
+      "gdo": "807f4495b62b",
+      "kind b": "ccd4ab7e674d",
+      "kindf a": "663221dade7e",
+      "doc full": "d654f13759df",
+      "doc hints": "9ad1bbdb75f8",
+      "doc case gate narrow": "1da4b3ed7d10",
+      "narrowed gate narrow": "7f0cbec16140",
+      "doc case gate req": "3814a2765ba8",
+      "narrowed gate req": "b5e503ebff47",
+      "doc case gate out": "55c01890ed7f",
+      "narrowed gate out": "f66726434cc6",
+      "doc case gate label": "8a787af389db",
+      "narrowed gate label": "2b5e7a041c82",
+      "doc case gi 1": "2b771c59b128",
+      "narrowed gi 1": "de250820331c",
+      "doc case gi 2": "e20a23722d4e",
+      "narrowed gi 2": "d799be5de3e2",
+      "doc case gb t": "9751ac89050f",
+      "narrowed gb t": "daee04b645cb",
+      "doc case gb f": "5060c6d3ee92",
+      "narrowed gb f": "f837b0d759f2",
+      "doc case gf": "6dc358d947ea",
+      "narrowed gf": "4fb128a7b77f",
+      "doc case gt": "ad2384c19b75",
+      "narrowed gt": "9e0db0e943f0",
+      "doc case gd": "23ff22dbbbac",
+      "narrowed gd": "fd1cea89d04b",
+      "doc case gdo": "f110a96aa312",
+      "narrowed gdo": "5869c29131cf",
+      "doc case kind b": "3b57b56a671a",
+      "narrowed kind b": "ba72f7229187",
+      "doc case kindf a": "f4eb123c4e1e",
+      "narrowed kindf a": "086ce9cb5f77"
+    },
+    "plain": {
+      "doc empty": "a8491d771ee0",
+      "doc emitFull": "b31f5d5fb605",
+      "doc emitFull hints": "84388c7c8772"
+    }
+  },
+  "records": {
+    "plain | stored | gate out": {
+      "accept": {
+        "gate": "out",
+        "gi": null,
+        "gb": null,
+        "gf": null,
+        "gt": null,
+        "gd": null,
+        "gdo": null,
+        "dep_gi": null,
+        "dep_gb": null,
+        "dep_gf": null,
+        "dep_gt": null,
+        "dep_gd": null,
+        "dep_gdo": null,
+        "sec_req": null,
+        "held_k": 4,
+        "comp_req": "out",
+        "ex": "e1",
+        "items_c": null,
+        "ints": [
+          1,
+          2
+        ],
+        "mapd": {
+          "b": 4,
+          "s": "sec"
+        },
+        "listed_map": null,
+        "rows_l": null,
+        "widgeted": null,
+        "sized": null,
+        "mapw": null,
+        "narrowed_map": null,
+        "narrowed_list": null,
+        "nl": null,
+        "same": "b",
+        "equal": "b",
+        "grouping": {
+          "mod": {
+            "size": 3
+          }
+        },
+        "att": {
+          "cname": "n",
+          "csec": "s"
+        },
+        "coll": [
+          {
+            "cname": "c1",
+            "csec": null
+          }
+        ],
+        "kind": "a",
+        "var": {
+          "cname": null,
+          "csec": null
+        },
+        "kindf": null,
+        "varf": null,
+        "lk": "fixed",
+        "third_party_settings": []
+      },
+      "notes": [],
+      "unmatched": [],
+      "validate": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": {
+          "sec_req": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "sec_req",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "Secret req"
+                },
+                "options": [],
+                "text": "Secret req is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "var": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "var",
+              "path": "cname",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "Child name"
+                },
+                "options": [],
+                "text": "Child name is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ]
+        },
+        "staleEntries": []
+      },
+      "kept": {
+        "gate": "out",
+        "comp_req": "out",
+        "mapd": {
+          "b": 4,
+          "s": "sec"
+        },
+        "nk": "c",
+        "same": "b",
+        "equal": "b",
+        "att": {
+          "cname": "n",
+          "csec": "s"
+        },
+        "coll": [
+          {
+            "cname": "c1",
+            "csec": null
+          }
+        ],
+        "kind": "a",
+        "var": {
+          "cname": null,
+          "csec": null
+        },
+        "third_party_settings": []
+      },
+      "validate raw": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": {
+          "sec_req": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "sec_req",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "Secret req"
+                },
+                "options": [],
+                "text": "Secret req is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "held_k": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "held_k",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": "Held",
+                  "@default": "4"
+                },
+                "options": [],
+                "text": "Held cannot be cleared: it always holds a value, 4 by default. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "comp_req": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "comp_req",
+              "path": "",
+              "message": {
+                "@source": "@label is computed from @source and takes no value of its own; leave it out.",
+                "arguments": {
+                  "@label": "Comp",
+                  "@source": {
+                    "@class": "Drupal\\surface\\Pipeline\\Named",
+                    "label": "Gate",
+                    "machine": "gate",
+                    "value": false,
+                    "text": "Gate"
+                  }
+                },
+                "options": {
+                  "context": "surface refusal"
+                },
+                "text": "Comp is computed from Gate and takes no value of its own; leave it out."
+              },
+              "code": "computed",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "mapd": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "mapd",
+              "path": "b",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "B"
+                },
+                "options": [],
+                "text": "B is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            },
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "mapd",
+              "path": "s",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "S"
+                },
+                "options": [],
+                "text": "S is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "att": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "att",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "Attached"
+                },
+                "options": [],
+                "text": "Attached is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ]
+        },
+        "staleEntries": []
+      }
+    },
+    "plain | doc emitFull": {
+      "resource": "hand",
+      "operation": "op",
+      "label": "Op label",
+      "schema": {
+        "$schema": "https://portable-schema.dev/v1/schema",
+        "title": "Op label",
+        "x-surface": {
+          "contract": 5,
+          "version": 1
+        },
+        "type": "object",
+        "properties": {
+          "gate": {
+            "title": "Gate",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "open",
+                "title": "open"
+              },
+              {
+                "const": "narrow",
+                "title": "narrow"
+              },
+              {
+                "const": "req",
+                "title": "req"
+              },
+              {
+                "const": "label",
+                "title": "label"
+              },
+              {
+                "const": "out",
+                "title": "out"
+              },
+              {
+                "const": null
+              }
+            ],
+            "default": "open"
+          },
+          "gi": {
+            "title": "Gi",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": 1,
+                "title": "1"
+              },
+              {
+                "const": 2,
+                "title": "2"
+              },
+              {
+                "const": null
+              }
+            ]
+          },
+          "gb": {
+            "title": "Gb",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "gf": {
+            "title": "Gf",
+            "type": [
+              "number",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": 1.5,
+                "title": "1.5"
+              },
+              {
+                "const": 2.5,
+                "title": "2.5"
+              },
+              {
+                "const": null
+              }
+            ]
+          },
+          "gt": {
+            "title": "Gt",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": 1700000000,
+                "title": "1700000000"
+              },
+              {
+                "const": 1700000001,
+                "title": "1700000001"
+              },
+              {
+                "const": null
+              }
+            ]
+          },
+          "gd": {
+            "title": "Gd",
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "oneOf": [
+              {
+                "const": "2026-01-01",
+                "title": "2026-01-01"
+              },
+              {
+                "const": "2026-01-02",
+                "title": "2026-01-02"
+              },
+              {
+                "const": null
+              }
+            ]
+          },
+          "gdo": {
+            "title": "Gdo",
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "oneOf": [
+              {
+                "const": "2026-01-01",
+                "title": "2026-01-01"
+              },
+              {
+                "const": "2026-01-02",
+                "title": "2026-01-02"
+              },
+              {
+                "const": null
+              }
+            ],
+            "portable-check": {
+              "drupal:DateOnly": {
+                "@object": []
+              }
+            },
+            "x-portable-messages": {
+              "check.drupal:DateOnly": "DateOnly"
+            }
+          },
+          "dep_gi": {
+            "title": "Dep gi",
+            "description": "Desc",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": "c",
+                "title": "c"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gi"
+              ],
+              "enumerated": true
+            }
+          },
+          "dep_gb": {
+            "title": "Dep gb",
+            "description": "Desc",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": "c",
+                "title": "c"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gb"
+              ],
+              "refine": true
+            }
+          },
+          "dep_gf": {
+            "title": "Dep gf",
+            "description": "Desc",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": "c",
+                "title": "c"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gf"
+              ],
+              "enumerated": true
+            }
+          },
+          "dep_gt": {
+            "title": "Dep gt",
+            "description": "Desc",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": "c",
+                "title": "c"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gt"
+              ],
+              "enumerated": true
+            }
+          },
+          "dep_gd": {
+            "title": "Dep gd",
+            "description": "Desc",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": "c",
+                "title": "c"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gd"
+              ],
+              "enumerated": true
+            }
+          },
+          "dep_gdo": {
+            "title": "Dep gdo",
+            "description": "Desc",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": "c",
+                "title": "c"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gdo"
+              ],
+              "enumerated": true
+            }
+          },
+          "sec_req": {
+            "title": "Secret req",
+            "type": "string",
+            "writeOnly": true
+          },
+          "held_k": {
+            "title": "Held",
+            "type": "integer",
+            "default": 4
+          },
+          "comp_req": {
+            "title": "Comp",
+            "type": "string",
+            "readOnly": true,
+            "x-surface": {
+              "computed": {
+                "from": [
+                  "gate"
+                ],
+                "when": "change"
+              }
+            }
+          },
+          "ex": {
+            "title": "Examples",
+            "description": "With examples",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": "e1",
+            "examples": [
+              "e1",
+              "e2"
+            ]
+          },
+          "items_c": {
+            "title": "Items constrained",
+            "description": "List desc",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "title": "Item",
+              "type": "string",
+              "maxLength": 4,
+              "oneOf": [
+                {
+                  "const": "ab",
+                  "title": "ab"
+                },
+                {
+                  "const": "cd",
+                  "title": "cd"
+                }
+              ]
+            },
+            "maxItems": 3
+          },
+          "ints": {
+            "title": "Ints",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "title": "I",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9
+            },
+            "default": [
+              1,
+              2
+            ]
+          },
+          "mapd": {
+            "title": "Map with default",
+            "description": "Md",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "a": {
+                "title": "A",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "default": "ad"
+              },
+              "b": {
+                "title": "B",
+                "type": "integer"
+              },
+              "s": {
+                "title": "S",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "b"
+            ]
+          },
+          "listed_map": {
+            "title": "Listed map",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "title": "Row",
+              "type": "object",
+              "properties": {
+                "k": {
+                  "title": "K",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "oneOf": [
+                    {
+                      "const": "x",
+                      "title": "x"
+                    },
+                    {
+                      "const": "y",
+                      "title": "y"
+                    },
+                    {
+                      "const": null
+                    }
+                  ]
+                },
+                "n": {
+                  "title": "N",
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "n"
+              ]
+            }
+          },
+          "rows_l": {
+            "title": "Rows",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "title": "Row",
+              "type": "string"
+            }
+          },
+          "widgeted": {
+            "title": "Widgeted",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sized": {
+            "title": "Sized",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mapw": {
+            "title": "Map widget",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "x": {
+                "title": "X",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "narrowed_map": {
+            "title": "Narrowed map",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "p": {
+                "title": "P",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "oneOf": [
+                  {
+                    "const": "a",
+                    "title": "a"
+                  },
+                  {
+                    "const": "b",
+                    "title": "b"
+                  },
+                  {
+                    "const": null
+                  }
+                ]
+              },
+              "q": {
+                "title": "Q",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "enumerated": true
+            }
+          },
+          "narrowed_list": {
+            "title": "Narrowed list",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "title": "Item",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "a"
+                },
+                {
+                  "const": "b",
+                  "title": "b"
+                }
+              ]
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "enumerated": true
+            }
+          },
+          "nk": {
+            "title": "Narrowed key",
+            "description": "Nk desc",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": "c",
+                "title": "c"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "enumerated": true
+            }
+          },
+          "nl": {
+            "title": "Label moved",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "enumerated": true
+            }
+          },
+          "ng": {
+            "title": "Ruled out key",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "enumerated": true
+            }
+          },
+          "same": {
+            "title": "Same object",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "enumerated": true
+            }
+          },
+          "equal": {
+            "title": "Equal object",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "enumerated": true
+            }
+          },
+          "grouping": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "mod": {
+                "title": "Mod",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "size": {
+                    "title": "Size",
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "default": 3
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "x-surface": {
+              "group": true
+            }
+          },
+          "att": {
+            "title": "Attached",
+            "description": "Att desc",
+            "$ref": "#/$defs/hand.att"
+          },
+          "coll": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/$defs/hand.att"
+            },
+            "x-surface": {
+              "collection": true
+            }
+          },
+          "kind": {
+            "title": "Kind",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": null
+              }
+            ]
+          },
+          "var": {
+            "title": "Variants",
+            "description": "Var desc",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/hand.att"
+              },
+              {
+                "$ref": "#/$defs/hand.var.b"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "kind"
+              ],
+              "by": "kind",
+              "variants": {
+                "a": "#/$defs/hand.att",
+                "b": "#/$defs/hand.var.b"
+              }
+            }
+          },
+          "kindf": {
+            "title": "Kind flat",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": null
+              }
+            ]
+          },
+          "varf": {
+            "title": "Flat variants",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/hand.att"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "kindf"
+              ],
+              "by": "kindf",
+              "variants": {
+                "a": "#/$defs/hand.att"
+              }
+            }
+          },
+          "lk": {
+            "title": "Locked",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": "fixed",
+            "readOnly": true,
+            "const": "fixed"
+          },
+          "third_party_settings": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "surface": {
+                "title": "Surface API",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "mounted": {
+                    "title": "Mounted",
+                    "description": "From a module",
+                    "type": "string"
+                  },
+                  "mountedm": {
+                    "title": "Mounted map",
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "a": {
+                        "title": "A",
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "oneOf": [
+                          {
+                            "const": "x",
+                            "title": "x"
+                          },
+                          {
+                            "const": "y",
+                            "title": "y"
+                          },
+                          {
+                            "const": null
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "group": true,
+              "enumerated": true
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "att"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "gi": {
+                  "const": 1
+                }
+              },
+              "required": [
+                "gi"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gi": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "dep_gi"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gi": {
+                  "const": 2
+                }
+              },
+              "required": [
+                "gi"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gi": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "dep_gi"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gf": {
+                  "const": 1.5
+                }
+              },
+              "required": [
+                "gf"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gf": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "dep_gf"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gf": {
+                  "const": 2.5
+                }
+              },
+              "required": [
+                "gf"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gf": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "dep_gf"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gt": {
+                  "const": 1700000000
+                }
+              },
+              "required": [
+                "gt"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gt": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "dep_gt"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gd": {
+                  "const": "2026-01-02"
+                }
+              },
+              "required": [
+                "gd"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gd": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "dep_gd"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gdo": {
+                  "const": "2026-01-02"
+                }
+              },
+              "required": [
+                "gdo"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gdo": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "dep_gdo"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "narrow"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "narrowed_map": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "p": {
+                      "oneOf": [
+                        {
+                          "const": "a",
+                          "title": "a"
+                        },
+                        {
+                          "const": null
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "req"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "narrowed_map": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "q": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "q"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "narrow"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "narrowed_list": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "title": "Item",
+                    "type": "string",
+                    "oneOf": [
+                      {
+                        "const": "a",
+                        "title": "a"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "req"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "narrowed_list": {
+                  "type": "array"
+                }
+              },
+              "required": [
+                "narrowed_list"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "narrow"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "nk": {
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    },
+                    {
+                      "const": "b",
+                      "title": "b"
+                    },
+                    {
+                      "const": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "req"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "nk": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    },
+                    {
+                      "const": "b",
+                      "title": "b"
+                    },
+                    {
+                      "const": "c",
+                      "title": "c"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "nk"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "out"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "nk": false
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "narrow"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "nl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 2
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "label"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "nl": {
+                  "title": "Moved label"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "out"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "ng": false
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "a"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "properties": {
+                "var": {
+                  "title": "Variants",
+                  "description": "Var desc",
+                  "$ref": "#/$defs/hand.att"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "b"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "properties": {
+                "var": {
+                  "title": "Variants",
+                  "description": "Var desc",
+                  "$ref": "#/$defs/hand.var.b"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kindf": {
+                  "const": "a"
+                }
+              },
+              "required": [
+                "kindf"
+              ]
+            },
+            "then": {
+              "properties": {
+                "varf": {
+                  "title": "Flat variants",
+                  "$ref": "#/$defs/hand.att"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "open"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "mounted"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "narrow"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "mounted"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "req"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "mounted": {
+                          "type": "string",
+                          "maxLength": 2
+                        }
+                      },
+                      "required": [
+                        "mounted"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "label"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "mounted"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "out"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "mounted": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "$defs": {
+          "hand.att": {
+            "title": "hand.att",
+            "type": "object",
+            "properties": {
+              "cname": {
+                "title": "Child name",
+                "type": "string"
+              },
+              "csec": {
+                "title": "Child secret",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "cname"
+            ]
+          },
+          "hand.var.b": {
+            "title": "hand.var.b",
+            "type": "object",
+            "properties": {
+              "bb": {
+                "title": "Bb",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "plain | none | doc case gate out": {
+      "resource": "hand",
+      "operation": "op",
+      "label": null,
+      "schema": {
+        "$schema": "https://portable-schema.dev/v1/schema",
+        "x-surface": {
+          "contract": 5,
+          "version": 1,
+          "doesNotApply": {
+            "nk": [
+              "gate"
+            ],
+            "ng": [
+              "gate"
+            ]
+          }
+        },
+        "type": "object",
+        "properties": {
+          "gate": {
+            "title": "Gate",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "open",
+                "title": "open"
+              },
+              {
+                "const": "narrow",
+                "title": "narrow"
+              },
+              {
+                "const": "req",
+                "title": "req"
+              },
+              {
+                "const": "label",
+                "title": "label"
+              },
+              {
+                "const": "out",
+                "title": "out"
+              },
+              {
+                "const": null
+              }
+            ],
+            "default": "open",
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "gi": {
+            "title": "Gi",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": 1,
+                "title": "1"
+              },
+              {
+                "const": 2,
+                "title": "2"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "gb": {
+            "title": "Gb",
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "x-portable-ui": {
+              "widget": "checkbox"
+            }
+          },
+          "gf": {
+            "title": "Gf",
+            "type": [
+              "number",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": 1.5,
+                "title": "1.5"
+              },
+              {
+                "const": 2.5,
+                "title": "2.5"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "gt": {
+            "title": "Gt",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": 1700000000,
+                "title": "1700000000"
+              },
+              {
+                "const": 1700000001,
+                "title": "1700000001"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "gd": {
+            "title": "Gd",
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "oneOf": [
+              {
+                "const": "2026-01-01",
+                "title": "2026-01-01"
+              },
+              {
+                "const": "2026-01-02",
+                "title": "2026-01-02"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "gdo": {
+            "title": "Gdo",
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "oneOf": [
+              {
+                "const": "2026-01-01",
+                "title": "2026-01-01"
+              },
+              {
+                "const": "2026-01-02",
+                "title": "2026-01-02"
+              },
+              {
+                "const": null
+              }
+            ],
+            "portable-check": {
+              "drupal:DateOnly": {
+                "@object": []
+              }
+            },
+            "x-portable-messages": {
+              "check.drupal:DateOnly": "DateOnly"
+            },
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "dep_gi": {
+            "title": "Dep gi",
+            "description": "Desc",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": "c",
+                "title": "c"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gi"
+              ],
+              "enumerated": true
+            }
+          },
+          "dep_gb": {
+            "title": "Dep gb",
+            "description": "Desc",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": "c",
+                "title": "c"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gb"
+              ],
+              "refine": true
+            }
+          },
+          "dep_gf": {
+            "title": "Dep gf",
+            "description": "Desc",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": "c",
+                "title": "c"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gf"
+              ],
+              "enumerated": true
+            }
+          },
+          "dep_gt": {
+            "title": "Dep gt",
+            "description": "Desc",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": "c",
+                "title": "c"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gt"
+              ],
+              "enumerated": true
+            }
+          },
+          "dep_gd": {
+            "title": "Dep gd",
+            "description": "Desc",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": "c",
+                "title": "c"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gd"
+              ],
+              "enumerated": true
+            }
+          },
+          "dep_gdo": {
+            "title": "Dep gdo",
+            "description": "Desc",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": "c",
+                "title": "c"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gdo"
+              ],
+              "enumerated": true
+            }
+          },
+          "sec_req": {
+            "title": "Secret req",
+            "type": "string",
+            "writeOnly": true,
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "held_k": {
+            "title": "Held",
+            "type": "integer",
+            "default": 4,
+            "x-portable-ui": {
+              "widget": "number"
+            }
+          },
+          "comp_req": {
+            "title": "Comp",
+            "type": "string",
+            "readOnly": true,
+            "x-portable-ui": {
+              "widget": "text"
+            },
+            "x-surface": {
+              "computed": {
+                "from": [
+                  "gate"
+                ],
+                "when": "change"
+              }
+            }
+          },
+          "ex": {
+            "title": "Examples",
+            "description": "With examples",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": "e1",
+            "examples": [
+              "e1",
+              "e2"
+            ],
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "items_c": {
+            "title": "Items constrained",
+            "description": "List desc",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "title": "Item",
+              "type": "string",
+              "maxLength": 4,
+              "oneOf": [
+                {
+                  "const": "ab",
+                  "title": "ab"
+                },
+                {
+                  "const": "cd",
+                  "title": "cd"
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            },
+            "maxItems": 3,
+            "x-portable-ui": {
+              "widget": "checkboxes"
+            }
+          },
+          "ints": {
+            "title": "Ints",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "title": "I",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9,
+              "x-portable-ui": {
+                "widget": "number"
+              }
+            },
+            "default": [
+              1,
+              2
+            ],
+            "x-portable-ui": {
+              "widget": "list"
+            }
+          },
+          "mapd": {
+            "title": "Map with default",
+            "description": "Md",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "a": {
+                "title": "A",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "default": "ad",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "b": {
+                "title": "B",
+                "type": "integer",
+                "x-portable-ui": {
+                  "widget": "number"
+                }
+              },
+              "s": {
+                "title": "S",
+                "type": "string",
+                "writeOnly": true,
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "b"
+            ],
+            "x-portable-ui": {
+              "widget": "fieldset"
+            }
+          },
+          "listed_map": {
+            "title": "Listed map",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "title": "Row",
+              "type": "object",
+              "properties": {
+                "k": {
+                  "title": "K",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "oneOf": [
+                    {
+                      "const": "x",
+                      "title": "x"
+                    },
+                    {
+                      "const": "y",
+                      "title": "y"
+                    },
+                    {
+                      "const": null
+                    }
+                  ],
+                  "x-portable-ui": {
+                    "widget": "select",
+                    "options": {
+                      "emptyOption": {
+                        "show": true,
+                        "label": "- None -"
+                      }
+                    }
+                  }
+                },
+                "n": {
+                  "title": "N",
+                  "type": "integer",
+                  "x-portable-ui": {
+                    "widget": "number"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "n"
+              ],
+              "x-portable-ui": {
+                "widget": "fieldset"
+              }
+            },
+            "x-portable-ui": {
+              "widget": "list"
+            }
+          },
+          "rows_l": {
+            "title": "Rows",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "title": "Row",
+              "type": "string",
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "x-portable-ui": {
+              "widget": "list"
+            }
+          },
+          "widgeted": {
+            "title": "Widgeted",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "sized": {
+            "title": "Sized",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-portable-ui": {
+              "widget": "text",
+              "options": {
+                "size": 12
+              }
+            }
+          },
+          "mapw": {
+            "title": "Map widget",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "x": {
+                "title": "X",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "x-portable-ui": {
+              "widget": "details"
+            }
+          },
+          "narrowed_map": {
+            "title": "Narrowed map",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "p": {
+                "title": "P",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "oneOf": [
+                  {
+                    "const": "a",
+                    "title": "a"
+                  },
+                  {
+                    "const": "b",
+                    "title": "b"
+                  },
+                  {
+                    "const": null
+                  }
+                ],
+                "x-portable-ui": {
+                  "widget": "select",
+                  "options": {
+                    "emptyOption": {
+                      "show": true,
+                      "label": "- None -"
+                    }
+                  }
+                }
+              },
+              "q": {
+                "title": "Q",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "x-portable-ui": {
+              "widget": "fieldset"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ]
+            }
+          },
+          "narrowed_list": {
+            "title": "Narrowed list",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "title": "Item",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "a"
+                },
+                {
+                  "const": "b",
+                  "title": "b"
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            },
+            "x-portable-ui": {
+              "widget": "checkboxes"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ]
+            }
+          },
+          "nl": {
+            "title": "Label moved",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-portable-ui": {
+              "widget": "text"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ]
+            }
+          },
+          "same": {
+            "title": "Same object",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ]
+            }
+          },
+          "equal": {
+            "title": "Equal object",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ]
+            }
+          },
+          "grouping": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "mod": {
+                "title": "Mod",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "size": {
+                    "title": "Size",
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "default": 3,
+                    "x-portable-ui": {
+                      "widget": "number"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "x-portable-ui": {
+              "widget": "fieldset"
+            },
+            "x-surface": {
+              "group": true
+            }
+          },
+          "att": {
+            "title": "Attached",
+            "description": "Att desc",
+            "$ref": "#/$defs/hand.att",
+            "x-portable-ui": {
+              "widget": "fieldset"
+            }
+          },
+          "coll": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/$defs/hand.att"
+            },
+            "x-portable-ui": {
+              "widget": "list"
+            },
+            "x-surface": {
+              "collection": true
+            }
+          },
+          "kind": {
+            "title": "Kind",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "var": {
+            "title": "Variants",
+            "description": "Var desc",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/hand.att"
+              },
+              {
+                "$ref": "#/$defs/hand.var.b"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "variants"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "kind"
+              ],
+              "by": "kind",
+              "variants": {
+                "a": "#/$defs/hand.att",
+                "b": "#/$defs/hand.var.b"
+              }
+            }
+          },
+          "kindf": {
+            "title": "Kind flat",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "varf": {
+            "title": "Flat variants",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/hand.att"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "variants"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "kindf"
+              ],
+              "by": "kindf",
+              "variants": {
+                "a": "#/$defs/hand.att"
+              }
+            }
+          },
+          "lk": {
+            "title": "Locked",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": "fixed",
+            "readOnly": true,
+            "const": "fixed",
+            "x-portable-ui": {
+              "widget": "text"
+            },
+            "x-surface": {
+              "locked": "Fixed."
+            }
+          },
+          "third_party_settings": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "surface": {
+                "title": "Surface API",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "mountedm": {
+                    "title": "Mounted map",
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "a": {
+                        "title": "A",
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "oneOf": [
+                          {
+                            "const": "x",
+                            "title": "x"
+                          },
+                          {
+                            "const": "y",
+                            "title": "y"
+                          },
+                          {
+                            "const": null
+                          }
+                        ],
+                        "x-portable-ui": {
+                          "widget": "select",
+                          "options": {
+                            "emptyOption": {
+                              "show": "@deeper",
+                              "label": "@deeper"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "x-portable-ui": {
+              "widget": "fieldset"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "group": true
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "att"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "gi": {
+                  "const": 1
+                }
+              },
+              "required": [
+                "gi"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gi": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "dep_gi"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gi": {
+                  "const": 2
+                }
+              },
+              "required": [
+                "gi"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gi": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "dep_gi"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gf": {
+                  "const": 1.5
+                }
+              },
+              "required": [
+                "gf"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gf": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "dep_gf"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gf": {
+                  "const": 2.5
+                }
+              },
+              "required": [
+                "gf"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gf": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "dep_gf"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gt": {
+                  "const": 1700000000
+                }
+              },
+              "required": [
+                "gt"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gt": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "dep_gt"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gd": {
+                  "const": "2026-01-02"
+                }
+              },
+              "required": [
+                "gd"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gd": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "dep_gd"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gdo": {
+                  "const": "2026-01-02"
+                }
+              },
+              "required": [
+                "gdo"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gdo": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "dep_gdo"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "a"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "properties": {
+                "var": {
+                  "title": "Variants",
+                  "description": "Var desc",
+                  "$ref": "#/$defs/hand.att"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "b"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "properties": {
+                "var": {
+                  "title": "Variants",
+                  "description": "Var desc",
+                  "$ref": "#/$defs/hand.var.b"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kindf": {
+                  "const": "a"
+                }
+              },
+              "required": [
+                "kindf"
+              ]
+            },
+            "then": {
+              "properties": {
+                "varf": {
+                  "title": "Flat variants",
+                  "$ref": "#/$defs/hand.att"
+                }
+              }
+            }
+          }
+        ],
+        "$defs": {
+          "hand.att": {
+            "title": "hand.att",
+            "type": "object",
+            "properties": {
+              "cname": {
+                "title": "Child name",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "csec": {
+                "title": "Child secret",
+                "type": "string",
+                "writeOnly": true,
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "cname"
+            ]
+          },
+          "hand.var.b": {
+            "title": "hand.var.b",
+            "type": "object",
+            "properties": {
+              "bb": {
+                "title": "Bb",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "x-portable-ui": {
+                  "widget": "number"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "values": {
+        "gate": "out",
+        "gi": null,
+        "gb": null,
+        "gf": null,
+        "gt": null,
+        "gd": null,
+        "gdo": null,
+        "dep_gi": null,
+        "dep_gb": null,
+        "dep_gf": null,
+        "dep_gt": null,
+        "dep_gd": null,
+        "dep_gdo": null,
+        "sec_req": null,
+        "held_k": 4,
+        "comp_req": "out",
+        "ex": "e1",
+        "items_c": null,
+        "ints": [
+          1,
+          2
+        ],
+        "mapd": {
+          "a": "ad",
+          "b": 3,
+          "s": null
+        },
+        "listed_map": null,
+        "rows_l": null,
+        "widgeted": null,
+        "sized": null,
+        "mapw": {
+          "x": null
+        },
+        "narrowed_map": {
+          "p": null,
+          "q": null
+        },
+        "narrowed_list": null,
+        "nl": null,
+        "same": null,
+        "equal": null,
+        "grouping": {
+          "mod": {
+            "size": 3
+          }
+        },
+        "att": {
+          "cname": null,
+          "csec": null
+        },
+        "coll": null,
+        "kind": null,
+        "var": null,
+        "kindf": null,
+        "varf": null,
+        "lk": "fixed",
+        "third_party_settings": {
+          "surface": {
+            "mountedm": {
+              "a": null
+            }
+          }
+        }
+      },
+      "stale": []
+    },
+    "plain | none | narrowed gate out": {
+      "document": {
+        "resource": "surface.form",
+        "operation": null,
+        "label": null,
+        "schema": {
+          "$schema": "https://portable-schema.dev/v1/schema",
+          "x-surface": {
+            "contract": 5,
+            "version": 1,
+            "doesNotApply": {
+              "nk": [
+                "gate"
+              ],
+              "ng": [
+                "gate"
+              ]
+            }
+          },
+          "type": "object",
+          "properties": {
+            "gate": {
+              "title": "Gate",
+              "type": [
+                "string",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": "open",
+                  "title": "open"
+                },
+                {
+                  "const": "narrow",
+                  "title": "narrow"
+                },
+                {
+                  "const": "req",
+                  "title": "req"
+                },
+                {
+                  "const": "label",
+                  "title": "label"
+                },
+                {
+                  "const": "out",
+                  "title": "out"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "default": "open",
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            },
+            "gi": {
+              "title": "Gi",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": 1,
+                  "title": "1"
+                },
+                {
+                  "const": 2,
+                  "title": "2"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            },
+            "gb": {
+              "title": "Gb",
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "x-portable-ui": {
+                "widget": "checkbox"
+              }
+            },
+            "gf": {
+              "title": "Gf",
+              "type": [
+                "number",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": 1.5,
+                  "title": "1.5"
+                },
+                {
+                  "const": 2.5,
+                  "title": "2.5"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            },
+            "gt": {
+              "title": "Gt",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": 1700000000,
+                  "title": "1700000000"
+                },
+                {
+                  "const": 1700000001,
+                  "title": "1700000001"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            },
+            "gd": {
+              "title": "Gd",
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date",
+              "oneOf": [
+                {
+                  "const": "2026-01-01",
+                  "title": "2026-01-01"
+                },
+                {
+                  "const": "2026-01-02",
+                  "title": "2026-01-02"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            },
+            "gdo": {
+              "title": "Gdo",
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date",
+              "oneOf": [
+                {
+                  "const": "2026-01-01",
+                  "title": "2026-01-01"
+                },
+                {
+                  "const": "2026-01-02",
+                  "title": "2026-01-02"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "portable-check": {
+                "drupal:DateOnly": {
+                  "@object": []
+                }
+              },
+              "x-portable-messages": {
+                "check.drupal:DateOnly": "DateOnly"
+              },
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            },
+            "dep_gi": {
+              "title": "Dep gi",
+              "description": "Desc",
+              "type": [
+                "string",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "a"
+                },
+                {
+                  "const": "b",
+                  "title": "b"
+                },
+                {
+                  "const": "c",
+                  "title": "c"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "gi"
+                ],
+                "enumerated": true
+              }
+            },
+            "dep_gb": {
+              "title": "Dep gb",
+              "description": "Desc",
+              "type": [
+                "string",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "a"
+                },
+                {
+                  "const": "b",
+                  "title": "b"
+                },
+                {
+                  "const": "c",
+                  "title": "c"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "gb"
+                ],
+                "refine": true
+              }
+            },
+            "dep_gf": {
+              "title": "Dep gf",
+              "description": "Desc",
+              "type": [
+                "string",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "a"
+                },
+                {
+                  "const": "b",
+                  "title": "b"
+                },
+                {
+                  "const": "c",
+                  "title": "c"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "gf"
+                ],
+                "enumerated": true
+              }
+            },
+            "dep_gt": {
+              "title": "Dep gt",
+              "description": "Desc",
+              "type": [
+                "string",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "a"
+                },
+                {
+                  "const": "b",
+                  "title": "b"
+                },
+                {
+                  "const": "c",
+                  "title": "c"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "gt"
+                ],
+                "enumerated": true
+              }
+            },
+            "dep_gd": {
+              "title": "Dep gd",
+              "description": "Desc",
+              "type": [
+                "string",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "a"
+                },
+                {
+                  "const": "b",
+                  "title": "b"
+                },
+                {
+                  "const": "c",
+                  "title": "c"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "gd"
+                ],
+                "enumerated": true
+              }
+            },
+            "dep_gdo": {
+              "title": "Dep gdo",
+              "description": "Desc",
+              "type": [
+                "string",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "a"
+                },
+                {
+                  "const": "b",
+                  "title": "b"
+                },
+                {
+                  "const": "c",
+                  "title": "c"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "gdo"
+                ],
+                "enumerated": true
+              }
+            },
+            "sec_req": {
+              "title": "Secret req",
+              "type": "string",
+              "writeOnly": true,
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "held_k": {
+              "title": "Held",
+              "type": "integer",
+              "default": 4,
+              "x-portable-ui": {
+                "widget": "number"
+              }
+            },
+            "comp_req": {
+              "title": "Comp",
+              "type": "string",
+              "readOnly": true,
+              "x-portable-ui": {
+                "widget": "text"
+              },
+              "x-surface": {
+                "computed": {
+                  "from": [
+                    "gate"
+                  ],
+                  "when": "change"
+                }
+              }
+            },
+            "ex": {
+              "title": "Examples",
+              "description": "With examples",
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": "e1",
+              "examples": [
+                "e1",
+                "e2"
+              ],
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "items_c": {
+              "title": "Items constrained",
+              "description": "List desc",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "title": "Item",
+                "type": "string",
+                "maxLength": 4,
+                "oneOf": [
+                  {
+                    "const": "ab",
+                    "title": "ab"
+                  },
+                  {
+                    "const": "cd",
+                    "title": "cd"
+                  }
+                ],
+                "x-portable-ui": {
+                  "widget": "select",
+                  "options": {
+                    "emptyOption": {
+                      "show": true,
+                      "label": "- None -"
+                    }
+                  }
+                }
+              },
+              "maxItems": 3,
+              "x-portable-ui": {
+                "widget": "checkboxes"
+              }
+            },
+            "ints": {
+              "title": "Ints",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "title": "I",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9,
+                "x-portable-ui": {
+                  "widget": "number"
+                }
+              },
+              "default": [
+                1,
+                2
+              ],
+              "x-portable-ui": {
+                "widget": "list"
+              }
+            },
+            "mapd": {
+              "title": "Map with default",
+              "description": "Md",
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "a": {
+                  "title": "A",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": "ad",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "b": {
+                  "title": "B",
+                  "type": "integer",
+                  "x-portable-ui": {
+                    "widget": "number"
+                  }
+                },
+                "s": {
+                  "title": "S",
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "b"
+              ],
+              "x-portable-ui": {
+                "widget": "fieldset"
+              }
+            },
+            "listed_map": {
+              "title": "Listed map",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "title": "Row",
+                "type": "object",
+                "properties": {
+                  "k": {
+                    "title": "K",
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "oneOf": [
+                      {
+                        "const": "x",
+                        "title": "x"
+                      },
+                      {
+                        "const": "y",
+                        "title": "y"
+                      },
+                      {
+                        "const": null
+                      }
+                    ],
+                    "x-portable-ui": {
+                      "widget": "select",
+                      "options": {
+                        "emptyOption": {
+                          "show": true,
+                          "label": "- None -"
+                        }
+                      }
+                    }
+                  },
+                  "n": {
+                    "title": "N",
+                    "type": "integer",
+                    "x-portable-ui": {
+                      "widget": "number"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "n"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "x-portable-ui": {
+                "widget": "list"
+              }
+            },
+            "rows_l": {
+              "title": "Rows",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "title": "Row",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "x-portable-ui": {
+                "widget": "list"
+              }
+            },
+            "widgeted": {
+              "title": "Widgeted",
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "sized": {
+              "title": "Sized",
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-portable-ui": {
+                "widget": "text",
+                "options": {
+                  "size": 12
+                }
+              }
+            },
+            "mapw": {
+              "title": "Map widget",
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "x": {
+                  "title": "X",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "x-portable-ui": {
+                "widget": "details"
+              }
+            },
+            "narrowed_map": {
+              "title": "Narrowed map",
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "p": {
+                  "title": "P",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    },
+                    {
+                      "const": "b",
+                      "title": "b"
+                    },
+                    {
+                      "const": null
+                    }
+                  ],
+                  "x-portable-ui": {
+                    "widget": "select",
+                    "options": {
+                      "emptyOption": {
+                        "show": true,
+                        "label": "- None -"
+                      }
+                    }
+                  }
+                },
+                "q": {
+                  "title": "Q",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "x-portable-ui": {
+                "widget": "fieldset"
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "gate"
+                ]
+              }
+            },
+            "narrowed_list": {
+              "title": "Narrowed list",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "title": "Item",
+                "type": "string",
+                "oneOf": [
+                  {
+                    "const": "a",
+                    "title": "a"
+                  },
+                  {
+                    "const": "b",
+                    "title": "b"
+                  }
+                ],
+                "x-portable-ui": {
+                  "widget": "select",
+                  "options": {
+                    "emptyOption": {
+                      "show": true,
+                      "label": "- None -"
+                    }
+                  }
+                }
+              },
+              "x-portable-ui": {
+                "widget": "checkboxes"
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "gate"
+                ]
+              }
+            },
+            "nl": {
+              "title": "Label moved",
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-portable-ui": {
+                "widget": "text"
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "gate"
+                ]
+              }
+            },
+            "same": {
+              "title": "Same object",
+              "type": [
+                "string",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "a"
+                },
+                {
+                  "const": "b",
+                  "title": "b"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "gate"
+                ]
+              }
+            },
+            "equal": {
+              "title": "Equal object",
+              "type": [
+                "string",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "a"
+                },
+                {
+                  "const": "b",
+                  "title": "b"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "gate"
+                ]
+              }
+            },
+            "grouping": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "mod": {
+                  "title": "Mod",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "size": {
+                      "title": "Size",
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "default": 3,
+                      "x-portable-ui": {
+                        "widget": "number"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "x-portable-ui": {
+                "widget": "fieldset"
+              },
+              "x-surface": {
+                "group": true
+              }
+            },
+            "att": {
+              "title": "Attached",
+              "description": "Att desc",
+              "$ref": "#/$defs/surface.form.att",
+              "x-portable-ui": {
+                "widget": "fieldset"
+              }
+            },
+            "coll": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/$defs/surface.form.att"
+              },
+              "x-portable-ui": {
+                "widget": "list"
+              },
+              "x-surface": {
+                "collection": true
+              }
+            },
+            "kind": {
+              "title": "Kind",
+              "type": [
+                "string",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "a"
+                },
+                {
+                  "const": "b",
+                  "title": "b"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            },
+            "var": {
+              "title": "Variants",
+              "description": "Var desc",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/surface.form.att"
+                },
+                {
+                  "$ref": "#/$defs/surface.form.var.b"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "variants"
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "kind"
+                ],
+                "by": "kind",
+                "variants": {
+                  "a": "#/$defs/surface.form.att",
+                  "b": "#/$defs/surface.form.var.b"
+                }
+              }
+            },
+            "kindf": {
+              "title": "Kind flat",
+              "type": [
+                "string",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "a"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            },
+            "varf": {
+              "title": "Flat variants",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/surface.form.att"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "variants"
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "kindf"
+                ],
+                "by": "kindf",
+                "variants": {
+                  "a": "#/$defs/surface.form.att"
+                }
+              }
+            },
+            "lk": {
+              "title": "Locked",
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": "fixed",
+              "readOnly": true,
+              "const": "fixed",
+              "x-portable-ui": {
+                "widget": "text"
+              },
+              "x-surface": {
+                "locked": "Fixed."
+              }
+            },
+            "third_party_settings": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "surface": {
+                  "title": "Surface API",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "mountedm": {
+                      "title": "Mounted map",
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "a": {
+                          "title": "A",
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "oneOf": [
+                            {
+                              "const": "@deeper",
+                              "title": "@deeper"
+                            },
+                            {
+                              "const": "@deeper",
+                              "title": "@deeper"
+                            },
+                            {
+                              "const": "@deeper"
+                            }
+                          ],
+                          "x-portable-ui": {
+                            "widget": "select",
+                            "options": {
+                              "emptyOption": "@deeper"
+                            }
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "x-portable-ui": {
+                "widget": "fieldset"
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "gate"
+                ],
+                "group": true
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "att"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "gi": {
+                    "const": 1
+                  }
+                },
+                "required": [
+                  "gi"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "dep_gi": {
+                    "type": "string",
+                    "oneOf": [
+                      {
+                        "const": "a",
+                        "title": "a"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "dep_gi"
+                ]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "gi": {
+                    "const": 2
+                  }
+                },
+                "required": [
+                  "gi"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "dep_gi": {
+                    "type": "string",
+                    "oneOf": [
+                      {
+                        "const": "a",
+                        "title": "a"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "dep_gi"
+                ]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "gf": {
+                    "const": 1.5
+                  }
+                },
+                "required": [
+                  "gf"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "dep_gf": {
+                    "type": "string",
+                    "oneOf": [
+                      {
+                        "const": "a",
+                        "title": "a"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "dep_gf"
+                ]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "gf": {
+                    "const": 2.5
+                  }
+                },
+                "required": [
+                  "gf"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "dep_gf": {
+                    "type": "string",
+                    "oneOf": [
+                      {
+                        "const": "a",
+                        "title": "a"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "dep_gf"
+                ]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "gt": {
+                    "const": 1700000000
+                  }
+                },
+                "required": [
+                  "gt"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "dep_gt": {
+                    "type": "string",
+                    "oneOf": [
+                      {
+                        "const": "a",
+                        "title": "a"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "dep_gt"
+                ]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "gd": {
+                    "const": "2026-01-02"
+                  }
+                },
+                "required": [
+                  "gd"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "dep_gd": {
+                    "type": "string",
+                    "oneOf": [
+                      {
+                        "const": "a",
+                        "title": "a"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "dep_gd"
+                ]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "gdo": {
+                    "const": "2026-01-02"
+                  }
+                },
+                "required": [
+                  "gdo"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "dep_gdo": {
+                    "type": "string",
+                    "oneOf": [
+                      {
+                        "const": "a",
+                        "title": "a"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "dep_gdo"
+                ]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "a"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "var": {
+                    "title": "Variants",
+                    "description": "Var desc",
+                    "$ref": "#/$defs/surface.form.att"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "b"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "var": {
+                    "title": "Variants",
+                    "description": "Var desc",
+                    "$ref": "#/$defs/surface.form.var.b"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kindf": {
+                    "const": "a"
+                  }
+                },
+                "required": [
+                  "kindf"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "varf": {
+                    "title": "Flat variants",
+                    "$ref": "#/$defs/surface.form.att"
+                  }
+                }
+              }
+            }
+          ],
+          "$defs": {
+            "surface.form.att": {
+              "title": "surface.form.att",
+              "type": "object",
+              "properties": {
+                "cname": {
+                  "title": "Child name",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "csec": {
+                  "title": "Child secret",
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "cname"
+              ]
+            },
+            "surface.form.var.b": {
+              "title": "surface.form.var.b",
+              "type": "object",
+              "properties": {
+                "bb": {
+                  "title": "Bb",
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "number"
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "values": {
+          "gate": "out",
+          "gi": null,
+          "gb": null,
+          "gf": null,
+          "gt": null,
+          "gd": null,
+          "gdo": null,
+          "dep_gi": null,
+          "dep_gb": null,
+          "dep_gf": null,
+          "dep_gt": null,
+          "dep_gd": null,
+          "dep_gdo": null,
+          "sec_req": null,
+          "held_k": 4,
+          "comp_req": "out",
+          "ex": "e1",
+          "items_c": null,
+          "ints": [
+            1,
+            2
+          ],
+          "mapd": {
+            "a": "ad",
+            "b": 3,
+            "s": null
+          },
+          "listed_map": null,
+          "rows_l": null,
+          "widgeted": null,
+          "sized": null,
+          "mapw": {
+            "x": null
+          },
+          "narrowed_map": {
+            "p": null,
+            "q": null
+          },
+          "narrowed_list": null,
+          "nl": null,
+          "same": null,
+          "equal": null,
+          "grouping": {
+            "mod": {
+              "size": 3
+            }
+          },
+          "att": {
+            "cname": null,
+            "csec": null
+          },
+          "coll": null,
+          "kind": null,
+          "var": null,
+          "kindf": null,
+          "varf": null,
+          "lk": "fixed",
+          "third_party_settings": {
+            "surface": {
+              "mountedm": {
+                "a": null
+              }
+            }
+          }
+        },
+        "stale": []
+      },
+      "values": {
+        "gate": "out",
+        "comp_req": "out"
+      },
+      "discarded": []
+    }
+  }
+}

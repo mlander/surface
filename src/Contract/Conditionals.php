@@ -7,7 +7,6 @@ namespace Drupal\surface\Contract;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
@@ -571,13 +570,13 @@ final class Conditionals {
       else {
         array_push($vanishing, ...static::vanished($base, $schema));
       }
-      $answers[] = [$combination, $definition, $schema];
+      $answers[] = [$combination, $holder, $schema];
     }
     $base = static::requiringNone($base, $vanishing);
-    $required = !$ruled && PropertySchema::required($entry->definition);
+    $required = !$ruled && static::requires($entry);
 
     $branches = [];
-    foreach ($answers as [$combination, $definition, $schema]) {
+    foreach ($answers as [$combination, $holder, $schema]) {
       $then = [];
       if ($schema === FALSE) {
         $then['properties'] = [$entry->name => FALSE];
@@ -587,7 +586,7 @@ final class Conditionals {
         if ($narrowed->all() !== []) {
           $then['properties'] = [$entry->name => $narrowed];
         }
-        if (PropertySchema::required($definition) && !$required) {
+        if (static::requires($holder) && !$required) {
           // Required here, and only here: a then may say so.
           $then['required'] = [$entry->name];
         }
@@ -762,11 +761,29 @@ final class Conditionals {
    */
   public function stated(Entry $entry, DataDefinitionInterface $definition, Emission $emission, ?Entry $holder = NULL): Schema {
     if ($entry->list !== NULL) {
-      return $this->propertySchema->listKeywords($definition)[0];
+      return $this->propertySchema->listKeywords($this->propertySchema->listNode($definition), $definition)[0];
     }
     $holder ??= $entry;
     $node = $holder->definition === $definition ? $holder->schema() : DefinitionSchema::of($definition);
-    return $this->propertySchema->property($definition, $node, NULL, NULL, $emission->at($entry->name), FALSE, [], $emission->withoutStale())[0];
+    return $this->propertySchema->property($definition, $node, NULL, NULL, NULL, $emission->at($entry->name), FALSE, [], $emission->withoutStale())[0];
+  }
+
+  /**
+   * Answers whether a key is in its object's `required`, for one answer.
+   *
+   * Read from the key's node (PropertySchema::required()), but for a key
+   * that holds a child, variants or a list of children: its definition
+   * holds the child's keys, so its node would be the child's whole tree,
+   * and its flag is read from the definition (DefinitionSchema::required()).
+   *
+   * @param \Drupal\surface\Entry $holder
+   *   The key's entry, as declared or refined for a combination.
+   *
+   * @return bool
+   *   Whether the schema requires it.
+   */
+  protected static function requires(Entry $holder): bool {
+    return $holder->isNested() || $holder->list !== NULL ? DefinitionSchema::required($holder->definition) : PropertySchema::required($holder->schema());
   }
 
   /**
@@ -888,18 +905,24 @@ final class Conditionals {
    */
   protected function domain(SurfaceInterface $surface, string $key, array $values, CacheableMetadata $cacheability): ?array {
     $entry = $surface->getDefinitions()->entry($key);
-    if ($entry === NULL || $entry->isNested() || $entry->definition instanceof ListDataDefinitionInterface) {
+    // A collection's node would be its child's whole tree: it is told
+    // apart by its entry.
+    if ($entry === NULL || $entry->isNested() || $entry->list !== NULL) {
+      return NULL;
+    }
+    $node = $entry->schema();
+    if (DefinitionSchema::isList($node)) {
       return NULL;
     }
     $value = $values[$key] ?? NULL;
     if (ValueState::isConfigured($value)) {
-      return [is_int($value) || is_string($value) ? $this->propertySchema->cast($value, $entry->definition) : $value];
+      return [is_int($value) || is_string($value) ? $this->propertySchema->cast($value, $node) : $value];
     }
     $set = $this->propertySchema->optionSet($entry->definition, $cacheability);
     if ($set === NULL || count($set->options) > ContractEmitter::ENUMERATION_CAP) {
       return NULL;
     }
-    return array_map(fn (int|string $option): int|float|string|bool => $this->propertySchema->cast($option, $entry->definition), array_keys($set->options));
+    return array_map(fn (int|string $option): int|float|string|bool => $this->propertySchema->cast($option, $node), array_keys($set->options));
   }
 
   /**

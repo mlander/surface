@@ -14,10 +14,13 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Computed;
-use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Entry;
 use Drupal\surface\Collection;
 use Drupal\surface\Validation\DrupalCheckProvider;
@@ -237,18 +240,28 @@ final class Validating {
     $errors = [];
     foreach ($refined->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
+      // A plain key's facts are read from its node, asked once: with
+      // assertions on, each ask reads the definition again. A key that
+      // holds a child frame is a shell whose node is the child's whole
+      // tree: its own facts are read from its definition, and its node
+      // only by a walk that needs the tree (a mount's). The definition is
+      // handed on where a contract still takes one: the options service
+      // and a computed key's value.
+      // Decision: see
+      // docs/decisions.md#the-validators-checks-and-the-document-read-nodes.
       $definition = $entry->definition;
+      $node = static::isShell($entry) ? NULL : $entry->schema();
       $value = $values[$name] ?? NULL;
-      $computed = $entry->locked ? NULL : Computed::of($definition);
+      $computed = $entry->locked ? NULL : ($node === NULL ? Computed::of($definition) : NodeFacts::compute($node));
       // A key computed unless sent holds either: nothing to refuse.
-      $refusal = $computed === NULL || $computed->takesSent() ? NULL : $this->notComputed($surface, $entry, $computed, $values, $current);
+      $refusal = $computed === NULL || $computed->takesSent() ? NULL : $this->notComputed($surface, $entry, $node ?? $entry->schema(), $computed, $values, $current);
       if ($refusal !== NULL) {
         // Decision: see
         // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
         $errors[] = $refusal;
         continue;
       }
-      if (DoesNotApply::marks($definition)) {
+      if ($node === NULL ? DoesNotApply::marks($definition) : NodeFacts::doesNotApply($node)) {
         // Nothing about a key that does not apply is required or held to
         // a rule; a value sent for it other than what it holds is refused.
         // Decision: see docs/decisions.md#a-key-that-does-not-apply.
@@ -257,7 +270,12 @@ final class Validating {
         }
         continue;
       }
-      $ruled_out = DoesNotApply::inside($definition);
+      // A mounted key is a property of its mount, refined one property at
+      // a time: the mount's node is walked for what is ruled out and
+      // required inside it. Any other shell's marks are read from its
+      // definition.
+      $tree = $node ?? ($entry->mounted === [] ? NULL : $entry->schema());
+      $ruled_out = $tree === NULL ? DoesNotApply::inside($definition) : static::ruledOut($tree);
       if ($ruled_out !== []) {
         foreach ($ruled_out as $path) {
           $parents = explode('.', $path);
@@ -267,12 +285,14 @@ final class Validating {
             $errors[] = new Violation($name, $path, $this->doesNotApply($surface, $refined, $name, $path, $values), Violation::DOES_NOT_APPLY);
           }
         }
-        $definition = static::withoutRuledOut($definition);
+        // What is ruled out is no part of the value; missingInMap() walks
+        // past it in the node.
         $value = is_array($value) ? static::valueWithout($value, $ruled_out) : $value;
       }
       // Decision: see docs/decisions.md#required-inside-a-plain-map.
-      $missing = $entry->attachment === NULL && $entry->variants === NULL
-        ? $this->missingInMap($definition, is_array($value) ? $value : [])
+      // A collection's list holds no map to walk.
+      $missing = $tree !== NULL && $entry->attachment === NULL && $entry->variants === NULL
+        ? $this->missingInMap($tree, is_array($value) ? $value : [])
         : [];
       if (!ValueState::isConfigured($value)) {
         // Not configured: nothing to hold to a constraint, and for a
@@ -280,14 +300,14 @@ final class Validating {
         // type-specific one a constraint would have produced. A key that
         // was never set is this case whether it is required or not, and
         // it is never stale: there is no value to keep.
-        if ($definition->isRequired()) {
-          $errors[] = new Violation($name, '', $this->isRequired($surface, $refined, $name, '', $definition->getLabel() ?? $name, $values), Violation::REQUIRED);
+        if ($node === NULL ? $definition->isRequired() : NodeFacts::isRequired($node)) {
+          $errors[] = new Violation($name, '', $this->isRequired($surface, $refined, $name, '', static::ownLabel($entry, $node) ?? $name, $values), Violation::REQUIRED);
         }
-        elseif (DefinitionMetadata::isAlwaysHeld($definition)) {
+        elseif ($node === NULL ? DefinitionMetadata::isAlwaysHeld($definition) : NodeFacts::isAlwaysHeld($node)) {
           // Null clears where clearing is possible; here the storage
           // holds a value whatever is sent, so null is no answer.
           // Decision: see docs/decisions.md#a-key-its-storage-always-holds.
-          $errors[] = new Violation($name, '', $this->cannotBeCleared($definition, $name), Violation::CANNOT_CLEAR);
+          $errors[] = new Violation($name, '', $this->cannotBeCleared($tree ?? $entry->schema(), $definition, $name), Violation::CANNOT_CLEAR);
         }
         foreach ($missing as $path => $label) {
           $errors[] = new Violation($name, $path, $this->isRequired($surface, $refined, $name, $path, $label, $values), Violation::REQUIRED);
@@ -309,9 +329,10 @@ final class Validating {
         // deciding key holds a value that names none, that key's own
         // Choice says so; when it holds nothing, this does.
         if (!ValueState::isConfigured($values[$entry->variants->by] ?? NULL)) {
+          $by = $refined->getDefinitions()->entry($entry->variants->by);
           $errors[] = new Violation($name, '', $this->t('@label depends on @by, which holds no value.', [
-            '@label' => $definition->getLabel() ?? $name,
-            '@by' => Named::key($refined->getDefinition($entry->variants->by)?->getLabel() ?? $entry->variants->by, $this->frame[0] . $entry->variants->by),
+            '@label' => static::ownLabel($entry, $node) ?? $name,
+            '@by' => Named::key(($by === NULL ? NULL : static::ownLabel($by, static::isShell($by) ? NULL : $by->schema())) ?? $entry->variants->by, $this->frame[0] . $entry->variants->by),
           ]), Violation::NO_VARIANT);
         }
         continue;
@@ -342,13 +363,13 @@ final class Validating {
         // What a rule made required is said below, with the rest.
         $refusals[] = new Violation($name, (string) $path, $this->t('@label is required.', ['@label' => $label]), Violation::REQUIRED);
       }
-      if ($refusals !== [] && $this->isStale($definition, $value, $name, $current, $refined->getDefinitions()->dependencies($name), $values)) {
+      if ($refusals !== [] && $this->isStale($tree ?? $entry->schema(), $definition, $value, $name, $current, $refined->getDefinitions()->dependencies($name), $values)) {
         // The whole key is reported as stale and not re-judged. What
         // else its constraints would say is about a value this run is
         // not changing and could not have chosen — it is what storage
         // holds — and saying it would read as a list of things to fix
         // where there is exactly one: choose again.
-        $errors[] = $this->staleViolation($definition, $value, $name);
+        $errors[] = $this->staleViolation($tree ?? $entry->schema(), $value, $name);
         continue;
       }
       $errors = array_merge($errors, $this->sayingWhatIsAllowed($refusals, $surface, $refined, $name, $values, $choices));
@@ -380,7 +401,9 @@ final class Validating {
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface the key belongs to.
    * @param \Drupal\surface\Entry $entry
-   *   The computed key.
+   *   The computed key, whose definition its value is computed with.
+   * @param \PortableSchema\Builder\Schema $node
+   *   Its node, which its label and the accept are read from.
    * @param \Drupal\surface\Computed $computed
    *   What it is computed from.
    * @param array $values
@@ -391,11 +414,11 @@ final class Validating {
    * @return \Drupal\surface\Pipeline\Violation|null
    *   The refusal, or NULL when it holds the value computed.
    */
-  protected function notComputed(SurfaceInterface $surface, Entry $entry, Computed $computed, array $values, array $current): ?Violation {
+  protected function notComputed(SurfaceInterface $surface, Entry $entry, Schema $node, Computed $computed, array $values, array $current): ?Violation {
     $name = $entry->name;
     $held = $computed->value($name, $values, $current, $entry->definition, $this->creates);
     try {
-      $held = $this->accepting->acceptValue($entry->schema(), $entry->definition, $held, $held, $name);
+      $held = $this->accepting->acceptValue($node, $entry->definition, $held, $held, $name);
     }
     catch (\InvalidArgumentException) {
       // Compared as computed.
@@ -403,7 +426,7 @@ final class Validating {
     if (Accepting::sameValue($values[$name] ?? NULL, $held)) {
       return NULL;
     }
-    return new Violation($name, '', $this->accepting->computedFrom($entry->definition->getLabel() ?? $name, $this->accepting->sources($surface, $computed, $this->frame[0]), 'refusal'), Violation::COMPUTED);
+    return new Violation($name, '', $this->accepting->computedFrom(NodeFacts::label($node) ?? $name, $this->accepting->sources($surface, $computed, $this->frame[0]), 'refusal'), Violation::COMPUTED);
   }
 
   /**
@@ -442,18 +465,18 @@ final class Validating {
     $named = [];
     foreach ($violations as $violation) {
       $entry = $violation->key === '' ? NULL : $surface->getDefinitions()->entry($violation->key);
-      $definition = $entry?->definition;
-      $computed = Computed::of($definition);
+      $node = $entry === NULL || static::isShell($entry) ? NULL : $entry->schema();
+      $computed = $entry === NULL ? NULL : ($node === NULL ? Computed::of($entry->definition) : NodeFacts::compute($node));
       // A key computed unless sent holding a value its sources do not give
       // holds the caller's own: its refusals stand as they are.
-      if ($entry === NULL || $computed === NULL || $violation->code === Violation::COMPUTED || ($computed->takesSent() && !$this->holdsComputed($violation->key, $entry->schema(), $entry->definition, $computed, $values, $current))) {
+      if ($entry === NULL || $computed === NULL || $violation->code === Violation::COMPUTED || ($computed->takesSent() && !$this->holdsComputed($violation->key, $node ?? $entry->schema(), $entry->definition, $computed, $values, $current))) {
         $named[] = $violation;
         continue;
       }
       if (array_intersect_key($refused, array_flip($computed->from)) !== []) {
         continue;
       }
-      $after = $this->accepting->computedFrom($definition->getLabel() ?? $violation->key, $this->accepting->sources($surface, $computed, $this->frame[0]), $computed->takesSent() ? 'unless' : 'after');
+      $after = $this->accepting->computedFrom(static::ownLabel($entry, $node) ?? $violation->key, $this->accepting->sources($surface, $computed, $this->frame[0]), $computed->takesSent() ? 'unless' : 'after');
       $named[] = $violation->saying(new Sentences($violation->message, $after));
     }
     return $named;
@@ -551,9 +574,9 @@ final class Validating {
           continue;
         }
         $parents = $path === '' ? [$name] : [$name, ...explode('.', $path)];
-        $declared = static::definitionAt($surface, $parents);
-        $narrowed = static::definitionAt($refined, $parents);
-        if ($declared === NULL || $narrowed === NULL || json_encode($declared->getConstraints()) === json_encode($narrowed->getConstraints())) {
+        $declared = static::nodeAt($surface, $parents);
+        $narrowed = static::nodeAt($refined, $parents);
+        if ($declared === NULL || $narrowed === NULL || json_encode(NodeFacts::constraints($declared)) === json_encode(NodeFacts::constraints($narrowed))) {
           continue;
         }
         $conditions = $this->conditions($refined, $dependencies, $values, $entry);
@@ -623,7 +646,8 @@ final class Validating {
     $context = ['context' => SurfacePipeline::REFUSAL_CONTEXT];
     foreach ($dependencies as $dependency) {
       $at = explode('.', $dependency);
-      $watched = static::definitionAt($refined, $at);
+      // The options service takes the definition; nothing else is read.
+      $watched = static::placeAt($refined, $at)[1] ?? NULL;
       $arguments = ['@key' => $this->conditionKey($refined, $dependency)];
       if (array_key_exists($dependency, $withheld)) {
         // What the rule was handed: nothing, since its own key refused it.
@@ -640,7 +664,10 @@ final class Validating {
       $set = $watched === NULL || !is_scalar($held) ? NULL : $this->options->resolve($watched);
       $labeled = $set !== NULL && isset($set->options[$held]);
       if ($labeled || (is_scalar($held) && !is_bool($held))) {
-        $arguments['@value'] = $labeled ? Named::value($set->options[$held], (string) $held) : (string) $held;
+        // The labels of a choice of numbers are the numbers: a label that
+        // is no text is said as text.
+        $label = $labeled ? $set->options[$held] : NULL;
+        $arguments['@value'] = $labeled ? Named::value(is_string($label) || $label instanceof \Stringable ? $label : (string) $label, (string) $held) : (string) $held;
       }
       $conditions[] = match (TRUE) {
         !ValueState::isConfigured($held) => $this->t('@key is empty', $arguments, $context),
@@ -678,7 +705,7 @@ final class Validating {
   protected function conditionKey(SurfaceInterface $refined, string $dependency): string|\Stringable {
     [$prefix, $ports] = $this->frame;
     $full = $ports[$dependency] ?? $prefix . $dependency;
-    $label = static::labelOf(static::definitionAt($refined, explode('.', $dependency)));
+    $label = static::labelOf(static::nodeAt($refined, explode('.', $dependency)));
     if ($label === NULL) {
       return ResultDocument::pointer($full);
     }
@@ -710,24 +737,78 @@ final class Validating {
     foreach (array_reverse($levels, TRUE) as $at => $level) {
       $at = (string) $at;
       if ($at === '' || str_starts_with($path, $at)) {
-        return static::labelOf(static::definitionAt($level, explode('.', substr($path, strlen($at)))));
+        return static::labelOf(static::nodeAt($level, explode('.', substr($path, strlen($at)))));
       }
     }
     return NULL;
   }
 
   /**
-   * Reads a definition's label, an empty one as none.
+   * Reads a key's label, an empty one as none.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
-   *   The definition.
+   * @param \PortableSchema\Builder\Schema|null $node
+   *   The key's built node.
    *
    * @return string|\Stringable|null
    *   The label, or NULL.
    */
-  protected static function labelOf(?DataDefinitionInterface $definition): string|\Stringable|null {
-    $label = $definition?->getLabel();
+  protected static function labelOf(?Schema $node): string|\Stringable|null {
+    $label = $node === NULL ? NULL : NodeFacts::label($node);
     return $label === NULL || (string) $label === '' ? NULL : $label;
+  }
+
+  /**
+   * Answers whether a key holds a child frame, so its node is a shell.
+   *
+   * An attached child, variants, a collection or a mount: the key's
+   * definition holds the child's keys, so its node is the child's whole
+   * tree, which the child's own entries read again. Its own facts are
+   * read from its definition until a source gives the node; a plain
+   * key's are read from its node.
+   *
+   * Decision: see
+   * docs/decisions.md#the-validators-checks-and-the-document-read-nodes.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The key's entry.
+   *
+   * @return bool
+   *   TRUE for a key that holds a child frame.
+   */
+  protected static function isShell(Entry $entry): bool {
+    return $entry->isNested() || $entry->list !== NULL || $entry->mounted !== [];
+  }
+
+  /**
+   * Reads a key's own label as getLabel() gives it.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The key's entry.
+   * @param \PortableSchema\Builder\Schema|null $node
+   *   Its node, or NULL for a key that holds a child frame, whose label is
+   *   read from its definition.
+   *
+   * @return string|\Stringable|null
+   *   The label, or NULL.
+   */
+  protected static function ownLabel(Entry $entry, ?Schema $node): string|\Stringable|null {
+    return $node === NULL ? $entry->definition->getLabel() : NodeFacts::label($node);
+  }
+
+  /**
+   * Answers whether a key that holds a child frame may be cleared.
+   *
+   * What NodeFacts::isNullable() reads of a node, read from the
+   * definition of a shell.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The key's entry.
+   *
+   * @return bool
+   *   TRUE when null clears it.
+   */
+  protected static function shellIsNullable(Entry $entry): bool {
+    return !DefinitionMetadata::holdsValue($entry->definition) && !DefinitionMetadata::isSecret($entry->definition);
   }
 
   /**
@@ -791,7 +872,8 @@ final class Validating {
    *   chosen." for an empty list; NULL when the key offers no list.
    */
   protected function choices(SurfaceInterface $refined, string $name, string $path): ?TranslatableMarkup {
-    $definition = $path === '' ? NULL : static::definitionAt($refined, [$name, ...explode('.', $path)]);
+    // The options service takes the definition; nothing else is read.
+    $definition = $path === '' ? NULL : static::placeAt($refined, [$name, ...explode('.', $path)])[1] ?? NULL;
     $definition ??= $refined->getDefinition($name);
     $set = $definition === NULL ? NULL : $this->options->resolve($definition);
     if ($set === NULL) {
@@ -826,17 +908,19 @@ final class Validating {
    * Names the default, an option by its label, so the caller knows what
    * the key holds when it starts, and that leaving it out keeps it.
    *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The key's node, which its label and default are read from.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key.
+   *   The key's definition, for the options service, which takes one.
    * @param string $name
    *   Its name, when it has no label.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The refusal.
    */
-  protected function cannotBeCleared(DataDefinitionInterface $definition, string $name): TranslatableMarkup {
-    $label = $definition->getLabel() ?? $name;
-    $default = DefinitionMetadata::hasDefaultValue($definition) ? DefinitionMetadata::getDefaultValue($definition) : NULL;
+  protected function cannotBeCleared(Schema $node, DataDefinitionInterface $definition, string $name): TranslatableMarkup {
+    $label = NodeFacts::label($node) ?? $name;
+    $default = NodeFacts::hasDefault($node) ? NodeFacts::default($node) : NULL;
     if (!is_scalar($default)) {
       return $this->t('@label cannot be cleared: it always holds a value. Leave it out to keep what it holds.', ['@label' => $label]);
     }
@@ -888,13 +972,13 @@ final class Validating {
    */
   protected function isRequired(SurfaceInterface $surface, SurfaceInterface $refined, string $name, string $path, string|\Stringable $label, array $values): TranslatableMarkup {
     $parents = $path === '' ? [$name] : [$name, ...explode('.', $path)];
-    $declared = static::definitionAt($surface, $parents);
+    $declared = static::nodeAt($surface, $parents);
     $entry = $refined->getDefinitions()->entry($name);
     $dependencies = $path === '' ? ($entry->dependencies ?? []) : ($entry->paths[$path] ?? $entry->dependencies ?? []);
     if ($entry?->variants !== NULL) {
       $dependencies = array_values(array_diff($dependencies, [$entry->variants->by]));
     }
-    $conditions = $declared === NULL || $declared->isRequired() ? [] : $this->conditions($refined, $dependencies, $values, $entry);
+    $conditions = $declared === NULL || NodeFacts::isRequired($declared) ? [] : $this->conditions($refined, $dependencies, $values, $entry);
     return $this->requiredWhen($label, $conditions);
   }
 
@@ -949,7 +1033,8 @@ final class Validating {
       // What chooses a variant is not what rules the key out.
       $dependencies = array_values(array_diff($dependencies, [$entry->variants->by]));
     }
-    $label = static::definitionAt($surface, $parents)?->getLabel() ?? end($parents);
+    $declared = static::nodeAt($surface, $parents);
+    $label = ($declared === NULL ? NULL : NodeFacts::label($declared)) ?? end($parents);
     $conditions = $this->conditions($refined, $dependencies, $values, $entry);
     if ($conditions === []) {
       return $this->t('@label does not apply.', ['@label' => $label]);
@@ -964,23 +1049,49 @@ final class Validating {
   }
 
   /**
-   * Copies a map's definition without the properties ruled out.
+   * Lists the ruled-out properties inside a map, by dotted path.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The map, refined.
+   * What DoesNotApply::inside() lists of the definition, read from the
+   * node: a key an alter mounted is a property of the mount, refined one
+   * property at a time, so it is ruled out inside the map rather than at
+   * the top of the frame.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   A copy holding only what applies.
+   * @param \PortableSchema\Builder\Schema $node
+   *   A key's node, as refined.
+   * @param string $prefix
+   *   The path so far.
+   *
+   * @return string[]
+   *   The dotted paths below the key, in declaration order.
    */
-  protected static function withoutRuledOut(DataDefinitionInterface $definition): DataDefinitionInterface {
-    if (!$definition instanceof MapDataDefinition) {
-      return $definition;
+  protected static function ruledOut(Schema $node, string $prefix = ''): array {
+    if (!static::isComplex($node) || DefinitionSchema::isList($node)) {
+      return [];
     }
-    $copy = clone $definition;
-    foreach ($copy->getPropertyDefinitions() as $property => $property_definition) {
-      $copy->setPropertyDefinition((string) $property, DoesNotApply::marks($property_definition) ? NULL : static::withoutRuledOut($property_definition));
+    $paths = [];
+    foreach (NodeFacts::properties($node) as $name => $property) {
+      $path = $prefix . $name;
+      if (NodeFacts::doesNotApply($property)) {
+        $paths[] = $path;
+        continue;
+      }
+      array_push($paths, ...static::ruledOut($property, $path . '.'));
     }
-    return $copy;
+    return $paths;
+  }
+
+  /**
+   * Answers whether a node was read from a complex definition.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node.
+   *
+   * @return bool
+   *   TRUE where its class (DefinitionSchema::classOf()) is complex, a
+   *   list that is complex too included.
+   */
+  protected static function isComplex(Schema $node): bool {
+    return is_a(DefinitionSchema::classOf($node), ComplexDataDefinitionInterface::class, TRUE);
   }
 
   /**
@@ -1091,7 +1202,7 @@ final class Validating {
   }
 
   /**
-   * Finds the definition at a key, or at a property path inside it.
+   * Finds the node at a key, or at a property path inside it.
    *
    * A port is read as the container's key it is wired to. A delta below
    * a list names its item, so a refused item's choices are its item's, as
@@ -1102,23 +1213,65 @@ final class Validating {
    * @param string[] $parents
    *   The key, then the property names or deltas below it; or a port.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
-   *   The definition, or NULL when the path names none.
+   * @return \PortableSchema\Builder\Schema|null
+   *   The node, or NULL when the path names none.
    */
-  public static function definitionAt(SurfaceInterface $surface, array $parents): ?DataDefinitionInterface {
-    if (count($parents) === 1 && $surface->getDefinition((string) $parents[0]) === NULL) {
+  public static function nodeAt(SurfaceInterface $surface, array $parents): ?Schema {
+    return static::placeAt($surface, $parents)[0] ?? NULL;
+  }
+
+  /**
+   * Finds the node and the definition at a key, or at a path inside it.
+   *
+   * The key's node is its entry's (Entry::schema()), and the walk below it
+   * steps the node and the definition together, as Location steps them:
+   * the definition is handed on for the options service, which takes one.
+   * A port has no entry: its node is read from the bare definition the
+   * container wired to it (SurfaceInterface::getPortDefinition()).
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The data surface.
+   * @param string[] $parents
+   *   The key, then the property names or deltas below it; or a port.
+   *
+   * @return array{0: \PortableSchema\Builder\Schema, 1: \Drupal\Core\TypedData\DataDefinitionInterface}|null
+   *   The node and its definition, or NULL when the path names none.
+   *
+   * @throws \LogicException
+   *   Where the definition holds a property or an item the node does not:
+   *   a built node holds one for every property and item.
+   */
+  protected static function placeAt(SurfaceInterface $surface, array $parents): ?array {
+    $first = (string) array_shift($parents);
+    $entry = $surface->getDefinitions()->entry($first);
+    if ($entry === NULL) {
       // A port: the container's key it reads.
-      return $surface->getPortDefinition((string) $parents[0]);
+      $port = $parents === [] ? $surface->getPortDefinition($first) : NULL;
+      return $port === NULL ? NULL : [DefinitionSchema::of($port), $port];
     }
-    $definition = $surface->getDefinition((string) array_shift($parents));
+    $definition = $entry->definition;
+    $node = $entry->schema();
     foreach ($parents as $property) {
-      $definition = match (TRUE) {
-        $definition instanceof ListDataDefinitionInterface => ctype_digit((string) $property) ? $definition->getItemDefinition() : NULL,
-        $definition instanceof ComplexDataDefinitionInterface => $definition->getPropertyDefinition($property),
-        default => NULL,
-      };
+      $property = (string) $property;
+      if ($definition instanceof ListDataDefinitionInterface) {
+        $definition = ctype_digit($property) ? $definition->getItemDefinition() : NULL;
+        $below = $definition === NULL ? NULL : DefinitionSchema::itemNode($node);
+      }
+      elseif ($definition instanceof ComplexDataDefinitionInterface) {
+        $definition = $definition->getPropertyDefinition($property);
+        $below = $definition === NULL ? NULL : DefinitionSchema::propertyNode($node, $property);
+      }
+      else {
+        return NULL;
+      }
+      if ($definition === NULL) {
+        return NULL;
+      }
+      // A place with a definition and no node would answer for a key with
+      // none of its facts.
+      $node = $below ?? throw new \LogicException(sprintf('The node of the "%s" key holds no node at "%s" where its definition holds one: a built node holds one for every property and item.', $entry->name, $property));
     }
-    return $definition;
+    return [$node, $definition];
   }
 
   /**
@@ -1131,30 +1284,41 @@ final class Validating {
    * properties: required and not configured is refused, with the same
    * message. A mounted key an alter made required is the case it is for.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key's definition.
+   * A property ruled out is no part of the map: it is walked past where
+   * the map and every map above it is a MapDataDefinition, which is where
+   * a refinement rules one out (a copy without it was walked before the
+   * node was).
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The key's node, as refined.
    * @param array $value
    *   The key's value, or an empty array when it holds none.
    * @param string $prefix
    *   The property path so far.
+   * @param bool $maps
+   *   Whether every map above this one is a MapDataDefinition.
    *
    * @return array<string, string|\Stringable>
    *   The labels of the missing properties, keyed by property path.
    */
-  protected function missingInMap(DataDefinitionInterface $definition, array $value, string $prefix = ''): array {
-    if (!$definition instanceof ComplexDataDefinitionInterface || $definition instanceof ListDataDefinitionInterface) {
+  protected function missingInMap(Schema $node, array $value, string $prefix = '', bool $maps = TRUE): array {
+    if (!static::isComplex($node) || DefinitionSchema::isList($node)) {
       return [];
     }
+    $maps = $maps && is_a(DefinitionSchema::classOf($node), MapDataDefinition::class, TRUE);
     $missing = [];
-    foreach ($definition->getPropertyDefinitions() as $property => $property_definition) {
-      $path = $prefix . $property;
-      $held = $value[$property] ?? NULL;
-      if ($property_definition instanceof ComplexDataDefinitionInterface) {
-        $missing += $this->missingInMap($property_definition, is_array($held) ? $held : [], $path . '.');
+    foreach (NodeFacts::properties($node) as $property => $property_node) {
+      if ($maps && NodeFacts::doesNotApply($property_node)) {
         continue;
       }
-      if ($property_definition->isRequired() && !ValueState::isConfigured($held)) {
-        $missing[$path] = $property_definition->getLabel() ?? $property;
+      $path = $prefix . $property;
+      $held = $value[$property] ?? NULL;
+      if (static::isComplex($property_node)) {
+        $missing += $this->missingInMap($property_node, is_array($held) ? $held : [], $path . '.', $maps);
+        continue;
+      }
+      if (NodeFacts::isRequired($property_node) && !ValueState::isConfigured($held)) {
+        $missing[$path] = NodeFacts::label($property_node) ?? $property;
       }
     }
     return $missing;
@@ -1194,7 +1358,7 @@ final class Validating {
         Violation::typeMismatch($name, '', $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => 'map',
           '@actual' => get_debug_type($value),
-        ]), 'map', get_debug_type($value), !DefinitionMetadata::holdsValue($entry->definition) && !DefinitionMetadata::isSecret($entry->definition)),
+        ]), 'map', get_debug_type($value), static::shellIsNullable($entry)),
       ];
     }
     $errors = [];
@@ -1269,7 +1433,7 @@ final class Validating {
         Violation::typeMismatch($name, '', $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => 'list',
           '@actual' => get_debug_type($value),
-        ]), 'list', get_debug_type($value), !DefinitionMetadata::holdsValue($entry->definition) && !DefinitionMetadata::isSecret($entry->definition)),
+        ]), 'list', get_debug_type($value), static::shellIsNullable($entry)),
       ];
     }
     $items = array_values($value);
@@ -1328,8 +1492,11 @@ final class Validating {
    * the widget nor this rule has a shape for. A list whose items went
    * stale is refused as it always was.
    *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The refined node, which says whether the key is a list.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The refined definition, which is where the narrowed list lives.
+   *   The refined definition, which is where the narrowed list lives, for
+   *   the options service, which takes one.
    * @param mixed $value
    *   The value that was refused.
    * @param string $name
@@ -1344,8 +1511,8 @@ final class Validating {
    * @return bool
    *   TRUE when the refusal is a stale reference.
    */
-  protected function isStale(DataDefinitionInterface $definition, mixed $value, string $name, array $current, array $dependencies, array $values): bool {
-    if ($definition instanceof ListDataDefinitionInterface) {
+  protected function isStale(Schema $node, DataDefinitionInterface $definition, mixed $value, string $name, array $current, array $dependencies, array $values): bool {
+    if (DefinitionSchema::isList($node)) {
       return FALSE;
     }
     if (!array_key_exists($name, $current) || $current[$name] !== $value) {
@@ -1365,8 +1532,8 @@ final class Validating {
   /**
    * Builds the entry reporting one stale reference.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The refined definition, for its label.
+   * @param \PortableSchema\Builder\Schema $node
+   *   The refined node, for its label and whether it is a secret.
    * @param mixed $value
    *   The stale value, which the message names so that whoever reads it
    *   knows what is about to be kept.
@@ -1376,11 +1543,11 @@ final class Validating {
    * @return \Drupal\surface\Pipeline\Violation
    *   The stale entry.
    */
-  protected function staleViolation(DataDefinitionInterface $definition, mixed $value, string $name): Violation {
+  protected function staleViolation(Schema $node, mixed $value, string $name): Violation {
     return new Violation($name, '', $this->t('@label keeps the value @value, which is no longer available. Choose a new one when you can.', [
-      '@label' => $definition->getLabel() ?? $name,
+      '@label' => NodeFacts::label($node) ?? $name,
       '@value' => (string) $value,
-    ]), Violation::STALE, TRUE, DefinitionMetadata::isSecret($definition) ? NULL : $value);
+    ]), Violation::STALE, TRUE, Secrets::marked($node) ? NULL : $value);
   }
 
 }

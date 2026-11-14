@@ -950,6 +950,37 @@ final class DefinitionSchema {
   }
 
   /**
+   * Names the JSON type, and format, a built node's data type is.
+   *
+   * Stands for type(), read from the node's facts: its data type, its
+   * `widget` setting, whether it declares DateOnly. The node's own `type`
+   * keyword says the type with null where the key may be cleared, and its
+   * `format` keyword may be a constraint's; a reader that needs the
+   * type's row as type() gives it (a cast, a signature) reads it here.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node.
+   *
+   * @return array
+   *   What type() returns for the definition the node was read from.
+   */
+  public static function typeOf(Schema $node): array {
+    if (!static::isLeaf($node)) {
+      return [];
+    }
+    $type = NodeFacts::dataType($node);
+    if ($type === 'string' && NodeFacts::setting($node, 'widget') === 'date') {
+      return ['type' => 'string', 'format' => 'date'];
+    }
+    if ($type === 'datetime_iso8601' && static::declares($node, 'DateOnly')) {
+      return LeafTypes::DATE_ONLY;
+    }
+    // A type no row is for, and an `any` the module holds as one, have
+    // none.
+    return LeafTypes::ROWS[$type] ?? [];
+  }
+
+  /**
    * Answers whether a key is in its object's `required`.
    *
    * A key the resource requires must be present and not null. A secret is
@@ -1023,6 +1054,28 @@ final class DefinitionSchema {
    */
   public static function keywords(DataDefinitionInterface $definition, string|array|null $type, array $given = []): array {
     return static::stated($definition->getConstraints(), $type, $given);
+  }
+
+  /**
+   * States a built node's constraints as JSON Schema keywords and checks.
+   *
+   * Stands for keywords(), read from the node's `constraints` member,
+   * for a type the caller gives: what a reader compares that is not the
+   * node's own keywords, which were stated for the type with null where
+   * the key may be cleared (PropertySchema::signature()).
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node.
+   * @param string|array|null $type
+   *   The JSON type.
+   * @param array $given
+   *   What the key says already, as keywords() takes it.
+   *
+   * @return array
+   *   What keywords() returns for the definition the node was read from.
+   */
+  public static function keywordsOf(Schema $node, string|array|null $type, array $given = []): array {
+    return static::stated(NodeFacts::constraints($node), $type, $given);
   }
 
   /**

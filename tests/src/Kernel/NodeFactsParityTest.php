@@ -16,20 +16,23 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests each reader of a node the value pipeline uses against its call.
+ * Tests each reader of a node against the definition call it stands for.
  *
- * The pipeline reads a key's facts from its node (NodeFacts, and the node
- * readers of DefinitionSchema and Secrets). For every entry of every data
+ * The pipeline, the validator's own checks and the document's classes
+ * read a key's facts from its node (NodeFacts, and the node readers of
+ * DefinitionSchema and Secrets). For every entry of every data
  * surface of the 19 example modules and of `surface_values_test`
  * (HandBuiltSurfaces included), declared and refined by each of its value
  * sets, and for every definition below an entry at every depth (a
  * property, an item, a shape's, a config type's and `each`'s definition),
  * each reader on the node answers what the definition call it stands for
  * answers (NodeFactsParityTrait::READERS), by strict equality. Then one
- * hand case for each fact no example states. The counts are pinned as
- * literals, so a walk that finds nothing fails.
+ * hand case for each fact no example states (STATED says which the
+ * examples state). The counts are pinned as literals, so a walk that
+ * finds nothing fails.
  *
- * Decision: see docs/decisions.md#the-value-pipeline-reads-nodes.
+ * Decision: see docs/decisions.md#the-value-pipeline-reads-nodes,
+ * docs/decisions.md#the-validators-checks-and-the-document-read-nodes.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -79,25 +82,98 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
    * Each distinct definition is compared once, wherever it is first met.
    */
   protected const READS = [
+    'arrangement' => 1067,
+    'compute' => 1067,
+    'configType' => 1067,
+    'configTypeNode' => 1067,
+    'constraints' => 1067,
+    'constraintsJson' => 1067,
     'dataType' => 1067,
     'dateOnly' => 1067,
+    'declaredConstraints' => 1067,
     'default' => 1067,
     'defaultOf' => 1067,
+    'description' => 1067,
+    'doesNotApply' => 1067,
+    'each' => 1067,
     'hasConstraints' => 1067,
     'hasDefault' => 1067,
     'holdsValue' => 1067,
     'isAlwaysHeld' => 1067,
+    'isComputed' => 1067,
+    'isFixed' => 1067,
     'isGrouping' => 1067,
+    'isHeldWhole' => 1067,
     'isLeaf' => 1067,
     'isList' => 1067,
     'isMap' => 1067,
     'isNullable' => 1067,
+    'isOneVariant' => 1067,
+    'isReadOnly' => 1067,
     'isRequired' => 1067,
+    'keywordsOf' => 1067,
     'label' => 1067,
     'ownLabel' => 1067,
+    'placedAfter' => 1067,
     'properties' => 1067,
+    'readVariants' => 1067,
+    'resolve' => 1067,
     'secret' => 1067,
+    'setting' => 1067,
     'settings' => 1067,
+    'shape' => 1067,
+    'shapeNode' => 1067,
+    'typeOf' => 1067,
+    'variantsBy' => 1067,
+    'variantsFrom' => 1067,
+  ];
+
+  /**
+   * The comparisons whose definition states the fact, by reader.
+   *
+   * A reader no example states has a hand case that does
+   * (testHandCases()).
+   */
+  protected const STATED = [
+    'arrangement' => 43,
+    'compute' => 5,
+    'configType' => 4,
+    'configTypeNode' => 4,
+    'constraints' => 684,
+    'constraintsJson' => 684,
+    'dataType' => 1067,
+    'dateOnly' => 1,
+    'declaredConstraints' => 352,
+    'default' => 242,
+    'defaultOf' => 441,
+    'description' => 360,
+    'doesNotApply' => 41,
+    'each' => 4,
+    'hasConstraints' => 684,
+    'hasDefault' => 297,
+    'holdsValue' => 277,
+    'isAlwaysHeld' => 77,
+    'isGrouping' => 29,
+    'isLeaf' => 704,
+    'isList' => 43,
+    'isMap' => 301,
+    'isNullable' => 775,
+    'isRequired' => 200,
+    'keywordsOf' => 677,
+    'label' => 1029,
+    'ownLabel' => 1029,
+    'placedAfter' => 15,
+    'properties' => 301,
+    'readVariants' => 102,
+    'resolve' => 3,
+    'secret' => 18,
+    'setting' => 82,
+    'settings' => 82,
+    'shape' => 11,
+    'shapeNode' => 11,
+    'typeOf' => 656,
+    'variantsBy' => 46,
+    'variantsFrom' => 102,
   ];
 
   /**
@@ -164,6 +240,7 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
     /** @var \SplObjectStorage<\Drupal\Core\TypedData\DataDefinitionInterface, null> $seen */
     $seen = new \SplObjectStorage();
     $counts = [];
+    $stated = [];
     $differ = [];
     $entries = 0;
     foreach ($sources as $name => $surface) {
@@ -175,13 +252,15 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
         $refined["$name [$set]"] = $surface->refine($values);
       }
       foreach ($refined as $at => $each) {
-        $entries += $this->compareSurface($each, $at, $walked, $seen, $counts, $differ);
+        $entries += $this->compareSurface($each, $at, $walked, $seen, $counts, $differ, $stated);
       }
     }
     $this->assertSame([], array_slice($differ, 0, 40), count($differ) . ' disagreements.');
     $this->assertSame(self::COUNTS, ['surfaces' => count($walked), 'entries' => $entries]);
     ksort($counts);
     $this->assertSame(self::READS, $counts, 'The comparisons made, by reader.');
+    ksort($stated);
+    $this->assertSame(self::STATED, $stated, 'The comparisons whose definition states the fact, by reader.');
   }
 
   /**
@@ -189,12 +268,16 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
    */
   public function testHandCases(): void {
     $counts = [];
+    $stated = [];
     foreach ($this->handCases() as $case => $definition) {
-      $differ = static::parity($definition, DefinitionSchema::of($definition), $case, $counts);
+      $differ = static::parity($definition, DefinitionSchema::of($definition), $case, $counts, NULL, $stated);
       $this->assertSame([], $differ, $case);
     }
     foreach (array_keys(self::READERS) as $reader) {
       $this->assertGreaterThan(0, $counts[$reader] ?? 0, "A hand case compares $reader.");
+      if ((self::STATED[$reader] ?? 0) === 0) {
+        $this->assertGreaterThan(0, $stated[$reader] ?? 0, "No example states $reader: a hand case does.");
+      }
     }
   }
 
@@ -213,11 +296,13 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
    *   The comparisons made, by reader.
    * @param list<string> $differ
    *   The disagreements.
+   * @param array<string, int> $stated
+   *   The comparisons whose definition states the fact, by reader.
    *
    * @return int
    *   The entries compared here.
    */
-  protected function compareSurface(SurfaceInterface $surface, string $at, \SplObjectStorage $walked, \SplObjectStorage $seen, array &$counts, array &$differ): int {
+  protected function compareSurface(SurfaceInterface $surface, string $at, \SplObjectStorage $walked, \SplObjectStorage $seen, array &$counts, array &$differ, array &$stated): int {
     if ($walked->contains($surface)) {
       return 0;
     }
@@ -227,7 +312,7 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
       foreach ($map->entries() as $name => $entry) {
         $here = "$at $side:$name";
         $entries++;
-        array_push($differ, ...static::parity($entry->definition, $entry->schema(), $here, $counts, $seen));
+        array_push($differ, ...static::parity($entry->definition, $entry->schema(), $here, $counts, $seen, $stated));
         $children = [];
         if ($entry->variants !== NULL) {
           foreach ($entry->variants->variantIds() as $variant) {
@@ -244,7 +329,7 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
           $children["mounted $path"] = $mounted->settledChild();
         }
         foreach (array_filter($children) as $what => $child) {
-          $entries += $this->compareSurface($child, "$here $what", $walked, $seen, $counts, $differ);
+          $entries += $this->compareSurface($child, "$here $what", $walked, $seen, $counts, $differ, $stated);
         }
       }
     }
@@ -333,6 +418,7 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
     $cases['decimal'] = DataDefinition::create('decimal')->setLabel('Amount');
     $cases['a datetime'] = DataDefinition::create('datetime_iso8601')->setLabel('When');
     $cases['a datetime with DateOnly'] = DataDefinition::create('datetime_iso8601')->setLabel('Day')->addConstraint('DateOnly', []);
+    $cases['a string drawn as a date'] = DataDefinition::create('string')->setLabel('Day')->setSetting('widget', 'date');
     $cases['an empty MapDataDefinition'] = MapDataDefinition::create()->setLabel('Empty');
 
     $item = MapDataDefinition::create()->setLabel('Row')
@@ -342,6 +428,27 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
     $hidden = DataDefinition::create('string')->setLabel('Code');
     DefinitionMetadata::setSecret($hidden);
     $cases['a list of secrets'] = new ListDataDefinition(['label' => 'Codes'], $hidden);
+
+    // Core's own flags, and what DefinitionMetadata stores that no example
+    // states.
+    $cases['read-only'] = DataDefinition::create('string')->setLabel('Stamp')->setReadOnly(TRUE);
+    $cases['computed, so read-only'] = DataDefinition::create('string')->setLabel('Derived')->setComputed(TRUE);
+    $cases['read-only stored as FALSE beside computed'] = new DataDefinition([
+      'type' => 'string',
+      'label' => 'Typed over',
+      'read-only' => FALSE,
+      'computed' => TRUE,
+    ]);
+    $cases['a description of \'\''] = DataDefinition::create('string')->setLabel('Blank')->setDescription('');
+    $fixed = DataDefinition::create('string')->setLabel('Fixed');
+    DefinitionMetadata::setFixed($fixed);
+    $cases['fixed'] = $fixed;
+    $one = DataDefinition::create('string')->setLabel('Kind');
+    DefinitionMetadata::setOneVariant($one);
+    $cases['one variant'] = $one;
+    $whole = DataDefinition::create('any')->setLabel('Whole');
+    DefinitionMetadata::setHeldWhole($whole);
+    $cases['an any held whole'] = $whole;
     return $cases;
   }
 

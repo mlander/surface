@@ -2869,7 +2869,9 @@ Later, by slice: `Outbound`'s secret trees, `Accepting`'s secret reads,
 stage's kept secrets read built nodes through `Secrets` in slice 26
 (2026-11-13: done for all but `Validating`'s, which slice 31 takes; the
 stage's kept secrets follow `Outbound::secrets()`. See [The value
-pipeline reads nodes](#the-value-pipeline-reads-nodes).);
+pipeline reads nodes](#the-value-pipeline-reads-nodes). `Validating`'s
+too since 2026-11-13: see [The validator's checks and the document read
+nodes](#the-validators-checks-and-the-document-read-nodes).);
 `EncryptedStorageLayout`, `ConfigSchemaGenerator`,
 `HeldToConfigSchemaTrait`, `InputDefinitions`, `ResourceCode`,
 `SiteCatalog` and `FlatVariantsLayout` in slice 27; `KeyPaths`,
@@ -3149,7 +3151,9 @@ each half needs. No served document, refusal or value changed.
   $definition, $listed)` plus the request's decoration;
   `publishedTexts()` is the static projection of a title and a
   description alone; `publishedKeywords()` projects what `keywords()`
-  read for `PropertySchema::signature()`.
+  read for `PropertySchema::signature()` (since 2026-11-13 what
+  `keywordsOf()` reads of a node: see [The validator's checks and the
+  document read nodes](#the-validators-checks-and-the-document-read-nodes)).
 - **The memo stays, static.** (Gone since 2026-11-13, with `seal()`,
   `hold()`, the fingerprint assertion and `BuiltNodes`: see
   [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone).) `seal()`, `hold()`, the memo and the
@@ -3441,7 +3445,10 @@ that code is deleted. No served document, refusal or value changed.
   alone); `PropertySchema::property()` for a shape whose node its key's
   node does not hold; and `PropertySchema::listKeywords()`, a
   collection's own keywords without its items (`head()`), which no
-  entry's node is. Since `property()` reads nothing, a caller that stops
+  entry's node is (since 2026-11-13 `PropertySchema::listNode()`, and
+  `Validating` reads a port's node: see [The validator's checks and the
+  document read nodes](#the-validators-checks-and-the-document-read-nodes)).
+  Since `property()` reads nothing, a caller that stops
   handing an entry's node on has to call `of()` itself, and the list
   shows it.
 - **Staleness is asserted and tested.** The rule is unchanged: a
@@ -3606,7 +3613,10 @@ the node. No value, refusal or served byte changed.
   `Conforming`, `KeyPaths`, the storage layouts, the tool door's inputs,
   the form and the config schema writer read definitions until slices
   31 and 34; `Validating` hands `acceptValue()` the entry's node beside
-  its definition.
+  its definition. (2026-11-13: `Validating`'s own checks and the label
+  in `unmatchedSecret()`, through `Validating::nodeAt()`, read nodes,
+  and so do the document's classes: see [The validator's checks and the
+  document read nodes](#the-validators-checks-and-the-document-read-nodes).)
 - **Proof.** `NodeFactsParityTest` holds each reader to its call, by
   strict equality, for every entry of every example data surface,
   declared and refined by each value set, and every definition below it
@@ -3663,6 +3673,234 @@ the node. No value, refusal or served byte changed.
 `ResourceBuild\KeyPaths`, `NodeFactsParityTest`, `NodeFactsParityTrait`,
 `KeyPathsCoercionTest`, `SurfacePipelineCastingTest`,
 `DefinitionReadIsPureTest`, `TypedDataFootprintTest`)
+
+### The validator's checks and the document read nodes
+
+Decided 2026-11-13. The validator's own checks (a key computed, a key
+that does not apply, required, always held, a required property of a
+plain map, a stale value, and the labels its refusals name) and what the
+document's classes still took from a definition beside the node they
+held read a key's facts from its node now. No served byte, refusal or
+value changed.
+
+- **The validator.** `Pipeline\Validating` works on the refined data
+  surface, so it reads the nodes of the refined entries: each plain key
+  is asked for its node once per `validateLevel()` (`Entry::schema()`;
+  with assertions on, each ask reads the definition again), and the node
+  is handed to what the level calls (`notComputed()`,
+  `cannotBeCleared()`, `isStale()`, `staleViolation()`,
+  `missingInMap()`). The mark of a key that does not apply is the node's
+  member, since the node is read there anyway; `ruledOut()` lists the
+  marks below a key as `DoesNotApply::inside()` lists them.
+  `namingSources()` reads the node of the plain key a violation is filed
+  under.
+- **One rule for a key that holds a child frame.** An attached child,
+  variants, a collection and a mount (`Validating::isShell()`) are
+  shells: the key's definition holds the child's keys, so its node is
+  the child's whole tree, which the child's own entries then read
+  again. A shell's own facts are read from its definition until a source
+  gives the node (slice 32): `Computed::of()`, the mark, `isRequired()`,
+  always held, its label and whether null clears it
+  (`validateChild()` and `validateCollection()` take no node). A plain
+  key's facts are read from its node. The document's classes keep the
+  same rule (below). What still reads a shell's node: a mount's, for the
+  walk of what is required and ruled out inside it (`missingInMap()`,
+  `ruledOut()`), since a mounted key is a property of the mount and the
+  walk needs the tree itself; an attachment's or variants' marks below
+  the key are read from the definition (`DoesNotApply::inside()`), as
+  before the node was. A computed shell, and an always-held shell sent
+  null, read the node in that refusal alone (`notComputed()`,
+  `cannotBeCleared()`), since the accept and the refusal's default take
+  one.
+- **A condition on a number.** The option labels of a Choice of numbers
+  are the numbers, and `Named::value()` takes text: a refusal whose
+  condition named such a key (an integer `gi` of Choice [1, 2, 3] that
+  makes `qm` required at 2, with `qm` left out) threw a TypeError.
+  `Validating::conditions()` casts a label that is no text to a string,
+  so the sentence reads "Gi is 2". This is the one behavior this slice
+  changes. A label that is a number in the definition itself still
+  makes the validator's document invalid ("Invalid schema ... /title");
+  that is recorded, not fixed.
+- **A key path gives a node.** `Validating::definitionAt()` is
+  `nodeAt()`, the node at a key path, and `placeAt()`, the node and the
+  definition beside it, stepped as `Location` steps them (the entry's
+  node, then `itemNode()` and `propertyNode()` in step with the
+  definition); a place with a definition and no node throws. The
+  definition is read there for the options service alone (a watched
+  key's labeled value, a refused key's choices). A port has no entry: the
+  container hands the child a bare definition
+  (`SurfaceInterface::getPortDefinition()`), so its node is read there
+  with `DefinitionSchema::of()`, the one caller this adds to
+  `DefinitionReadCallersTest`. `Accepting::unmatchedSecret()` names the
+  secret through `nodeAt()`.
+- **The copy is gone.** `withoutRuledOut()` cloned a map's definition
+  without the properties a refinement ruled out. Its readers were
+  `missingInMap()`, the key's own flags and label (which the copy did not
+  change), and the options service in `isStale()` and
+  `cannotBeCleared()`. `missingInMap()` now walks past a marked property
+  where the map and every map above it is a `MapDataDefinition`, which is
+  where the copy left one out; the options service is handed the entry's
+  definition, since a resolver reads a key's constraints and settings,
+  which the copy shared, and no resolver reads a property.
+- **Three label rules, kept apart.** A refusal that names a key by its
+  label or its name keeps a label of `''` (`NodeFacts::label() ?? $name`);
+  a condition and a holder's label read `''` as none
+  (`Validating::labelOf()`); a label that is no text is handed on as the
+  definition holds it. `NodeFacts::label()` hands back what the
+  definition holds; each site applies its own rule.
+- **The narrowed twin.** `sayingWhatIsAllowed()` compares a declared
+  key's constraints with its narrowed twin's by the JSON of the two
+  lists, now read from the two nodes (`NodeFacts::constraints()`); the
+  JSON of the node's list is byte-equal to that of `getConstraints()`
+  for every definition of every example (`NodeFactsParityTest`,
+  `constraintsJson`).
+- **The document's classes.** `PropertySchema::property()` reads every
+  fact of a key from its node and walks the definition beside it, in
+  step, only for the options service and the widget claims (slice 32
+  and 31b): its title and description (`describe()` takes a node),
+  `required()`, `nullable()`, `cast()` and `signature()` take a node,
+  and so do the settings a widget publishes, the `widget` and reference
+  settings, `isGrouping`, `placedAfter`, `compute`, `arrangement`
+  (`hints()` takes one), and the shape's id. `DefinitionSchema::typeOf()`
+  and `keywordsOf()` stand for `type()` and `keywords()`: the node's own
+  `type` keyword says the type with null where the key may be cleared,
+  and its keywords were stated for that type, so a cast and a signature,
+  which need the type's row, read the row and the constraints from the
+  node's facts. `ContractEmitter` reads a plain key's node, the one
+  `property()` is handed, for `required`, the secret, `holdsValue` and
+  the lookup link's setting; a collection through its own node without
+  its items (`PropertySchema::listNode()`, the one `head()` call), for its
+  keywords, default, arrangement and signature; a mount's title from
+  the node of the key that holds it. `Conditionals` reads `required`
+  and a watched sibling's type from the node; `DocumentHead` an output's
+  `required`.
+- **Compared only where the definition moved.** Whether a key is
+  narrowed now is its signature against the advertised key's. Read from
+  nodes, that would read the advertised entry's node besides the
+  refined one for every key of a refined frame (a refined entry starts
+  unread). One definition has one signature, so `ContractEmitter` hands
+  `property()` the advertised key only where its definition is another
+  object, and compares a collection's only there; the answer is the
+  same, and nothing is kept.
+- **What stays on the definition, and why.** The contracts that take
+  one until slice 32: the options service and its resolvers,
+  `Computed::value()`, the refiners, the widget claims and `WidgetChoice`
+  (31b), `References::target()`, `ConstraintRunner`. A key that holds a
+  child, variants or a list of children: its definition holds the
+  child's keys (`Attachment::mapOf()`), so its node would be the
+  child's whole tree, read for a title or a flag; the emitter's deferred,
+  anonymous, attached and variants sites, `Conditionals::requires()` for
+  such a key, and the variants' shell read their definitions. The marks
+  a walk meets before it holds a node (`ContractEmitter::frame()` before
+  a key is described, `Conditionals::answer()`, `describeKey()`), as
+  `Accepting::withoutWhatDoesNotApply()` and `Outbound::project()` read
+  theirs: a node is not read for one flag. A rule applied to a copy
+  (`Conditionals::appliedAt()`), which writes a definition. The deferred
+  list's entry labels, one per entry of a list too long to describe;
+  `linksBelow()`, which asks whether a lookup link is below before any
+  node of the frame is held.
+- **A definition of another class.** The readers were shown complete
+  for the three classes a node is read from in full: `DataDefinition`,
+  `ListDataDefinition` and `MapDataDefinition` (slice 28). A definition
+  of another class is read by what its array stores, not by its getters.
+  A subclass whose `isRequired()` answers TRUE with nothing stored was
+  refused as required before this slice and is not now, and is missing
+  from the document's `required`, since `NodeFacts::isRequired()` reads
+  the stored member; overrides of `getLabel()`, `getDescription()` and
+  `getSettings()` showed no difference, and `BaseFieldDefinition` and
+  `FieldItemDataDefinition` compute their settings. Where that matters
+  is decided at the authoring door in slice 32: refuse such a class, or
+  read it through its getters there.
+- **The readers added.**
+
+| Reader | Stands for |
+|---|---|
+| `NodeFacts::description()` | `getDescription()` |
+| `NodeFacts::constraints()` | `getConstraints()` |
+| `NodeFacts::declaredConstraints()` | `toArray()['constraints'] ?? []` of a DataDefinition |
+| `NodeFacts::doesNotApply()` | `DoesNotApply::marks()` |
+| `NodeFacts::compute()` | `Computed::of()`, `DefinitionMetadata::computedOf()` |
+| `NodeFacts::resolve()` | `DefinitionMetadata::resolveOf()` |
+| `NodeFacts::each()` | `DefinitionMetadata::eachOf()`, a definition as its node |
+| `NodeFacts::variantsBy()`, `variantsFrom()` | `DefinitionMetadata::variantsBy()`, `variantsFrom()` |
+| `NodeFacts::readVariants()` | `DefinitionMetadata::variantsListedBySite()` |
+| `NodeFacts::configType()`, `configTypeNode()` | `DefinitionMetadata::configTypeOf()`, `configTypeDefinition()` as its node |
+| `NodeFacts::shape()` | `DefinitionMetadata::shapeOf()` (its node: `DefinitionSchema::shapeNode()`) |
+| `NodeFacts::isFixed()`, `isOneVariant()`, `isHeldWhole()` | the metadata getters of the same names |
+| `NodeFacts::placedAfter()` | `DefinitionMetadata::getPlacedAfter()` |
+| `NodeFacts::arrangement()` | `DefinitionMetadata::arrangementOf()` |
+| `NodeFacts::isReadOnly()`, `isComputed()` | core's `isReadOnly()`, `isComputed()` |
+| `NodeFacts::setting()` | `getSetting()` |
+| `DefinitionSchema::typeOf()` | `DefinitionSchema::type()` |
+| `DefinitionSchema::keywordsOf()` | `DefinitionSchema::keywords()` |
+
+- **Proof.** `NodeFactsParityTest` holds every reader to its call, by
+  strict equality, over the 1,067 definitions of the examples, with a
+  hand case for each fact no example states (core's `read-only` and
+  `computed`, `fixed`, one variant, an `any` held whole, a string drawn
+  as a date); `STATED` pins how many definitions state each fact.
+  `typeOf()` and `keywordsOf()` are compared with `type()` and
+  `keywords()` the same way (a throw counts as an answer; a message the
+  keywords make is compared by what it holds). The development site's parity
+  script found no disagreement over 2,226 definitions (262 builds and their
+  refines), for every reader. The value
+  baseline shows zero differences in 39,109 cases as user 1 and 3,737
+  as anonymous, and a planted fault in the required message shows
+  8,810 and 117. The documents (684 and 364 with subjects; 309, 74, 309
+  and 2,996 without), the validation corpus (3,004 and 997 cases) and
+  the door digests (forms, violations, tool definitions, OpenAPI) show
+  none.
+- **The hand corpus.** The value baseline walks the examples, and a
+  fault planted in the moved code passed every test the lanes ran in 44
+  of 85 cases. `HandCorpusTest` and `HandCorpusNarrowTest` pin six
+  surfaces built by hand (`Drupal\Tests\surface\HandCorpus\HandSurfaces`
+  says what each holds): 11,106 rows, each a case run through accept()
+  (with its notes and the secrets a collection item would erase),
+  validate() (on the accepted values, on the raw input and for a
+  create; its refusals and its stale values alike), kept() and every
+  kind of document (emit() with and without hints, over each case's
+  values, narrowed, emitFull()). Every violation is recorded whole, its
+  message as source string, arguments and rendering. The sixth surface,
+  `gaps`, holds the shapes added for the planted faults the first five
+  missed. The fixtures, `tests/fixtures/hand-corpus/`, hold a digest per
+  row and one whole record of each kind, 967 KB in all. Of the 85
+  planted faults, every one is now caught by a test the lanes run but
+  three that cannot change an answer: `PropertySchema::nullable()` has
+  no caller; a map's signature without its properties, since a map is
+  marked refined when any property is and each property compares its
+  own; and the secret half of a shell's nullability, since a complex
+  definition cannot be marked secret. Written on this slice's code and
+  run again with the base's sources, only the rows of the condition on
+  a number differ: a TypeError at the base, a sentence now.
+- **What it costs.** Measured over 171 operations of the development site
+  on fresh builds with assertions off, alternating base and tree
+  processes, by the sum of each operation's minimum: a document is
+  cheaper, `emit()` 228.2 ms against 247.4 (7.8 percent) and
+  `emitFull()` 224.4 against 238.8 (6.0 percent), since a node holds
+  what a definition's getters computed on every call; validate 268.2
+  against 288.1, the form 471.7 against 512.9, a whole write request
+  408.8 against 428.7; a first accept, what goes out after a commit and
+  a read move by under 0.3 percent, the tool definitions' rebuild by 1.3
+  percent. In nodes read over 262 builds, validate reads 728 against
+  641: the node of each refined plain key (77), and the two mounts whose
+  tree the walk of what is required and ruled out inside them needs
+  (10); a key that holds a child reads its own facts from its
+  definition, so its node, the child's whole tree, is not read for them.
+  The form, which validates, reads 1,519 against 1,460, and a write
+  request reads no definition twice that the base did not (394). A
+  document reads 1,113 against 1,065 for `emit()` and 1,195 against
+  1,191 for `emitFull()`: the advertised node of a key whose definition
+  a refinement moved, read for its signature (40 over 262 builds),
+  which was computed from definitions. All of it ends as the value
+  pipeline's does, when a source gives the node (slice 32) and a request
+  reads a compiled surface (slice 33); no memo or cache is added.
+
+(`Pipeline\Validating`, `Pipeline\Accepting`, `Contract\NodeFacts`,
+`Contract\DefinitionSchema`, `Contract\PropertySchema`,
+`Contract\ContractEmitter`, `Contract\Conditionals`,
+`Contract\DocumentHead`, `NodeFactsParityTest`, `NodeFactsParityTrait`,
+`DefinitionReadCallersTest`, `DefinitionReadIsPureTest`,
+`HandCorpusTest`, `HandCorpusNarrowTest`)
 
 ### A key that does not apply
 
@@ -11740,7 +11978,8 @@ three-way rule and its exceptions. A reader who asks why a refusal names
 holds the frame each path and label is read from. `Validating` calls
 `Accepting` for a computed key's value and sources and for the sentence
 about a key of another variant, and calls the pipeline for `document()`;
-`Accepting` reads only the static `Validating::definitionAt()`. None of
+`Accepting` reads only the static `Validating::definitionAt()` (since
+2026-11-13 `Validating::nodeAt()`). None of
 the three holds a door-specific service. Nothing changed in what is
 accepted, refused or written: the method bodies moved as they were, no
 test changed, and the examples' documents and tool definitions are byte
@@ -13323,7 +13562,8 @@ say is run by a check on the server.
   of the joining above. Manifests for the library's checks.
   *Done 2026-11-11 in [The checks the document names](#the-checks-the-document-names)*, but `iri` and the manifests,
   which stay in its Later.
-  `References::definitionAt()`, `Validating::definitionAt()` and
+  `References::definitionAt()`, `Validating::definitionAt()` (since
+  2026-11-13 `nodeAt()` and `placeAt()`, which give the node) and
   `Extracting::definitionAt()` answer other questions than
   `Location::definitionAt()` and stay their own: the first finds a
   reference target and refines by an entity type, not by the values;

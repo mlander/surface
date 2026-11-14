@@ -1,0 +1,5259 @@
+{
+  "surface": "required",
+  "rows": 1767,
+  "digests": {
+    "plain | none": {
+      "nothing": "8327039c7308",
+      "r_blank=__out": "8327039c7308",
+      "r_blank=null": "8327039c7308",
+      "r_blank=empty": "8327039c7308",
+      "r_blank=zero": "e54fd43593c2",
+      "r_blank=arr": "fe89346829f9",
+      "r_blank=word": "d98858116e02",
+      "r_blank=int": "49a867b2ac37",
+      "ri_blank=__out": "8327039c7308",
+      "ri_blank=null": "8327039c7308",
+      "ri_blank=empty": "8327039c7308",
+      "ri_blank=zero": "78faeec4c612",
+      "ri_blank=arr": "8b3f32e5ad02",
+      "ri_blank=word": "ba8b85c3103b",
+      "ri_blank=int": "22851729993c",
+      "h_blank=__out": "8327039c7308",
+      "h_blank=null": "4545db3f45b4",
+      "h_blank=empty": "4545db3f45b4",
+      "h_blank=zero": "49e872d8e399",
+      "h_blank=arr": "dbcb2484fd65",
+      "h_blank=word": "6a407da36e87",
+      "h_blank=int": "f52a252e0056",
+      "hn_blank=__out": "8327039c7308",
+      "hn_blank=null": "8327039c7308",
+      "hn_blank=empty": "8327039c7308",
+      "hn_blank=zero": "32992ed3b0f3",
+      "hn_blank=arr": "16e923560030",
+      "hn_blank=word": "498c51224675",
+      "hn_blank=int": "aea1aeca0cb5",
+      "hc_blank=__out": "8327039c7308",
+      "hc_blank=null": "6f0510065a7d",
+      "hc_blank=empty": "6f0510065a7d",
+      "hc_blank=zero": "8bfc38e0c856",
+      "hc_blank=arr": "ae4616967c33",
+      "hc_blank=word": "b45087cfa40b",
+      "hc_blank=int": "3178bbc1c958",
+      "hs_blank=__out": "8327039c7308",
+      "hs_blank=null": "8327039c7308",
+      "hs_blank=empty": "8327039c7308",
+      "hs_blank=zero": "4fc05182f754",
+      "hs_blank=arr": "ed0a7995f249",
+      "hs_blank=word": "e1c686c50cbd",
+      "hs_blank=int": "9f8aaf7ebc28",
+      "l_blank=__out": "8327039c7308",
+      "l_blank=null": "8327039c7308",
+      "l_blank=empty": "8327039c7308",
+      "l_blank=zero": "df86bdeb64fc",
+      "l_blank=arr": "76e0d6ecf586",
+      "l_blank=word": "d434cbb1f805",
+      "l_blank=int": "d677e5c57f5f",
+      "mr_blank=__out": "8327039c7308",
+      "mr_blank=null": "8327039c7308",
+      "mr_blank=empty": "8327039c7308",
+      "mr_blank=zero": "34377642b911",
+      "mr_blank=arr": "25f743e62542",
+      "mr_blank=word": "34377642b911",
+      "mr_blank=int": "ad6511d6703c",
+      "m_blank {}": "a851dbec2c25",
+      "m_blank req null": "a851dbec2c25",
+      "m_blank req ''": "a851dbec2c25",
+      "m_blank req 0": "0b5b1a40b87d",
+      "m_blank hp null": "1cef14e6f9b2",
+      "m_blank hp ''": "fef98bdd97c5",
+      "m_blank mm {}": "846b84a1679f",
+      "m_blank mm req2 null": "846b84a1679f",
+      "m_blank mm req2 ''": "846b84a1679f",
+      "m_blank rows [{}]": "bfab2d95bca9",
+      "m_blank rows name ''": "59c901d7ef6a",
+      "m_blank sec null": "4dfe7c434504",
+      "m_blank full": "5d25c386e43c",
+      "m_blank null": "252473d18f85",
+      "mr_blank {}": "25f743e62542",
+      "mr_blank x ''": "25f743e62542",
+      "r_zero=__out": "8327039c7308",
+      "r_zero=null": "8327039c7308",
+      "r_zero=empty": "8327039c7308",
+      "r_zero=zero": "0490f6b0eb02",
+      "r_zero=arr": "73db567f58d1",
+      "r_zero=word": "ef513f323a34",
+      "r_zero=int": "ee8b6cfcad2a",
+      "ri_zero=__out": "8327039c7308",
+      "ri_zero=null": "8327039c7308",
+      "ri_zero=empty": "8327039c7308",
+      "ri_zero=zero": "cff72aafcce9",
+      "ri_zero=arr": "59f689c3b12c",
+      "ri_zero=word": "05f3b84ff91e",
+      "ri_zero=int": "b07b3bc27f34",
+      "h_zero=__out": "8327039c7308",
+      "h_zero=null": "3a41adba19a2",
+      "h_zero=empty": "3a41adba19a2",
+      "h_zero=zero": "07d0bc86efe0",
+      "h_zero=arr": "e90e152beae0",
+      "h_zero=word": "1dca3f98fabf",
+      "h_zero=int": "af330e8f722f",
+      "hn_zero=__out": "8327039c7308",
+      "hn_zero=null": "8327039c7308",
+      "hn_zero=empty": "8327039c7308",
+      "hn_zero=zero": "f5ff78192266",
+      "hn_zero=arr": "b0fb3533f923",
+      "hn_zero=word": "68e751dbd15a",
+      "hn_zero=int": "e5d6be5e205b",
+      "hc_zero=__out": "8327039c7308",
+      "hc_zero=null": "7e4e20511b96",
+      "hc_zero=empty": "7e4e20511b96",
+      "hc_zero=zero": "c362b11a6815",
+      "hc_zero=arr": "630a16d8211b",
+      "hc_zero=word": "d838b97cd4ab",
+      "hc_zero=int": "1a94fdd01fe6",
+      "hs_zero=__out": "8327039c7308",
+      "hs_zero=null": "8327039c7308",
+      "hs_zero=empty": "8327039c7308",
+      "hs_zero=zero": "f02582f1ed2c",
+      "hs_zero=arr": "8a6cf900bba2",
+      "hs_zero=word": "91ec3011af28",
+      "hs_zero=int": "ac2cfc31f1e4",
+      "l_zero=__out": "8327039c7308",
+      "l_zero=null": "8327039c7308",
+      "l_zero=empty": "8327039c7308",
+      "l_zero=zero": "ca5068ffc2c4",
+      "l_zero=arr": "0495b2c6feb7",
+      "l_zero=word": "78ff3978922f",
+      "l_zero=int": "1acc58fc03e6",
+      "mr_zero=__out": "8327039c7308",
+      "mr_zero=null": "8327039c7308",
+      "mr_zero=empty": "8327039c7308",
+      "mr_zero=zero": "9ad20a85ed37",
+      "mr_zero=arr": "2a2857741e2c",
+      "mr_zero=word": "9ad20a85ed37",
+      "mr_zero=int": "c92a6177dd45",
+      "m_zero {}": "e14fd5047c9c",
+      "m_zero req null": "e14fd5047c9c",
+      "m_zero req ''": "e14fd5047c9c",
+      "m_zero req 0": "fd1832500348",
+      "m_zero hp null": "5b1ccdbd2fc1",
+      "m_zero hp ''": "9f5c8f9c09db",
+      "m_zero mm {}": "35586ad047bc",
+      "m_zero mm req2 null": "35586ad047bc",
+      "m_zero mm req2 ''": "35586ad047bc",
+      "m_zero rows [{}]": "bf88edcafc83",
+      "m_zero rows name ''": "332900188007",
+      "m_zero sec null": "7653c6c22c77",
+      "m_zero full": "f495708bdd22",
+      "m_zero null": "862fbc6ec6b4",
+      "mr_zero {}": "2a2857741e2c",
+      "mr_zero x ''": "2a2857741e2c",
+      "r_none=__out": "8327039c7308",
+      "r_none=null": "8327039c7308",
+      "r_none=empty": "8327039c7308",
+      "r_none=zero": "f34d4872858d",
+      "r_none=arr": "ea24069415b1",
+      "r_none=word": "3c261e8b95cc",
+      "r_none=int": "193aa7f9cb6f",
+      "ri_none=__out": "8327039c7308",
+      "ri_none=null": "8327039c7308",
+      "ri_none=empty": "8327039c7308",
+      "ri_none=zero": "14b1abd52cf7",
+      "ri_none=arr": "48ccf1a806a8",
+      "ri_none=word": "1f329404cc9b",
+      "ri_none=int": "c7c97cc0987f",
+      "h_none=__out": "8327039c7308",
+      "h_none=null": "7a9aff55b3ad",
+      "h_none=empty": "7a9aff55b3ad",
+      "h_none=zero": "5f02dff8c745",
+      "h_none=arr": "076158186902",
+      "h_none=word": "759446075f7d",
+      "h_none=int": "20970e161b8d",
+      "hn_none=__out": "8327039c7308",
+      "hn_none=null": "8327039c7308",
+      "hn_none=empty": "8327039c7308",
+      "hn_none=zero": "08bdb09ffa31",
+      "hn_none=arr": "067cce3c79a5",
+      "hn_none=word": "f54c80c67c7e",
+      "hn_none=int": "831e71102aeb",
+      "hc_none=__out": "8327039c7308",
+      "hc_none=null": "5cd8fc5e263c",
+      "hc_none=empty": "5cd8fc5e263c",
+      "hc_none=zero": "93d713a4406d",
+      "hc_none=arr": "fea60a548fec",
+      "hc_none=word": "a5fbd711896f",
+      "hc_none=int": "f91f774ae62a",
+      "hs_none=__out": "8327039c7308",
+      "hs_none=null": "8327039c7308",
+      "hs_none=empty": "8327039c7308",
+      "hs_none=zero": "c2f4e015eac5",
+      "hs_none=arr": "6960f3a46a19",
+      "hs_none=word": "1aefdae1dc45",
+      "hs_none=int": "803b16301c70",
+      "l_none=__out": "8327039c7308",
+      "l_none=null": "8327039c7308",
+      "l_none=empty": "8327039c7308",
+      "l_none=zero": "82ae32432804",
+      "l_none=arr": "f8595320d3b0",
+      "l_none=word": "4c9d931c32f1",
+      "l_none=int": "59054abe6bed",
+      "mr_none=__out": "8327039c7308",
+      "mr_none=null": "8327039c7308",
+      "mr_none=empty": "8327039c7308",
+      "mr_none=zero": "5ae6c7349a92",
+      "mr_none=arr": "9fc0eaf0f69c",
+      "mr_none=word": "5ae6c7349a92",
+      "mr_none=int": "9b20cbed5972",
+      "m_none {}": "d86b37a0f2a4",
+      "m_none req null": "d86b37a0f2a4",
+      "m_none req ''": "d86b37a0f2a4",
+      "m_none req 0": "4583295dcfcc",
+      "m_none hp null": "c9f3358c05fe",
+      "m_none hp ''": "2a2010990d44",
+      "m_none mm {}": "85042a1f1cef",
+      "m_none mm req2 null": "85042a1f1cef",
+      "m_none mm req2 ''": "85042a1f1cef",
+      "m_none rows [{}]": "2098f00d8bf0",
+      "m_none rows name ''": "8ff12c45e507",
+      "m_none sec null": "125362e5b1e3",
+      "m_none full": "52f4fc7e8020",
+      "m_none null": "69f3a79b029e",
+      "mr_none {}": "9fc0eaf0f69c",
+      "mr_none x ''": "9fc0eaf0f69c",
+      "r_mk=__out": "8327039c7308",
+      "r_mk=null": "8327039c7308",
+      "r_mk=empty": "8327039c7308",
+      "r_mk=zero": "a3016c026c39",
+      "r_mk=arr": "d2c76110e6e6",
+      "r_mk=word": "c43fef4ff55b",
+      "r_mk=int": "2f5976c71c59",
+      "ri_mk=__out": "8327039c7308",
+      "ri_mk=null": "8327039c7308",
+      "ri_mk=empty": "8327039c7308",
+      "ri_mk=zero": "22865fd59277",
+      "ri_mk=arr": "a3cc2663867c",
+      "ri_mk=word": "3a5b768cab94",
+      "ri_mk=int": "31b57464b564",
+      "h_mk=__out": "8327039c7308",
+      "h_mk=null": "18759c9374af",
+      "h_mk=empty": "18759c9374af",
+      "h_mk=zero": "4c38eda9618a",
+      "h_mk=arr": "87fdbb57a146",
+      "h_mk=word": "241bd1e013f2",
+      "h_mk=int": "a1744a1e038a",
+      "hn_mk=__out": "8327039c7308",
+      "hn_mk=null": "8327039c7308",
+      "hn_mk=empty": "8327039c7308",
+      "hn_mk=zero": "c6c8e3fd8e2c",
+      "hn_mk=arr": "23bd738f032d",
+      "hn_mk=word": "a7ef6fa09a1c",
+      "hn_mk=int": "e4d876b28c08",
+      "hc_mk=__out": "8327039c7308",
+      "hc_mk=null": "f735d99f9f58",
+      "hc_mk=empty": "f735d99f9f58",
+      "hc_mk=zero": "f12b06d75fd3",
+      "hc_mk=arr": "995f432f6035",
+      "hc_mk=word": "6b41bfc35c65",
+      "hc_mk=int": "85bb55eff658",
+      "hs_mk=__out": "8327039c7308",
+      "hs_mk=null": "8327039c7308",
+      "hs_mk=empty": "8327039c7308",
+      "hs_mk=zero": "793ea21dce8e",
+      "hs_mk=arr": "94f6f80c9a8c",
+      "hs_mk=word": "821b4aa0ce63",
+      "hs_mk=int": "aa83b979ae0e",
+      "l_mk=__out": "8327039c7308",
+      "l_mk=null": "8327039c7308",
+      "l_mk=empty": "8327039c7308",
+      "l_mk=zero": "543750006968",
+      "l_mk=arr": "56f1f18e711f",
+      "l_mk=word": "586c865bff28",
+      "l_mk=int": "21bbea50045f",
+      "mr_mk=__out": "8327039c7308",
+      "mr_mk=null": "8327039c7308",
+      "mr_mk=empty": "8327039c7308",
+      "mr_mk=zero": "6353f29b2ea6",
+      "mr_mk=arr": "f38dfc01bede",
+      "mr_mk=word": "6353f29b2ea6",
+      "mr_mk=int": "d29dc7777361",
+      "m_mk {}": "12885bc5d1ff",
+      "m_mk req null": "12885bc5d1ff",
+      "m_mk req ''": "12885bc5d1ff",
+      "m_mk req 0": "d1be0644878c",
+      "m_mk hp null": "008ae1859f14",
+      "m_mk hp ''": "83c10d5eb972",
+      "m_mk mm {}": "8888dcbea8d8",
+      "m_mk mm req2 null": "8888dcbea8d8",
+      "m_mk mm req2 ''": "8888dcbea8d8",
+      "m_mk rows [{}]": "133b6eac3297",
+      "m_mk rows name ''": "a2ef384ba6a5",
+      "m_mk sec null": "fc83d005d1b1",
+      "m_mk full": "03882ce0f9ed",
+      "m_mk null": "0db0929ddea8",
+      "mr_mk {}": "f38dfc01bede",
+      "mr_mk x ''": "f38dfc01bede",
+      "lk other": "64546038ff1b",
+      "lk_blank other": "f5d3f448d451",
+      "lk null": "64546038ff1b",
+      "unknown": "46fe6a203178",
+      "unknown nested": "38402e4a8296",
+      "doc full": "f18466aca955",
+      "doc hints": "ed0847cced7c",
+      "doc case r_blank=__out": "ed0847cced7c",
+      "narrowed r_blank=__out": "8bc3d108477a",
+      "doc case r_blank=null": "ed0847cced7c",
+      "narrowed r_blank=null": "3746dc13644d",
+      "doc case r_blank=empty": "ed0847cced7c",
+      "narrowed r_blank=empty": "06346464fc7b",
+      "doc case r_blank=zero": "483303263269",
+      "narrowed r_blank=zero": "9b56321a7e1d",
+      "doc case r_blank=arr": "d97e3fb7b5fb",
+      "narrowed r_blank=arr": "32f52665d4b6",
+      "doc case r_blank=word": "48fe64d7e30c",
+      "narrowed r_blank=word": "d45894a57617",
+      "doc case r_blank=int": "7c3aba40954c",
+      "narrowed r_blank=int": "76a689d1a916",
+      "doc case ri_blank=__out": "ed0847cced7c",
+      "narrowed ri_blank=__out": "8bc3d108477a",
+      "doc case ri_blank=null": "ed0847cced7c",
+      "narrowed ri_blank=null": "fa96b4330ae5",
+      "doc case ri_blank=empty": "ed0847cced7c",
+      "narrowed ri_blank=empty": "f602c1c08d82",
+      "doc case ri_blank=zero": "e7399efeeae1",
+      "narrowed ri_blank=zero": "3bda86f274f4",
+      "doc case ri_blank=arr": "cf642dfeabc6",
+      "narrowed ri_blank=arr": "f79bbff9442e",
+      "doc case ri_blank=word": "b538c580aa6b",
+      "narrowed ri_blank=word": "b06f8a75b777",
+      "doc case ri_blank=int": "88711551b4d4",
+      "narrowed ri_blank=int": "0613c7878eb6",
+      "doc case h_blank=__out": "ed0847cced7c",
+      "narrowed h_blank=__out": "8bc3d108477a",
+      "doc case h_blank=null": "ed0847cced7c",
+      "narrowed h_blank=null": "b93e44dd7563",
+      "doc case h_blank=empty": "ed0847cced7c",
+      "narrowed h_blank=empty": "837db4dc27fb",
+      "doc case h_blank=zero": "46fe04aa6a28",
+      "narrowed h_blank=zero": "29319bfeceee",
+      "doc case h_blank=arr": "2745870c133a",
+      "narrowed h_blank=arr": "04113f67df6a",
+      "doc case h_blank=word": "1041489f5d5c",
+      "narrowed h_blank=word": "5c4a99841c2b",
+      "doc case h_blank=int": "e3aa91102e12",
+      "narrowed h_blank=int": "abc8e8629b25",
+      "doc case hn_blank=__out": "ed0847cced7c",
+      "narrowed hn_blank=__out": "8bc3d108477a",
+      "doc case hn_blank=null": "ed0847cced7c",
+      "narrowed hn_blank=null": "0cbda2a620de",
+      "doc case hn_blank=empty": "ed0847cced7c",
+      "narrowed hn_blank=empty": "5b10993ecd65",
+      "doc case hn_blank=zero": "c1d1e9df1dfc",
+      "narrowed hn_blank=zero": "e378170e86f9",
+      "doc case hn_blank=arr": "3c7152decc4e",
+      "narrowed hn_blank=arr": "471f6e7b70b9",
+      "doc case hn_blank=word": "d10489f4349f",
+      "narrowed hn_blank=word": "c408b42d67e3",
+      "doc case hn_blank=int": "927e5858c62f",
+      "narrowed hn_blank=int": "d7ebca0ebc26",
+      "doc case hc_blank=__out": "ed0847cced7c",
+      "narrowed hc_blank=__out": "8bc3d108477a",
+      "doc case hc_blank=null": "ed0847cced7c",
+      "narrowed hc_blank=null": "3ebb1fb897b4",
+      "doc case hc_blank=empty": "ed0847cced7c",
+      "narrowed hc_blank=empty": "464f8c90a54c",
+      "doc case hc_blank=zero": "34e9e69ca880",
+      "narrowed hc_blank=zero": "702d74e55e9b",
+      "doc case hc_blank=arr": "58daeb9c247d",
+      "narrowed hc_blank=arr": "062a9ded1265",
+      "doc case hc_blank=word": "8a95e721ac4d",
+      "narrowed hc_blank=word": "f2a7e89ea084",
+      "doc case hc_blank=int": "1c27f2e5e69e",
+      "narrowed hc_blank=int": "089b98c7b8bc",
+      "doc case hs_blank=__out": "ed0847cced7c",
+      "narrowed hs_blank=__out": "8bc3d108477a",
+      "doc case hs_blank=null": "ed0847cced7c",
+      "narrowed hs_blank=null": "aa2531ec0df2",
+      "doc case hs_blank=empty": "ed0847cced7c",
+      "narrowed hs_blank=empty": "99dc62694277",
+      "doc case hs_blank=zero": "ed0847cced7c",
+      "narrowed hs_blank=zero": "5c92d605230d",
+      "doc case hs_blank=arr": "c1db00fd3c0b",
+      "narrowed hs_blank=arr": "029a9ff92080",
+      "doc case hs_blank=word": "ed0847cced7c",
+      "narrowed hs_blank=word": "702c740a61e0",
+      "doc case hs_blank=int": "ed0847cced7c",
+      "narrowed hs_blank=int": "e5b62a123040",
+      "doc case l_blank=__out": "ed0847cced7c",
+      "narrowed l_blank=__out": "8bc3d108477a",
+      "doc case l_blank=null": "ed0847cced7c",
+      "narrowed l_blank=null": "2e5363961df2",
+      "doc case l_blank=empty": "ed0847cced7c",
+      "narrowed l_blank=empty": "6616647e4495",
+      "doc case l_blank=zero": "ef4af21183fd",
+      "narrowed l_blank=zero": "4d6b2f1d9a10",
+      "doc case l_blank=arr": "ee2fe1dc33ed",
+      "narrowed l_blank=arr": "abb841f2ec3d",
+      "doc case l_blank=word": "472baf0be31e",
+      "narrowed l_blank=word": "053d8ef3f106",
+      "doc case l_blank=int": "bba85bc63a7c",
+      "narrowed l_blank=int": "e29890c41996",
+      "doc case mr_blank=__out": "ed0847cced7c",
+      "narrowed mr_blank=__out": "8bc3d108477a",
+      "doc case mr_blank=null": "ed0847cced7c",
+      "narrowed mr_blank=null": "092a004d1abb",
+      "doc case mr_blank=empty": "ed0847cced7c",
+      "narrowed mr_blank=empty": "aae82032e01e",
+      "doc case mr_blank=zero": "7886814a8330",
+      "narrowed mr_blank=zero": "f6e34cd9fa35",
+      "doc case mr_blank=arr": "ed0847cced7c",
+      "narrowed mr_blank=arr": "25a7e180cde5",
+      "doc case mr_blank=word": "7886814a8330",
+      "narrowed mr_blank=word": "8d4103af21b8",
+      "doc case mr_blank=int": "f5b435fc2b1b",
+      "narrowed mr_blank=int": "394ac416bf34",
+      "doc case m_blank {}": "ed0847cced7c",
+      "narrowed m_blank {}": "2cfedd7ab551",
+      "doc case m_blank req null": "ed0847cced7c",
+      "narrowed m_blank req null": "99807868cf4d",
+      "doc case m_blank req ''": "ed0847cced7c",
+      "narrowed m_blank req ''": "91417ac9246d",
+      "doc case m_blank req 0": "ec1ec4d084d6",
+      "narrowed m_blank req 0": "66471ade8633",
+      "doc case m_blank hp null": "1b6d75701e44",
+      "narrowed m_blank hp null": "963b27c89e19",
+      "doc case m_blank hp ''": "1b6d75701e44",
+      "narrowed m_blank hp ''": "59a43bff5a08",
+      "doc case m_blank mm {}": "95c26bc2d7dd",
+      "narrowed m_blank mm {}": "6b8ddcaeeb45",
+      "doc case m_blank mm req2 null": "95c26bc2d7dd",
+      "narrowed m_blank mm req2 null": "7fc02ed81ea1",
+      "doc case m_blank mm req2 ''": "95c26bc2d7dd",
+      "narrowed m_blank mm req2 ''": "a888f960a0a1",
+      "doc case m_blank rows [{}]": "36e8d3787e93",
+      "narrowed m_blank rows [{}]": "71dd721cc5d8",
+      "doc case m_blank rows name ''": "1c1ec4a5537d",
+      "narrowed m_blank rows name ''": "df89b77dcc7c",
+      "doc case m_blank sec null": "95c26bc2d7dd",
+      "narrowed m_blank sec null": "e5a2db23dbbc",
+      "doc case m_blank full": "1e7bb458c86f",
+      "narrowed m_blank full": "f3fb4a039138",
+      "doc case m_blank null": "ed0847cced7c",
+      "narrowed m_blank null": "69891c1c7760",
+      "doc case mr_blank {}": "ed0847cced7c",
+      "narrowed mr_blank {}": "25a7e180cde5",
+      "doc case mr_blank x ''": "ed0847cced7c",
+      "narrowed mr_blank x ''": "31473d2dfbbc",
+      "doc case r_zero=__out": "ed0847cced7c",
+      "narrowed r_zero=__out": "8bc3d108477a",
+      "doc case r_zero=null": "ed0847cced7c",
+      "narrowed r_zero=null": "901b57b7f33d",
+      "doc case r_zero=empty": "ed0847cced7c",
+      "narrowed r_zero=empty": "b39542930154",
+      "doc case r_zero=zero": "851cfeea7e15",
+      "narrowed r_zero=zero": "5360cad258a7",
+      "doc case r_zero=arr": "5d24a470321e",
+      "narrowed r_zero=arr": "93fcb75ae257",
+      "doc case r_zero=word": "52161439b041",
+      "narrowed r_zero=word": "68d4e4a60b3f",
+      "doc case r_zero=int": "8b48d906cbba",
+      "narrowed r_zero=int": "d7028677fb3c",
+      "doc case ri_zero=__out": "ed0847cced7c",
+      "narrowed ri_zero=__out": "8bc3d108477a",
+      "doc case ri_zero=null": "ed0847cced7c",
+      "narrowed ri_zero=null": "9f42101b79e5",
+      "doc case ri_zero=empty": "ed0847cced7c",
+      "narrowed ri_zero=empty": "457aa6219279",
+      "doc case ri_zero=zero": "8c5db4441ca9",
+      "narrowed ri_zero=zero": "34545ffcad20",
+      "doc case ri_zero=arr": "2480392d3cf8",
+      "narrowed ri_zero=arr": "53f03875fa35",
+      "doc case ri_zero=word": "1ac1a5843031",
+      "narrowed ri_zero=word": "09412a3d7cad",
+      "doc case ri_zero=int": "307b05c765f0",
+      "narrowed ri_zero=int": "c1fea4ac194b",
+      "doc case h_zero=__out": "ed0847cced7c",
+      "narrowed h_zero=__out": "8bc3d108477a",
+      "doc case h_zero=null": "ed0847cced7c",
+      "narrowed h_zero=null": "be4c1af87dce",
+      "doc case h_zero=empty": "ed0847cced7c",
+      "narrowed h_zero=empty": "4b182ae071a8",
+      "doc case h_zero=zero": "c54008679cf9",
+      "narrowed h_zero=zero": "9b4f3b279f24",
+      "doc case h_zero=arr": "f570ae3eed7d",
+      "narrowed h_zero=arr": "a014bc20cde9",
+      "doc case h_zero=word": "11712b056699",
+      "narrowed h_zero=word": "fddbff1fbf6b",
+      "doc case h_zero=int": "7ee74e8d2c18",
+      "narrowed h_zero=int": "243df743e926",
+      "doc case hn_zero=__out": "ed0847cced7c",
+      "narrowed hn_zero=__out": "8bc3d108477a",
+      "doc case hn_zero=null": "ed0847cced7c",
+      "narrowed hn_zero=null": "15b9cfd36a8b",
+      "doc case hn_zero=empty": "ed0847cced7c",
+      "narrowed hn_zero=empty": "d2054f95d7f8",
+      "doc case hn_zero=zero": "37b23de7f06d",
+      "narrowed hn_zero=zero": "b0c09e8ca986",
+      "doc case hn_zero=arr": "f4950dc9cfd2",
+      "narrowed hn_zero=arr": "a93a2a676853",
+      "doc case hn_zero=word": "6bf48874bc46",
+      "narrowed hn_zero=word": "57da808a740f",
+      "doc case hn_zero=int": "0eab5d74e6f0",
+      "narrowed hn_zero=int": "ecf4758c96d7",
+      "doc case hc_zero=__out": "ed0847cced7c",
+      "narrowed hc_zero=__out": "8bc3d108477a",
+      "doc case hc_zero=null": "ed0847cced7c",
+      "narrowed hc_zero=null": "a5356e3e4102",
+      "doc case hc_zero=empty": "ed0847cced7c",
+      "narrowed hc_zero=empty": "ff22ee1f9b28",
+      "doc case hc_zero=zero": "e58e8c6a7b2b",
+      "narrowed hc_zero=zero": "b682fa892607",
+      "doc case hc_zero=arr": "6a15c58bee58",
+      "narrowed hc_zero=arr": "64faf002488e",
+      "doc case hc_zero=word": "cdcd9fba31d0",
+      "narrowed hc_zero=word": "405af1cf4860",
+      "doc case hc_zero=int": "46166ced9664",
+      "narrowed hc_zero=int": "7ff5795a1900",
+      "doc case hs_zero=__out": "ed0847cced7c",
+      "narrowed hs_zero=__out": "8bc3d108477a",
+      "doc case hs_zero=null": "ed0847cced7c",
+      "narrowed hs_zero=null": "5b561af82047",
+      "doc case hs_zero=empty": "ed0847cced7c",
+      "narrowed hs_zero=empty": "e91fc80cceb9",
+      "doc case hs_zero=zero": "ed0847cced7c",
+      "narrowed hs_zero=zero": "49e42fa5bfec",
+      "doc case hs_zero=arr": "73074f457fd6",
+      "narrowed hs_zero=arr": "65a45137bd23",
+      "doc case hs_zero=word": "ed0847cced7c",
+      "narrowed hs_zero=word": "aaa4d683739c",
+      "doc case hs_zero=int": "ed0847cced7c",
+      "narrowed hs_zero=int": "a352b2e83e52",
+      "doc case l_zero=__out": "ed0847cced7c",
+      "narrowed l_zero=__out": "8bc3d108477a",
+      "doc case l_zero=null": "ed0847cced7c",
+      "narrowed l_zero=null": "01cce6166b89",
+      "doc case l_zero=empty": "ed0847cced7c",
+      "narrowed l_zero=empty": "93e3220b9c48",
+      "doc case l_zero=zero": "75f5560171b2",
+      "narrowed l_zero=zero": "3dab6bb607df",
+      "doc case l_zero=arr": "e32313011a3b",
+      "narrowed l_zero=arr": "e24108439995",
+      "doc case l_zero=word": "9dc3c37fd3f9",
+      "narrowed l_zero=word": "559546273a13",
+      "doc case l_zero=int": "711196a60b80",
+      "narrowed l_zero=int": "f2cc78d21e45",
+      "doc case mr_zero=__out": "ed0847cced7c",
+      "narrowed mr_zero=__out": "8bc3d108477a",
+      "doc case mr_zero=null": "ed0847cced7c",
+      "narrowed mr_zero=null": "ee101842a4be",
+      "doc case mr_zero=empty": "ed0847cced7c",
+      "narrowed mr_zero=empty": "cbf8c5d5a23d",
+      "doc case mr_zero=zero": "bf8cc15995dd",
+      "narrowed mr_zero=zero": "b2e9cc4a9aee",
+      "doc case mr_zero=arr": "ed0847cced7c",
+      "narrowed mr_zero=arr": "9eb991887161",
+      "doc case mr_zero=word": "bf8cc15995dd",
+      "narrowed mr_zero=word": "4d522be68087",
+      "doc case mr_zero=int": "f615ff09566e",
+      "narrowed mr_zero=int": "d9a3d6b64bc8",
+      "doc case m_zero {}": "ed0847cced7c",
+      "narrowed m_zero {}": "fd8775662c5b",
+      "doc case m_zero req null": "ed0847cced7c",
+      "narrowed m_zero req null": "e8dcde090ce1",
+      "doc case m_zero req ''": "ed0847cced7c",
+      "narrowed m_zero req ''": "235d57569ca8",
+      "doc case m_zero req 0": "2595fc200c8f",
+      "narrowed m_zero req 0": "c8319472d19e",
+      "doc case m_zero hp null": "e888975f918c",
+      "narrowed m_zero hp null": "0c578452c122",
+      "doc case m_zero hp ''": "e888975f918c",
+      "narrowed m_zero hp ''": "5a8a9df19406",
+      "doc case m_zero mm {}": "6f77ccc4747a",
+      "narrowed m_zero mm {}": "fab53a2d58bb",
+      "doc case m_zero mm req2 null": "6f77ccc4747a",
+      "narrowed m_zero mm req2 null": "228b0e7780df",
+      "doc case m_zero mm req2 ''": "6f77ccc4747a",
+      "narrowed m_zero mm req2 ''": "609dfccb79e3",
+      "doc case m_zero rows [{}]": "7806acaf367d",
+      "narrowed m_zero rows [{}]": "ee7faaaf7039",
+      "doc case m_zero rows name ''": "b8b49b6a5829",
+      "narrowed m_zero rows name ''": "1ac751f96d0a",
+      "doc case m_zero sec null": "6f77ccc4747a",
+      "narrowed m_zero sec null": "967ad624e43b",
+      "doc case m_zero full": "869bb017ac71",
+      "narrowed m_zero full": "6c2e8fc6f23b",
+      "doc case m_zero null": "ed0847cced7c",
+      "narrowed m_zero null": "e9a4111ad2bb",
+      "doc case mr_zero {}": "ed0847cced7c",
+      "narrowed mr_zero {}": "9eb991887161",
+      "doc case mr_zero x ''": "ed0847cced7c",
+      "narrowed mr_zero x ''": "b7e00f55fd76",
+      "doc case r_none=__out": "ed0847cced7c",
+      "narrowed r_none=__out": "8bc3d108477a",
+      "doc case r_none=null": "ed0847cced7c",
+      "narrowed r_none=null": "2bf7b0b8d3f0",
+      "doc case r_none=empty": "ed0847cced7c",
+      "narrowed r_none=empty": "6a4c34b2b3d7",
+      "doc case r_none=zero": "3c98c425d663",
+      "narrowed r_none=zero": "621b4eb49afb",
+      "doc case r_none=arr": "4c156134b547",
+      "narrowed r_none=arr": "a17be5c15329",
+      "doc case r_none=word": "09031c89f94d",
+      "narrowed r_none=word": "8e8f1395c86f",
+      "doc case r_none=int": "1faa821edf93",
+      "narrowed r_none=int": "31a7be1386e4",
+      "doc case ri_none=__out": "ed0847cced7c",
+      "narrowed ri_none=__out": "8bc3d108477a",
+      "doc case ri_none=null": "ed0847cced7c",
+      "narrowed ri_none=null": "d84eb17835fc",
+      "doc case ri_none=empty": "ed0847cced7c",
+      "narrowed ri_none=empty": "85ccefa0f3e7",
+      "doc case ri_none=zero": "eb698e5e0ed8",
+      "narrowed ri_none=zero": "199088f1e14b",
+      "doc case ri_none=arr": "a830dbe8336c",
+      "narrowed ri_none=arr": "7645de9767dd",
+      "doc case ri_none=word": "ceef23949388",
+      "narrowed ri_none=word": "1da88b70b0f6",
+      "doc case ri_none=int": "1dc04a5ef424",
+      "narrowed ri_none=int": "a19e6e4929d5",
+      "doc case h_none=__out": "ed0847cced7c",
+      "narrowed h_none=__out": "8bc3d108477a",
+      "doc case h_none=null": "ed0847cced7c",
+      "narrowed h_none=null": "1ad17613c59e",
+      "doc case h_none=empty": "ed0847cced7c",
+      "narrowed h_none=empty": "cb41afebad39",
+      "doc case h_none=zero": "1d30d1112b97",
+      "narrowed h_none=zero": "b2d83d424dfe",
+      "doc case h_none=arr": "4e1453362fdc",
+      "narrowed h_none=arr": "a4131f8ddb15",
+      "doc case h_none=word": "69c61c5dc007",
+      "narrowed h_none=word": "00c85ad8e6ce",
+      "doc case h_none=int": "b521f7c72034",
+      "narrowed h_none=int": "90f942847b52",
+      "doc case hn_none=__out": "ed0847cced7c",
+      "narrowed hn_none=__out": "8bc3d108477a",
+      "doc case hn_none=null": "ed0847cced7c",
+      "narrowed hn_none=null": "120afac7136a",
+      "doc case hn_none=empty": "ed0847cced7c",
+      "narrowed hn_none=empty": "107c59ea3d9b",
+      "doc case hn_none=zero": "3d54ac00640e",
+      "narrowed hn_none=zero": "bb885f816912",
+      "doc case hn_none=arr": "7238e64494d2",
+      "narrowed hn_none=arr": "dd8557857e4a",
+      "doc case hn_none=word": "9c8110208759",
+      "narrowed hn_none=word": "e0c9141ce254",
+      "doc case hn_none=int": "21c1f3b53a0d",
+      "narrowed hn_none=int": "049c6cadafdd",
+      "doc case hc_none=__out": "ed0847cced7c",
+      "narrowed hc_none=__out": "8bc3d108477a",
+      "doc case hc_none=null": "ed0847cced7c",
+      "narrowed hc_none=null": "397f3cc73b33",
+      "doc case hc_none=empty": "ed0847cced7c",
+      "narrowed hc_none=empty": "c0a8b47d323b",
+      "doc case hc_none=zero": "1993c1939092",
+      "narrowed hc_none=zero": "a1548adeb0aa",
+      "doc case hc_none=arr": "f0ad910ca6c4",
+      "narrowed hc_none=arr": "456d10c51432",
+      "doc case hc_none=word": "c383a3dbaa31",
+      "narrowed hc_none=word": "f666f65dc1dd",
+      "doc case hc_none=int": "2fb4b41d31fe",
+      "narrowed hc_none=int": "3f097186be43",
+      "doc case hs_none=__out": "ed0847cced7c",
+      "narrowed hs_none=__out": "8bc3d108477a",
+      "doc case hs_none=null": "ed0847cced7c",
+      "narrowed hs_none=null": "68ce3574f9db",
+      "doc case hs_none=empty": "ed0847cced7c",
+      "narrowed hs_none=empty": "98344eccd918",
+      "doc case hs_none=zero": "ed0847cced7c",
+      "narrowed hs_none=zero": "e93f0e933f6b",
+      "doc case hs_none=arr": "df06b0dbc794",
+      "narrowed hs_none=arr": "b7967252eaae",
+      "doc case hs_none=word": "ed0847cced7c",
+      "narrowed hs_none=word": "ad54fe277d36",
+      "doc case hs_none=int": "ed0847cced7c",
+      "narrowed hs_none=int": "23e6df8e41a0",
+      "doc case l_none=__out": "ed0847cced7c",
+      "narrowed l_none=__out": "8bc3d108477a",
+      "doc case l_none=null": "ed0847cced7c",
+      "narrowed l_none=null": "930891a3d580",
+      "doc case l_none=empty": "ed0847cced7c",
+      "narrowed l_none=empty": "e768e9872d2c",
+      "doc case l_none=zero": "6480e2d19ca1",
+      "narrowed l_none=zero": "dad43baeedd8",
+      "doc case l_none=arr": "419612b1cfd7",
+      "narrowed l_none=arr": "8d68103d5773",
+      "doc case l_none=word": "961e30e22f51",
+      "narrowed l_none=word": "fb7db36f0d1e",
+      "doc case l_none=int": "ddff18bba878",
+      "narrowed l_none=int": "1ca9b94480d9",
+      "doc case mr_none=__out": "ed0847cced7c",
+      "narrowed mr_none=__out": "8bc3d108477a",
+      "doc case mr_none=null": "ed0847cced7c",
+      "narrowed mr_none=null": "1d969894048c",
+      "doc case mr_none=empty": "ed0847cced7c",
+      "narrowed mr_none=empty": "498b042da9e3",
+      "doc case mr_none=zero": "b1ed196a7a9b",
+      "narrowed mr_none=zero": "83eb1d818948",
+      "doc case mr_none=arr": "ed0847cced7c",
+      "narrowed mr_none=arr": "903e2e76b462",
+      "doc case mr_none=word": "b1ed196a7a9b",
+      "narrowed mr_none=word": "75df5e55e319",
+      "doc case mr_none=int": "08d4dd9bbf88",
+      "narrowed mr_none=int": "bac784c46b2f",
+      "doc case m_none {}": "ed0847cced7c",
+      "narrowed m_none {}": "7524fe2c13af",
+      "doc case m_none req null": "ed0847cced7c",
+      "narrowed m_none req null": "c5e9ccd03900",
+      "doc case m_none req ''": "ed0847cced7c",
+      "narrowed m_none req ''": "bb1718b7b4a6",
+      "doc case m_none req 0": "880bbe172263",
+      "narrowed m_none req 0": "68091aee418a",
+      "doc case m_none hp null": "e6b4dacd2644",
+      "narrowed m_none hp null": "70354bf62e26",
+      "doc case m_none hp ''": "e6b4dacd2644",
+      "narrowed m_none hp ''": "f07d0801ff56",
+      "doc case m_none mm {}": "6945123bba32",
+      "narrowed m_none mm {}": "da713485f4bf",
+      "doc case m_none mm req2 null": "6945123bba32",
+      "narrowed m_none mm req2 null": "20eab9e72df9",
+      "doc case m_none mm req2 ''": "6945123bba32",
+      "narrowed m_none mm req2 ''": "a35ced91d4f9",
+      "doc case m_none rows [{}]": "937b248f39ab",
+      "narrowed m_none rows [{}]": "18c7b3f23347",
+      "doc case m_none rows name ''": "c31c52f25adf",
+      "narrowed m_none rows name ''": "c0954a4bdb68",
+      "doc case m_none sec null": "6945123bba32",
+      "narrowed m_none sec null": "9bdc62a810b2",
+      "doc case m_none full": "e8ded56f5a0d",
+      "narrowed m_none full": "1ea310e24712",
+      "doc case m_none null": "ed0847cced7c",
+      "narrowed m_none null": "4296f95bf3af",
+      "doc case mr_none {}": "ed0847cced7c",
+      "narrowed mr_none {}": "903e2e76b462",
+      "doc case mr_none x ''": "ed0847cced7c",
+      "narrowed mr_none x ''": "abe79d83952b",
+      "doc case r_mk=__out": "ed0847cced7c",
+      "narrowed r_mk=__out": "8bc3d108477a",
+      "doc case r_mk=null": "ed0847cced7c",
+      "narrowed r_mk=null": "f035091c15ef",
+      "doc case r_mk=empty": "ed0847cced7c",
+      "narrowed r_mk=empty": "e93123b0dca6",
+      "doc case r_mk=zero": "1b0a7a540259",
+      "narrowed r_mk=zero": "deb5f78e04c1",
+      "doc case r_mk=arr": "142f075d9109",
+      "narrowed r_mk=arr": "1658f4a5107a",
+      "doc case r_mk=word": "1296779de5c0",
+      "narrowed r_mk=word": "b233130435f9",
+      "doc case r_mk=int": "f9ad013ffc67",
+      "narrowed r_mk=int": "7e037dd9b8b7",
+      "doc case ri_mk=__out": "ed0847cced7c",
+      "narrowed ri_mk=__out": "8bc3d108477a",
+      "doc case ri_mk=null": "ed0847cced7c",
+      "narrowed ri_mk=null": "ba3f87039529",
+      "doc case ri_mk=empty": "ed0847cced7c",
+      "narrowed ri_mk=empty": "465c918443dd",
+      "doc case ri_mk=zero": "d114456c7e6c",
+      "narrowed ri_mk=zero": "477418fe7225",
+      "doc case ri_mk=arr": "12600c4302fa",
+      "narrowed ri_mk=arr": "c1eae3494392",
+      "doc case ri_mk=word": "0914b9f7311a",
+      "narrowed ri_mk=word": "a9127670e9c2",
+      "doc case ri_mk=int": "958bd49c3476",
+      "narrowed ri_mk=int": "479a343028ba",
+      "doc case h_mk=__out": "ed0847cced7c",
+      "narrowed h_mk=__out": "8bc3d108477a",
+      "doc case h_mk=null": "ed0847cced7c",
+      "narrowed h_mk=null": "87b4b5e80f01",
+      "doc case h_mk=empty": "ed0847cced7c",
+      "narrowed h_mk=empty": "d1a060865803",
+      "doc case h_mk=zero": "d2e31cce5fe5",
+      "narrowed h_mk=zero": "1dbf375edc01",
+      "doc case h_mk=arr": "d949fbe3e951",
+      "narrowed h_mk=arr": "8c705f31ce58",
+      "doc case h_mk=word": "9c11b6789c82",
+      "narrowed h_mk=word": "36796a635cf3",
+      "doc case h_mk=int": "07af6901be72",
+      "narrowed h_mk=int": "9c08e11fc9ef",
+      "doc case hn_mk=__out": "ed0847cced7c",
+      "narrowed hn_mk=__out": "8bc3d108477a",
+      "doc case hn_mk=null": "ed0847cced7c",
+      "narrowed hn_mk=null": "6e3711670b62",
+      "doc case hn_mk=empty": "ed0847cced7c",
+      "narrowed hn_mk=empty": "ebef18878eee",
+      "doc case hn_mk=zero": "4bb4000dbc92",
+      "narrowed hn_mk=zero": "d9c34e229e6e",
+      "doc case hn_mk=arr": "63864e6bd0e1",
+      "narrowed hn_mk=arr": "c3d099f773fe",
+      "doc case hn_mk=word": "f2142adf8e81",
+      "narrowed hn_mk=word": "3a8981b10814",
+      "doc case hn_mk=int": "cd1d4a489c16",
+      "narrowed hn_mk=int": "26c643523a77",
+      "doc case hc_mk=__out": "ed0847cced7c",
+      "narrowed hc_mk=__out": "8bc3d108477a",
+      "doc case hc_mk=null": "ed0847cced7c",
+      "narrowed hc_mk=null": "a11cabfad895",
+      "doc case hc_mk=empty": "ed0847cced7c",
+      "narrowed hc_mk=empty": "090c61957fb7",
+      "doc case hc_mk=zero": "204c084a76c6",
+      "narrowed hc_mk=zero": "f276c1a084da",
+      "doc case hc_mk=arr": "c2d037fa6d69",
+      "narrowed hc_mk=arr": "b07235909185",
+      "doc case hc_mk=word": "14b26289459d",
+      "narrowed hc_mk=word": "084da606a470",
+      "doc case hc_mk=int": "4816ade9d017",
+      "narrowed hc_mk=int": "f2ccb5a3d120",
+      "doc case hs_mk=__out": "ed0847cced7c",
+      "narrowed hs_mk=__out": "8bc3d108477a",
+      "doc case hs_mk=null": "ed0847cced7c",
+      "narrowed hs_mk=null": "a77cf3a2ebce",
+      "doc case hs_mk=empty": "ed0847cced7c",
+      "narrowed hs_mk=empty": "cb0f6d681798",
+      "doc case hs_mk=zero": "ed0847cced7c",
+      "narrowed hs_mk=zero": "00af843272d5",
+      "doc case hs_mk=arr": "9fbf682e0a63",
+      "narrowed hs_mk=arr": "488b447adf16",
+      "doc case hs_mk=word": "ed0847cced7c",
+      "narrowed hs_mk=word": "57ece81cd8ff",
+      "doc case hs_mk=int": "ed0847cced7c",
+      "narrowed hs_mk=int": "f62fb942722f",
+      "doc case l_mk=__out": "ed0847cced7c",
+      "narrowed l_mk=__out": "8bc3d108477a",
+      "doc case l_mk=null": "ed0847cced7c",
+      "narrowed l_mk=null": "9e3495e70f3e",
+      "doc case l_mk=empty": "ed0847cced7c",
+      "narrowed l_mk=empty": "d50e62d25c83",
+      "doc case l_mk=zero": "b99a4621138f",
+      "narrowed l_mk=zero": "f9d3be874a6b",
+      "doc case l_mk=arr": "4522029298d5",
+      "narrowed l_mk=arr": "d7e91f5f6b68",
+      "doc case l_mk=word": "cc5fd8c32f42",
+      "narrowed l_mk=word": "5c9df74c7e55",
+      "doc case l_mk=int": "9340bcb6cfdb",
+      "narrowed l_mk=int": "a086399e8afc",
+      "doc case mr_mk=__out": "ed0847cced7c",
+      "narrowed mr_mk=__out": "8bc3d108477a",
+      "doc case mr_mk=null": "ed0847cced7c",
+      "narrowed mr_mk=null": "1c94d3fac167",
+      "doc case mr_mk=empty": "ed0847cced7c",
+      "narrowed mr_mk=empty": "26d833c1197e",
+      "doc case mr_mk=zero": "28f8583e5d1e",
+      "narrowed mr_mk=zero": "4c24aae6cc68",
+      "doc case mr_mk=arr": "ed0847cced7c",
+      "narrowed mr_mk=arr": "37119ece5406",
+      "doc case mr_mk=word": "28f8583e5d1e",
+      "narrowed mr_mk=word": "d14947128a16",
+      "doc case mr_mk=int": "98bd64697dc8",
+      "narrowed mr_mk=int": "bed5171649b3",
+      "doc case m_mk {}": "ed0847cced7c",
+      "narrowed m_mk {}": "f852b83e6573",
+      "doc case m_mk req null": "ed0847cced7c",
+      "narrowed m_mk req null": "54222ca658b1",
+      "doc case m_mk req ''": "ed0847cced7c",
+      "narrowed m_mk req ''": "b27dee2c4959",
+      "doc case m_mk req 0": "868be9c3d66d",
+      "narrowed m_mk req 0": "4a54f47ae9db",
+      "doc case m_mk hp null": "fbc6b27999c9",
+      "narrowed m_mk hp null": "bf89aec72703",
+      "doc case m_mk hp ''": "fbc6b27999c9",
+      "narrowed m_mk hp ''": "dd19fdc72831",
+      "doc case m_mk mm {}": "ac93402cf6e2",
+      "narrowed m_mk mm {}": "c426b5b2023d",
+      "doc case m_mk mm req2 null": "ac93402cf6e2",
+      "narrowed m_mk mm req2 null": "c786b885f69f",
+      "doc case m_mk mm req2 ''": "ac93402cf6e2",
+      "narrowed m_mk mm req2 ''": "4d7c7f946f91",
+      "doc case m_mk rows [{}]": "f0d9576b4cae",
+      "narrowed m_mk rows [{}]": "9e43060ffa9f",
+      "doc case m_mk rows name ''": "577bd5d72ddc",
+      "narrowed m_mk rows name ''": "990efac3d86d",
+      "doc case m_mk sec null": "ac93402cf6e2",
+      "narrowed m_mk sec null": "fbf88637e8c7",
+      "doc case m_mk full": "aacdc900b305",
+      "narrowed m_mk full": "b59deae0bbed",
+      "doc case m_mk null": "ed0847cced7c",
+      "narrowed m_mk null": "270098a6c4a7",
+      "doc case mr_mk {}": "ed0847cced7c",
+      "narrowed mr_mk {}": "37119ece5406",
+      "doc case mr_mk x ''": "ed0847cced7c",
+      "narrowed mr_mk x ''": "e6564c4f551d",
+      "doc case lk other": "ed0847cced7c",
+      "narrowed lk other": "24bd3279d831",
+      "doc case lk_blank other": "ed0847cced7c",
+      "narrowed lk_blank other": "a574ed9f4697",
+      "doc case lk null": "ed0847cced7c",
+      "narrowed lk null": "e4eb0d183910",
+      "doc case unknown": "fcf947676aa5",
+      "narrowed unknown": "32ea17d0e3cb",
+      "doc case unknown nested": "63232e16f341",
+      "narrowed unknown nested": "d4419a1fac14"
+    },
+    "plain | stored": {
+      "nothing": "9b513e15958e",
+      "r_blank=__out": "9b513e15958e",
+      "r_blank=null": "9b513e15958e",
+      "r_blank=empty": "9b513e15958e",
+      "r_blank=zero": "bb727f15b18f",
+      "r_blank=arr": "bbb118227444",
+      "r_blank=word": "7bb9d724a477",
+      "r_blank=int": "f4d4df1f9cae",
+      "ri_blank=__out": "9b513e15958e",
+      "ri_blank=null": "9b513e15958e",
+      "ri_blank=empty": "9b513e15958e",
+      "ri_blank=zero": "ae1516c103f1",
+      "ri_blank=arr": "07c63006b641",
+      "ri_blank=word": "34e0f69167dc",
+      "ri_blank=int": "2cf80cdec70a",
+      "h_blank=__out": "9b513e15958e",
+      "h_blank=null": "6615879d151f",
+      "h_blank=empty": "6615879d151f",
+      "h_blank=zero": "0b0f64fd492b",
+      "h_blank=arr": "13111ea6aeb5",
+      "h_blank=word": "26385260f281",
+      "h_blank=int": "000a56b4f9b4",
+      "hn_blank=__out": "9b513e15958e",
+      "hn_blank=null": "9b513e15958e",
+      "hn_blank=empty": "9b513e15958e",
+      "hn_blank=zero": "55a83d617962",
+      "hn_blank=arr": "aa65ead944bf",
+      "hn_blank=word": "bc4df56032c3",
+      "hn_blank=int": "38b1f3e335f8",
+      "hc_blank=__out": "9b513e15958e",
+      "hc_blank=null": "4390a07e460d",
+      "hc_blank=empty": "4390a07e460d",
+      "hc_blank=zero": "c7324fe32ec7",
+      "hc_blank=arr": "d3cae74d0ef2",
+      "hc_blank=word": "7eee06c12089",
+      "hc_blank=int": "6f2c042bbe9c",
+      "hs_blank=__out": "9b513e15958e",
+      "hs_blank=null": "9b513e15958e",
+      "hs_blank=empty": "9b513e15958e",
+      "hs_blank=zero": "26cfe7c6c5fa",
+      "hs_blank=arr": "3c0c3e2fc06e",
+      "hs_blank=word": "271c9bc20dec",
+      "hs_blank=int": "3693b67c16c8",
+      "l_blank=__out": "9b513e15958e",
+      "l_blank=null": "9b513e15958e",
+      "l_blank=empty": "9b513e15958e",
+      "l_blank=zero": "c0dcd32f5c79",
+      "l_blank=arr": "6238381157e3",
+      "l_blank=word": "42d270e6d0f5",
+      "l_blank=int": "49c37e6e622b",
+      "mr_blank=__out": "9b513e15958e",
+      "mr_blank=null": "9b513e15958e",
+      "mr_blank=empty": "9b513e15958e",
+      "mr_blank=zero": "a52661cf85c4",
+      "mr_blank=arr": "55cf55c3b4cd",
+      "mr_blank=word": "a52661cf85c4",
+      "mr_blank=int": "4b98c9e03710",
+      "m_blank {}": "abd4ef66e693",
+      "m_blank req null": "abd4ef66e693",
+      "m_blank req ''": "abd4ef66e693",
+      "m_blank req 0": "0de085872c68",
+      "m_blank hp null": "b98dad87e6d7",
+      "m_blank hp ''": "89635dee80ab",
+      "m_blank mm {}": "47069a758c72",
+      "m_blank mm req2 null": "47069a758c72",
+      "m_blank mm req2 ''": "47069a758c72",
+      "m_blank rows [{}]": "73354575f25c",
+      "m_blank rows name ''": "964adfda37dd",
+      "m_blank sec null": "93608b9011a7",
+      "m_blank full": "3521d5919944",
+      "m_blank null": "f3cbd2f865f3",
+      "mr_blank {}": "55cf55c3b4cd",
+      "mr_blank x ''": "55cf55c3b4cd",
+      "r_zero=__out": "9b513e15958e",
+      "r_zero=null": "9b513e15958e",
+      "r_zero=empty": "9b513e15958e",
+      "r_zero=zero": "b8ea6385ac66",
+      "r_zero=arr": "5db310b7ede1",
+      "r_zero=word": "286fd3404010",
+      "r_zero=int": "03f990e59069",
+      "ri_zero=__out": "9b513e15958e",
+      "ri_zero=null": "9b513e15958e",
+      "ri_zero=empty": "9b513e15958e",
+      "ri_zero=zero": "25fed339fd00",
+      "ri_zero=arr": "18eaf5206174",
+      "ri_zero=word": "553286af3d10",
+      "ri_zero=int": "193000aa38e2",
+      "h_zero=__out": "9b513e15958e",
+      "h_zero=null": "0f6d7dacce24",
+      "h_zero=empty": "0f6d7dacce24",
+      "h_zero=zero": "cc5ec27c636c",
+      "h_zero=arr": "773e95778155",
+      "h_zero=word": "8254699b190a",
+      "h_zero=int": "ff7205aae0a5",
+      "hn_zero=__out": "9b513e15958e",
+      "hn_zero=null": "9b513e15958e",
+      "hn_zero=empty": "9b513e15958e",
+      "hn_zero=zero": "8772bf9792a5",
+      "hn_zero=arr": "8d55365d495b",
+      "hn_zero=word": "2da6a5d944ec",
+      "hn_zero=int": "edd64ac6b1e3",
+      "hc_zero=__out": "9b513e15958e",
+      "hc_zero=null": "28c4552b2309",
+      "hc_zero=empty": "28c4552b2309",
+      "hc_zero=zero": "538f3c74bbb0",
+      "hc_zero=arr": "c1eebe2b1566",
+      "hc_zero=word": "c0af95b3e8e2",
+      "hc_zero=int": "aed2d180da65",
+      "hs_zero=__out": "9b513e15958e",
+      "hs_zero=null": "9b513e15958e",
+      "hs_zero=empty": "9b513e15958e",
+      "hs_zero=zero": "9a9b1765f95b",
+      "hs_zero=arr": "952a66eaa97f",
+      "hs_zero=word": "6d7f2308899e",
+      "hs_zero=int": "17e1ef07571b",
+      "l_zero=__out": "9b513e15958e",
+      "l_zero=null": "9b513e15958e",
+      "l_zero=empty": "9b513e15958e",
+      "l_zero=zero": "5196950c7f84",
+      "l_zero=arr": "fcd29b772965",
+      "l_zero=word": "a08c223a03a1",
+      "l_zero=int": "c193e3f7236b",
+      "mr_zero=__out": "9b513e15958e",
+      "mr_zero=null": "9b513e15958e",
+      "mr_zero=empty": "9b513e15958e",
+      "mr_zero=zero": "7569d42ce8c0",
+      "mr_zero=arr": "9542bfc9a4f1",
+      "mr_zero=word": "7569d42ce8c0",
+      "mr_zero=int": "686f82722b1e",
+      "m_zero {}": "4bdfc6f5a78c",
+      "m_zero req null": "4bdfc6f5a78c",
+      "m_zero req ''": "4bdfc6f5a78c",
+      "m_zero req 0": "b79216d47d77",
+      "m_zero hp null": "d016904bbafb",
+      "m_zero hp ''": "913c478ba05d",
+      "m_zero mm {}": "6bcac2c2538e",
+      "m_zero mm req2 null": "6bcac2c2538e",
+      "m_zero mm req2 ''": "6bcac2c2538e",
+      "m_zero rows [{}]": "61e99e854877",
+      "m_zero rows name ''": "59cef57feeb7",
+      "m_zero sec null": "c00e1a124086",
+      "m_zero full": "49a37257fdac",
+      "m_zero null": "827d00218843",
+      "mr_zero {}": "9542bfc9a4f1",
+      "mr_zero x ''": "9542bfc9a4f1",
+      "r_none=__out": "9b513e15958e",
+      "r_none=null": "9b513e15958e",
+      "r_none=empty": "9b513e15958e",
+      "r_none=zero": "9a90d1c55000",
+      "r_none=arr": "363db792d05d",
+      "r_none=word": "804f7eb7173f",
+      "r_none=int": "2a482a0e5737",
+      "ri_none=__out": "9b513e15958e",
+      "ri_none=null": "9b513e15958e",
+      "ri_none=empty": "9b513e15958e",
+      "ri_none=zero": "0d912c779535",
+      "ri_none=arr": "1bf213121c26",
+      "ri_none=word": "569506c485a9",
+      "ri_none=int": "f6bd1b962107",
+      "h_none=__out": "9b513e15958e",
+      "h_none=null": "a622319c4662",
+      "h_none=empty": "a622319c4662",
+      "h_none=zero": "709f15826d9a",
+      "h_none=arr": "e383f5b9751b",
+      "h_none=word": "ad88a12fd39a",
+      "h_none=int": "cff6538aa47a",
+      "hn_none=__out": "9b513e15958e",
+      "hn_none=null": "9b513e15958e",
+      "hn_none=empty": "9b513e15958e",
+      "hn_none=zero": "a24372b636b2",
+      "hn_none=arr": "08ebce0b24ac",
+      "hn_none=word": "6d8ba4284cf6",
+      "hn_none=int": "d7f525e2605a",
+      "hc_none=__out": "9b513e15958e",
+      "hc_none=null": "c4b3e945a6d5",
+      "hc_none=empty": "c4b3e945a6d5",
+      "hc_none=zero": "e18230ee5da2",
+      "hc_none=arr": "030a234ac01e",
+      "hc_none=word": "d09f17b80000",
+      "hc_none=int": "022c83217c5d",
+      "hs_none=__out": "9b513e15958e",
+      "hs_none=null": "9b513e15958e",
+      "hs_none=empty": "9b513e15958e",
+      "hs_none=zero": "8af08a3a7175",
+      "hs_none=arr": "6216f52091b1",
+      "hs_none=word": "6c215e58a0a0",
+      "hs_none=int": "9c6abc616c7f",
+      "l_none=__out": "9b513e15958e",
+      "l_none=null": "9b513e15958e",
+      "l_none=empty": "9b513e15958e",
+      "l_none=zero": "ff43c2a7a195",
+      "l_none=arr": "9c0eae94ab59",
+      "l_none=word": "026d33be9a35",
+      "l_none=int": "834817ef0e57",
+      "mr_none=__out": "9b513e15958e",
+      "mr_none=null": "9b513e15958e",
+      "mr_none=empty": "9b513e15958e",
+      "mr_none=zero": "163ad7769a66",
+      "mr_none=arr": "fba5675d4075",
+      "mr_none=word": "163ad7769a66",
+      "mr_none=int": "44e52c042f5f",
+      "m_none {}": "49e687878811",
+      "m_none req null": "49e687878811",
+      "m_none req ''": "49e687878811",
+      "m_none req 0": "5fbe75487ecd",
+      "m_none hp null": "8e28edf7857f",
+      "m_none hp ''": "89dfe59f3db6",
+      "m_none mm {}": "973c70ad3a51",
+      "m_none mm req2 null": "973c70ad3a51",
+      "m_none mm req2 ''": "973c70ad3a51",
+      "m_none rows [{}]": "01f8effa88d8",
+      "m_none rows name ''": "87a258ac48ea",
+      "m_none sec null": "821fb609caea",
+      "m_none full": "2c5ccddbd6da",
+      "m_none null": "466a585b31e9",
+      "mr_none {}": "fba5675d4075",
+      "mr_none x ''": "fba5675d4075",
+      "r_mk=__out": "9b513e15958e",
+      "r_mk=null": "9b513e15958e",
+      "r_mk=empty": "9b513e15958e",
+      "r_mk=zero": "20ecb40d9d13",
+      "r_mk=arr": "0da52a34c64f",
+      "r_mk=word": "e8e12bf2d9f4",
+      "r_mk=int": "7e3445c63a13",
+      "ri_mk=__out": "9b513e15958e",
+      "ri_mk=null": "9b513e15958e",
+      "ri_mk=empty": "9b513e15958e",
+      "ri_mk=zero": "02fb6355c0f7",
+      "ri_mk=arr": "bd5286901f12",
+      "ri_mk=word": "4970796a3cdb",
+      "ri_mk=int": "7f7e15af0a66",
+      "h_mk=__out": "9b513e15958e",
+      "h_mk=null": "42ac0cd42517",
+      "h_mk=empty": "42ac0cd42517",
+      "h_mk=zero": "3231b0daeeb2",
+      "h_mk=arr": "7d95ffaad0a5",
+      "h_mk=word": "b8ac3f8998d6",
+      "h_mk=int": "654b1f61c2a4",
+      "hn_mk=__out": "9b513e15958e",
+      "hn_mk=null": "9b513e15958e",
+      "hn_mk=empty": "9b513e15958e",
+      "hn_mk=zero": "3382ab11a31c",
+      "hn_mk=arr": "13dd45beacba",
+      "hn_mk=word": "164e9d330874",
+      "hn_mk=int": "9879057b3d26",
+      "hc_mk=__out": "9b513e15958e",
+      "hc_mk=null": "1b926db61f1c",
+      "hc_mk=empty": "1b926db61f1c",
+      "hc_mk=zero": "9b4b39f2a2f5",
+      "hc_mk=arr": "b39e4a878abe",
+      "hc_mk=word": "a0a485b130a8",
+      "hc_mk=int": "7d1b6a7fccf6",
+      "hs_mk=__out": "9b513e15958e",
+      "hs_mk=null": "9b513e15958e",
+      "hs_mk=empty": "9b513e15958e",
+      "hs_mk=zero": "f282672a630f",
+      "hs_mk=arr": "9ec721497880",
+      "hs_mk=word": "aba12016fc52",
+      "hs_mk=int": "ec52da1e0d26",
+      "l_mk=__out": "9b513e15958e",
+      "l_mk=null": "9b513e15958e",
+      "l_mk=empty": "9b513e15958e",
+      "l_mk=zero": "489d2c823af7",
+      "l_mk=arr": "9a344f7f8058",
+      "l_mk=word": "c951f1cafb62",
+      "l_mk=int": "000a781382ea",
+      "mr_mk=__out": "9b513e15958e",
+      "mr_mk=null": "9b513e15958e",
+      "mr_mk=empty": "9b513e15958e",
+      "mr_mk=zero": "8b7d8b56a6cd",
+      "mr_mk=arr": "161d7ef1d7c5",
+      "mr_mk=word": "8b7d8b56a6cd",
+      "mr_mk=int": "950030ce1fd0",
+      "m_mk {}": "d1b35f3c8419",
+      "m_mk req null": "d1b35f3c8419",
+      "m_mk req ''": "d1b35f3c8419",
+      "m_mk req 0": "86e505133308",
+      "m_mk hp null": "f7b1b729a2c8",
+      "m_mk hp ''": "8f87132b12f4",
+      "m_mk mm {}": "a8ce419b2f92",
+      "m_mk mm req2 null": "a8ce419b2f92",
+      "m_mk mm req2 ''": "a8ce419b2f92",
+      "m_mk rows [{}]": "4b61d8bcf812",
+      "m_mk rows name ''": "4f3bfe378449",
+      "m_mk sec null": "1987823dcaac",
+      "m_mk full": "e6854f4feb3c",
+      "m_mk null": "e574b3593de7",
+      "mr_mk {}": "161d7ef1d7c5",
+      "mr_mk x ''": "161d7ef1d7c5",
+      "lk other": "23f6b325ffe5",
+      "lk_blank other": "7d7ecd87e3ec",
+      "lk null": "23f6b325ffe5",
+      "unknown": "a788032d3158",
+      "unknown nested": "f53eff40f2a7",
+      "doc full": "42eb6edacdc6",
+      "doc hints": "14cf586dafea",
+      "doc case r_blank=__out": "14cf586dafea",
+      "narrowed r_blank=__out": "06ad3b801f29",
+      "doc case r_blank=null": "14cf586dafea",
+      "narrowed r_blank=null": "452401f1b21c",
+      "doc case r_blank=empty": "14cf586dafea",
+      "narrowed r_blank=empty": "6aad0ca35cb9",
+      "doc case r_blank=zero": "8cba24ac7014",
+      "narrowed r_blank=zero": "9ae802562d75",
+      "doc case r_blank=arr": "d97e3fb7b5fb",
+      "narrowed r_blank=arr": "3f68b98b4cd1",
+      "doc case r_blank=word": "e917df0703dc",
+      "narrowed r_blank=word": "2e6ba5de04dd",
+      "doc case r_blank=int": "5a9ca8edf829",
+      "narrowed r_blank=int": "52f7ac3cb660",
+      "doc case ri_blank=__out": "14cf586dafea",
+      "narrowed ri_blank=__out": "06ad3b801f29",
+      "doc case ri_blank=null": "14cf586dafea",
+      "narrowed ri_blank=null": "cba3b8cd7588",
+      "doc case ri_blank=empty": "14cf586dafea",
+      "narrowed ri_blank=empty": "ee054c7fe492",
+      "doc case ri_blank=zero": "a24d606290c6",
+      "narrowed ri_blank=zero": "0aefe4b8df2e",
+      "doc case ri_blank=arr": "cf642dfeabc6",
+      "narrowed ri_blank=arr": "ae9e9c3a7125",
+      "doc case ri_blank=word": "77ac5173f13b",
+      "narrowed ri_blank=word": "113a7b611f3d",
+      "doc case ri_blank=int": "bbf2f9090158",
+      "narrowed ri_blank=int": "d4711521de64",
+      "doc case h_blank=__out": "14cf586dafea",
+      "narrowed h_blank=__out": "06ad3b801f29",
+      "doc case h_blank=null": "4b57f53de32a",
+      "narrowed h_blank=null": "094d7d6bf090",
+      "doc case h_blank=empty": "4b57f53de32a",
+      "narrowed h_blank=empty": "1b84dcbb2cd6",
+      "doc case h_blank=zero": "7c85f83cf9b6",
+      "narrowed h_blank=zero": "ac33fb451016",
+      "doc case h_blank=arr": "2745870c133a",
+      "narrowed h_blank=arr": "3503c1bda315",
+      "doc case h_blank=word": "5d91fad0cc43",
+      "narrowed h_blank=word": "b9a9e757ceba",
+      "doc case h_blank=int": "cf8514be34f1",
+      "narrowed h_blank=int": "92871b8b4db9",
+      "doc case hn_blank=__out": "14cf586dafea",
+      "narrowed hn_blank=__out": "06ad3b801f29",
+      "doc case hn_blank=null": "14cf586dafea",
+      "narrowed hn_blank=null": "e1fd6c71edcc",
+      "doc case hn_blank=empty": "14cf586dafea",
+      "narrowed hn_blank=empty": "4f9a8af1d975",
+      "doc case hn_blank=zero": "3c1742a139c9",
+      "narrowed hn_blank=zero": "5fcf4b342c25",
+      "doc case hn_blank=arr": "3c7152decc4e",
+      "narrowed hn_blank=arr": "577a233df7e3",
+      "doc case hn_blank=word": "17f695cd1aee",
+      "narrowed hn_blank=word": "59a698bcab73",
+      "doc case hn_blank=int": "a6334ff2e847",
+      "narrowed hn_blank=int": "c497c17ac07d",
+      "doc case hc_blank=__out": "14cf586dafea",
+      "narrowed hc_blank=__out": "06ad3b801f29",
+      "doc case hc_blank=null": "14cf586dafea",
+      "narrowed hc_blank=null": "e38cf26961c3",
+      "doc case hc_blank=empty": "14cf586dafea",
+      "narrowed hc_blank=empty": "cd09ba6f2647",
+      "doc case hc_blank=zero": "9d2560755106",
+      "narrowed hc_blank=zero": "b48b35fce7ac",
+      "doc case hc_blank=arr": "58daeb9c247d",
+      "narrowed hc_blank=arr": "57cc74022a28",
+      "doc case hc_blank=word": "33a5beada1ec",
+      "narrowed hc_blank=word": "9dd52484d2e6",
+      "doc case hc_blank=int": "3ecb354ade5c",
+      "narrowed hc_blank=int": "43efd1bcbb7b",
+      "doc case hs_blank=__out": "14cf586dafea",
+      "narrowed hs_blank=__out": "06ad3b801f29",
+      "doc case hs_blank=null": "14cf586dafea",
+      "narrowed hs_blank=null": "a606d2b1674c",
+      "doc case hs_blank=empty": "14cf586dafea",
+      "narrowed hs_blank=empty": "5b2ec29c3b90",
+      "doc case hs_blank=zero": "14cf586dafea",
+      "narrowed hs_blank=zero": "8811357d38dc",
+      "doc case hs_blank=arr": "c1db00fd3c0b",
+      "narrowed hs_blank=arr": "8c388f5ce4f6",
+      "doc case hs_blank=word": "14cf586dafea",
+      "narrowed hs_blank=word": "9499e11ad746",
+      "doc case hs_blank=int": "14cf586dafea",
+      "narrowed hs_blank=int": "cadf8bd504ce",
+      "doc case l_blank=__out": "14cf586dafea",
+      "narrowed l_blank=__out": "06ad3b801f29",
+      "doc case l_blank=null": "14cf586dafea",
+      "narrowed l_blank=null": "3f90998258c8",
+      "doc case l_blank=empty": "14cf586dafea",
+      "narrowed l_blank=empty": "7a73b46fd868",
+      "doc case l_blank=zero": "4b14105e8a03",
+      "narrowed l_blank=zero": "f72c3ed3d8fe",
+      "doc case l_blank=arr": "3b8a24c3ac3f",
+      "narrowed l_blank=arr": "0e921e7e7f71",
+      "doc case l_blank=word": "c9b227a59e92",
+      "narrowed l_blank=word": "fe538c99f085",
+      "doc case l_blank=int": "e7b7e744d83a",
+      "narrowed l_blank=int": "1386f45c475f",
+      "doc case mr_blank=__out": "14cf586dafea",
+      "narrowed mr_blank=__out": "06ad3b801f29",
+      "doc case mr_blank=null": "14cf586dafea",
+      "narrowed mr_blank=null": "0d25d13c62b1",
+      "doc case mr_blank=empty": "14cf586dafea",
+      "narrowed mr_blank=empty": "495d07b43589",
+      "doc case mr_blank=zero": "7886814a8330",
+      "narrowed mr_blank=zero": "d91f53605b19",
+      "doc case mr_blank=arr": "14cf586dafea",
+      "narrowed mr_blank=arr": "1a66acae0ad9",
+      "doc case mr_blank=word": "7886814a8330",
+      "narrowed mr_blank=word": "4f66355ce545",
+      "doc case mr_blank=int": "f5b435fc2b1b",
+      "narrowed mr_blank=int": "e01c2b0b1816",
+      "doc case m_blank {}": "14cf586dafea",
+      "narrowed m_blank {}": "bb4541c2dfc3",
+      "doc case m_blank req null": "14cf586dafea",
+      "narrowed m_blank req null": "f2e4dbad68f5",
+      "doc case m_blank req ''": "14cf586dafea",
+      "narrowed m_blank req ''": "0510c86fd56f",
+      "doc case m_blank req 0": "e337f3da936b",
+      "narrowed m_blank req 0": "06ce44808532",
+      "doc case m_blank hp null": "9fc5dae2284d",
+      "narrowed m_blank hp null": "4e996140af40",
+      "doc case m_blank hp ''": "9fc5dae2284d",
+      "narrowed m_blank hp ''": "2cf5a9c4ac52",
+      "doc case m_blank mm {}": "f3ec84397d2b",
+      "narrowed m_blank mm {}": "dc8a2db08568",
+      "doc case m_blank mm req2 null": "f3ec84397d2b",
+      "narrowed m_blank mm req2 null": "110948b11605",
+      "doc case m_blank mm req2 ''": "f3ec84397d2b",
+      "narrowed m_blank mm req2 ''": "59803920d99d",
+      "doc case m_blank rows [{}]": "35068897333e",
+      "narrowed m_blank rows [{}]": "d9f47ee8db97",
+      "doc case m_blank rows name ''": "52ecbf2ffea0",
+      "narrowed m_blank rows name ''": "3144c1be66a5",
+      "doc case m_blank sec null": "f3ec84397d2b",
+      "narrowed m_blank sec null": "c52c9cd927f1",
+      "doc case m_blank full": "f3535cc468f1",
+      "narrowed m_blank full": "c7a4ac162dc7",
+      "doc case m_blank null": "14cf586dafea",
+      "narrowed m_blank null": "6a34ae234f03",
+      "doc case mr_blank {}": "14cf586dafea",
+      "narrowed mr_blank {}": "1a66acae0ad9",
+      "doc case mr_blank x ''": "14cf586dafea",
+      "narrowed mr_blank x ''": "8e9becc89afe",
+      "doc case r_zero=__out": "14cf586dafea",
+      "narrowed r_zero=__out": "06ad3b801f29",
+      "doc case r_zero=null": "14cf586dafea",
+      "narrowed r_zero=null": "9cf02648d3c1",
+      "doc case r_zero=empty": "14cf586dafea",
+      "narrowed r_zero=empty": "ff4267a7f2a5",
+      "doc case r_zero=zero": "67ba87052701",
+      "narrowed r_zero=zero": "f78c5610e61a",
+      "doc case r_zero=arr": "5d24a470321e",
+      "narrowed r_zero=arr": "5a0968c2fbca",
+      "doc case r_zero=word": "e07b77075637",
+      "narrowed r_zero=word": "fcff80b15565",
+      "doc case r_zero=int": "060b4ff51639",
+      "narrowed r_zero=int": "1bf503b7adb4",
+      "doc case ri_zero=__out": "14cf586dafea",
+      "narrowed ri_zero=__out": "06ad3b801f29",
+      "doc case ri_zero=null": "14cf586dafea",
+      "narrowed ri_zero=null": "eecf1eee1112",
+      "doc case ri_zero=empty": "14cf586dafea",
+      "narrowed ri_zero=empty": "d185ed417a17",
+      "doc case ri_zero=zero": "aee62848840d",
+      "narrowed ri_zero=zero": "6dc139fb8220",
+      "doc case ri_zero=arr": "2480392d3cf8",
+      "narrowed ri_zero=arr": "34f1f3459d50",
+      "doc case ri_zero=word": "db81fc88224b",
+      "narrowed ri_zero=word": "457a0c4e1173",
+      "doc case ri_zero=int": "cc04823aa7d8",
+      "narrowed ri_zero=int": "68d89116bea0",
+      "doc case h_zero=__out": "14cf586dafea",
+      "narrowed h_zero=__out": "06ad3b801f29",
+      "doc case h_zero=null": "14cf586dafea",
+      "narrowed h_zero=null": "bbcf42835284",
+      "doc case h_zero=empty": "14cf586dafea",
+      "narrowed h_zero=empty": "998d968a5119",
+      "doc case h_zero=zero": "958ca6633109",
+      "narrowed h_zero=zero": "62e273fc4516",
+      "doc case h_zero=arr": "f570ae3eed7d",
+      "narrowed h_zero=arr": "e5c96a9a2532",
+      "doc case h_zero=word": "c9b46588ba95",
+      "narrowed h_zero=word": "f5202de56780",
+      "doc case h_zero=int": "4fe4bbd5b305",
+      "narrowed h_zero=int": "f6341f6100be",
+      "doc case hn_zero=__out": "14cf586dafea",
+      "narrowed hn_zero=__out": "06ad3b801f29",
+      "doc case hn_zero=null": "14cf586dafea",
+      "narrowed hn_zero=null": "5c7d983857e7",
+      "doc case hn_zero=empty": "14cf586dafea",
+      "narrowed hn_zero=empty": "d174d0dddb82",
+      "doc case hn_zero=zero": "9d45faaa58d1",
+      "narrowed hn_zero=zero": "f97a1d7cfc13",
+      "doc case hn_zero=arr": "f4950dc9cfd2",
+      "narrowed hn_zero=arr": "19ca8a3dccaa",
+      "doc case hn_zero=word": "e03ff424777f",
+      "narrowed hn_zero=word": "c06c980d07a2",
+      "doc case hn_zero=int": "7b90c35596f4",
+      "narrowed hn_zero=int": "fb9b7b6bbe70",
+      "doc case hc_zero=__out": "14cf586dafea",
+      "narrowed hc_zero=__out": "06ad3b801f29",
+      "doc case hc_zero=null": "a50e56be9403",
+      "narrowed hc_zero=null": "55338387513c",
+      "doc case hc_zero=empty": "a50e56be9403",
+      "narrowed hc_zero=empty": "9055e56e47ec",
+      "doc case hc_zero=zero": "1abee89189a3",
+      "narrowed hc_zero=zero": "5ab165aac935",
+      "doc case hc_zero=arr": "6a15c58bee58",
+      "narrowed hc_zero=arr": "8918150c6e95",
+      "doc case hc_zero=word": "4a5cccd80e31",
+      "narrowed hc_zero=word": "9fb2fdf83e49",
+      "doc case hc_zero=int": "fad36d376fbb",
+      "narrowed hc_zero=int": "3a4c2c0dd20e",
+      "doc case hs_zero=__out": "14cf586dafea",
+      "narrowed hs_zero=__out": "06ad3b801f29",
+      "doc case hs_zero=null": "14cf586dafea",
+      "narrowed hs_zero=null": "08aa393be7b5",
+      "doc case hs_zero=empty": "14cf586dafea",
+      "narrowed hs_zero=empty": "ac99d4fcf6ec",
+      "doc case hs_zero=zero": "14cf586dafea",
+      "narrowed hs_zero=zero": "3bd2a3e61d1d",
+      "doc case hs_zero=arr": "73074f457fd6",
+      "narrowed hs_zero=arr": "717e5a9002c0",
+      "doc case hs_zero=word": "14cf586dafea",
+      "narrowed hs_zero=word": "12f117c60e54",
+      "doc case hs_zero=int": "14cf586dafea",
+      "narrowed hs_zero=int": "6201c645cebb",
+      "doc case l_zero=__out": "14cf586dafea",
+      "narrowed l_zero=__out": "06ad3b801f29",
+      "doc case l_zero=null": "14cf586dafea",
+      "narrowed l_zero=null": "7ebb458c9574",
+      "doc case l_zero=empty": "14cf586dafea",
+      "narrowed l_zero=empty": "613b4b626f2d",
+      "doc case l_zero=zero": "f136e6f2b536",
+      "narrowed l_zero=zero": "d6fab8fdbf4e",
+      "doc case l_zero=arr": "e3a112c52386",
+      "narrowed l_zero=arr": "880607644cc9",
+      "doc case l_zero=word": "cdd9ba1d3b0a",
+      "narrowed l_zero=word": "515ed5ff5f25",
+      "doc case l_zero=int": "e0b8bd091c4f",
+      "narrowed l_zero=int": "5c19c9ab4030",
+      "doc case mr_zero=__out": "14cf586dafea",
+      "narrowed mr_zero=__out": "06ad3b801f29",
+      "doc case mr_zero=null": "14cf586dafea",
+      "narrowed mr_zero=null": "d34f9c15a786",
+      "doc case mr_zero=empty": "14cf586dafea",
+      "narrowed mr_zero=empty": "7bd007387b94",
+      "doc case mr_zero=zero": "bf8cc15995dd",
+      "narrowed mr_zero=zero": "9e91819bc363",
+      "doc case mr_zero=arr": "14cf586dafea",
+      "narrowed mr_zero=arr": "bb41c77ac435",
+      "doc case mr_zero=word": "bf8cc15995dd",
+      "narrowed mr_zero=word": "0c7fc0f2673a",
+      "doc case mr_zero=int": "f615ff09566e",
+      "narrowed mr_zero=int": "7445d098860b",
+      "doc case m_zero {}": "14cf586dafea",
+      "narrowed m_zero {}": "480d620593f9",
+      "doc case m_zero req null": "14cf586dafea",
+      "narrowed m_zero req null": "8f8ba4a51237",
+      "doc case m_zero req ''": "14cf586dafea",
+      "narrowed m_zero req ''": "ceeb5404efd0",
+      "doc case m_zero req 0": "8e4c6db6b498",
+      "narrowed m_zero req 0": "58ad213390bf",
+      "doc case m_zero hp null": "7f98c7d31c07",
+      "narrowed m_zero hp null": "a4c973b9aa92",
+      "doc case m_zero hp ''": "7f98c7d31c07",
+      "narrowed m_zero hp ''": "8619140ad423",
+      "doc case m_zero mm {}": "0551cd423c9c",
+      "narrowed m_zero mm {}": "e5c81cce93f3",
+      "doc case m_zero mm req2 null": "0551cd423c9c",
+      "narrowed m_zero mm req2 null": "9e7f95b675e0",
+      "doc case m_zero mm req2 ''": "0551cd423c9c",
+      "narrowed m_zero mm req2 ''": "bd3fe11b0034",
+      "doc case m_zero rows [{}]": "d23a18e325a3",
+      "narrowed m_zero rows [{}]": "f8b5321e4417",
+      "doc case m_zero rows name ''": "f9ed70ae96ab",
+      "narrowed m_zero rows name ''": "621e96d00ab3",
+      "doc case m_zero sec null": "0551cd423c9c",
+      "narrowed m_zero sec null": "fca8988f5606",
+      "doc case m_zero full": "d22b26b4fa74",
+      "narrowed m_zero full": "ddc428666968",
+      "doc case m_zero null": "14cf586dafea",
+      "narrowed m_zero null": "71129fc52a9a",
+      "doc case mr_zero {}": "14cf586dafea",
+      "narrowed mr_zero {}": "bb41c77ac435",
+      "doc case mr_zero x ''": "14cf586dafea",
+      "narrowed mr_zero x ''": "322b27a10259",
+      "doc case r_none=__out": "14cf586dafea",
+      "narrowed r_none=__out": "06ad3b801f29",
+      "doc case r_none=null": "14cf586dafea",
+      "narrowed r_none=null": "51fce5db070c",
+      "doc case r_none=empty": "14cf586dafea",
+      "narrowed r_none=empty": "b94b2344e9ee",
+      "doc case r_none=zero": "6a1809881191",
+      "narrowed r_none=zero": "428b2140555d",
+      "doc case r_none=arr": "4c156134b547",
+      "narrowed r_none=arr": "4878ae133424",
+      "doc case r_none=word": "bfa5716d7f69",
+      "narrowed r_none=word": "87f9884fcbcd",
+      "doc case r_none=int": "cc1f36414ac2",
+      "narrowed r_none=int": "1acdc2df7051",
+      "doc case ri_none=__out": "14cf586dafea",
+      "narrowed ri_none=__out": "06ad3b801f29",
+      "doc case ri_none=null": "14cf586dafea",
+      "narrowed ri_none=null": "62962edac88f",
+      "doc case ri_none=empty": "14cf586dafea",
+      "narrowed ri_none=empty": "21b58d1ed361",
+      "doc case ri_none=zero": "bc991cc3cdd8",
+      "narrowed ri_none=zero": "d034d67b38c1",
+      "doc case ri_none=arr": "a830dbe8336c",
+      "narrowed ri_none=arr": "c0024dc79d89",
+      "doc case ri_none=word": "e780c4688d3b",
+      "narrowed ri_none=word": "b93295455513",
+      "doc case ri_none=int": "f9e8e88ee2ba",
+      "narrowed ri_none=int": "0f98ab50c8ce",
+      "doc case h_none=__out": "14cf586dafea",
+      "narrowed h_none=__out": "06ad3b801f29",
+      "doc case h_none=null": "14cf586dafea",
+      "narrowed h_none=null": "ab0f368225e6",
+      "doc case h_none=empty": "14cf586dafea",
+      "narrowed h_none=empty": "91195fa3b52d",
+      "doc case h_none=zero": "3eefc09797a8",
+      "narrowed h_none=zero": "178db072aec4",
+      "doc case h_none=arr": "4e1453362fdc",
+      "narrowed h_none=arr": "312c4a7fd3cb",
+      "doc case h_none=word": "c339a0ec2ba0",
+      "narrowed h_none=word": "27cee53f48c4",
+      "doc case h_none=int": "9755089ec9eb",
+      "narrowed h_none=int": "c160bf0f7738",
+      "doc case hn_none=__out": "14cf586dafea",
+      "narrowed hn_none=__out": "06ad3b801f29",
+      "doc case hn_none=null": "14cf586dafea",
+      "narrowed hn_none=null": "e017563461ea",
+      "doc case hn_none=empty": "14cf586dafea",
+      "narrowed hn_none=empty": "c3f6d4b42684",
+      "doc case hn_none=zero": "832b1f253de4",
+      "narrowed hn_none=zero": "8abf7bf29951",
+      "doc case hn_none=arr": "7238e64494d2",
+      "narrowed hn_none=arr": "172521a96ef6",
+      "doc case hn_none=word": "7719bd6eb109",
+      "narrowed hn_none=word": "329ec720371f",
+      "doc case hn_none=int": "c502011e98a1",
+      "narrowed hn_none=int": "9a788cdf41ae",
+      "doc case hc_none=__out": "14cf586dafea",
+      "narrowed hc_none=__out": "06ad3b801f29",
+      "doc case hc_none=null": "14cf586dafea",
+      "narrowed hc_none=null": "2980ec07db10",
+      "doc case hc_none=empty": "14cf586dafea",
+      "narrowed hc_none=empty": "409a4a5d1d15",
+      "doc case hc_none=zero": "5faf1a4118ef",
+      "narrowed hc_none=zero": "ab70916aea4f",
+      "doc case hc_none=arr": "f0ad910ca6c4",
+      "narrowed hc_none=arr": "9d68deeb2155",
+      "doc case hc_none=word": "0e6b75538e7e",
+      "narrowed hc_none=word": "8d8b344dbd95",
+      "doc case hc_none=int": "17001c44ca36",
+      "narrowed hc_none=int": "e6f62de53001",
+      "doc case hs_none=__out": "14cf586dafea",
+      "narrowed hs_none=__out": "06ad3b801f29",
+      "doc case hs_none=null": "14cf586dafea",
+      "narrowed hs_none=null": "4ae607f3add0",
+      "doc case hs_none=empty": "14cf586dafea",
+      "narrowed hs_none=empty": "e063c06f9b27",
+      "doc case hs_none=zero": "14cf586dafea",
+      "narrowed hs_none=zero": "872c9dc74cd5",
+      "doc case hs_none=arr": "df06b0dbc794",
+      "narrowed hs_none=arr": "b13fd4a85f21",
+      "doc case hs_none=word": "14cf586dafea",
+      "narrowed hs_none=word": "98048936138b",
+      "doc case hs_none=int": "14cf586dafea",
+      "narrowed hs_none=int": "20bf5fca5cd5",
+      "doc case l_none=__out": "14cf586dafea",
+      "narrowed l_none=__out": "06ad3b801f29",
+      "doc case l_none=null": "14cf586dafea",
+      "narrowed l_none=null": "e612da6e422c",
+      "doc case l_none=empty": "14cf586dafea",
+      "narrowed l_none=empty": "c7210e434f87",
+      "doc case l_none=zero": "cb889148d5e7",
+      "narrowed l_none=zero": "cb98b7856e5c",
+      "doc case l_none=arr": "e9d61e91445b",
+      "narrowed l_none=arr": "fda7dbb27deb",
+      "doc case l_none=word": "02b465f8eba5",
+      "narrowed l_none=word": "25c13c292d57",
+      "doc case l_none=int": "ad84168977ba",
+      "narrowed l_none=int": "19c39d550ce9",
+      "doc case mr_none=__out": "14cf586dafea",
+      "narrowed mr_none=__out": "06ad3b801f29",
+      "doc case mr_none=null": "14cf586dafea",
+      "narrowed mr_none=null": "91cfbeb807a1",
+      "doc case mr_none=empty": "14cf586dafea",
+      "narrowed mr_none=empty": "7078b65d6fcd",
+      "doc case mr_none=zero": "b1ed196a7a9b",
+      "narrowed mr_none=zero": "4660d3d7fcbd",
+      "doc case mr_none=arr": "14cf586dafea",
+      "narrowed mr_none=arr": "09bee9a30b00",
+      "doc case mr_none=word": "b1ed196a7a9b",
+      "narrowed mr_none=word": "a95598319bd8",
+      "doc case mr_none=int": "08d4dd9bbf88",
+      "narrowed mr_none=int": "70387dcea591",
+      "doc case m_none {}": "14cf586dafea",
+      "narrowed m_none {}": "7a7009826906",
+      "doc case m_none req null": "14cf586dafea",
+      "narrowed m_none req null": "48a5448c6bed",
+      "doc case m_none req ''": "14cf586dafea",
+      "narrowed m_none req ''": "586d738fc836",
+      "doc case m_none req 0": "adf125e275dd",
+      "narrowed m_none req 0": "a260542b6fb4",
+      "doc case m_none hp null": "5cb2c1e3b5ef",
+      "narrowed m_none hp null": "0a0015a73c0a",
+      "doc case m_none hp ''": "5cb2c1e3b5ef",
+      "narrowed m_none hp ''": "d32aa42b5f67",
+      "doc case m_none mm {}": "6dc822e9e827",
+      "narrowed m_none mm {}": "7c463f6c4fef",
+      "doc case m_none mm req2 null": "6dc822e9e827",
+      "narrowed m_none mm req2 null": "96805ede082a",
+      "doc case m_none mm req2 ''": "6dc822e9e827",
+      "narrowed m_none mm req2 ''": "a716a5991625",
+      "doc case m_none rows [{}]": "2577061b104d",
+      "narrowed m_none rows [{}]": "c9ec2e52fc1f",
+      "doc case m_none rows name ''": "759e57e1b74d",
+      "narrowed m_none rows name ''": "551b93d7701c",
+      "doc case m_none sec null": "6dc822e9e827",
+      "narrowed m_none sec null": "d1e0405dd351",
+      "doc case m_none full": "d19f3e739e66",
+      "narrowed m_none full": "5a048d7247b6",
+      "doc case m_none null": "14cf586dafea",
+      "narrowed m_none null": "eb9faf2f350f",
+      "doc case mr_none {}": "14cf586dafea",
+      "narrowed mr_none {}": "09bee9a30b00",
+      "doc case mr_none x ''": "14cf586dafea",
+      "narrowed mr_none x ''": "238df0e3d154",
+      "doc case r_mk=__out": "14cf586dafea",
+      "narrowed r_mk=__out": "06ad3b801f29",
+      "doc case r_mk=null": "14cf586dafea",
+      "narrowed r_mk=null": "23f2ff8b050e",
+      "doc case r_mk=empty": "14cf586dafea",
+      "narrowed r_mk=empty": "58b7726eb014",
+      "doc case r_mk=zero": "cf96de190f31",
+      "narrowed r_mk=zero": "3fb3465b0c35",
+      "doc case r_mk=arr": "142f075d9109",
+      "narrowed r_mk=arr": "79c881e3fa75",
+      "doc case r_mk=word": "ca83376d2c26",
+      "narrowed r_mk=word": "e2e7123d6b1d",
+      "doc case r_mk=int": "c765ebe451f0",
+      "narrowed r_mk=int": "4b6f28c478c6",
+      "doc case ri_mk=__out": "14cf586dafea",
+      "narrowed ri_mk=__out": "06ad3b801f29",
+      "doc case ri_mk=null": "14cf586dafea",
+      "narrowed ri_mk=null": "7a256812559f",
+      "doc case ri_mk=empty": "14cf586dafea",
+      "narrowed ri_mk=empty": "424b52a352e3",
+      "doc case ri_mk=zero": "1a7413fb7bba",
+      "narrowed ri_mk=zero": "e7036a71ad8c",
+      "doc case ri_mk=arr": "12600c4302fa",
+      "narrowed ri_mk=arr": "4106f8d34366",
+      "doc case ri_mk=word": "51eb5d19f2ef",
+      "narrowed ri_mk=word": "53b02ed9836d",
+      "doc case ri_mk=int": "36c19f9133f0",
+      "narrowed ri_mk=int": "f8e45e8656c3",
+      "doc case h_mk=__out": "14cf586dafea",
+      "narrowed h_mk=__out": "06ad3b801f29",
+      "doc case h_mk=null": "14cf586dafea",
+      "narrowed h_mk=null": "8a6b7f521dfe",
+      "doc case h_mk=empty": "14cf586dafea",
+      "narrowed h_mk=empty": "3ec1124f5c56",
+      "doc case h_mk=zero": "3e8588d6071b",
+      "narrowed h_mk=zero": "ead76fda0208",
+      "doc case h_mk=arr": "d949fbe3e951",
+      "narrowed h_mk=arr": "4e46bcda62c2",
+      "doc case h_mk=word": "2c96c49cac84",
+      "narrowed h_mk=word": "adac8829d476",
+      "doc case h_mk=int": "9c40142861fd",
+      "narrowed h_mk=int": "a48c9094c793",
+      "doc case hn_mk=__out": "14cf586dafea",
+      "narrowed hn_mk=__out": "06ad3b801f29",
+      "doc case hn_mk=null": "14cf586dafea",
+      "narrowed hn_mk=null": "76865b6c0003",
+      "doc case hn_mk=empty": "14cf586dafea",
+      "narrowed hn_mk=empty": "d0270a70bfa6",
+      "doc case hn_mk=zero": "097677410287",
+      "narrowed hn_mk=zero": "a8a3aef28015",
+      "doc case hn_mk=arr": "63864e6bd0e1",
+      "narrowed hn_mk=arr": "5e767014cb6d",
+      "doc case hn_mk=word": "88e9fa65fc8d",
+      "narrowed hn_mk=word": "7ae50df8f40e",
+      "doc case hn_mk=int": "e419f219ad5d",
+      "narrowed hn_mk=int": "260103e5c10e",
+      "doc case hc_mk=__out": "14cf586dafea",
+      "narrowed hc_mk=__out": "06ad3b801f29",
+      "doc case hc_mk=null": "14cf586dafea",
+      "narrowed hc_mk=null": "6821d23168b1",
+      "doc case hc_mk=empty": "14cf586dafea",
+      "narrowed hc_mk=empty": "2c135f248f52",
+      "doc case hc_mk=zero": "3aba095d8433",
+      "narrowed hc_mk=zero": "3136d2650830",
+      "doc case hc_mk=arr": "c2d037fa6d69",
+      "narrowed hc_mk=arr": "30830f764551",
+      "doc case hc_mk=word": "919cf6085ed4",
+      "narrowed hc_mk=word": "3ca22c9d2828",
+      "doc case hc_mk=int": "bcf67256b25a",
+      "narrowed hc_mk=int": "6ee5b02f8d72",
+      "doc case hs_mk=__out": "14cf586dafea",
+      "narrowed hs_mk=__out": "06ad3b801f29",
+      "doc case hs_mk=null": "14cf586dafea",
+      "narrowed hs_mk=null": "e675a87ab468",
+      "doc case hs_mk=empty": "14cf586dafea",
+      "narrowed hs_mk=empty": "8d6c9dac06fb",
+      "doc case hs_mk=zero": "14cf586dafea",
+      "narrowed hs_mk=zero": "61ee65dc6664",
+      "doc case hs_mk=arr": "9fbf682e0a63",
+      "narrowed hs_mk=arr": "a114bf5e64b1",
+      "doc case hs_mk=word": "14cf586dafea",
+      "narrowed hs_mk=word": "e974c4c38af6",
+      "doc case hs_mk=int": "14cf586dafea",
+      "narrowed hs_mk=int": "c0d4654868e6",
+      "doc case l_mk=__out": "14cf586dafea",
+      "narrowed l_mk=__out": "06ad3b801f29",
+      "doc case l_mk=null": "14cf586dafea",
+      "narrowed l_mk=null": "9adf9af6ab2d",
+      "doc case l_mk=empty": "14cf586dafea",
+      "narrowed l_mk=empty": "5a8015d98111",
+      "doc case l_mk=zero": "911135cef5f9",
+      "narrowed l_mk=zero": "ada97b2aff2c",
+      "doc case l_mk=arr": "5bd03ba63f57",
+      "narrowed l_mk=arr": "37165557ff01",
+      "doc case l_mk=word": "1ed345522f5d",
+      "narrowed l_mk=word": "be4699d82554",
+      "doc case l_mk=int": "4aae6e7fc77e",
+      "narrowed l_mk=int": "9ddab180d0b5",
+      "doc case mr_mk=__out": "14cf586dafea",
+      "narrowed mr_mk=__out": "06ad3b801f29",
+      "doc case mr_mk=null": "14cf586dafea",
+      "narrowed mr_mk=null": "3ff172a69a00",
+      "doc case mr_mk=empty": "14cf586dafea",
+      "narrowed mr_mk=empty": "08ffc082129b",
+      "doc case mr_mk=zero": "28f8583e5d1e",
+      "narrowed mr_mk=zero": "a09b278a21ac",
+      "doc case mr_mk=arr": "14cf586dafea",
+      "narrowed mr_mk=arr": "964930a5ddc3",
+      "doc case mr_mk=word": "28f8583e5d1e",
+      "narrowed mr_mk=word": "e6bcf3907933",
+      "doc case mr_mk=int": "98bd64697dc8",
+      "narrowed mr_mk=int": "112110278b34",
+      "doc case m_mk {}": "14cf586dafea",
+      "narrowed m_mk {}": "b40c2d4d21a5",
+      "doc case m_mk req null": "14cf586dafea",
+      "narrowed m_mk req null": "534a9b790b1d",
+      "doc case m_mk req ''": "14cf586dafea",
+      "narrowed m_mk req ''": "f216f1ff5bfa",
+      "doc case m_mk req 0": "0b8bb15bd008",
+      "narrowed m_mk req 0": "414cb188373a",
+      "doc case m_mk hp null": "e780f98acff9",
+      "narrowed m_mk hp null": "8ac41e9a9e37",
+      "doc case m_mk hp ''": "e780f98acff9",
+      "narrowed m_mk hp ''": "13dad430b9ef",
+      "doc case m_mk mm {}": "2c79506b9bbe",
+      "narrowed m_mk mm {}": "bb3f00b7c1c1",
+      "doc case m_mk mm req2 null": "2c79506b9bbe",
+      "narrowed m_mk mm req2 null": "f9f243463a0e",
+      "doc case m_mk mm req2 ''": "2c79506b9bbe",
+      "narrowed m_mk mm req2 ''": "32733a8416ae",
+      "doc case m_mk rows [{}]": "7551d060965f",
+      "narrowed m_mk rows [{}]": "6e56e5670b4c",
+      "doc case m_mk rows name ''": "ba27c390d8f0",
+      "narrowed m_mk rows name ''": "0a664cc3151d",
+      "doc case m_mk sec null": "2c79506b9bbe",
+      "narrowed m_mk sec null": "c2da0154d355",
+      "doc case m_mk full": "9843e09bf1ad",
+      "narrowed m_mk full": "9e460edaac06",
+      "doc case m_mk null": "14cf586dafea",
+      "narrowed m_mk null": "e8811c2ebf84",
+      "doc case mr_mk {}": "14cf586dafea",
+      "narrowed mr_mk {}": "964930a5ddc3",
+      "doc case mr_mk x ''": "14cf586dafea",
+      "narrowed mr_mk x ''": "0a83b5827f28",
+      "doc case lk other": "14cf586dafea",
+      "narrowed lk other": "a97c9d6f64f7",
+      "doc case lk_blank other": "14cf586dafea",
+      "narrowed lk_blank other": "9e653c9dac05",
+      "doc case lk null": "14cf586dafea",
+      "narrowed lk null": "a5a9bce3adf2",
+      "doc case unknown": "fcf947676aa5",
+      "narrowed unknown": "88db1a6f6679",
+      "doc case unknown nested": "63232e16f341",
+      "narrowed unknown nested": "20449922156b"
+    },
+    "plain": {
+      "doc empty": "f18466aca955",
+      "doc emitFull": "d73c7a4487d7",
+      "doc emitFull hints": "ac517050046a"
+    }
+  },
+  "records": {
+    "plain | stored | unknown": {
+      "accept": {
+        "thrown": "Drupal\\surface\\Pipeline\\UnknownKeysException",
+        "message": "Unknown key(s) bogus."
+      },
+      "refused": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": {
+          "bogus": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "bogus",
+              "path": "",
+              "message": {
+                "@source": "Unknown key @key.",
+                "arguments": {
+                  "@key": "bogus"
+                },
+                "options": [],
+                "text": "Unknown key bogus."
+              },
+              "code": "unknown_key",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ]
+        },
+        "staleEntries": []
+      },
+      "validate raw": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": {
+          "r_blank": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "r_blank",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": ""
+                },
+                "options": [],
+                "text": " is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "ri_blank": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "ri_blank",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": ""
+                },
+                "options": [],
+                "text": " is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "h_blank": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "h_blank",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": "",
+                  "@default": "dv"
+                },
+                "options": [],
+                "text": " cannot be cleared: it always holds a value, dv by default. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "hn_blank": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "hn_blank",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": ""
+                },
+                "options": [],
+                "text": " cannot be cleared: it always holds a value. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "hc_blank": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "hc_blank",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": "",
+                  "@default": {
+                    "@class": "Drupal\\surface\\Pipeline\\Named",
+                    "label": "Beta",
+                    "machine": "b",
+                    "value": true,
+                    "text": "Beta"
+                  }
+                },
+                "options": [],
+                "text": " cannot be cleared: it always holds a value, Beta by default. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "hs_blank": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "hs_blank",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": "",
+                  "@default": "sv"
+                },
+                "options": [],
+                "text": " cannot be cleared: it always holds a value, sv by default. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "m_blank": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "m_blank",
+              "path": "req",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": ""
+                },
+                "options": [],
+                "text": " is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            },
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "m_blank",
+              "path": "mm.req2",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": ""
+                },
+                "options": [],
+                "text": " is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            },
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "m_blank",
+              "path": "sec",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": ""
+                },
+                "options": [],
+                "text": " is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "mr_blank": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "mr_blank",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "Required map"
+                },
+                "options": [],
+                "text": "Required map is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            },
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "mr_blank",
+              "path": "x",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": ""
+                },
+                "options": [],
+                "text": " is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "l_blank": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "l_blank",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": ""
+                },
+                "options": [],
+                "text": " is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "r_zero": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "r_zero",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "0"
+                },
+                "options": [],
+                "text": "0 is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "ri_zero": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "ri_zero",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "0"
+                },
+                "options": [],
+                "text": "0 is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "h_zero": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "h_zero",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": "0",
+                  "@default": "dv"
+                },
+                "options": [],
+                "text": "0 cannot be cleared: it always holds a value, dv by default. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "hn_zero": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "hn_zero",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": "0"
+                },
+                "options": [],
+                "text": "0 cannot be cleared: it always holds a value. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "hc_zero": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "hc_zero",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": "0",
+                  "@default": {
+                    "@class": "Drupal\\surface\\Pipeline\\Named",
+                    "label": "Beta",
+                    "machine": "b",
+                    "value": true,
+                    "text": "Beta"
+                  }
+                },
+                "options": [],
+                "text": "0 cannot be cleared: it always holds a value, Beta by default. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "hs_zero": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "hs_zero",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": "0",
+                  "@default": "sv"
+                },
+                "options": [],
+                "text": "0 cannot be cleared: it always holds a value, sv by default. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "m_zero": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "m_zero",
+              "path": "req",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "0"
+                },
+                "options": [],
+                "text": "0 is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            },
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "m_zero",
+              "path": "mm.req2",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "0"
+                },
+                "options": [],
+                "text": "0 is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            },
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "m_zero",
+              "path": "sec",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "0"
+                },
+                "options": [],
+                "text": "0 is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "mr_zero": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "mr_zero",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "Required map"
+                },
+                "options": [],
+                "text": "Required map is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            },
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "mr_zero",
+              "path": "x",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "0"
+                },
+                "options": [],
+                "text": "0 is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "l_zero": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "l_zero",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "0"
+                },
+                "options": [],
+                "text": "0 is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "r_none": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "r_none",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "r_none"
+                },
+                "options": [],
+                "text": "r_none is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "ri_none": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "ri_none",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "ri_none"
+                },
+                "options": [],
+                "text": "ri_none is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "h_none": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "h_none",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": "h_none",
+                  "@default": "dv"
+                },
+                "options": [],
+                "text": "h_none cannot be cleared: it always holds a value, dv by default. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "hn_none": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "hn_none",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": "hn_none"
+                },
+                "options": [],
+                "text": "hn_none cannot be cleared: it always holds a value. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "hc_none": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "hc_none",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": "hc_none",
+                  "@default": {
+                    "@class": "Drupal\\surface\\Pipeline\\Named",
+                    "label": "Beta",
+                    "machine": "b",
+                    "value": true,
+                    "text": "Beta"
+                  }
+                },
+                "options": [],
+                "text": "hc_none cannot be cleared: it always holds a value, Beta by default. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "hs_none": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "hs_none",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": "hs_none",
+                  "@default": "sv"
+                },
+                "options": [],
+                "text": "hs_none cannot be cleared: it always holds a value, sv by default. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "m_none": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "m_none",
+              "path": "req",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "req"
+                },
+                "options": [],
+                "text": "req is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            },
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "m_none",
+              "path": "mm.req2",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "req2"
+                },
+                "options": [],
+                "text": "req2 is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            },
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "m_none",
+              "path": "sec",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "sec"
+                },
+                "options": [],
+                "text": "sec is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "mr_none": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "mr_none",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "Required map"
+                },
+                "options": [],
+                "text": "Required map is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            },
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "mr_none",
+              "path": "x",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "x"
+                },
+                "options": [],
+                "text": "x is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "l_none": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "l_none",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "l_none"
+                },
+                "options": [],
+                "text": "l_none is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "ri_mk": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "ri_mk",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": {
+                    "@source": "Marked @x",
+                    "arguments": {
+                      "@x": "up"
+                    },
+                    "options": [],
+                    "text": "Marked up"
+                  }
+                },
+                "options": [],
+                "text": "Marked up is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "h_mk": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "h_mk",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": {
+                    "@source": "Marked @x",
+                    "arguments": {
+                      "@x": "up"
+                    },
+                    "options": [],
+                    "text": "Marked up"
+                  },
+                  "@default": "dv"
+                },
+                "options": [],
+                "text": "Marked up cannot be cleared: it always holds a value, dv by default. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "hn_mk": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "hn_mk",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": {
+                    "@source": "Marked @x",
+                    "arguments": {
+                      "@x": "up"
+                    },
+                    "options": [],
+                    "text": "Marked up"
+                  }
+                },
+                "options": [],
+                "text": "Marked up cannot be cleared: it always holds a value. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "hc_mk": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "hc_mk",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": {
+                    "@source": "Marked @x",
+                    "arguments": {
+                      "@x": "up"
+                    },
+                    "options": [],
+                    "text": "Marked up"
+                  },
+                  "@default": {
+                    "@class": "Drupal\\surface\\Pipeline\\Named",
+                    "label": "Beta",
+                    "machine": "b",
+                    "value": true,
+                    "text": "Beta"
+                  }
+                },
+                "options": [],
+                "text": "Marked up cannot be cleared: it always holds a value, Beta by default. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "hs_mk": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "hs_mk",
+              "path": "",
+              "message": {
+                "@source": "@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.",
+                "arguments": {
+                  "@label": {
+                    "@source": "Marked @x",
+                    "arguments": {
+                      "@x": "up"
+                    },
+                    "options": [],
+                    "text": "Marked up"
+                  },
+                  "@default": "sv"
+                },
+                "options": [],
+                "text": "Marked up cannot be cleared: it always holds a value, sv by default. Leave it out to keep what it holds."
+              },
+              "code": "cannot_clear",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "m_mk": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "m_mk",
+              "path": "req",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": {
+                    "@source": "Marked @x",
+                    "arguments": {
+                      "@x": "up"
+                    },
+                    "options": [],
+                    "text": "Marked up"
+                  }
+                },
+                "options": [],
+                "text": "Marked up is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            },
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "m_mk",
+              "path": "mm.req2",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": {
+                    "@source": "Marked @x",
+                    "arguments": {
+                      "@x": "up"
+                    },
+                    "options": [],
+                    "text": "Marked up"
+                  }
+                },
+                "options": [],
+                "text": "Marked up is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            },
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "m_mk",
+              "path": "sec",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": {
+                    "@source": "Marked @x",
+                    "arguments": {
+                      "@x": "up"
+                    },
+                    "options": [],
+                    "text": "Marked up"
+                  }
+                },
+                "options": [],
+                "text": "Marked up is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "mr_mk": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "mr_mk",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": "Required map"
+                },
+                "options": [],
+                "text": "Required map is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            },
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "mr_mk",
+              "path": "x",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": {
+                    "@source": "Marked @x",
+                    "arguments": {
+                      "@x": "up"
+                    },
+                    "options": [],
+                    "text": "Marked up"
+                  }
+                },
+                "options": [],
+                "text": "Marked up is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ],
+          "l_mk": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "l_mk",
+              "path": "",
+              "message": {
+                "@source": "@label is required.",
+                "arguments": {
+                  "@label": {
+                    "@source": "Marked @x",
+                    "arguments": {
+                      "@x": "up"
+                    },
+                    "options": [],
+                    "text": "Marked up"
+                  }
+                },
+                "options": [],
+                "text": "Marked up is required."
+              },
+              "code": "required",
+              "stale": false,
+              "stored": null,
+              "params": []
+            }
+          ]
+        },
+        "staleEntries": []
+      }
+    },
+    "plain | doc emitFull": {
+      "resource": "hand",
+      "operation": "op",
+      "label": "Op label",
+      "schema": {
+        "$schema": "https://portable-schema.dev/v1/schema",
+        "title": "Op label",
+        "x-surface": {
+          "contract": 5,
+          "version": 1
+        },
+        "type": "object",
+        "properties": {
+          "r_blank": {
+            "type": "string"
+          },
+          "ri_blank": {
+            "type": "integer"
+          },
+          "h_blank": {
+            "type": "string",
+            "default": "dv"
+          },
+          "hn_blank": {
+            "type": "integer"
+          },
+          "hc_blank": {
+            "type": "string",
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "Alpha"
+              },
+              {
+                "const": "b",
+                "title": "Beta"
+              }
+            ],
+            "default": "b"
+          },
+          "hs_blank": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "m_blank": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "req": {
+                "type": "string"
+              },
+              "opt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "hp": {
+                "type": "string",
+                "default": "hpd"
+              },
+              "mm": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req2": {
+                    "type": "integer"
+                  },
+                  "o2": {
+                    "title": "O2",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req2"
+                ]
+              },
+              "rows": {
+                "title": "Rows",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "name"
+                  ]
+                }
+              },
+              "sec": {
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "req"
+            ]
+          },
+          "mr_blank": {
+            "title": "Required map",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "x"
+            ]
+          },
+          "l_blank": {
+            "type": "array",
+            "items": {
+              "title": "Item",
+              "type": "string"
+            }
+          },
+          "r_zero": {
+            "title": "0",
+            "type": "string"
+          },
+          "ri_zero": {
+            "title": "0",
+            "type": "integer"
+          },
+          "h_zero": {
+            "title": "0",
+            "type": "string",
+            "default": "dv"
+          },
+          "hn_zero": {
+            "title": "0",
+            "type": "integer"
+          },
+          "hc_zero": {
+            "title": "0",
+            "type": "string",
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "Alpha"
+              },
+              {
+                "const": "b",
+                "title": "Beta"
+              }
+            ],
+            "default": "b"
+          },
+          "hs_zero": {
+            "title": "0",
+            "type": "string",
+            "writeOnly": true
+          },
+          "m_zero": {
+            "title": "0",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "req": {
+                "title": "0",
+                "type": "string"
+              },
+              "opt": {
+                "title": "0",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "hp": {
+                "title": "0",
+                "type": "string",
+                "default": "hpd"
+              },
+              "mm": {
+                "title": "0",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req2": {
+                    "title": "0",
+                    "type": "integer"
+                  },
+                  "o2": {
+                    "title": "O2",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req2"
+                ]
+              },
+              "rows": {
+                "title": "Rows",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "title": "0",
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "name"
+                  ]
+                }
+              },
+              "sec": {
+                "title": "0",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "req"
+            ]
+          },
+          "mr_zero": {
+            "title": "Required map",
+            "type": "object",
+            "properties": {
+              "x": {
+                "title": "0",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "x"
+            ]
+          },
+          "l_zero": {
+            "title": "0",
+            "type": "array",
+            "items": {
+              "title": "Item",
+              "type": "string"
+            }
+          },
+          "r_none": {
+            "type": "string"
+          },
+          "ri_none": {
+            "type": "integer"
+          },
+          "h_none": {
+            "type": "string",
+            "default": "dv"
+          },
+          "hn_none": {
+            "type": "integer"
+          },
+          "hc_none": {
+            "type": "string",
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "Alpha"
+              },
+              {
+                "const": "b",
+                "title": "Beta"
+              }
+            ],
+            "default": "b"
+          },
+          "hs_none": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "m_none": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "req": {
+                "type": "string"
+              },
+              "opt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "hp": {
+                "type": "string",
+                "default": "hpd"
+              },
+              "mm": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req2": {
+                    "type": "integer"
+                  },
+                  "o2": {
+                    "title": "O2",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req2"
+                ]
+              },
+              "rows": {
+                "title": "Rows",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "name"
+                  ]
+                }
+              },
+              "sec": {
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "req"
+            ]
+          },
+          "mr_none": {
+            "title": "Required map",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "x"
+            ]
+          },
+          "l_none": {
+            "type": "array",
+            "items": {
+              "title": "Item",
+              "type": "string"
+            }
+          },
+          "r_mk": {
+            "title": "Marked up",
+            "type": "string"
+          },
+          "ri_mk": {
+            "title": "Marked up",
+            "type": "integer"
+          },
+          "h_mk": {
+            "title": "Marked up",
+            "type": "string",
+            "default": "dv"
+          },
+          "hn_mk": {
+            "title": "Marked up",
+            "type": "integer"
+          },
+          "hc_mk": {
+            "title": "Marked up",
+            "type": "string",
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "Alpha"
+              },
+              {
+                "const": "b",
+                "title": "Beta"
+              }
+            ],
+            "default": "b"
+          },
+          "hs_mk": {
+            "title": "Marked up",
+            "type": "string",
+            "writeOnly": true
+          },
+          "m_mk": {
+            "title": "Marked up",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "req": {
+                "title": "Marked up",
+                "type": "string"
+              },
+              "opt": {
+                "title": "Marked up",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "hp": {
+                "title": "Marked up",
+                "type": "string",
+                "default": "hpd"
+              },
+              "mm": {
+                "title": "Marked up",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req2": {
+                    "title": "Marked up",
+                    "type": "integer"
+                  },
+                  "o2": {
+                    "title": "O2",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req2"
+                ]
+              },
+              "rows": {
+                "title": "Rows",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "title": "Marked up",
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "name"
+                  ]
+                }
+              },
+              "sec": {
+                "title": "Marked up",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "req"
+            ]
+          },
+          "mr_mk": {
+            "title": "Required map",
+            "type": "object",
+            "properties": {
+              "x": {
+                "title": "Marked up",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "x"
+            ]
+          },
+          "l_mk": {
+            "title": "Marked up",
+            "type": "array",
+            "items": {
+              "title": "Item",
+              "type": "string"
+            }
+          },
+          "lk": {
+            "title": "Locked",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": "fixed",
+            "readOnly": true,
+            "const": "fixed"
+          },
+          "lk_blank": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": "fixed",
+            "readOnly": true,
+            "const": "fixed"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "r_blank",
+          "ri_blank",
+          "mr_blank",
+          "l_blank",
+          "r_zero",
+          "ri_zero",
+          "mr_zero",
+          "l_zero",
+          "r_none",
+          "ri_none",
+          "mr_none",
+          "l_none",
+          "r_mk",
+          "ri_mk",
+          "mr_mk",
+          "l_mk"
+        ]
+      }
+    },
+    "plain | none | doc case ri_blank=zero": {
+      "resource": "hand",
+      "operation": "op",
+      "label": null,
+      "schema": {
+        "$schema": "https://portable-schema.dev/v1/schema",
+        "x-surface": {
+          "contract": 5,
+          "version": 1
+        },
+        "type": "object",
+        "properties": {
+          "r_blank": {
+            "type": "string",
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "ri_blank": {
+            "type": "integer",
+            "x-portable-ui": {
+              "widget": "number"
+            }
+          },
+          "h_blank": {
+            "type": "string",
+            "default": "dv",
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "hn_blank": {
+            "type": "integer",
+            "x-portable-ui": {
+              "widget": "number"
+            }
+          },
+          "hc_blank": {
+            "type": "string",
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "Alpha"
+              },
+              {
+                "const": "b",
+                "title": "Beta"
+              }
+            ],
+            "default": "b",
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                }
+              }
+            }
+          },
+          "hs_blank": {
+            "type": "string",
+            "writeOnly": true,
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "m_blank": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "req": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "opt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "hp": {
+                "type": "string",
+                "default": "hpd",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "mm": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req2": {
+                    "type": "integer",
+                    "x-portable-ui": {
+                      "widget": "number"
+                    }
+                  },
+                  "o2": {
+                    "title": "O2",
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req2"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "rows": {
+                "title": "Rows",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "name"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "x-portable-ui": {
+                  "widget": "list"
+                }
+              },
+              "sec": {
+                "type": "string",
+                "writeOnly": true,
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "req"
+            ],
+            "x-portable-ui": {
+              "widget": "fieldset"
+            }
+          },
+          "mr_blank": {
+            "title": "Required map",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "x"
+            ],
+            "x-portable-ui": {
+              "widget": "fieldset"
+            }
+          },
+          "l_blank": {
+            "type": "array",
+            "items": {
+              "title": "Item",
+              "type": "string",
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "x-portable-ui": {
+              "widget": "list"
+            }
+          },
+          "r_zero": {
+            "title": "0",
+            "type": "string",
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "ri_zero": {
+            "title": "0",
+            "type": "integer",
+            "x-portable-ui": {
+              "widget": "number"
+            }
+          },
+          "h_zero": {
+            "title": "0",
+            "type": "string",
+            "default": "dv",
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "hn_zero": {
+            "title": "0",
+            "type": "integer",
+            "x-portable-ui": {
+              "widget": "number"
+            }
+          },
+          "hc_zero": {
+            "title": "0",
+            "type": "string",
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "Alpha"
+              },
+              {
+                "const": "b",
+                "title": "Beta"
+              }
+            ],
+            "default": "b",
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                }
+              }
+            }
+          },
+          "hs_zero": {
+            "title": "0",
+            "type": "string",
+            "writeOnly": true,
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "m_zero": {
+            "title": "0",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "req": {
+                "title": "0",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "opt": {
+                "title": "0",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "hp": {
+                "title": "0",
+                "type": "string",
+                "default": "hpd",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "mm": {
+                "title": "0",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req2": {
+                    "title": "0",
+                    "type": "integer",
+                    "x-portable-ui": {
+                      "widget": "number"
+                    }
+                  },
+                  "o2": {
+                    "title": "O2",
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req2"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "rows": {
+                "title": "Rows",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "title": "0",
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "name"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "x-portable-ui": {
+                  "widget": "list"
+                }
+              },
+              "sec": {
+                "title": "0",
+                "type": "string",
+                "writeOnly": true,
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "req"
+            ],
+            "x-portable-ui": {
+              "widget": "fieldset"
+            }
+          },
+          "mr_zero": {
+            "title": "Required map",
+            "type": "object",
+            "properties": {
+              "x": {
+                "title": "0",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "x"
+            ],
+            "x-portable-ui": {
+              "widget": "fieldset"
+            }
+          },
+          "l_zero": {
+            "title": "0",
+            "type": "array",
+            "items": {
+              "title": "Item",
+              "type": "string",
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "x-portable-ui": {
+              "widget": "list"
+            }
+          },
+          "r_none": {
+            "type": "string",
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "ri_none": {
+            "type": "integer",
+            "x-portable-ui": {
+              "widget": "number"
+            }
+          },
+          "h_none": {
+            "type": "string",
+            "default": "dv",
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "hn_none": {
+            "type": "integer",
+            "x-portable-ui": {
+              "widget": "number"
+            }
+          },
+          "hc_none": {
+            "type": "string",
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "Alpha"
+              },
+              {
+                "const": "b",
+                "title": "Beta"
+              }
+            ],
+            "default": "b",
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                }
+              }
+            }
+          },
+          "hs_none": {
+            "type": "string",
+            "writeOnly": true,
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "m_none": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "req": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "opt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "hp": {
+                "type": "string",
+                "default": "hpd",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "mm": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req2": {
+                    "type": "integer",
+                    "x-portable-ui": {
+                      "widget": "number"
+                    }
+                  },
+                  "o2": {
+                    "title": "O2",
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req2"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "rows": {
+                "title": "Rows",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "name"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "x-portable-ui": {
+                  "widget": "list"
+                }
+              },
+              "sec": {
+                "type": "string",
+                "writeOnly": true,
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "req"
+            ],
+            "x-portable-ui": {
+              "widget": "fieldset"
+            }
+          },
+          "mr_none": {
+            "title": "Required map",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "x"
+            ],
+            "x-portable-ui": {
+              "widget": "fieldset"
+            }
+          },
+          "l_none": {
+            "type": "array",
+            "items": {
+              "title": "Item",
+              "type": "string",
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "x-portable-ui": {
+              "widget": "list"
+            }
+          },
+          "r_mk": {
+            "title": "Marked up",
+            "type": "string",
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "ri_mk": {
+            "title": "Marked up",
+            "type": "integer",
+            "x-portable-ui": {
+              "widget": "number"
+            }
+          },
+          "h_mk": {
+            "title": "Marked up",
+            "type": "string",
+            "default": "dv",
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "hn_mk": {
+            "title": "Marked up",
+            "type": "integer",
+            "x-portable-ui": {
+              "widget": "number"
+            }
+          },
+          "hc_mk": {
+            "title": "Marked up",
+            "type": "string",
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "Alpha"
+              },
+              {
+                "const": "b",
+                "title": "Beta"
+              }
+            ],
+            "default": "b",
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                }
+              }
+            }
+          },
+          "hs_mk": {
+            "title": "Marked up",
+            "type": "string",
+            "writeOnly": true,
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "m_mk": {
+            "title": "Marked up",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "req": {
+                "title": "Marked up",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "opt": {
+                "title": "Marked up",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "hp": {
+                "title": "Marked up",
+                "type": "string",
+                "default": "hpd",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "mm": {
+                "title": "Marked up",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req2": {
+                    "title": "Marked up",
+                    "type": "integer",
+                    "x-portable-ui": {
+                      "widget": "number"
+                    }
+                  },
+                  "o2": {
+                    "title": "O2",
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req2"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "rows": {
+                "title": "Rows",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "title": "Marked up",
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "name"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "x-portable-ui": {
+                  "widget": "list"
+                }
+              },
+              "sec": {
+                "title": "Marked up",
+                "type": "string",
+                "writeOnly": true,
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "req"
+            ],
+            "x-portable-ui": {
+              "widget": "fieldset"
+            }
+          },
+          "mr_mk": {
+            "title": "Required map",
+            "type": "object",
+            "properties": {
+              "x": {
+                "title": "Marked up",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "x"
+            ],
+            "x-portable-ui": {
+              "widget": "fieldset"
+            }
+          },
+          "l_mk": {
+            "title": "Marked up",
+            "type": "array",
+            "items": {
+              "title": "Item",
+              "type": "string",
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "x-portable-ui": {
+              "widget": "list"
+            }
+          },
+          "lk": {
+            "title": "Locked",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": "fixed",
+            "readOnly": true,
+            "const": "fixed",
+            "x-portable-ui": {
+              "widget": "text"
+            },
+            "x-surface": {
+              "locked": "Fixed here."
+            }
+          },
+          "lk_blank": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": "fixed",
+            "readOnly": true,
+            "const": "fixed",
+            "x-portable-ui": {
+              "widget": "text"
+            },
+            "x-surface": {
+              "locked": "Fixed here."
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "r_blank",
+          "ri_blank",
+          "mr_blank",
+          "l_blank",
+          "r_zero",
+          "ri_zero",
+          "mr_zero",
+          "l_zero",
+          "r_none",
+          "ri_none",
+          "mr_none",
+          "l_none",
+          "r_mk",
+          "ri_mk",
+          "mr_mk",
+          "l_mk"
+        ]
+      },
+      "values": {
+        "r_blank": null,
+        "ri_blank": 0,
+        "h_blank": "dv",
+        "hn_blank": null,
+        "hc_blank": "b",
+        "hs_blank": null,
+        "m_blank": {
+          "req": null,
+          "opt": null,
+          "hp": "hpd",
+          "mm": {
+            "req2": null,
+            "o2": null
+          },
+          "rows": null,
+          "sec": null
+        },
+        "mr_blank": {
+          "x": null
+        },
+        "l_blank": null,
+        "r_zero": null,
+        "ri_zero": null,
+        "h_zero": "dv",
+        "hn_zero": null,
+        "hc_zero": "b",
+        "hs_zero": null,
+        "m_zero": {
+          "req": null,
+          "opt": null,
+          "hp": "hpd",
+          "mm": {
+            "req2": null,
+            "o2": null
+          },
+          "rows": null,
+          "sec": null
+        },
+        "mr_zero": {
+          "x": null
+        },
+        "l_zero": null,
+        "r_none": null,
+        "ri_none": null,
+        "h_none": "dv",
+        "hn_none": null,
+        "hc_none": "b",
+        "hs_none": null,
+        "m_none": {
+          "req": null,
+          "opt": null,
+          "hp": "hpd",
+          "mm": {
+            "req2": null,
+            "o2": null
+          },
+          "rows": null,
+          "sec": null
+        },
+        "mr_none": {
+          "x": null
+        },
+        "l_none": null,
+        "r_mk": null,
+        "ri_mk": null,
+        "h_mk": "dv",
+        "hn_mk": null,
+        "hc_mk": "b",
+        "hs_mk": null,
+        "m_mk": {
+          "req": null,
+          "opt": null,
+          "hp": "hpd",
+          "mm": {
+            "req2": null,
+            "o2": null
+          },
+          "rows": null,
+          "sec": null
+        },
+        "mr_mk": {
+          "x": null
+        },
+        "l_mk": null,
+        "lk": "fixed",
+        "lk_blank": "fixed"
+      },
+      "stale": []
+    },
+    "plain | none | narrowed r_blank=__out": {
+      "document": {
+        "resource": "surface.form",
+        "operation": null,
+        "label": null,
+        "schema": {
+          "$schema": "https://portable-schema.dev/v1/schema",
+          "x-surface": {
+            "contract": 5,
+            "version": 1
+          },
+          "type": "object",
+          "properties": {
+            "r_blank": {
+              "type": "string",
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "ri_blank": {
+              "type": "integer",
+              "x-portable-ui": {
+                "widget": "number"
+              }
+            },
+            "h_blank": {
+              "type": "string",
+              "default": "dv",
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "hn_blank": {
+              "type": "integer",
+              "x-portable-ui": {
+                "widget": "number"
+              }
+            },
+            "hc_blank": {
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "Alpha"
+                },
+                {
+                  "const": "b",
+                  "title": "Beta"
+                }
+              ],
+              "default": "b",
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": false,
+                    "label": "- Select -"
+                  }
+                }
+              }
+            },
+            "hs_blank": {
+              "type": "string",
+              "writeOnly": true,
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "m_blank": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "req": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "opt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "hp": {
+                  "type": "string",
+                  "default": "hpd",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "mm": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req2": {
+                      "type": "integer",
+                      "x-portable-ui": {
+                        "widget": "number"
+                      }
+                    },
+                    "o2": {
+                      "title": "O2",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req2"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "rows": {
+                  "title": "Rows",
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "x-portable-ui": {
+                          "widget": "text"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "name"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  },
+                  "x-portable-ui": {
+                    "widget": "list"
+                  }
+                },
+                "sec": {
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "req"
+              ],
+              "x-portable-ui": {
+                "widget": "fieldset"
+              }
+            },
+            "mr_blank": {
+              "title": "Required map",
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "x"
+              ],
+              "x-portable-ui": {
+                "widget": "fieldset"
+              }
+            },
+            "l_blank": {
+              "type": "array",
+              "items": {
+                "title": "Item",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "x-portable-ui": {
+                "widget": "list"
+              }
+            },
+            "r_zero": {
+              "title": "0",
+              "type": "string",
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "ri_zero": {
+              "title": "0",
+              "type": "integer",
+              "x-portable-ui": {
+                "widget": "number"
+              }
+            },
+            "h_zero": {
+              "title": "0",
+              "type": "string",
+              "default": "dv",
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "hn_zero": {
+              "title": "0",
+              "type": "integer",
+              "x-portable-ui": {
+                "widget": "number"
+              }
+            },
+            "hc_zero": {
+              "title": "0",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "Alpha"
+                },
+                {
+                  "const": "b",
+                  "title": "Beta"
+                }
+              ],
+              "default": "b",
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": false,
+                    "label": "- Select -"
+                  }
+                }
+              }
+            },
+            "hs_zero": {
+              "title": "0",
+              "type": "string",
+              "writeOnly": true,
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "m_zero": {
+              "title": "0",
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "req": {
+                  "title": "0",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "opt": {
+                  "title": "0",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "hp": {
+                  "title": "0",
+                  "type": "string",
+                  "default": "hpd",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "mm": {
+                  "title": "0",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req2": {
+                      "title": "0",
+                      "type": "integer",
+                      "x-portable-ui": {
+                        "widget": "number"
+                      }
+                    },
+                    "o2": {
+                      "title": "O2",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req2"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "rows": {
+                  "title": "Rows",
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "title": "0",
+                        "type": "string",
+                        "x-portable-ui": {
+                          "widget": "text"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "name"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  },
+                  "x-portable-ui": {
+                    "widget": "list"
+                  }
+                },
+                "sec": {
+                  "title": "0",
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "req"
+              ],
+              "x-portable-ui": {
+                "widget": "fieldset"
+              }
+            },
+            "mr_zero": {
+              "title": "Required map",
+              "type": "object",
+              "properties": {
+                "x": {
+                  "title": "0",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "x"
+              ],
+              "x-portable-ui": {
+                "widget": "fieldset"
+              }
+            },
+            "l_zero": {
+              "title": "0",
+              "type": "array",
+              "items": {
+                "title": "Item",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "x-portable-ui": {
+                "widget": "list"
+              }
+            },
+            "r_none": {
+              "type": "string",
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "ri_none": {
+              "type": "integer",
+              "x-portable-ui": {
+                "widget": "number"
+              }
+            },
+            "h_none": {
+              "type": "string",
+              "default": "dv",
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "hn_none": {
+              "type": "integer",
+              "x-portable-ui": {
+                "widget": "number"
+              }
+            },
+            "hc_none": {
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "Alpha"
+                },
+                {
+                  "const": "b",
+                  "title": "Beta"
+                }
+              ],
+              "default": "b",
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": false,
+                    "label": "- Select -"
+                  }
+                }
+              }
+            },
+            "hs_none": {
+              "type": "string",
+              "writeOnly": true,
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "m_none": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "req": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "opt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "hp": {
+                  "type": "string",
+                  "default": "hpd",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "mm": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req2": {
+                      "type": "integer",
+                      "x-portable-ui": {
+                        "widget": "number"
+                      }
+                    },
+                    "o2": {
+                      "title": "O2",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req2"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "rows": {
+                  "title": "Rows",
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "x-portable-ui": {
+                          "widget": "text"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "name"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  },
+                  "x-portable-ui": {
+                    "widget": "list"
+                  }
+                },
+                "sec": {
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "req"
+              ],
+              "x-portable-ui": {
+                "widget": "fieldset"
+              }
+            },
+            "mr_none": {
+              "title": "Required map",
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "x"
+              ],
+              "x-portable-ui": {
+                "widget": "fieldset"
+              }
+            },
+            "l_none": {
+              "type": "array",
+              "items": {
+                "title": "Item",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "x-portable-ui": {
+                "widget": "list"
+              }
+            },
+            "r_mk": {
+              "title": "Marked up",
+              "type": "string",
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "ri_mk": {
+              "title": "Marked up",
+              "type": "integer",
+              "x-portable-ui": {
+                "widget": "number"
+              }
+            },
+            "h_mk": {
+              "title": "Marked up",
+              "type": "string",
+              "default": "dv",
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "hn_mk": {
+              "title": "Marked up",
+              "type": "integer",
+              "x-portable-ui": {
+                "widget": "number"
+              }
+            },
+            "hc_mk": {
+              "title": "Marked up",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "Alpha"
+                },
+                {
+                  "const": "b",
+                  "title": "Beta"
+                }
+              ],
+              "default": "b",
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": false,
+                    "label": "- Select -"
+                  }
+                }
+              }
+            },
+            "hs_mk": {
+              "title": "Marked up",
+              "type": "string",
+              "writeOnly": true,
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "m_mk": {
+              "title": "Marked up",
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "req": {
+                  "title": "Marked up",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "opt": {
+                  "title": "Marked up",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "hp": {
+                  "title": "Marked up",
+                  "type": "string",
+                  "default": "hpd",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "mm": {
+                  "title": "Marked up",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req2": {
+                      "title": "Marked up",
+                      "type": "integer",
+                      "x-portable-ui": {
+                        "widget": "number"
+                      }
+                    },
+                    "o2": {
+                      "title": "O2",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req2"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "rows": {
+                  "title": "Rows",
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "title": "Marked up",
+                        "type": "string",
+                        "x-portable-ui": {
+                          "widget": "text"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "name"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  },
+                  "x-portable-ui": {
+                    "widget": "list"
+                  }
+                },
+                "sec": {
+                  "title": "Marked up",
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "req"
+              ],
+              "x-portable-ui": {
+                "widget": "fieldset"
+              }
+            },
+            "mr_mk": {
+              "title": "Required map",
+              "type": "object",
+              "properties": {
+                "x": {
+                  "title": "Marked up",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "x"
+              ],
+              "x-portable-ui": {
+                "widget": "fieldset"
+              }
+            },
+            "l_mk": {
+              "title": "Marked up",
+              "type": "array",
+              "items": {
+                "title": "Item",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "x-portable-ui": {
+                "widget": "list"
+              }
+            },
+            "lk": {
+              "title": "Locked",
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": "fixed",
+              "readOnly": true,
+              "const": "fixed",
+              "x-portable-ui": {
+                "widget": "text"
+              },
+              "x-surface": {
+                "locked": "Fixed here."
+              }
+            },
+            "lk_blank": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": "fixed",
+              "readOnly": true,
+              "const": "fixed",
+              "x-portable-ui": {
+                "widget": "text"
+              },
+              "x-surface": {
+                "locked": "Fixed here."
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "r_blank",
+            "ri_blank",
+            "mr_blank",
+            "l_blank",
+            "r_zero",
+            "ri_zero",
+            "mr_zero",
+            "l_zero",
+            "r_none",
+            "ri_none",
+            "mr_none",
+            "l_none",
+            "r_mk",
+            "ri_mk",
+            "mr_mk",
+            "l_mk"
+          ]
+        },
+        "values": {
+          "r_blank": null,
+          "ri_blank": null,
+          "h_blank": "dv",
+          "hn_blank": null,
+          "hc_blank": "b",
+          "hs_blank": null,
+          "m_blank": {
+            "req": null,
+            "opt": null,
+            "hp": "hpd",
+            "mm": {
+              "req2": null,
+              "o2": null
+            },
+            "rows": null,
+            "sec": null
+          },
+          "mr_blank": {
+            "x": null
+          },
+          "l_blank": null,
+          "r_zero": null,
+          "ri_zero": null,
+          "h_zero": "dv",
+          "hn_zero": null,
+          "hc_zero": "b",
+          "hs_zero": null,
+          "m_zero": {
+            "req": null,
+            "opt": null,
+            "hp": "hpd",
+            "mm": {
+              "req2": null,
+              "o2": null
+            },
+            "rows": null,
+            "sec": null
+          },
+          "mr_zero": {
+            "x": null
+          },
+          "l_zero": null,
+          "r_none": null,
+          "ri_none": null,
+          "h_none": "dv",
+          "hn_none": null,
+          "hc_none": "b",
+          "hs_none": null,
+          "m_none": {
+            "req": null,
+            "opt": null,
+            "hp": "hpd",
+            "mm": {
+              "req2": null,
+              "o2": null
+            },
+            "rows": null,
+            "sec": null
+          },
+          "mr_none": {
+            "x": null
+          },
+          "l_none": null,
+          "r_mk": null,
+          "ri_mk": null,
+          "h_mk": "dv",
+          "hn_mk": null,
+          "hc_mk": "b",
+          "hs_mk": null,
+          "m_mk": {
+            "req": null,
+            "opt": null,
+            "hp": "hpd",
+            "mm": {
+              "req2": null,
+              "o2": null
+            },
+            "rows": null,
+            "sec": null
+          },
+          "mr_mk": {
+            "x": null
+          },
+          "l_mk": null,
+          "lk": "fixed",
+          "lk_blank": "fixed"
+        },
+        "stale": []
+      },
+      "values": [],
+      "discarded": []
+    }
+  }
+}

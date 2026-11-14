@@ -1,0 +1,3986 @@
+{
+  "surface": "frames",
+  "rows": 411,
+  "digests": {
+    "plain | none": {
+      "nothing": "954c7089e98b",
+      "child {}": "2414ccc078b3",
+      "child null": "21237718e69c",
+      "child scalar": "4d8c1163a5b5",
+      "child r_blank null": "2414ccc078b3",
+      "child r_blank ''": "2414ccc078b3",
+      "child h_blank null": "b60d4123674f",
+      "child h_blank ''": "b60d4123674f",
+      "child m_blank {}": "7715ffb53d20",
+      "child m_blank mm": "9911dcbf0200",
+      "child r_none null": "2414ccc078b3",
+      "child r_none ''": "2414ccc078b3",
+      "child h_none null": "398e880cc58e",
+      "child h_none ''": "398e880cc58e",
+      "child m_none {}": "80bbb4445660",
+      "child m_none mm": "af01a0fcd80b",
+      "child r_mk null": "2414ccc078b3",
+      "child r_mk ''": "2414ccc078b3",
+      "child h_mk null": "27081e4e72ef",
+      "child h_mk ''": "27081e4e72ef",
+      "child m_mk {}": "428ae6cad50f",
+      "child m_mk mm": "49dd13687656",
+      "child2 {}": "214de5604ba4",
+      "child2 null": "0edb55769131",
+      "child2 scalar": "c22431d68f0b",
+      "child2 r_blank null": "214de5604ba4",
+      "child2 r_blank ''": "214de5604ba4",
+      "child2 h_blank null": "31abf42da8c0",
+      "child2 h_blank ''": "31abf42da8c0",
+      "child2 m_blank {}": "2ec739beff05",
+      "child2 m_blank mm": "8e5f1afc7eec",
+      "child2 r_none null": "214de5604ba4",
+      "child2 r_none ''": "214de5604ba4",
+      "child2 h_none null": "9a96d838d01c",
+      "child2 h_none ''": "9a96d838d01c",
+      "child2 m_none {}": "aca05895f9c2",
+      "child2 m_none mm": "89b6ede95c0b",
+      "child2 r_mk null": "214de5604ba4",
+      "child2 r_mk ''": "214de5604ba4",
+      "child2 h_mk null": "556e491a3e96",
+      "child2 h_mk ''": "556e491a3e96",
+      "child2 m_mk {}": "f32d5a7d2a44",
+      "child2 m_mk mm": "ced9d62865ee",
+      "items [{}]": "010a9da748b3",
+      "items name null": "010a9da748b3",
+      "items m ''": "7e3dd5363c53",
+      "items scalar": "95fb1891ee80",
+      "variant 'a' {}": "023138f914cc",
+      "variant 'a' null r": "f10247bbbf32",
+      "variant 'a' m": "cb8efa891217",
+      "flat 'a'": "e6f3a6f21a45",
+      "variant 'b' {}": "16f85abb5db6",
+      "variant 'b' null r": "218ab780b610",
+      "variant 'b' m": "43a1b8d88c23",
+      "flat 'b'": "0bdeb8844247",
+      "variant NULL {}": "8d2537bfa5c6",
+      "variant NULL null r": "33db03fdba53",
+      "variant NULL m": "402d966b414f",
+      "flat NULL": "8fc580f416d9",
+      "variant '' {}": "8d2537bfa5c6",
+      "variant '' null r": "33db03fdba53",
+      "variant '' m": "402d966b414f",
+      "flat ''": "8fc580f416d9",
+      "variant 'zz' {}": "fe6dff0369c9",
+      "variant 'zz' null r": "f163f9fc3bb8",
+      "variant 'zz' m": "bda0b4973d21",
+      "flat 'zz'": "ea00ed093ed3",
+      "flat no kind": "0ddfbd4f8b2d",
+      "doc full": "f0fe954bab95",
+      "doc hints": "708ed6ea8d28",
+      "doc case child {}": "708ed6ea8d28",
+      "narrowed child {}": "2af36bd42dfb",
+      "doc case child null": "708ed6ea8d28",
+      "narrowed child null": "bb557194fbba",
+      "doc case child scalar": "3dc977ffc519",
+      "narrowed child scalar": "48a44f23587e",
+      "doc case child r_blank null": "708ed6ea8d28",
+      "narrowed child r_blank null": "8a600cf33896",
+      "doc case child r_blank ''": "708ed6ea8d28",
+      "narrowed child r_blank ''": "e940062e8847",
+      "doc case child h_blank null": "708ed6ea8d28",
+      "narrowed child h_blank null": "09679cb97925",
+      "doc case child h_blank ''": "708ed6ea8d28",
+      "narrowed child h_blank ''": "20fcf022c378",
+      "doc case child m_blank {}": "708ed6ea8d28",
+      "narrowed child m_blank {}": "33df49e94053",
+      "doc case child m_blank mm": "24a1b018c133",
+      "narrowed child m_blank mm": "b9db248b8a4f",
+      "doc case child r_none null": "708ed6ea8d28",
+      "narrowed child r_none null": "f81f9408fa1b",
+      "doc case child r_none ''": "708ed6ea8d28",
+      "narrowed child r_none ''": "6a586fac056c",
+      "doc case child h_none null": "708ed6ea8d28",
+      "narrowed child h_none null": "613fac4441f6",
+      "doc case child h_none ''": "708ed6ea8d28",
+      "narrowed child h_none ''": "5598078ae638",
+      "doc case child m_none {}": "708ed6ea8d28",
+      "narrowed child m_none {}": "530d9d463ca8",
+      "doc case child m_none mm": "fa2beeb3fe9c",
+      "narrowed child m_none mm": "af32e5363896",
+      "doc case child r_mk null": "708ed6ea8d28",
+      "narrowed child r_mk null": "4a137ddde724",
+      "doc case child r_mk ''": "708ed6ea8d28",
+      "narrowed child r_mk ''": "efdb4da8b9cf",
+      "doc case child h_mk null": "708ed6ea8d28",
+      "narrowed child h_mk null": "a484faeb7ac1",
+      "doc case child h_mk ''": "708ed6ea8d28",
+      "narrowed child h_mk ''": "66c25fa01a08",
+      "doc case child m_mk {}": "708ed6ea8d28",
+      "narrowed child m_mk {}": "e3626e860511",
+      "doc case child m_mk mm": "b1f20b49acaf",
+      "narrowed child m_mk mm": "6b1908e151d4",
+      "doc case child2 {}": "708ed6ea8d28",
+      "narrowed child2 {}": "b8d97f81bb8f",
+      "doc case child2 null": "708ed6ea8d28",
+      "narrowed child2 null": "21829c99938c",
+      "doc case child2 scalar": "aecaafa06388",
+      "narrowed child2 scalar": "f78dccc313cb",
+      "doc case child2 r_blank null": "708ed6ea8d28",
+      "narrowed child2 r_blank null": "7b49641630cd",
+      "doc case child2 r_blank ''": "708ed6ea8d28",
+      "narrowed child2 r_blank ''": "05230440b10c",
+      "doc case child2 h_blank null": "708ed6ea8d28",
+      "narrowed child2 h_blank null": "7edc52fce78e",
+      "doc case child2 h_blank ''": "708ed6ea8d28",
+      "narrowed child2 h_blank ''": "0020b98fbbf4",
+      "doc case child2 m_blank {}": "708ed6ea8d28",
+      "narrowed child2 m_blank {}": "8ff220fdfe9e",
+      "doc case child2 m_blank mm": "a30d3eb5cf6b",
+      "narrowed child2 m_blank mm": "dd0399393331",
+      "doc case child2 r_none null": "708ed6ea8d28",
+      "narrowed child2 r_none null": "cc2889603fda",
+      "doc case child2 r_none ''": "708ed6ea8d28",
+      "narrowed child2 r_none ''": "3a59e86bd68b",
+      "doc case child2 h_none null": "708ed6ea8d28",
+      "narrowed child2 h_none null": "2d0edbd2901c",
+      "doc case child2 h_none ''": "708ed6ea8d28",
+      "narrowed child2 h_none ''": "34608cef94ac",
+      "doc case child2 m_none {}": "708ed6ea8d28",
+      "narrowed child2 m_none {}": "e4630976ad3d",
+      "doc case child2 m_none mm": "5134ebe67b7b",
+      "narrowed child2 m_none mm": "88c0f681e684",
+      "doc case child2 r_mk null": "708ed6ea8d28",
+      "narrowed child2 r_mk null": "f29792c23e72",
+      "doc case child2 r_mk ''": "708ed6ea8d28",
+      "narrowed child2 r_mk ''": "f378ce4e7c0b",
+      "doc case child2 h_mk null": "708ed6ea8d28",
+      "narrowed child2 h_mk null": "da622e415ea3",
+      "doc case child2 h_mk ''": "708ed6ea8d28",
+      "narrowed child2 h_mk ''": "6ca05e05b2c5",
+      "doc case child2 m_mk {}": "708ed6ea8d28",
+      "narrowed child2 m_mk {}": "0e9de80ab040",
+      "doc case child2 m_mk mm": "6358a90a86f7",
+      "narrowed child2 m_mk mm": "a2ca68a93ca1",
+      "doc case items [{}]": "d8c6d06253a3",
+      "narrowed items [{}]": "4917e1aa653b",
+      "doc case items name null": "d8c6d06253a3",
+      "narrowed items name null": "6d70226d11f5",
+      "doc case items m ''": "b63bbc7a9ce2",
+      "narrowed items m ''": "246aef8797d8",
+      "doc case items scalar": "cd49fa68fa84",
+      "narrowed items scalar": "3aac6aad5c78",
+      "doc case variant 'a' {}": "708ed6ea8d28",
+      "narrowed variant 'a' {}": "fcddd193af52",
+      "doc case variant 'a' null r": "65f6c963e484",
+      "narrowed variant 'a' null r": "b362464d1ccf",
+      "doc case variant 'a' m": "708ed6ea8d28",
+      "narrowed variant 'a' m": "fd2aea02b9a8",
+      "doc case flat 'a'": "e7a9b3ddff52",
+      "narrowed flat 'a'": "b0f02ff9fad4",
+      "doc case variant 'b' {}": "c64c814f4461",
+      "narrowed variant 'b' {}": "9de4271b379b",
+      "doc case variant 'b' null r": "264b0972bf49",
+      "narrowed variant 'b' null r": "42b9bdb9646b",
+      "doc case variant 'b' m": "e2646007de82",
+      "narrowed variant 'b' m": "42b9bdb9646b",
+      "doc case flat 'b'": "740be0f9e508",
+      "narrowed flat 'b'": "ccf796a055a7",
+      "doc case variant NULL {}": "708ed6ea8d28",
+      "narrowed variant NULL {}": "52816ee90488",
+      "doc case variant NULL null r": "708ed6ea8d28",
+      "narrowed variant NULL null r": "18a7fb65bc76",
+      "doc case variant NULL m": "708ed6ea8d28",
+      "narrowed variant NULL m": "d4f28e13a72f",
+      "doc case flat NULL": "fea7bf37197a",
+      "narrowed flat NULL": "b300fa92b54c",
+      "doc case variant '' {}": "708ed6ea8d28",
+      "narrowed variant '' {}": "9658a73ca2ff",
+      "doc case variant '' null r": "708ed6ea8d28",
+      "narrowed variant '' null r": "e00f405dd4b6",
+      "doc case variant '' m": "708ed6ea8d28",
+      "narrowed variant '' m": "c0e0013d6d11",
+      "doc case flat ''": "fea7bf37197a",
+      "narrowed flat ''": "c5ea2427bff3",
+      "doc case variant 'zz' {}": "56016655f4fb",
+      "narrowed variant 'zz' {}": "f4d9d917d0f1",
+      "doc case variant 'zz' null r": "b810e392781e",
+      "narrowed variant 'zz' null r": "980f99edd4a1",
+      "doc case variant 'zz' m": "e2eb84d5850f",
+      "narrowed variant 'zz' m": "d805ab2f8390",
+      "doc case flat 'zz'": "33b9d45eb572",
+      "narrowed flat 'zz'": "32553683ba1d",
+      "doc case flat no kind": "b70b0880ac88",
+      "narrowed flat no kind": "e74d1d787310"
+    },
+    "plain | stored": {
+      "nothing": "95a2c9345dfb",
+      "child {}": "7d713d90153f",
+      "child null": "81710d669197",
+      "child scalar": "4b96272d87b2",
+      "child r_blank null": "7d713d90153f",
+      "child r_blank ''": "7d713d90153f",
+      "child h_blank null": "e804e0d99359",
+      "child h_blank ''": "e804e0d99359",
+      "child m_blank {}": "4f807fc3b362",
+      "child m_blank mm": "2ef6e487621d",
+      "child r_none null": "7d713d90153f",
+      "child r_none ''": "7d713d90153f",
+      "child h_none null": "75f99c3aadbd",
+      "child h_none ''": "75f99c3aadbd",
+      "child m_none {}": "2acb8a4f0c28",
+      "child m_none mm": "2a8357f89991",
+      "child r_mk null": "7d713d90153f",
+      "child r_mk ''": "7d713d90153f",
+      "child h_mk null": "c71742f1a7e8",
+      "child h_mk ''": "c71742f1a7e8",
+      "child m_mk {}": "ec79f53319c2",
+      "child m_mk mm": "141e4db48969",
+      "child2 {}": "3d3dbcac8078",
+      "child2 null": "713a1957b70f",
+      "child2 scalar": "212ba91b4285",
+      "child2 r_blank null": "3d3dbcac8078",
+      "child2 r_blank ''": "3d3dbcac8078",
+      "child2 h_blank null": "c673fe3b5afa",
+      "child2 h_blank ''": "c673fe3b5afa",
+      "child2 m_blank {}": "bb60b8472c95",
+      "child2 m_blank mm": "ec300d6600a5",
+      "child2 r_none null": "3d3dbcac8078",
+      "child2 r_none ''": "3d3dbcac8078",
+      "child2 h_none null": "83bada71911c",
+      "child2 h_none ''": "83bada71911c",
+      "child2 m_none {}": "8a9b4ba6dc9c",
+      "child2 m_none mm": "52bc6d81f886",
+      "child2 r_mk null": "3d3dbcac8078",
+      "child2 r_mk ''": "3d3dbcac8078",
+      "child2 h_mk null": "983e3289b054",
+      "child2 h_mk ''": "983e3289b054",
+      "child2 m_mk {}": "4badba933966",
+      "child2 m_mk mm": "43921671cd34",
+      "items [{}]": "ea7171e357f9",
+      "items name null": "ea7171e357f9",
+      "items m ''": "8fbfcb679c3c",
+      "items scalar": "009c1ee63b52",
+      "variant 'a' {}": "0f2f71b3bfc7",
+      "variant 'a' null r": "2ccc3ba43017",
+      "variant 'a' m": "6557895c719b",
+      "flat 'a'": "94653a28113e",
+      "variant 'b' {}": "72bd7ad4c62e",
+      "variant 'b' null r": "8ff0443780ed",
+      "variant 'b' m": "b902084e943a",
+      "flat 'b'": "8c5d6f3b5423",
+      "variant NULL {}": "7e0701dd4bb0",
+      "variant NULL null r": "e806af07a0b7",
+      "variant NULL m": "5949acf4e9e2",
+      "flat NULL": "6c1623cd19bc",
+      "variant '' {}": "7e0701dd4bb0",
+      "variant '' null r": "e806af07a0b7",
+      "variant '' m": "5949acf4e9e2",
+      "flat ''": "6c1623cd19bc",
+      "variant 'zz' {}": "80f643e1b503",
+      "variant 'zz' null r": "21dadb73cfd1",
+      "variant 'zz' m": "8c4f23e02d0d",
+      "flat 'zz'": "49df00e27a01",
+      "flat no kind": "09ff9e594760",
+      "doc full": "0be7ef7a3bf1",
+      "doc hints": "32a942e592ee",
+      "doc case child {}": "32a942e592ee",
+      "narrowed child {}": "73538a4806c0",
+      "doc case child null": "51828e584876",
+      "narrowed child null": "7096f7889826",
+      "doc case child scalar": "3dc977ffc519",
+      "narrowed child scalar": "2eb0f8f45c49",
+      "doc case child r_blank null": "32a942e592ee",
+      "narrowed child r_blank null": "16fae719cf1f",
+      "doc case child r_blank ''": "32a942e592ee",
+      "narrowed child r_blank ''": "4d9c4922d33e",
+      "doc case child h_blank null": "32a942e592ee",
+      "narrowed child h_blank null": "8ec8d48ebd05",
+      "doc case child h_blank ''": "32a942e592ee",
+      "narrowed child h_blank ''": "23c04f4ce324",
+      "doc case child m_blank {}": "32a942e592ee",
+      "narrowed child m_blank {}": "14a65fc83e1c",
+      "doc case child m_blank mm": "6262a21b8af2",
+      "narrowed child m_blank mm": "73aaa4135bfa",
+      "doc case child r_none null": "32a942e592ee",
+      "narrowed child r_none null": "35d8ddeb9c95",
+      "doc case child r_none ''": "32a942e592ee",
+      "narrowed child r_none ''": "f3e1d5bcef98",
+      "doc case child h_none null": "32a942e592ee",
+      "narrowed child h_none null": "0f42b994aad6",
+      "doc case child h_none ''": "32a942e592ee",
+      "narrowed child h_none ''": "01b67aeb43f5",
+      "doc case child m_none {}": "32a942e592ee",
+      "narrowed child m_none {}": "45a86c423983",
+      "doc case child m_none mm": "7c2a519b6a19",
+      "narrowed child m_none mm": "03f44b5030f0",
+      "doc case child r_mk null": "32a942e592ee",
+      "narrowed child r_mk null": "49eebd4af359",
+      "doc case child r_mk ''": "32a942e592ee",
+      "narrowed child r_mk ''": "4f4c6adad7b8",
+      "doc case child h_mk null": "32a942e592ee",
+      "narrowed child h_mk null": "b8c777c79d40",
+      "doc case child h_mk ''": "32a942e592ee",
+      "narrowed child h_mk ''": "1d1cf574caff",
+      "doc case child m_mk {}": "32a942e592ee",
+      "narrowed child m_mk {}": "331240cdb6ad",
+      "doc case child m_mk mm": "f973a3101ee2",
+      "narrowed child m_mk mm": "957ad1115a13",
+      "doc case child2 {}": "32a942e592ee",
+      "narrowed child2 {}": "94c6e986a9db",
+      "doc case child2 null": "32a942e592ee",
+      "narrowed child2 null": "031732b7771e",
+      "doc case child2 scalar": "aecaafa06388",
+      "narrowed child2 scalar": "0715551f1ec7",
+      "doc case child2 r_blank null": "32a942e592ee",
+      "narrowed child2 r_blank null": "de3ff049e3a7",
+      "doc case child2 r_blank ''": "32a942e592ee",
+      "narrowed child2 r_blank ''": "dbf3b975592b",
+      "doc case child2 h_blank null": "32a942e592ee",
+      "narrowed child2 h_blank null": "b813fa402c4d",
+      "doc case child2 h_blank ''": "32a942e592ee",
+      "narrowed child2 h_blank ''": "532dffa0cd0e",
+      "doc case child2 m_blank {}": "32a942e592ee",
+      "narrowed child2 m_blank {}": "89a96f9eda84",
+      "doc case child2 m_blank mm": "b79a7904f67b",
+      "narrowed child2 m_blank mm": "a89b99e6bc30",
+      "doc case child2 r_none null": "32a942e592ee",
+      "narrowed child2 r_none null": "9d7bb95072f8",
+      "doc case child2 r_none ''": "32a942e592ee",
+      "narrowed child2 r_none ''": "99f2878defb3",
+      "doc case child2 h_none null": "32a942e592ee",
+      "narrowed child2 h_none null": "82acf9a4fa24",
+      "doc case child2 h_none ''": "32a942e592ee",
+      "narrowed child2 h_none ''": "05a7098f6767",
+      "doc case child2 m_none {}": "32a942e592ee",
+      "narrowed child2 m_none {}": "0e048524feb3",
+      "doc case child2 m_none mm": "555bebcc7655",
+      "narrowed child2 m_none mm": "5c7bf1c139b9",
+      "doc case child2 r_mk null": "32a942e592ee",
+      "narrowed child2 r_mk null": "b93bec222004",
+      "doc case child2 r_mk ''": "32a942e592ee",
+      "narrowed child2 r_mk ''": "f1544295237d",
+      "doc case child2 h_mk null": "32a942e592ee",
+      "narrowed child2 h_mk null": "1bfc4347712f",
+      "doc case child2 h_mk ''": "32a942e592ee",
+      "narrowed child2 h_mk ''": "4cde54ccc3f9",
+      "doc case child2 m_mk {}": "32a942e592ee",
+      "narrowed child2 m_mk {}": "8d7b6aa6b71d",
+      "doc case child2 m_mk mm": "44512ac15a9d",
+      "narrowed child2 m_mk mm": "404efaa8a95b",
+      "doc case items [{}]": "25df28b6b217",
+      "narrowed items [{}]": "ffe3d0b6e06c",
+      "doc case items name null": "25df28b6b217",
+      "narrowed items name null": "b7ee97833ef3",
+      "doc case items m ''": "e847776d4ba5",
+      "narrowed items m ''": "751ba758fec3",
+      "doc case items scalar": "cd49fa68fa84",
+      "narrowed items scalar": "04ab2591a7f6",
+      "doc case variant 'a' {}": "32a942e592ee",
+      "narrowed variant 'a' {}": "9ede6a6efe56",
+      "doc case variant 'a' null r": "65f6c963e484",
+      "narrowed variant 'a' null r": "aa520358070e",
+      "doc case variant 'a' m": "32a942e592ee",
+      "narrowed variant 'a' m": "c03e1ef9d07c",
+      "doc case flat 'a'": "8d8714b86ae3",
+      "narrowed flat 'a'": "79ca8db815ac",
+      "doc case variant 'b' {}": "4aa4e98c6d8b",
+      "narrowed variant 'b' {}": "53b89f37314f",
+      "doc case variant 'b' null r": "264b0972bf49",
+      "narrowed variant 'b' null r": "6fb4b9520155",
+      "doc case variant 'b' m": "e2646007de82",
+      "narrowed variant 'b' m": "6fb4b9520155",
+      "doc case flat 'b'": "7f5dca4e1621",
+      "narrowed flat 'b'": "e66a0d930465",
+      "doc case variant NULL {}": "5d8c4539f557",
+      "narrowed variant NULL {}": "2615bc9ccc2c",
+      "doc case variant NULL null r": "5d8c4539f557",
+      "narrowed variant NULL null r": "dadb473f26c9",
+      "doc case variant NULL m": "5d8c4539f557",
+      "narrowed variant NULL m": "65b42890c680",
+      "doc case flat NULL": "70dc26a0b333",
+      "narrowed flat NULL": "5c67e8f91cb8",
+      "doc case variant '' {}": "5d8c4539f557",
+      "narrowed variant '' {}": "b3968dcf4bb2",
+      "doc case variant '' null r": "5d8c4539f557",
+      "narrowed variant '' null r": "e8fb2aab1792",
+      "doc case variant '' m": "5d8c4539f557",
+      "narrowed variant '' m": "a656cc89c457",
+      "doc case flat ''": "70dc26a0b333",
+      "narrowed flat ''": "7b1130f0ff39",
+      "doc case variant 'zz' {}": "06ffab11d78a",
+      "narrowed variant 'zz' {}": "8a35b50856b6",
+      "doc case variant 'zz' null r": "fc89a569bedb",
+      "narrowed variant 'zz' null r": "54d2c7e0595d",
+      "doc case variant 'zz' m": "3a9e7f1526b6",
+      "narrowed variant 'zz' m": "7f01d47f3ada",
+      "doc case flat 'zz'": "6d6e3f3a7415",
+      "narrowed flat 'zz'": "b078af262268",
+      "doc case flat no kind": "c18513abb93c",
+      "narrowed flat no kind": "40de0f45bca6"
+    },
+    "plain": {
+      "doc empty": "f0fe954bab95",
+      "doc emitFull": "312276192986",
+      "doc emitFull hints": "ea5f9ddab7e0"
+    }
+  },
+  "records": {
+    "plain | stored | child scalar": {
+      "accept": {
+        "thrown": "Drupal\\surface\\Pipeline\\TypeMismatchException",
+        "message": "The value at \"child\" must be of type map, string given."
+      },
+      "refused": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": {
+          "child": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "child",
+              "path": "",
+              "message": {
+                "@source": "This value must be of type @expected, @actual given.",
+                "arguments": {
+                  "@expected": "map",
+                  "@actual": "string"
+                },
+                "options": [],
+                "text": "This value must be of type map, string given."
+              },
+              "code": "type",
+              "stale": false,
+              "stored": null,
+              "params": {
+                "expected": [
+                  "object",
+                  "null"
+                ],
+                "actual": "string"
+              }
+            }
+          ]
+        },
+        "staleEntries": []
+      },
+      "validate raw": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": {
+          "child": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "child",
+              "path": "",
+              "message": {
+                "@source": "This value must be of type @expected, @actual given.",
+                "arguments": {
+                  "@expected": "map",
+                  "@actual": "string"
+                },
+                "options": [],
+                "text": "This value must be of type map, string given."
+              },
+              "code": "type",
+              "stale": false,
+              "stored": null,
+              "params": {
+                "expected": [
+                  "object",
+                  "null"
+                ],
+                "actual": "string"
+              }
+            }
+          ]
+        },
+        "staleEntries": []
+      }
+    },
+    "plain | doc emitFull": {
+      "resource": "hand",
+      "operation": "op",
+      "label": "Op label",
+      "schema": {
+        "$schema": "https://portable-schema.dev/v1/schema",
+        "title": "Op label",
+        "x-surface": {
+          "contract": 5,
+          "version": 1
+        },
+        "type": "object",
+        "properties": {
+          "child": {
+            "$ref": "#/$defs/hand.child"
+          },
+          "child2": {
+            "title": "Child shell",
+            "description": "Shell text",
+            "$ref": "#/$defs/hand.child2"
+          },
+          "items": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/$defs/hand.items"
+            },
+            "x-surface": {
+              "collection": true
+            }
+          },
+          "kind": {
+            "title": "Kind",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": null
+              }
+            ],
+            "default": "a"
+          },
+          "settings": {
+            "title": "Settings",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/hand.settings.a"
+              },
+              {
+                "$ref": "#/$defs/hand.settings.b"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "kind"
+              ],
+              "by": "kind",
+              "variants": {
+                "a": "#/$defs/hand.settings.a",
+                "b": "#/$defs/hand.settings.b"
+              }
+            }
+          },
+          "kind2": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": null
+              }
+            ]
+          },
+          "flat": {
+            "title": "Flat",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/hand.flat.a"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "kind2"
+              ],
+              "by": "kind2",
+              "variants": {
+                "a": "#/$defs/hand.flat.a"
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "a"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "properties": {
+                "settings": {
+                  "title": "Settings",
+                  "$ref": "#/$defs/hand.settings.a"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "b"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "properties": {
+                "settings": {
+                  "title": "Settings",
+                  "$ref": "#/$defs/hand.settings.b"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind2": {
+                  "const": "a"
+                }
+              },
+              "required": [
+                "kind2"
+              ]
+            },
+            "then": {
+              "properties": {
+                "flat": {
+                  "title": "Flat",
+                  "$ref": "#/$defs/hand.flat.a"
+                }
+              }
+            }
+          }
+        ],
+        "$defs": {
+          "hand.child": {
+            "title": "hand.child",
+            "type": "object",
+            "properties": {
+              "r_blank": {
+                "type": "string"
+              },
+              "h_blank": {
+                "type": "string",
+                "default": "dv"
+              },
+              "m_blank": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "r_none": {
+                "type": "string"
+              },
+              "h_none": {
+                "type": "string",
+                "default": "dv"
+              },
+              "m_none": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "r_mk": {
+                "title": "Marked up",
+                "type": "string"
+              },
+              "h_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "default": "dv"
+              },
+              "m_mk": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "title": "Marked up",
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "title": "Marked up",
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "pin": {
+                "title": "PIN",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "r_blank",
+              "r_none",
+              "r_mk",
+              "name"
+            ]
+          },
+          "hand.child2": {
+            "title": "hand.child2",
+            "type": "object",
+            "properties": {
+              "r_blank": {
+                "type": "string"
+              },
+              "h_blank": {
+                "type": "string",
+                "default": "dv"
+              },
+              "m_blank": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "r_none": {
+                "type": "string"
+              },
+              "h_none": {
+                "type": "string",
+                "default": "dv"
+              },
+              "m_none": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "r_mk": {
+                "title": "Marked up",
+                "type": "string"
+              },
+              "h_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "default": "dv"
+              },
+              "m_mk": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "title": "Marked up",
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "title": "Marked up",
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "pin": {
+                "title": "PIN",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "r_blank",
+              "r_none",
+              "r_mk",
+              "name"
+            ]
+          },
+          "hand.items": {
+            "title": "hand.items",
+            "type": "object",
+            "properties": {
+              "r_blank": {
+                "type": "string"
+              },
+              "h_blank": {
+                "type": "string",
+                "default": "dv"
+              },
+              "m_blank": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "r_none": {
+                "type": "string"
+              },
+              "h_none": {
+                "type": "string",
+                "default": "dv"
+              },
+              "m_none": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "r_mk": {
+                "title": "Marked up",
+                "type": "string"
+              },
+              "h_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "default": "dv"
+              },
+              "m_mk": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "title": "Marked up",
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "title": "Marked up",
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "pin": {
+                "title": "PIN",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "r_blank",
+              "r_none",
+              "r_mk",
+              "name"
+            ]
+          },
+          "hand.settings.a": {
+            "title": "hand.settings.a",
+            "type": "object",
+            "properties": {
+              "r_blank": {
+                "type": "string"
+              },
+              "h_blank": {
+                "type": "string",
+                "default": "dv"
+              },
+              "m_blank": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "r_none": {
+                "type": "string"
+              },
+              "h_none": {
+                "type": "string",
+                "default": "dv"
+              },
+              "m_none": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "r_mk": {
+                "title": "Marked up",
+                "type": "string"
+              },
+              "h_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "default": "dv"
+              },
+              "m_mk": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "title": "Marked up",
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "title": "Marked up",
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "pin": {
+                "title": "PIN",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "r_blank",
+              "r_none",
+              "r_mk",
+              "name"
+            ]
+          },
+          "hand.settings.b": {
+            "title": "hand.settings.b",
+            "type": "object",
+            "properties": {
+              "only": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "only"
+            ]
+          },
+          "hand.flat.a": {
+            "title": "hand.flat.a",
+            "type": "object",
+            "properties": {
+              "r_blank": {
+                "type": "string"
+              },
+              "h_blank": {
+                "type": "string",
+                "default": "dv"
+              },
+              "m_blank": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "r_none": {
+                "type": "string"
+              },
+              "h_none": {
+                "type": "string",
+                "default": "dv"
+              },
+              "m_none": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "r_mk": {
+                "title": "Marked up",
+                "type": "string"
+              },
+              "h_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "default": "dv"
+              },
+              "m_mk": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "title": "Marked up",
+                    "type": "string"
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "title": "Marked up",
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ]
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "pin": {
+                "title": "PIN",
+                "type": "string",
+                "writeOnly": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "r_blank",
+              "r_none",
+              "r_mk",
+              "name"
+            ]
+          }
+        }
+      }
+    },
+    "plain | none | doc case variant 'b' {}": {
+      "resource": "hand",
+      "operation": "op",
+      "label": null,
+      "schema": {
+        "$schema": "https://portable-schema.dev/v1/schema",
+        "x-surface": {
+          "contract": 5,
+          "version": 1
+        },
+        "type": "object",
+        "properties": {
+          "child": {
+            "$ref": "#/$defs/hand.child",
+            "x-portable-ui": {
+              "widget": "fieldset"
+            }
+          },
+          "child2": {
+            "title": "Child shell",
+            "description": "Shell text",
+            "$ref": "#/$defs/hand.child2",
+            "x-portable-ui": {
+              "widget": "fieldset"
+            }
+          },
+          "items": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/$defs/hand.items"
+            },
+            "x-portable-ui": {
+              "widget": "list"
+            },
+            "x-surface": {
+              "collection": true
+            }
+          },
+          "kind": {
+            "title": "Kind",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": "b",
+                "title": "b"
+              },
+              {
+                "const": null
+              }
+            ],
+            "default": "a",
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "settings": {
+            "title": "Settings",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/hand.settings.a"
+              },
+              {
+                "$ref": "#/$defs/hand.settings.b"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "variants"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "kind"
+              ],
+              "refined": true,
+              "by": "kind",
+              "variants": {
+                "a": "#/$defs/hand.settings.a",
+                "b": "#/$defs/hand.settings.b"
+              },
+              "chosen": "b"
+            }
+          },
+          "kind2": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "a",
+                "title": "a"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "flat": {
+            "title": "Flat",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/hand.flat.a"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "variants"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "kind2"
+              ],
+              "by": "kind2",
+              "variants": {
+                "a": "#/$defs/hand.flat.a"
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "a"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "properties": {
+                "settings": {
+                  "title": "Settings",
+                  "$ref": "#/$defs/hand.settings.a"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "b"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "properties": {
+                "settings": {
+                  "title": "Settings",
+                  "$ref": "#/$defs/hand.settings.b"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind2": {
+                  "const": "a"
+                }
+              },
+              "required": [
+                "kind2"
+              ]
+            },
+            "then": {
+              "properties": {
+                "flat": {
+                  "title": "Flat",
+                  "$ref": "#/$defs/hand.flat.a"
+                }
+              }
+            }
+          }
+        ],
+        "$defs": {
+          "hand.child": {
+            "title": "hand.child",
+            "type": "object",
+            "properties": {
+              "r_blank": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_blank": {
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_blank": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "r_none": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_none": {
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_none": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "r_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_mk": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "title": "Marked up",
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "title": "Marked up",
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "name": {
+                "title": "Name",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "pin": {
+                "title": "PIN",
+                "type": "string",
+                "writeOnly": true,
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "r_blank",
+              "r_none",
+              "r_mk",
+              "name"
+            ]
+          },
+          "hand.child2": {
+            "title": "hand.child2",
+            "type": "object",
+            "properties": {
+              "r_blank": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_blank": {
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_blank": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "r_none": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_none": {
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_none": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "r_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_mk": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "title": "Marked up",
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "title": "Marked up",
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "name": {
+                "title": "Name",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "pin": {
+                "title": "PIN",
+                "type": "string",
+                "writeOnly": true,
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "r_blank",
+              "r_none",
+              "r_mk",
+              "name"
+            ]
+          },
+          "hand.items": {
+            "title": "hand.items",
+            "type": "object",
+            "properties": {
+              "r_blank": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_blank": {
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_blank": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "r_none": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_none": {
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_none": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "r_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_mk": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "title": "Marked up",
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "title": "Marked up",
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "name": {
+                "title": "Name",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "pin": {
+                "title": "PIN",
+                "type": "string",
+                "writeOnly": true,
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "r_blank",
+              "r_none",
+              "r_mk",
+              "name"
+            ]
+          },
+          "hand.settings.a": {
+            "title": "hand.settings.a",
+            "type": "object",
+            "properties": {
+              "r_blank": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_blank": {
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_blank": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "r_none": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_none": {
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_none": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "r_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_mk": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "title": "Marked up",
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "title": "Marked up",
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "name": {
+                "title": "Name",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "pin": {
+                "title": "PIN",
+                "type": "string",
+                "writeOnly": true,
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "r_blank",
+              "r_none",
+              "r_mk",
+              "name"
+            ]
+          },
+          "hand.settings.b": {
+            "title": "hand.settings.b",
+            "type": "object",
+            "properties": {
+              "only": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "only"
+            ]
+          },
+          "hand.flat.a": {
+            "title": "hand.flat.a",
+            "type": "object",
+            "properties": {
+              "r_blank": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_blank": {
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_blank": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "r_none": {
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_none": {
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_none": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "r_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "h_mk": {
+                "title": "Marked up",
+                "type": "string",
+                "default": "dv",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "m_mk": {
+                "title": "Map",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "req": {
+                    "title": "Marked up",
+                    "type": "string",
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "mm": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "req2": {
+                        "title": "Marked up",
+                        "type": "integer",
+                        "x-portable-ui": {
+                          "widget": "number"
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "req2"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "fieldset"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "req"
+                ],
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "name": {
+                "title": "Name",
+                "type": "string",
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              },
+              "pin": {
+                "title": "PIN",
+                "type": "string",
+                "writeOnly": true,
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "r_blank",
+              "r_none",
+              "r_mk",
+              "name"
+            ]
+          }
+        }
+      },
+      "values": {
+        "child": {
+          "r_blank": null,
+          "h_blank": "dv",
+          "m_blank": {
+            "req": null,
+            "mm": {
+              "req2": null
+            }
+          },
+          "r_none": null,
+          "h_none": "dv",
+          "m_none": {
+            "req": null,
+            "mm": {
+              "req2": null
+            }
+          },
+          "r_mk": null,
+          "h_mk": "dv",
+          "m_mk": {
+            "req": null,
+            "mm": {
+              "req2": null
+            }
+          },
+          "name": null,
+          "pin": null
+        },
+        "child2": {
+          "r_blank": null,
+          "h_blank": "dv",
+          "m_blank": {
+            "req": null,
+            "mm": {
+              "req2": null
+            }
+          },
+          "r_none": null,
+          "h_none": "dv",
+          "m_none": {
+            "req": null,
+            "mm": {
+              "req2": null
+            }
+          },
+          "r_mk": null,
+          "h_mk": "dv",
+          "m_mk": {
+            "req": null,
+            "mm": {
+              "req2": null
+            }
+          },
+          "name": null,
+          "pin": null
+        },
+        "items": null,
+        "kind": "b",
+        "settings": {
+          "only": null
+        },
+        "kind2": null,
+        "flat": null
+      },
+      "stale": []
+    },
+    "plain | none | narrowed variant '' {}": {
+      "document": {
+        "resource": "surface.form",
+        "operation": null,
+        "label": null,
+        "schema": {
+          "$schema": "https://portable-schema.dev/v1/schema",
+          "x-surface": {
+            "contract": 5,
+            "version": 1
+          },
+          "type": "object",
+          "properties": {
+            "child": {
+              "$ref": "#/$defs/surface.form.child",
+              "x-portable-ui": {
+                "widget": "fieldset"
+              }
+            },
+            "child2": {
+              "title": "Child shell",
+              "description": "Shell text",
+              "$ref": "#/$defs/surface.form.child2",
+              "x-portable-ui": {
+                "widget": "fieldset"
+              }
+            },
+            "items": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/$defs/surface.form.items"
+              },
+              "x-portable-ui": {
+                "widget": "list"
+              },
+              "x-surface": {
+                "collection": true
+              }
+            },
+            "kind": {
+              "title": "Kind",
+              "type": [
+                "string",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "a"
+                },
+                {
+                  "const": "b",
+                  "title": "b"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "default": "a",
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            },
+            "settings": {
+              "title": "Settings",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/surface.form.settings.a"
+                },
+                {
+                  "$ref": "#/$defs/surface.form.settings.b"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "variants"
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "kind"
+                ],
+                "by": "kind",
+                "variants": {
+                  "a": "#/$defs/surface.form.settings.a",
+                  "b": "#/$defs/surface.form.settings.b"
+                }
+              }
+            },
+            "kind2": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": "a",
+                  "title": "a"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            },
+            "flat": {
+              "title": "Flat",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/surface.form.flat.a"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "variants"
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "kind2"
+                ],
+                "by": "kind2",
+                "variants": {
+                  "a": "#/$defs/surface.form.flat.a"
+                }
+              }
+            }
+          },
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "a"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "settings": {
+                    "title": "Settings",
+                    "$ref": "#/$defs/surface.form.settings.a"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "b"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "settings": {
+                    "title": "Settings",
+                    "$ref": "#/$defs/surface.form.settings.b"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind2": {
+                    "const": "a"
+                  }
+                },
+                "required": [
+                  "kind2"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "flat": {
+                    "title": "Flat",
+                    "$ref": "#/$defs/surface.form.flat.a"
+                  }
+                }
+              }
+            }
+          ],
+          "$defs": {
+            "surface.form.child": {
+              "title": "surface.form.child",
+              "type": "object",
+              "properties": {
+                "r_blank": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_blank": {
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_blank": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "r_none": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_none": {
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_none": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "r_mk": {
+                  "title": "Marked up",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_mk": {
+                  "title": "Marked up",
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_mk": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "title": "Marked up",
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "title": "Marked up",
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "name": {
+                  "title": "Name",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "pin": {
+                  "title": "PIN",
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "r_blank",
+                "r_none",
+                "r_mk",
+                "name"
+              ]
+            },
+            "surface.form.child2": {
+              "title": "surface.form.child2",
+              "type": "object",
+              "properties": {
+                "r_blank": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_blank": {
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_blank": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "r_none": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_none": {
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_none": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "r_mk": {
+                  "title": "Marked up",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_mk": {
+                  "title": "Marked up",
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_mk": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "title": "Marked up",
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "title": "Marked up",
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "name": {
+                  "title": "Name",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "pin": {
+                  "title": "PIN",
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "r_blank",
+                "r_none",
+                "r_mk",
+                "name"
+              ]
+            },
+            "surface.form.items": {
+              "title": "surface.form.items",
+              "type": "object",
+              "properties": {
+                "r_blank": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_blank": {
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_blank": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "r_none": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_none": {
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_none": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "r_mk": {
+                  "title": "Marked up",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_mk": {
+                  "title": "Marked up",
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_mk": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "title": "Marked up",
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "title": "Marked up",
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "name": {
+                  "title": "Name",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "pin": {
+                  "title": "PIN",
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "r_blank",
+                "r_none",
+                "r_mk",
+                "name"
+              ]
+            },
+            "surface.form.settings.a": {
+              "title": "surface.form.settings.a",
+              "type": "object",
+              "properties": {
+                "r_blank": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_blank": {
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_blank": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "r_none": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_none": {
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_none": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "r_mk": {
+                  "title": "Marked up",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_mk": {
+                  "title": "Marked up",
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_mk": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "title": "Marked up",
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "title": "Marked up",
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "name": {
+                  "title": "Name",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "pin": {
+                  "title": "PIN",
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "r_blank",
+                "r_none",
+                "r_mk",
+                "name"
+              ]
+            },
+            "surface.form.settings.b": {
+              "title": "surface.form.settings.b",
+              "type": "object",
+              "properties": {
+                "only": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "only"
+              ]
+            },
+            "surface.form.flat.a": {
+              "title": "surface.form.flat.a",
+              "type": "object",
+              "properties": {
+                "r_blank": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_blank": {
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_blank": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "r_none": {
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_none": {
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_none": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "r_mk": {
+                  "title": "Marked up",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "h_mk": {
+                  "title": "Marked up",
+                  "type": "string",
+                  "default": "dv",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "m_mk": {
+                  "title": "Map",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "req": {
+                      "title": "Marked up",
+                      "type": "string",
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    },
+                    "mm": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "req2": {
+                          "title": "Marked up",
+                          "type": "integer",
+                          "x-portable-ui": {
+                            "widget": "number"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "req2"
+                      ],
+                      "x-portable-ui": {
+                        "widget": "fieldset"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "req"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "name": {
+                  "title": "Name",
+                  "type": "string",
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "pin": {
+                  "title": "PIN",
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "r_blank",
+                "r_none",
+                "r_mk",
+                "name"
+              ]
+            }
+          }
+        },
+        "values": {
+          "child": {
+            "r_blank": null,
+            "h_blank": "dv",
+            "m_blank": {
+              "req": null,
+              "mm": {
+                "req2": null
+              }
+            },
+            "r_none": null,
+            "h_none": "dv",
+            "m_none": {
+              "req": null,
+              "mm": {
+                "req2": null
+              }
+            },
+            "r_mk": null,
+            "h_mk": "dv",
+            "m_mk": {
+              "req": null,
+              "mm": {
+                "req2": null
+              }
+            },
+            "name": null,
+            "pin": null
+          },
+          "child2": {
+            "r_blank": null,
+            "h_blank": "dv",
+            "m_blank": {
+              "req": null,
+              "mm": {
+                "req2": null
+              }
+            },
+            "r_none": null,
+            "h_none": "dv",
+            "m_none": {
+              "req": null,
+              "mm": {
+                "req2": null
+              }
+            },
+            "r_mk": null,
+            "h_mk": "dv",
+            "m_mk": {
+              "req": null,
+              "mm": {
+                "req2": null
+              }
+            },
+            "name": null,
+            "pin": null
+          },
+          "items": null,
+          "kind": "",
+          "settings": [],
+          "kind2": null,
+          "flat": null
+        },
+        "stale": []
+      },
+      "values": {
+        "kind": "",
+        "settings": []
+      },
+      "discarded": []
+    }
+  }
+}

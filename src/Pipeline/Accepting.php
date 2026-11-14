@@ -724,8 +724,9 @@ final class Accepting {
    */
   protected function unmatchedSecret(SurfaceInterface $child, string $at, array $parents): Violation {
     [$key, $below] = array_pad(explode('.', $at . '.' . implode('.', $parents), 2), 2, '');
+    $node = Validating::nodeAt($child, $parents);
     return new Violation($key, $below, $this->t('@label is stored for the item at this position, and items are matched to what is stored by position, which items added or removed have moved: send it again, or the clear marker to remove it.', [
-      '@label' => Validating::definitionAt($child, $parents)?->getLabel() ?? end($parents),
+      '@label' => ($node === NULL ? NULL : NodeFacts::label($node)) ?? end($parents),
     ]), Violation::SECRET_IN_ITEM);
   }
 

@@ -25,7 +25,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * DefinitionSchema::of(), head() and describe(), every static method of
  * the module they reach and the constructor of every module class they
  * make (`new X(`), are read from their source, and so is every reader of
- * a node the value pipeline uses (NodeFacts) and what it reaches. None
+ * a node (NodeFacts) and what it reaches. None
  * may:
  * - use `$this` (a constructor may), or be an instance method (but a
  *   constructor);
@@ -80,11 +80,12 @@ class DefinitionReadIsPureTest extends UnitTestCase {
   /**
    * How many methods the node readers reach, their entry points too.
    *
-   * NodeFacts's 14 public methods, and the 6 readers of DefinitionSchema
+   * NodeFacts's 35 public methods, and the 6 readers of DefinitionSchema
    * and Secrets they reach: model(), isLeaf(), isList(), classOf(),
-   * implied() and Secrets::marked().
+   * implied() and Secrets::marked(). 20 before the validator's checks and
+   * the document's classes read nodes, with 14 public methods.
    */
-  protected const NODE_READERS_REACHED = 20;
+  protected const NODE_READERS_REACHED = 41;
 
   /**
    * The types a reached method may not take: services and the request.
@@ -132,7 +133,7 @@ class DefinitionReadIsPureTest extends UnitTestCase {
   }
 
   /**
-   * Tests every reader of a node the value pipeline uses.
+   * Tests every reader of a node.
    *
    * Each public method of NodeFacts is an entry point.
    */

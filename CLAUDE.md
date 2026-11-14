@@ -717,10 +717,31 @@ the record of the rework that brought the module to the pattern.
   member. `Coercion` takes facts (`scalar($type, $dateOnly, ...)`,
   `served($value, $dateOnly)`), never a definition. The definition is
   carried beside the node only for the options service (a key's choices)
-  and `Computed`, until slice 32; the refinement's marks and
-  `Validating`'s own checks stay on definitions until slices 33 and 31.
+  and `Computed`, until slice 32; the refinement's marks in
+  `withoutWhatDoesNotApply()` and `Outbound::project()` stay on
+  definitions until slice 33.
   `NodeFactsParityTest` holds each reader to its call
   (`docs/decisions.md#the-value-pipeline-reads-nodes`).
+- **The validator's checks and the document read nodes**: `Validating`
+  asks each refined plain key for its node once and hands it down; its
+  own checks (computed, does not apply, required, always held, a
+  required property of a plain map, stale, the labels its refusals name)
+  read the node. A key that holds a child frame (attached, variants, a
+  collection, a mount) is a shell whose node is the child's whole tree:
+  its own facts are read from its definition, and a mount's node only
+  for the walk of what is required and ruled out inside it. And `Validating::nodeAt()` walks to the node at a key path
+  (`placeAt()` gives the definition beside it for the options service;
+  a port's node is read from its bare definition). `PropertySchema`,
+  `ContractEmitter`, `Conditionals` and `DocumentHead` read a plain key's
+  facts from its node (`describe()`, `required()`, `nullable()`,
+  `cast()`, `signature()` take one; `DefinitionSchema::typeOf()` and
+  `keywordsOf()` stand for `type()` and `keywords()`); a key that holds a
+  child, variants or a list of children is read from its definition,
+  since its node would be the child's whole tree, and a collection
+  through its own node without items (`PropertySchema::listNode()`). The
+  definition stays beside the node for the options service, the widget
+  claims, `References::target()` and `Computed`
+  (`docs/decisions.md#the-validators-checks-and-the-document-read-nodes`).
 - **Secrets**: `Contract\Secrets`, the one reader of what is secret,
   from a schema node or a document, holding no definition: `marked()`
   (the node says `writeOnly: true`; the reader, the check provider and
@@ -1064,8 +1085,8 @@ test errored or failed and every gate passed.
   cache; it orders classes slowest first.
 
 On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-13: the
-full lane takes 15m51s at the defaults (phpunit 15m08s) and the fast
-lane 8m12s (phpunit 8m04s). As of 2026-10-23, with a smaller suite, the
+full lane takes 17m17s at the defaults (phpunit 16m24s) and the fast
+lane 9m16s (phpunit 9m06s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1096,7 +1117,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2526, Assertions: 102433, Errors: 0, Failures: 0, Skipped: 3. Classes: 356 of 356, 8 at a time, browser classes 4.
+phpunit: Tests: 2532, Assertions: 102484, Errors: 0, Failures: 0, Skipped: 3. Classes: 358 of 358, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1120,8 +1141,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2412, Assertions: 97879, Deprecations: 792, Skipped: 3. Classes:
-303, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2418, Assertions: 97930, Deprecations: 801, Skipped: 3. Classes:
+305, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 
@@ -1370,7 +1391,10 @@ so the rule is this sentence. `npm test` is not part of
   official OpenAPI 3.1 schema beside it is vendored, not generated), and
   what the value pipeline does with shapes no example has,
   `tests/fixtures/pipeline-hand-cases.json`, by `PipelineHandCasesTest`
-  with `SURFACE_HAND_CASES_WRITE=1`, and
+  with `SURFACE_HAND_CASES_WRITE=1`, and the hand corpus of the
+  validator's checks and the documents, `tests/fixtures/hand-corpus/`,
+  by `HandCorpusTest` and `HandCorpusNarrowTest` with
+  `SURFACE_HAND_CORPUS_WRITE=1`, and
   the React app's fixtures,
   `modules/surface_examples_react/app/src/test/fixtures/`, by
   `ReactFixturesTest` with `SURFACE_REACT_FIXTURES_WRITE=1`, and the
@@ -1474,7 +1498,7 @@ src/Contract/            The served contract's emitter (a Portable Schema
                          CheckOptions the check options a document says,
                          NodeMessage a message it holds); of() keeps
                          nothing, the Entry holds its node; NodeFacts reads
-                         the facts the value pipeline needs from a node;
+                         a key's facts from its node;
                          Secrets answers
                          what is secret from a node or a document;
                          ContractEmitter

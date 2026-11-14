@@ -1,0 +1,3453 @@
+{
+  "surface": "ruled",
+  "rows": 1413,
+  "digests": {
+    "plain | none": {
+      "nothing": "694a105cd892",
+      "open m1 out": "694a105cd892",
+      "open m1 {}": "9c8b53dba294",
+      "open m1 r": "350a34e49752",
+      "open m1 sub": "27e6c3225591",
+      "open m1 sub {}": "946bcd74d4f8",
+      "open m1 sub y": "2d46d596b2c4",
+      "open m1 li": "16dbb0dd153a",
+      "open m1 li y": "ea44f14b34b4",
+      "open m1 cx": "e658eb889a00",
+      "open m1 cx zm": "ad67603f5b79",
+      "open m1 cx full": "23dbb3c0f71a",
+      "open m1 full": "b46fa2eddafe",
+      "open m2 {}": "f90cfcd9e180",
+      "open m2 null": "694a105cd892",
+      "open tps {}": "f296bf34aaac",
+      "open tps mk {}": "10e7f5ad18b7",
+      "open tps mk in": "3fd260a7c12d",
+      "open tps full": "d42cc6a1aabb",
+      "r m1 out": "099074f91af6",
+      "r m1 {}": "a1555638d543",
+      "r m1 r": "6286f73a1b70",
+      "r m1 sub": "0ccb65e9d2e0",
+      "r m1 sub {}": "e4532619d75f",
+      "r m1 sub y": "b1b9d70e7df8",
+      "r m1 li": "3e901333d639",
+      "r m1 li y": "9a8d460d8479",
+      "r m1 cx": "bafc1a5da2d1",
+      "r m1 cx zm": "0ac255b18edf",
+      "r m1 cx full": "81d757415689",
+      "r m1 full": "2297cbb64233",
+      "r m2 {}": "9465fa44f848",
+      "r m2 null": "099074f91af6",
+      "r tps {}": "6a2ae68e7906",
+      "r tps mk {}": "4e79879b1c07",
+      "r tps mk in": "9f15b4e498cb",
+      "r tps full": "81f4c4dafae6",
+      "sub m1 out": "f51c224971cd",
+      "sub m1 {}": "a4f188ec8df2",
+      "sub m1 r": "4754d51a43ed",
+      "sub m1 sub": "41e934abd495",
+      "sub m1 sub {}": "48c2a7d60b68",
+      "sub m1 sub y": "9e80c26aa605",
+      "sub m1 li": "73904d582801",
+      "sub m1 li y": "ad075e7fbc58",
+      "sub m1 cx": "b1c4878a2a98",
+      "sub m1 cx zm": "ab63544f6d98",
+      "sub m1 cx full": "6ffc0acfec29",
+      "sub m1 full": "0d60b8d7ba82",
+      "sub m2 {}": "9f0d37512fd8",
+      "sub m2 null": "f51c224971cd",
+      "sub tps {}": "e7abbc6441b4",
+      "sub tps mk {}": "3f051097e9e7",
+      "sub tps mk in": "7ce256f272bd",
+      "sub tps full": "2c15ac338074",
+      "subx m1 out": "852fd64ec4ef",
+      "subx m1 {}": "136e613582fd",
+      "subx m1 r": "8b3269e1fa71",
+      "subx m1 sub": "8f83ad5d3dc7",
+      "subx m1 sub {}": "d034125a5e2d",
+      "subx m1 sub y": "1c3a388f0960",
+      "subx m1 li": "c16f8c47b3c9",
+      "subx m1 li y": "40077d899598",
+      "subx m1 cx": "1a6e5d3cbad7",
+      "subx m1 cx zm": "e68699681d68",
+      "subx m1 cx full": "6d22ff4d9466",
+      "subx m1 full": "e73797a6fc69",
+      "subx m2 {}": "2ae6c4b122ef",
+      "subx m2 null": "852fd64ec4ef",
+      "subx tps {}": "66e0ae0f8641",
+      "subx tps mk {}": "11136f5bb655",
+      "subx tps mk in": "9d9a9618008e",
+      "subx tps full": "a4eae305209c",
+      "li m1 out": "af3ecad3b590",
+      "li m1 {}": "17939460a2cf",
+      "li m1 r": "03d6a63cd50e",
+      "li m1 sub": "2a2d97829af0",
+      "li m1 sub {}": "4532e1b1c230",
+      "li m1 sub y": "4bc3c4dd7e33",
+      "li m1 li": "e56ccda4a3d4",
+      "li m1 li y": "30b3478333d8",
+      "li m1 cx": "2006f9febf68",
+      "li m1 cx zm": "362417662f78",
+      "li m1 cx full": "0cca82f6b635",
+      "li m1 full": "31d366cdf2c9",
+      "li m2 {}": "a0248b13646a",
+      "li m2 null": "af3ecad3b590",
+      "li tps {}": "dd585d4455c7",
+      "li tps mk {}": "dad03ff5c67b",
+      "li tps mk in": "b2af608036de",
+      "li tps full": "06b137ae6dbb",
+      "cx m1 out": "3d59826cde8a",
+      "cx m1 {}": "67c5e829e6a8",
+      "cx m1 r": "fb7f55295d4e",
+      "cx m1 sub": "5f4933c519a0",
+      "cx m1 sub {}": "efefae5016fe",
+      "cx m1 sub y": "d270191374ed",
+      "cx m1 li": "70485319a7fd",
+      "cx m1 li y": "24fd63764e1f",
+      "cx m1 cx": "9d58df4429dc",
+      "cx m1 cx zm": "4725183765d5",
+      "cx m1 cx full": "4144fd065bb7",
+      "cx m1 full": "31d80f3574be",
+      "cx m2 {}": "f083eca24283",
+      "cx m2 null": "3d59826cde8a",
+      "cx tps {}": "5a7be91f6ad2",
+      "cx tps mk {}": "30c51219c6bb",
+      "cx tps mk in": "6501274e937c",
+      "cx tps full": "158e72137f39",
+      "cxzm m1 out": "2aab569003e8",
+      "cxzm m1 {}": "d879bc418b23",
+      "cxzm m1 r": "1a704abc512b",
+      "cxzm m1 sub": "071a1ac2d42f",
+      "cxzm m1 sub {}": "5cc9467adcb9",
+      "cxzm m1 sub y": "55c0b28729c6",
+      "cxzm m1 li": "d1efe99cbb08",
+      "cxzm m1 li y": "1afd218f5bd9",
+      "cxzm m1 cx": "04cc67e8e109",
+      "cxzm m1 cx zm": "d496d2d49800",
+      "cxzm m1 cx full": "132bfd30a232",
+      "cxzm m1 full": "119cc8ce8a32",
+      "cxzm m2 {}": "098d00f95b63",
+      "cxzm m2 null": "2aab569003e8",
+      "cxzm tps {}": "534777f139c1",
+      "cxzm tps mk {}": "02986bccb540",
+      "cxzm tps mk in": "d02dfbe59342",
+      "cxzm tps full": "58824cfd3a83",
+      "two m1 out": "31bcd36510f3",
+      "two m1 {}": "8b93444267a6",
+      "two m1 r": "ba48c65a9a97",
+      "two m1 sub": "229a9d901246",
+      "two m1 sub {}": "b482b4bb2fe7",
+      "two m1 sub y": "81f7a6b28f5a",
+      "two m1 li": "7e51ba0270a9",
+      "two m1 li y": "57fef01f054f",
+      "two m1 cx": "e321ffe97ae6",
+      "two m1 cx zm": "8a17283a7c4a",
+      "two m1 cx full": "79f5327de103",
+      "two m1 full": "a5070f8c86ca",
+      "two m2 {}": "6cd610ef1c13",
+      "two m2 null": "31bcd36510f3",
+      "two tps {}": "4395b16755f8",
+      "two tps mk {}": "7d21cd6dde1b",
+      "two tps mk in": "1310fbcc0c42",
+      "two tps full": "751637010017",
+      "all m1 out": "879bc7f8602b",
+      "all m1 {}": "8c7a15f81e1c",
+      "all m1 r": "86513126b223",
+      "all m1 sub": "e0a507a676e3",
+      "all m1 sub {}": "f396021b5d87",
+      "all m1 sub y": "ad1ad8dbe3d0",
+      "all m1 li": "65dede213539",
+      "all m1 li y": "f07a33017df4",
+      "all m1 cx": "1f8e10874082",
+      "all m1 cx zm": "f3a78b8242c8",
+      "all m1 cx full": "01bc94f838c9",
+      "all m1 full": "abf9b73d1758",
+      "all m2 {}": "1fb173e3994f",
+      "all m2 null": "879bc7f8602b",
+      "all tps {}": "7ebce0da037c",
+      "all tps mk {}": "d21f93fa31ce",
+      "all tps mk in": "ba79fcc82f63",
+      "all tps full": "3a0582d0de3c",
+      "mnt m1 out": "568646351c34",
+      "mnt m1 {}": "09e59d7b179f",
+      "mnt m1 r": "c09578c2d918",
+      "mnt m1 sub": "e3db247439ee",
+      "mnt m1 sub {}": "b7de0d1a11ce",
+      "mnt m1 sub y": "2d3bef4753cf",
+      "mnt m1 li": "38837703051a",
+      "mnt m1 li y": "503901032b65",
+      "mnt m1 cx": "271b6e632cd9",
+      "mnt m1 cx zm": "bd962e09aedc",
+      "mnt m1 cx full": "827f15751d93",
+      "mnt m1 full": "90e6c2869a79",
+      "mnt m2 {}": "baff4db5c8cb",
+      "mnt m2 null": "568646351c34",
+      "mnt tps {}": "3fea2770fbcd",
+      "mnt tps mk {}": "27bfc7e14e73",
+      "mnt tps mk in": "950428679c60",
+      "mnt tps full": "34ad689b76ff",
+      "mntin m1 out": "92c1bebeafb4",
+      "mntin m1 {}": "e79d02b06e92",
+      "mntin m1 r": "8348edd80cef",
+      "mntin m1 sub": "af65fcae63ff",
+      "mntin m1 sub {}": "d9b4e7fdc0cf",
+      "mntin m1 sub y": "7b99d5b0ead3",
+      "mntin m1 li": "cddb320a9ab9",
+      "mntin m1 li y": "79b764b09354",
+      "mntin m1 cx": "3fbbfd56172c",
+      "mntin m1 cx zm": "467e30c688e9",
+      "mntin m1 cx full": "3782bc227d7f",
+      "mntin m1 full": "031ddbe366cb",
+      "mntin m2 {}": "4537bd892d02",
+      "mntin m2 null": "92c1bebeafb4",
+      "mntin tps {}": "672b45103fd0",
+      "mntin tps mk {}": "30f30483e5bc",
+      "mntin tps mk in": "67062fbadb2e",
+      "mntin tps full": "c06814dc932d",
+      "subreq m1 out": "b78ff5749763",
+      "subreq m1 {}": "e775fa2d870d",
+      "subreq m1 r": "552351627355",
+      "subreq m1 sub": "44e2255b1532",
+      "subreq m1 sub {}": "775081c1f41f",
+      "subreq m1 sub y": "f9f6a03c9d91",
+      "subreq m1 li": "90747b6e744b",
+      "subreq m1 li y": "e1d6f4f1fbab",
+      "subreq m1 cx": "a6289d2d230a",
+      "subreq m1 cx zm": "25a8865f1379",
+      "subreq m1 cx full": "8f527decce2a",
+      "subreq m1 full": "5facb81731bd",
+      "subreq m2 {}": "ff4b31f25103",
+      "subreq m2 null": "b78ff5749763",
+      "subreq tps {}": "781ecd6dba2f",
+      "subreq tps mk {}": "8d8b55c3cd19",
+      "subreq tps mk in": "d25f169cefc2",
+      "subreq tps full": "c8aac95c7e78",
+      "__out m1 out": "694a105cd892",
+      "__out m1 {}": "9c8b53dba294",
+      "__out m1 r": "350a34e49752",
+      "__out m1 sub": "27e6c3225591",
+      "__out m1 sub {}": "946bcd74d4f8",
+      "__out m1 sub y": "2d46d596b2c4",
+      "__out m1 li": "16dbb0dd153a",
+      "__out m1 li y": "ea44f14b34b4",
+      "__out m1 cx": "e658eb889a00",
+      "__out m1 cx zm": "ad67603f5b79",
+      "__out m1 cx full": "23dbb3c0f71a",
+      "__out m1 full": "b46fa2eddafe",
+      "__out m2 {}": "f90cfcd9e180",
+      "__out m2 null": "694a105cd892",
+      "__out tps {}": "f296bf34aaac",
+      "__out tps mk {}": "10e7f5ad18b7",
+      "__out tps mk in": "3fd260a7c12d",
+      "__out tps full": "d42cc6a1aabb",
+      "doc full": "821712af9176",
+      "doc hints": "4e486a89986d",
+      "doc case open m1 out": "b44156e9ed3e",
+      "narrowed open m1 out": "a6290673b2c3",
+      "doc case open m1 {}": "b44156e9ed3e",
+      "narrowed open m1 {}": "d7311f09066b",
+      "doc case open m1 r": "50c73fc4dda3",
+      "narrowed open m1 r": "412bc4aa2d5a",
+      "doc case open m1 sub": "464f2cf82abd",
+      "narrowed open m1 sub": "88151725cf6e",
+      "doc case open m1 sub {}": "50c73fc4dda3",
+      "narrowed open m1 sub {}": "96b88562639e",
+      "doc case open m1 sub y": "07606ffff751",
+      "narrowed open m1 sub y": "4bd71d0daced",
+      "doc case open m1 li": "444a60544283",
+      "narrowed open m1 li": "3759839971d4",
+      "doc case open m1 li y": "dd1ed34ff1c7",
+      "narrowed open m1 li y": "633fb1eeca19",
+      "doc case open m1 cx": "50c73fc4dda3",
+      "narrowed open m1 cx": "cd7f384ef67f",
+      "doc case open m1 cx zm": "50c73fc4dda3",
+      "narrowed open m1 cx zm": "4a6eb248dd59",
+      "doc case open m1 cx full": "e4ce282dc9a6",
+      "narrowed open m1 cx full": "0245ffcfcde4",
+      "doc case open m1 full": "acfb394a5759",
+      "narrowed open m1 full": "1c31dde841fc",
+      "doc case open m2 {}": "b44156e9ed3e",
+      "narrowed open m2 {}": "5b7da8e1a8aa",
+      "doc case open m2 null": "b44156e9ed3e",
+      "narrowed open m2 null": "282ecb494b3a",
+      "doc case open tps {}": "b44156e9ed3e",
+      "narrowed open tps {}": "04106c754b7f",
+      "doc case open tps mk {}": "b44156e9ed3e",
+      "narrowed open tps mk {}": "06ca6405574d",
+      "doc case open tps mk in": "392e41d80437",
+      "narrowed open tps mk in": "b623709fc2c5",
+      "doc case open tps full": "3a8b17694e19",
+      "narrowed open tps full": "fcc139002191",
+      "doc case r m1 out": "d60bad21c1d1",
+      "narrowed r m1 out": "4967d6a4c970",
+      "doc case r m1 {}": "d60bad21c1d1",
+      "narrowed r m1 {}": "9ecd65ff85ec",
+      "doc case r m1 r": "d60bad21c1d1",
+      "narrowed r m1 r": "d43371ccbe5c",
+      "doc case r m1 sub": "4f26584a4491",
+      "narrowed r m1 sub": "15120fa8215a",
+      "doc case r m1 sub {}": "d60bad21c1d1",
+      "narrowed r m1 sub {}": "4e5ff86baae6",
+      "doc case r m1 sub y": "45b9087465ca",
+      "narrowed r m1 sub y": "de46981db445",
+      "doc case r m1 li": "2a31d45e7935",
+      "narrowed r m1 li": "0c957dc947e7",
+      "doc case r m1 li y": "2484d08315ae",
+      "narrowed r m1 li y": "78483fd738df",
+      "doc case r m1 cx": "d60bad21c1d1",
+      "narrowed r m1 cx": "25998c288413",
+      "doc case r m1 cx zm": "d60bad21c1d1",
+      "narrowed r m1 cx zm": "b1df2eb5ba50",
+      "doc case r m1 cx full": "fdb02b30ac36",
+      "narrowed r m1 cx full": "1961eb2945c4",
+      "doc case r m1 full": "c5ef7012082a",
+      "narrowed r m1 full": "0ff43ea87b05",
+      "doc case r m2 {}": "d60bad21c1d1",
+      "narrowed r m2 {}": "3f25a1f50ea2",
+      "doc case r m2 null": "d60bad21c1d1",
+      "narrowed r m2 null": "d92f384ce18a",
+      "doc case r tps {}": "d60bad21c1d1",
+      "narrowed r tps {}": "b6cdd4aff080",
+      "doc case r tps mk {}": "d60bad21c1d1",
+      "narrowed r tps mk {}": "18d09bfb9086",
+      "doc case r tps mk in": "712fe7dd5d58",
+      "narrowed r tps mk in": "3c4e26e7bf0c",
+      "doc case r tps full": "a9f3d8e8976b",
+      "narrowed r tps full": "614152065783",
+      "doc case sub m1 out": "dc43dba29aa6",
+      "narrowed sub m1 out": "4a59f4b396bb",
+      "doc case sub m1 {}": "dc43dba29aa6",
+      "narrowed sub m1 {}": "25426cb3dc42",
+      "doc case sub m1 r": "a66d1efc298d",
+      "narrowed sub m1 r": "93fe383e15e3",
+      "doc case sub m1 sub": "a66d1efc298d",
+      "narrowed sub m1 sub": "7988426f705b",
+      "doc case sub m1 sub {}": "a66d1efc298d",
+      "narrowed sub m1 sub {}": "5f67032df4b1",
+      "doc case sub m1 sub y": "a66d1efc298d",
+      "narrowed sub m1 sub y": "930f67f0fc19",
+      "doc case sub m1 li": "f4c309cfd349",
+      "narrowed sub m1 li": "20f5e05c34fb",
+      "doc case sub m1 li y": "ed5caa9374aa",
+      "narrowed sub m1 li y": "639ba44276d6",
+      "doc case sub m1 cx": "a66d1efc298d",
+      "narrowed sub m1 cx": "e03a4ae54e5e",
+      "doc case sub m1 cx zm": "a66d1efc298d",
+      "narrowed sub m1 cx zm": "49702a187515",
+      "doc case sub m1 cx full": "3fe00a2e2f59",
+      "narrowed sub m1 cx full": "751c486439e3",
+      "doc case sub m1 full": "cbc5fd744467",
+      "narrowed sub m1 full": "bc8e87dbe110",
+      "doc case sub m2 {}": "dc43dba29aa6",
+      "narrowed sub m2 {}": "8c5d2e4302b6",
+      "doc case sub m2 null": "dc43dba29aa6",
+      "narrowed sub m2 null": "3e9890d0abe3",
+      "doc case sub tps {}": "dc43dba29aa6",
+      "narrowed sub tps {}": "957509878581",
+      "doc case sub tps mk {}": "dc43dba29aa6",
+      "narrowed sub tps mk {}": "c3098ead68ca",
+      "doc case sub tps mk in": "18ec180a13e0",
+      "narrowed sub tps mk in": "ce471a9b1acf",
+      "doc case sub tps full": "58ada81257c5",
+      "narrowed sub tps full": "9b192945ee8a",
+      "doc case subx m1 out": "4d3284018a3b",
+      "narrowed subx m1 out": "69307dce4f28",
+      "doc case subx m1 {}": "4d3284018a3b",
+      "narrowed subx m1 {}": "416aedb4f8c7",
+      "doc case subx m1 r": "4b57a03d672a",
+      "narrowed subx m1 r": "b44cd47fa819",
+      "doc case subx m1 sub": "4b57a03d672a",
+      "narrowed subx m1 sub": "9215b42b69a4",
+      "doc case subx m1 sub {}": "4b57a03d672a",
+      "narrowed subx m1 sub {}": "f74b03e5285f",
+      "doc case subx m1 sub y": "ddd7b79c0d25",
+      "narrowed subx m1 sub y": "381462fa53fb",
+      "doc case subx m1 li": "ac5999501426",
+      "narrowed subx m1 li": "0559e82e9da3",
+      "doc case subx m1 li y": "6e88c4cc4314",
+      "narrowed subx m1 li y": "901ede5c3320",
+      "doc case subx m1 cx": "4b57a03d672a",
+      "narrowed subx m1 cx": "a6289485ad8f",
+      "doc case subx m1 cx zm": "4b57a03d672a",
+      "narrowed subx m1 cx zm": "37d5cc4117a3",
+      "doc case subx m1 cx full": "53929c98bd1a",
+      "narrowed subx m1 cx full": "c7edb43d28be",
+      "doc case subx m1 full": "778a8c58d3ab",
+      "narrowed subx m1 full": "76b714003c60",
+      "doc case subx m2 {}": "4d3284018a3b",
+      "narrowed subx m2 {}": "ecace28a8e86",
+      "doc case subx m2 null": "4d3284018a3b",
+      "narrowed subx m2 null": "6ed614a270bd",
+      "doc case subx tps {}": "4d3284018a3b",
+      "narrowed subx tps {}": "64b099b354ad",
+      "doc case subx tps mk {}": "4d3284018a3b",
+      "narrowed subx tps mk {}": "6d04d948472b",
+      "doc case subx tps mk in": "aa7bdb79758f",
+      "narrowed subx tps mk in": "3f14ebfd5be2",
+      "doc case subx tps full": "f26b68fd0e40",
+      "narrowed subx tps full": "77ecd9ab47d3",
+      "doc case li m1 out": "2446b553771c",
+      "narrowed li m1 out": "eb9c5d71f2b3",
+      "doc case li m1 {}": "2446b553771c",
+      "narrowed li m1 {}": "a1b190f89d8e",
+      "doc case li m1 r": "02c743922f90",
+      "narrowed li m1 r": "b55bab9ccbb0",
+      "doc case li m1 sub": "ff661258d290",
+      "narrowed li m1 sub": "82eb8a69de0e",
+      "doc case li m1 sub {}": "02c743922f90",
+      "narrowed li m1 sub {}": "4891c9db98ca",
+      "doc case li m1 sub y": "30d3489db038",
+      "narrowed li m1 sub y": "b67e28a5cbd6",
+      "doc case li m1 li": "6cdb23e3aff2",
+      "narrowed li m1 li": "a2ef63338c48",
+      "doc case li m1 li y": "a4e1ff252556",
+      "narrowed li m1 li y": "3803e6bf9d5c",
+      "doc case li m1 cx": "02c743922f90",
+      "narrowed li m1 cx": "437b8681a522",
+      "doc case li m1 cx zm": "02c743922f90",
+      "narrowed li m1 cx zm": "75a0bd934866",
+      "doc case li m1 cx full": "ffcaace4b273",
+      "narrowed li m1 cx full": "540ab3b39eb6",
+      "doc case li m1 full": "b734c5df6c60",
+      "narrowed li m1 full": "b519b86d4008",
+      "doc case li m2 {}": "2446b553771c",
+      "narrowed li m2 {}": "6be607e1c4c6",
+      "doc case li m2 null": "2446b553771c",
+      "narrowed li m2 null": "203832cae9ae",
+      "doc case li tps {}": "2446b553771c",
+      "narrowed li tps {}": "a5bdda3fa245",
+      "doc case li tps mk {}": "2446b553771c",
+      "narrowed li tps mk {}": "97f993da9017",
+      "doc case li tps mk in": "b005576ebea8",
+      "narrowed li tps mk in": "d3be04b3532d",
+      "doc case li tps full": "0acfe37059ca",
+      "narrowed li tps full": "3a732b32467b",
+      "doc case cx m1 out": "5bc3d281490a",
+      "narrowed cx m1 out": "e5383354746d",
+      "doc case cx m1 {}": "5bc3d281490a",
+      "narrowed cx m1 {}": "8ec4be01dc9c",
+      "doc case cx m1 r": "19c0b2c09faa",
+      "narrowed cx m1 r": "d1d1568fd257",
+      "doc case cx m1 sub": "e8e7c502e0ab",
+      "narrowed cx m1 sub": "4bb1639b2b23",
+      "doc case cx m1 sub {}": "19c0b2c09faa",
+      "narrowed cx m1 sub {}": "2c9b39ccf65b",
+      "doc case cx m1 sub y": "e0762823a07b",
+      "narrowed cx m1 sub y": "d028fbeb2d3c",
+      "doc case cx m1 li": "bd74677dece9",
+      "narrowed cx m1 li": "7dbcd01e5579",
+      "doc case cx m1 li y": "ac22559af7df",
+      "narrowed cx m1 li y": "59766729f0a5",
+      "doc case cx m1 cx": "19c0b2c09faa",
+      "narrowed cx m1 cx": "5e627b733128",
+      "doc case cx m1 cx zm": "19c0b2c09faa",
+      "narrowed cx m1 cx zm": "062f162489d7",
+      "doc case cx m1 cx full": "6788a7dd1ca0",
+      "narrowed cx m1 cx full": "c7ecd1e27fc4",
+      "doc case cx m1 full": "0d09d6787363",
+      "narrowed cx m1 full": "52ee68399245",
+      "doc case cx m2 {}": "5bc3d281490a",
+      "narrowed cx m2 {}": "d5ddb3c97733",
+      "doc case cx m2 null": "5bc3d281490a",
+      "narrowed cx m2 null": "2588a3ad6b34",
+      "doc case cx tps {}": "5bc3d281490a",
+      "narrowed cx tps {}": "8d3827d14446",
+      "doc case cx tps mk {}": "5bc3d281490a",
+      "narrowed cx tps mk {}": "86094a7dd20c",
+      "doc case cx tps mk in": "b51e45baa979",
+      "narrowed cx tps mk in": "1eef9081ec5c",
+      "doc case cx tps full": "2d37015cd95a",
+      "narrowed cx tps full": "8bc44cd67e48",
+      "doc case cxzm m1 out": "04ad6123909d",
+      "narrowed cxzm m1 out": "b1579f409b7c",
+      "doc case cxzm m1 {}": "04ad6123909d",
+      "narrowed cxzm m1 {}": "20ca9356e2e2",
+      "doc case cxzm m1 r": "2f75ab83f13f",
+      "narrowed cxzm m1 r": "a5f6336e8d74",
+      "doc case cxzm m1 sub": "78e68aa77676",
+      "narrowed cxzm m1 sub": "46dd9b622386",
+      "doc case cxzm m1 sub {}": "2f75ab83f13f",
+      "narrowed cxzm m1 sub {}": "cb68944e6749",
+      "doc case cxzm m1 sub y": "5d67fd0dc0dd",
+      "narrowed cxzm m1 sub y": "42acb6d2f510",
+      "doc case cxzm m1 li": "f9fd2de78171",
+      "narrowed cxzm m1 li": "49ae81db694d",
+      "doc case cxzm m1 li y": "addcba008b8a",
+      "narrowed cxzm m1 li y": "8b6e71682496",
+      "doc case cxzm m1 cx": "2f75ab83f13f",
+      "narrowed cxzm m1 cx": "e79a05895aa2",
+      "doc case cxzm m1 cx zm": "2f75ab83f13f",
+      "narrowed cxzm m1 cx zm": "ac30d58adb24",
+      "doc case cxzm m1 cx full": "748fcbbcdd5d",
+      "narrowed cxzm m1 cx full": "0c4f7334d4bd",
+      "doc case cxzm m1 full": "a2f1d0d3440e",
+      "narrowed cxzm m1 full": "fd7fa8309da0",
+      "doc case cxzm m2 {}": "04ad6123909d",
+      "narrowed cxzm m2 {}": "85ddfd270a81",
+      "doc case cxzm m2 null": "04ad6123909d",
+      "narrowed cxzm m2 null": "dba2ed0448f8",
+      "doc case cxzm tps {}": "04ad6123909d",
+      "narrowed cxzm tps {}": "c22229a7dbb2",
+      "doc case cxzm tps mk {}": "04ad6123909d",
+      "narrowed cxzm tps mk {}": "81793773b7c7",
+      "doc case cxzm tps mk in": "5a23cbd108eb",
+      "narrowed cxzm tps mk in": "68cc3bd31615",
+      "doc case cxzm tps full": "143729e7c301",
+      "narrowed cxzm tps full": "f746282db121",
+      "doc case two m1 out": "0a34a2b3a998",
+      "narrowed two m1 out": "76f67f2a875a",
+      "doc case two m1 {}": "0a34a2b3a998",
+      "narrowed two m1 {}": "98132a338e02",
+      "doc case two m1 r": "0a34a2b3a998",
+      "narrowed two m1 r": "72831013a4b2",
+      "doc case two m1 sub": "0a34a2b3a998",
+      "narrowed two m1 sub": "bfac26fee288",
+      "doc case two m1 sub {}": "0a34a2b3a998",
+      "narrowed two m1 sub {}": "64cc1848fe79",
+      "doc case two m1 sub y": "7fd5abaa2e18",
+      "narrowed two m1 sub y": "83a3321f1ea3",
+      "doc case two m1 li": "1e07bc3709df",
+      "narrowed two m1 li": "0453447fc220",
+      "doc case two m1 li y": "82b7172b5db0",
+      "narrowed two m1 li y": "b9defd7c899c",
+      "doc case two m1 cx": "0a34a2b3a998",
+      "narrowed two m1 cx": "e699e90db6a6",
+      "doc case two m1 cx zm": "0a34a2b3a998",
+      "narrowed two m1 cx zm": "77cf22475a77",
+      "doc case two m1 cx full": "5971dddc900f",
+      "narrowed two m1 cx full": "95333b511017",
+      "doc case two m1 full": "839df0defbfb",
+      "narrowed two m1 full": "4576e37ff2f1",
+      "doc case two m2 {}": "0a34a2b3a998",
+      "narrowed two m2 {}": "9aa14151fc84",
+      "doc case two m2 null": "0a34a2b3a998",
+      "narrowed two m2 null": "3ab359fc94db",
+      "doc case two tps {}": "0a34a2b3a998",
+      "narrowed two tps {}": "52ae6729135e",
+      "doc case two tps mk {}": "0a34a2b3a998",
+      "narrowed two tps mk {}": "4811c17a2198",
+      "doc case two tps mk in": "32f5a12f99a3",
+      "narrowed two tps mk in": "59ae7e134284",
+      "doc case two tps full": "dcc900265aec",
+      "narrowed two tps full": "53d9172a50e6",
+      "doc case all m1 out": "07a919792274",
+      "narrowed all m1 out": "979c0aaae3ad",
+      "doc case all m1 {}": "07a919792274",
+      "narrowed all m1 {}": "301d0a44f382",
+      "doc case all m1 r": "07a919792274",
+      "narrowed all m1 r": "c65f8ae500d3",
+      "doc case all m1 sub": "07a919792274",
+      "narrowed all m1 sub": "6f69ddfb657a",
+      "doc case all m1 sub {}": "07a919792274",
+      "narrowed all m1 sub {}": "bb04e14c1cd4",
+      "doc case all m1 sub y": "07a919792274",
+      "narrowed all m1 sub y": "6ae58e0813ab",
+      "doc case all m1 li": "07a919792274",
+      "narrowed all m1 li": "264ab558f802",
+      "doc case all m1 li y": "07a919792274",
+      "narrowed all m1 li y": "eefa3ff08f98",
+      "doc case all m1 cx": "07a919792274",
+      "narrowed all m1 cx": "c0a45843e4c3",
+      "doc case all m1 cx zm": "07a919792274",
+      "narrowed all m1 cx zm": "68d306601caa",
+      "doc case all m1 cx full": "07a919792274",
+      "narrowed all m1 cx full": "5af129504a4c",
+      "doc case all m1 full": "471d514a5e58",
+      "narrowed all m1 full": "7cf4b3dac1f6",
+      "doc case all m2 {}": "07a919792274",
+      "narrowed all m2 {}": "41e985b8ec47",
+      "doc case all m2 null": "07a919792274",
+      "narrowed all m2 null": "5ec1330de130",
+      "doc case all tps {}": "07a919792274",
+      "narrowed all tps {}": "3f6868ed2ecb",
+      "doc case all tps mk {}": "07a919792274",
+      "narrowed all tps mk {}": "08e87e9a2565",
+      "doc case all tps mk in": "07a919792274",
+      "narrowed all tps mk in": "d266c879e5c2",
+      "doc case all tps full": "07a919792274",
+      "narrowed all tps full": "55f22da74c37",
+      "doc case mnt m1 out": "00ad9ba3b15a",
+      "narrowed mnt m1 out": "3f1711e33765",
+      "doc case mnt m1 {}": "00ad9ba3b15a",
+      "narrowed mnt m1 {}": "ec3cef7e122c",
+      "doc case mnt m1 r": "e8447c81b342",
+      "narrowed mnt m1 r": "7aa92a9d8475",
+      "doc case mnt m1 sub": "deb1bba1b173",
+      "narrowed mnt m1 sub": "e09cec8b96a7",
+      "doc case mnt m1 sub {}": "e8447c81b342",
+      "narrowed mnt m1 sub {}": "47a2d1f31835",
+      "doc case mnt m1 sub y": "4ada6734eff3",
+      "narrowed mnt m1 sub y": "cb3a21e50902",
+      "doc case mnt m1 li": "b199e0e338ef",
+      "narrowed mnt m1 li": "e1a2fed561b1",
+      "doc case mnt m1 li y": "718f623baa24",
+      "narrowed mnt m1 li y": "85b9cd773c24",
+      "doc case mnt m1 cx": "e8447c81b342",
+      "narrowed mnt m1 cx": "429510f18c6a",
+      "doc case mnt m1 cx zm": "e8447c81b342",
+      "narrowed mnt m1 cx zm": "d57216c59f3f",
+      "doc case mnt m1 cx full": "a10f966fa4fc",
+      "narrowed mnt m1 cx full": "e7aa255d00c3",
+      "doc case mnt m1 full": "70aa1678f3f3",
+      "narrowed mnt m1 full": "32da57d4d166",
+      "doc case mnt m2 {}": "00ad9ba3b15a",
+      "narrowed mnt m2 {}": "ce007189b983",
+      "doc case mnt m2 null": "00ad9ba3b15a",
+      "narrowed mnt m2 null": "c7008ecb4280",
+      "doc case mnt tps {}": "00ad9ba3b15a",
+      "narrowed mnt tps {}": "fca9462a1882",
+      "doc case mnt tps mk {}": "00ad9ba3b15a",
+      "narrowed mnt tps mk {}": "0b02ff96e626",
+      "doc case mnt tps mk in": "00ad9ba3b15a",
+      "narrowed mnt tps mk in": "5c77f60bc661",
+      "doc case mnt tps full": "00ad9ba3b15a",
+      "narrowed mnt tps full": "b842b0a6bdd9",
+      "doc case mntin m1 out": "18a8bac12a7c",
+      "narrowed mntin m1 out": "9590875d4d8b",
+      "doc case mntin m1 {}": "18a8bac12a7c",
+      "narrowed mntin m1 {}": "d527884f6a67",
+      "doc case mntin m1 r": "aa14acfbae2b",
+      "narrowed mntin m1 r": "966ab7fb4dbe",
+      "doc case mntin m1 sub": "1905f01e780b",
+      "narrowed mntin m1 sub": "296a48e05e78",
+      "doc case mntin m1 sub {}": "aa14acfbae2b",
+      "narrowed mntin m1 sub {}": "447e7741e1c4",
+      "doc case mntin m1 sub y": "e7400c903dfa",
+      "narrowed mntin m1 sub y": "7d1dd12f5e9e",
+      "doc case mntin m1 li": "32ed25f2623c",
+      "narrowed mntin m1 li": "e876f8e65850",
+      "doc case mntin m1 li y": "04f9ac132ca5",
+      "narrowed mntin m1 li y": "09a371a6dfc1",
+      "doc case mntin m1 cx": "aa14acfbae2b",
+      "narrowed mntin m1 cx": "2cddd126af86",
+      "doc case mntin m1 cx zm": "aa14acfbae2b",
+      "narrowed mntin m1 cx zm": "31a4bd9012e2",
+      "doc case mntin m1 cx full": "588528d3c15b",
+      "narrowed mntin m1 cx full": "1b11f01e98dd",
+      "doc case mntin m1 full": "0f082cac857d",
+      "narrowed mntin m1 full": "4d268fd34710",
+      "doc case mntin m2 {}": "18a8bac12a7c",
+      "narrowed mntin m2 {}": "00357d7a4aca",
+      "doc case mntin m2 null": "18a8bac12a7c",
+      "narrowed mntin m2 null": "30c03159cb60",
+      "doc case mntin tps {}": "18a8bac12a7c",
+      "narrowed mntin tps {}": "5ec9876086ed",
+      "doc case mntin tps mk {}": "18a8bac12a7c",
+      "narrowed mntin tps mk {}": "38bf3869cdec",
+      "doc case mntin tps mk in": "3927d2e48f4e",
+      "narrowed mntin tps mk in": "8e651149d156",
+      "doc case mntin tps full": "3927d2e48f4e",
+      "narrowed mntin tps full": "d36a393418fe",
+      "doc case subreq m1 out": "bf8c1cd3e515",
+      "narrowed subreq m1 out": "7e26356c321a",
+      "doc case subreq m1 {}": "bf8c1cd3e515",
+      "narrowed subreq m1 {}": "65c1a4b43575",
+      "doc case subreq m1 r": "a2bf7d576982",
+      "narrowed subreq m1 r": "9653009dc22c",
+      "doc case subreq m1 sub": "a2bf7d576982",
+      "narrowed subreq m1 sub": "d18847c8b9bf",
+      "doc case subreq m1 sub {}": "a2bf7d576982",
+      "narrowed subreq m1 sub {}": "b77005318a19",
+      "doc case subreq m1 sub y": "27cb5802bedf",
+      "narrowed subreq m1 sub y": "cb02bef0639e",
+      "doc case subreq m1 li": "373deabc730f",
+      "narrowed subreq m1 li": "4f73aa1f5de9",
+      "doc case subreq m1 li y": "007693de6178",
+      "narrowed subreq m1 li y": "ee0d3dca1e45",
+      "doc case subreq m1 cx": "a2bf7d576982",
+      "narrowed subreq m1 cx": "276d73d06f86",
+      "doc case subreq m1 cx zm": "a2bf7d576982",
+      "narrowed subreq m1 cx zm": "8256ad970afa",
+      "doc case subreq m1 cx full": "b1f67bb50951",
+      "narrowed subreq m1 cx full": "b9246b458bb9",
+      "doc case subreq m1 full": "e491b926baa0",
+      "narrowed subreq m1 full": "80d7b8bca18b",
+      "doc case subreq m2 {}": "bf8c1cd3e515",
+      "narrowed subreq m2 {}": "2e536f514319",
+      "doc case subreq m2 null": "bf8c1cd3e515",
+      "narrowed subreq m2 null": "bf193a20e500",
+      "doc case subreq tps {}": "bf8c1cd3e515",
+      "narrowed subreq tps {}": "9f3030d91830",
+      "doc case subreq tps mk {}": "bf8c1cd3e515",
+      "narrowed subreq tps mk {}": "2fadb6ede9bd",
+      "doc case subreq tps mk in": "009dd8c47aed",
+      "narrowed subreq tps mk in": "1cebb72758d4",
+      "doc case subreq tps full": "a25fff8544e3",
+      "narrowed subreq tps full": "af5e06a1f587",
+      "doc case __out m1 out": "b44156e9ed3e",
+      "narrowed __out m1 out": "0f99973143d8",
+      "doc case __out m1 {}": "b44156e9ed3e",
+      "narrowed __out m1 {}": "d51cc5d164c4",
+      "doc case __out m1 r": "50c73fc4dda3",
+      "narrowed __out m1 r": "cd6d9d9d10af",
+      "doc case __out m1 sub": "464f2cf82abd",
+      "narrowed __out m1 sub": "064b84ee3b99",
+      "doc case __out m1 sub {}": "50c73fc4dda3",
+      "narrowed __out m1 sub {}": "c0ecfe9ec9f1",
+      "doc case __out m1 sub y": "07606ffff751",
+      "narrowed __out m1 sub y": "2941cc4d2df5",
+      "doc case __out m1 li": "444a60544283",
+      "narrowed __out m1 li": "ace7dd6c1f59",
+      "doc case __out m1 li y": "dd1ed34ff1c7",
+      "narrowed __out m1 li y": "b29ab458cd6a",
+      "doc case __out m1 cx": "50c73fc4dda3",
+      "narrowed __out m1 cx": "a42e721918f2",
+      "doc case __out m1 cx zm": "50c73fc4dda3",
+      "narrowed __out m1 cx zm": "85683078fc81",
+      "doc case __out m1 cx full": "e4ce282dc9a6",
+      "narrowed __out m1 cx full": "88bca92ab6e3",
+      "doc case __out m1 full": "acfb394a5759",
+      "narrowed __out m1 full": "ece9069fd2f5",
+      "doc case __out m2 {}": "b44156e9ed3e",
+      "narrowed __out m2 {}": "b1b9347e7511",
+      "doc case __out m2 null": "b44156e9ed3e",
+      "narrowed __out m2 null": "f633d49dc13a",
+      "doc case __out tps {}": "b44156e9ed3e",
+      "narrowed __out tps {}": "872a44ad54cf",
+      "doc case __out tps mk {}": "b44156e9ed3e",
+      "narrowed __out tps mk {}": "dab0ee857d1c",
+      "doc case __out tps mk in": "392e41d80437",
+      "narrowed __out tps mk in": "4e69a00d6758",
+      "doc case __out tps full": "3a8b17694e19",
+      "narrowed __out tps full": "4395c32be1c7"
+    },
+    "plain | stored": {
+      "nothing": "898868337520",
+      "open m1 out": "898868337520",
+      "open m1 {}": "621bb6341834",
+      "open m1 r": "5e40d5fc8282",
+      "open m1 sub": "474ed60c0646",
+      "open m1 sub {}": "491906e9babc",
+      "open m1 sub y": "760364d36005",
+      "open m1 li": "b8f63189d96d",
+      "open m1 li y": "edff56ba4aef",
+      "open m1 cx": "cadd0426b7fb",
+      "open m1 cx zm": "aa8946c551d8",
+      "open m1 cx full": "7430efb393e6",
+      "open m1 full": "0ae46cb8c413",
+      "open m2 {}": "c6f9221fc305",
+      "open m2 null": "898868337520",
+      "open tps {}": "898868337520",
+      "open tps mk {}": "121be07cb03b",
+      "open tps mk in": "66db9daf976a",
+      "open tps full": "b7ed67f61ad8",
+      "r m1 out": "cfce0c24a42d",
+      "r m1 {}": "a7ca4d01f66d",
+      "r m1 r": "cd8557e32ad1",
+      "r m1 sub": "896d336d231c",
+      "r m1 sub {}": "e6b8cb5dc868",
+      "r m1 sub y": "636b6c352c36",
+      "r m1 li": "d67601567e04",
+      "r m1 li y": "ae9fc33117ec",
+      "r m1 cx": "cdfa07bcee10",
+      "r m1 cx zm": "b0cda4921b67",
+      "r m1 cx full": "0d9522e16b60",
+      "r m1 full": "a036af73720b",
+      "r m2 {}": "25391ac6814b",
+      "r m2 null": "cfce0c24a42d",
+      "r tps {}": "cfce0c24a42d",
+      "r tps mk {}": "3279760d57fe",
+      "r tps mk in": "13e5c7343121",
+      "r tps full": "57dd6fbc1b54",
+      "sub m1 out": "c3f77a049769",
+      "sub m1 {}": "1b6927989731",
+      "sub m1 r": "28f982f15fff",
+      "sub m1 sub": "7e9ff60f177f",
+      "sub m1 sub {}": "524ce17a9ea4",
+      "sub m1 sub y": "132f8c92fc4f",
+      "sub m1 li": "de4e6feb1f18",
+      "sub m1 li y": "915aa32fba31",
+      "sub m1 cx": "fbb09a0b68d0",
+      "sub m1 cx zm": "de188856d3b2",
+      "sub m1 cx full": "eed157de5fcb",
+      "sub m1 full": "c9baaab65157",
+      "sub m2 {}": "3fc802f7b00b",
+      "sub m2 null": "c3f77a049769",
+      "sub tps {}": "c3f77a049769",
+      "sub tps mk {}": "e957b7becc50",
+      "sub tps mk in": "16e7ecc2ddb1",
+      "sub tps full": "83dcfa72b689",
+      "subx m1 out": "9c4e1a0b6cfb",
+      "subx m1 {}": "c524b3816da1",
+      "subx m1 r": "b61698e55fba",
+      "subx m1 sub": "af59c50f61cc",
+      "subx m1 sub {}": "9f9a0abba232",
+      "subx m1 sub y": "39ea0d27eb3c",
+      "subx m1 li": "4240f374e3d3",
+      "subx m1 li y": "2a4c4eb4ecdd",
+      "subx m1 cx": "d310ce851ca2",
+      "subx m1 cx zm": "b6a3351b57e8",
+      "subx m1 cx full": "ae33b5908ddb",
+      "subx m1 full": "74f40108abca",
+      "subx m2 {}": "5a71c1f376ed",
+      "subx m2 null": "9c4e1a0b6cfb",
+      "subx tps {}": "9c4e1a0b6cfb",
+      "subx tps mk {}": "2338373bee08",
+      "subx tps mk in": "e350d89f1ccd",
+      "subx tps full": "89a7a1be797b",
+      "li m1 out": "b7ba29bccad8",
+      "li m1 {}": "af17c17a0bff",
+      "li m1 r": "73cfe581bd85",
+      "li m1 sub": "6e76f88277a3",
+      "li m1 sub {}": "a890cf66af6c",
+      "li m1 sub y": "2fd1f25f0e21",
+      "li m1 li": "b9231b6352e6",
+      "li m1 li y": "9b69e2529eae",
+      "li m1 cx": "67270e81d5eb",
+      "li m1 cx zm": "52b7c5b8880f",
+      "li m1 cx full": "326c77f15ba7",
+      "li m1 full": "4482d6a3925a",
+      "li m2 {}": "f3d10e2f8ff0",
+      "li m2 null": "b7ba29bccad8",
+      "li tps {}": "b7ba29bccad8",
+      "li tps mk {}": "41188ef30838",
+      "li tps mk in": "04c092440977",
+      "li tps full": "68aed563f626",
+      "cx m1 out": "4e4d946f4841",
+      "cx m1 {}": "a1b94e3f0e58",
+      "cx m1 r": "0d7d3a5df27b",
+      "cx m1 sub": "d5fe08159a8a",
+      "cx m1 sub {}": "b7effb305a37",
+      "cx m1 sub y": "f6e864d9c69f",
+      "cx m1 li": "643f7c407e6b",
+      "cx m1 li y": "1d7cfdb2f7b2",
+      "cx m1 cx": "e1cf548b2ab3",
+      "cx m1 cx zm": "ef1ca49fee4d",
+      "cx m1 cx full": "ae7c01b87837",
+      "cx m1 full": "e3e500437605",
+      "cx m2 {}": "574504ef03ab",
+      "cx m2 null": "4e4d946f4841",
+      "cx tps {}": "4e4d946f4841",
+      "cx tps mk {}": "ef5fdfbd6ae5",
+      "cx tps mk in": "ded56ae4a58b",
+      "cx tps full": "7f7dcae9ff9f",
+      "cxzm m1 out": "4cc218456278",
+      "cxzm m1 {}": "0f008b8b6faf",
+      "cxzm m1 r": "9c273c5b2bf5",
+      "cxzm m1 sub": "a599b9074b94",
+      "cxzm m1 sub {}": "4b823d5f2c9a",
+      "cxzm m1 sub y": "d3db9836108f",
+      "cxzm m1 li": "8b08a1648e07",
+      "cxzm m1 li y": "f2a3b2d502d5",
+      "cxzm m1 cx": "7003b9b4c1f4",
+      "cxzm m1 cx zm": "5edf11eed10e",
+      "cxzm m1 cx full": "4f9a9a07ec34",
+      "cxzm m1 full": "6b1f3ce6a0ae",
+      "cxzm m2 {}": "c6bd7be86e0b",
+      "cxzm m2 null": "4cc218456278",
+      "cxzm tps {}": "4cc218456278",
+      "cxzm tps mk {}": "ed9ca2f911af",
+      "cxzm tps mk in": "aeeb9c8e3419",
+      "cxzm tps full": "d9323a23b38c",
+      "two m1 out": "9fe33aa95813",
+      "two m1 {}": "4cc8ea147d70",
+      "two m1 r": "5939c93b4a0d",
+      "two m1 sub": "65f31330129b",
+      "two m1 sub {}": "8b2bbdd76c6a",
+      "two m1 sub y": "9388d308ef4d",
+      "two m1 li": "bdcf837906d6",
+      "two m1 li y": "3f16150f9050",
+      "two m1 cx": "590bd5dcadb6",
+      "two m1 cx zm": "784de6476f04",
+      "two m1 cx full": "3cd18c2d0eaf",
+      "two m1 full": "7f67b93619f9",
+      "two m2 {}": "91f79a9a72c0",
+      "two m2 null": "9fe33aa95813",
+      "two tps {}": "9fe33aa95813",
+      "two tps mk {}": "6f5fd84d81f4",
+      "two tps mk in": "f0747ff77bff",
+      "two tps full": "b93c536960e1",
+      "all m1 out": "300681286cc6",
+      "all m1 {}": "0fa1b455841b",
+      "all m1 r": "42a83c02776d",
+      "all m1 sub": "a643245da187",
+      "all m1 sub {}": "e21230e87360",
+      "all m1 sub y": "11be317ce10e",
+      "all m1 li": "1810d76afd71",
+      "all m1 li y": "fd4ec53f6921",
+      "all m1 cx": "6da2a84ce794",
+      "all m1 cx zm": "9589a56f853f",
+      "all m1 cx full": "b8e0e30e836b",
+      "all m1 full": "a9bf287f5da8",
+      "all m2 {}": "765fe15d894b",
+      "all m2 null": "300681286cc6",
+      "all tps {}": "300681286cc6",
+      "all tps mk {}": "01c425548e1c",
+      "all tps mk in": "f72382111a57",
+      "all tps full": "79e83ec1a415",
+      "mnt m1 out": "9f56bab7870d",
+      "mnt m1 {}": "a66abb9b9721",
+      "mnt m1 r": "1d90bfc98056",
+      "mnt m1 sub": "16b00129a04e",
+      "mnt m1 sub {}": "42fadaa180a6",
+      "mnt m1 sub y": "212802d0a471",
+      "mnt m1 li": "38c5c346e723",
+      "mnt m1 li y": "1d1a580bf5cf",
+      "mnt m1 cx": "7f2a0a58a21d",
+      "mnt m1 cx zm": "b831b177e816",
+      "mnt m1 cx full": "7a6bb5e52093",
+      "mnt m1 full": "4fee0c38f888",
+      "mnt m2 {}": "ce4d4537fa79",
+      "mnt m2 null": "9f56bab7870d",
+      "mnt tps {}": "9f56bab7870d",
+      "mnt tps mk {}": "82e1e6330665",
+      "mnt tps mk in": "0b1e7f5fc00c",
+      "mnt tps full": "0d15f99a44cc",
+      "mntin m1 out": "fd423cdd9a3f",
+      "mntin m1 {}": "c3eba19ff4d1",
+      "mntin m1 r": "67315f40cb55",
+      "mntin m1 sub": "8a1107aa5d29",
+      "mntin m1 sub {}": "500031e9963a",
+      "mntin m1 sub y": "22e7ea2c7086",
+      "mntin m1 li": "4430cbd18090",
+      "mntin m1 li y": "8ab0beedf5ae",
+      "mntin m1 cx": "6965c07c52c0",
+      "mntin m1 cx zm": "47a6dfca2355",
+      "mntin m1 cx full": "d22de8d20e12",
+      "mntin m1 full": "c28a0851b1ae",
+      "mntin m2 {}": "36e5596d7f7b",
+      "mntin m2 null": "fd423cdd9a3f",
+      "mntin tps {}": "fd423cdd9a3f",
+      "mntin tps mk {}": "03574071c564",
+      "mntin tps mk in": "ad31423f05b4",
+      "mntin tps full": "e948728e0441",
+      "subreq m1 out": "f41c242db82c",
+      "subreq m1 {}": "b56d17327424",
+      "subreq m1 r": "c4814fb0bfbd",
+      "subreq m1 sub": "1e22642e2fe2",
+      "subreq m1 sub {}": "25b03f9c81d8",
+      "subreq m1 sub y": "6d88040d3175",
+      "subreq m1 li": "f2a4c5c89bd7",
+      "subreq m1 li y": "1ddd1342e2c3",
+      "subreq m1 cx": "095fe2520e8a",
+      "subreq m1 cx zm": "92ebc32b1415",
+      "subreq m1 cx full": "745aac1a4f49",
+      "subreq m1 full": "bb0792e83247",
+      "subreq m2 {}": "34e612a2ca36",
+      "subreq m2 null": "f41c242db82c",
+      "subreq tps {}": "f41c242db82c",
+      "subreq tps mk {}": "11c729655691",
+      "subreq tps mk in": "1fdc64d9d556",
+      "subreq tps full": "b0a91d4f0d4a",
+      "__out m1 out": "898868337520",
+      "__out m1 {}": "621bb6341834",
+      "__out m1 r": "5e40d5fc8282",
+      "__out m1 sub": "474ed60c0646",
+      "__out m1 sub {}": "491906e9babc",
+      "__out m1 sub y": "760364d36005",
+      "__out m1 li": "b8f63189d96d",
+      "__out m1 li y": "edff56ba4aef",
+      "__out m1 cx": "cadd0426b7fb",
+      "__out m1 cx zm": "aa8946c551d8",
+      "__out m1 cx full": "7430efb393e6",
+      "__out m1 full": "0ae46cb8c413",
+      "__out m2 {}": "c6f9221fc305",
+      "__out m2 null": "898868337520",
+      "__out tps {}": "898868337520",
+      "__out tps mk {}": "121be07cb03b",
+      "__out tps mk in": "66db9daf976a",
+      "__out tps full": "b7ed67f61ad8",
+      "doc full": "81426f46866f",
+      "doc hints": "9de0ea400fc8",
+      "doc case open m1 out": "22c85426cf9b",
+      "narrowed open m1 out": "a0ab32604bec",
+      "doc case open m1 {}": "22c85426cf9b",
+      "narrowed open m1 {}": "326e3ba3b1e4",
+      "doc case open m1 r": "3517dd34a60e",
+      "narrowed open m1 r": "9599ccccf889",
+      "doc case open m1 sub": "219f247a6f29",
+      "narrowed open m1 sub": "a4cac96ef3e7",
+      "doc case open m1 sub {}": "3517dd34a60e",
+      "narrowed open m1 sub {}": "1c6711be4088",
+      "doc case open m1 sub y": "62ed20b5738a",
+      "narrowed open m1 sub y": "5218b28d8b4d",
+      "doc case open m1 li": "60e788fa2475",
+      "narrowed open m1 li": "b8dd8086cbd7",
+      "doc case open m1 li y": "2a1d3b409ef6",
+      "narrowed open m1 li y": "7f2a31e3545a",
+      "doc case open m1 cx": "3517dd34a60e",
+      "narrowed open m1 cx": "95d3f424d984",
+      "doc case open m1 cx zm": "3517dd34a60e",
+      "narrowed open m1 cx zm": "5f8d60194b3d",
+      "doc case open m1 cx full": "ffcae3ef0813",
+      "narrowed open m1 cx full": "3542f7ed76e4",
+      "doc case open m1 full": "ae771294eb15",
+      "narrowed open m1 full": "22b3ddc29997",
+      "doc case open m2 {}": "22c85426cf9b",
+      "narrowed open m2 {}": "0ddebd3c5782",
+      "doc case open m2 null": "22c85426cf9b",
+      "narrowed open m2 null": "84f213d133e6",
+      "doc case open tps {}": "22c85426cf9b",
+      "narrowed open tps {}": "e006ea3a3d4d",
+      "doc case open tps mk {}": "4452f4a96806",
+      "narrowed open tps mk {}": "cfea229fe7b4",
+      "doc case open tps mk in": "5b4e76a58078",
+      "narrowed open tps mk in": "0f9eb6d9545f",
+      "doc case open tps full": "a7500595f519",
+      "narrowed open tps full": "38d7c4f7c0b8",
+      "doc case r m1 out": "f180a2957b56",
+      "narrowed r m1 out": "f96d6a0d130c",
+      "doc case r m1 {}": "f180a2957b56",
+      "narrowed r m1 {}": "e0494ef09a2b",
+      "doc case r m1 r": "f180a2957b56",
+      "narrowed r m1 r": "699591e76c5b",
+      "doc case r m1 sub": "d368b6f45ac3",
+      "narrowed r m1 sub": "853886d67826",
+      "doc case r m1 sub {}": "f180a2957b56",
+      "narrowed r m1 sub {}": "29fd3e7ecc16",
+      "doc case r m1 sub y": "0aa9d83de077",
+      "narrowed r m1 sub y": "ea04d372cd01",
+      "doc case r m1 li": "f19474bde432",
+      "narrowed r m1 li": "96f56d370f37",
+      "doc case r m1 li y": "436d6d4fd0f8",
+      "narrowed r m1 li y": "d20bd4edeb75",
+      "doc case r m1 cx": "f180a2957b56",
+      "narrowed r m1 cx": "85ca3890c340",
+      "doc case r m1 cx zm": "f180a2957b56",
+      "narrowed r m1 cx zm": "dfc115793df6",
+      "doc case r m1 cx full": "2923606329c7",
+      "narrowed r m1 cx full": "3920e6a71cc3",
+      "doc case r m1 full": "d03259200fed",
+      "narrowed r m1 full": "1a4f94298378",
+      "doc case r m2 {}": "f180a2957b56",
+      "narrowed r m2 {}": "1847c3c345a7",
+      "doc case r m2 null": "f180a2957b56",
+      "narrowed r m2 null": "ed4e6ce06339",
+      "doc case r tps {}": "f180a2957b56",
+      "narrowed r tps {}": "709f203be29d",
+      "doc case r tps mk {}": "e6606f3f40e3",
+      "narrowed r tps mk {}": "fd3f4265d6a0",
+      "doc case r tps mk in": "f6a89bb39894",
+      "narrowed r tps mk in": "5dc0731468d9",
+      "doc case r tps full": "1178ab8bfb80",
+      "narrowed r tps full": "60ae1c6da534",
+      "doc case sub m1 out": "eb738959db00",
+      "narrowed sub m1 out": "30b7a4848c4c",
+      "doc case sub m1 {}": "eb738959db00",
+      "narrowed sub m1 {}": "64433b9f9d40",
+      "doc case sub m1 r": "b4a53a2c0ddc",
+      "narrowed sub m1 r": "3602b6b1ab99",
+      "doc case sub m1 sub": "b4a53a2c0ddc",
+      "narrowed sub m1 sub": "382fa38f0c19",
+      "doc case sub m1 sub {}": "b4a53a2c0ddc",
+      "narrowed sub m1 sub {}": "d9883aafe59e",
+      "doc case sub m1 sub y": "b4a53a2c0ddc",
+      "narrowed sub m1 sub y": "29871ba23d4b",
+      "doc case sub m1 li": "81e235ff6b03",
+      "narrowed sub m1 li": "82e30f682aff",
+      "doc case sub m1 li y": "da3981911932",
+      "narrowed sub m1 li y": "b9c66b5ae6e4",
+      "doc case sub m1 cx": "b4a53a2c0ddc",
+      "narrowed sub m1 cx": "275ce1a460ed",
+      "doc case sub m1 cx zm": "b4a53a2c0ddc",
+      "narrowed sub m1 cx zm": "b570ddbb1b8f",
+      "doc case sub m1 cx full": "73e38515e231",
+      "narrowed sub m1 cx full": "d7852ac909b7",
+      "doc case sub m1 full": "2121e298daf7",
+      "narrowed sub m1 full": "de021bd7cf13",
+      "doc case sub m2 {}": "eb738959db00",
+      "narrowed sub m2 {}": "f5bfdb0a318d",
+      "doc case sub m2 null": "eb738959db00",
+      "narrowed sub m2 null": "b639960d4cfb",
+      "doc case sub tps {}": "eb738959db00",
+      "narrowed sub tps {}": "3252c30698f8",
+      "doc case sub tps mk {}": "ee61c2b86efa",
+      "narrowed sub tps mk {}": "16c795b32973",
+      "doc case sub tps mk in": "beea1e184c4a",
+      "narrowed sub tps mk in": "ec4af072b1df",
+      "doc case sub tps full": "beefb537b077",
+      "narrowed sub tps full": "66270d98fa73",
+      "doc case subx m1 out": "9f1e21d6a586",
+      "narrowed subx m1 out": "dace2d63ad9a",
+      "doc case subx m1 {}": "9f1e21d6a586",
+      "narrowed subx m1 {}": "0c20caebf8a9",
+      "doc case subx m1 r": "51c87fd80da5",
+      "narrowed subx m1 r": "552720a3d401",
+      "doc case subx m1 sub": "51c87fd80da5",
+      "narrowed subx m1 sub": "0be8af437c05",
+      "doc case subx m1 sub {}": "51c87fd80da5",
+      "narrowed subx m1 sub {}": "ce429cf3326b",
+      "doc case subx m1 sub y": "9942f2bd6942",
+      "narrowed subx m1 sub y": "836cd463c6e9",
+      "doc case subx m1 li": "e96323892af6",
+      "narrowed subx m1 li": "4b176ed56d3d",
+      "doc case subx m1 li y": "9469363e3ee0",
+      "narrowed subx m1 li y": "f0a09ba559a1",
+      "doc case subx m1 cx": "51c87fd80da5",
+      "narrowed subx m1 cx": "397036eccceb",
+      "doc case subx m1 cx zm": "51c87fd80da5",
+      "narrowed subx m1 cx zm": "b78c64e2d9eb",
+      "doc case subx m1 cx full": "99b42d8250c2",
+      "narrowed subx m1 cx full": "8d15ed3c1576",
+      "doc case subx m1 full": "89d32331c3d1",
+      "narrowed subx m1 full": "a08f9fbfe27b",
+      "doc case subx m2 {}": "9f1e21d6a586",
+      "narrowed subx m2 {}": "5299480ec133",
+      "doc case subx m2 null": "9f1e21d6a586",
+      "narrowed subx m2 null": "ae04aa4ce36b",
+      "doc case subx tps {}": "9f1e21d6a586",
+      "narrowed subx tps {}": "cdb94fcabfd2",
+      "doc case subx tps mk {}": "61b67607f326",
+      "narrowed subx tps mk {}": "bd4389cd471a",
+      "doc case subx tps mk in": "e66414fe1bf0",
+      "narrowed subx tps mk in": "cfb36af65e18",
+      "doc case subx tps full": "fd1d56853700",
+      "narrowed subx tps full": "4e5e10e6f9a4",
+      "doc case li m1 out": "c1287889173a",
+      "narrowed li m1 out": "efa2186026ce",
+      "doc case li m1 {}": "c1287889173a",
+      "narrowed li m1 {}": "6a14fd5a88c8",
+      "doc case li m1 r": "8cb1dad89f95",
+      "narrowed li m1 r": "7c35a85fc7e3",
+      "doc case li m1 sub": "216f13755837",
+      "narrowed li m1 sub": "09f61a5652b2",
+      "doc case li m1 sub {}": "8cb1dad89f95",
+      "narrowed li m1 sub {}": "4669a774de38",
+      "doc case li m1 sub y": "0a14fb9c3527",
+      "narrowed li m1 sub y": "115a557e8739",
+      "doc case li m1 li": "e2ead433b415",
+      "narrowed li m1 li": "596a52ebeede",
+      "doc case li m1 li y": "8c217faf2010",
+      "narrowed li m1 li y": "0e8d2edeca86",
+      "doc case li m1 cx": "8cb1dad89f95",
+      "narrowed li m1 cx": "1c8b31dd4fd1",
+      "doc case li m1 cx zm": "8cb1dad89f95",
+      "narrowed li m1 cx zm": "0369e9817bab",
+      "doc case li m1 cx full": "38449ac6c9bc",
+      "narrowed li m1 cx full": "f8504a342ca3",
+      "doc case li m1 full": "bb6175f20623",
+      "narrowed li m1 full": "c46de59b7ff3",
+      "doc case li m2 {}": "c1287889173a",
+      "narrowed li m2 {}": "83bb2b6bf47b",
+      "doc case li m2 null": "c1287889173a",
+      "narrowed li m2 null": "e299d00c8519",
+      "doc case li tps {}": "c1287889173a",
+      "narrowed li tps {}": "af710c2db4b6",
+      "doc case li tps mk {}": "45107bcb38cd",
+      "narrowed li tps mk {}": "4d5fe8e18585",
+      "doc case li tps mk in": "ad7f1b166346",
+      "narrowed li tps mk in": "1b7376d36679",
+      "doc case li tps full": "c218509f356f",
+      "narrowed li tps full": "e395435c3765",
+      "doc case cx m1 out": "3b17fcf1a550",
+      "narrowed cx m1 out": "95c71eeaa8a1",
+      "doc case cx m1 {}": "3b17fcf1a550",
+      "narrowed cx m1 {}": "610a802ac197",
+      "doc case cx m1 r": "f423dd27dabc",
+      "narrowed cx m1 r": "185d721316dd",
+      "doc case cx m1 sub": "d7dc98109d1a",
+      "narrowed cx m1 sub": "4bd2af9b0d9f",
+      "doc case cx m1 sub {}": "f423dd27dabc",
+      "narrowed cx m1 sub {}": "4aff51efb567",
+      "doc case cx m1 sub y": "14b57c8ce77d",
+      "narrowed cx m1 sub y": "1d00a1d7dbff",
+      "doc case cx m1 li": "149fc51a61f1",
+      "narrowed cx m1 li": "364ebb022951",
+      "doc case cx m1 li y": "5c4b33154b90",
+      "narrowed cx m1 li y": "af8fed96132b",
+      "doc case cx m1 cx": "f423dd27dabc",
+      "narrowed cx m1 cx": "ae8bae256680",
+      "doc case cx m1 cx zm": "f423dd27dabc",
+      "narrowed cx m1 cx zm": "e1d06b86d354",
+      "doc case cx m1 cx full": "29aaef267e52",
+      "narrowed cx m1 cx full": "24f6c4b57b32",
+      "doc case cx m1 full": "01f295f8f82f",
+      "narrowed cx m1 full": "f8b11b27b4fa",
+      "doc case cx m2 {}": "3b17fcf1a550",
+      "narrowed cx m2 {}": "860e957bae34",
+      "doc case cx m2 null": "3b17fcf1a550",
+      "narrowed cx m2 null": "dd93a53db1bc",
+      "doc case cx tps {}": "3b17fcf1a550",
+      "narrowed cx tps {}": "c9edb842b450",
+      "doc case cx tps mk {}": "033d3c1d04aa",
+      "narrowed cx tps mk {}": "cccc7c6e44a8",
+      "doc case cx tps mk in": "d4f9f1362a37",
+      "narrowed cx tps mk in": "a4309627b732",
+      "doc case cx tps full": "1576c904d1c6",
+      "narrowed cx tps full": "520de3e44bed",
+      "doc case cxzm m1 out": "f39807205577",
+      "narrowed cxzm m1 out": "36966c1a478a",
+      "doc case cxzm m1 {}": "f39807205577",
+      "narrowed cxzm m1 {}": "b27c67b6982e",
+      "doc case cxzm m1 r": "26ea330002f8",
+      "narrowed cxzm m1 r": "9a35194b981f",
+      "doc case cxzm m1 sub": "c8e7e91069d7",
+      "narrowed cxzm m1 sub": "635011cbd73b",
+      "doc case cxzm m1 sub {}": "26ea330002f8",
+      "narrowed cxzm m1 sub {}": "42de3a04cb9d",
+      "doc case cxzm m1 sub y": "9bd4bd91adc4",
+      "narrowed cxzm m1 sub y": "a9f98d81c77f",
+      "doc case cxzm m1 li": "3b8b0afb1709",
+      "narrowed cxzm m1 li": "c718559e7bf5",
+      "doc case cxzm m1 li y": "aeea7f2f8649",
+      "narrowed cxzm m1 li y": "fa444061d4a7",
+      "doc case cxzm m1 cx": "26ea330002f8",
+      "narrowed cxzm m1 cx": "972f74f73096",
+      "doc case cxzm m1 cx zm": "26ea330002f8",
+      "narrowed cxzm m1 cx zm": "dac98adc43bd",
+      "doc case cxzm m1 cx full": "bb4690c1c1a7",
+      "narrowed cxzm m1 cx full": "7ea835562d43",
+      "doc case cxzm m1 full": "4067b744ef65",
+      "narrowed cxzm m1 full": "a52323e8c7e0",
+      "doc case cxzm m2 {}": "f39807205577",
+      "narrowed cxzm m2 {}": "4189138c4499",
+      "doc case cxzm m2 null": "f39807205577",
+      "narrowed cxzm m2 null": "022613b3a863",
+      "doc case cxzm tps {}": "f39807205577",
+      "narrowed cxzm tps {}": "42f40581d017",
+      "doc case cxzm tps mk {}": "33a40af20c78",
+      "narrowed cxzm tps mk {}": "ac77484206b8",
+      "doc case cxzm tps mk in": "2ed7dd9eec3f",
+      "narrowed cxzm tps mk in": "0d307ffddc4c",
+      "doc case cxzm tps full": "3fc39bc4f378",
+      "narrowed cxzm tps full": "9933dc8cbc8a",
+      "doc case two m1 out": "c67fa16b2d6e",
+      "narrowed two m1 out": "bf4d947d9c03",
+      "doc case two m1 {}": "c67fa16b2d6e",
+      "narrowed two m1 {}": "fab24b2a0d51",
+      "doc case two m1 r": "c67fa16b2d6e",
+      "narrowed two m1 r": "19814fb2dfc3",
+      "doc case two m1 sub": "c67fa16b2d6e",
+      "narrowed two m1 sub": "3e0a0e506525",
+      "doc case two m1 sub {}": "c67fa16b2d6e",
+      "narrowed two m1 sub {}": "2bd0e0ac2462",
+      "doc case two m1 sub y": "5c1f1b8c9946",
+      "narrowed two m1 sub y": "f3180f91eef9",
+      "doc case two m1 li": "08e0b95fbe36",
+      "narrowed two m1 li": "87984913b6a7",
+      "doc case two m1 li y": "b0401336a77a",
+      "narrowed two m1 li y": "3695951e9a80",
+      "doc case two m1 cx": "c67fa16b2d6e",
+      "narrowed two m1 cx": "4ec4e9fcaf30",
+      "doc case two m1 cx zm": "c67fa16b2d6e",
+      "narrowed two m1 cx zm": "c0f5fdca9a59",
+      "doc case two m1 cx full": "bd151f18f139",
+      "narrowed two m1 cx full": "1022b9408f06",
+      "doc case two m1 full": "a826fc0dfed4",
+      "narrowed two m1 full": "cfec1c65c963",
+      "doc case two m2 {}": "c67fa16b2d6e",
+      "narrowed two m2 {}": "2fb2f508e886",
+      "doc case two m2 null": "c67fa16b2d6e",
+      "narrowed two m2 null": "884b091a5467",
+      "doc case two tps {}": "c67fa16b2d6e",
+      "narrowed two tps {}": "78656e489727",
+      "doc case two tps mk {}": "b8051f390616",
+      "narrowed two tps mk {}": "6c79b0ae51db",
+      "doc case two tps mk in": "32f5a12f99a3",
+      "narrowed two tps mk in": "cbf706080185",
+      "doc case two tps full": "dcc900265aec",
+      "narrowed two tps full": "2b6c5c37766f",
+      "doc case all m1 out": "07a919792274",
+      "narrowed all m1 out": "d5c21f69d333",
+      "doc case all m1 {}": "07a919792274",
+      "narrowed all m1 {}": "87634f39b7f9",
+      "doc case all m1 r": "07a919792274",
+      "narrowed all m1 r": "c3c236373ff9",
+      "doc case all m1 sub": "07a919792274",
+      "narrowed all m1 sub": "835f2775e7d1",
+      "doc case all m1 sub {}": "07a919792274",
+      "narrowed all m1 sub {}": "4f2c98ebd713",
+      "doc case all m1 sub y": "07a919792274",
+      "narrowed all m1 sub y": "89f8bf0006a2",
+      "doc case all m1 li": "07a919792274",
+      "narrowed all m1 li": "95d11d80089d",
+      "doc case all m1 li y": "07a919792274",
+      "narrowed all m1 li y": "0409a92fd4e7",
+      "doc case all m1 cx": "07a919792274",
+      "narrowed all m1 cx": "e2f9c85d2d82",
+      "doc case all m1 cx zm": "07a919792274",
+      "narrowed all m1 cx zm": "306c0fdcfaba",
+      "doc case all m1 cx full": "07a919792274",
+      "narrowed all m1 cx full": "85c41403aa95",
+      "doc case all m1 full": "471d514a5e58",
+      "narrowed all m1 full": "7cf6f9e988cd",
+      "doc case all m2 {}": "07a919792274",
+      "narrowed all m2 {}": "4e068694ac70",
+      "doc case all m2 null": "07a919792274",
+      "narrowed all m2 null": "71fdb66cb05e",
+      "doc case all tps {}": "07a919792274",
+      "narrowed all tps {}": "d92890c75e0b",
+      "doc case all tps mk {}": "07a919792274",
+      "narrowed all tps mk {}": "e91c7a48c007",
+      "doc case all tps mk in": "07a919792274",
+      "narrowed all tps mk in": "3f45b9d84f34",
+      "doc case all tps full": "07a919792274",
+      "narrowed all tps full": "883a94c12c4c",
+      "doc case mnt m1 out": "512a2a0cc7e8",
+      "narrowed mnt m1 out": "9b00bc445f6f",
+      "doc case mnt m1 {}": "512a2a0cc7e8",
+      "narrowed mnt m1 {}": "dccd33766e1c",
+      "doc case mnt m1 r": "bec3eb8bfee3",
+      "narrowed mnt m1 r": "462dbc560298",
+      "doc case mnt m1 sub": "deb1bba1b173",
+      "narrowed mnt m1 sub": "8a8c51ce60ed",
+      "doc case mnt m1 sub {}": "bec3eb8bfee3",
+      "narrowed mnt m1 sub {}": "163d177dcdad",
+      "doc case mnt m1 sub y": "8696c586983c",
+      "narrowed mnt m1 sub y": "8cf32ce072d8",
+      "doc case mnt m1 li": "a458f31a3e08",
+      "narrowed mnt m1 li": "faa8e415a88f",
+      "doc case mnt m1 li y": "067e3754f5cf",
+      "narrowed mnt m1 li y": "255e397b70a5",
+      "doc case mnt m1 cx": "bec3eb8bfee3",
+      "narrowed mnt m1 cx": "6658ba6ce5a1",
+      "doc case mnt m1 cx zm": "bec3eb8bfee3",
+      "narrowed mnt m1 cx zm": "f0f8a9c1bf83",
+      "doc case mnt m1 cx full": "52169435391d",
+      "narrowed mnt m1 cx full": "61c51916a9f5",
+      "doc case mnt m1 full": "70aa1678f3f3",
+      "narrowed mnt m1 full": "c263d22d2502",
+      "doc case mnt m2 {}": "512a2a0cc7e8",
+      "narrowed mnt m2 {}": "3503beddcb92",
+      "doc case mnt m2 null": "512a2a0cc7e8",
+      "narrowed mnt m2 null": "000306b692fd",
+      "doc case mnt tps {}": "512a2a0cc7e8",
+      "narrowed mnt tps {}": "5f86bf678f64",
+      "doc case mnt tps mk {}": "512a2a0cc7e8",
+      "narrowed mnt tps mk {}": "71688e4a4b21",
+      "doc case mnt tps mk in": "512a2a0cc7e8",
+      "narrowed mnt tps mk in": "138d692839cd",
+      "doc case mnt tps full": "512a2a0cc7e8",
+      "narrowed mnt tps full": "46a9fd05e445",
+      "doc case mntin m1 out": "451a53d9e293",
+      "narrowed mntin m1 out": "2b757f8df67a",
+      "doc case mntin m1 {}": "451a53d9e293",
+      "narrowed mntin m1 {}": "fe650f57af87",
+      "doc case mntin m1 r": "95f373b13d7d",
+      "narrowed mntin m1 r": "1c957bdd645d",
+      "doc case mntin m1 sub": "a9c3c6b011b3",
+      "narrowed mntin m1 sub": "5b3c863006c5",
+      "doc case mntin m1 sub {}": "95f373b13d7d",
+      "narrowed mntin m1 sub {}": "71ef2ce3abf2",
+      "doc case mntin m1 sub y": "fb7f4511c32c",
+      "narrowed mntin m1 sub y": "4a147eb55090",
+      "doc case mntin m1 li": "a989a84af936",
+      "narrowed mntin m1 li": "0b4fe53486e7",
+      "doc case mntin m1 li y": "a015e05fb0ae",
+      "narrowed mntin m1 li y": "8f131eb69abc",
+      "doc case mntin m1 cx": "95f373b13d7d",
+      "narrowed mntin m1 cx": "150f6ba2c657",
+      "doc case mntin m1 cx zm": "95f373b13d7d",
+      "narrowed mntin m1 cx zm": "def09f201047",
+      "doc case mntin m1 cx full": "84603e9976a3",
+      "narrowed mntin m1 cx full": "d4d83448ccc5",
+      "doc case mntin m1 full": "996108c7ff95",
+      "narrowed mntin m1 full": "fddc3c00317b",
+      "doc case mntin m2 {}": "451a53d9e293",
+      "narrowed mntin m2 {}": "97847ebd941c",
+      "doc case mntin m2 null": "451a53d9e293",
+      "narrowed mntin m2 null": "94e3412b4d2d",
+      "doc case mntin tps {}": "451a53d9e293",
+      "narrowed mntin tps {}": "a3c977ee0c24",
+      "doc case mntin tps mk {}": "3e8d5efc3e84",
+      "narrowed mntin tps mk {}": "aafab9bd4dda",
+      "doc case mntin tps mk in": "c5dfb0194227",
+      "narrowed mntin tps mk in": "6b1f48cbb7a9",
+      "doc case mntin tps full": "c5dfb0194227",
+      "narrowed mntin tps full": "175d515bd337",
+      "doc case subreq m1 out": "94cd95baca67",
+      "narrowed subreq m1 out": "ce04fe02b05a",
+      "doc case subreq m1 {}": "94cd95baca67",
+      "narrowed subreq m1 {}": "6182f8ca8c02",
+      "doc case subreq m1 r": "61d90ca6d824",
+      "narrowed subreq m1 r": "57fe48441e9a",
+      "doc case subreq m1 sub": "61d90ca6d824",
+      "narrowed subreq m1 sub": "c01335499627",
+      "doc case subreq m1 sub {}": "61d90ca6d824",
+      "narrowed subreq m1 sub {}": "0aaac8a4d9fd",
+      "doc case subreq m1 sub y": "c96fcd165869",
+      "narrowed subreq m1 sub y": "ae5e66abc6ad",
+      "doc case subreq m1 li": "9fae986a0008",
+      "narrowed subreq m1 li": "12d81c0db7da",
+      "doc case subreq m1 li y": "a16281dac9fb",
+      "narrowed subreq m1 li y": "b723ac8b28f4",
+      "doc case subreq m1 cx": "61d90ca6d824",
+      "narrowed subreq m1 cx": "f4bb7e9315ba",
+      "doc case subreq m1 cx zm": "61d90ca6d824",
+      "narrowed subreq m1 cx zm": "16797bbe43a5",
+      "doc case subreq m1 cx full": "89d30bbcd515",
+      "narrowed subreq m1 cx full": "d88286d83527",
+      "doc case subreq m1 full": "7603f21258a1",
+      "narrowed subreq m1 full": "97508f3980dc",
+      "doc case subreq m2 {}": "94cd95baca67",
+      "narrowed subreq m2 {}": "ef0ca83e5d60",
+      "doc case subreq m2 null": "94cd95baca67",
+      "narrowed subreq m2 null": "43be7dc1cc6c",
+      "doc case subreq tps {}": "94cd95baca67",
+      "narrowed subreq tps {}": "ec268cc810ad",
+      "doc case subreq tps mk {}": "e1611d535f66",
+      "narrowed subreq tps mk {}": "93a83ee0b472",
+      "doc case subreq tps mk in": "23ad7727d49c",
+      "narrowed subreq tps mk in": "26fb123f819b",
+      "doc case subreq tps full": "2e5beb910434",
+      "narrowed subreq tps full": "2496fc28039c",
+      "doc case __out m1 out": "22c85426cf9b",
+      "narrowed __out m1 out": "c70605b6e4ac",
+      "doc case __out m1 {}": "22c85426cf9b",
+      "narrowed __out m1 {}": "147db3092ffc",
+      "doc case __out m1 r": "3517dd34a60e",
+      "narrowed __out m1 r": "f49493b49905",
+      "doc case __out m1 sub": "219f247a6f29",
+      "narrowed __out m1 sub": "c549abbbf5f1",
+      "doc case __out m1 sub {}": "3517dd34a60e",
+      "narrowed __out m1 sub {}": "11bba36ba6b0",
+      "doc case __out m1 sub y": "62ed20b5738a",
+      "narrowed __out m1 sub y": "cb1973cd3b38",
+      "doc case __out m1 li": "60e788fa2475",
+      "narrowed __out m1 li": "789238fc1a21",
+      "doc case __out m1 li y": "2a1d3b409ef6",
+      "narrowed __out m1 li y": "8525a8a74094",
+      "doc case __out m1 cx": "3517dd34a60e",
+      "narrowed __out m1 cx": "c7b129a08d67",
+      "doc case __out m1 cx zm": "3517dd34a60e",
+      "narrowed __out m1 cx zm": "c2de20626473",
+      "doc case __out m1 cx full": "ffcae3ef0813",
+      "narrowed __out m1 cx full": "f24a6d1fb536",
+      "doc case __out m1 full": "ae771294eb15",
+      "narrowed __out m1 full": "f09ad13dca71",
+      "doc case __out m2 {}": "22c85426cf9b",
+      "narrowed __out m2 {}": "634921b28807",
+      "doc case __out m2 null": "22c85426cf9b",
+      "narrowed __out m2 null": "1acfb44efe7c",
+      "doc case __out tps {}": "22c85426cf9b",
+      "narrowed __out tps {}": "5f5cca3e6b54",
+      "doc case __out tps mk {}": "4452f4a96806",
+      "narrowed __out tps mk {}": "1b8255c98466",
+      "doc case __out tps mk in": "5b4e76a58078",
+      "narrowed __out tps mk in": "58b4f22cc5e5",
+      "doc case __out tps full": "a7500595f519",
+      "narrowed __out tps full": "e4c9277dfcec"
+    },
+    "plain": {
+      "doc empty": "821712af9176",
+      "doc emitFull": "0784ba0523d5",
+      "doc emitFull hints": "b0832af84c09"
+    }
+  },
+  "records": {
+    "plain | stored | all m1 out": {
+      "accept": {
+        "gate": "all",
+        "m1": [],
+        "third_party_settings": {
+          "surface": []
+        }
+      },
+      "notes": [],
+      "unmatched": [],
+      "validate": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": [],
+        "staleEntries": []
+      },
+      "kept": {
+        "gate": "all",
+        "m1": {
+          "r": "stored",
+          "sub": {
+            "x": 5
+          }
+        },
+        "third_party_settings": {
+          "surface": {
+            "mk": {
+              "a": "sa"
+            },
+            "mk2": "sm"
+          }
+        }
+      },
+      "validate raw": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": [],
+        "staleEntries": []
+      }
+    },
+    "plain | doc emitFull": {
+      "resource": "hand",
+      "operation": "op",
+      "label": "Op label",
+      "schema": {
+        "$schema": "https://portable-schema.dev/v1/schema",
+        "title": "Op label",
+        "x-surface": {
+          "contract": 5,
+          "version": 1
+        },
+        "type": "object",
+        "properties": {
+          "gate": {
+            "title": "Gate",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "open",
+                "title": "open"
+              },
+              {
+                "const": "r",
+                "title": "r"
+              },
+              {
+                "const": "sub",
+                "title": "sub"
+              },
+              {
+                "const": "subx",
+                "title": "subx"
+              },
+              {
+                "const": "li",
+                "title": "li"
+              },
+              {
+                "const": "cx",
+                "title": "cx"
+              },
+              {
+                "const": "cxzm",
+                "title": "cxzm"
+              },
+              {
+                "const": "two",
+                "title": "two"
+              },
+              {
+                "const": "all",
+                "title": "all"
+              },
+              {
+                "const": "mnt",
+                "title": "mnt"
+              },
+              {
+                "const": "mntin",
+                "title": "mntin"
+              },
+              {
+                "const": "subreq",
+                "title": "subreq"
+              },
+              {
+                "const": null
+              }
+            ],
+            "default": "open"
+          },
+          "m1": {
+            "title": "M one",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "r": {
+                "title": "Arr",
+                "type": "string"
+              },
+              "s": {
+                "title": "Ess",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "sub": {
+                "title": "Sub",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "x": {
+                    "title": "Ex",
+                    "type": "integer"
+                  },
+                  "y": {
+                    "title": "Why",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "li": {
+                "title": "Li",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "title": "Row",
+                  "type": "object",
+                  "properties": {
+                    "y": {
+                      "title": "Yrow",
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "y"
+                  ]
+                }
+              },
+              "cx": {
+                "title": "Complex",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "z": {
+                    "title": "Zed",
+                    "type": "string"
+                  },
+                  "zm": {
+                    "title": "ZM",
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "w": {
+                        "title": "Wu",
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "enumerated": true
+            }
+          },
+          "m2": {
+            "title": "M two",
+            "type": "object",
+            "properties": {
+              "r": {
+                "title": "Arr2",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "enumerated": true
+            }
+          },
+          "third_party_settings": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "surface": {
+                "title": "Surface API",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "mk": {
+                    "title": "Mounted map",
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "a": {
+                        "title": "Ay",
+                        "type": "string"
+                      },
+                      "in": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "deep": {
+                            "title": "Deep",
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "a"
+                    ]
+                  },
+                  "mk2": {
+                    "title": "Mounted two",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "group": true,
+              "enumerated": true
+            }
+          }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "open"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m1": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "sub": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "x"
+                      ]
+                    },
+                    "cx": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "zm": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "w"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "z"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "r"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "r"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m1": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "r": false,
+                    "sub": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "x"
+                      ]
+                    },
+                    "cx": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "zm": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "w"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "z"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "sub"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m1": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "sub": false,
+                    "cx": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "zm": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "w"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "z"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "r"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "subx"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m1": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "sub": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "x": false
+                      }
+                    },
+                    "cx": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "zm": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "w"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "z"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "r"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "li"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m1": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "sub": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "x"
+                      ]
+                    },
+                    "li": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "title": "Row",
+                        "type": "object",
+                        "additionalProperties": false
+                      }
+                    },
+                    "cx": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "zm": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "w"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "z"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "r"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "cx"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m1": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "sub": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "x"
+                      ]
+                    },
+                    "cx": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "z": false,
+                        "zm": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "w"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "r"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "cxzm"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m1": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "sub": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "x"
+                      ]
+                    },
+                    "cx": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "z"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "r"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "two"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m1": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "r": false,
+                    "sub": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "x": false
+                      }
+                    },
+                    "cx": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "zm": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "w"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "z"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "all"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m1": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "r": false,
+                    "sub": false,
+                    "li": false,
+                    "cx": false
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "mnt"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m1": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "sub": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "x"
+                      ]
+                    },
+                    "cx": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "zm": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "w"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "z"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "r"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "mntin"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m1": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "sub": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "x"
+                      ]
+                    },
+                    "cx": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "zm": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "w"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "z"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "r"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "subreq"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m1": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "sub": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "x": false,
+                        "y": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "y"
+                      ]
+                    },
+                    "cx": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "zm": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "w"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "z"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "r"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "open"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m2": {
+                  "type": "object",
+                  "required": [
+                    "r"
+                  ]
+                }
+              },
+              "required": [
+                "m2"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "r"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "required": [
+                "m2"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "sub"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m2": {
+                  "type": "object",
+                  "required": [
+                    "r"
+                  ]
+                }
+              },
+              "required": [
+                "m2"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "subx"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m2": {
+                  "type": "object",
+                  "required": [
+                    "r"
+                  ]
+                }
+              },
+              "required": [
+                "m2"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "li"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m2": {
+                  "type": "object",
+                  "required": [
+                    "r"
+                  ]
+                }
+              },
+              "required": [
+                "m2"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "cx"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m2": {
+                  "type": "object",
+                  "required": [
+                    "r"
+                  ]
+                }
+              },
+              "required": [
+                "m2"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "cxzm"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m2": {
+                  "type": "object",
+                  "required": [
+                    "r"
+                  ]
+                }
+              },
+              "required": [
+                "m2"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "two"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m2": {
+                  "type": "object",
+                  "required": [
+                    "r"
+                  ]
+                }
+              },
+              "required": [
+                "m2"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "all"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m2": false
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "mnt"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m2": {
+                  "type": "object",
+                  "required": [
+                    "r"
+                  ]
+                }
+              },
+              "required": [
+                "m2"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "mntin"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m2": {
+                  "type": "object",
+                  "required": [
+                    "r"
+                  ]
+                }
+              },
+              "required": [
+                "m2"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "subreq"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "m2": {
+                  "type": "object",
+                  "required": [
+                    "r"
+                  ]
+                }
+              },
+              "required": [
+                "m2"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "open"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "mk": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "in": {
+                              "type": "@deeper",
+                              "required": "@deeper"
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "mk2"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "r"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "mk": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "in": {
+                              "type": "@deeper",
+                              "required": "@deeper"
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "mk2"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "sub"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "mk": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "in": {
+                              "type": "@deeper",
+                              "required": "@deeper"
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "mk2"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "subx"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "mk": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "in": {
+                              "type": "@deeper",
+                              "required": "@deeper"
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "mk2"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "li"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "mk": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "in": {
+                              "type": "@deeper",
+                              "required": "@deeper"
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "mk2"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "cx"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "mk": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "in": {
+                              "type": "@deeper",
+                              "required": "@deeper"
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "mk2"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "cxzm"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "mk": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "in": {
+                              "type": "@deeper",
+                              "required": "@deeper"
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "mk2"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "two"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "mk": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "in": {
+                              "type": "@deeper",
+                              "required": "@deeper"
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "mk2"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "all"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": true
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "mnt"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": true
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "mntin"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "mk2"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "subreq"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "third_party_settings": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "surface": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "mk": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "in": {
+                              "type": "@deeper",
+                              "required": "@deeper"
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "mk2"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "plain | none | doc case all m1 full": {
+      "resource": "hand",
+      "operation": "op",
+      "label": null,
+      "schema": {
+        "$schema": "https://portable-schema.dev/v1/schema",
+        "x-surface": {
+          "contract": 5,
+          "version": 1,
+          "doesNotApply": {
+            "m2": [
+              "gate"
+            ]
+          }
+        },
+        "type": "object",
+        "properties": {
+          "gate": {
+            "title": "Gate",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "open",
+                "title": "open"
+              },
+              {
+                "const": "r",
+                "title": "r"
+              },
+              {
+                "const": "sub",
+                "title": "sub"
+              },
+              {
+                "const": "subx",
+                "title": "subx"
+              },
+              {
+                "const": "li",
+                "title": "li"
+              },
+              {
+                "const": "cx",
+                "title": "cx"
+              },
+              {
+                "const": "cxzm",
+                "title": "cxzm"
+              },
+              {
+                "const": "two",
+                "title": "two"
+              },
+              {
+                "const": "all",
+                "title": "all"
+              },
+              {
+                "const": "mnt",
+                "title": "mnt"
+              },
+              {
+                "const": "mntin",
+                "title": "mntin"
+              },
+              {
+                "const": "subreq",
+                "title": "subreq"
+              },
+              {
+                "const": null
+              }
+            ],
+            "default": "open",
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "m1": {
+            "title": "M one",
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "s": {
+                "title": "Ess",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "x-portable-ui": {
+              "widget": "fieldset"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ]
+            }
+          },
+          "third_party_settings": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "surface": {
+                "title": "Surface API",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "@object": []
+                },
+                "additionalProperties": false,
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "x-portable-ui": {
+              "widget": "fieldset"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "group": true
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "values": {
+        "gate": "all",
+        "m1": {
+          "s": "s"
+        },
+        "third_party_settings": {
+          "surface": {
+            "@object": []
+          }
+        }
+      },
+      "stale": []
+    },
+    "plain | none | narrowed all m1 out": {
+      "document": {
+        "resource": "surface.form",
+        "operation": null,
+        "label": null,
+        "schema": {
+          "$schema": "https://portable-schema.dev/v1/schema",
+          "x-surface": {
+            "contract": 5,
+            "version": 1,
+            "doesNotApply": {
+              "m2": [
+                "gate"
+              ]
+            }
+          },
+          "type": "object",
+          "properties": {
+            "gate": {
+              "title": "Gate",
+              "type": [
+                "string",
+                "null"
+              ],
+              "oneOf": [
+                {
+                  "const": "open",
+                  "title": "open"
+                },
+                {
+                  "const": "r",
+                  "title": "r"
+                },
+                {
+                  "const": "sub",
+                  "title": "sub"
+                },
+                {
+                  "const": "subx",
+                  "title": "subx"
+                },
+                {
+                  "const": "li",
+                  "title": "li"
+                },
+                {
+                  "const": "cx",
+                  "title": "cx"
+                },
+                {
+                  "const": "cxzm",
+                  "title": "cxzm"
+                },
+                {
+                  "const": "two",
+                  "title": "two"
+                },
+                {
+                  "const": "all",
+                  "title": "all"
+                },
+                {
+                  "const": "mnt",
+                  "title": "mnt"
+                },
+                {
+                  "const": "mntin",
+                  "title": "mntin"
+                },
+                {
+                  "const": "subreq",
+                  "title": "subreq"
+                },
+                {
+                  "const": null
+                }
+              ],
+              "default": "open",
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            },
+            "m1": {
+              "title": "M one",
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "s": {
+                  "title": "Ess",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "x-portable-ui": {
+                "widget": "fieldset"
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "gate"
+                ]
+              }
+            },
+            "third_party_settings": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "surface": {
+                  "title": "Surface API",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "@object": []
+                  },
+                  "additionalProperties": false,
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "x-portable-ui": {
+                "widget": "fieldset"
+              },
+              "x-surface": {
+                "dependsOn": [
+                  "gate"
+                ],
+                "group": true
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "values": {
+          "gate": "all",
+          "m1": {
+            "s": null
+          },
+          "third_party_settings": {
+            "surface": {
+              "@object": []
+            }
+          }
+        },
+        "stale": []
+      },
+      "values": {
+        "gate": "all"
+      },
+      "discarded": []
+    }
+  }
+}

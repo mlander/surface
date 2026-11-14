@@ -40,9 +40,14 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *   handed one).
    * - src/Contract/PropertySchema.php, of(): property() reads a shape's
    *   definition where its key's node does not hold the shape's node.
-   * - src/Contract/PropertySchema.php, head(): listKeywords() reads a
-   *   collection's own keywords, without its items, which no entry's node
-   *   is (a list's node holds its items, and its default and examples).
+   * - src/Contract/PropertySchema.php, head(): listNode() reads a
+   *   collection's own node, without its items, which no entry's node is
+   *   (a list's node holds its items, the child's whole tree), for its
+   *   keywords, its default, its arrangement and its signature.
+   * - src/Pipeline/Validating.php, of(): placeAt() reads a port's node. A
+   *   port has no entry: the container hands the child a bare definition
+   *   (SurfaceInterface::getPortDefinition()), whose label a refusal
+   *   names.
    *
    * property() takes its node from its caller and reads nothing, so a
    * caller that stops handing an entry's node on has to call of() itself,
@@ -52,6 +57,7 @@ class DefinitionReadCallersTest extends UnitTestCase {
     'src/Contract/Conditionals.php' => ['of' => 1],
     'src/Contract/PropertySchema.php' => ['head' => 1, 'of' => 1],
     'src/Entry.php' => ['of' => 2],
+    'src/Pipeline/Validating.php' => ['of' => 1],
   ];
 
   /**

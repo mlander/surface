@@ -1,0 +1,2263 @@
+{
+  "surface": "gaps",
+  "rows": 165,
+  "digests": {
+    "plain | none": {
+      "nothing": "5ac84251d59c",
+      "gate narrow": "5a366d890ab3",
+      "gate open": "5ac84251d59c",
+      "sc b": "396dbdd44bde",
+      "sc0 b": "17121e17f128",
+      "ss b": "943db3b823d4",
+      "narrowed kept": "e509d103a2a1",
+      "stale sent": "cfcbc1e03e4b",
+      "stale changed": "827a7504d0dd",
+      "src long": "5955b2eeda8b",
+      "vault one left": "25813f983e2f",
+      "vault moved": "2fbdb56785ca",
+      "coll two": "b548626ab8de",
+      "tags x": "0afba55d9300",
+      "gi 2": "0b62587bfe37",
+      "gi text": "7ef5614c2e82",
+      "gb true": "c04e4afee5de",
+      "gb one": "85cb60344656",
+      "doc full": "abeaa0381819",
+      "doc hints": "99b8a1da7310",
+      "doc case gate narrow": "355078cf1396",
+      "narrowed gate narrow": "2de8217f2837",
+      "doc case gate open": "6dbf899ddc33",
+      "narrowed gate open": "e461f5cda17c",
+      "doc case sc b": "652e24834fb4",
+      "narrowed sc b": "faeabdaf9a87",
+      "doc case sc0 b": "f25a2c275868",
+      "narrowed sc0 b": "4be529f2b919",
+      "doc case ss b": "6dbf899ddc33",
+      "narrowed ss b": "81f20fc05935",
+      "doc case narrowed kept": "43fb1557e1da",
+      "narrowed narrowed kept": "1465f1fadac3",
+      "doc case stale sent": "150b0e70aca0",
+      "narrowed stale sent": "a2947cdae679",
+      "doc case stale changed": "08494d2bb59c",
+      "narrowed stale changed": "bb1a4945185d",
+      "doc case src long": "38127dcfd937",
+      "narrowed src long": "f24664c7dd2d",
+      "doc case vault one left": "988b997d95d6",
+      "narrowed vault one left": "1c80b4043922",
+      "doc case vault moved": "01fd30d0a74b",
+      "narrowed vault moved": "33486817f58c",
+      "doc case coll two": "ca3baf6c53a3",
+      "narrowed coll two": "536bf2cecafe",
+      "doc case tags x": "9789d8e4cbb9",
+      "narrowed tags x": "f838e6e7e157",
+      "doc case gi 2": "714d47596c5c",
+      "narrowed gi 2": "a62ae0c1a3c3",
+      "doc case gi text": "714d47596c5c",
+      "narrowed gi text": "9394e007bae2",
+      "doc case gb true": "a2fa330bb999",
+      "narrowed gb true": "7382fb4ed1e1",
+      "doc case gb one": "a2fa330bb999",
+      "narrowed gb one": "ec8fae38e7bf"
+    },
+    "plain | stored": {
+      "nothing": "2d3d1959e5ad",
+      "gate narrow": "2d3d1959e5ad",
+      "gate open": "156799e8295e",
+      "sc b": "2d3d1959e5ad",
+      "sc0 b": "2d3d1959e5ad",
+      "ss b": "2d3d1959e5ad",
+      "narrowed kept": "1deb80fe47ef",
+      "stale sent": "2b3f5c751dae",
+      "stale changed": "eba55fe8f671",
+      "src long": "6e83ecfbb4ce",
+      "vault one left": "78a18e5fc89b",
+      "vault moved": "c6eabc8fbf36",
+      "coll two": "7004c9d355da",
+      "tags x": "b408365936ff",
+      "gi 2": "4131f9b8e483",
+      "gi text": "d41fe24cd53c",
+      "gb true": "120e9fe45b2a",
+      "gb one": "50b60154caf7",
+      "doc full": "ff84616f4898",
+      "doc hints": "af57de23ed71",
+      "doc case gate narrow": "7a8380a46cf7",
+      "narrowed gate narrow": "9adad9e3237a",
+      "doc case gate open": "1e6561e72d77",
+      "narrowed gate open": "76e034f0d7fb",
+      "doc case sc b": "7a8380a46cf7",
+      "narrowed sc b": "6758b5c17558",
+      "doc case sc0 b": "7a8380a46cf7",
+      "narrowed sc0 b": "128d73da8a98",
+      "doc case ss b": "7a8380a46cf7",
+      "narrowed ss b": "75097fd0d306",
+      "doc case narrowed kept": "7a8380a46cf7",
+      "narrowed narrowed kept": "2be8dfcbd769",
+      "doc case stale sent": "7a8380a46cf7",
+      "narrowed stale sent": "9adad9e3237a",
+      "doc case stale changed": "d3daa4498a6d",
+      "narrowed stale changed": "c0b1931426da",
+      "doc case src long": "7a8380a46cf7",
+      "narrowed src long": "9adad9e3237a",
+      "doc case vault one left": "2c7a081ecda6",
+      "narrowed vault one left": "4335a6916cf3",
+      "doc case vault moved": "7cc493600760",
+      "narrowed vault moved": "60cbe85cfcb9",
+      "doc case coll two": "2a26befec8f5",
+      "narrowed coll two": "7eee1e22e5eb",
+      "doc case tags x": "fb8b5acdbe7b",
+      "narrowed tags x": "87c5b8d144e8",
+      "doc case gi 2": "33bad786d525",
+      "narrowed gi 2": "4af71cb50d83",
+      "doc case gi text": "33bad786d525",
+      "narrowed gi text": "0b0c8b16c653",
+      "doc case gb true": "74aece61ad72",
+      "narrowed gb true": "b49e334dd77b",
+      "doc case gb one": "74aece61ad72",
+      "narrowed gb one": "403a75df62b2"
+    },
+    "plain": {
+      "doc empty": "abeaa0381819",
+      "doc emitFull": "a7fb9cb3d01c",
+      "doc emitFull hints": "315740dff989"
+    },
+    "texts | stored": {
+      "nothing": "dda9935eac41",
+      "gate narrow": "dda9935eac41",
+      "gate open": "779cad3f98b5",
+      "sc b": "dda9935eac41",
+      "sc0 b": "dda9935eac41",
+      "ss b": "dda9935eac41",
+      "narrowed kept": "be43e0285368",
+      "stale sent": "355264deeb07",
+      "stale changed": "65e59bc8dc62",
+      "src long": "a080d011eafc",
+      "vault one left": "35bac7c6fc1c",
+      "vault moved": "30d6b698b232",
+      "coll two": "687d501eefb3",
+      "tags x": "78e97c6df2e2",
+      "gi 2": "ee71af5dbe97",
+      "gi text": "0fec0d59922a",
+      "gb true": "f3b5297cd465",
+      "gb one": "323cfa41783f",
+      "doc full": "04caf24f468f",
+      "doc hints": "fddf4ca3aacf",
+      "doc case gate narrow": "1174e06b061c",
+      "narrowed gate narrow": "a775c159f0af",
+      "doc case gate open": "aee14d2d54af",
+      "narrowed gate open": "451844bb0eed",
+      "doc case sc b": "1174e06b061c",
+      "narrowed sc b": "dc21cfc74927",
+      "doc case sc0 b": "1174e06b061c",
+      "narrowed sc0 b": "45157db9032e",
+      "doc case ss b": "1174e06b061c",
+      "narrowed ss b": "a833e068da75",
+      "doc case narrowed kept": "1174e06b061c",
+      "narrowed narrowed kept": "f841eae21d0e",
+      "doc case stale sent": "1174e06b061c",
+      "narrowed stale sent": "a775c159f0af",
+      "doc case stale changed": "9da31caa2dd3",
+      "narrowed stale changed": "da667beb7447",
+      "doc case src long": "1174e06b061c",
+      "narrowed src long": "a775c159f0af",
+      "doc case vault one left": "56267f9a888d",
+      "narrowed vault one left": "8f3db488fb59",
+      "doc case vault moved": "3e39b0d3a820",
+      "narrowed vault moved": "cbd7b3948ee6",
+      "doc case coll two": "c5f7a3592acb",
+      "narrowed coll two": "ab908099cd09",
+      "doc case tags x": "bcce315e59e2",
+      "narrowed tags x": "5ca518d3e4cb",
+      "doc case gi 2": "da294735362f",
+      "narrowed gi 2": "b225647babe4",
+      "doc case gi text": "da294735362f",
+      "narrowed gi text": "a775c159f0af",
+      "doc case gb true": "7a81acf39de0",
+      "narrowed gb true": "362add1dc664",
+      "doc case gb one": "7a81acf39de0",
+      "narrowed gb one": "a775c159f0af"
+    }
+  },
+  "records": {
+    "plain | none | sc b": {
+      "accept": {
+        "gate": "open",
+        "sc": "b",
+        "sc0": null,
+        "ss": null,
+        "stc": null,
+        "stc0": null,
+        "sts": null,
+        "src": null,
+        "comp0": null,
+        "vault": null,
+        "coll": [
+          {
+            "cname": "first"
+          }
+        ],
+        "arranged": null,
+        "accent": null,
+        "tags": null,
+        "dep_tags": null,
+        "tags2": null,
+        "dep_tags2": null,
+        "gio": null,
+        "level": null,
+        "per_level": null,
+        "flag": null,
+        "per_flag": null,
+        "gi": null,
+        "gb": null,
+        "dep_gi": null,
+        "dep_gb": null
+      },
+      "notes": [],
+      "unmatched": [],
+      "validate": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": [],
+        "staleEntries": []
+      },
+      "kept": {
+        "gate": "open",
+        "sc": "b",
+        "sc0": null,
+        "ss": null,
+        "stc": null,
+        "stc0": null,
+        "sts": null,
+        "src": null,
+        "comp0": null,
+        "vault": null,
+        "coll": [
+          {
+            "cname": "first"
+          }
+        ],
+        "arranged": null,
+        "accent": null,
+        "tags": null,
+        "dep_tags": null,
+        "tags2": null,
+        "dep_tags2": null,
+        "gio": null,
+        "level": null,
+        "per_level": null,
+        "flag": null,
+        "per_flag": null,
+        "gi": null,
+        "gb": null,
+        "dep_gi": null,
+        "dep_gb": null
+      },
+      "validate raw": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": [],
+        "staleEntries": []
+      },
+      "validate creates": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": [],
+        "staleEntries": []
+      }
+    },
+    "plain | stored | narrowed kept": {
+      "accept": {
+        "gate": "narrow",
+        "sc": "b",
+        "sc0": "b",
+        "ss": "b",
+        "stc": "gone",
+        "stc0": "gone",
+        "sts": "gone",
+        "src": "Long Title",
+        "comp0": "long_title",
+        "vault": [
+          {
+            "m": {
+              "sec": "s1",
+              "x": "a"
+            },
+            "rows": [
+              {
+                "pin": "p1"
+              }
+            ],
+            "pins": [
+              "q1"
+            ]
+          },
+          {
+            "m": {
+              "sec": "s2",
+              "x": "b"
+            },
+            "rows": [
+              {
+                "pin": "p2"
+              }
+            ],
+            "pins": [
+              "q2"
+            ]
+          }
+        ],
+        "coll": [
+          {
+            "cname": "first"
+          }
+        ],
+        "arranged": null,
+        "accent": null,
+        "tags": null,
+        "dep_tags": null,
+        "tags2": null,
+        "dep_tags2": null,
+        "gio": null,
+        "level": null,
+        "per_level": null,
+        "flag": null,
+        "per_flag": null,
+        "gi": null,
+        "gb": null,
+        "dep_gi": null,
+        "dep_gb": null
+      },
+      "notes": [],
+      "unmatched": [],
+      "validate": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": {
+          "comp0": [
+            {
+              "@class": "Drupal\\surface\\Pipeline\\Violation",
+              "key": "comp0",
+              "path": "",
+              "message": {
+                "@class": "Drupal\\surface\\Pipeline\\Sentences",
+                "sentences": [
+                  {
+                    "@class": "Drupal\\surface\\Pipeline\\Sentences",
+                    "sentences": [
+                      {
+                        "@source": "The value you selected is not a valid choice.",
+                        "arguments": {
+                          "%value": "\"long_title\"",
+                          "%choices": "\"other\""
+                        },
+                        "options": {
+                          "langcode": null
+                        },
+                        "text": "The value you selected is not a valid choice."
+                      },
+                      {
+                        "@source": "Choose @choice.",
+                        "arguments": {
+                          "@choice": {
+                            "@class": "Drupal\\surface\\Pipeline\\Named",
+                            "label": "other",
+                            "machine": "other",
+                            "value": true,
+                            "text": "other"
+                          }
+                        },
+                        "options": {
+                          "context": "surface refusal"
+                        },
+                        "text": "Choose other."
+                      }
+                    ],
+                    "text": "The value you selected is not a valid choice. Choose other."
+                  },
+                  {
+                    "@source": "This is computed from @source.",
+                    "arguments": {
+                      "@label": "",
+                      "@source": {
+                        "@class": "Drupal\\surface\\Pipeline\\Named",
+                        "label": "Source",
+                        "machine": "src",
+                        "value": false,
+                        "text": "Source"
+                      }
+                    },
+                    "options": {
+                      "context": "surface refusal"
+                    },
+                    "text": "This is computed from Source."
+                  }
+                ],
+                "text": "The value you selected is not a valid choice. Choose other. This is computed from Source."
+              },
+              "code": "enum",
+              "stale": false,
+              "stored": null,
+              "params": {
+                "value": "long_title",
+                "allowed": [
+                  "other",
+                  null
+                ]
+              }
+            }
+          ]
+        },
+        "staleEntries": [
+          {
+            "@class": "Drupal\\surface\\Pipeline\\Violation",
+            "key": "sc",
+            "path": "",
+            "message": {
+              "@source": "@label keeps the value @value, which is no longer available. Choose a new one when you can.",
+              "arguments": {
+                "@label": "Stale choice",
+                "@value": "b"
+              },
+              "options": [],
+              "text": "Stale choice keeps the value b, which is no longer available. Choose a new one when you can."
+            },
+            "code": "stale",
+            "stale": true,
+            "stored": "b",
+            "params": []
+          },
+          {
+            "@class": "Drupal\\surface\\Pipeline\\Violation",
+            "key": "sc0",
+            "path": "",
+            "message": {
+              "@source": "@label keeps the value @value, which is no longer available. Choose a new one when you can.",
+              "arguments": {
+                "@label": "",
+                "@value": "b"
+              },
+              "options": [],
+              "text": " keeps the value b, which is no longer available. Choose a new one when you can."
+            },
+            "code": "stale",
+            "stale": true,
+            "stored": "b",
+            "params": []
+          },
+          {
+            "@class": "Drupal\\surface\\Pipeline\\Violation",
+            "key": "ss",
+            "path": "",
+            "message": {
+              "@source": "@label keeps the value @value, which is no longer available. Choose a new one when you can.",
+              "arguments": {
+                "@label": "Stale secret",
+                "@value": "b"
+              },
+              "options": [],
+              "text": "Stale secret keeps the value b, which is no longer available. Choose a new one when you can."
+            },
+            "code": "stale",
+            "stale": true,
+            "stored": null,
+            "params": []
+          },
+          {
+            "@class": "Drupal\\surface\\Pipeline\\Violation",
+            "key": "stc",
+            "path": "",
+            "message": {
+              "@source": "@label keeps the value @value, which is no longer available. Choose a new one when you can.",
+              "arguments": {
+                "@label": "Pick",
+                "@value": "gone"
+              },
+              "options": [],
+              "text": "Pick keeps the value gone, which is no longer available. Choose a new one when you can."
+            },
+            "code": "stale",
+            "stale": true,
+            "stored": "gone",
+            "params": []
+          },
+          {
+            "@class": "Drupal\\surface\\Pipeline\\Violation",
+            "key": "stc0",
+            "path": "",
+            "message": {
+              "@source": "@label keeps the value @value, which is no longer available. Choose a new one when you can.",
+              "arguments": {
+                "@label": "",
+                "@value": "gone"
+              },
+              "options": [],
+              "text": " keeps the value gone, which is no longer available. Choose a new one when you can."
+            },
+            "code": "stale",
+            "stale": true,
+            "stored": "gone",
+            "params": []
+          },
+          {
+            "@class": "Drupal\\surface\\Pipeline\\Violation",
+            "key": "sts",
+            "path": "",
+            "message": {
+              "@source": "@label keeps the value @value, which is no longer available. Choose a new one when you can.",
+              "arguments": {
+                "@label": "Secret pick",
+                "@value": "gone"
+              },
+              "options": [],
+              "text": "Secret pick keeps the value gone, which is no longer available. Choose a new one when you can."
+            },
+            "code": "stale",
+            "stale": true,
+            "stored": null,
+            "params": []
+          }
+        ]
+      },
+      "kept": {
+        "gate": "narrow",
+        "sc": "b",
+        "sc0": "b",
+        "ss": "b",
+        "stc": "gone",
+        "stc0": "gone",
+        "sts": "gone",
+        "src": "Long Title",
+        "comp0": "long_title",
+        "vault": [
+          {
+            "m": {
+              "sec": "s1",
+              "x": "a"
+            },
+            "rows": [
+              {
+                "pin": "p1"
+              }
+            ],
+            "pins": [
+              "q1"
+            ]
+          },
+          {
+            "m": {
+              "sec": "s2",
+              "x": "b"
+            },
+            "rows": [
+              {
+                "pin": "p2"
+              }
+            ],
+            "pins": [
+              "q2"
+            ]
+          }
+        ]
+      },
+      "validate raw": {
+        "@class": "Drupal\\surface\\Pipeline\\ViolationSet",
+        "grouped": [],
+        "staleEntries": [
+          {
+            "@class": "Drupal\\surface\\Pipeline\\Violation",
+            "key": "sc",
+            "path": "",
+            "message": {
+              "@source": "@label keeps the value @value, which is no longer available. Choose a new one when you can.",
+              "arguments": {
+                "@label": "Stale choice",
+                "@value": "b"
+              },
+              "options": [],
+              "text": "Stale choice keeps the value b, which is no longer available. Choose a new one when you can."
+            },
+            "code": "stale",
+            "stale": true,
+            "stored": "b",
+            "params": []
+          },
+          {
+            "@class": "Drupal\\surface\\Pipeline\\Violation",
+            "key": "sc0",
+            "path": "",
+            "message": {
+              "@source": "@label keeps the value @value, which is no longer available. Choose a new one when you can.",
+              "arguments": {
+                "@label": "",
+                "@value": "b"
+              },
+              "options": [],
+              "text": " keeps the value b, which is no longer available. Choose a new one when you can."
+            },
+            "code": "stale",
+            "stale": true,
+            "stored": "b",
+            "params": []
+          },
+          {
+            "@class": "Drupal\\surface\\Pipeline\\Violation",
+            "key": "ss",
+            "path": "",
+            "message": {
+              "@source": "@label keeps the value @value, which is no longer available. Choose a new one when you can.",
+              "arguments": {
+                "@label": "Stale secret",
+                "@value": "b"
+              },
+              "options": [],
+              "text": "Stale secret keeps the value b, which is no longer available. Choose a new one when you can."
+            },
+            "code": "stale",
+            "stale": true,
+            "stored": null,
+            "params": []
+          }
+        ]
+      }
+    },
+    "plain | doc emitFull": {
+      "resource": "hand",
+      "operation": "op",
+      "label": "Op label",
+      "schema": {
+        "$schema": "https://portable-schema.dev/v1/schema",
+        "title": "Op label",
+        "x-surface": {
+          "contract": 5,
+          "version": 1
+        },
+        "type": "object",
+        "properties": {
+          "gate": {
+            "title": "Gate",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "open",
+                "title": "open"
+              },
+              {
+                "const": "narrow",
+                "title": "narrow"
+              },
+              {
+                "const": null
+              }
+            ],
+            "default": "open"
+          },
+          "sc": {
+            "title": "Stale choice",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "enumerated": true
+            }
+          },
+          "sc0": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "enumerated": true
+            }
+          },
+          "ss": {
+            "title": "Stale secret",
+            "type": "string",
+            "writeOnly": true,
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "enumerated": true
+            }
+          },
+          "stc": {
+            "title": "Pick",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "keep",
+                "title": "Keep"
+              },
+              {
+                "const": "other",
+                "title": "Other"
+              },
+              {
+                "const": null
+              }
+            ]
+          },
+          "stc0": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "keep",
+                "title": "Keep"
+              },
+              {
+                "const": "other",
+                "title": "Other"
+              },
+              {
+                "const": null
+              }
+            ]
+          },
+          "sts": {
+            "title": "Secret pick",
+            "type": "string",
+            "oneOf": [
+              {
+                "const": "keep",
+                "title": "Keep"
+              },
+              {
+                "const": "other",
+                "title": "Other"
+              }
+            ],
+            "writeOnly": true
+          },
+          "src": {
+            "title": "Source",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "comp0": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "other",
+                "title": "other"
+              },
+              {
+                "const": null
+              }
+            ],
+            "readOnly": true,
+            "x-surface": {
+              "computed": {
+                "from": [
+                  "src"
+                ],
+                "when": "change"
+              }
+            }
+          },
+          "vault": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/$defs/hand.vault"
+            },
+            "x-surface": {
+              "collection": true
+            }
+          },
+          "coll": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/$defs/hand.coll"
+            },
+            "default": [
+              {
+                "cname": "first"
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "collection": true,
+              "enumerated": true
+            }
+          },
+          "arranged": {
+            "title": "Arranged",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "accent": {
+            "title": "Accent",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tags": {
+            "title": "Tags",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "title": "Tag",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "x",
+                  "title": "x"
+                },
+                {
+                  "const": "y",
+                  "title": "y"
+                }
+              ]
+            }
+          },
+          "dep_tags": {
+            "title": "Dep tags",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "tags"
+              ],
+              "refine": true
+            }
+          },
+          "tags2": {
+            "title": "Tags two",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "title": "Tag",
+              "type": "string"
+            },
+            "portable-check": {
+              "drupal:Choice": {
+                "@object": []
+              }
+            },
+            "x-portable-messages": {
+              "check.drupal:Choice": "Choice"
+            }
+          },
+          "dep_tags2": {
+            "title": "Dep tags two",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "tags2"
+              ],
+              "refine": true
+            }
+          },
+          "gio": {
+            "title": "Padded",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": 1,
+                "title": "01"
+              },
+              {
+                "const": 2,
+                "title": "02"
+              },
+              {
+                "const": null
+              }
+            ]
+          },
+          "level": {
+            "title": "Level",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": 1,
+                "title": "1"
+              },
+              {
+                "const": 2,
+                "title": "2"
+              },
+              {
+                "const": null
+              }
+            ]
+          },
+          "per_level": {
+            "title": "Per level",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/hand.per_level.1"
+              },
+              {
+                "$ref": "#/$defs/hand.per_level.2"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "level"
+              ],
+              "by": "level",
+              "variants": {
+                "@object": {
+                  "1": "#/$defs/hand.per_level.1",
+                  "2": "#/$defs/hand.per_level.2"
+                }
+              }
+            }
+          },
+          "flag": {
+            "title": "Flag",
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": false,
+                "title": "0"
+              },
+              {
+                "const": true,
+                "title": "1"
+              },
+              {
+                "const": null
+              }
+            ]
+          },
+          "per_flag": {
+            "title": "Per flag",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/hand.per_flag.0"
+              },
+              {
+                "$ref": "#/$defs/hand.per_flag.1"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "flag"
+              ],
+              "by": "flag",
+              "variants": {
+                "@object": [
+                  "#/$defs/hand.per_flag.0",
+                  "#/$defs/hand.per_flag.1"
+                ]
+              }
+            }
+          },
+          "gi": {
+            "title": "Gi",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": 1,
+                "title": "1"
+              },
+              {
+                "const": 2,
+                "title": "2"
+              },
+              {
+                "const": null
+              }
+            ]
+          },
+          "gb": {
+            "title": "Gb",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "dep_gi": {
+            "title": "Dep gi",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gi"
+              ],
+              "enumerated": true
+            }
+          },
+          "dep_gb": {
+            "title": "Dep gb",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-surface": {
+              "dependsOn": [
+                "gb"
+              ],
+              "refine": true
+            }
+          }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "narrow"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "sc": {
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    },
+                    {
+                      "const": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "narrow"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "sc0": {
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    },
+                    {
+                      "const": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "narrow"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "ss": {
+                  "oneOf": [
+                    {
+                      "const": "a",
+                      "title": "a"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gate": {
+                  "const": "narrow"
+                }
+              },
+              "required": [
+                "gate"
+              ]
+            },
+            "then": {
+              "properties": {
+                "coll": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "maxItems": 1
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "level": {
+                  "const": 1
+                }
+              },
+              "required": [
+                "level"
+              ]
+            },
+            "then": {
+              "properties": {
+                "per_level": {
+                  "title": "Per level",
+                  "$ref": "#/$defs/hand.per_level.1"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "level": {
+                  "const": 2
+                }
+              },
+              "required": [
+                "level"
+              ]
+            },
+            "then": {
+              "properties": {
+                "per_level": {
+                  "title": "Per level",
+                  "$ref": "#/$defs/hand.per_level.2"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "flag": {
+                  "const": false
+                }
+              },
+              "required": [
+                "flag"
+              ]
+            },
+            "then": {
+              "properties": {
+                "per_flag": {
+                  "title": "Per flag",
+                  "$ref": "#/$defs/hand.per_flag.0"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "flag": {
+                  "const": true
+                }
+              },
+              "required": [
+                "flag"
+              ]
+            },
+            "then": {
+              "properties": {
+                "per_flag": {
+                  "title": "Per flag",
+                  "$ref": "#/$defs/hand.per_flag.1"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "gi": {
+                  "const": 2
+                }
+              },
+              "required": [
+                "gi"
+              ]
+            },
+            "then": {
+              "properties": {
+                "dep_gi": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "dep_gi"
+              ]
+            }
+          }
+        ],
+        "$defs": {
+          "hand.vault": {
+            "title": "hand.vault",
+            "type": "object",
+            "properties": {
+              "m": {
+                "title": "Vault",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "sec": {
+                    "title": "Vault code",
+                    "type": "string",
+                    "writeOnly": true
+                  },
+                  "x": {
+                    "title": "X",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "rows": {
+                "title": "Rows",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "title": "Row",
+                  "type": "object",
+                  "properties": {
+                    "pin": {
+                      "title": "Row pin",
+                      "type": "string",
+                      "writeOnly": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "pins": {
+                "title": "Pins",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "title": "Pin",
+                  "type": "string",
+                  "writeOnly": true
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "hand.coll": {
+            "title": "hand.coll",
+            "type": "object",
+            "properties": {
+              "cname": {
+                "title": "Child name",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "hand.per_level.1": {
+            "title": "hand.per_level.1",
+            "type": "object",
+            "properties": {
+              "low": {
+                "title": "Low",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "hand.per_level.2": {
+            "title": "hand.per_level.2",
+            "type": "object",
+            "properties": {
+              "high": {
+                "title": "High",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "hand.per_flag.0": {
+            "title": "hand.per_flag.0",
+            "type": "object",
+            "properties": {
+              "off_note": {
+                "title": "Off note",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "hand.per_flag.1": {
+            "title": "hand.per_flag.1",
+            "type": "object",
+            "properties": {
+              "on_note": {
+                "title": "On note",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "plain | none | doc case gi 2": {
+      "resource": "hand",
+      "operation": "op",
+      "label": null,
+      "schema": {
+        "$schema": "https://portable-schema.dev/v1/schema",
+        "x-surface": {
+          "contract": 5,
+          "version": 1
+        },
+        "type": "object",
+        "properties": {
+          "gate": {
+            "title": "Gate",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "open",
+                "title": "open"
+              },
+              {
+                "const": "narrow",
+                "title": "narrow"
+              },
+              {
+                "const": null
+              }
+            ],
+            "default": "open",
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "sc": {
+            "title": "Stale choice",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-portable-ui": {
+              "widget": "text"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ]
+            }
+          },
+          "sc0": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-portable-ui": {
+              "widget": "text"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ]
+            }
+          },
+          "ss": {
+            "title": "Stale secret",
+            "type": "string",
+            "writeOnly": true,
+            "x-portable-ui": {
+              "widget": "text"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ]
+            }
+          },
+          "stc": {
+            "title": "Pick",
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "keep",
+                "title": "Keep"
+              },
+              {
+                "const": "other",
+                "title": "Other"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "stc0": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "keep",
+                "title": "Keep"
+              },
+              {
+                "const": "other",
+                "title": "Other"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "sts": {
+            "title": "Secret pick",
+            "type": "string",
+            "oneOf": [
+              {
+                "const": "keep",
+                "title": "Keep"
+              },
+              {
+                "const": "other",
+                "title": "Other"
+              }
+            ],
+            "writeOnly": true,
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "src": {
+            "title": "Source",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-portable-ui": {
+              "widget": "text"
+            }
+          },
+          "comp0": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": "other",
+                "title": "other"
+              },
+              {
+                "const": null
+              }
+            ],
+            "readOnly": true,
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            },
+            "x-surface": {
+              "computed": {
+                "from": [
+                  "src"
+                ],
+                "when": "change"
+              }
+            }
+          },
+          "vault": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/$defs/hand.vault"
+            },
+            "x-portable-ui": {
+              "widget": "list"
+            },
+            "x-surface": {
+              "collection": true
+            }
+          },
+          "coll": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/$defs/hand.coll"
+            },
+            "default": [
+              {
+                "cname": "first"
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "list"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gate"
+              ],
+              "collection": true
+            }
+          },
+          "arranged": {
+            "title": "Arranged",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-portable-ui": {
+              "widget": "text",
+              "options": {
+                "placeholder": "Type here"
+              }
+            }
+          },
+          "accent": {
+            "title": "Accent",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-portable-ui": {
+              "widget": "widget_test_color",
+              "options": {
+                "palette": [
+                  "#336699",
+                  "#ffffff"
+                ]
+              }
+            }
+          },
+          "tags": {
+            "title": "Tags",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "title": "Tag",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "x",
+                  "title": "x"
+                },
+                {
+                  "const": "y",
+                  "title": "y"
+                }
+              ],
+              "x-portable-ui": {
+                "widget": "select",
+                "options": {
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- None -"
+                  }
+                }
+              }
+            },
+            "x-portable-ui": {
+              "widget": "checkboxes"
+            }
+          },
+          "dep_tags": {
+            "title": "Dep tags",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-portable-ui": {
+              "widget": "text"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "tags"
+              ],
+              "refine": true
+            }
+          },
+          "tags2": {
+            "title": "Tags two",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "title": "Tag",
+              "type": "string",
+              "x-portable-ui": {
+                "widget": "text"
+              }
+            },
+            "portable-check": {
+              "drupal:Choice": {
+                "@object": []
+              }
+            },
+            "x-portable-messages": {
+              "check.drupal:Choice": "Choice"
+            },
+            "x-portable-ui": {
+              "widget": "list"
+            }
+          },
+          "dep_tags2": {
+            "title": "Dep tags two",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-portable-ui": {
+              "widget": "text"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "tags2"
+              ],
+              "refine": true
+            }
+          },
+          "gio": {
+            "title": "Padded",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": 1,
+                "title": "01"
+              },
+              {
+                "const": 2,
+                "title": "02"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "level": {
+            "title": "Level",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": 1,
+                "title": "1"
+              },
+              {
+                "const": 2,
+                "title": "2"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "per_level": {
+            "title": "Per level",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/hand.per_level.1"
+              },
+              {
+                "$ref": "#/$defs/hand.per_level.2"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "variants"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "level"
+              ],
+              "by": "level",
+              "variants": {
+                "@object": {
+                  "1": "#/$defs/hand.per_level.1",
+                  "2": "#/$defs/hand.per_level.2"
+                }
+              }
+            }
+          },
+          "flag": {
+            "title": "Flag",
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": false,
+                "title": "0"
+              },
+              {
+                "const": true,
+                "title": "1"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "per_flag": {
+            "title": "Per flag",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/hand.per_flag.0"
+              },
+              {
+                "$ref": "#/$defs/hand.per_flag.1"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "variants"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "flag"
+              ],
+              "by": "flag",
+              "variants": {
+                "@object": [
+                  "#/$defs/hand.per_flag.0",
+                  "#/$defs/hand.per_flag.1"
+                ]
+              }
+            }
+          },
+          "gi": {
+            "title": "Gi",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "oneOf": [
+              {
+                "const": 1,
+                "title": "1"
+              },
+              {
+                "const": 2,
+                "title": "2"
+              },
+              {
+                "const": null
+              }
+            ],
+            "x-portable-ui": {
+              "widget": "select",
+              "options": {
+                "emptyOption": {
+                  "show": true,
+                  "label": "- None -"
+                }
+              }
+            }
+          },
+          "gb": {
+            "title": "Gb",
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "x-portable-ui": {
+              "widget": "checkbox"
+            }
+          },
+          "dep_gi": {
+            "title": "Dep gi",
+            "type": "string",
+            "x-portable-ui": {
+              "widget": "text"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gi"
+              ],
+              "refined": true
+            }
+          },
+          "dep_gb": {
+            "title": "Dep gb",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-portable-ui": {
+              "widget": "text"
+            },
+            "x-surface": {
+              "dependsOn": [
+                "gb"
+              ],
+              "refine": true
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "dep_gi"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "level": {
+                  "const": 1
+                }
+              },
+              "required": [
+                "level"
+              ]
+            },
+            "then": {
+              "properties": {
+                "per_level": {
+                  "title": "Per level",
+                  "$ref": "#/$defs/hand.per_level.1"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "level": {
+                  "const": 2
+                }
+              },
+              "required": [
+                "level"
+              ]
+            },
+            "then": {
+              "properties": {
+                "per_level": {
+                  "title": "Per level",
+                  "$ref": "#/$defs/hand.per_level.2"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "flag": {
+                  "const": false
+                }
+              },
+              "required": [
+                "flag"
+              ]
+            },
+            "then": {
+              "properties": {
+                "per_flag": {
+                  "title": "Per flag",
+                  "$ref": "#/$defs/hand.per_flag.0"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "flag": {
+                  "const": true
+                }
+              },
+              "required": [
+                "flag"
+              ]
+            },
+            "then": {
+              "properties": {
+                "per_flag": {
+                  "title": "Per flag",
+                  "$ref": "#/$defs/hand.per_flag.1"
+                }
+              }
+            }
+          }
+        ],
+        "$defs": {
+          "hand.vault": {
+            "title": "hand.vault",
+            "type": "object",
+            "properties": {
+              "m": {
+                "title": "Vault",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "sec": {
+                    "title": "Vault code",
+                    "type": "string",
+                    "writeOnly": true,
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  },
+                  "x": {
+                    "title": "X",
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "x-portable-ui": {
+                      "widget": "text"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "x-portable-ui": {
+                  "widget": "fieldset"
+                }
+              },
+              "rows": {
+                "title": "Rows",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "title": "Row",
+                  "type": "object",
+                  "properties": {
+                    "pin": {
+                      "title": "Row pin",
+                      "type": "string",
+                      "writeOnly": true,
+                      "x-portable-ui": {
+                        "widget": "text"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "x-portable-ui": {
+                    "widget": "fieldset"
+                  }
+                },
+                "x-portable-ui": {
+                  "widget": "list"
+                }
+              },
+              "pins": {
+                "title": "Pins",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "title": "Pin",
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-portable-ui": {
+                    "widget": "text"
+                  }
+                },
+                "x-portable-ui": {
+                  "widget": "list"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "hand.coll": {
+            "title": "hand.coll",
+            "type": "object",
+            "properties": {
+              "cname": {
+                "title": "Child name",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "hand.per_level.1": {
+            "title": "hand.per_level.1",
+            "type": "object",
+            "properties": {
+              "low": {
+                "title": "Low",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "hand.per_level.2": {
+            "title": "hand.per_level.2",
+            "type": "object",
+            "properties": {
+              "high": {
+                "title": "High",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "hand.per_flag.0": {
+            "title": "hand.per_flag.0",
+            "type": "object",
+            "properties": {
+              "off_note": {
+                "title": "Off note",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "hand.per_flag.1": {
+            "title": "hand.per_flag.1",
+            "type": "object",
+            "properties": {
+              "on_note": {
+                "title": "On note",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-portable-ui": {
+                  "widget": "text"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "values": {
+        "gate": "open",
+        "sc": null,
+        "sc0": null,
+        "ss": null,
+        "stc": null,
+        "stc0": null,
+        "sts": null,
+        "src": null,
+        "comp0": null,
+        "vault": null,
+        "coll": [
+          {
+            "cname": "first"
+          }
+        ],
+        "arranged": null,
+        "accent": null,
+        "tags": null,
+        "dep_tags": null,
+        "tags2": null,
+        "dep_tags2": null,
+        "gio": null,
+        "level": null,
+        "per_level": null,
+        "flag": null,
+        "per_flag": null,
+        "gi": 2,
+        "gb": null,
+        "dep_gi": null,
+        "dep_gb": null
+      },
+      "stale": []
+    }
+  }
+}
