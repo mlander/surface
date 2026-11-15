@@ -342,13 +342,14 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
       self::$keptDefinitionFirst++;
       return $entry;
     }
-    $node = DefinitionSchema::of($definition);
-    if (!static::derivedClasses($node)) {
+    // The entry's own node: a key that holds a child frame composes it of
+    // its children's (Entry::schema()).
+    if (!static::derivedClasses($entry->schema())) {
       self::$keptDefinitionFirst++;
       return $entry;
     }
     self::$madeNodeFirst++;
-    return $entry->withSchema($node);
+    return $entry->nodeFirst();
   }
 
   /**

@@ -6,6 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
+use Drupal\surface\Drush\Commands\RunCommand;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface_examples\ConceptCalls;
 use Drupal\surface_examples\ConceptPanel;
@@ -20,6 +21,8 @@ use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\User;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -156,6 +159,27 @@ class RetitleExampleTest extends SurfaceKernelTestBase {
     $this->assertSame('Rewrites the titles of one to fifty nodes in the style chosen, each node one the account may update and whose title it may edit; a new title sent is written as sent. Update: send only the keys to change; a key left out keeps its value, null clears it, and values {} changes nothing. The read tool returns the current values.', (string) $definition->getDescription());
     $values = $tools->createInstance(self::TOOL)->getInputDefinitions()[OperationInputs::VALUES];
     $this->assertSame('Each node to retitle, one to fifty. Whether this may be changed is decided once the thing it belongs to is known: a call may find it locked or left out. Required; a value already stored stands when left out.', (string) $values->getPropertyDefinitions()['items']->getDescription());
+  }
+
+  /**
+   * Tests the run command says what the retitle takes, its list too.
+   *
+   * The nodes to retitle are a collection the operation requires: its type
+   * and its flag are read from its node, as a plain key's are.
+   */
+  public function testTheRunCommandSaysWhatItTakes(): void {
+    $command = new RunCommand(
+      $this->container->get('surface.runner'),
+      $this->container->get('surface.pipeline'),
+      $this->container->get('entity_type.manager'),
+    );
+    $command->getDefinition()->addOption(new InputOption('yes', 'y', InputOption::VALUE_NONE));
+    $tester = new CommandTester($command);
+    $tester->execute(['resource' => 'ai.retitle', 'operation' => 'retitle', '--uid' => '1', '--json' => TRUE], ['interactive' => FALSE]);
+    $document = json_decode($tester->getDisplay(), TRUE);
+    $this->assertIsArray($document, $tester->getDisplay());
+    $this->assertTrue($document['prepared']);
+    $this->assertSame(['type' => 'list', 'required' => TRUE], $document['takes']['items'] ?? NULL, 'The collection is a required list.');
   }
 
   /**

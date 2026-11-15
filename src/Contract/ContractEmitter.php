@@ -651,10 +651,12 @@ final class ContractEmitter {
         $ruled[$name] = $advertised->dependencies($name);
         continue;
       }
-      // A key holding a child, variants or a list of children holds its
-      // child's keys in its definition, so its node would be the child's
-      // whole tree: its facts are read from the definition, and only a
-      // key that holds none is read through its node.
+      // A key holding a child, variants or a list of children has its
+      // facts read from its definition here. Its node is composed of the
+      // refined child's entries' nodes (Entry::schema()), and the document
+      // refines the child again in its own frame and reads those: the
+      // node would read each of the child's keys twice. Decision: see
+      // docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
       $node = $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL ? $current->schema() : NULL;
       $requires = $node === NULL ? DefinitionSchema::required($current->definition()) : PropertySchema::required($node);
       $depends = $advertised->dependencies($name);
@@ -1850,8 +1852,7 @@ final class ContractEmitter {
   /**
    * Answers whether a key refers to an entity type, or one a sibling names.
    *
-   * A plain key's facts are read from its node; a shell's own from its
-   * definition (Entry::isShell()).
+   * Read from the key's node, a key that holds a child frame's too.
    *
    * @param \Drupal\surface\Entry $entry
    *   The key.
@@ -1860,9 +1861,6 @@ final class ContractEmitter {
    *   TRUE for a reference key, or the id of a reference to any type.
    */
   protected static function refers(Entry $entry): bool {
-    if ($entry->isShell()) {
-      return References::target($entry->definition()) !== NULL || $entry->definition()->getSetting(References::TARGETS) !== NULL;
-    }
     $node = $entry->schema();
     return References::targetIn($node) !== NULL || NodeFacts::setting($node, References::TARGETS) !== NULL;
   }

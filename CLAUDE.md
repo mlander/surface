@@ -698,7 +698,15 @@ the record of the rework that brought the module to the pattern.
   entry node-first. Run any kernel class in that mode with
   `SURFACE_NODE_FIRST=1` in front of its phpunit command; the lanes run
   without it, and `NodeFirstModeTest` pins both modes alike
-  (`docs/decisions.md#an-entry-holds-the-form-its-source-gave`). And
+  (`docs/decisions.md#an-entry-holds-the-form-its-source-gave`). A key
+  that holds a child frame (attached, variants, a collection, a mount:
+  `Entry::isShell()`) composes its node: its own facts read once
+  (`DefinitionSchema::around()`) around the nodes its child's entries
+  hold, the very objects, and a refined one around the refined child
+  `Surface::refineNested()` and `refineMounted()` hand it
+  (`Entry::withDefinition($definition, $frames)`);
+  `ShellNodeCompositionTest` proves it the read of the definition
+  (`docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own`). And
   a reader that walks down from an entry walks its node in step
   (`DefinitionSchema::propertyNode()`, `itemNode()`, `shapeNode()`). The
   rule it rests on: a definition an entry holds is never written after
@@ -737,19 +745,20 @@ the record of the rework that brought the module to the pattern.
   asks each refined plain key for its node once and hands it down; its
   own checks (computed, does not apply, required, always held, a
   required property of a plain map, stale, the labels its refusals name)
-  read the node. A key that holds a child frame (attached, variants, a
-  collection, a mount) is a shell whose node is the child's whole tree:
-  its own facts are read from its definition, and a mount's node only
-  for the walk of what is required and ruled out inside it. And `Validating::nodeAt()` walks to the node at a key path
+  read the node, a key that holds a child frame's too since its node is
+  composed of its child's entries' nodes (2026-11-14). And
+  `Validating::nodeAt()` walks to the node at a key path
   (`placeAt()` gives the definition beside it for the options service;
   a port's node is read from its bare definition). `PropertySchema`,
   `ContractEmitter`, `Conditionals` and `DocumentHead` read a plain key's
   facts from its node (`describe()`, `required()`, `nullable()`,
   `cast()`, `signature()` take one; `DefinitionSchema::typeOf()` and
-  `keywordsOf()` stand for `type()` and `keywords()`); a key that holds a
-  child, variants or a list of children is read from its definition,
-  since its node would be the child's whole tree, and a collection
-  through its own node without items (`PropertySchema::listNode()`). The
+  `keywordsOf()` stand for `type()` and `keywords()`); in the emitter a
+  key that holds a child, variants or a list of children is read from
+  its definition, since its composed node would read the refined
+  child's keys, which the document reads again from its own refinement
+  of the child, and a collection through its own node without items
+  (`PropertySchema::listNode()`). The
   definition stays beside the node for the options service, the widget
   claims, `References::target()` and `Computed`
   (`docs/decisions.md#the-validators-checks-and-the-document-read-nodes`).
@@ -762,12 +771,15 @@ the record of the rework that brought the module to the pattern.
   panel's plain rows, `CompiledFlow` and the formatter's summary read a
   plain key's facts from its entry's node, stepped down in step with the
   definition, which goes on only to the options service, the constraint
-  runner and `getClass()`. A shell (`Entry::isShell()`: attached,
-  variants, a collection, a mount) keeps its own facts on its
-  definition, and the tool door, the config schema writer and the
-  formatter take what lies below a shell from the child's entries. A
-  mount is a plain map whose node is its own tree: a walk into a
-  module's part reads it. A builder's definition before sealing has no
+  runner and `getClass()`. A key that holds a child frame reads its own
+  facts from its composed node too (2026-11-14), but in the two storage
+  layouts (`EncryptedStorageLayout::secretKeys()`, `FlatVariantsLayout`'s
+  `each`), which read no child key, so the node would read every one for
+  one flag; and the tool door, the
+  config schema writer and the formatter take what lies below it from
+  the child's entries; the tool door finds a child's key advertised as
+  its entry says by its node, the very object. A walk into a mount's
+  module part reads the mount's node. A builder's definition before sealing has no
   entry: `KeyPaths::held()` reads its facts from it; the tool door's
   public converters read the node of a definition handed alone
   (`DefinitionReadCallersTest`). What reads a definition still
@@ -1127,9 +1139,9 @@ test errored or failed and every gate passed.
   itself, so the full lane has no `--order-by=defects` and no result
   cache; it orders classes slowest first.
 
-On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-14: the
-full lane takes 16m32s at the defaults (phpunit 15m25s) and the fast
-lane 9m06s (phpunit 9m00s). As of 2026-10-23, with a smaller suite, the
+On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-15: the
+full lane takes 16m09s at the defaults (phpunit 15m24s) and the fast
+lane 9m21s (phpunit 9m10s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1160,7 +1172,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2561, Assertions: 102722, Errors: 0, Failures: 0, Skipped: 3. Classes: 364 of 364, 8 at a time, browser classes 4.
+phpunit: Tests: 2571, Assertions: 102816, Errors: 0, Failures: 0, Skipped: 3. Classes: 365 of 365, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1184,8 +1196,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2447, Assertions: 98168, Deprecations: 811, Skipped: 3. Classes:
-311, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2457, Assertions: 98262, Deprecations: 811, Skipped: 3. Classes:
+312, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 

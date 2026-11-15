@@ -299,13 +299,12 @@ trait HeldToConfigSchemaTrait {
         $wider[$path] = sprintf('it is a list, which the schema types %s', $type);
         return;
       }
-      $this->constraintsWider($entry->definition(), $schema, $path, $wider);
+      $this->constraintsWider($entry->definition(), $schema, $path, $wider, $entry->schema());
       $this->mapWider($entry->list->child()->getDefinitions(), $this->merged($schema['sequence'] ?? []), $path, $strict, $wider);
       return;
     }
     if ($entry->attachment !== NULL) {
-      $each = DefinitionMetadata::eachOf($entry->definition());
-      if ($each !== NULL) {
+      if (NodeFacts::each($entry->schema()) !== NULL) {
         if (!$this->isA($schema, Sequence::class)) {
           $wider[$path] = sprintf('it holds a key per thing the site has, which the schema types %s', $type);
           return;
@@ -319,8 +318,6 @@ trait HeldToConfigSchemaTrait {
       $this->mapWider($entry->attachment->child->getDefinitions(), $schema, $path, $strict, $wider);
       return;
     }
-    // A plain key's facts are read from its node; the shells above keep
-    // their own on their definitions (Entry::isShell()).
     $this->definitionWider($entry->schema(), $entry->definition(), $schema, $path, $strict, $wider);
   }
 
@@ -459,8 +456,7 @@ trait HeldToConfigSchemaTrait {
    * @param array<string, string> $wider
    *   Where the resource is wider, added to.
    * @param \PortableSchema\Builder\Schema|null $node
-   *   Its node, whose facts are read; NULL for a collection, a shell
-   *   whose own facts are read from its definition (Entry::isShell()).
+   *   Its node, whose facts are read; NULL to read the definition's.
    */
   protected function constraintsWider(DataDefinitionInterface $definition, array $schema, string $path, array &$wider, ?Schema $node = NULL): void {
     $mine = $node === NULL ? $definition->getConstraints() : NodeFacts::constraints($node);

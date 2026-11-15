@@ -7,6 +7,8 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
+use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\SchemaResolver;
@@ -17,7 +19,11 @@ use Drupal\surface\Pipeline\TypeMismatchException;
 use Drupal\surface\Pipeline\UnknownKeysException;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\Attachment;
+use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Collection;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceRefinerInterface;
 use Drupal\surface_resource_test\Structure\Broken\NarrowsListItemsStructure;
 use Drupal\surface_resource_test\Structure\Broken\RefinesListItemKeyStructure;
 use Drupal\surface_resource_test\Structure\Broken\WatchesListStructure;
@@ -223,6 +229,58 @@ class CollectionTest extends SurfaceKernelTestBase {
     // Omitted leaves the key out.
     $this->actAs('hide spice rack');
     $this->assertSame(['larder', 'size', 'shelves'], $this->edit()->getDefinitions()->names());
+  }
+
+  /**
+   * Tests a required collection a parent refiner watches stays required.
+   *
+   * The full schema states the parent's Count per value of what it watches
+   * (Conditionals::enumerate()); whether the list is required there is
+   * read from its node, composed of its item's keys, as a plain key's is.
+   */
+  public function testRequiredCollectionStaysRequiredWhenEnumerated(): void {
+    $rack = (new SurfaceBuilder())->setDefinition('label', DataDefinition::create('string')->setLabel('Label'))->seal();
+    $builder = (new SurfaceBuilder())
+      ->setDefinition('size', DataDefinition::create('string')->setLabel('Size')->addConstraint('Choice', [
+        'choices' => ['small', 'large'],
+      ]))
+      ->setDefinition('racks', (new ListDataDefinition([], MapDataDefinition::create()))->setLabel('Racks')->setRequired(TRUE))
+      ->attachList('racks', new Collection(new Attachment($rack)))
+      ->addRefinement('racks', ['size']);
+    $builder->addRefiner('racks', new class () implements SurfaceRefinerInterface {
+
+      /**
+       * {@inheritdoc}
+       */
+      public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
+        return ($values['size'] ?? NULL) === 'small' ? $definition->addConstraint('Count', ['max' => 2]) : $definition;
+      }
+
+    });
+    $full = $this->container->get('surface.contract_emitter')->emitFull($builder->seal(), 'resource_test.cellar', 'update')->document['schema'];
+    $this->assertTrue($full['properties']['racks']['x-surface']['enumerated'] ?? FALSE, 'The list is stated per size.');
+    $this->assertContains('racks', $full['required'] ?? [], 'And it is required, as its node says.');
+  }
+
+  /**
+   * Tests a collection its storage always holds refuses null.
+   *
+   * What a collection read from a schema whose list is not nullable is
+   * (SchemaReader::collection()): that it is always held is read from its
+   * node, composed of its item's keys, as a plain key's is.
+   */
+  public function testAnAlwaysHeldCollectionCannotBeCleared(): void {
+    $rack = (new SurfaceBuilder())->setDefinition('label', DataDefinition::create('string')->setLabel('Label'))->seal();
+    $racks = (new ListDataDefinition([], MapDataDefinition::create()))->setLabel('Racks');
+    DefinitionMetadata::setAlwaysHeld($racks);
+    $surface = (new SurfaceBuilder())
+      ->setDefinition('racks', $racks)
+      ->attachList('racks', new Collection(new Attachment($rack)))
+      ->seal();
+    $stored = ['racks' => [['label' => 'Herbs']]];
+    $violations = iterator_to_array($this->container->get('surface.pipeline')->validate($surface, ['racks' => NULL], $stored), FALSE);
+    $messages = array_map(static fn ($violation): string => (string) $violation->message, $violations);
+    $this->assertSame(['Racks cannot be cleared: it always holds a value. Leave it out to keep what it holds.'], $messages);
   }
 
   /**

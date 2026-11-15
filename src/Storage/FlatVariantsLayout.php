@@ -236,11 +236,13 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
    * Lists the flat keys of one map, and walks the maps it holds.
    *
    * The walk reads no node. Its one fact of a definition, `each`, is read
-   * only for a key that holds an attachment, which is a shell
-   * (Entry::isShell()): a shell's own facts are read from its definition
-   * until a source gives the node.
+   * only for a key that holds an attachment, from its definition: that
+   * key's node is composed of the child's entries' nodes
+   * (Entry::schema()), and a storage layout reads none of them, so the
+   * node would read every key of the child for one fact.
    *
-   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes and
+   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
    *
    * @param \Drupal\surface\DefinitionMap $map
    *   The keys of one level.

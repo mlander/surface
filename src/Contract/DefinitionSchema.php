@@ -441,6 +441,40 @@ final class DefinitionSchema {
   }
 
   /**
+   * Reads a definition's own facts around the nodes given for what is below.
+   *
+   * The node of() reads, with each property or item given here placed
+   * where of() would read it: the node of a key that holds a child frame
+   * (an attachment, variants, a collection, a mount), whose properties
+   * are the child's keys, which the child's own entries read already.
+   * What the definition says of itself (its keywords, `required` from its
+   * properties' flags, its checks and MODEL) is read once, and nothing
+   * given is read again. A property or an item not given is read as of()
+   * reads it. Unlike head(), which reads a collection's own keywords with
+   * no items at all, in its own order, the node is the one of() reads:
+   * the same keywords in the same order, so DefinitionSchema::same()
+   * holds between the two when each node given is the one of() reads for
+   * its definition.
+   *
+   * Decision: see
+   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   * @param array<string, \PortableSchema\Builder\Schema> $properties
+   *   For a map, the nodes of its properties, by name; those not given are
+   *   read.
+   * @param \PortableSchema\Builder\Schema|null $items
+   *   For a list, the node of its item; NULL to read it.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The built node.
+   */
+  public static function around(DataDefinitionInterface $definition, array $properties = [], ?Schema $items = NULL): Schema {
+    return self::build($definition, '', [spl_object_id($definition) => TRUE], $properties, $items);
+  }
+
+  /**
    * Reads one definition into its built node.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -489,17 +523,20 @@ final class DefinitionSchema {
    *   Where it is in the node being read, as a JSON Pointer.
    * @param array<int, true> $above
    *   The definitions above it and itself, by object id.
+   * @param array<string, \PortableSchema\Builder\Schema> $given
+   *   The nodes of properties already read, by name (around()).
+   * @param \PortableSchema\Builder\Schema|null $item
+   *   The node of the item, already read (around()).
    *
    * @return \PortableSchema\Builder\Schema
    *   The built node.
    */
-  private static function build(DataDefinitionInterface $definition, string $path, array $above): Schema {
+  private static function build(DataDefinitionInterface $definition, string $path, array $above, array $given = [], ?Schema $item = NULL): Schema {
     $schema = static::describe($definition);
     if ($definition instanceof ListDataDefinitionInterface) {
-      $item = $definition->getItemDefinition();
       $list = [
         'type' => static::nullable('array', $definition),
-        'items' => static::read($item, $path . '/items', $above),
+        'items' => $item ?? static::read($definition->getItemDefinition(), $path . '/items', $above),
       ];
       $schema = Schemas::defaults($schema, $list + static::keywords($definition, 'array'));
     }
@@ -513,7 +550,7 @@ final class DefinitionSchema {
           '~' => '~0',
           '/' => '~1',
         ]);
-        $properties[(string) $name] = static::read($property, $at, $above);
+        $properties[(string) $name] = $given[(string) $name] ?? static::read($property, $at, $above);
         if (static::required($property)) {
           $required[] = (string) $name;
         }

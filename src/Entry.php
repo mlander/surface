@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\surface;
 
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeDefinition;
 use Drupal\surface\Refinement\ApplicabilityInterface;
@@ -94,6 +96,22 @@ final class Entry {
    * Whether the node is the source of truth, the definition derived.
    */
   private bool $nodeFirst = FALSE;
+
+  /**
+   * The children a refinement built the definition from, by path.
+   *
+   * NULL while the definition is the one the key was sealed with; the
+   * refined children otherwise, by the path below the key ('' for the
+   * key's own child or a collection's item, `<module>` at a mount), none
+   * where the refinement gave none. What a shell's node is composed of
+   * (schema()). Serialized only when not NULL (__sleep()): a sealed entry
+   * serializes as it did before, and a refined one wakes with the
+   * children its definition was built from, the same objects its
+   * definition holds, since one serialized graph keeps object identity.
+   *
+   * @var array<string, \Drupal\surface\SurfaceInterface>|null
+   */
+  private ?array $frames = NULL;
 
   /**
    * What a node-first entry is constructed with, then drops.
@@ -282,16 +300,23 @@ final class Entry {
    * is this one again, its source and its other form kept; handed
    * another, it is definition-first and starts unread.
    *
+   * A key that holds a child frame, refined by its child, is handed the
+   * refined children its definition was built from: its node is composed
+   * of their entries' nodes (schema()).
+   *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The narrowed definition.
+   * @param array<string, \Drupal\surface\SurfaceInterface> $frames
+   *   The refined children the definition holds, by the path below the
+   *   key ('' for the key's own child, `<module>` at a mount).
    *
    * @return static
    *   The new entry.
    */
-  public function withDefinition(DataDefinitionInterface $definition): static {
+  public function withDefinition(DataDefinitionInterface $definition, array $frames = []): static {
     return $definition === $this->definition
-      ? $this->remade($this->definition, $this->node, $this->nodeFirst)
-      : $this->remade($definition, NULL, FALSE);
+      ? $this->remade($this->definition, $this->node, $this->nodeFirst, frames: $this->frames)
+      : $this->remade($definition, NULL, FALSE, frames: $frames);
   }
 
   /**
@@ -309,8 +334,22 @@ final class Entry {
    */
   public function withSchema(Schema $node): static {
     return $node === $this->node
-      ? $this->remade($this->definition, $this->node, TRUE)
+      ? $this->remade($this->definition, $this->node, TRUE, frames: $this->frames)
       : $this->remade(NULL, $node, TRUE);
+  }
+
+  /**
+   * Returns the same entry node-first from the node it reads.
+   *
+   * The node schema() gives (a shell's composed of its children's), as
+   * the source; the definition is dropped and derived from the node on
+   * the first ask. What DefinitionMap::$nodeFirst makes of each entry.
+   *
+   * @return static
+   *   The new entry.
+   */
+  public function nodeFirst(): static {
+    return $this->remade(NULL, $this->schema(), TRUE);
   }
 
   /**
@@ -326,11 +365,14 @@ final class Entry {
    *   The attachment, NULL for this entry's.
    * @param array<string, \Drupal\surface\Attachment> $mounted
    *   The mounted structures that replace this entry's, by path.
+   * @param array<string, \Drupal\surface\SurfaceInterface>|null $frames
+   *   The refined children the definition was built from, NULL for a
+   *   sealed one.
    *
    * @return static
    *   The copy.
    */
-  private function remade(?DataDefinitionInterface $definition, ?Schema $node, bool $nodeFirst, ?Attachment $attachment = NULL, array $mounted = []): static {
+  private function remade(?DataDefinitionInterface $definition, ?Schema $node, bool $nodeFirst, ?Attachment $attachment = NULL, array $mounted = [], ?array $frames = NULL): static {
     $entry = new static(
       $this->name,
       $definition ?? (self::$unread ??= new DataDefinition()),
@@ -353,6 +395,7 @@ final class Entry {
     $entry->definition = $definition;
     $entry->node = $node;
     $entry->nodeFirst = $nodeFirst;
+    $entry->frames = $frames;
     return $entry;
   }
 
@@ -360,9 +403,9 @@ final class Entry {
    * Gets the key's Typed Data definition.
    *
    * Asked for only where an edge needs a definition: the option resolver,
-   * a computed value, a refiner, a widget's claim, ConstraintRunner, and
-   * the own facts of a key that holds a child frame (isShell()). A key's
-   * facts are read from its node (schema()).
+   * a computed value, a refiner, a widget's claim, ConstraintRunner. A
+   * key's facts are read from its node (schema()), a key that holds a
+   * child frame's too.
    *
    * On a node-first entry it is derived from the node on the first call
    * (NodeDefinition::of(), which asks core's typed data manager whether
@@ -402,8 +445,10 @@ final class Entry {
    *
    * On a definition-first entry, read from the definition on the first
    * call (DefinitionSchema::of()) and kept: every later call returns the
-   * same object. On a node-first entry, the node its source gave. It
-   * asks no service.
+   * same object. A key that holds a child frame (isShell()) composes it
+   * instead (composed()): its own facts read once, around the nodes its
+   * child's entries hold, so no node below it is read twice. On a
+   * node-first entry, the node its source gave. It asks no service.
    *
    * @return \PortableSchema\Builder\Schema
    *   The built node.
@@ -412,7 +457,8 @@ final class Entry {
    *   When the definition holds itself, which no node can be read from.
    * @throws \AssertionError
    *   With assertions on, on a definition-first entry, when the
-   *   definition was written after its node was read.
+   *   definition was written after its node was read, or when a shell's
+   *   node was composed of other children than its definition holds.
    */
   public function schema(): Schema {
     if ($this->nodeFirst) {
@@ -424,7 +470,114 @@ final class Entry {
     // was made, which no code may do (a refiner writes a copy).
     assert($this->definition !== NULL);
     assert($this->node === NULL || DefinitionSchema::same($this->node, DefinitionSchema::of($this->definition)), sprintf('The definition of the "%s" key, its source, was written after its node was read. An entry\'s definition is never written: write a copy and make an entry of it (withDefinition()).', $this->name));
+    if ($this->node === NULL && $this->isShell()) {
+      $this->node = $this->composed($this->definition);
+      // With assertions on, the first ask of a shell reads the definition
+      // too: the two differ where the node was composed of children that
+      // are not the ones the definition holds.
+      assert(DefinitionSchema::same($this->node, DefinitionSchema::of($this->definition)), sprintf('The node of the "%s" key was composed of children that are not the ones its definition holds: a refinement that builds the definition from a child hands that child on (withDefinition()).', $this->name));
+      return $this->node;
+    }
     return $this->node ??= DefinitionSchema::of($this->definition);
+  }
+
+  /**
+   * Composes a shell's node: its own facts around its children's nodes.
+   *
+   * The node DefinitionSchema::of() reads from the definition, each
+   * property that is a child's key taken from that key's entry
+   * (DefinitionSchema::around()):
+   * - an attachment: the child's keys, the map's properties;
+   * - variants: the placeholder holds none; a chosen variant's map holds
+   *   that variant's keys;
+   * - a collection: its item, a map of the item child's keys;
+   * - a mount: each module's map, a structure's keys in it.
+   * A property is taken from a child's entry where it is that entry's
+   * definition, the very object: the sealed child's, or the refined
+   * child a refinement built the definition from ($frames). At a sealed
+   * mount a structure's keys are taken by name: the builder mounts a
+   * deep copy of each of the structure's definitions
+   * (SurfaceBuilder::mountStructure()), which reads as the original, and
+   * nothing writes either. Any other property is read.
+   *
+   * Decision: see
+   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   Its node.
+   */
+  private function composed(DataDefinitionInterface $definition): Schema {
+    $frames = $this->frames ?? [];
+    if ($this->list !== NULL) {
+      if (!$definition instanceof ListDataDefinitionInterface) {
+        return DefinitionSchema::around($definition);
+      }
+      $children = array_filter([$frames[''] ?? NULL, $this->list->item->child]);
+      return DefinitionSchema::around($definition, items: static::framed($definition->getItemDefinition(), $children));
+    }
+    if ($this->mounted !== []) {
+      $parts = [];
+      if ($definition instanceof ComplexDataDefinitionInterface && DefinitionSchema::isMap($definition)) {
+        foreach ($definition->getPropertyDefinitions() as $path => $part) {
+          $path = (string) $path;
+          $mounted = $this->mounted[$path] ?? NULL;
+          if ($mounted !== NULL || isset($frames[$path])) {
+            $parts[$path] = static::framed($part, array_filter([$frames[$path] ?? NULL]), $this->frames === NULL ? $mounted?->child : NULL);
+          }
+        }
+      }
+      return DefinitionSchema::around($definition, $parts);
+    }
+    $children = $this->attachment !== NULL ? [$this->attachment->child] : [];
+    if ($this->variants !== NULL && DefinitionSchema::isMap($definition)) {
+      // A chosen variant's map holds that variant's keys, and its child was
+      // read to build the map: a variant the site lists and nothing read is
+      // not built here.
+      foreach ($this->variants->variants as $variant) {
+        if ($variant->isSettled()) {
+          $children[] = $variant->child;
+        }
+      }
+    }
+    return static::framed($definition, array_filter([$frames[''] ?? NULL, ...$children]));
+  }
+
+  /**
+   * Reads a map around the nodes of the children's keys it holds.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $map
+   *   The map.
+   * @param \Drupal\surface\SurfaceInterface[] $children
+   *   The children whose entries' definitions may be its properties.
+   * @param \Drupal\surface\SurfaceInterface|null $byName
+   *   A child whose entries' nodes are taken by name: a structure at a
+   *   sealed mount.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The map's node.
+   */
+  private static function framed(DataDefinitionInterface $map, array $children, ?SurfaceInterface $byName = NULL): Schema {
+    $nodes = [];
+    if ($map instanceof ComplexDataDefinitionInterface && DefinitionSchema::isMap($map)) {
+      foreach ($map->getPropertyDefinitions() as $name => $property) {
+        $name = (string) $name;
+        foreach ($children as $child) {
+          $entry = $child->getDefinitions()->entry($name);
+          if ($entry !== NULL && $entry->definition() === $property) {
+            $nodes[$name] = $entry->schema();
+            continue 2;
+          }
+        }
+        $entry = $byName?->getDefinitions()->entry($name);
+        if ($entry !== NULL) {
+          $nodes[$name] = $entry->schema();
+        }
+      }
+    }
+    return DefinitionSchema::around($map, $nodes);
   }
 
   /**
@@ -439,14 +592,22 @@ final class Entry {
    * private member serializes under the class's name: a row written
    * while the definition was a public member does not match the class,
    * and the cache is rebuilt, as after any change to a serialized class.
+   * A refined entry serializes the children its definition was built
+   * from as well ($frames), last; a sealed one, which holds none, the
+   * same members as before. Without them a refined entry would wake as a
+   * sealed one, and its node would be composed of the sealed children.
    *
    * @return string[]
-   *   The constructor's members, in their order, the given form second.
+   *   The constructor's members, in their order, the given form second,
+   *   and the refined children last where there are any.
    */
   public function __sleep(): array {
-    $forms = ['definition' => TRUE, 'node' => TRUE, 'nodeFirst' => TRUE];
+    $forms = ['definition' => TRUE, 'node' => TRUE, 'nodeFirst' => TRUE, 'frames' => TRUE];
     $members = array_keys(array_diff_key(get_object_vars($this), $forms));
     array_splice($members, 1, 0, $this->nodeFirst ? ['node', 'nodeFirst'] : ['definition']);
+    if ($this->frames !== NULL) {
+      $members[] = 'frames';
+    }
     return $members;
   }
 
@@ -707,7 +868,7 @@ final class Entry {
       return NULL;
     }
     // The same source: the other form read or derived already is its own.
-    return $this->remade($this->definition, $this->node, $this->nodeFirst, $attachment, $mounted);
+    return $this->remade($this->definition, $this->node, $this->nodeFirst, $attachment, $mounted, $this->frames);
   }
 
   /**
@@ -725,21 +886,16 @@ final class Entry {
   }
 
   /**
-   * Answers whether this key holds a child frame, so its node is a shell.
+   * Answers whether this key holds a child frame, so its node is composed.
    *
    * An attached child, variants, a collection or a mount: the key's
-   * definition holds the child's keys, so its node is the child's whole
-   * tree, which the child's own entries read again. Its own facts are
-   * read from its definition until a source gives the node; a plain
-   * key's are read from its node (schema()).
-   *
-   * A mount (the map other modules' keys sit in) answers TRUE here, so
-   * its own facts are read from its definition too. It is a plain map,
-   * though: its node is its own tree, and a walk that steps into a
-   * module's part reads it, which is right.
+   * definition holds the child's keys, which the child's own entries hold
+   * the nodes of. schema() composes the key's node of its own facts and
+   * those nodes (composed()), so nothing below the key is read twice, and
+   * every reader reads the key's facts from its node as any key's.
    *
    * Decision: see
-   * docs/decisions.md#the-validators-checks-and-the-document-read-nodes.
+   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
    *
    * @return bool
    *   TRUE for a key that holds a child frame.

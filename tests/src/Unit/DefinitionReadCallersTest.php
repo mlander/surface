@@ -12,8 +12,8 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * An entry holds its key's node (Entry::schema()), and a reader that
  * walks down from an entry walks the entry's node in step. What is left
- * calling DefinitionSchema::of() or head() holds a definition no entry
- * holds. The list is pinned (CALLERS): a new caller changes it, and so
+ * calling DefinitionSchema::of(), head() or around() holds a definition no
+ * entry holds. The list is pinned (CALLERS): a new caller changes it, and so
  * does a caller that moves to an entry's node. Each is a reader a later
  * slice moves. Comments are not read. What the scan cannot see: a call
  * from inside DefinitionSchema itself (a new public method there that
@@ -28,17 +28,25 @@ use PHPUnit\Framework\Attributes\Group;
 class DefinitionReadCallersTest extends UnitTestCase {
 
   /**
-   * The calls of DefinitionSchema::of() and head() in src and modules/*\/src.
+   * The calls of DefinitionSchema::of(), head() and around().
+   *
+   * In src and modules/*\/src.
    *
    * By file, relative to the module, then by function, the number of
    * calls. Why each caller holds a definition and no entry:
-   * - src/DefinitionMap.php, of(): with the node-first switch on, a
-   *   switch for tests and probes ($nodeFirst), fromArrays() reads each
-   *   definition it is handed into the node the entry is made from.
    * - src/Entry.php, of(): a definition-first entry reads its own
    *   definition, once (schema()), and once more per later ask inside an
-   *   assertion; a node-first entry reads its derived definition per
-   *   later ask of definition() inside an assertion.
+   *   assertion; a shell reads its definition inside an assertion on its
+   *   first ask too, against the node it composed; a node-first entry
+   *   reads its derived definition per later ask of definition() inside
+   *   an assertion.
+   * - src/Entry.php, around(): a key that holds a child frame composes its
+   *   node of its own facts around its child's entries' nodes (composed()
+   *   for a collection, around a collection's item and a mount's, and
+   *   framed() for a map of a child's keys). With the node-first switch
+   *   on, DefinitionMap::fromArrays() makes each entry node-first from the
+   *   node it reads (Entry::nodeFirst()), and reads nothing itself (since
+   *   2026-11-14).
    * - src/Contract/Conditionals.php, of(): stated() describes a definition
    *   no entry holds: a declared rule's answer, made on a copy (rules()),
    *   and a key a caller describes by its definition alone (describeKey()
@@ -53,13 +61,10 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *   fromDefinition() and outputFromDefinition(), read the node of a
    *   definition a caller hands with no node; every caller in the module
    *   hands the entry's node with it.
-   * - src/Storage/ConfigSchemaGenerator.php, head(): entry() reads a
-   *   collection's own node, without its items, for the constraints it
-   *   declares, as PropertySchema's listNode() does.
-   * - src/Storage/ConfigSchemaGenerator.php, of(): entry() reads what
-   *   every entry of a map of entries from the site is, a definition set
-   *   on the shell's definition that no entry holds, so the shell's node
-   *   (the child's whole tree) is not read for it.
+   * - src/Storage/ConfigSchemaGenerator.php reads none since 2026-11-14:
+   *   a collection's declared constraints, and what every entry of a map
+   *   of entries from the site is, are read from the key's own node,
+   *   which is composed of its child's entries' nodes (Entry::schema()).
    * - src/Pipeline/Validating.php, of(): placeAt() reads a port's node. A
    *   port has no entry: the container hands the child a bare definition
    *   (SurfaceInterface::getPortDefinition()), whose label a refusal
@@ -72,10 +77,8 @@ class DefinitionReadCallersTest extends UnitTestCase {
   protected const CALLERS = [
     'src/Contract/Conditionals.php' => ['of' => 1],
     'src/Contract/PropertySchema.php' => ['head' => 1, 'of' => 1],
-    'src/DefinitionMap.php' => ['of' => 1],
-    'src/Entry.php' => ['of' => 3],
+    'src/Entry.php' => ['around' => 4, 'of' => 4],
     'src/Pipeline/Validating.php' => ['of' => 1],
-    'src/Storage/ConfigSchemaGenerator.php' => ['head' => 1, 'of' => 1],
     'src/Tool/InputDefinitions.php' => ['of' => 2],
   ];
 
@@ -99,7 +102,7 @@ class DefinitionReadCallersTest extends UnitTestCase {
       // The class is called by its own name: under another name, or
       // through a variable, a call would not be counted below.
       $this->assertDoesNotMatchRegularExpression('/\bDefinitionSchema\s+as\s+\w|\bDefinitionSchema::class\b/', $code, substr($file, strlen($root) + 1) . ' names DefinitionSchema by an alias or as a class string.');
-      if (preg_match_all('/\bDefinitionSchema::(of|head)\s*\(/', $code, $matches) === 0) {
+      if (preg_match_all('/\bDefinitionSchema::(of|head|around)\s*\(/', $code, $matches) === 0) {
         continue;
       }
       $relative = substr($file, strlen($root) + 1);

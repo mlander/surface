@@ -354,6 +354,63 @@ PHP, $resource, 'A labeled choice is its labels alone, unless a value is a numer
   }
 
   /**
+   * Tests a collection and an attached map are written with their own facts.
+   *
+   * A collection's Count, and the description and required flag of a key
+   * that holds a child frame, are read from its node, composed of the
+   * child's entries' nodes.
+   */
+  public function testKeysThatHoldChildFrames(): void {
+    $schema = $this->sandbox . '/booking.schema.json';
+    file_put_contents($schema, (string) json_encode([
+      '$schema' => 'https://json-schema.org/draft/2020-12/schema',
+      'title' => 'Booking settings',
+      'type' => 'object',
+      'additionalProperties' => FALSE,
+      'required' => ['rooms', 'venue'],
+      'properties' => [
+        'rooms' => [
+          'type' => 'array',
+          'title' => 'Rooms',
+          'description' => 'The rooms to book.',
+          'minItems' => 1,
+          'maxItems' => 4,
+          'items' => ['$ref' => '#/$defs/room'],
+        ],
+        'venue' => ['$ref' => '#/$defs/venue', 'title' => 'Venue', 'description' => 'Where the event is.'],
+      ],
+      '$defs' => [
+        'room' => [
+          'type' => 'object',
+          'additionalProperties' => FALSE,
+          'properties' => ['name' => ['type' => 'string', 'title' => 'Name']],
+        ],
+        'venue' => [
+          'type' => 'object',
+          'additionalProperties' => FALSE,
+          'properties' => ['city' => ['type' => 'string', 'title' => 'City']],
+        ],
+      ],
+    ]));
+    $out = $this->sandbox . '/booking';
+    $this->generate([
+      'surface_examples_first', 'first.booking', '', '', '1', '',
+      'Sets the booking: its rooms and its venue.',
+      '', '', '', '',
+    ], ['--from-json-schema' => $schema], $out);
+    $resource = $this->written('src/Resource/BookingResource.php', $out);
+    $this->assertStringContainsString(<<<'PHP'
+    $inputs->attachList(self::ROOMS, RoomsStructure::class, t('Rooms'), min: 1, max: 4)
+      ->setDescription(t('The rooms to book.'))
+      ->setRequired(TRUE);
+
+    $inputs->attach(self::VENUE, VenueStructure::class, t('Venue'))
+      ->setDescription(t('Where the event is.'))
+      ->setRequired(TRUE);
+PHP, $resource, 'A collection keeps its Count, and each key that holds a child its description and its flag.');
+  }
+
+  /**
    * Tests keys whose constants would clash are named apart.
    *
    * A camelCase key splits at its capitals, a run of other characters is

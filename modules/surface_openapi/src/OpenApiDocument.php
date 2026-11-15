@@ -745,15 +745,13 @@ final class OpenApiDocument {
       if ($child !== NULL) {
         $inside = static::references($child, $at);
         $id = $child->getDefinitions()->entry('id');
-        if ($id !== NULL && in_array($at . '/id', $inside, TRUE) && ($id->isShell() ? $id->definition()->getSetting(References::TARGETS) : NodeFacts::setting($id->schema(), References::TARGETS)) !== NULL) {
+        if ($id !== NULL && in_array($at . '/id', $inside, TRUE) && NodeFacts::setting($id->schema(), References::TARGETS) !== NULL) {
           $found[] = $at;
         }
         array_push($found, ...$inside);
         continue;
       }
-      $refers = $entry->isShell()
-        ? References::target($entry->definition()) !== NULL || $entry->definition()->getSetting(References::TARGETS) !== NULL
-        : References::targetIn($entry->schema()) !== NULL || NodeFacts::setting($entry->schema(), References::TARGETS) !== NULL;
+      $refers = References::targetIn($entry->schema()) !== NULL || NodeFacts::setting($entry->schema(), References::TARGETS) !== NULL;
       if ($refers) {
         $found[] = $at;
       }

@@ -3879,7 +3879,16 @@ value changed.
   before the node was. A computed shell, and an always-held shell sent
   null, read the node in that refusal alone (`notComputed()`,
   `cannotBeCleared()`), since the accept and the refusal's default take
-  one.
+  one. (2026-11-14: the rule is gone. Such a key composes its node of
+  its own facts and its child's entries' nodes, and `Validating` reads
+  every key's facts from its node: see [A key that holds a child frame
+  has a node of its own](#a-key-that-holds-a-child-frame-has-a-node-of-its-own).
+  2026-11-15: no declaration makes a computed shell, since `compute()`
+  declares a value through `add()`, which refuses a map; a hand-built
+  `SurfaceBuilder` does not refuse one, and no module builds one. An
+  always-held shell is a collection: `SchemaReader` marks a list that is
+  neither nullable nor required, and `CollectionTest` holds one to the
+  refusal.)
 - **A condition on a number.** The option labels of a Choice of numbers
   are the numbers, and `Named::value()` takes text: a refusal whose
   condition named such a key (an integer `gi` of Choice [1, 2, 3] that
@@ -3962,7 +3971,10 @@ value changed.
   child's keys (`Attachment::mapOf()`), so its node would be the
   child's whole tree, read for a title or a flag; the emitter's deferred,
   anonymous, attached and variants sites, `Conditionals::requires()` for
-  such a key, and the variants' shell read their definitions. The marks
+  such a key, and the variants' shell read their definitions.
+  (2026-11-14: `Conditionals::requires()` reads the key's composed node;
+  the emitter's sites keep their definitions: see [A key that holds a
+  child frame has a node of its own](#a-key-that-holds-a-child-frame-has-a-node-of-its-own).) The marks
   a walk meets before it holds a node (`ContractEmitter::frame()` before
   a key is described, `Conditionals::answer()`, `describeKey()`), as
   `Accepting::withoutWhatDoesNotApply()` and `Outbound::project()` read
@@ -4091,7 +4103,9 @@ the two faults below, fixed on purpose.
   what takes one: the options service, the constraint runner, the PHP
   class a data type maps to. A key that holds a child frame is a shell
   (`Entry::isShell()`, moved from `Validating`, one place): its own
-  facts are read from its definition until slice 32. A mount (the map
+  facts are read from its definition until slice 32. (2026-11-14: they
+  are read from its composed node: see [A key that holds a child frame
+  has a node of its own](#a-key-that-holds-a-child-frame-has-a-node-of-its-own).) A mount (the map
   other modules' keys sit in) is one too for its own facts, but it is a
   plain map whose node is its own tree: a walk into a module's part
   reads the mount's node, which is right (`KeyPaths::reached()`,
@@ -4343,6 +4357,131 @@ The public interfaces that take or return a definition, for slice 32:
 (15) and `SurfaceOptions::resolve()`, `ComputesValueInterface` (15),
 `SurfaceRefinerInterface` (13), `HeldToConfigSchemaInterface` (2, it
 takes a surface), `StorageLayoutInterface` (values only).
+
+### A key that holds a child frame has a node of its own
+
+Decided 2026-11-14. A key that holds a child frame (an attachment,
+variants, a collection, a mount: `Entry::isShell()`) has a definition
+that repeats the child's keys, so reading its node read the child's
+whole tree a second time. Slices 31a and 31b therefore read such a key's
+own facts from its definition. Its node is now composed of its own facts
+and the nodes its child's entries hold, and every reader reads its facts
+from that node as it reads any key's. No served byte, refusal or value
+changed.
+
+- **The composition.** `Entry::schema()` for a shell composes its node
+  on the first ask and keeps it (`composed()`). The shell's own facts
+  are read once, with `DefinitionSchema::around()`, around the nodes
+  below it, each asked of its own entry:
+  - an attachment: the child's entries' nodes, the map's properties;
+  - variants: the placeholder (`any`) holds none; a chosen variant's map
+    holds that variant's keys (only a variant already built is looked
+    at: a variant the site lists and nothing read is not built for it);
+  - a collection: its item, the map of the item child's keys, composed
+    the same way;
+  - a mount: each module's map, a structure's keys in it.
+  A property is taken from a child's entry where it is that entry's
+  definition, the very object. At a sealed mount a structure's keys are
+  taken by name: the builder mounts a deep copy of each of the
+  structure's definitions (`SurfaceBuilder::mountStructure()`), which
+  reads as the original. Any other property is read, as `of()` reads it.
+  Nothing a shell's definition holds is missing from its children:
+  `required` is read from the properties' own flags, as `of()` reads it.
+- **The own-facts read.** `DefinitionSchema::around($definition,
+  $properties, $items)`, static and pure, beside `head()`. It is the read
+  `of()` makes, with each node given placed where `of()` would read one:
+  the same keywords in the same order, so the two are the same node
+  (`DefinitionSchema::same()`) when each node given is the one `of()`
+  reads. `head()` is not that read: it gives a collection's own keywords
+  with no items at all, in its own order, and no default. A shell's own
+  facts and the place of its children cannot be read apart without
+  changing that order, so `around()` takes the children's nodes.
+- **A refined shell.** `Surface::refineNested()` and `refineMounted()`
+  hand the refined child they built the definition from to the entry
+  (`Entry::withDefinition($definition, $frames)`), and its node is
+  composed of that child's entries' nodes. A shell a parent refiner
+  ruled out, or a collection its Count narrowed, is a deep copy: its
+  properties are read. A refined entry serializes the children it holds
+  (`Entry::__sleep()` names them only when there are any, so a sealed
+  entry serializes byte for byte as before, over the 262 sealed builds
+  of the development site); one serialized graph keeps object identity,
+  so a woken refined shell still finds its child's keys by identity.
+  Without them it woke as a sealed one, and a mount took its keys by
+  name from the sealed structure: a stale node, with assertions off.
+- **A wrong composition is caught at once.** With assertions on, the
+  first ask of a shell reads its definition too and asserts the two the
+  same, naming the cause (children other than the ones the definition
+  holds). It costs nothing with assertions off.
+- **The proof.** `ShellNodeCompositionTest` reads the node of every shell
+  of every pinned example, built for the account and for no account,
+  and of every hand and door surface and their other forms, then of each
+  refined against its value sets by each kind of refiner and with its
+  variants resolved: the composed node is the read of the definition for
+  each, and a sealed shell holds the very nodes of its child's entries,
+  and a refined one the very nodes of the refined child it was built
+  from (1,010 shells), never a sealed structure's by name at a refined
+  mount. The same holds for every refined example woken from
+  `serialize()`.
+  It reads 1,497 distinct shells: 59 attachments, 30 collections, 2
+  mounts and 43 variants with none chosen as sealed; 106 attachments,
+  108 collections, 75 mounts, 978 chosen variants and 96 variants with
+  none chosen as refined; the same with the node-first switch on. On the
+  development site, every operation built as user 1 and as anonymous
+  and refined against what storage holds, 272 shells, none differs, in
+  either mode.
+- **The shell rule is gone.** Every reader that chose between a shell's
+  definition and its node reads the node: `Validating`, `CompiledFlow`,
+  `RunCommand`, `OperationInputs`, the contract panel's rows,
+  `ResourceCode`, the formatter's summary, `ContractEmitter::refers()`,
+  the OpenAPI document's reference keys, `KeyPaths`, `References`, the
+  tool door
+  (`InputDefinitions::headOf()` takes the node; `fromVariants()` says a
+  shell from its node, as a plain key), `ConfigSchemaGenerator` (its
+  `head()` and `of()` calls go: a collection's constraints and `each`
+  are in the key's node), `HeldToConfigSchemaTrait` and
+  `Conditionals::requires()`. The tool door finds a child's key
+  advertised as its entry says by its node, the very object, so a
+  node-first child no longer derives its definition for the comparison.
+  The emitter's own sites for a key holding a child, variants or a list
+  of children (`describe()`, the nullable type, the widget and the
+  arrangement hints, the mount's title) keep their definitions: the
+  refined key's node is composed of the refined child's entries, and
+  the document refines the child again in its own frame and reads
+  those, so moving them read 347 more nodes in `emit()`, 297 in
+  `emitFull()`, 272 in the form and 220 in validation. A collection's
+  own keywords in the document stay on `head()`
+  (`PropertySchema::listNode()`): the composed node holds the items, a
+  default and the keywords in another order. The two storage layouts
+  keep a shell's definition for their one fact of it
+  (`EncryptedStorageLayout::secretKeys()`'s secret flag,
+  `FlatVariantsLayout`'s `each`): a layout reads no child key, so the
+  node read 315 more nodes laying out a save (41 percent slower by the
+  minimum) and 95 loading one (74 percent). `Entry::isShell()` stays:
+  `Entry::schema()` asks it to choose between the composition and the
+  plain read, and `EncryptedStorageLayout` to keep a shell's secret flag
+  on its definition.
+- **The node-first mode.** `DefinitionMap::fromArrays()` makes each
+  entry node-first from the node the entry reads (`Entry::nodeFirst()`),
+  a shell's composed, and derives its definition from it on demand.
+- **What it costs.** Counted over 262 operations of the development
+  site as two accounts on fresh builds, nodes read per phase fall where a
+  shell's node was read whole before: what goes out after a commit 545
+  to 128, a read 1,593 to 1,241, `emit()` 1,273 to 1,212, `emitFull()`
+  1,195 to 1,145, the first accept 789 to 781. Three rise: validation 967
+  to 1,111 and the form 1,665 to 1,753, since `Validating` reads a
+  refined shell's node, composed of the refined child's entries' nodes,
+  and validates the child by refining it again in its own frame; the
+  tool definitions 3,995 to 4,000. Timed over 171 operations, 8 rounds,
+  assertions off, by the sum of minimums: from 12.1 percent faster (what
+  goes out after a commit) to 1.1 percent slower (validation), a write
+  request 0.1 percent slower, the tool definitions' rebuild 1.8 percent
+  faster. With the node-first switch on, the tool door no longer derives
+  a child's definition to compare it: `InputDefinitions::fromChild()`
+  asks 30 derivations where it asked 1,320 (1,075 of them in a tool
+  rebuild). A shell made definition-first from a node-first child's key
+  (the tool door's collection copy, `withDefinition()`) derives each of
+  its child's definitions once to compare it with its property (162,
+  under `withLookups()`). In all 12,145 derivations against 13,285.
 
 ### A key that does not apply
 

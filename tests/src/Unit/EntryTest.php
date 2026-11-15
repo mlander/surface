@@ -12,7 +12,9 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Attachment;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\Schemas;
+use Drupal\surface\DefinitionMap;
 use Drupal\surface\ResourceBuild\Location;
+use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\SurfaceRefinerInterface;
 use Drupal\surface\Entry;
@@ -179,6 +181,85 @@ class EntryTest extends UnitTestCase {
   }
 
   /**
+   * Tests a key that holds a child frame composes its node of the child's.
+   */
+  public function testShellComposesItsNode(): void {
+    $children = static::children('City');
+    $child = $this->createMock(SurfaceInterface::class);
+    $child->method('getDefinitions')->willReturn($children);
+    $definition = Attachment::mapOf(MapDataDefinition::create()->setLabel('Where'), $child);
+    $entry = new Entry('where', $definition, attachment: new Attachment($child));
+    $node = $entry->schema();
+    $this->assertSame(static::json(DefinitionSchema::of($definition)), static::json($node), 'The composed node is the read of the definition.');
+    $this->assertSame($node, $entry->schema(), 'A second ask returns the same object.');
+    foreach (['city', 'rooms'] as $name) {
+      $this->assertSame($children->entry($name)?->schema(), DefinitionSchema::propertyNode($node, $name), "A child entry's node is the very object under properties.");
+    }
+
+    // A refinement hands the refined child its definition was built from.
+    $refined_children = static::children('Town');
+    $refined = $this->createMock(SurfaceInterface::class);
+    $refined->method('getDefinitions')->willReturn($refined_children);
+    $narrowed = $entry->withDefinition(Attachment::mapOf($definition, $refined), ['' => $refined]);
+    $this->assertSame('Town', DefinitionSchema::propertyNode($narrowed->schema(), 'city')?->get('title'));
+    $this->assertSame($refined_children->entry('city')?->schema(), DefinitionSchema::propertyNode($narrowed->schema(), 'city'), "The refined child's entry's node is the one under properties.");
+    $this->assertSame(static::json(DefinitionSchema::of($narrowed->definition())), static::json($narrowed->schema()), 'And it is the read of the refined definition.');
+  }
+
+  /**
+   * Tests a refined shell keeps the child it was built from, and only it.
+   *
+   * A copy bound to its container's values (readingFrom()) still composes
+   * of the refined child; a refined mount no refined structure stands for
+   * reads its keys, and takes nothing by name from the sealed structure.
+   */
+  public function testRefinedShellKeepsItsChild(): void {
+    $children = static::children('City');
+    $child = $this->createMock(SurfaceInterface::class);
+    $child->method('getDefinitions')->willReturn($children);
+    $child->method('withPorts')->willReturnSelf();
+    $definition = Attachment::mapOf(MapDataDefinition::create()->setLabel('Where'), $child);
+    $entry = new Entry('where', $definition, attachment: new Attachment($child, reads: ['venue' => 'venue']));
+    $refined_children = static::children('Town');
+    $refined = $this->createMock(SurfaceInterface::class);
+    $refined->method('getDefinitions')->willReturn($refined_children);
+    $bound = $entry->withDefinition(Attachment::mapOf($definition, $refined), ['' => $refined])->readingFrom(['venue' => 'hall']);
+    $this->assertNotNull($bound);
+    $this->assertSame($refined_children->entry('city')?->schema(), DefinitionSchema::propertyNode($bound->schema(), 'city'), 'A bound copy composes of the refined child, the very node.');
+
+    // A mount: the module's map holds a deep copy of the structure's
+    // definitions, as SurfaceBuilder::mountStructure() mounts them.
+    $module = MapDataDefinition::create()->setLabel('Module');
+    foreach ($children->entries() as $name => $child_entry) {
+      $module->setPropertyDefinition((string) $name, Surface::deepClone($child_entry->definition()));
+    }
+    $mount = MapDataDefinition::create()->setLabel('Mounts')->setPropertyDefinition('module', $module);
+    $sealed = new Entry('third_party_settings', $mount, mounted: ['module' => new Attachment($child)]);
+    $city = $children->entry('city')?->schema();
+    $this->assertSame($city, DefinitionSchema::propertyNode(DefinitionSchema::propertyNode($sealed->schema(), 'module') ?? $mount, 'city') ?? NULL, 'A sealed mount takes the structure\'s keys by name.');
+    $copy = $sealed->withDefinition(Surface::deepClone($mount));
+    $read = DefinitionSchema::propertyNode(DefinitionSchema::propertyNode($copy->schema(), 'module') ?? $mount, 'city');
+    $this->assertNotSame($city, $read, 'A refined mount no refined structure stands for reads its keys.');
+    $this->assertSame(static::json(DefinitionSchema::of($copy->definition())), static::json($copy->schema()), 'And it is the read of its definition.');
+  }
+
+  /**
+   * Makes a child's entries: a required city with this label, and rooms.
+   *
+   * @param string $label
+   *   The city's label.
+   *
+   * @return \Drupal\surface\DefinitionMap
+   *   The entries.
+   */
+  protected static function children(string $label): DefinitionMap {
+    return new DefinitionMap([
+      new Entry('city', DataDefinition::create('string')->setLabel($label)->setRequired(TRUE)),
+      new Entry('rooms', DataDefinition::create('integer')->setLabel('Rooms')),
+    ]);
+  }
+
+  /**
    * Tests an entry made with the same definition keeps the node.
    */
   public function testTheNodeTravelsWithTheDefinition(): void {
@@ -195,6 +276,7 @@ class EntryTest extends UnitTestCase {
     $this->assertSame($node, $entry->withDefinition($definition)->schema(), 'The same definition keeps the node.');
 
     $child = $this->createMock(SurfaceInterface::class);
+    $child->method('getDefinitions')->willReturn(new DefinitionMap([]));
     $wired = new Entry('where', $definition, attachment: new Attachment($child, reads: ['venue' => 'venue']));
     $read = $wired->schema();
     $bound = $wired->readingFrom(['venue' => 'hall']);
@@ -322,6 +404,7 @@ class EntryTest extends UnitTestCase {
   public function testCopiesKeepTheSource(): void {
     $node = DefinitionSchema::of(static::map());
     $child = $this->createMock(SurfaceInterface::class);
+    $child->method('getDefinitions')->willReturn(new DefinitionMap([]));
     $entry = Entry::ofSchema('where', $node, attachment: new Attachment($child, reads: ['venue' => 'venue']));
     $derived = $entry->definition();
 

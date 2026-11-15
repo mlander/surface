@@ -22,11 +22,10 @@ use Symfony\Component\HttpFoundation\RequestStack;
 /**
  * Tests that reading a definition into a node is a pure function.
  *
- * DefinitionSchema::of(), head() and describe(), every static method of
- * the module they reach and the constructor of every module class they
- * make (`new X(`), are read from their source, and so is every reader of
- * a node (NodeFacts) and what it reaches. None
- * may:
+ * DefinitionSchema::of(), head(), around() and describe(), every static
+ * method of the module they reach and the constructor of every module
+ * class they make (`new X(`), are read from their source, and so is every
+ * reader of a node (NodeFacts) and what it reaches. None may:
  * - use `$this` (a constructor may), or be an instance method (but a
  *   constructor);
  * - take a service by its type;
@@ -63,7 +62,7 @@ class DefinitionReadIsPureTest extends UnitTestCase {
   /**
    * The read's entry points.
    */
-  protected const ENTRIES = ['of', 'head', 'describe', 'propertyNode', 'itemNode', 'shapeNode'];
+  protected const ENTRIES = ['of', 'head', 'around', 'describe', 'propertyNode', 'itemNode', 'shapeNode'];
 
   /**
    * How many methods and constructors the read reaches, entry points too.
@@ -73,9 +72,10 @@ class DefinitionReadIsPureTest extends UnitTestCase {
    * entry holds its node and the memo is gone: fingerprinted(), unchanged(),
    * fingerprint(), comparable() and nestedNode(); 59 with the three steps
    * a reader takes on a node (propertyNode(), itemNode(), shapeNode()) and
-   * model().
+   * model(); 60 with around(), a shell's own facts around its children's
+   * nodes (2026-11-14).
    */
-  protected const REACHED = 59;
+  protected const REACHED = 60;
 
   /**
    * How many methods the node readers reach, their entry points too.

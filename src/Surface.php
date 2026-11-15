@@ -580,12 +580,13 @@ final class Surface implements SurfaceInterface {
         // frame, and by nothing else in the parent: no parent refiner can
         // narrow into it. Its ports read what the parent may hand a
         // refiner.
-        $resolved = $this->refineNested($entry, $values, $cacheability, $runtime, $admitted);
+        $frames = [];
+        $resolved = $this->refineNested($entry, $values, $cacheability, $runtime, $admitted, $frames);
         // Whatever reads the refined data surface hands the child what it
         // was refined with.
         $bound = $entry->readingFrom($admitted);
         if ($resolved !== NULL || $bound !== NULL) {
-          $definitions = $definitions->with($resolved === NULL ? $bound : ($bound ?? $entry)->withDefinition($resolved));
+          $definitions = $definitions->with($resolved === NULL ? $bound : ($bound ?? $entry)->withDefinition($resolved, $frames));
           $changed = TRUE;
         }
         continue;
@@ -593,10 +594,11 @@ final class Surface implements SurfaceInterface {
       if ($entry->mounted !== []) {
         // The key holding the alters' mounts, some of which hold a
         // structure that refines its own keys there.
-        $refined = $this->refineMounted($entry, $refines ? $this->refinedEntry($entry, $admitted, $runtime, $cacheability) : NULL, $values, $admitted, $runtime, $cacheability);
+        $frames = [];
+        $refined = $this->refineMounted($entry, $refines ? $this->refinedEntry($entry, $admitted, $runtime, $cacheability) : NULL, $values, $admitted, $runtime, $cacheability, $frames);
         $bound = $entry->readingFrom($admitted);
         if ($refined !== NULL || $bound !== NULL) {
-          $definitions = $definitions->with($refined === NULL ? $bound : ($bound ?? $entry)->withDefinition($refined));
+          $definitions = $definitions->with($refined === NULL ? $bound : ($bound ?? $entry)->withDefinition($refined, $frames));
           $changed = TRUE;
         }
         continue;
@@ -667,11 +669,14 @@ final class Surface implements SurfaceInterface {
    *   The kinds of refiner that run.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what each structure's refinement depended on.
+   * @param array<string, \Drupal\surface\SurfaceInterface> $frames
+   *   Gains each refined structure written into the key, by its mount's
+   *   path: what the key's node is composed of (Entry::withDefinition()).
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The key for these values, or NULL when nothing about it changes.
    */
-  protected function refineMounted(Entry $entry, ?DataDefinitionInterface $refined, array $values, array $admitted, int $runtime, CacheableMetadata $cacheability): ?DataDefinitionInterface {
+  protected function refineMounted(Entry $entry, ?DataDefinitionInterface $refined, array $values, array $admitted, int $runtime, CacheableMetadata $cacheability, array &$frames = []): ?DataDefinitionInterface {
     $before = $refined ?? $entry->definition();
     $definition = NULL;
     foreach ($entry->mounted as $path => $attachment) {
@@ -693,6 +698,7 @@ final class Surface implements SurfaceInterface {
         throw new \LogicException(sprintf('The "%s.%s" mount no longer holds a map, so the structure attached there has nowhere to be written.', $entry->name, $path));
       }
       $map->setPropertyDefinition((string) end($parents), Attachment::mapOf($shell, $answer));
+      $frames[(string) $path] = $answer;
     }
     if ($definition === NULL) {
       return $refined;
@@ -923,12 +929,15 @@ final class Surface implements SurfaceInterface {
    * @param array|null $admitted
    *   The values a refiner may be handed, which an attached child's ports
    *   read; NULL for $values.
+   * @param array<string, \Drupal\surface\SurfaceInterface> $frames
+   *   Gains the refined child the definition is built from, under '':
+   *   what the key's node is composed of (Entry::withDefinition()).
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The key's definition for these values, or NULL when nothing about
    *   it changes.
    */
-  protected function refineNested(Entry $entry, array $values, CacheableMetadata $cacheability, int $runtime = self::EVERY, ?array $admitted = NULL): ?DataDefinitionInterface {
+  protected function refineNested(Entry $entry, array $values, CacheableMetadata $cacheability, int $runtime = self::EVERY, ?array $admitted = NULL, array &$frames = []): ?DataDefinitionInterface {
     $child = $entry->attachment !== NULL ? $entry->attachment->readFrom($admitted ?? $values)->bound([]) : $entry->childFor($values);
     if ($child === NULL) {
       return NULL;
@@ -955,6 +964,7 @@ final class Surface implements SurfaceInterface {
       throw new \LogicException(sprintf('The "%s" key no longer holds a map, so its attached child has nowhere to be written.', $entry->name));
     }
     Narrowing::assertNarrows($entry->name, 'the child attached there', $entry->definition(), $definition);
+    $frames[''] = $refined;
     return $definition;
   }
 

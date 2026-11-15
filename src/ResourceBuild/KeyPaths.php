@@ -52,8 +52,7 @@ use PortableSchema\Builder\Schema;
  * A key's facts are read from its node. On the sealed resource that is the
  * entry's node (Entry::schema()), stepped down in step with the
  * definition, which is handed to the constraint runner alone; a key that
- * holds a child frame is a shell (Entry::isShell()), whose own facts are
- * read from its definition. What the build writes (writeDefaults(),
+ * holds a child frame's too. What the build writes (writeDefaults(),
  * resolve(), setDefault()) is a builder's definitions before sealing,
  * which no entry holds: held() reads such a definition's facts from the
  * definition, and reads no node for it.
@@ -375,9 +374,8 @@ final class KeyPaths {
    * Finds the node and the definition of the key a path names.
    *
    * As reachedOn() finds it: the key's facts are read from the node, the
-   * entry's (Entry::schema()) stepped down in step with the definition. A
-   * key that holds a child frame is a shell (Entry::isShell()), whose own
-   * `each` is read from its definition; the mount's node is stepped into,
+   * entry's (Entry::schema()) stepped down in step with the definition, a
+   * key that holds a child frame's too; the mount's node is stepped into,
    * since a mounted key is a property of the mount.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
@@ -413,7 +411,7 @@ final class KeyPaths {
       $kind = match (TRUE) {
         $entry->variants !== NULL => 'variants',
         $entry->list !== NULL => 'collection',
-        ($entry->isShell() ? DefinitionMetadata::eachOf($entry->definition()) : NodeFacts::each($entry->schema())) !== NULL => 'site',
+        NodeFacts::each($entry->schema()) !== NULL => 'site',
         $entry->attachment !== NULL => 'child',
         default => NULL,
       };

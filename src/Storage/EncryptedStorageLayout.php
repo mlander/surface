@@ -124,11 +124,14 @@ final class EncryptedStorageLayout implements StorageLayoutInterface {
   /**
    * Names the keys a data surface declared secret.
    *
-   * Read from each key's node (Secrets::marked()); a key that holds a
-   * child frame is a shell, whose own flag is read from its definition
-   * (Entry::isShell()).
+   * Read from each key's node (Secrets::marked()). A key that holds a
+   * child frame has its own flag read from its definition: its node is
+   * composed of the child's entries' nodes (Entry::schema()), which a
+   * storage layout does not read, so the node would read every key of
+   * the child for one flag.
    *
-   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes and
+   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface to read.

@@ -683,10 +683,8 @@ final class References {
   /**
    * Finds the node and the definition of a key that refers to one type.
    *
-   * The key's facts are read from its entry's node (Entry::schema()). A
-   * key that holds a child frame is a shell (Entry::isShell()), whose own
-   * facts are read from its definition: no shell refers to an entity type,
-   * so no shell's node is read.
+   * The key's facts are read from its entry's node (Entry::schema()), a
+   * key that holds a child frame's too.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource, built.
@@ -718,7 +716,7 @@ final class References {
     if ($found !== NULL) {
       return $found;
     }
-    if (($entry->isShell() ? $entry->definition()->getSetting(self::TARGETS) : NodeFacts::setting($entry->schema(), self::TARGETS)) === NULL) {
+    if (NodeFacts::setting($entry->schema(), self::TARGETS) === NULL) {
       return NULL;
     }
     $types = $surface->getDefinitions()->entry(self::TYPE_KEY);
@@ -742,15 +740,9 @@ final class References {
    *
    * @return array{0: \PortableSchema\Builder\Schema, 1: \Drupal\Core\TypedData\DataDefinitionInterface}|null
    *   Its node and definition; NULL for a key that refers to no one entity
-   *   type. A shell's own CONSTRAINT is read from its definition. Its node
-   *   is read only where its definition has one, to hand nodeAt() what it
-   *   gives: a reference is one value, so no shell the module builds has
-   *   one.
+   *   type.
    */
   protected static function referring(Entry $entry): ?array {
-    if ($entry->isShell()) {
-      return static::target($entry->definition()) === NULL ? NULL : [$entry->schema(), $entry->definition()];
-    }
     $node = $entry->schema();
     return static::targetIn($node) === NULL ? NULL : [$node, $entry->definition()];
   }

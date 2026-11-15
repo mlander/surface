@@ -259,12 +259,10 @@ final class RunCommand extends Command {
   protected function prepared(OperationRun $run, OutputInterface $output, DrushStyle $io, bool $json): int {
     $takes = [];
     foreach ($run->surface()->getDefinitions()->entries() as $key => $entry) {
-      // A plain key's facts from its node; a key that holds a child frame
-      // is a shell, whose own facts are read from its definition.
-      $node = $entry->isShell() ? NULL : $entry->schema();
+      $node = $entry->schema();
       $takes[(string) $key] = [
-        'type' => $node === NULL ? $entry->definition()->getDataType() : NodeFacts::dataType($node),
-        'required' => $node === NULL ? $entry->definition()->isRequired() : NodeFacts::isRequired($node),
+        'type' => NodeFacts::dataType($node),
+        'required' => NodeFacts::isRequired($node),
       ];
     }
     if ($json) {

@@ -304,13 +304,11 @@ trait SurfaceFormatterTrait {
   /**
    * Appends the lines of one frame's keys, in the frame's order.
    *
-   * A plain key's facts, and the keys of a map below it, are read from its
-   * node. A key that holds a child frame is a shell (Entry::isShell()):
-   * its own label is read from its definition, and the keys below it from
-   * the child's entries, each with its own node. A mount is a plain map,
-   * whose node is its own tree, so it is read as one. A collection, and
-   * variants nothing has chosen, hold no keys of their own here: a value
-   * there is one line.
+   * A key's facts, and the keys of a map below it, are read from its node.
+   * A key that holds an attached child or a chosen variant has its keys
+   * read from the child's entries, each with its own node. A mount is a
+   * plain map, read as one. A collection, and variants nothing has
+   * chosen, hold no keys of their own here: a value there is one line.
    *
    * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
    *
@@ -324,14 +322,10 @@ trait SurfaceFormatterTrait {
   protected function appendFrameSummary(array &$summary, SurfaceInterface $surface, array $values): void {
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $value = $values[$name] ?? NULL;
-      if (!$entry->isShell()) {
-        $node = $entry->schema();
-        $this->appendSettingSummary($summary, $node, NodeFacts::label($node) ?? $name, $value);
-        continue;
-      }
-      $label = $entry->definition()->getLabel() ?? $name;
-      if ($entry->mounted !== [] && !$entry->isNested() && $entry->list === NULL) {
-        $this->appendSettingSummary($summary, $entry->schema(), $label, $value);
+      $node = $entry->schema();
+      $label = NodeFacts::label($node) ?? $name;
+      if (!$entry->isNested() && $entry->list === NULL) {
+        $this->appendSettingSummary($summary, $node, $label, $value);
         continue;
       }
       if ($value === NULL || $value === '' || $value === []) {
@@ -341,7 +335,7 @@ trait SurfaceFormatterTrait {
       if ($entry->attachment !== NULL) {
         $child = $entry->attachment->child;
       }
-      elseif ($entry->variants !== NULL && $entry->definition()->getDataType() !== 'any') {
+      elseif ($entry->variants !== NULL && NodeFacts::dataType($node) !== 'any') {
         // Variants chosen when the data surface was sealed (a locked
         // deciding key): the key is that variant's map.
         $by = $surface->getDefinitions()->entry($entry->variants->by);

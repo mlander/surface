@@ -11,7 +11,6 @@ use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Refinement\Condition;
@@ -316,23 +315,21 @@ final class ResourceCode {
   protected function key(SurfaceInterface $surface, Entry $entry, string $path): string {
     $name = $entry->name;
     $at = $path . $name;
-    $definition = $entry->definition();
-    // A plain key's facts are read from its node; a key that holds a child
-    // frame is a shell (Entry::isShell()), whose own facts are read from
-    // its definition.
-    $node = $entry->isShell() ? NULL : $entry->schema();
+    // A key's facts are read from its node, a key that holds a child
+    // frame's too (Entry::schema()).
+    $node = $entry->schema();
     $comments = $this->leftComments($at, $name, $entry->attachment === NULL && $entry->list === NULL);
     if ($entry->variants !== NULL) {
       $comments[] = sprintf('From the schema, not written here: %s holds variants chosen by %s. Declare each as a #[Variant] structure and attach them with attachVariants(%s, by: %s).', $this->named($name), $this->named($entry->variants->by), $this->ref($name), $this->ref($entry->variants->by));
       $this->comments++;
       return $this->comment($comments);
     }
-    if ($entry->attachment !== NULL && DefinitionMetadata::eachOf($definition) !== NULL) {
+    if ($entry->attachment !== NULL && NodeFacts::each($node) !== NULL) {
       $comments[] = sprintf('From the schema, not written here: %s holds one entry per thing the site has. Declare it with addEach() or attachEach() and a provider.', $this->named($name));
       $this->comments++;
       return $this->comment($comments);
     }
-    [$label, $unlabeled] = $this->label($node === NULL ? (DefinitionMetadata::ownLabel($definition) ?? $definition->getLabel()) : (NodeFacts::ownLabel($node) ?? NodeFacts::label($node)), $name);
+    [$label, $unlabeled] = $this->label(NodeFacts::ownLabel($node) ?? NodeFacts::label($node), $name);
     if ($unlabeled) {
       $this->unlabeled[] = $name;
     }
@@ -340,21 +337,19 @@ final class ResourceCode {
       $child = $entry->list !== NULL ? $entry->list->item : $entry->attachment;
       $class = $this->structure($child->child, $child->source ?? $at, $name, $label);
       if ($entry->list !== NULL) {
-        $declared = $definition instanceof DataDefinition ? ($definition->toArray()['constraints'] ?? []) : [];
-        $count = is_array($declared) ? $declared['Count'] ?? [] : [];
+        $count = NodeFacts::declaredConstraints($node)['Count'] ?? [];
         $bounds = '';
         foreach (['min', 'max'] as $bound) {
-          $bounds .= isset($count[$bound]) ? sprintf(', %s: %s', $bound, PhpLiteral::scalar($count[$bound])) : '';
+          $bounds .= is_array($count) && isset($count[$bound]) ? sprintf(', %s: %s', $bound, PhpLiteral::scalar($count[$bound])) : '';
         }
         $head = sprintf('$inputs->attachList(%s, %s::class, %s%s)', $this->ref($name), $class, PhpLiteral::translated($label), $bounds);
       }
       else {
         $head = sprintf('$inputs->attach(%s, %s::class, %s)', $this->ref($name), $class, PhpLiteral::translated($label));
       }
-      $calls = $this->described($definition->getDescription(), (bool) $definition->isRequired());
+      $calls = $this->describedBy($node);
     }
     else {
-      assert($node !== NULL);
       $default = $surface->getDefault($name);
       $head = $this->declaration($name, $node, $label, $default);
       $calls = [
@@ -366,11 +361,11 @@ final class ResourceCode {
       $comments[] = sprintf('The schema makes %s readOnly, at the value it starts from: lock it with an access class, or leave it out.', $this->named($name));
       $this->comments++;
     }
-    if ($node === NULL ? DefinitionMetadata::isSecret($definition) : Secrets::marked($node)) {
+    if (Secrets::marked($node)) {
       $comments[] = sprintf('The schema makes %s writeOnly: a secret, which a storage holds apart. See docs/declaring-a-resource.md.', $this->named($name));
       $this->comments++;
     }
-    if ($node === NULL ? DefinitionMetadata::isAlwaysHeld($definition) && !$definition->isRequired() : NodeFacts::isAlwaysHeld($node) && !NodeFacts::isRequired($node)) {
+    if (NodeFacts::isAlwaysHeld($node) && !NodeFacts::isRequired($node)) {
       $this->alwaysHeld[] = $at;
     }
     return ($comments === [] ? '' : $this->comment($comments) . "\n") . static::chain($head, $calls);

@@ -9,6 +9,8 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\ResourceBuild\ValueNotAcceptedException;
+use Drupal\surface_resource_test\Resource\Gallery\GalleryResource;
+use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -28,6 +30,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 #[RunTestsInSeparateProcesses]
 class KeyPathsCoercionTest extends SurfaceKernelTestBase {
 
+  use UserCreationTrait;
+
   /**
    * {@inheritdoc}
    */
@@ -39,6 +43,8 @@ class KeyPathsCoercionTest extends SurfaceKernelTestBase {
     // The DateOnly check is the Tool API's.
     'tool',
     'surface',
+    // The gallery's rooms: one entry per thing the site has.
+    'surface_resource_test',
   ];
 
   /**
@@ -87,6 +93,32 @@ class KeyPathsCoercionTest extends SurfaceKernelTestBase {
     ];
     foreach ($rows as $case => [$definition, $raw, $expected]) {
       $this->assertSame($expected, $this->held($definition, $raw), $case);
+    }
+  }
+
+  /**
+   * Tests a path inside keys from the site is refused by what they are.
+   *
+   * The gallery attaches one room per thing the site has (attachEach());
+   * that the key holds such entries is read from its node.
+   */
+  public function testKeysFromTheSiteAreNotReached(): void {
+    $this->installEntitySchema('user');
+    $this->setUpCurrentUser(admin: TRUE);
+    $surface = $this->container->get('surface.resources')->buildOperation(GalleryResource::class, 'configure');
+    $where = [
+      'resource' => 'resource_test.gallery',
+      'at' => '',
+      'source' => 'The route',
+      'noun' => 'default',
+      'verb' => 'defaults',
+    ];
+    try {
+      $this->container->get('surface.key_paths')->reachedOn($surface, 'rooms.east.size', $where);
+      $this->fail('A path into keys from the site is refused.');
+    }
+    catch (\LogicException $e) {
+      $this->assertStringContainsString('is inside "rooms", a map of keys from the site, which its provider starts', $e->getMessage());
     }
   }
 

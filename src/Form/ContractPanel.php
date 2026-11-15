@@ -249,10 +249,10 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    * @param array $values
    *   The values it was refined by.
    * @param \Drupal\surface\Entry|null $declared_entry
-   *   The key's entry as declared, or NULL: a plain key's facts are read
-   *   from its node and the refined key's (Entry::schema()); a key that
-   *   holds a child frame is a shell (Entry::isShell()), whose own facts,
-   *   and its properties', are read from its definition.
+   *   The key's entry as declared, or NULL: a key's own facts are read
+   *   from its node and the refined key's (Entry::schema()), a key that
+   *   holds a child frame's too; the properties of such a key are read
+   *   from its definition.
    */
   protected function entryRows(array &$rows, string $path, Entry $entry, ?DataDefinitionInterface $declared, SurfaceInterface $refined, array $values, ?Entry $declared_entry = NULL): void {
     $definition = $entry->definition();
@@ -268,7 +268,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
         '@variants' => implode(', ', $variants),
       ]), [$entry->variants->by], $chosen === NULL
         ? $this->t('not chosen yet')
-        : $this->t('the @value variant', ['@value' => $chosen]));
+        : $this->t('the @value variant', ['@value' => $chosen]), $entry->schema());
       if ($chosen !== NULL) {
         $child = $entry->variants->variant($chosen)->child;
         $held = is_array($values[$entry->name] ?? NULL) ? $values[$entry->name] : [];
@@ -284,7 +284,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       $rows[] = $this->row($path, $this->t('collection'), $definition, NULL, $this->t('A list of @child@count', [
         '@child' => $source === NULL ? $this->t('a sealed data surface') : $this->named($source),
         '@count' => is_array($count) ? ', ' . $this->bounds('Count', $count) : '',
-      ]), $depends, $this->status($declared, $definition, $entry->locked, $entry->isRefinedAtRuntime()));
+      ]), $depends, $this->status($declared, $definition, $entry->locked, $entry->isRefinedAtRuntime(), $declared_entry?->schema(), $entry->schema()), $entry->schema());
       $declared_item = $declared instanceof ListDataDefinitionInterface ? $declared->getItemDefinition() : NULL;
       $this->propertyRows($rows, $path . '.*', $definition->getItemDefinition(), $declared_item instanceof ComplexDataDefinitionInterface ? $declared_item->getPropertyDefinitions() : [], []);
       return;
@@ -293,21 +293,21 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       $source = $entry->attachment->source;
       $rows[] = $this->row($path, $this->t('part'), $definition, NULL, $this->t('A fixed part: @child', [
         '@child' => $source === NULL ? $this->t('a sealed data surface') : $this->named($source),
-      ]), $depends, $this->t('as declared'));
+      ]), $depends, $this->t('as declared'), $entry->schema());
       $this->propertyRows($rows, $path, $definition, $declared instanceof ComplexDataDefinitionInterface ? $declared->getPropertyDefinitions() : [], []);
       return;
     }
     if ($definition instanceof ComplexDataDefinitionInterface && $definition->getPropertyDefinitions() !== []) {
       // A map of other modules' keys, each under its module's name: the
       // rows say whose they are, and what the map's refiners read.
-      $rows[] = $this->row($path, $definition->getDataType(), $definition, NULL, $this->t('Keys other modules added'), $depends, $this->t('as declared'));
+      $rows[] = $this->row($path, NodeFacts::dataType($entry->schema()), $definition, NULL, $this->t('Keys other modules added'), $depends, $this->t('as declared'), $entry->schema());
       $this->propertyRows($rows, $path, $definition, $declared instanceof ComplexDataDefinitionInterface ? $declared->getPropertyDefinitions() : [], $depends);
       return;
     }
     // A plain key: its facts from its node, the refined key's and the
     // declared key's.
     $node = $entry->schema();
-    $declared_node = $declared_entry === NULL || $declared_entry->isShell() ? NULL : $declared_entry->schema();
+    $declared_node = $declared_entry?->schema();
     $rows[] = $this->row(
       $path,
       NodeFacts::dataType($node),
@@ -373,7 +373,8 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    *   Whether it is as declared right now.
    * @param \PortableSchema\Builder\Schema|null $node
    *   The key's node, refined, whose label and flag are read; NULL for a
-   *   shell or a property of one, read from its definition.
+   *   property of a key that holds a child frame, read from its
+   *   definition.
    *
    * @return array
    *   The table row.
@@ -403,8 +404,9 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition, which the options service is handed.
    * @param \PortableSchema\Builder\Schema|null $node
-   *   Its node, whose constraints are read; NULL for a shell or a property
-   *   of one, whose constraints are read from its definition.
+   *   Its node, whose constraints are read; NULL for a property of a key
+   *   that holds a child frame, whose constraints are read from its
+   *   definition.
    *
    * @return string
    *   One phrase per constraint, or "anything of its type".

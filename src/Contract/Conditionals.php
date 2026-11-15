@@ -771,10 +771,9 @@ final class Conditionals {
   /**
    * Answers whether a key is in its object's `required`, for one answer.
    *
-   * Read from the key's node (PropertySchema::required()), but for a key
-   * that holds a child, variants or a list of children: its definition
-   * holds the child's keys, so its node would be the child's whole tree,
-   * and its flag is read from the definition (DefinitionSchema::required()).
+   * Read from the key's node (PropertySchema::required()), a key that
+   * holds a child frame's too: its node is composed of the child's
+   * entries' nodes.
    *
    * @param \Drupal\surface\Entry $holder
    *   The key's entry, as declared or refined for a combination.
@@ -783,7 +782,7 @@ final class Conditionals {
    *   Whether the schema requires it.
    */
   protected static function requires(Entry $holder): bool {
-    return $holder->isNested() || $holder->list !== NULL ? DefinitionSchema::required($holder->definition()) : PropertySchema::required($holder->schema());
+    return PropertySchema::required($holder->schema());
   }
 
   /**

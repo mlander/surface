@@ -17,8 +17,6 @@ use Drupal\surface\Computed;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\Secrets;
-use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Entry;
@@ -240,28 +238,27 @@ final class Validating {
     $errors = [];
     foreach ($refined->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
-      // A plain key's facts are read from its node, asked once: with
-      // assertions on, each ask reads the definition again. A key that
-      // holds a child frame is a shell whose node is the child's whole
-      // tree: its own facts are read from its definition, and its node
-      // only by a walk that needs the tree (a mount's). The definition is
-      // handed on where a contract still takes one: the options service
-      // and a computed key's value.
+      // A key's facts are read from its node, asked once: with assertions
+      // on, each ask reads the definition again. A key that holds a child
+      // frame composes its node of the child's entries' nodes, so its own
+      // facts are read from it as any key's. The definition is handed on
+      // where a contract still takes one: the options service and a
+      // computed key's value.
       // Decision: see
-      // docs/decisions.md#the-validators-checks-and-the-document-read-nodes.
+      // docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
       $definition = $entry->definition();
-      $node = $entry->isShell() ? NULL : $entry->schema();
+      $node = $entry->schema();
       $value = $values[$name] ?? NULL;
-      $computed = $entry->locked ? NULL : ($node === NULL ? Computed::of($definition) : NodeFacts::compute($node));
+      $computed = $entry->locked ? NULL : NodeFacts::compute($node);
       // A key computed unless sent holds either: nothing to refuse.
-      $refusal = $computed === NULL || $computed->takesSent() ? NULL : $this->notComputed($surface, $entry, $node ?? $entry->schema(), $computed, $values, $current);
+      $refusal = $computed === NULL || $computed->takesSent() ? NULL : $this->notComputed($surface, $entry, $node, $computed, $values, $current);
       if ($refusal !== NULL) {
         // Decision: see
         // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
         $errors[] = $refusal;
         continue;
       }
-      if ($node === NULL ? DoesNotApply::marks($definition) : NodeFacts::doesNotApply($node)) {
+      if (NodeFacts::doesNotApply($node)) {
         // Nothing about a key that does not apply is required or held to
         // a rule; a value sent for it other than what it holds is refused.
         // Decision: see docs/decisions.md#a-key-that-does-not-apply.
@@ -270,12 +267,10 @@ final class Validating {
         }
         continue;
       }
-      // A mounted key is a property of its mount, refined one property at
-      // a time: the mount's node is walked for what is ruled out and
-      // required inside it. Any other shell's marks are read from its
-      // definition.
-      $tree = $node ?? ($entry->mounted === [] ? NULL : $entry->schema());
-      $ruled_out = $tree === NULL ? DoesNotApply::inside($definition) : static::ruledOut($tree);
+      // What is ruled out inside the key is walked in its node: a mounted
+      // key is a property of its mount, refined one property at a time,
+      // and a child's key a property of its shell.
+      $ruled_out = static::ruledOut($node);
       if ($ruled_out !== []) {
         foreach ($ruled_out as $path) {
           $parents = explode('.', $path);
@@ -290,9 +285,10 @@ final class Validating {
         $value = is_array($value) ? static::valueWithout($value, $ruled_out) : $value;
       }
       // Decision: see docs/decisions.md#required-inside-a-plain-map.
-      // A collection's list holds no map to walk.
-      $missing = $tree !== NULL && $entry->attachment === NULL && $entry->variants === NULL
-        ? $this->missingInMap($tree, is_array($value) ? $value : [])
+      // A collection's list holds no map to walk, and a child's keys are
+      // the child's to require.
+      $missing = $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL
+        ? $this->missingInMap($node, is_array($value) ? $value : [])
         : [];
       if (!ValueState::isConfigured($value)) {
         // Not configured: nothing to hold to a constraint, and for a
@@ -300,14 +296,14 @@ final class Validating {
         // type-specific one a constraint would have produced. A key that
         // was never set is this case whether it is required or not, and
         // it is never stale: there is no value to keep.
-        if ($node === NULL ? $definition->isRequired() : NodeFacts::isRequired($node)) {
-          $errors[] = new Violation($name, '', $this->isRequired($surface, $refined, $name, '', static::ownLabel($entry, $node) ?? $name, $values), Violation::REQUIRED);
+        if (NodeFacts::isRequired($node)) {
+          $errors[] = new Violation($name, '', $this->isRequired($surface, $refined, $name, '', NodeFacts::label($node) ?? $name, $values), Violation::REQUIRED);
         }
-        elseif ($node === NULL ? DefinitionMetadata::isAlwaysHeld($definition) : NodeFacts::isAlwaysHeld($node)) {
+        elseif (NodeFacts::isAlwaysHeld($node)) {
           // Null clears where clearing is possible; here the storage
           // holds a value whatever is sent, so null is no answer.
           // Decision: see docs/decisions.md#a-key-its-storage-always-holds.
-          $errors[] = new Violation($name, '', $this->cannotBeCleared($tree ?? $entry->schema(), $definition, $name), Violation::CANNOT_CLEAR);
+          $errors[] = new Violation($name, '', $this->cannotBeCleared($node, $definition, $name), Violation::CANNOT_CLEAR);
         }
         foreach ($missing as $path => $label) {
           $errors[] = new Violation($name, $path, $this->isRequired($surface, $refined, $name, $path, $label, $values), Violation::REQUIRED);
@@ -331,8 +327,8 @@ final class Validating {
         if (!ValueState::isConfigured($values[$entry->variants->by] ?? NULL)) {
           $by = $refined->getDefinitions()->entry($entry->variants->by);
           $errors[] = new Violation($name, '', $this->t('@label depends on @by, which holds no value.', [
-            '@label' => static::ownLabel($entry, $node) ?? $name,
-            '@by' => Named::key(($by === NULL ? NULL : static::ownLabel($by, $by->isShell() ? NULL : $by->schema())) ?? $entry->variants->by, $this->frame[0] . $entry->variants->by),
+            '@label' => NodeFacts::label($node) ?? $name,
+            '@by' => Named::key(($by === NULL ? NULL : NodeFacts::label($by->schema())) ?? $entry->variants->by, $this->frame[0] . $entry->variants->by),
           ]), Violation::NO_VARIANT);
         }
         continue;
@@ -363,13 +359,13 @@ final class Validating {
         // What a rule made required is said below, with the rest.
         $refusals[] = new Violation($name, (string) $path, $this->t('@label is required.', ['@label' => $label]), Violation::REQUIRED);
       }
-      if ($refusals !== [] && $this->isStale($tree ?? $entry->schema(), $definition, $value, $name, $current, $refined->getDefinitions()->dependencies($name), $values)) {
+      if ($refusals !== [] && $this->isStale($node, $definition, $value, $name, $current, $refined->getDefinitions()->dependencies($name), $values)) {
         // The whole key is reported as stale and not re-judged. What
         // else its constraints would say is about a value this run is
         // not changing and could not have chosen — it is what storage
         // holds — and saying it would read as a list of things to fix
         // where there is exactly one: choose again.
-        $errors[] = $this->staleViolation($tree ?? $entry->schema(), $value, $name);
+        $errors[] = $this->staleViolation($node, $value, $name);
         continue;
       }
       $errors = array_merge($errors, $this->sayingWhatIsAllowed($refusals, $surface, $refined, $name, $values, $choices));
@@ -465,18 +461,18 @@ final class Validating {
     $named = [];
     foreach ($violations as $violation) {
       $entry = $violation->key === '' ? NULL : $surface->getDefinitions()->entry($violation->key);
-      $node = $entry === NULL || $entry->isShell() ? NULL : $entry->schema();
-      $computed = $entry === NULL ? NULL : ($node === NULL ? Computed::of($entry->definition()) : NodeFacts::compute($node));
+      $node = $entry?->schema();
+      $computed = $node === NULL ? NULL : NodeFacts::compute($node);
       // A key computed unless sent holding a value its sources do not give
       // holds the caller's own: its refusals stand as they are.
-      if ($entry === NULL || $computed === NULL || $violation->code === Violation::COMPUTED || ($computed->takesSent() && !$this->holdsComputed($violation->key, $node ?? $entry->schema(), $entry->definition(), $computed, $values, $current))) {
+      if ($entry === NULL || $computed === NULL || $violation->code === Violation::COMPUTED || ($computed->takesSent() && !$this->holdsComputed($violation->key, $node, $entry->definition(), $computed, $values, $current))) {
         $named[] = $violation;
         continue;
       }
       if (array_intersect_key($refused, array_flip($computed->from)) !== []) {
         continue;
       }
-      $after = $this->accepting->computedFrom(static::ownLabel($entry, $node) ?? $violation->key, $this->accepting->sources($surface, $computed, $this->frame[0]), $computed->takesSent() ? 'unless' : 'after');
+      $after = $this->accepting->computedFrom(NodeFacts::label($entry->schema()) ?? $violation->key, $this->accepting->sources($surface, $computed, $this->frame[0]), $computed->takesSent() ? 'unless' : 'after');
       $named[] = $violation->saying(new Sentences($violation->message, $after));
     }
     return $named;
@@ -755,38 +751,6 @@ final class Validating {
   protected static function labelOf(?Schema $node): string|\Stringable|null {
     $label = $node === NULL ? NULL : NodeFacts::label($node);
     return $label === NULL || (string) $label === '' ? NULL : $label;
-  }
-
-  /**
-   * Reads a key's own label as getLabel() gives it.
-   *
-   * @param \Drupal\surface\Entry $entry
-   *   The key's entry.
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   Its node, or NULL for a key that holds a child frame, whose label is
-   *   read from its definition.
-   *
-   * @return string|\Stringable|null
-   *   The label, or NULL.
-   */
-  protected static function ownLabel(Entry $entry, ?Schema $node): string|\Stringable|null {
-    return $node === NULL ? $entry->definition()->getLabel() : NodeFacts::label($node);
-  }
-
-  /**
-   * Answers whether a key that holds a child frame may be cleared.
-   *
-   * What NodeFacts::isNullable() reads of a node, read from the
-   * definition of a shell.
-   *
-   * @param \Drupal\surface\Entry $entry
-   *   The key's entry.
-   *
-   * @return bool
-   *   TRUE when null clears it.
-   */
-  protected static function shellIsNullable(Entry $entry): bool {
-    return !DefinitionMetadata::holdsValue($entry->definition()) && !DefinitionMetadata::isSecret($entry->definition());
   }
 
   /**
@@ -1339,7 +1303,7 @@ final class Validating {
         Violation::typeMismatch($name, '', $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => 'map',
           '@actual' => get_debug_type($value),
-        ]), 'map', get_debug_type($value), static::shellIsNullable($entry)),
+        ]), 'map', get_debug_type($value), NodeFacts::isNullable($entry->schema())),
       ];
     }
     $errors = [];
@@ -1414,7 +1378,7 @@ final class Validating {
         Violation::typeMismatch($name, '', $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => 'list',
           '@actual' => get_debug_type($value),
-        ]), 'list', get_debug_type($value), static::shellIsNullable($entry)),
+        ]), 'list', get_debug_type($value), NodeFacts::isNullable($entry->schema())),
       ];
     }
     $items = array_values($value);

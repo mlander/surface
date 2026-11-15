@@ -4,7 +4,15 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\ListDataDefinition;
+use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Attachment;
+use Drupal\surface\Collection;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\Storage\ConfigSchemaGenerator;
+use Drupal\surface\SurfaceBuilder;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -81,6 +89,31 @@ class ConfigSchemaDriftTest extends SurfaceKernelTestBase {
       'my_module',
     ]);
     $this->setUpCurrentUser(admin: TRUE);
+  }
+
+  /**
+   * Tests the keys that hold a child frame, as the schema and the file say.
+   *
+   * A collection with no default starts as an empty list in a new object's
+   * install file, and an attached key an alter reworded is labeled with
+   * its owner's label: both read from the key's node, composed of the
+   * child's entries' nodes.
+   */
+  public function testShellsInTheSchemaAndTheInstallFile(): void {
+    $person = (new SurfaceBuilder())->setDefinition('name', DataDefinition::create('string')->setLabel('Name'))->seal();
+    $lead = MapDataDefinition::create()->setLabel('Lead');
+    DefinitionMetadata::keepOwnLabel($lead);
+    $lead->setLabel('Desk lead, as another module says it');
+    $built = (new SurfaceBuilder())
+      ->setDefinition('lead', $lead)
+      ->attach('lead', new Attachment($person))
+      ->setDefinition('volunteers', (new ListDataDefinition([], MapDataDefinition::create()))->setLabel('Volunteers'))
+      ->attachList('volunteers', new Collection(new Attachment($person)))
+      ->seal();
+    $owner = new ResourceDefinition(NULL, 'hand.drift', 'surface', [], NULL, NULL, []);
+    $described = $this->container->get('surface.config_schema')->describeBuilt($built, $owner, 'hand.drift', [], [], []);
+    $this->assertSame([], $described['install']['volunteers'] ?? NULL, 'A collection with no default starts as an empty list.');
+    $this->assertSame('Lead', $described['entries'][0]['schema']['mapping']['lead']['label'] ?? NULL, 'An attached key is labeled with its owner\'s label.');
   }
 
   /**

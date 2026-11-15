@@ -679,14 +679,12 @@ final class ConfigSchemaGenerator {
   protected function entry(Entry $entry, string $path, ResourceDefinition $owner, array &$entries, array $existing, ?Schema $deciding = NULL, ?array $installed = NULL, string $at = ''): array {
     $held = $installed === NULL ? NULL : ($installed[$entry->name] ?? NULL);
     $definition = $entry->definition();
-    // A plain key's facts are read from its node; a key that holds a child
-    // frame is a shell (Entry::isShell()), whose own facts are read from
-    // its definition; a collection's declared constraints from its own
-    // node (head()), which holds no secret mark.
-    $node = $entry->isShell() ? NULL : $entry->schema();
-    $label = static::label($node === NULL ? DefinitionMetadata::ownLabel($definition) : NodeFacts::ownLabel($node), $entry->name);
+    // A key's facts are read from its node, a key that holds a child
+    // frame's too: its node is composed of the child's entries' nodes.
+    $node = $entry->schema();
+    $label = static::label(NodeFacts::ownLabel($node), $entry->name);
     if ($at !== '' && isset($this->translated[$at])) {
-      return $this->translated($this->translated[$at], $node ?? $definition, $label, $at, $installed !== NULL && $held === NULL);
+      return $this->translated($this->translated[$at], $node, $label, $at, $installed !== NULL && $held === NULL);
     }
     $from = $entry->variants === NULL ? NULL : DefinitionMetadata::variantsFrom($entry->variants->shell);
     if ($from !== NULL && !is_subclass_of($from, ClosedSiteListInterface::class)) {
@@ -703,11 +701,10 @@ final class ConfigSchemaGenerator {
       return ['type' => $path . '.[%parent.' . $entry->variants->by . ']', 'label' => $label];
     }
     if ($entry->list !== NULL) {
-      $head = DefinitionSchema::head($definition);
       return [
         'type' => 'sequence',
         'label' => $label,
-      ] + (!$definition->isRequired() && !DefinitionMetadata::isSecret($definition) && !in_array($at, $this->alwaysHeld, TRUE) ? ['nullable' => TRUE] : []) + static::constraints($head) + [
+      ] + ($this->clearable($node, $at) ? ['nullable' => TRUE] : []) + static::constraints($node) + [
         'sequence' => $this->ownKeyed($entry->list->child()->getDefinitions(), $path, $label, $owner, $entries, $existing, $at . '.') ?? [
           'type' => 'mapping',
           'label' => $label,
@@ -716,7 +713,7 @@ final class ConfigSchemaGenerator {
       ];
     }
     if ($entry->attachment !== NULL) {
-      $each = DefinitionMetadata::eachOf($definition);
+      $each = NodeFacts::each($node);
       if (is_string($each)) {
         $child = $this->resources->declaration($each, $this->context($owner));
         return [
@@ -732,19 +729,20 @@ final class ConfigSchemaGenerator {
           ],
         ];
       }
-      if ($each instanceof DataDefinitionInterface) {
+      $each_definition = DefinitionMetadata::eachOf($definition);
+      if ($each instanceof Schema && $each_definition instanceof DataDefinitionInterface) {
         // Each entry is a key of its own, which may hold nothing as one
         // would, and is stored as the storage says under `*`. What every
-        // entry is was set on the shell's definition, and no entry holds
-        // it (the site's entries are keys of the child), so it is read
-        // into its node here; the shell's node is not read.
-        $each_node = DefinitionSchema::of($each);
+        // entry is was set on the key's definition, and no entry holds it
+        // (the site's entries are keys of the child): its node is the one
+        // the key's node holds, and its definition is handed on for the
+        // PHP class its data type maps to.
         return [
           'type' => 'sequence',
           'label' => $label,
           'sequence' => isset($this->translated[$at . '.*'])
-            ? $this->translated($this->translated[$at . '.*'], $each_node, $label, $at . '.*')
-            : $this->definition($each_node, $each, $label),
+            ? $this->translated($this->translated[$at . '.*'], $each, $label, $at . '.*')
+            : $this->definition($each, $each_definition, $label),
         ];
       }
       return $this->ownKeyed($entry->attachment->child->getDefinitions(), $path, $label, $owner, $entries, $existing, $at . '.', installed: is_array($held) ? $held : NULL) ?? [
@@ -756,7 +754,7 @@ final class ConfigSchemaGenerator {
     // Of the keys that hold a child frame only a mount gets here (the
     // others are written above), and a mount is a plain map whose node is
     // its own tree.
-    return $this->definition($node ?? $entry->schema(), $definition, $label, installedEmpty: $installed !== NULL && $held === NULL, at: $at);
+    return $this->definition($node, $definition, $label, installedEmpty: $installed !== NULL && $held === NULL, at: $at);
   }
 
   /**
@@ -1012,13 +1010,12 @@ final class ConfigSchemaGenerator {
         if ($own->has($name) || isset($kept[$name])) {
           continue;
         }
-        // A shell's own facts are read from its definition. setSecret()
-        // refuses a map and a list, so a shell is a secret only where its
-        // definition was marked some other way: then its label is its
-        // definition's, and what it holds is written from its node.
-        if ($entry->isShell() ? DefinitionMetadata::isSecret($entry->definition()) : Secrets::marked($entry->schema())) {
-          $node = $entry->schema();
-          $label = $entry->isShell() ? DefinitionMetadata::ownLabel($entry->definition()) : NodeFacts::ownLabel($node);
+        // setSecret() refuses a map and a list, so a key that holds a child
+        // frame is a secret only where its definition was marked some other
+        // way; its node says so as any key's does.
+        $node = $entry->schema();
+        if (Secrets::marked($node)) {
+          $label = NodeFacts::ownLabel($node);
           $kept[$name] = $this->definition($node, $entry->definition(), static::label($label, $name)) + ['requiredKey' => FALSE];
         }
       }
@@ -1182,9 +1179,8 @@ final class ConfigSchemaGenerator {
    *
    * @param array $stored
    *   The schema as stored.
-   * @param \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface $key
-   *   The key's node, as asked for; for a key that holds a child frame (a
-   *   shell, Entry::isShell()), its definition, whose own facts are read.
+   * @param \PortableSchema\Builder\Schema $key
+   *   The key's node.
    * @param string $label
    *   Its label.
    * @param string $at
@@ -1195,35 +1191,12 @@ final class ConfigSchemaGenerator {
    * @return array
    *   Its schema.
    */
-  protected function translated(array $stored, Schema|DataDefinitionInterface $key, string $label, string $at, bool $installedEmpty = FALSE): array {
+  protected function translated(array $stored, Schema $key, string $label, string $at, bool $installedEmpty = FALSE): array {
     $schema = ['type' => (string) ($stored['type'] ?? 'ignore'), 'label' => (string) ($stored['label'] ?? $label)];
-    $one = $key instanceof Schema ? DefinitionSchema::isLeaf($key) : !$key instanceof ComplexDataDefinitionInterface && !$key instanceof ListDataDefinitionInterface;
-    if (!array_key_exists('nullable', $stored) && $one && ($installedEmpty || ($key instanceof Schema ? $this->clearable($key, $at) : $this->shellClearable($key, $at)))) {
+    if (!array_key_exists('nullable', $stored) && DefinitionSchema::isLeaf($key) && ($installedEmpty || $this->clearable($key, $at))) {
       $schema['nullable'] = TRUE;
     }
     return $schema + $stored;
-  }
-
-  /**
-   * Answers whether null may clear a shell, by the three-way rule.
-   *
-   * As clearable() answers for a node, read from the definition of a key
-   * that holds a child frame (Entry::isShell()), whose own facts are read
-   * from its definition.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key's definition.
-   * @param string|null $at
-   *   Where it is stored in the object; NULL where the storage cannot
-   *   name it.
-   *
-   * @return bool
-   *   TRUE when its schema says `nullable: true`.
-   */
-  protected function shellClearable(DataDefinitionInterface $definition, ?string $at): bool {
-    return !$definition->isRequired()
-      && !DefinitionMetadata::isSecret($definition)
-      && ($at === NULL || !in_array($at, $this->alwaysHeld, TRUE));
   }
 
   /**
@@ -1380,15 +1353,12 @@ final class ConfigSchemaGenerator {
         continue;
       }
       $held = array_key_exists($name, $existing) ? $existing[$name] : NULL;
-      $definition = $entry->definition();
-      // A plain key's facts from its node; a shell's own from its
-      // definition (Entry::isShell()).
-      $node = $entry->isShell() ? NULL : $entry->schema();
+      $node = $entry->schema();
       if ($entry->variants !== NULL) {
         $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? $surface->getDefault($entry->variants->by));
         $values[$name] = $chosen === NULL ? $held : $this->installMap($entry->variants->variant($chosen)->child->getDefinitions(), $entry->variants->variant($chosen)->child, is_array($held) ? $held : [], $at . $name . '.');
       }
-      elseif ($entry->attachment !== NULL && DefinitionMetadata::eachOf($definition) === NULL) {
+      elseif ($entry->attachment !== NULL && NodeFacts::each($node) === NULL) {
         $values[$name] = $this->installMap($entry->attachment->child->getDefinitions(), $entry->attachment->child, is_array($held) ? $held : [], $at . $name . '.');
       }
       elseif (array_key_exists($name, $existing)) {
@@ -1396,10 +1366,10 @@ final class ConfigSchemaGenerator {
         // where nothing is stored: the file says the first.
         $values[$name] = $held;
       }
-      elseif ($node === NULL ? DefinitionMetadata::hasDefaultValue($definition) : NodeFacts::hasDefault($node)) {
-        $values[$name] = $node === NULL ? DefinitionMetadata::getDefaultValue($definition) : NodeFacts::default($node);
+      elseif (NodeFacts::hasDefault($node)) {
+        $values[$name] = NodeFacts::default($node);
       }
-      elseif ($node === NULL ? $entry->list !== NULL || $definition instanceof ListDataDefinitionInterface || DefinitionMetadata::eachOf($definition) !== NULL : DefinitionSchema::isList($node) || NodeFacts::each($node) !== NULL) {
+      elseif (DefinitionSchema::isList($node) || NodeFacts::each($node) !== NULL) {
         $values[$name] = [];
       }
       else {

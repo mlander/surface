@@ -11,9 +11,13 @@ use Drupal\Core\Form\EnforcedResponseException;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteBuildEvent;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\ListDataDefinition;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\Url;
 use Drupal\node\Entity\NodeType;
 use Drupal\surface\Access\OperationRouteSubscriber;
+use Drupal\surface\Attachment;
+use Drupal\surface\Collection;
 use Drupal\surface\Compute\MachineName;
 use Drupal\surface\Computed;
 use Drupal\surface\DefinitionMetadata;
@@ -283,7 +287,7 @@ class FlowFormTest extends SurfaceKernelTestBase {
       ->setDefinition('slug', $slug)
       ->setDefinition('note', DataDefinition::create('string')->setLabel('Note')->setRequired(TRUE))
       ->seal();
-    $refusal = static function (array $first, array $second) use ($built, $resource, $operation): ?string {
+    $refusal = static function (array $first, array $second) use (&$built, $resource, $operation): ?string {
       $flow = CompiledFlow::onRoute(new Route('/hand/flow', [
         '_form' => SurfaceOperationForm::class,
         '_surface_resource' => 'stage_test.itinerary',
@@ -295,6 +299,16 @@ class FlowFormTest extends SurfaceKernelTestBase {
     $this->assertNull($refusal(['title', 'note'], ['slug']), 'The computed key is drawn at step 2, and nothing refuses it.');
     $refused = 'The hand.flow route\'s flow creates through the "create" operation of stage_test.itinerary and draws its required key "note", which has no default, at step 2: each step is validated as the whole create, so a required key with no default is drawn at the first step.';
     $this->assertSame($refused, $refusal(['title', 'slug'], ['note']));
+
+    // A required collection with no default is such a key too: its own
+    // flag is read from its node, composed of its item's keys.
+    $stop = (new SurfaceBuilder())->setDefinition('place', DataDefinition::create('string')->setLabel('Place'))->seal();
+    $built = (new SurfaceBuilder())
+      ->setDefinition('title', DataDefinition::create('string')->setLabel('Title')->setRequired(TRUE))
+      ->setDefinition('stops', (new ListDataDefinition([], MapDataDefinition::create()))->setLabel('Stops')->setRequired(TRUE))
+      ->attachList('stops', new Collection(new Attachment($stop)))
+      ->seal();
+    $this->assertSame('The hand.flow route\'s flow creates through the "create" operation of stage_test.itinerary and draws its required key "stops", which has no default, at step 2: each step is validated as the whole create, so a required key with no default is drawn at the first step.', $refusal(['title'], ['stops']));
   }
 
   /**

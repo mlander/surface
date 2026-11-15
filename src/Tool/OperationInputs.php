@@ -837,11 +837,9 @@ final class OperationInputs {
     $properties = array_diff_key($map->getPropertyDefinitions(), array_flip($known));
     if (!$computed) {
       // One computed unless sent is a value a caller may give.
-      // A plain key's facts from its node; a shell's own from its
-      // definition (Entry::isShell()).
       $computed = static function (string $name) use ($built): ?Computed {
         $entry = $built->getDefinitions()->entry($name);
-        return $entry === NULL ? NULL : ($entry->isShell() ? Computed::of($entry->definition()) : NodeFacts::compute($entry->schema()));
+        return $entry === NULL ? NULL : NodeFacts::compute($entry->schema());
       };
       $properties = array_filter($properties, static fn (string $name): bool => $computed($name)?->takesSent() !== FALSE || $built->getDefinitions()->isLocked($name), ARRAY_FILTER_USE_KEY);
     }
