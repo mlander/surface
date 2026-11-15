@@ -66,10 +66,10 @@ final class NodeFacts {
    *   A built node.
    *
    * @return bool
-   *   TRUE where the `constraints` member holds one.
+   *   TRUE where constraints() gives one.
    */
   public static function hasConstraints(Schema $node): bool {
-    return !empty(DefinitionSchema::model($node)['constraints']);
+    return static::constraints($node) !== [];
   }
 
   /**
@@ -320,18 +320,63 @@ final class NodeFacts {
   /**
    * Gets every constraint a definition runs, its type's defaults included.
    *
-   * Stands for getConstraints().
+   * Stands for getConstraints(). The `constraints` member where the node
+   * holds one, which the read writes only where derived() does not give
+   * getConstraints() exactly; derived() where it holds none. The one
+   * reader of the member.
+   *
+   * Decision: see docs/decisions.md#the-merged-constraint-list-is-derived.
    *
    * @param \PortableSchema\Builder\Schema $node
    *   A built node.
    *
    * @return array
-   *   The `constraints` member: options by plugin id, as held; empty where
-   *   there are none.
+   *   Options by plugin id, as held, in getConstraints()'s order; empty
+   *   where there are none, or for a node no definition was read into.
    */
   public static function constraints(Schema $node): array {
-    $constraints = DefinitionSchema::model($node)['constraints'] ?? [];
-    return is_array($constraints) ? $constraints : [];
+    $model = DefinitionSchema::model($node);
+    if (array_key_exists('constraints', $model)) {
+      return is_array($model['constraints']) ? $model['constraints'] : [];
+    }
+    return static::derived($model) ?? [];
+  }
+
+  /**
+   * Derives the merged constraint list from a node's other members.
+   *
+   * What DataDefinition::getConstraints() gives, merged as core merges it:
+   * the constraints the definition declares (`declared`), then each of
+   * its type's defaults (LeafTypes::DEFAULT_CONSTRAINTS) and `NotNull`
+   * where the key is required (`required`) whose id it does not declare,
+   * so a declared one wins and keeps its place; where the key is required
+   * and a `NotBlank` is among them, `NotBlank` allows NULL. No answer for
+   * a type the table has no row for, or a definition with a `class` key,
+   * whose class may give `AllowedValues`: the read writes the member for
+   * those (DefinitionSchema::of()). Static and pure.
+   *
+   * @param array<string, mixed> $model
+   *   A node's MODEL members (DefinitionSchema::model()).
+   *
+   * @return array|null
+   *   Options by plugin id; NULL where the members cannot say it.
+   */
+  public static function derived(array $model): ?array {
+    $type = $model['type'] ?? NULL;
+    $declared = $model['declared'] ?? [];
+    if (!is_string($type) || !isset(LeafTypes::DEFAULT_CONSTRAINTS[$type]) || !is_array($declared) || array_key_exists('class', (array) ($model['stored'] ?? []))) {
+      return NULL;
+    }
+    $required = !empty($model['required']);
+    $defaults = LeafTypes::DEFAULT_CONSTRAINTS[$type];
+    if ($required) {
+      $defaults['NotNull'] = [];
+    }
+    $constraints = $declared + $defaults;
+    if ($required && array_key_exists('NotBlank', $constraints)) {
+      $constraints['NotBlank']['allowNull'] = TRUE;
+    }
+    return $constraints;
   }
 
   /**

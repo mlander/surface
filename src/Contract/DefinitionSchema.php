@@ -177,12 +177,18 @@ final class DefinitionSchema {
    * - `settings`: the settings, whole and as stored. Read by the inverse.
    * - `constraints`: every constraint the definition declares with its
    *   type's defaults (getConstraints()), by plugin id, with its options as
-   *   held. Read by the check provider through declares() and options(),
-   *   to word a keyword's refusal, and by oneValue(). The inverse writes
-   *   no definition from it (it writes `declared`): it reads it only to
-   *   refuse a node whose type's defaults are another manager's.
+   *   held, only where NodeFacts::derived() does not give that list exactly
+   *   from `type`, `declared`, `required` and `stored` (a type with no row
+   *   in LeafTypes::DEFAULT_CONSTRAINTS, a `class` key, a class whose
+   *   getConstraints() is its own); everywhere else the list is derived.
+   *   Read by NodeFacts::constraints() alone, which every reader of the
+   *   merged list asks (the check provider, declares(), options(),
+   *   oneValue(), keywordsOf(), the inverse's refusal of a node whose
+   *   type's defaults are another manager's).
    * - `declared`: the definition's own constraints (toArray()), as stored.
-   *   Read by the inverse.
+   *   Read by the inverse, by NodeFacts::derived() and, through
+   *   NodeFacts::declaredConstraints(), by ConfigSchemaGenerator,
+   *   ResourceCode and InputDefinitions.
    * - `default`, `examples`: the stored default or examples where the
    *   keyword does not hold them as stored: an explicit NULL, a map's, a
    *   secret's, examples with keys. Read by the inverse. A default merged
@@ -261,15 +267,25 @@ final class DefinitionSchema {
    * other member is a fact of Surface's own model and stays. Each bridge,
    * its readers, and the slice it goes in:
    * - `type`: the projection (the refusal of a type no row is for), the
-   *   inverse, and the pipeline's casts once they move (slice 30); goes
-   *   before slice 35 closes;
-   * - `definitionClass`: the projection (classOf(), isList(), isLeaf())
-   *   and the inverse; goes in slice 35;
-   * - `readOnly`, `computed`, `declared`, `mainProperty`, `stored`: the
-   *   inverse alone; go in slice 35, when nothing derives a definition;
-   * - `constraints`: the check provider and oneValue(), until they read
-   *   the constraints from the node's own facts (slice 32), and the
-   *   inverse's refusal; goes in slice 35.
+   *   inverse, NodeFacts::derived(), and every reader of
+   *   NodeFacts::dataType() (the pipeline's casts, the config schema
+   *   generator, the tool door's inputs, the generated code, among
+   *   others); goes before slice 35 closes;
+   * - `definitionClass`: classOf() and so isList(), isComplex() and
+   *   isLeaf() (the projection, the validator, the definition map, the
+   *   tool door's inputs, the generated code), and the inverse; goes in
+   *   slice 35;
+   * - `readOnly`, `computed`, `mainProperty`: the inverse alone; go in
+   *   slice 35, when nothing derives a definition;
+   * - `stored`: the inverse, and NodeFacts::derived(), which gives no list
+   *   where it holds a `class` key; goes in slice 35;
+   * - `declared`: the inverse, NodeFacts::derived(), and
+   *   ConfigSchemaGenerator, ResourceCode and InputDefinitions through
+   *   NodeFacts::declaredConstraints(); goes once an authored node says
+   *   what its own constraints are;
+   * - `constraints`: on a node only where NodeFacts::derived() does not
+   *   give getConstraints() exactly; read by NodeFacts::constraints()
+   *   alone; goes in slice 35.
    */
   public const BRIDGES = [
     'type',
@@ -789,9 +805,10 @@ final class DefinitionSchema {
    *
    * The members MEMBERS names, each where the definition states its fact
    * and no keyword of the node holds it: `type` always, `definitionClass`,
-   * `constraints` where there are any, and for a DataDefinition what its
-   * array holds (stored()); for a definition that is no DataDefinition
-   * (a FieldConfig) the getters say no more.
+   * for a DataDefinition what its array holds (stored()); for a definition
+   * that is no DataDefinition (a FieldConfig) the getters say no more.
+   * `constraints` last, and only where NodeFacts::derived() does not give
+   * getConstraints() exactly from the others (an empty list included).
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
@@ -812,18 +829,20 @@ final class DefinitionSchema {
     if ($class !== static::implied($type, $schema->has('properties'))) {
       $members['definitionClass'] = $class;
     }
-    $constraints = [];
-    foreach ($definition->getConstraints() as $id => $options) {
-      $constraints[(string) $id] = $options;
-    }
-    if ($constraints !== []) {
-      $members['constraints'] = $constraints;
-    }
     if ($definition instanceof DataDefinition) {
       $members += static::stored($definition->toArray(), $type, $schema, $path, $above);
     }
     if ($class === MapDataDefinition::class && $definition instanceof ComplexDataDefinitionInterface && $definition->getMainPropertyName() !== NULL) {
       $members['mainProperty'] = $definition->getMainPropertyName();
+    }
+    $constraints = [];
+    foreach ($definition->getConstraints() as $id => $options) {
+      $constraints[(string) $id] = $options;
+    }
+    // The merged list is derived from the other members wherever they say
+    // it exactly; the member holds it only where they do not.
+    if (NodeFacts::derived($members) !== $constraints) {
+      $members['constraints'] = $constraints;
     }
     return array_merge(array_intersect_key(array_fill_keys(self::MEMBERS, NULL), $members), $members);
   }
@@ -1342,7 +1361,7 @@ final class DefinitionSchema {
    *   TRUE where it does.
    */
   public static function declares(?Schema $node, string $id): bool {
-    return array_key_exists($id, static::model($node)['constraints'] ?? []);
+    return $node !== NULL && array_key_exists($id, NodeFacts::constraints($node));
   }
 
   /**
@@ -1366,7 +1385,7 @@ final class DefinitionSchema {
     if (is_array($checks) && array_key_exists($name, $checks)) {
       return $checks[$name];
     }
-    return static::model($node)['constraints'][$id] ?? NULL;
+    return $node === NULL ? NULL : NodeFacts::constraints($node)[$id] ?? NULL;
   }
 
   /**
@@ -1527,7 +1546,8 @@ final class DefinitionSchema {
    * `oneOf`, so its own constraints are stated as a value's are, and its
    * properties, `type`, `required` and `additionalProperties` are no part
    * of it. Made from the node alone: its title and description, and its
-   * MODEL `constraints` read as keywords() reads a value's constraints.
+   * merged constraints (NodeFacts::constraints()) read as keywords() reads
+   * a value's constraints.
    *
    * @param \PortableSchema\Builder\Schema $node
    *   The map's built node (of()).
@@ -1542,8 +1562,7 @@ final class DefinitionSchema {
         $value = $value->with($text, $node->get($text));
       }
     }
-    $model = static::model($node);
-    $value = Schemas::defaults($value, static::stated((array) ($model['constraints'] ?? []), NULL));
+    $value = Schemas::defaults($value, static::stated(NodeFacts::constraints($node), NULL));
     // What only the server checks, and the messages, come last, as the
     // read places them (build()).
     $checks = array_intersect_key($value->all(), array_flip([PortableKeywords::CHECK, PortableKeywords::MESSAGES]));

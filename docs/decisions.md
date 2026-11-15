@@ -4632,6 +4632,71 @@ byte, refusal or value changed.
   `ComputedKeysTest` show the node handed over is the key's: its title
   and its keywords.
 
+### The merged constraint list is derived
+
+Decided 2026-11-15. A node read from a definition held two lists of
+constraints in `x-surface-model`: `declared` (the definition's own, as
+stored) and `constraints` (what `getConstraints()` gives: the declared
+ones merged with the data type's defaults, which core's typed data
+manager supplies). The next parts build nodes from an authored `Schema`,
+with no definition and no service to ask for the defaults, so nothing
+could write `constraints` there. A scout over 145,560 nodes found the
+merged list is not read back from keywords alone (a bound's messages,
+numeric strings, order), but it is exactly the declared list, the
+type's defaults and `NotNull` where the key is required. So the merged
+list is now derived, and the member is kept only where the derivation
+does not give it. No served byte, refusal, message or value changed.
+
+- **The table.** `LeafTypes::DEFAULT_CONSTRAINTS` holds, by data type,
+  what `TypedDataManager::getDefaultConstraints()` gives a definition of
+  the type that is not required and has no `class` key: `PrimitiveType`
+  where the type's class is primitive, then the constraints the type's
+  plugin declares, in core's order. One row for each leaf type
+  (`string`, `uri`, `datetime_iso8601`, `integer`, `timestamp`,
+  `float`, `boolean`: `PrimitiveType`; `email`: `PrimitiveType` and
+  `Email`) and for `map`, `list` and `any` (none). It is static, so the
+  derivation needs no service. `DefaultConstraintsTest` holds every row
+  to the test site's typed data manager and fails with the type's name
+  when core or a module changes a type's defaults.
+- **One derivation, one reader.** `NodeFacts::derived()` merges as
+  `DataDefinition::getConstraints()` and `getDefaultConstraints()` do:
+  the declared list first, then each default and `NotNull` (where the
+  `required` member is set) whose id is not declared, so a declared
+  constraint wins and keeps its place; where the key is required, a
+  `NotBlank` among them allows NULL. It gives no answer for a type with
+  no row, or for a definition with a `class` key, whose class may add
+  `AllowedValues`. `NodeFacts::constraints()` answers the member where
+  the node holds it and the derivation where it does not, and it is the
+  one reader of the member: the check provider's two sites
+  (`isListedByChecks()`, `constraintMessage()`), `declares()`,
+  `options()`, `oneValue()`, `keywordsOf()`, `hasConstraints()` and the
+  inverse ask it.
+- **Where the member stays.** `DefinitionSchema::of()` writes
+  `constraints` only where `NodeFacts::derived()` of the node's other
+  members is not `getConstraints()` exactly, an empty list included:
+  a type with no row, a `class` key, a class whose `getConstraints()`
+  is its own, a typed data manager that gives a type other defaults
+  (a unit test's mock). This is the rule every member follows: a member
+  is on a node only where no other fact of the node holds it. Counts at
+  this part: none of 4,563 nodes of the development site (as user 1 and
+  anonymous, built and refined), none of 49,660 of the hand corpus and
+  of 1,665 of the door corpus, 1 of 19 of `HandBuiltSurfaces` (its
+  `decimal`), and 1 of the nodes `DefinitionRoundTripTest` reaches over
+  every example (1,105 before; the same `decimal`).
+- **The inverse.** `NodeDefinition::of()` still refuses a node whose
+  derived definition gives other constraints than the node was read
+  with. Where the member is on the node, the check is unchanged. Where
+  it is not, it compares the table's row with what the site's typed
+  data manager gives the type: the check `DefaultConstraintsTest` makes
+  on the test site, made on the site where the definition is derived.
+- **Not in this part.** Reading the merged list from an authored
+  node's keywords, and what an authored node's `declared` is; a bound's
+  own messages and a Regex message with a placeholder; numeric-string
+  bounds; a declared `NotNull` on an optional key; the order where a
+  mapped and an unmapped constraint interleave. `type` and
+  `definitionClass` stay members: they hold facts no keyword holds
+  (`timestamp` against `integer`, an empty map, a plain `any`).
+
 ### A key that does not apply
 
 A refiner says a key does not apply to the values it watches by

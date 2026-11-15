@@ -32,10 +32,16 @@ use PortableSchema\Builder\Schema;
  *   refused with a LogicException naming the type: the definition was read
  *   from another manager's definition (typed config's), which the node
  *   does not name. So is a node whose derived definition does not give
- *   the constraints the node was read with (its `constraints` member):
+ *   the constraints the node was read with (NodeFacts::constraints()):
  *   the type is core's, but the definition took its type's defaults from
  *   another manager (a typed config `text` where a module defines a typed
- *   data `text`).
+ *   data `text`). Where the node holds the `constraints` member (a type
+ *   with no row in LeafTypes::DEFAULT_CONSTRAINTS, such as `text`), that
+ *   is the list the definition read gave. Where it holds none, the list
+ *   is derived from the table, so the check compares the table's row with
+ *   what the site's typed data manager gives the type: the check
+ *   DefaultConstraintsTest makes on the test site, made here on the site
+ *   the node is derived on.
  * - It makes a new definition wherever the node holds a node: a list's
  *   item, a map's properties, a shape's, a config type's and `each`'s
  *   definition. Every other value is the object the node holds, which is
@@ -103,7 +109,7 @@ final class NodeDefinition {
       MapDataDefinition::class => static::properties(new MapDataDefinition($values), $node, $model),
       default => new DataDefinition($values),
     };
-    if ($derived->getConstraints() !== ($model['constraints'] ?? [])) {
+    if ($derived->getConstraints() !== NodeFacts::constraints($node)) {
       throw new \LogicException(sprintf('No definition of the %s type is derived from a node: core\'s typed data manager gives the type other constraints than the node was read with, so the definition was read from another manager\'s definition.', $type));
     }
     return $derived;

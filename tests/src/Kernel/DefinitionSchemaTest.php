@@ -16,6 +16,7 @@ use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\NodeType;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\LeafTypes;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Contract\Schemas;
@@ -174,12 +175,12 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $messages = $built->get(PortableKeywords::MESSAGES);
     $this->assertInstanceOf(TranslatableMarkup::class, $messages['check.drupal:Regex'] ?? NULL, 'A lazy message stays lazy.');
     $model = DefinitionSchema::model($built);
-    $this->assertSame(['type', 'constraints', 'declared'], array_keys($model), 'MODEL holds the members its definition states, in the order of MEMBERS.');
+    $this->assertSame(['type', 'declared'], array_keys($model), 'MODEL holds the members its definition states, in the order of MEMBERS: the merged constraint list is derived, so no `constraints` member.');
     $this->assertSame('string', $model['type'], 'MODEL holds the data type.');
     $this->assertFalse(Secrets::marked($built), 'A node says it is secret by writeOnly alone.');
     $this->assertStringNotContainsString('DataDefinition', serialize($model), 'A node holds no reference to its definition.');
-    $this->assertSame(array_keys($leaf->getConstraints()), array_keys($model['constraints']), 'Every declared constraint, the ones keywords state among them.');
-    $this->assertSame(['max' => 2], $model['constraints']['Length']);
+    $this->assertSame($leaf->getConstraints(), NodeFacts::constraints($built), 'Every declared constraint, the ones keywords state among them, and the type\'s default.');
+    $this->assertSame(['max' => 2], NodeFacts::constraints($built)['Length']);
     $this->assertSame($held['SurfaceUnique'], DefinitionSchema::options($built, 'SurfaceUnique'));
     $this->assertSame(['max' => 2], DefinitionSchema::options($built, 'Length'), 'A keyword-stated constraint runs with its own options.');
 
@@ -210,7 +211,8 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $this->assertSame([PortableKeywords::PROVIDER . 'LanguageExists' => []], $built->get(PortableKeywords::CHECK));
     $this->assertNull($built->get(PortableKeywords::MESSAGES), 'A check given no message holds none: its label is the projection\'s.');
     $this->assertSame(['type' => ['string', 'null']], static::json($this->definitions()->published($built->get('items'), $tags->getItemDefinition())), 'The item is a node of its own.');
-    $this->assertSame(['type', 'constraints'], array_keys(DefinitionSchema::model($built->get('items'))), 'The item states its data type and its type\'s constraints alone.');
+    $this->assertSame(['type'], array_keys(DefinitionSchema::model($built->get('items'))), 'The item states its data type alone: its type\'s constraints are derived from it.');
+    $this->assertSame(['PrimitiveType' => []], NodeFacts::constraints($built->get('items')));
     $this->assertSame([
       'title' => 'Tags',
       'type' => ['array', 'null'],

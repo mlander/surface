@@ -10,6 +10,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Contract\ContractBaselines;
 use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\NodeMessage;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Schemas;
@@ -250,9 +251,8 @@ class LocationNodeTest extends SurfaceKernelTestBase {
    *   Where, for the message.
    */
   protected function assertDeclaresTheDefinitionsConstraints(DataDefinitionInterface $definition, Schema $node, string $at): void {
-    $model = DefinitionSchema::model($node);
     $constraints = $definition->getConstraints();
-    $this->assertSame(array_keys($constraints), array_keys($model['constraints'] ?? []), "$at: every constraint the definition declares.");
+    $this->assertSame(array_keys($constraints), array_keys(NodeFacts::constraints($node)), "$at: every constraint the definition declares.");
     foreach ($constraints as $constraint => $options) {
       $constraint = (string) $constraint;
       $this->assertTrue(DefinitionSchema::declares($node, $constraint), "$at: $constraint");

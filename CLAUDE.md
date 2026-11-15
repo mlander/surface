@@ -666,7 +666,16 @@ the record of the rework that brought the module to the pattern.
   `DefinitionSchema::BRIDGES` the ones that go before the series
   closes): every fact of a `DataDefinition`, `ListDataDefinition` or
   `MapDataDefinition` a keyword does not hold, so the node is complete;
-  key order is no fact. `Contract\NodeDefinition::of()`, static and an
+  key order is no fact. The merged constraint list (`getConstraints()`)
+  is derived: `NodeFacts::constraints()` merges `declared`, the type's
+  row of `LeafTypes::DEFAULT_CONSTRAINTS` and `NotNull` where the key is
+  required, as core merges them, and every reader asks it; the
+  `constraints` member is written only where that derivation does not
+  give the list exactly (a type with no row, a `class` key), so no node
+  of the development site holds it (`DefaultConstraintsTest` holds the
+  table to the typed data manager;
+  `docs/decisions.md#the-merged-constraint-list-is-derived`).
+  `Contract\NodeDefinition::of()`, static and an
   edge, derives a definition of those three classes back from a node
   alone, equal to the one read, and refuses any other class and a data
   type core's typed data manager does not define as the node was read
@@ -1147,8 +1156,8 @@ test errored or failed and every gate passed.
   cache; it orders classes slowest first.
 
 On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-15: the
-full lane takes 15m33s at the defaults (phpunit 14m40s) and the fast
-lane 11m10s (phpunit 11m00s). As of 2026-10-23, with a smaller suite, the
+full lane takes 15m31s at the defaults (phpunit 14m45s) and the fast
+lane 8m59s (phpunit 8m53s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1179,7 +1188,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2576, Assertions: 102866, Errors: 0, Failures: 0, Skipped: 3. Classes: 365 of 365, 8 at a time, browser classes 4.
+phpunit: Tests: 2580, Assertions: 102963, Errors: 0, Failures: 0, Skipped: 3. Classes: 366 of 366, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1203,8 +1212,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2462, Assertions: 98312, Deprecations: 811, Skipped: 3. Classes:
-312, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2466, Assertions: 98409, Deprecations: 811, Skipped: 3. Classes:
+313, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 

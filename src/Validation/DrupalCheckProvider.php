@@ -16,6 +16,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Contract\ConstraintKeywords;
 use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Options\SurfaceOptions;
@@ -27,6 +28,7 @@ use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraintValidator;
 use Drupal\surface\ResourceBuild\KeepsRefines;
 use Drupal\surface\ResourceBuild\Location;
 use Drupal\surface\SurfaceInterface;
+use PortableSchema\Builder\Schema;
 use PortableSchema\Check\CheckProvider;
 use PortableSchema\Check\CheckRequest;
 use PortableSchema\Check\CheckResult;
@@ -287,7 +289,8 @@ final class DrupalCheckProvider implements CheckProvider {
    */
   public function isListedByChecks(string $pointer): bool {
     $listed = FALSE;
-    foreach (DefinitionSchema::model($this->at($pointer)['node'] ?? NULL)['constraints'] ?? [] as $id => $options) {
+    $node = $this->at($pointer)['node'] ?? NULL;
+    foreach ($node instanceof Schema ? NodeFacts::constraints($node) : [] as $id => $options) {
       if (!$this->options->readsAsList((string) $id, $options)) {
         continue;
       }
@@ -399,14 +402,14 @@ final class DrupalCheckProvider implements CheckProvider {
    */
   public function constraintMessage(string $location, array $ids, ?array $others = NULL): string|\Stringable|null {
     $place = $this->at($location);
-    $model = DefinitionSchema::model($place['node'] ?? NULL);
+    $node = $place['node'] ?? NULL;
     $definition = $place['definition'] ?? NULL;
     if ($place === NULL || $definition === NULL) {
       return NULL;
     }
     // Every constraint the place declares, the ones its keywords state
     // among them: a keyword's refusal is worded by its constraint.
-    $constraints = $model['constraints'] ?? [];
+    $constraints = $node instanceof Schema ? NodeFacts::constraints($node) : [];
     if ($others !== NULL) {
       $type = ['NotNull', 'PrimitiveType', 'ComplexData'];
       $ids = array_unique([...$ids, ...array_diff(array_map('strval', array_keys($constraints)), $others, $type)]);

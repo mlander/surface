@@ -73,19 +73,22 @@ class DefinitionReadIsPureTest extends UnitTestCase {
    * fingerprint(), comparable() and nestedNode(); 59 with the three steps
    * a reader takes on a node (propertyNode(), itemNode(), shapeNode()) and
    * model(); 60 with around(), a shell's own facts around its children's
-   * nodes (2026-11-14).
+   * nodes (2026-11-14); 61 with NodeFacts::derived(), which the read asks
+   * whether the merged constraint list is derived or kept as a member
+   * (part 32.5).
    */
-  protected const REACHED = 60;
+  protected const REACHED = 61;
 
   /**
    * How many methods the node readers reach, their entry points too.
    *
-   * NodeFacts's 35 public methods, and the 6 readers of DefinitionSchema
+   * NodeFacts's 36 public methods, and the 6 readers of DefinitionSchema
    * and Secrets they reach: model(), isLeaf(), isList(), classOf(),
    * implied() and Secrets::marked(). 20 before the validator's checks and
-   * the document's classes read nodes, with 14 public methods.
+   * the document's classes read nodes, with 14 public methods; 41 before
+   * NodeFacts::derived(), the merged constraint list (part 32.5).
    */
-  protected const NODE_READERS_REACHED = 41;
+  protected const NODE_READERS_REACHED = 42;
 
   /**
    * The types a reached method may not take: services and the request.

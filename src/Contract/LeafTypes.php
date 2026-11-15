@@ -110,6 +110,35 @@ final class LeafTypes {
   public const ANY = 'any';
 
   /**
+   * The constraints core gives a definition of each type, by type.
+   *
+   * What TypedDataManager::getDefaultConstraints() answers for a definition
+   * of the type that is not required and has no `class` key, in core's
+   * order: `PrimitiveType` where the type's class is primitive, then the
+   * constraints the type's plugin declares. One row for each type ROWS
+   * has a row for, and for `map`, `list` and `any`. Static, so a node's
+   * merged constraint list is derived with no service
+   * (NodeFacts::constraints()); DefaultConstraintsTest holds each row to
+   * the typed data manager, so a module that changes a type's defaults
+   * fails that test with the type's name.
+   *
+   * Decision: see docs/decisions.md#the-merged-constraint-list-is-derived.
+   */
+  public const DEFAULT_CONSTRAINTS = [
+    'string' => ['PrimitiveType' => []],
+    'email' => ['PrimitiveType' => [], 'Email' => []],
+    'uri' => ['PrimitiveType' => []],
+    'datetime_iso8601' => ['PrimitiveType' => []],
+    'integer' => ['PrimitiveType' => []],
+    'timestamp' => ['PrimitiveType' => []],
+    'float' => ['PrimitiveType' => []],
+    'boolean' => ['PrimitiveType' => []],
+    'map' => [],
+    'list' => [],
+    self::ANY => [],
+  ];
+
+  /**
    * Answers whether a type is a row.
    *
    * @param string $type

@@ -20,6 +20,7 @@ use Drupal\surface\Compute\MachineName;
 use Drupal\surface\Computed;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeDefinition;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\DefinitionTypedData;
 use Drupal\surface\Plugin\SurfaceWidget\StringWidget;
@@ -44,11 +45,13 @@ use PortableSchema\Builder\Schema;
  * DefinitionEqualityTrait's rules (class, toArray() as a map, the getters,
  * properties, item, every DefinitionMetadata getter; objects by
  * identity), it is a new object at every depth, and the node read from it
- * equals the node it was derived from; at every depth the node's
- * `constraints` member is getConstraints(). A node serialized and
- * unserialized derives a definition equal to `$d` with objects equal by
- * class and content. A definition of any other class, or of a type core's
- * typed data manager does not define as it was read, is refused.
+ * equals the node it was derived from; at every depth the node's merged
+ * constraint list (NodeFacts::constraints(): the `constraints` member
+ * where the node holds one, else derived) is getConstraints(). A node
+ * serialized and unserialized derives a definition equal to `$d` with
+ * objects equal by class and content. A definition of any other class,
+ * or of a type core's typed data manager does not define as it was read,
+ * is refused.
  *
  * Walked: every data surface of the 19 example modules and of
  * `surface_values_test` (its declarations and HandBuiltSurfaces), declared
@@ -140,6 +143,11 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
 
   /**
    * How often each member is on a node reached, at every depth.
+   *
+   * `constraints` is 1 (1,105 before part 32.5): the merged list is derived
+   * wherever the node's other members say it (NodeFacts::derived()), and
+   * the one node that holds it is HandBuiltSurfaces' `decimal`, a type
+   * with no row in LeafTypes::DEFAULT_CONSTRAINTS.
    */
   protected const MEMBERS = [
     'type' => 1625,
@@ -150,7 +158,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     'readOnly' => 0,
     'computed' => 0,
     'settings' => 101,
-    'constraints' => 1105,
+    'constraints' => 1,
     'declared' => 579,
     'default' => 12,
     'examples' => 0,
@@ -451,7 +459,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Lists where a node's `constraints` member is not its getConstraints().
+   * Lists where a node's merged constraint list is not getConstraints().
    *
    * At every depth: the item, each property, and the definitions a shape,
    * a config type and `each` hold, beside the nodes their members hold.
@@ -464,14 +472,14 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    *   Where, for the message.
    *
    * @return list<string>
-   *   Each place where the member, or [] where it is absent, is not
-   *   identical to getConstraints().
+   *   Each place where NodeFacts::constraints() is not identical to
+   *   getConstraints().
    */
   protected static function constraintsDifferences(DataDefinitionInterface $definition, Schema $node, string $at): array {
     $model = DefinitionSchema::model($node);
     $differ = [];
-    if (($model['constraints'] ?? []) !== $definition->getConstraints()) {
-      $differ[] = "$at: the constraints member is not getConstraints()";
+    if (NodeFacts::constraints($node) !== $definition->getConstraints()) {
+      $differ[] = "$at: the merged constraint list is not getConstraints()";
     }
     $pairs = [];
     if ($definition instanceof ListDataDefinitionInterface) {
