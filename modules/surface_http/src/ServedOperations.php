@@ -335,7 +335,7 @@ final class ServedOperations {
     if ($served->storage === NULL) {
       return [];
     }
-    return array_intersect_key($served->storage->load($served->surface), $served->surface->getDefinitions()->toArray());
+    return array_intersect_key($served->storage->load($served->surface), $served->surface->getDefinitions()->keys());
   }
 
   /**

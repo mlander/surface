@@ -1008,7 +1008,7 @@ final class OperationInputs {
    */
   protected function takesNoKeys(ResourceDefinition $resource, OperationDefinition $operation): bool {
     $context = $operation->needsNothing() ? $this->resources->operation($resource->name(), $operation->id) : new OperationContext($operation->contextId());
-    return $this->listed($resource, $context, TRUE)->getDefinitions()->toArray() === [];
+    return $this->listed($resource, $context, TRUE)->getDefinitions()->names() === [];
   }
 
   /**

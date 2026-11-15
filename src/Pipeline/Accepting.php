@@ -207,7 +207,7 @@ final class Accepting {
    */
   protected function acceptLevel(SurfaceInterface $surface, array $input, array $current, string $prefix): array {
     $definitions = $surface->getDefinitions();
-    $unknown = array_keys(array_diff_key($input, $definitions->toArray()));
+    $unknown = array_keys(array_diff_key($input, $definitions->keys()));
     if ($unknown !== []) {
       throw new UnknownKeysException(array_map('strval', $unknown), $prefix, $definitions->names());
     }
@@ -427,7 +427,7 @@ final class Accepting {
       $fallback = array_key_exists($name, $current) ? $current[$name] : NULL;
       return $this->acceptValue($entry->schema(), $entry->definition(), $input[$name], $fallback, $path);
     }
-    $value = $computed->value($name, $values, $current, $entry->definition(), $this->creates);
+    $value = $computed->value($name, $values, $current, $entry->schema(), $this->creates);
     $held = $this->acceptValue($entry->schema(), $entry->definition(), $value, $value, $path);
     if (!array_key_exists($name, $input) || $computed->takesSent()) {
       return $held;
@@ -1057,7 +1057,7 @@ final class Accepting {
     }
     $choices = [];
     if (is_string($value) && NodeFacts::hasConstraints($node)) {
-      $set = $this->options->resolve($definition);
+      $set = $this->options->resolve($definition, $node);
       $choices = $set === NULL ? [] : array_keys($set->options);
     }
     return Coercion::scalar($type, DefinitionSchema::declares($node, 'DateOnly'), $value, $choices);

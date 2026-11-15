@@ -119,12 +119,17 @@ final class SiteListBudget {
    *
    * @return bool
    *   TRUE for variants the site lists, and a map of keys from the site.
+   *   Whether an attached map is one is read from the form the entry
+   *   holds, so a node-first entry derives no definition for it.
    */
   public static function listedBySite(Entry $entry): bool {
     if ($entry->variants !== NULL) {
       return DefinitionMetadata::variantsListedBySite($entry->variants->shell);
     }
-    return $entry->attachment !== NULL && DefinitionMetadata::eachOf($entry->definition()) !== NULL;
+    if ($entry->attachment === NULL) {
+      return FALSE;
+    }
+    return $entry->isNodeFirst() ? NodeFacts::each($entry->schema()) !== NULL : DefinitionMetadata::eachOf($entry->definition()) !== NULL;
   }
 
   /**

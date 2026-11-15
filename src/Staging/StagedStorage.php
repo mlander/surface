@@ -203,11 +203,11 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
         return $this->current = [];
       }
       $this->address = StageRecord::address($entry);
-      return $this->current = array_intersect_key($this->readable($entry), $surface->getDefinitions()->toArray());
+      return $this->current = array_intersect_key($this->readable($entry), $surface->getDefinitions()->keys());
     }
     if ($entry !== NULL) {
       $this->token ??= $entry['token'];
-      $values = $entry['kind'] === 'delete' ? [] : array_intersect_key($this->readable($entry), $surface->getDefinitions()->toArray());
+      $values = $entry['kind'] === 'delete' ? [] : array_intersect_key($this->readable($entry), $surface->getDefinitions()->keys());
       return $this->current = $values;
     }
     $loaded = $this->adapter->load($surface);

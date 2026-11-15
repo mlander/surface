@@ -459,6 +459,23 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   }
 
   /**
+   * Gets the definition keys as the keys of an array, in declaration order.
+   *
+   * For the callers that hand the keys to an array function that reads
+   * keys alone: array_intersect_key() against stored values, above all.
+   * It asks no entry for its definition or its node.
+   *
+   * Decision: see
+   * docs/decisions.md#nothing-asks-for-a-definition-it-does-not-need.
+   *
+   * @return array<string, true>
+   *   Each key, mapped to TRUE.
+   */
+  public function keys(): array {
+    return array_fill_keys(array_keys($this->entries), TRUE);
+  }
+
+  /**
    * Returns whether a key's value is fixed by the data surface.
    *
    * @param string $name
@@ -712,9 +729,8 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   /**
    * Gets the definitions as a plain array, keyed by definition key.
    *
-   * For the callers that hand the whole group to an array function —
-   * array_intersect_key() against stored values, above all — where an
-   * object would have to be unpacked anyway.
+   * For the callers that read the definitions themselves. One that reads
+   * only the keys asks keys(), which asks no entry for its definition.
    *
    * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
    *   The definitions, in declaration order.

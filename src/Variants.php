@@ -187,7 +187,7 @@ final class Variants {
    *   The keys the variant does not take, in the value's order.
    */
   public function strangers(string $id, array $value): array {
-    $declared = $this->variant($id)->child->getDefinitions()->toArray();
+    $declared = $this->variant($id)->child->getDefinitions()->keys();
     return array_map('strval', array_keys(array_diff_key($value, $declared)));
   }
 

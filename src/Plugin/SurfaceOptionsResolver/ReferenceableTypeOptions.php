@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Drupal\surface\Plugin\SurfaceOptionsResolver;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Attribute\SurfaceOptionsResolver;
 use Drupal\surface\Options\SurfaceOptionsResolverBase;
 use Drupal\surface\Options\OptionSet;
 use Drupal\surface\Plugin\Validation\Constraint\ReferenceableTypeConstraint;
 use Drupal\surface\Reference\References;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Validator\Constraint;
 
@@ -73,7 +73,7 @@ final class ReferenceableTypeOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet {
+  public function resolve(Constraint $constraint, Schema $node): OptionSet {
     assert($constraint instanceof ReferenceableTypeConstraint);
     [$types, $cacheability] = $this->references->entityTypes($constraint->interface, $constraint->targets);
     return new OptionSet($types, [], $cacheability);

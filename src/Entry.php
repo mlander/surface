@@ -400,12 +400,31 @@ final class Entry {
   }
 
   /**
+   * Answers which form the entry holds as its source.
+   *
+   * For a reader that needs one fact and reads it from the form the entry
+   * holds, so it reads no node off a definition-first entry and derives
+   * no definition off a node-first one.
+   *
+   * Decision: see
+   * docs/decisions.md#nothing-asks-for-a-definition-it-does-not-need.
+   *
+   * @return bool
+   *   TRUE when its source gave the node (node-first), FALSE when its
+   *   source gave the definition.
+   */
+  public function isNodeFirst(): bool {
+    return $this->nodeFirst;
+  }
+
+  /**
    * Gets the key's Typed Data definition.
    *
-   * Asked for only where an edge needs a definition: the option resolver,
-   * a computed value, a refiner, a widget's claim, ConstraintRunner. A
-   * key's facts are read from its node (schema()), a key that holds a
-   * child frame's too.
+   * Asked for only where an edge needs a definition: the options
+   * service, a refiner, a widget's claim, ConstraintRunner. A key's facts
+   * are read from its node (schema()), a key that holds a child frame's
+   * too; a reader that needs one fact reads it from the form the entry
+   * holds (isNodeFirst()).
    *
    * On a node-first entry it is derived from the node on the first call
    * (NodeDefinition::of(), which asks core's typed data manager whether

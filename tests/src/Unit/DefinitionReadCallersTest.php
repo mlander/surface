@@ -12,12 +12,12 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * An entry holds its key's node (Entry::schema()), and a reader that
  * walks down from an entry walks the entry's node in step. What is left
- * calling DefinitionSchema::of(), head() or around() holds a definition no
- * entry holds. The list is pinned (CALLERS): a new caller changes it, and so
- * does a caller that moves to an entry's node. Each is a reader a later
- * slice moves. Comments are not read. What the scan cannot see: a call
- * from inside DefinitionSchema itself (a new public method there that
- * wraps of()), and a call through a callable string.
+ * calling DefinitionSchema::of(), head() or around() holds a definition
+ * no entry holds. The list is pinned (CALLERS): a new caller
+ * changes it, and so does a caller that moves to an entry's node. Each is
+ * a reader a later slice moves. Comments are not read. What the scan
+ * cannot see: a call from inside DefinitionSchema itself (a new public
+ * method there that wraps of()), and a call through a callable string.
  *
  * Entry::schema() asks no service: Entry's own code names no `Drupal::`
  * and no container.
@@ -70,6 +70,13 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *   (SurfaceInterface::getPortDefinition()), whose label a refusal
    *   names.
    *
+   * - src/Options/SurfaceOptions.php, of(): resolve() hands a resolver
+   *   the node of the definition it was handed, where its caller holds
+   *   no node, read when a resolver is about to be called (since
+   *   2026-11-15).
+   * - src/Resolve.php, of(): a resolved key's class is handed the node of
+   *   the key's definition; a key a mount holds has no entry of its own
+   *   (since 2026-11-15).
    * property() takes its node from its caller and reads nothing, so a
    * caller that stops handing an entry's node on has to call of() itself,
    * which this list then shows.
@@ -78,7 +85,9 @@ class DefinitionReadCallersTest extends UnitTestCase {
     'src/Contract/Conditionals.php' => ['of' => 1],
     'src/Contract/PropertySchema.php' => ['head' => 1, 'of' => 1],
     'src/Entry.php' => ['around' => 4, 'of' => 4],
+    'src/Options/SurfaceOptions.php' => ['of' => 1],
     'src/Pipeline/Validating.php' => ['of' => 1],
+    'src/Resolve.php' => ['of' => 1],
     'src/Tool/InputDefinitions.php' => ['of' => 2],
   ];
 

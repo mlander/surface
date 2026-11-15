@@ -3865,7 +3865,7 @@ final class Slugify implements ComputesValueInterface {
   /**
    * {@inheritdoc}
    */
-  public static function compute(array $from, ?DataDefinitionInterface $key = NULL): mixed {
+  public static function compute(array $from, ?Schema $key = NULL): mixed {
     $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower((string) ($from['label'] ?? ''))), '-');
     return $slug === '' ? NULL : $slug;
   }

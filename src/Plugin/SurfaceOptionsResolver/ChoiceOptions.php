@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Drupal\surface\Plugin\SurfaceOptionsResolver;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceOptionsResolver;
 use Drupal\surface\Options\SurfaceOptionsResolverBase;
 use Drupal\surface\Options\OptionSet;
 use Drupal\surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Choice;
 
@@ -50,7 +50,7 @@ final class ChoiceOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet {
+  public function resolve(Constraint $constraint, Schema $node): OptionSet {
     assert($constraint instanceof Choice);
     $options = [];
     foreach ($constraint->choices ?? [] as $choice) {

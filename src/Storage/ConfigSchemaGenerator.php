@@ -1405,7 +1405,7 @@ final class ConfigSchemaGenerator {
    */
   protected function installSpread(Entry $entry, DefinitionMap $map, array $existing, mixed $decided, string $at): array {
     $variants = $entry->variants;
-    $leftover = array_diff_key($existing, $map->toArray());
+    $leftover = array_diff_key($existing, $map->keys());
     $chosen = $variants->chosen($decided);
     $child = $chosen === NULL ? NULL : $variants->variant($chosen)->settledChild();
     $written = $child === NULL ? [] : $this->installMap($child->getDefinitions(), $child, $leftover, $at);

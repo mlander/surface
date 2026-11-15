@@ -7,6 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Compute\MachineName;
 use Drupal\surface\Computed;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Compute;
@@ -47,13 +48,14 @@ class MachineNameTest extends SurfaceKernelTestBase {
    * @param string|null $label
    *   The label.
    * @param \Drupal\Core\TypedData\DataDefinition|null $key
-   *   The computed key's definition; NULL for none.
+   *   The computed key's definition, whose node it is handed; NULL for
+   *   none.
    *
    * @return mixed
    *   The machine name, or NULL.
    */
   protected static function machineName(?string $label, ?DataDefinition $key = NULL): mixed {
-    return (new Computed(['label'], MachineName::class, Compute::UNLESS_SENT))->compute(['label' => $label], $key);
+    return (new Computed(['label'], MachineName::class, Compute::UNLESS_SENT))->compute(['label' => $label], $key === NULL ? NULL : DefinitionSchema::of($key));
   }
 
   /**

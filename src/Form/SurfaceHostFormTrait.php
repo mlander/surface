@@ -129,7 +129,7 @@ trait SurfaceHostFormTrait {
   protected function storedSurfaceValues(SurfaceInterface $surface): array {
     return array_intersect_key(
       $this->surfaceConfigurable()->getConfiguration(),
-      $surface->getDefinitions()->toArray(),
+      $surface->getDefinitions()->keys(),
     );
   }
 

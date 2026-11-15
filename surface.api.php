@@ -385,8 +385,9 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  * cache tags that invalidate it.
  *
  * Nothing about resources appears in a resolver's signature: it is handed a
- * constraint and a data definition, both core types, and answers with an option
- * set. A constraint never knows that resolvers exist.
+ * constraint and the node of the key it was declared on, whose standard
+ * keywords it may read with get(), and answers with an option set. A
+ * constraint never knows that resolvers exist.
  *
  * @code
  * #[SurfaceOptionsResolver(
@@ -396,7 +397,7 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  * )]
  * final class RoleExistsOptions extends SurfaceOptionsResolverBase {
  *
- *   public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet {
+ *   public function resolve(Constraint $constraint, Schema $node): OptionSet {
  *     $options = [];
  *     foreach ($this->roleStorage->loadMultiple() as $id => $role) {
  *       $options[$id] = $role->label();

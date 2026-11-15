@@ -314,21 +314,28 @@ final class InputDefinitions {
    *   when the site serves no API (surface_http is not installed).
    * @param string $pointer
    *   The JSON Pointer of the map in the values.
+   * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface|null $held
+   *   For a converted child, the definition its keys were converted from
+   *   (fromChild()): each key is asked of the options service as the
+   *   conversion asked it, so no child's key derives a definition of its
+   *   own. NULL at the top, whose keys are their entries' definitions.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The same map.
    */
-  public function withLookups(MapInputDefinition $map, SurfaceInterface $surface, ?string $lookup, string $pointer = ''): MapInputDefinition {
+  public function withLookups(MapInputDefinition $map, SurfaceInterface $surface, ?string $lookup, string $pointer = '', ?ComplexDataDefinitionInterface $held = NULL): MapInputDefinition {
     if ($this->references === NULL) {
       return $map;
     }
     $properties = $map->getPropertyDefinitions();
+    $converted = $held?->getPropertyDefinitions() ?? [];
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $property = $properties[$name] ?? NULL;
       $at = $pointer . '/' . str_replace(['~', '/'], ['~0', '~1'], (string) $name);
       $child = $entry->attachment?->child;
       if ($property instanceof MapInputDefinition && $child !== NULL) {
-        $this->withLookups($property, $child, $lookup, $at);
+        $map_definition = $converted[$name] ?? $entry->definition();
+        $this->withLookups($property, $child, $lookup, $at, $map_definition instanceof ComplexDataDefinitionInterface ? $map_definition : NULL);
         continue;
       }
       if (!$property instanceof DataDefinition) {
@@ -337,7 +344,7 @@ final class InputDefinitions {
       $node = $entry->schema();
       $target = References::targetIn($node);
       $bare = NodeFacts::setting($node, References::TARGETS) !== NULL;
-      if (($target === NULL || $this->options->resolve($entry->definition()) !== NULL) && !$bare) {
+      if (($target === NULL || $this->options->resolve($converted[$name] ?? $entry->definition(), $node) !== NULL) && !$bare) {
         continue;
       }
       // Whether a key lists its candidates depends on the limit, so the
@@ -715,7 +722,9 @@ final class InputDefinitions {
    */
   public function deferred(Entry $entry): bool {
     if (static::listedVariants($entry)) {
-      return DefinitionMetadata::variantsBy($entry->definition()) !== NULL;
+      // Read from the form the entry holds: a node-first entry derives no
+      // definition for one flag.
+      return ($entry->isNodeFirst() ? NodeFacts::variantsBy($entry->schema()) : DefinitionMetadata::variantsBy($entry->definition())) !== NULL;
     }
     return $this->over($entry);
   }
@@ -1783,7 +1792,7 @@ final class InputDefinitions {
     if ($optional && NodeFacts::isRequired($node) && !array_key_exists('NotNull', NodeFacts::declaredConstraints($node))) {
       unset($constraints['NotNull']);
     }
-    return $this->constraintsOf($constraints, $definition);
+    return $this->constraintsOf($constraints, $definition, $node);
   }
 
   /**
@@ -1793,6 +1802,8 @@ final class InputDefinitions {
    *   The constraints the key runs, its node's.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key's definition, which the options service is handed.
+   * @param \PortableSchema\Builder\Schema|null $node
+   *   The key's node, which the options service hands a resolver.
    *
    * @return array<string, mixed>
    *   The constraints, keyed by constraint name.
@@ -1800,9 +1811,9 @@ final class InputDefinitions {
    * @throws \LogicException
    *   When an option holds an object that has no scalar spelling.
    */
-  protected function constraintsOf(array $constraints, DataDefinitionInterface $definition): array {
+  protected function constraintsOf(array $constraints, DataDefinitionInterface $definition, ?Schema $node = NULL): array {
     if (!isset($constraints[self::CHOICE])) {
-      $set = $this->options->resolve($definition);
+      $set = $this->options->resolve($definition, $node);
       if ($set !== NULL && $set->options !== []) {
         $constraints[self::CHOICE] = ['choices' => array_keys($set->options)];
         // A list read from the site is in the definition until a tag it

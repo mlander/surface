@@ -145,9 +145,9 @@ trait SurfaceConfigurationTrait {
    */
   public function setConfiguration(array $configuration): static {
     $surface = $this->memoizedSurface();
-    $definitions = $surface->getDefinitions()->toArray();
+    $keys = $surface->getDefinitions()->keys();
     $pipeline = $this->surfacePipeline();
-    $values = $pipeline->accept($surface, array_intersect_key($configuration, $definitions));
+    $values = $pipeline->accept($surface, array_intersect_key($configuration, $keys));
     // The values are their own stored values here, and that is not a
     // trick: this method is how a host loads what storage holds, called
     // from inside a plugin constructor with the configuration the site
@@ -170,7 +170,7 @@ trait SurfaceConfigurationTrait {
     // A key that does not apply is left out of what accept() made of the
     // configuration, and kept as it was saved.
     // Decision: see docs/decisions.md#a-key-that-does-not-apply.
-    $this->configuration = $pipeline->kept($surface, $values, $configuration) + array_diff_key($configuration, $definitions);
+    $this->configuration = $pipeline->kept($surface, $values, $configuration) + array_diff_key($configuration, $keys);
     return $this;
   }
 

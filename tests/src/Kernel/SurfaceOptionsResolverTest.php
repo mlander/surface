@@ -6,8 +6,15 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Block\BlockPluginInterface;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\Options\OptionSet;
+use Drupal\surface\Options\SurfaceOptionsResolverInterface;
+use PortableSchema\Builder\Schema;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
+use Symfony\Component\Validator\Constraint;
+use Symfony\Component\Validator\Constraints\Choice;
 
 /**
  * Tests that option lists are derived from constraints, once.
@@ -245,6 +252,61 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
 
     $this->assertNull($this->options()->resolve($definition));
     $this->assertNull($this->options()->resolve(DataDefinition::create('string')));
+  }
+
+  /**
+   * Tests a resolver is handed the key's node, which it may read.
+   *
+   * Handed the definition alone, the service hands each resolver the node
+   * it reads from the definition: the title and the keywords the key
+   * declares. Handed the key's node as well, it hands that very node on.
+   */
+  public function testTheResolverIsHandedTheKeysNode(): void {
+    $recorder = new class () implements SurfaceOptionsResolverInterface {
+
+      /**
+       * The nodes handed, in order.
+       *
+       * @var \PortableSchema\Builder\Schema[]
+       */
+      public array $handed = [];
+
+      /**
+       * {@inheritdoc}
+       */
+      public function applies(Constraint $constraint): bool {
+        return $constraint instanceof Choice;
+      }
+
+      /**
+       * {@inheritdoc}
+       */
+      public function resolve(Constraint $constraint, Schema $node): OptionSet {
+        assert($constraint instanceof Choice);
+        $this->handed[] = $node;
+        return new OptionSet(array_combine($constraint->choices, $constraint->choices));
+      }
+
+    };
+    $options = $this->options();
+    (new \ReflectionProperty($options, 'resolvers'))->setValue($options, ['recorder' => $recorder]);
+    $definition = DataDefinition::create('string')
+      ->setLabel('Room')
+      ->addConstraint('Choice', ['choices' => ['east', 'west']])
+      ->addConstraint('Length', ['max' => 4]);
+
+    $this->assertSame(['east' => 'east', 'west' => 'west'], $options->resolve($definition)->options);
+    $this->assertCount(1, $recorder->handed);
+    $node = $recorder->handed[0];
+    $this->assertSame('Room', (string) $node->get('title'));
+    $this->assertSame(4, $node->get('maxLength'));
+    $this->assertSame(['string', 'null'], $node->get('type'), 'Not required, so it may be NULL.');
+    $this->assertTrue(DefinitionSchema::same(DefinitionSchema::of($definition), $node), 'Read, it is the definition\'s node.');
+
+    $entry = DefinitionMap::fromArrays(['room' => (clone $definition)->setLabel('Hall')])->entry('room');
+    $options->resolve($entry->definition(), $entry->schema());
+    $this->assertSame($entry->schema(), $recorder->handed[1], 'A caller that holds the key\'s node hands that node on.');
+    $this->assertSame('Hall', (string) $recorder->handed[1]->get('title'));
   }
 
 }

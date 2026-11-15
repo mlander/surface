@@ -150,7 +150,7 @@ trait SurfaceFormatterTrait {
   public function settingsForm(array $form, FormStateInterface $form_state): array {
     $surface = $this->getSurface();
     $builder = $this->surfaceFormBuilder();
-    $stored = array_intersect_key($this->getSettings(), $surface->getDefinitions()->toArray());
+    $stored = array_intersect_key($this->getSettings(), $surface->getDefinitions()->keys());
     $values = $this->surfaceFormValues($surface, $stored, $form_state);
     $field_name = $this->fieldDefinition->getName();
     $element = $builder->buildSurfaceForm(

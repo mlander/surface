@@ -7,6 +7,7 @@ namespace Drupal\surface;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Pipeline\PipelineGuard;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\ResourceBuild\RefinesInputRefiner;
@@ -128,7 +129,7 @@ final class Resolve {
         continue;
       }
       $using = $resolve->using;
-      $value = PipelineGuard::onBehalf(PipelineGuard::RESOLVE, $using, 'compute', static fn (): mixed => $using::compute($from, $definition));
+      $value = PipelineGuard::onBehalf(PipelineGuard::RESOLVE, $using, 'compute', static fn (): mixed => $using::compute($from, DefinitionSchema::of($definition)));
       NestedArray::setValue($values, explode('.', (string) $path), $value, TRUE);
     }
     foreach ($map->entries() as $name => $entry) {

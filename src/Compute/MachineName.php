@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Compute;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\ComputesValueInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Computes a machine name from a title, as core's machine name element does.
@@ -13,8 +13,8 @@ use Drupal\surface\Resource\ComputesValueInterface;
  * The stock class for a title and its machine name, `using:
  * MachineName::class` with `when: Compute::UNLESS_SENT`. The first key
  * `from:` names is transliterated, lowercased, each run of characters
- * outside `[a-z0-9_]` replaced by one underscore, cut to the key's Length
- * (166, a `machine_name`'s, when it states none) and trimmed of
+ * outside `[a-z0-9_]` replaced by one underscore, cut to the key's
+ * `maxLength` (166, a `machine_name`'s, when it states none) and trimmed of
  * underscores at both ends: the steps of core's `machine-name.js` with
  * its default `replace_pattern`, in its order, so the name the browser
  * suggests and the name the server computes for a call that leaves it
@@ -59,7 +59,7 @@ final class MachineName implements ComputesValueInterface {
   /**
    * {@inheritdoc}
    */
-  public static function compute(array $from, ?DataDefinitionInterface $key = NULL): mixed {
+  public static function compute(array $from, ?Schema $key = NULL): mixed {
     $source = reset($from);
     if (!is_scalar($source) || trim((string) $source) === '') {
       return NULL;
@@ -73,18 +73,15 @@ final class MachineName implements ComputesValueInterface {
   /**
    * Reads the longest machine name the key allows.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $key
-   *   The computed key.
+   * @param \PortableSchema\Builder\Schema|null $key
+   *   The computed key's node.
    *
    * @return int
-   *   Its Length's maximum, or MAX_LENGTH.
+   *   Its `maxLength`, a Length's maximum, or MAX_LENGTH.
    */
-  protected static function maxLength(?DataDefinitionInterface $key): int {
-    // As declared, not through getConstraints(), which asks typed data for
-    // the type's defaults: services this class may not reach.
-    $constraints = $key instanceof \ArrayAccess ? $key['constraints'] ?? [] : [];
-    $length = is_array($constraints) ? ($constraints['Length'] ?? NULL) : NULL;
-    $max = is_array($length) ? ($length['max'] ?? NULL) : NULL;
+  protected static function maxLength(?Schema $key): int {
+    // A standard keyword, read through get(): no service is asked.
+    $max = $key === NULL || $key->isBoolean() ? NULL : $key->get('maxLength');
     return is_numeric($max) && (int) $max > 0 ? (int) $max : self::MAX_LENGTH;
   }
 

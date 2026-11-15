@@ -3526,6 +3526,8 @@ refusal or value moved.
   the option resolver, a computed value, a refiner, a widget's claim,
   `ConstraintRunner`, and the own facts of a key that holds a child
   frame. A key's facts are read from its node (`Entry::schema()`).
+  Since 2026-11-15 a resolver and a computed value take the key's node
+  ([Nothing asks for a definition it does not need](#nothing-asks-for-a-definition-it-does-not-need)).
 - **One reader was not one for one.** `DefinitionMap::get()` read the
   property of an entry that may be missing and let `??` answer NULL; a
   method call on a missing entry would throw, so it asks the entry first
@@ -4308,7 +4310,9 @@ the two faults below, fixed on purpose.
   `withLookups()`, `ContractPanel::allows()`, `Extracting`,
   `PropertySchema`, `WidgetChoice::optionSet()`).
 - *`Computed::value()` and `ComputesValueInterface::compute()`* (15
-  implementers), and `Computed::of()` on a shell.
+  implementers), and `Computed::of()` on a shell. Both take the key's
+  node since 2026-11-15, as a resolver does
+  ([Nothing asks for a definition it does not need](#nothing-asks-for-a-definition-it-does-not-need)).
 - *The refiners* (`SurfaceRefinerInterface`, 13 implementers) and what a
   refinement writes (`Surface::refine()`, `DoesNotApply`, `Narrowing`,
   `DeclaredRefiner`, `Conditionals::appliedAt()`).
@@ -4482,6 +4486,151 @@ changed.
   (the tool door's collection copy, `withDefinition()`) derives each of
   its child's definitions once to compare it with its property (162,
   under `withLookups()`). In all 12,145 derivations against 13,285.
+
+### Nothing asks for a definition it does not need
+
+Decided 2026-11-15. A node-first entry (the test mode of
+[An entry holds the form its source gave](#an-entry-holds-the-form-its-source-gave))
+derived its definition 12,145 times over 262 operations of the
+development site as two accounts. Most of the askers did not need a
+definition: they wanted the key names, one flag, or a walk that looks
+for one setting. Once sources give nodes, each such derivation is paid
+in production. They now ask for what they want, and two contracts that
+were handed a definition nobody read take the key's node. No served
+byte, refusal or value changed.
+
+- **Key names are asked for as key names.** `DefinitionMap::keys()`
+  answers the keys, each mapped to TRUE, and asks no entry for its
+  definition or its node, so an `array_intersect_key()` or an
+  `array_diff_key()` stays one expression. The callers that read keys
+  alone ask it: `SurfaceHostTrait` (twice), `SurfaceConfigurationTrait`,
+  `PluginConfigurationStorage` (twice), `SurfaceHostFormTrait`,
+  `SurfaceOperationForm`, `SurfaceFieldTypeTrait`,
+  `SurfaceFormatterTrait`, `Accepting`, `Conforming`, `StagedStorage`
+  (twice), `StorageAdapter` (twice), `FlatVariantsLayout`,
+  `ConfigSchemaGenerator`, `ResourceOperationSchemaTool`, `Variants`,
+  and in `surface_http` `ServedOperations` and `ResourceApiController`.
+  `OperationInputs::takesNoKeys()` asks `names() === []`. Two callers
+  of `toArray()` read the definitions and keep it: the contract panel's
+  rows for a chosen variant (`ContractPanel`, whose status compares
+  each declared definition with the refined one) and
+  `StagedStorage::outputs()` (an output's data type casts a staged id;
+  reading the output's node would be a read the phase does not make).
+- **One flag is read from the form the entry holds.**
+  `Entry::isNodeFirst()` says which form the entry's source gave. A
+  reader that needs one fact reads it from that form: off a
+  definition-first entry from its definition, as before, so no node is
+  read; off a node-first entry from its node, so no definition is
+  derived. `SiteListBudget::listedBySite()` reads whether an attached
+  map is one of keys from the site (`each`) so, and the tool door's
+  `InputDefinitions::deferred()` whether variants are chosen by a key
+  (`variantsBy`).
+- **The widget walk walks the form the entry holds.**
+  `Resources::assertWidgetsDraw()` looks at every key, at any depth, for
+  a `widget` setting. One walk reads either form through one reader
+  (`keyAsked()`): a node-first entry is walked by its node, and its
+  definition is derived only when a key in it asks for a widget, since
+  the widget's claim takes a definition (`WidgetChoice::forDefinition()`
+  is handed the definition at the key's path). A definition-first entry
+  is walked by its definition: reading its node would be a read the
+  build does not make now. The definition branch goes when no source
+  makes a definition (parts 32.7 and 32.9). The refusal is the same in
+  either form, at any depth (`WidgetAskTest`).
+- **The tool door.** Its product is Tool API input and output
+  definitions, Typed Data by that API's contract. Its conversion
+  (`fromEntry()`, `fromChild()`, `fromVariants()`, `outputsFromSurface()`,
+  `OperationInputs::parameterInput()`) reads each key's facts from its
+  node and walks the definition in step only to hand each key's
+  definition to the options service, which takes one. That is the edge
+  doing its job and stays until the options service takes a node. What
+  moved: `deferred()` (one flag, above), and `withLookups()`, which
+  derived the definition of each key of an attached child to ask the
+  options service whether a reference key lists its candidates. It now
+  asks with the very definition the conversion handed the service for
+  that key (the attached map's property, `$held`), so the service's
+  identity memo answers it and no child's key derives a definition.
+- **The options service hands a resolver the key's node.**
+  `SurfaceOptionsResolverInterface::resolve(Constraint $constraint,
+  Schema $node)`: one signature, and every resolver changed with it
+  (the nine stock ones and the five of the example modules). No
+  resolver read the definition it was handed. `SurfaceOptions::resolve()`
+  takes the key's node beside the definition where its caller holds it
+  (`Validating`, `Accepting`, the tool door's `constraintsOf()` and
+  `withLookups()`), and hands that node on. Where a caller holds the
+  definition alone (the widget claims, core's options provider, the
+  form's extraction, the validator's sentences), the node is read from
+  the definition where a resolver is about to be called
+  (`DefinitionSchema::of()`): a definition no resolver answers for reads
+  none, and the service's memo by definition reads it once per
+  definition. The document's `listed()`, `optionSet()` and
+  `signature()` and the contract panel hand the node they hold.
+- **A computed key's class is handed the key's node.**
+  `ComputesValueInterface::compute(array $from, ?Schema $key = NULL)`,
+  and `Computed::value()` and `compute()` take the node where they took
+  the definition. Every caller holds the entry and hands its node
+  (`Computed::apply()`, `Validating`, `Accepting`). A resolved key's
+  class, called through the same interface by `Resolve`, is handed the
+  node read from the key's definition (`DefinitionSchema::of()`): a key
+  a mount holds has no entry of its own. Every computing
+  class changed: `MachineName`, the examples' `Slugify` and
+  `ManagedKeyValue`, and the seven of the test modules. `MachineName`
+  reads the key's `maxLength` (a Length's maximum) where it read the
+  Length declared on the definition. The phpstan fixture
+  `tests/fixtures/phpstan/ComputeFixture.php` keeps the old signature:
+  fixtures are not edited, and the rule test analyses only its rule.
+- **What a node promises.** A resolver and a computing class may read
+  the node's standard keywords through `get()`: its title, its type,
+  its bounds, the keywords JSON Schema names. What Surface keeps on a
+  node beyond them is not promised and may change. Part 32.9 promises a
+  refiner the same.
+- **What names Typed Data.** The two interfaces, the nine stock
+  resolvers, `MachineName`, the five example resolvers and the
+  examples' two computing classes no longer name Typed Data: 19 files
+  leave the footprint list (`TypedDataFootprintTest`, 150 to 131).
+- **What is left, and why.** An asker that needs the definition for an
+  edge keeps it: the tool door's conversion (the options service, above);
+  the emitter's outputs (`DocumentHead::outputs()` hands an output's
+  definition to `PropertySchema::property()`, for the widget claims and
+  the options service, part 32.5); the build's own making of a key's
+  definition from its child's (`Attachment::mapOf()`, parts 32.6 and
+  32.7); the copy a map of keys from the site keeps of the sibling key a
+  port reads (`Attaching::assertEachWiring()`, the ports edge).
+- **The first ask moves.** A node-first entry derives its definition on
+  the first ask and keeps it, so the instrument counts each derivation
+  against the first asker in a phase. The build's widget walk asked
+  first for nearly every entry, so the base table hid every asker behind
+  it. With the walk asking for few, those askers show: the emitter
+  (`ContractEmitter::frame()`), refinement and its defaults (`Surface`),
+  the accept, the reference and flat-variants storage layouts, and the
+  build's own `Attachment::mapOf()`. Each hands the definition on to an
+  edge in the same phase (part 32.5), is refinement (part 32.8), or is a
+  storage layout reader kept on definitions since slice 31b. Total
+  derivations fall from 12,145 to 11,308; the widget walk derives 602
+  (from 8,725), `toArray()` none (from 1,332, all `takesNoKeys()`), the
+  site list budget none (from 636), the tool door's lookups none (from
+  162).
+- **The proof.** On the development site, both sides recorded in one
+  sitting (the base a copy of the module before this part, loaded over
+  the tree): 39,109 and 3,737 value cases, 684 and 364 documents, the
+  narrowed, anonymous and corpus records, and 8,344 door digests, none
+  differs; the value cases also equal the base recorded before the first
+  edit. Nodes read per phase are the same in the default mode but in
+  three: the build 0 to 12, boot and other one more each, every one the
+  options service reading a key's node for a resolver where a widget's
+  claim held the definition alone (`WidgetChoice::optionSet()`). By sum
+  of minimums over 171 operations, 12 alternating rounds, assertions
+  off, every phase was within -2.4 and +1.2 percent, and the tool
+  definitions' rebuild +1.6 percent, before the node was read at the
+  resolver's call. In the node-first mode against
+  the default mode, the build is 16.6 percent slower (26.2 before this
+  part) and the tool definitions' rebuild 8.2 percent faster (40 percent
+  slower before). The node-first mode's test classes give the same
+  results as before. `DefinitionMapTest` proves `keys()` derives
+  nothing; `WidgetAskTest` refuses a widget asked for below a key alike
+  in either form, and shows a node-first build derives a definition only
+  for the keys that ask; `SurfaceOptionsResolverTest` and
+  `ComputedKeysTest` show the node handed over is the key's: its title
+  and its keywords.
 
 ### A key that does not apply
 
@@ -6134,6 +6283,10 @@ guard admits `transliteration` to `MachineName` by name, a function of a
 string and a language code that reads no site state, and refuses every
 other service to every class as before
 ([A machine name is a computed identity](#a-machine-name-is-a-computed-identity)).
+Since 2026-11-15 the class is handed the key's node,
+`compute(array $from, ?Schema $key = NULL)`, its standard keywords read
+with `get()`
+([Nothing asks for a definition it does not need](#nothing-asks-for-a-definition-it-does-not-need)).
 
 ### A machine name is a computed identity
 
@@ -6193,7 +6346,8 @@ Five parts, each an existing mechanism:
   `replace_pattern`, in its order, so the name the browser suggests and
   the name the server computes for a call that leaves the key out are
   one name. "Café Déjà Vu" is `cafe_deja_vu`. It reads the key's Length
-  from the key's own definition, which `compute()` is handed. The guard
+  from the key's own definition, which `compute()` is handed (since
+  2026-11-15 the key's node, whose `maxLength` it reads). The guard
   admits one service to this one class by name, `transliteration`
   (`PipelineGuard::COMPUTE_ALLOWED`, and the same list in the PHPStan
   rule): transliteration is a function of a string and a language code

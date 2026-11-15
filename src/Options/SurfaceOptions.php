@@ -8,7 +8,9 @@ use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Pipeline\PipelineGuard;
+use PortableSchema\Builder\Schema;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Choice;
@@ -114,13 +116,23 @@ final class SurfaceOptions {
    * Validation still sees the same constraint and refuses on its own
    * terms.
    *
+   * Each resolver is handed the key's node. A caller that holds it hands
+   * it on; for one that holds the definition alone, the node is read from
+   * the definition when a resolver is first about to be called
+   * (DefinitionSchema::of()). A definition no resolver answers for costs
+   * no read, and the memo above makes the read once per definition.
+   *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to read.
+   * @param \PortableSchema\Builder\Schema|null $node
+   *   The definition's node, when the caller holds it: its entry's, or the
+   *   node the entry's node holds for it. NULL to have it read when a
+   *   resolver is called.
    *
    * @return \Drupal\surface\Options\OptionSet|null
    *   The allowed values, or NULL when no constraint names a list.
    */
-  public function resolve(DataDefinitionInterface $definition): ?OptionSet {
+  public function resolve(DataDefinitionInterface $definition, ?Schema $node = NULL): ?OptionSet {
     if ($this->resolved->offsetExists($definition)) {
       return $this->resolved[$definition] ?: NULL;
     }
@@ -134,7 +146,8 @@ final class SurfaceOptions {
         continue;
       }
       foreach ($this->readers($constraint) as $resolver) {
-        $set = PipelineGuard::onBehalf(PipelineGuard::OPTIONS, get_class($resolver), 'resolve', static fn (): OptionSet => $resolver->resolve($constraint, $definition));
+        $node ??= DefinitionSchema::of($definition);
+        $set = PipelineGuard::onBehalf(PipelineGuard::OPTIONS, get_class($resolver), 'resolve', static fn (): OptionSet => $resolver->resolve($constraint, $node));
         $resolved = $resolved === NULL ? $set : $resolved->intersect($set);
       }
     }

@@ -242,8 +242,7 @@ final class Validating {
       // on, each ask reads the definition again. A key that holds a child
       // frame composes its node of the child's entries' nodes, so its own
       // facts are read from it as any key's. The definition is handed on
-      // where a contract still takes one: the options service and a
-      // computed key's value.
+      // where a contract still takes one: the options service.
       // Decision: see
       // docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
       $definition = $entry->definition();
@@ -397,9 +396,10 @@ final class Validating {
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface the key belongs to.
    * @param \Drupal\surface\Entry $entry
-   *   The computed key, whose definition its value is computed with.
+   *   The computed key.
    * @param \PortableSchema\Builder\Schema $node
-   *   Its node, which its label and the accept are read from.
+   *   Its node, which its value is computed with and its label and the
+   *   accept are read from.
    * @param \Drupal\surface\Computed $computed
    *   What it is computed from.
    * @param array $values
@@ -412,7 +412,7 @@ final class Validating {
    */
   protected function notComputed(SurfaceInterface $surface, Entry $entry, Schema $node, Computed $computed, array $values, array $current): ?Violation {
     $name = $entry->name;
-    $held = $computed->value($name, $values, $current, $entry->definition(), $this->creates);
+    $held = $computed->value($name, $values, $current, $node, $this->creates);
     try {
       $held = $this->accepting->acceptValue($node, $entry->definition(), $held, $held, $name);
     }
@@ -484,9 +484,10 @@ final class Validating {
    * @param string $key
    *   The key.
    * @param \PortableSchema\Builder\Schema $node
-   *   Its node, which the accept reads (Accepting::acceptValue()).
+   *   Its node, which its value is computed with and the accept reads
+   *   (Accepting::acceptValue()).
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   Its definition, which its value is computed with.
+   *   Its definition, which the accept reads.
    * @param \Drupal\surface\Computed $computed
    *   What it is computed from.
    * @param array $values
@@ -502,7 +503,7 @@ final class Validating {
     if ($values === []) {
       return FALSE;
     }
-    $held = $computed->value($key, $values, $current, $definition);
+    $held = $computed->value($key, $values, $current, $node);
     try {
       $held = $this->accepting->acceptValue($node, $definition, $held, $held, $key);
     }
@@ -866,7 +867,7 @@ final class Validating {
     if (!is_scalar($default)) {
       return $this->t('@label cannot be cleared: it always holds a value. Leave it out to keep what it holds.', ['@label' => $label]);
     }
-    $set = $this->options->resolve($definition);
+    $set = $this->options->resolve($definition, $node);
     $value = is_bool($default) ? (int) $default : $default;
     $context = ['context' => SurfacePipeline::REFUSAL_CONTEXT];
     if (is_bool($default) && !($set !== NULL && isset($set->options[$value]))) {
@@ -1470,7 +1471,7 @@ final class Validating {
         return FALSE;
       }
     }
-    $set = $this->options->resolve($definition);
+    $set = $this->options->resolve($definition, $node);
     return $set !== NULL && !$set->allows($value);
   }
 

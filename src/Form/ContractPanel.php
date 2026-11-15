@@ -413,7 +413,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    */
   protected function allows(DataDefinitionInterface $definition, ?Schema $node = NULL): string {
     $phrases = [];
-    $set = $this->options->resolve($definition);
+    $set = $this->options->resolve($definition, $node);
     if ($set !== NULL) {
       $phrases[] = (string) $this->t('one of @values', [
         '@values' => implode(', ', array_map('strval', $set->options)),

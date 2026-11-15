@@ -66,14 +66,14 @@ final class PluginConfigurationStorage implements SurfaceStorageInterface {
    * {@inheritdoc}
    */
   public function load(SurfaceInterface $surface): array {
-    return array_intersect_key($this->plugin->getConfiguration(), $surface->getDefinitions()->toArray());
+    return array_intersect_key($this->plugin->getConfiguration(), $surface->getDefinitions()->keys());
   }
 
   /**
    * {@inheritdoc}
    */
   public function prepare(SurfaceInterface $surface, array $values): PreparedValues {
-    $host_keys = array_diff_key($this->plugin->getConfiguration(), $surface->getDefinitions()->toArray());
+    $host_keys = array_diff_key($this->plugin->getConfiguration(), $surface->getDefinitions()->keys());
     // A plugin reads its configuration whole, so every key it declares is
     // there: a default the pipeline did not write, since the
     // configuration never held it, is filled in here.

@@ -7,11 +7,11 @@ namespace Drupal\surface\Plugin\SurfaceOptionsResolver;
 use CommerceGuys\Addressing\Country\CountryRepositoryInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Attribute\SurfaceOptionsResolver;
 use Drupal\surface\Options\SurfaceOptionsResolverBase;
 use Drupal\surface\Options\OptionSet;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Validator\Constraint;
 
@@ -100,7 +100,7 @@ final class CountryOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet {
+  public function resolve(Constraint $constraint, Schema $node): OptionSet {
     // The constraint class is the address module's, and nothing here
     // names it: applies() has already established that this constraint
     // is one, and reading the option it declares needs no more than

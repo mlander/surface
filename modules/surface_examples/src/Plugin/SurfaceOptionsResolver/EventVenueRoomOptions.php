@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Drupal\surface_examples\Plugin\SurfaceOptionsResolver;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Attribute\SurfaceOptionsResolver;
 use Drupal\surface\Options\SurfaceOptionsResolverBase;
 use Drupal\surface\Options\OptionSet;
 use Drupal\surface_examples\Plugin\Validation\Constraint\EventVenueRoomConstraint;
 use Drupal\surface_examples\VenueChoices;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Validator\Constraint;
 
@@ -70,7 +70,7 @@ final class EventVenueRoomOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet {
+  public function resolve(Constraint $constraint, Schema $node): OptionSet {
     assert($constraint instanceof EventVenueRoomConstraint);
     return new OptionSet($this->choices->rooms($constraint->venue), [], $this->choices->cacheability());
   }

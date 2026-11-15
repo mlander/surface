@@ -138,9 +138,13 @@ class TypedDataFootprintTest extends UnitTestCase {
    * a key's facts) and Pipeline/Outbound.php (it reads secrets and a
    * datetime's type from an entry's node) name no Typed Data. Lowered on
    * 2026-11-14 to 150: Form/SurfaceFormatterTrait.php reads a key's label
-   * and properties from its entry's node.
+   * and properties from its entry's node. Lowered on 2026-11-15 to 131: an
+   * options resolver and the class computing a key are handed the key's
+   * node, so SurfaceOptionsResolverInterface, ComputesValueInterface, the
+   * nine stock resolvers, MachineName, the five example resolvers and the
+   * two example computing classes name no Typed Data.
    */
-  public const OUTSIDE_THE_EDGES = 150;
+  public const OUTSIDE_THE_EDGES = 131;
 
   /**
    * Finds the files that use Typed Data.

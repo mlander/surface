@@ -1374,13 +1374,17 @@ final class DefinitionSchema {
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key.
+   * @param \PortableSchema\Builder\Schema|null $node
+   *   Its node, where the caller holds it, which the options service hands
+   *   a resolver: of its item for a list.
    *
    * @return bool
    *   TRUE where the options service resolves a set for it, of its item
    *   for a list.
    */
-  public function listed(DataDefinitionInterface $definition): bool {
-    return $this->options->resolve($definition instanceof ListDataDefinitionInterface ? $definition->getItemDefinition() : $definition) !== NULL;
+  public function listed(DataDefinitionInterface $definition, ?Schema $node = NULL): bool {
+    $list = $definition instanceof ListDataDefinitionInterface;
+    return $this->options->resolve($list ? $definition->getItemDefinition() : $definition, $list && $node !== NULL ? static::itemNode($node) : $node) !== NULL;
   }
 
   /**
@@ -1476,7 +1480,7 @@ final class DefinitionSchema {
     $read = $node;
     $map = static::nodeIsMap($read);
     if ($map) {
-      $listed ??= $this->listed($definition);
+      $listed ??= $this->listed($definition, $read);
     }
     if ($map && $listed) {
       $node = static::oneValue($node);
@@ -1493,7 +1497,7 @@ final class DefinitionSchema {
     }
     // A list's own checks and a map's are never stated by a list of its
     // values, so the options service is asked only for a value's.
-    $listed = $value && ($listed ?? $this->listed($definition));
+    $listed = $value && ($listed ?? $this->listed($definition, $read));
     $node = $this->publishedChecks(static::publishedTexts($node), $map, $listed);
     return $node->has(self::MODEL) ? $node->without(self::MODEL) : $node;
   }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples_keys\Compute;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\ComputesValueInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 14: a managed key's value, for the key that names it.
@@ -26,7 +26,7 @@ final class ManagedKeyValue implements ComputesValueInterface {
    *   The value of the key `key_id` names, or NULL for a name the site
    *   does not manage.
    */
-  public static function compute(array $from, ?DataDefinitionInterface $key = NULL): mixed {
+  public static function compute(array $from, ?Schema $key = NULL): mixed {
     $id = $from['key_id'] ?? NULL;
     // A resolve runs at use, so reading the store the value is kept in is
     // what it is for; a computed key's class may not.

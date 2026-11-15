@@ -424,7 +424,7 @@ final class PropertySchema {
     $shown = $value;
     $list = DefinitionSchema::isList($node);
     $item = $list ? static::itemDefinition($definition, $path) : NULL;
-    $set = $this->optionSet($item ?? $definition, $cacheability);
+    $set = $this->optionSet($item ?? $definition, $cacheability, $item === NULL ? $node : DefinitionSchema::itemNode($node));
     // A list of no values is still a list: a select offering nothing.
     // Decision: see docs/decisions.md#a-key-that-does-not-apply.
     $listed = $set !== NULL;
@@ -1038,12 +1038,15 @@ final class PropertySchema {
    *   The definition.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects the list's cacheability.
+   * @param \PortableSchema\Builder\Schema|null $node
+   *   The definition's node, where the caller holds it, which the options
+   *   service hands a resolver.
    *
    * @return \Drupal\surface\Options\OptionSet|null
    *   The set, or NULL when the definition names no list.
    */
-  public function optionSet(DataDefinitionInterface $definition, CacheableMetadata $cacheability): ?OptionSet {
-    $set = $this->options->resolve($definition);
+  public function optionSet(DataDefinitionInterface $definition, CacheableMetadata $cacheability, ?Schema $node = NULL): ?OptionSet {
+    $set = $this->options->resolve($definition, $node);
     if ($set !== NULL) {
       $cacheability->addCacheableDependency($set);
     }
@@ -1070,7 +1073,7 @@ final class PropertySchema {
    */
   public function signature(Schema $node, DataDefinitionInterface $definition): string {
     $list = DefinitionSchema::isList($node);
-    $set = $this->options->resolve($list ? static::itemDefinition($definition, '') : $definition);
+    $set = $this->options->resolve($list ? static::itemDefinition($definition, '') : $definition, $list ? DefinitionSchema::itemNode($node) : $node);
     $properties = [];
     if (is_a(DefinitionSchema::classOf($node), ComplexDataDefinitionInterface::class, TRUE)) {
       foreach (NodeFacts::properties($node) as $name => $property) {

@@ -435,7 +435,7 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
     $child = $chosen === NULL || $gathered === [] ? NULL : $variants->variant($chosen)->child;
     // What another variant wrote is left out, but for the secrets the
     // pipeline keeps beside the chosen keys.
-    $held = $child === NULL ? $gathered : array_intersect_key($gathered, $child->getDefinitions()->toArray() + $variants->keptSecrets((string) $chosen, $gathered));
+    $held = $child === NULL ? $gathered : array_intersect_key($gathered, $child->getDefinitions()->keys() + $variants->keptSecrets((string) $chosen, $gathered));
     // The key stands where the first key gathered under it stood, or,
     // with nothing of it stored, after the owner's keys declared before
     // it.

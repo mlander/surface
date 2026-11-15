@@ -157,7 +157,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
     // Read back before anything is narrowed to the data surface's keys: a
     // variant's keys stored flat are none of them until they are gathered.
     $loaded = self::asked($surface, $this->loaded($this->context), $this->flatLayout($surface));
-    $values = array_intersect_key($loaded, $surface->getDefinitions()->toArray());
+    $values = array_intersect_key($loaded, $surface->getDefinitions()->keys());
     $values = $this->referenceLayout($surface)?->fromStorage($values) ?? $values;
     foreach ($this->routes as $key => $routes) {
       $entry = $surface->getDefinitions()->entry($key);
@@ -449,7 +449,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    *   a data surface that declares none.
    */
   public function outputs(SurfaceInterface $surface, array $values, ?PreparedValues $prepared = NULL): array {
-    $outputs = $surface->getOutputDefinitions()->toArray();
+    $outputs = $surface->getOutputDefinitions()->keys();
     if ($outputs === []) {
       return [];
     }

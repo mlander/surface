@@ -10,6 +10,7 @@ use Drupal\surface\DefinitionMap;
 use Drupal\surface\Entry;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests the collection a data surface is sealed with.
@@ -42,7 +43,31 @@ class DefinitionMapTest extends UnitTestCase {
     $this->assertSame(['zebra', 'aardvark', 'moose'], $map->names());
     $this->assertSame(['zebra', 'aardvark', 'moose'], array_keys(iterator_to_array($map)));
     $this->assertSame(['zebra', 'aardvark', 'moose'], array_keys($map->toArray()));
+    $this->assertSame(['zebra', 'aardvark', 'moose'], array_keys($map->keys()));
     $this->assertCount(3, $map);
+  }
+
+  /**
+   * Tests the keys reader answers a node-first map without a definition.
+   *
+   * A caller that reads the keys alone asks keys(): no entry of a
+   * node-first map derives its definition (NodeDefinition::of()) for it,
+   * and the keys come in declaration order, each TRUE.
+   */
+  public function testKeysDeriveNoDefinition(): void {
+    $map = new DefinitionMap([
+      Entry::ofSchema('zebra', Schema::keywords(['type' => 'string'])),
+      Entry::ofSchema('aardvark', Schema::keywords(['type' => 'integer'])),
+    ]);
+
+    $this->assertSame(['zebra' => TRUE, 'aardvark' => TRUE], $map->keys());
+    $this->assertSame(['moose' => 2], array_diff_key(['zebra' => 1, 'moose' => 2], $map->keys()), 'It serves array_diff_key() as the definitions did.');
+    $derived = new \ReflectionProperty(Entry::class, 'definition');
+    foreach ($map->entries() as $name => $entry) {
+      $this->assertTrue($entry->isNodeFirst());
+      $this->assertNull($derived->getValue($entry), sprintf('The "%s" entry derived no definition.', $name));
+    }
+    $this->assertSame([], (new DefinitionMap([]))->keys());
   }
 
   /**

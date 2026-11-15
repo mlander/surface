@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Options;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\Validator\Constraint;
 
 /**
@@ -26,14 +26,17 @@ interface SurfaceOptionsResolverInterface {
    * Reads a constraint as a list of allowed values.
    *
    * @param \Symfony\Component\Validator\Constraint $constraint
-   *   The constraint, instantiated from the definition.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition the constraint was declared on, for resolvers that
-   *   need the surrounding context.
+   *   The constraint, instantiated from the key's constraints.
+   * @param \PortableSchema\Builder\Schema $node
+   *   The node of the key the constraint was declared on, for a resolver
+   *   that needs the surrounding context. What it promises is the
+   *   standard keywords, read through get(): its title, its type, its
+   *   bounds. What Surface keeps on a node beyond them is not promised
+   *   and may change.
    *
    * @return \Drupal\surface\Options\OptionSet
    *   The allowed values with their labels and cacheability.
    */
-  public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet;
+  public function resolve(Constraint $constraint, Schema $node): OptionSet;
 
 }

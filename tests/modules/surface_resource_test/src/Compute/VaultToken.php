@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Compute;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\ComputesValueInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A relay's token, for the vault entry that names it.
@@ -25,7 +25,7 @@ final class VaultToken implements ComputesValueInterface {
   /**
    * {@inheritdoc}
    */
-  public static function compute(array $from, ?DataDefinitionInterface $key = NULL): mixed {
+  public static function compute(array $from, ?Schema $key = NULL): mixed {
     return self::TOKENS[$from['vault_id'] ?? ''] ?? NULL;
   }
 

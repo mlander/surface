@@ -7,12 +7,12 @@ namespace Drupal\surface_examples_plugins\Plugin\SurfaceOptionsResolver;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Attribute\SurfaceOptionsResolver;
 use Drupal\surface\Options\SurfaceOptionsResolverBase;
 use Drupal\surface\Options\OptionSet;
 use Drupal\surface_examples_plugins\Plugin\Validation\Constraint\BundleFieldConstraint;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Validator\Constraint;
 
@@ -70,7 +70,7 @@ final class BundleFieldOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet {
+  public function resolve(Constraint $constraint, Schema $node): OptionSet {
     assert($constraint instanceof BundleFieldConstraint);
     $options = [];
     foreach ($this->entityFieldManager->getFieldDefinitions($constraint->entityTypeId, $constraint->bundle) as $name => $field) {

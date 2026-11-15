@@ -197,19 +197,26 @@ the `#[SurfaceOptionsResolver]` attribute, which names the validation
 constraint plugin the resolver reads.
 
 ```php
+use PortableSchema\Builder\Schema;
 use Symfony\Component\Validator\Constraint;
 
 public function applies(Constraint $constraint): bool;
-public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet;
+public function resolve(Constraint $constraint, Schema $node): OptionSet;
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 Nothing about resources or structures appears in either signature: a
-resolver is handed a constraint and a data definition, both core types,
-and answers with an `OptionSet`: allowed values as keys mapped to their
-labels, optional per-value descriptions, and a `CacheableMetadata`
-saying how long the answer may be reused.
+resolver is handed a constraint and the node of the key it was declared
+on, and answers with an `OptionSet`: allowed values as keys mapped to
+their labels, optional per-value descriptions, and a `CacheableMetadata`
+saying how long the answer may be reused. What the node promises is its
+standard keywords, read with `get()`: `$node->get('title')`, its type,
+its bounds. What Surface keeps on a node beyond them is not promised.
+No stock resolver reads the node. Where the caller holds the key's node
+it is handed on; otherwise it is read from the definition when a
+resolver is about to be called
+(why: [decision](decisions.md#nothing-asks-for-a-definition-it-does-not-need)).
 
 `SurfaceOptionsResolverBase` answers `applies()` from the declared
 constraint plugin id: the resolver serves that constraint's class and
@@ -221,9 +228,12 @@ resolver did not exist.
 ### The service
 
 `surface.options` (`Options\SurfaceOptions`) is what consumers
-call. `resolve(DataDefinitionInterface $definition): ?OptionSet` walks
-the definition's constraints, asks each resolver, and answers with the
-list, or `NULL` when no constraint on the definition names one.
+call. `resolve(DataDefinitionInterface $definition, ?Schema $node = NULL): ?OptionSet`
+walks the definition's constraints, asks each resolver, and answers with
+the list, or `NULL` when no constraint on the definition names one. A
+caller that holds the key's node hands it, and each resolver is handed
+that node; otherwise the node is read from the definition when a
+resolver first reads it.
 
 When more than one constraint resolves, the answer is their
 **intersection**, because every constraint on a definition has to hold at
@@ -528,7 +538,7 @@ as stored, as any stored value the list no longer offers
 )]
 final class RoleExistsOptions extends SurfaceOptionsResolverBase {
 
-  public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet {
+  public function resolve(Constraint $constraint, Schema $node): OptionSet {
     $options = [];
     foreach ($this->roleStorage->loadMultiple() as $id => $role) {
       $options[$id] = $role->label();

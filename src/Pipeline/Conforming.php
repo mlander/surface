@@ -72,7 +72,7 @@ final class Conforming {
     // before anything else looks at the array.
     $output = NotEmitted::strip($output);
     $errors = [];
-    foreach (array_keys(array_diff_key($output, $definitions->toArray())) as $unknown) {
+    foreach (array_keys(array_diff_key($output, $definitions->keys())) as $unknown) {
       $errors[] = new Violation((string) $unknown, '', $this->t('Unknown output key @key.', [
         '@key' => $unknown,
       ]), Violation::UNKNOWN_KEY);

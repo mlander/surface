@@ -9,11 +9,11 @@ use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Extension\Plugin\Validation\Constraint\ExtensionExistsConstraint;
 use Drupal\Core\Extension\ThemeHandlerInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Attribute\SurfaceOptionsResolver;
 use Drupal\surface\Options\SurfaceOptionsResolverBase;
 use Drupal\surface\Options\OptionSet;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Validator\Constraint;
 
@@ -77,7 +77,7 @@ final class ExtensionExistsOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet {
+  public function resolve(Constraint $constraint, Schema $node): OptionSet {
     assert($constraint instanceof ExtensionExistsConstraint);
     $options = [];
     if ($constraint->type === 'theme') {

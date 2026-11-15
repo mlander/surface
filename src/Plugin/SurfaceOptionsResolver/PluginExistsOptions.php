@@ -12,10 +12,10 @@ use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Plugin\Plugin\Validation\Constraint\PluginExistsConstraint;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceOptionsResolver;
 use Drupal\surface\Options\SurfaceOptionsResolverBase;
 use Drupal\surface\Options\OptionSet;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\Validator\Constraint;
 
 /**
@@ -49,7 +49,7 @@ final class PluginExistsOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet {
+  public function resolve(Constraint $constraint, Schema $node): OptionSet {
     assert($constraint instanceof PluginExistsConstraint);
     $manager = $constraint->pluginManager;
     $options = [];

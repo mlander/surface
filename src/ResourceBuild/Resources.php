@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Drupal\surface\ResourceBuild;
 
 use Drupal\surface\Contract\WidgetChoice;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Entry;
+use PortableSchema\Builder\Schema;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -1036,13 +1040,21 @@ final class Resources implements ResourcesInterface {
    * Refuses a widget a key asks for that does not draw it, at the build.
    *
    * The widget manager refuses one when the form is drawn; the same
-   * check is asked here of every definition whose `widget` setting asks
-   * for one, at any depth, so a word no widget answers to, or one that
-   * cannot draw the key (a map's fieldset for one value), is a build
-   * refusal at every door, never a form that fails to draw.
+   * check is asked here of every key whose `widget` setting asks for one,
+   * at any depth, so a word no widget answers to, or one that cannot draw
+   * the key (a map's fieldset for one value), is a build refusal at every
+   * door, never a form that fails to draw.
    *
-   * Decision: see
-   * docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates.
+   * Each key is walked in the form its entry holds (keyAsked()): a
+   * node-first entry by its node, its definition derived only when a key
+   * in it asks for a widget, since the widget's claim takes a definition;
+   * a definition-first entry by its definition, since reading its node
+   * would be a read the build does not make. The definition branch goes
+   * when no source makes a definition (parts 32.7 and 32.9).
+   *
+   * Decisions: see
+   * docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates
+   * and docs/decisions.md#nothing-asks-for-a-definition-it-does-not-need.
    *
    * @param \Drupal\surface\SurfaceInterface $sealed
    *   The data surface just sealed; each child was checked when it was.
@@ -1054,28 +1066,76 @@ final class Resources implements ResourcesInterface {
    */
   protected function assertWidgetsDraw(SurfaceInterface $sealed, ResourceDefinition $definition): void {
     $manager = NULL;
-    $walk = function (DataDefinitionInterface $key, string $path) use (&$walk, &$manager, $definition): void {
-      if (is_string($key->getSetting('widget'))) {
+    $walk = function (Entry $entry, Schema|DataDefinitionInterface $key, string $path, array $trail) use (&$walk, &$manager, $definition): void {
+      [$widget, $below] = static::keyAsked($key);
+      if ($widget !== NULL) {
         $manager ??= $this->classResolver->getInstanceFromDefinition(WidgetChoice::class);
         try {
-          $manager->forDefinition($key);
+          $manager->forDefinition($key instanceof DataDefinitionInterface ? $key : static::definitionAt($entry->definition(), $trail));
         }
         catch (\InvalidArgumentException $e) {
-          throw new \LogicException(sprintf('%s asks for the "%s" widget at "%s", which no widget answers to or which does not draw it: %s', $definition->id, $key->getSetting('widget'), $path, $e->getMessage()), 0, $e);
+          throw new \LogicException(sprintf('%s asks for the "%s" widget at "%s", which no widget answers to or which does not draw it: %s', $definition->id, $widget, $path, $e->getMessage()), 0, $e);
         }
       }
-      if ($key instanceof ListDataDefinitionInterface) {
-        $walk($key->getItemDefinition(), $path . '.*');
-      }
-      elseif ($key instanceof ComplexDataDefinitionInterface) {
-        foreach ($key->getPropertyDefinitions() as $name => $property) {
-          $walk($property, $path . '.' . $name);
-        }
+      // The trail is kept for a node alone: a definition is its own.
+      $node = $key instanceof Schema;
+      foreach ($below as $segment => $inner) {
+        $walk($entry, $inner, $path . '.' . $segment, $node ? [...$trail, (string) $segment] : $trail);
       }
     };
     foreach ($sealed->getDefinitions()->entries() as $name => $entry) {
-      $walk($entry->definition(), (string) $name);
+      $walk($entry, $entry->isNodeFirst() ? $entry->schema() : $entry->definition(), (string) $name, []);
     }
+  }
+
+  /**
+   * Reads what the widget walk needs of one key, in either form.
+   *
+   * @param \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface $key
+   *   The key's node, or its definition.
+   *
+   * @return array{0: string|null, 1: array<string|int, \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface>}
+   *   The widget its `widget` setting asks for, or NULL; and what is below
+   *   it in the same form: a list's item under `*`, a map's properties by
+   *   name.
+   */
+  protected static function keyAsked(Schema|DataDefinitionInterface $key): array {
+    if ($key instanceof Schema) {
+      $widget = NodeFacts::setting($key, 'widget');
+      $item = DefinitionSchema::isList($key) ? DefinitionSchema::itemNode($key) : NULL;
+      $below = $item !== NULL ? ['*' => $item] : NodeFacts::properties($key);
+    }
+    else {
+      $widget = $key->getSetting('widget');
+      $below = match (TRUE) {
+        $key instanceof ListDataDefinitionInterface => ['*' => $key->getItemDefinition()],
+        $key instanceof ComplexDataDefinitionInterface => $key->getPropertyDefinitions(),
+        default => [],
+      };
+    }
+    return [is_string($widget) ? $widget : NULL, $below];
+  }
+
+  /**
+   * Gets the definition at a path below a key's definition.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   * @param string[] $trail
+   *   The segments below it: `*` for a list's item, a property's name.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The definition there.
+   */
+  protected static function definitionAt(DataDefinitionInterface $definition, array $trail): DataDefinitionInterface {
+    foreach ($trail as $segment) {
+      $definition = match (TRUE) {
+        $definition instanceof ListDataDefinitionInterface && $segment === '*' => $definition->getItemDefinition(),
+        $definition instanceof ComplexDataDefinitionInterface => $definition->getPropertyDefinition($segment),
+        default => NULL,
+      } ?? throw new \LogicException(sprintf('No definition is at "%s" where the node holds one.', implode('.', $trail)));
+    }
+    return $definition;
   }
 
   /**

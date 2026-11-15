@@ -466,7 +466,7 @@ The class is a pure function of the keys `from:` names:
 <!-- excerpt: modules/surface_examples/src/Slugify.php -->
 
 ```php
-public static function compute(array $from, ?DataDefinitionInterface $key = NULL): mixed {
+public static function compute(array $from, ?Schema $key = NULL): mixed {
   $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower((string) ($from['label'] ?? ''))), '-');
   return $slug === '' ? NULL : $slug;
 }
@@ -482,8 +482,10 @@ and both documents state it. Three choices settle it
   refiner runs under, and the PHPStan rule flags `\Drupal::` in it, so
   the narrowing (`POST .../schema`) can run it ahead of a write and
   answer the value it would compute for the values in progress. It is
-  handed the values `from:` names and the key's own definition, `$key`,
-  which is declaration, not site state. A changed time reads the clock:
+  handed the values `from:` names and the key's own node, `$key`, which
+  is declaration, not site state. What it promises is its standard
+  keywords, read with `get()`: `MachineName` cuts to `maxLength`. What
+  Surface keeps on a node beyond them is not promised. A changed time reads the clock:
   it stays a storage's to add in `prepare()`.
 - **When it runs.** Once the other keys are accepted, from their
   accepted values: while storage holds nothing for it, which is when the

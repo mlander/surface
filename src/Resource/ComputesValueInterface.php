@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Resource;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Computes a key's value from the values of other keys.
@@ -25,7 +25,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * @code
  * final class Slugify implements ComputesValueInterface {
  *
- *   public static function compute(array $from, ?DataDefinitionInterface $key = NULL): mixed {
+ *   public static function compute(array $from, ?Schema $key = NULL): mixed {
  *     $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower((string) ($from['label'] ?? ''))), '-');
  *     return $slug === '' ? NULL : $slug;
  *   }
@@ -44,14 +44,16 @@ interface ComputesValueInterface {
    * @param array<string, mixed> $from
    *   The value of each key `from:` names, by key, in the order it names
    *   them: as accepted, so each in its declared type or NULL.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $key
-   *   The computed key's own definition, as declared, for a class that
-   *   fits its value to what the key allows (MachineName cuts to its
-   *   Length); NULL when it is called on its own.
+   * @param \PortableSchema\Builder\Schema|null $key
+   *   The computed key's own node, for a class that fits its value to what
+   *   the key allows (MachineName cuts to its `maxLength`); NULL when it is
+   *   called on its own. What it promises is the standard keywords, read
+   *   through get(): its title, its type, its bounds. What Surface keeps
+   *   on a node beyond them is not promised and may change.
    *
    * @return mixed
    *   The value, in the key's type, or NULL for none.
    */
-  public static function compute(array $from, ?DataDefinitionInterface $key = NULL): mixed;
+  public static function compute(array $from, ?Schema $key = NULL): mixed;
 
 }

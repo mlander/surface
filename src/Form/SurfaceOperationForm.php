@@ -1763,7 +1763,7 @@ class SurfaceOperationForm extends FormBase {
    *   The stored values, keyed by data surface key.
    */
   protected function storedSurfaceValues(SurfaceInterface $surface, SurfaceStorageInterface $storage): array {
-    return array_intersect_key($storage->load($surface), $surface->getDefinitions()->toArray());
+    return array_intersect_key($storage->load($surface), $surface->getDefinitions()->keys());
   }
 
   /**

@@ -349,7 +349,7 @@ the record of the rework that brought the module to the pattern.
 - **Computed key**: a key of a resource whose value nobody types,
   `$inputs->compute('slug', 'string', t('Slug'), from: ['label'], using:
   Slugify::class, when: Compute::ON_CREATE)`; the class implements
-  `ComputesValueInterface`, a static `compute(array $from, ?DataDefinitionInterface $key = NULL)`
+  `ComputesValueInterface`, a static `compute(array $from, ?Schema $key = NULL)`, `$key` the key's node (its standard keywords through `get()`),
   run under the static guard (one allowance: `MachineName` may use the
   `transliteration` service, `PipelineGuard::COMPUTE_ALLOWED`). Computed in `accept()` from the accepted sources while storage
   holds nothing for it (and on every write that changes a source with
@@ -698,7 +698,13 @@ the record of the rework that brought the module to the pattern.
   entry node-first. Run any kernel class in that mode with
   `SURFACE_NODE_FIRST=1` in front of its phpunit command; the lanes run
   without it, and `NodeFirstModeTest` pins both modes alike
-  (`docs/decisions.md#an-entry-holds-the-form-its-source-gave`). A key
+  (`docs/decisions.md#an-entry-holds-the-form-its-source-gave`). Ask for
+  what is needed: the keys alone are `DefinitionMap::keys()` (name to
+  TRUE) or `names()`, never `toArray()`, and one fact is read from the
+  form the entry holds (`Entry::isNodeFirst()`: the node of a node-first
+  entry, the definition of the other), so no definition is derived and
+  no node read for it
+  (`docs/decisions.md#nothing-asks-for-a-definition-it-does-not-need`). A key
   that holds a child frame (attached, variants, a collection, a mount:
   `Entry::isShell()`) composes its node: its own facts read once
   (`DefinitionSchema::around()`) around the nodes its child's entries
@@ -715,8 +721,9 @@ the record of the rework that brought the module to the pattern.
   (`DefinitionSchema::same()`), and `EntryNodeIsNeverStaleTest` proves
   it over the examples. `PropertySchema::property()` takes its node
   from its caller and reads nothing, so what still calls `of()` or
-  `head()` is every read there is, pinned by file
-  (`DefinitionReadCallersTest`). Never in the build cache or a served
+  `head()` is every read there is (the options service reads one where a
+  resolver is called and its caller held none, and `Resolve` one for a
+  resolved key's class), pinned by file (`DefinitionReadCallersTest`). Never in the build cache or a served
   document. `Location::definitionAt()` gives the check provider and the
   form the node at a place (the entry's, walked in step; a place with a
   definition and no node throws) beside the definition, the frame and
@@ -1140,8 +1147,8 @@ test errored or failed and every gate passed.
   cache; it orders classes slowest first.
 
 On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-15: the
-full lane takes 16m09s at the defaults (phpunit 15m24s) and the fast
-lane 9m21s (phpunit 9m10s). As of 2026-10-23, with a smaller suite, the
+full lane takes 15m33s at the defaults (phpunit 14m40s) and the fast
+lane 11m10s (phpunit 11m00s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1172,7 +1179,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2571, Assertions: 102816, Errors: 0, Failures: 0, Skipped: 3. Classes: 365 of 365, 8 at a time, browser classes 4.
+phpunit: Tests: 2576, Assertions: 102866, Errors: 0, Failures: 0, Skipped: 3. Classes: 365 of 365, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1196,7 +1203,7 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2457, Assertions: 98262, Deprecations: 811, Skipped: 3. Classes:
+`Tests: 2462, Assertions: 98312, Deprecations: 811, Skipped: 3. Classes:
 312, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.

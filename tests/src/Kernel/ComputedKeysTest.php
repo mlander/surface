@@ -6,18 +6,21 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Computed;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\SurfaceResult;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
 use Drupal\surface_resource_test\Compute\BadgeCode;
+use Drupal\surface_resource_test\Compute\BadgeHandle;
 use Drupal\surface_resource_test\Compute\Broken\ClockStamp;
 use Drupal\surface_resource_test\Resource\Badge\BadgeResource;
 use Drupal\surface_resource_test\Storage\BadgeStorage;
 use Drupal\surface_resource_test\Structure\ThresholdStructure;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
+use PortableSchema\Builder\Schema;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
@@ -160,6 +163,23 @@ class ComputedKeysTest extends SurfaceKernelTestBase {
       'color' => 'blue',
     ], $this->stored());
     $this->assertContains('/code', array_map(static fn (string $path): string => '/' . $path, $result->changes));
+  }
+
+  /**
+   * Tests the class computing a key is handed the key's node.
+   *
+   * What it may read of it is the standard keywords: the handle's title
+   * and the `maxLength` its Length declares.
+   */
+  public function testTheClassIsHandedTheKeysNode(): void {
+    BadgeHandle::$handed = NULL;
+    $this->assertTrue($this->submit(['first' => 'Ada', 'last' => 'Byron'])->isValid());
+    $node = BadgeHandle::handed();
+    $this->assertInstanceOf(Schema::class, $node);
+    $this->assertSame('Handle', (string) $node->get('title'));
+    $this->assertSame(12, $node->get('maxLength'));
+    $this->assertSame(['string', 'null'], $node->get('type'), 'Not required, so it may be NULL.');
+    $this->assertTrue(DefinitionSchema::same($this->badge()->getDefinitions()->entry('handle')->schema(), $node), 'It is the handle\'s node.');
   }
 
   /**
