@@ -32,8 +32,13 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *
    * By file, relative to the module, then by function, the number of
    * calls. Why each caller holds a definition and no entry:
-   * - src/Entry.php, of(): the entry reads its own definition, once
-   *   (schema()), and once more per later ask inside an assertion.
+   * - src/DefinitionMap.php, of(): with the node-first switch on, a
+   *   switch for tests and probes ($nodeFirst), fromArrays() reads each
+   *   definition it is handed into the node the entry is made from.
+   * - src/Entry.php, of(): a definition-first entry reads its own
+   *   definition, once (schema()), and once more per later ask inside an
+   *   assertion; a node-first entry reads its derived definition per
+   *   later ask of definition() inside an assertion.
    * - src/Contract/Conditionals.php, of(): stated() describes a definition
    *   no entry holds: a declared rule's answer, made on a copy (rules()),
    *   and a key a caller describes by its definition alone (describeKey()
@@ -67,7 +72,8 @@ class DefinitionReadCallersTest extends UnitTestCase {
   protected const CALLERS = [
     'src/Contract/Conditionals.php' => ['of' => 1],
     'src/Contract/PropertySchema.php' => ['head' => 1, 'of' => 1],
-    'src/Entry.php' => ['of' => 2],
+    'src/DefinitionMap.php' => ['of' => 1],
+    'src/Entry.php' => ['of' => 3],
     'src/Pipeline/Validating.php' => ['of' => 1],
     'src/Storage/ConfigSchemaGenerator.php' => ['head' => 1, 'of' => 1],
     'src/Tool/InputDefinitions.php' => ['of' => 2],

@@ -39,9 +39,31 @@ use Drupal\KernelTests\KernelTestBase;
  * here — #[RunTestsInSeparateProcesses] — has to sit on each concrete
  * class rather than be inherited from one place.
  *
+ * Any kernel test here runs with every built entry node-first when the
+ * environment sets SURFACE_NODE_FIRST=1 (DefinitionMap::$nodeFirst): the
+ * proof that a definition derived from a node serves every reader. The
+ * lanes run without it.
+ *
  * @see \Drupal\PHPStan\Rules\TestClassClassMetadata
+ * @see docs/decisions.md#an-entry-holds-the-form-its-source-gave
  */
 abstract class SurfaceKernelTestBase extends KernelTestBase {
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(): void {
+    DefinitionMap::$nodeFirst = getenv('SURFACE_NODE_FIRST') === '1';
+    parent::setUp();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function tearDown(): void {
+    DefinitionMap::$nodeFirst = FALSE;
+    parent::tearDown();
+  }
 
   /**
    * Gets the data surface pipeline, which is where validation lives.

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\surface;
 
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeDefinition;
 use Drupal\surface\Refinement\ApplicabilityInterface;
 use Drupal\surface\Refinement\DeclaredRefiner;
 use Drupal\surface\Refinement\RuntimeRefiner;
@@ -28,28 +30,44 @@ use PortableSchema\Builder\Schema;
  * The data surface's own cacheability is not per key and stays on the
  * data surface.
  *
- * An entry holds its key's built node (schema()): read from the
- * definition on the first ask and kept, so every consumer that has the
- * entry reads one node, with no service. The rules:
- * - The read is lazy: nothing reads the node when an entry is made, so a
- *   key refined and never described reads nothing. The read's one
- *   refusal, a definition that holds itself, is thrown at the first
+ * An entry holds one form of its key as the source of truth: the
+ * definition its source gave (the constructor, withDefinition()), or the
+ * built node its source gave (ofSchema(), withSchema()). Both answers
+ * are always given: schema() and definition(). The rules:
+ * - Definition-first: schema() reads the node from the definition on the
+ *   first ask (DefinitionSchema::of()) and keeps it, so every consumer
+ *   that has the entry reads one node, with no service.
+ * - Node-first: definition() derives the definition from the node on the
+ *   first ask (NodeDefinition::of()) and keeps it. The derive refuses a
+ *   node of a class other than the three it derives, of a data type
+ *   core's typed data manager does not define, or whose derived
+ *   constraints differ from its own; ofSchema() does not check, so the
+ *   refusal is thrown at the first definition() call, with the key's name.
+ * - The other form is lazy: nothing reads or derives it when an entry is
+ *   made, so a key refined and never described reads nothing. The read's
+ *   one refusal, a definition that holds itself, is thrown at the first
  *   schema() call, never at build.
- * - An entry made with the same definition object keeps the node
- *   (readingFrom(), withDefinition() handed the same definition); one
- *   made with another definition starts unread.
- * - The node is never serialized: a build cache row is the same whether
- *   or not a node was read, and an entry read back from one reads its
- *   node again on the first ask.
- * - A definition an entry holds is never written after the entry is
- *   made: the builder seals the definitions, and a refiner writes a deep
- *   copy (Surface::deepClone()). EntryNodeIsNeverStaleTest proves it for
- *   every example surface and value set.
- * Every source gives a definition today, so the node is the one read
- * from it (DefinitionSchema::of()).
+ * - An entry made with the same source object keeps the other form with
+ *   it (readingFrom(), withDefinition() handed the definition it holds,
+ *   withSchema() handed the node it holds); one made with another source
+ *   starts with that form alone.
+ * - Only the form given is serialized: a build cache row is the same
+ *   whether or not the other form was read, and an entry read back from
+ *   one reads or derives it again on the first ask.
+ * - Neither form is written after the entry is made: the builder seals
+ *   the definitions, and a refiner writes a deep copy
+ *   (Surface::deepClone()). With assertions on, every later ask of the
+ *   form that was not given checks it still says what the source says.
+ *   EntryNodeIsNeverStaleTest proves it for every example surface and
+ *   value set.
+ * Every source gives a definition today. DefinitionMap::$nodeFirst, a
+ * switch for tests and probes, makes every entry a built data surface
+ * is sealed with node-first, which proves the derived definition serves
+ * every reader that still asks for one.
  *
- * Decision: see
- * docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone.
+ * Decisions: see
+ * docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone and
+ * docs/decisions.md#an-entry-holds-the-form-its-source-gave.
  *
  * @see \Drupal\surface\DefinitionMap
  *   The ordered collection of entries a data surface is sealed with.
@@ -57,11 +75,34 @@ use PortableSchema\Builder\Schema;
 final class Entry {
 
   /**
-   * The built node of the definition, once schema() has read it.
+   * The key's Typed Data definition: given, or derived from the node.
    *
-   * Not a constructor parameter, and never serialized (__sleep()).
+   * NULL on a node-first entry until definition() derives it. Serialized
+   * only on a definition-first entry (__sleep()).
+   */
+  private ?DataDefinitionInterface $definition = NULL;
+
+  /**
+   * The key's built node: given, or read from the definition.
+   *
+   * NULL on a definition-first entry until schema() reads it. Serialized
+   * only on a node-first entry (__sleep()).
    */
   private ?Schema $node = NULL;
+
+  /**
+   * Whether the node is the source of truth, the definition derived.
+   */
+  private bool $nodeFirst = FALSE;
+
+  /**
+   * What a node-first entry is constructed with, then drops.
+   *
+   * The constructor takes a definition, as every caller hands one;
+   * ofSchema() and the copies of a node-first entry hand it this, and
+   * nothing reads it.
+   */
+  private static ?DataDefinitionInterface $unread = NULL;
 
   /**
    * Constructs an Entry.
@@ -138,7 +179,7 @@ final class Entry {
    */
   public function __construct(
     public readonly string $name,
-    private readonly DataDefinitionInterface $definition,
+    DataDefinitionInterface $definition,
     public readonly string $contributor = SurfaceInterface::OWNER,
     public readonly bool $locked = FALSE,
     public readonly array $dependencies = [],
@@ -155,16 +196,91 @@ final class Entry {
     public readonly bool $runtimeAccess = FALSE,
     public readonly string|\Stringable|null $lockedBecause = NULL,
   ) {
+    $this->definition = $definition;
   }
 
   /**
-   * Returns the same entry with another definition.
+   * Makes an entry whose source gave its built node: node-first.
+   *
+   * Its definition is derived from the node on the first definition()
+   * call (NodeDefinition::of()) and kept. Nothing is checked here: a node
+   * no definition derives from is refused at that call.
+   *
+   * @param string $name
+   *   The definition key.
+   * @param \PortableSchema\Builder\Schema $node
+   *   What the key accepts, as a built node (DefinitionSchema::of()).
+   * @param string $contributor
+   *   Who introduced the key; see the constructor for this and the rest.
+   * @param bool $locked
+   *   Whether the key's value is fixed.
+   * @param string[] $dependencies
+   *   The sibling keys this key's refinement reads.
+   * @param array<string, array<\Drupal\surface\SurfaceRefinerInterface>> $refiners
+   *   Refiner chains keyed by contributor.
+   * @param array<string, array> $contributions
+   *   The values contributed to this key, keyed by provider.
+   * @param \Drupal\surface\Attachment|null $attachment
+   *   The child fixed at this key, if any.
+   * @param \Drupal\surface\Variants|null $variants
+   *   The variant table, if any.
+   * @param array<string, string[]> $paths
+   *   What each property of a key refined one property at a time refines
+   *   against.
+   * @param string[] $runtimeOnly
+   *   The dependencies only a runtime refiner watches.
+   * @param \Drupal\surface\Collection|null $list
+   *   The child every item is, if the key is a collection.
+   * @param array<string, int> $watchedBy
+   *   Which kinds of link watch each dependency.
+   * @param array<string, \Drupal\surface\Attachment> $mounted
+   *   The structures alters attached at their mounts inside this key.
+   * @param bool $held
+   *   Whether the key is locked by access.
+   * @param bool $runtimeAccess
+   *   Whether an access answer for the key is decided once the subject is
+   *   known.
+   * @param string|\Stringable|null $lockedBecause
+   *   Why the key is locked, if an access answer said why.
+   *
+   * @return static
+   *   The entry.
+   */
+  public static function ofSchema(
+    string $name,
+    Schema $node,
+    string $contributor = SurfaceInterface::OWNER,
+    bool $locked = FALSE,
+    array $dependencies = [],
+    array $refiners = [],
+    array $contributions = [],
+    ?Attachment $attachment = NULL,
+    ?Variants $variants = NULL,
+    array $paths = [],
+    array $runtimeOnly = [],
+    ?Collection $list = NULL,
+    array $watchedBy = [],
+    array $mounted = [],
+    bool $held = FALSE,
+    bool $runtimeAccess = FALSE,
+    string|\Stringable|null $lockedBecause = NULL,
+  ): static {
+    $entry = new static($name, self::$unread ??= new DataDefinition(), $contributor, $locked, $dependencies, $refiners, $contributions, $attachment, $variants, $paths, $runtimeOnly, $list, $watchedBy, $mounted, $held, $runtimeAccess, $lockedBecause);
+    $entry->definition = NULL;
+    $entry->node = $node;
+    $entry->nodeFirst = TRUE;
+    return $entry;
+  }
+
+  /**
+   * Returns the same entry with another definition: definition-first.
    *
    * The one mutation refinement makes: everything else about a key (who
    * introduced it, whether it is locked, what it refines against, whose
    * values it carries) is settled at build time and survives
    * narrowing untouched. Handed the definition it holds, the new entry
-   * keeps the node; handed another, it starts unread.
+   * is this one again, its source and its other form kept; handed
+   * another, it is definition-first and starts unread.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The narrowed definition.
@@ -173,28 +289,70 @@ final class Entry {
    *   The new entry.
    */
   public function withDefinition(DataDefinitionInterface $definition): static {
+    return $definition === $this->definition
+      ? $this->remade($this->definition, $this->node, $this->nodeFirst)
+      : $this->remade($definition, NULL, FALSE);
+  }
+
+  /**
+   * Returns the same entry with another built node: node-first.
+   *
+   * The twin of withDefinition(). Handed the node it holds, the new entry
+   * is node-first and keeps the definition it holds, which reads as that
+   * node; handed another, it starts with the node alone.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The node.
+   *
+   * @return static
+   *   The new entry.
+   */
+  public function withSchema(Schema $node): static {
+    return $node === $this->node
+      ? $this->remade($this->definition, $this->node, TRUE)
+      : $this->remade(NULL, $node, TRUE);
+  }
+
+  /**
+   * Makes a copy of this entry with the forms and the source given.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
+   *   The definition, or NULL for a node-first entry not derived yet.
+   * @param \PortableSchema\Builder\Schema|null $node
+   *   The node, or NULL for a definition-first entry not read yet.
+   * @param bool $nodeFirst
+   *   Whether the node is the source.
+   * @param \Drupal\surface\Attachment|null $attachment
+   *   The attachment, NULL for this entry's.
+   * @param array<string, \Drupal\surface\Attachment> $mounted
+   *   The mounted structures that replace this entry's, by path.
+   *
+   * @return static
+   *   The copy.
+   */
+  private function remade(?DataDefinitionInterface $definition, ?Schema $node, bool $nodeFirst, ?Attachment $attachment = NULL, array $mounted = []): static {
     $entry = new static(
       $this->name,
-      $definition,
+      $definition ?? (self::$unread ??= new DataDefinition()),
       $this->contributor,
       $this->locked,
       $this->dependencies,
       $this->refiners,
       $this->contributions,
-      $this->attachment,
+      $attachment ?? $this->attachment,
       $this->variants,
       $this->paths,
       $this->runtimeOnly,
       $this->list,
       $this->watchedBy,
-      $this->mounted,
+      $mounted + $this->mounted,
       $this->held,
       $this->runtimeAccess,
       $this->lockedBecause,
     );
-    if ($definition === $this->definition) {
-      $entry->node = $this->node;
-    }
+    $entry->definition = $definition;
+    $entry->node = $node;
+    $entry->nodeFirst = $nodeFirst;
     return $entry;
   }
 
@@ -206,20 +364,46 @@ final class Entry {
    * the own facts of a key that holds a child frame (isShell()). A key's
    * facts are read from its node (schema()).
    *
+   * On a node-first entry it is derived from the node on the first call
+   * (NodeDefinition::of(), which asks core's typed data manager whether
+   * the type is defined) and kept: every later call returns the same
+   * object.
+   *
    * Decision: see docs/decisions.md#the-definition-of-an-entry-is-asked-for.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
    *   The definition.
+   *
+   * @throws \LogicException
+   *   On a node-first entry, when no definition derives from its node.
+   * @throws \AssertionError
+   *   With assertions on, on a node-first entry, when the derived
+   *   definition was written after it was derived.
    */
   public function definition(): DataDefinitionInterface {
+    if ($this->definition === NULL) {
+      assert($this->node !== NULL);
+      try {
+        return $this->definition = NodeDefinition::of($this->node);
+      }
+      catch (\LogicException $e) {
+        throw new \LogicException(sprintf('The "%s" key\'s source gave a node, and no definition derives from it: %s', $this->name, $e->getMessage()), 0, $e);
+      }
+    }
+    // With assertions on, each later ask of a node-first entry reads the
+    // derived definition again: the two differ only where an edge wrote
+    // the definition it was handed, which no code may do.
+    assert(!$this->nodeFirst || DefinitionSchema::same($this->node, DefinitionSchema::of($this->definition)), sprintf('The definition of the "%s" key, derived from the node its source gave, was written after it was derived. A definition an entry gives is never written: write a copy and make an entry of it (withDefinition()).', $this->name));
     return $this->definition;
   }
 
   /**
-   * Gets the built node of the key's definition.
+   * Gets the key's built node.
    *
-   * Read from the definition on the first call (DefinitionSchema::of()) and
-   * kept: every later call returns the same object. It asks no service.
+   * On a definition-first entry, read from the definition on the first
+   * call (DefinitionSchema::of()) and kept: every later call returns the
+   * same object. On a node-first entry, the node its source gave. It
+   * asks no service.
    *
    * @return \PortableSchema\Builder\Schema
    *   The built node.
@@ -227,32 +411,43 @@ final class Entry {
    * @throws \LogicException
    *   When the definition holds itself, which no node can be read from.
    * @throws \AssertionError
-   *   With assertions on, when the definition was written after its node
-   *   was read.
+   *   With assertions on, on a definition-first entry, when the
+   *   definition was written after its node was read.
    */
   public function schema(): Schema {
+    if ($this->nodeFirst) {
+      assert($this->node !== NULL);
+      return $this->node;
+    }
     // With assertions on, each later ask reads the definition again: the
     // two differ only where the definition was written after the entry
     // was made, which no code may do (a refiner writes a copy).
-    assert($this->node === NULL || DefinitionSchema::same($this->node, DefinitionSchema::of($this->definition)), sprintf('The definition of the "%s" key was written after its node was read. An entry\'s definition is never written: write a copy and make an entry of it (withDefinition()).', $this->name));
+    assert($this->definition !== NULL);
+    assert($this->node === NULL || DefinitionSchema::same($this->node, DefinitionSchema::of($this->definition)), sprintf('The definition of the "%s" key, its source, was written after its node was read. An entry\'s definition is never written: write a copy and make an entry of it (withDefinition()).', $this->name));
     return $this->node ??= DefinitionSchema::of($this->definition);
   }
 
   /**
-   * Names what an entry serializes: every member but the node.
+   * Names what an entry serializes: every member but the form not given.
    *
-   * The serialized entry is the same whether or not its node was read, so
-   * a build cache row does not depend on what a consumer asked before it
-   * was written. The definition is a private member, which serializes
-   * under the class's name: a row written while it was a public member
-   * does not match the class, and the cache is rebuilt, as after any
-   * change to a serialized class.
+   * A definition-first entry serializes its definition, never its node; a
+   * node-first one its node and the mark, never the derived definition.
+   * So the serialized entry is the same whether or not the other form was
+   * read, and a build cache row does not depend on what a consumer asked
+   * before it was written. A definition-first entry serializes the same
+   * members in the same order as before node-first entries existed. A
+   * private member serializes under the class's name: a row written
+   * while the definition was a public member does not match the class,
+   * and the cache is rebuilt, as after any change to a serialized class.
    *
    * @return string[]
-   *   The constructor's members, in their order.
+   *   The constructor's members, in their order, the given form second.
    */
   public function __sleep(): array {
-    return array_keys(array_diff_key(get_object_vars($this), ['node' => TRUE]));
+    $forms = ['definition' => TRUE, 'node' => TRUE, 'nodeFirst' => TRUE];
+    $members = array_keys(array_diff_key(get_object_vars($this), $forms));
+    array_splice($members, 1, 0, $this->nodeFirst ? ['node', 'nodeFirst'] : ['definition']);
+    return $members;
   }
 
   /**
@@ -497,7 +692,8 @@ final class Entry {
    *
    * @return static|null
    *   The entry, every attached or mounted child that reads ports bound
-   *   to them, with the node already read; NULL when none reads any.
+   *   to them, with its source and the other form as this one holds
+   *   them; NULL when none reads any.
    */
   public function readingFrom(array $values): ?static {
     $attachment = $this->attachment !== NULL && $this->attachment->reads !== [] ? $this->attachment->readFrom($values) : NULL;
@@ -510,28 +706,8 @@ final class Entry {
     if ($attachment === NULL && $mounted === []) {
       return NULL;
     }
-    $entry = new static(
-      $this->name,
-      $this->definition,
-      $this->contributor,
-      $this->locked,
-      $this->dependencies,
-      $this->refiners,
-      $this->contributions,
-      $attachment ?? $this->attachment,
-      $this->variants,
-      $this->paths,
-      $this->runtimeOnly,
-      $this->list,
-      $this->watchedBy,
-      $mounted + $this->mounted,
-      $this->held,
-      $this->runtimeAccess,
-      $this->lockedBecause,
-    );
-    // The same definition: the node read already is its node.
-    $entry->node = $this->node;
-    return $entry;
+    // The same source: the other form read or derived already is its own.
+    return $this->remade($this->definition, $this->node, $this->nodeFirst, $attachment, $mounted);
   }
 
   /**

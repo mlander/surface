@@ -687,7 +687,18 @@ the record of the rework that brought the module to the pattern.
   the emitter decorates the projection with what the request adds.
   `of()` keeps nothing: the `Entry` holds its key's node
   (`Entry::schema()`, read from the definition on the first ask, kept,
-  handed on to an entry with the same definition, never serialized), and
+  handed on to an entry with the same definition, never serialized). An
+  entry holds one form as its source: the definition (the constructor,
+  `withDefinition()`) or the node (`Entry::ofSchema()`, `withSchema()`),
+  the other made on the first ask and kept, only the given form
+  serialized; a node-first entry's `definition()` is derived by
+  `NodeDefinition::of()`, refused there with the key's name, and asserted
+  not written. Every source gives a definition today;
+  `DefinitionMap::$nodeFirst` (tests and probes only) makes every built
+  entry node-first. Run any kernel class in that mode with
+  `SURFACE_NODE_FIRST=1` in front of its phpunit command; the lanes run
+  without it, and `NodeFirstModeTest` pins both modes alike
+  (`docs/decisions.md#an-entry-holds-the-form-its-source-gave`). And
   a reader that walks down from an entry walks its node in step
   (`DefinitionSchema::propertyNode()`, `itemNode()`, `shapeNode()`). The
   rule it rests on: a definition an entry holds is never written after
@@ -1117,8 +1128,8 @@ test errored or failed and every gate passed.
   cache; it orders classes slowest first.
 
 On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-14: the
-full lane takes 16m01s at the defaults (phpunit 15m16s) and the fast
-lane 9m08s (phpunit 8m50s). As of 2026-10-23, with a smaller suite, the
+full lane takes 16m32s at the defaults (phpunit 15m25s) and the fast
+lane 9m06s (phpunit 9m00s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1149,7 +1160,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2555, Assertions: 102669, Errors: 0, Failures: 0, Skipped: 3. Classes: 363 of 363, 8 at a time, browser classes 4.
+phpunit: Tests: 2561, Assertions: 102722, Errors: 0, Failures: 0, Skipped: 3. Classes: 364 of 364, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1173,8 +1184,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2441, Assertions: 98115, Deprecations: 807, Skipped: 3. Classes:
-310, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2447, Assertions: 98168, Deprecations: 811, Skipped: 3. Classes:
+311, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 

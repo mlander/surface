@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Drupal\surface;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeDefinition;
+use PortableSchema\Builder\Schema;
 
 /**
  * The ordered, immutable set of keys a data surface advertises.
@@ -74,6 +77,49 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * @var array<int, array>
    */
   private array $frameConstraints = [];
+
+  /**
+   * Whether fromArrays() makes every entry node-first: tests and probes.
+   *
+   * Off by default, and never read from the environment here. With it on,
+   * fromArrays() reads each definition it is handed into its node
+   * (DefinitionSchema::of()) and makes the entry node-first from that
+   * node, the definition dropped (Entry::withSchema()), so every reader
+   * that asks the entry for a definition is handed one derived from the
+   * node (NodeDefinition::of()). A definition of a class other than the
+   * three the inverse derives, or one whose node holds a node of another
+   * class at any depth, stays definition-first. It lives here
+   * because fromArrays() is the one place a built data surface's entries
+   * are made; the other entries made in src/ are a refinement's copies
+   * (Entry::withDefinition(), definition-first by rule) and two
+   * transient entries that are never sealed (ContractEmitter's for a
+   * declared rule's stated branches, Binding's for a collection's
+   * advertised definition). SurfaceKernelTestBase::setUp() turns it on
+   * when SURFACE_NODE_FIRST=1 is set, and a dev-site probe from its boot
+   * file.
+   *
+   * Decision: see docs/decisions.md#an-entry-holds-the-form-its-source-gave.
+   *
+   * @internal
+   */
+  public static bool $nodeFirst = FALSE;
+
+  /**
+   * How many entries fromArrays() made node-first while $nodeFirst was on.
+   *
+   * @internal
+   */
+  public static int $madeNodeFirst = 0;
+
+  /**
+   * How many fromArrays() kept definition-first while $nodeFirst was on.
+   *
+   * A definition of a class other than DataDefinition, ListDataDefinition
+   * and MapDataDefinition (NodeDefinition::DERIVED), at any depth.
+   *
+   * @internal
+   */
+  public static int $keptDefinitionFirst = 0;
 
   /**
    * Constructs a DefinitionMap.
@@ -269,10 +315,74 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         runtimeAccess: in_array($name, $runtimeAccess, TRUE),
         lockedBecause: in_array($name, $locked, TRUE) ? ($lockReasons[$name] ?? NULL) : NULL,
       );
+      if (self::$nodeFirst) {
+        $entries[] = static::nodeFirst(array_pop($entries), $definition);
+      }
     }
     $map = new static($entries, $ports, $mixins);
     $map->frameConstraints = array_values($frameConstraints);
     return $map;
+  }
+
+  /**
+   * Makes an entry node-first, for the mode $nodeFirst turns on.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The entry, as made from its definition.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   Its definition.
+   *
+   * @return \Drupal\surface\Entry
+   *   The entry, node-first from the definition's node; the same entry
+   *   for a definition of a class the inverse does not derive, at any
+   *   depth its node holds a node.
+   */
+  private static function nodeFirst(Entry $entry, DataDefinitionInterface $definition): Entry {
+    if (!in_array($definition::class, NodeDefinition::DERIVED, TRUE)) {
+      self::$keptDefinitionFirst++;
+      return $entry;
+    }
+    $node = DefinitionSchema::of($definition);
+    if (!static::derivedClasses($node)) {
+      self::$keptDefinitionFirst++;
+      return $entry;
+    }
+    self::$madeNodeFirst++;
+    return $entry->withSchema($node);
+  }
+
+  /**
+   * Answers whether every node a node holds was read from a derived class.
+   *
+   * The node, its properties, its item, and the nodes a shape, a config
+   * type and `each` hold, at every depth: what NodeDefinition::of()
+   * derives a definition from, and refuses for any other class.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node.
+   *
+   * @return bool
+   *   TRUE when each is of one of NodeDefinition::DERIVED.
+   */
+  private static function derivedClasses(Schema $node): bool {
+    if (!in_array(DefinitionSchema::classOf($node), NodeDefinition::DERIVED, TRUE)) {
+      return FALSE;
+    }
+    $model = DefinitionSchema::model($node);
+    $properties = $node->get('properties');
+    $below = [
+      ...(is_array($properties) ? array_values($properties) : []),
+      $node->get('items'),
+      $model['shape']['node'] ?? NULL,
+      $model['configType']['node'] ?? NULL,
+      $model['each'] ?? NULL,
+    ];
+    foreach ($below as $child) {
+      if ($child instanceof Schema && !static::derivedClasses($child)) {
+        return FALSE;
+      }
+    }
+    return TRUE;
   }
 
   /**

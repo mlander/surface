@@ -3406,6 +3406,8 @@ that code is deleted. No served document, refusal or value changed.
   entry reads its node from its definition. Nothing in `src/` calls
   `NodeDefinition::of()`. The entry that holds a node a source gave and
   derives its definition comes when a source produces a node (slice 32).
+  (Since 2026-11-14 an entry can: see
+  [An entry holds the form its source gave](#an-entry-holds-the-form-its-source-gave).)
 - **The node travels with the definition.** An entry made with the same
   definition object keeps the node: `readingFrom()`, and
   `withDefinition()` handed the definition it holds. One made with
@@ -3536,6 +3538,139 @@ refusal or value moved.
 
 (`Entry`, `DefinitionMap`, every reader of an entry's definition in
 `src/`, `modules/` and `tests/`)
+
+### An entry holds the form its source gave
+
+Decided 2026-11-14. An entry held the definition its source gave and
+read its node from it. It can now hold either form as its source of
+truth: the definition, or the built node. The other form is made on the
+first ask and kept. Every source still gives a definition. A switch for
+tests and probes makes every built entry node-first, and with it on the
+module answers as it does with it off: the proof that sources can start
+producing nodes. No served byte, refusal or value changed.
+
+- **One source of truth.** `Entry::schema()` and `Entry::definition()`
+  both always answer. A definition-first entry (the constructor,
+  `withDefinition()`) reads its node on the first `schema()` ask
+  (`DefinitionSchema::of()`) and keeps it, as before. A node-first entry
+  (`Entry::ofSchema()`, `withSchema()`) derives its definition on the
+  first `definition()` ask (`NodeDefinition::of()`) and keeps it: a
+  second ask returns the same object. These are the first callers of
+  `NodeDefinition::of()` in `src/`.
+- **Making one.** The constructor keeps its shape: every `new Entry(...)`
+  and named argument works as before. `Entry::ofSchema(string $name,
+  Schema $node, ...)` takes the node and the same other members.
+  `withSchema(Schema $node)` is the twin of `withDefinition()`. Handed
+  the form the entry holds, either keeps the other form and the source;
+  handed another, the new entry starts with that form alone.
+  `readingFrom()` keeps the source and the other form.
+- **What derives.** `NodeDefinition::of()` derives the three exact
+  classes and refuses another class, a data type core's typed data
+  manager does not define, and a node whose derived constraints differ
+  from its `constraints` member. `ofSchema()` checks nothing: the refusal
+  is thrown at the first `definition()` call, with the key's name added.
+- **Serialized.** Only the form given is serialized (`__sleep()`). A
+  definition-first entry serializes the same members in the same order
+  as before, so its bytes are unchanged; a node-first entry serializes
+  its node and the mark, never the derived definition. A row does not
+  depend on what was asked before it was written.
+- **Staleness, both ways.** With assertions on, each later `schema()`
+  ask of a definition-first entry reads the definition again and
+  compares it with the kept node, as before. Each later `definition()`
+  ask of a node-first entry reads the kept derived definition and
+  compares it with the node (`DefinitionSchema::same()`), so an edge that
+  writes the definition it was handed is seen. Each message says which
+  form is the source.
+- **The mode that proves it.** `DefinitionMap::$nodeFirst`, a static
+  member that is `@internal` and off by default, is the switch. With it
+  on, `DefinitionMap::fromArrays()`, the one place a built data
+  surface's entries are made, reads each definition it is handed into
+  its node and makes the entry node-first from that node, the definition
+  dropped. A definition whose node holds a node of a class other than
+  the three, at any depth, stays definition-first;
+  `DefinitionMap::$madeNodeFirst` and `$keptDefinitionFirst` count both.
+  The other entries made in `src/` are not covered: a refinement's
+  copies (`withDefinition()`, definition-first by rule) and two entries
+  that are never sealed (`ContractEmitter`'s for a declared rule's
+  stated branches, `Binding`'s for a collection's advertised
+  definition). The switch lives on `DefinitionMap` because that is where
+  it acts; `src/` never reads the environment for it.
+  `SurfaceKernelTestBase::setUp()` turns it on when `SURFACE_NODE_FIRST=1`
+  is set, so any kernel test runs in the mode unedited; a dev-site probe
+  sets it from its boot file. `NodeFirstModeTest` builds the data
+  surfaces of three example modules in each mode and compares every
+  answer (accept, validate, the document with and without the widget
+  hints, the full schema, the envelope, the form build, every tool's
+  serialized inputs), so the lanes pin the mode in their default run.
+- **What the mode showed.** With it on, unedited: the four
+  `ValueBaseline*` classes, `PipelineHandCasesTest`, `HandCorpusTest`,
+  `HandCorpusNarrowTest`, `ContractBaselineTest` and the other fixture
+  families (block placement, component block, config schema drift,
+  React fixtures, reference keys, retitle, venue), `NestedSecretsTest`,
+  `BuildCacheTest` and `EntryNodeIsNeverStaleTest` pass. On the
+  development site the value probe (42,846 cases as two accounts), every
+  document and narrowed document, the validation corpus and the 8,344
+  door digests show no difference from the default mode, the digests
+  once a definition's array is compared as a map. The whole fast lane in
+  the mode fails 12 tests in 7 classes, and none is a reader that relies
+  on a shared definition object or a fault in the inverse:
+  - Tests that count or record the definition object itself, not a
+    fact. `NodeFactsParityTest` (comparisons 1067 against 1272) and
+    `DefinitionRoundTripTest` (reachable 1097 against 1302) count
+    definitions by object, and an entry's derived definition is a new
+    object where two entries shared one; neither reports a
+    disagreement. `DoorCorpusTest` (six sets) and `DoorCorpusNarrowTest`
+    digest a definition's `toArray()` in order, and a derived definition
+    writes the `type` key the declared one left unwritten, which is no
+    fact (the comparator's rule).
+  - Tests that write a definition an entry gives.
+    `PortableServedContractTest::testKeptFragmentIsServedAsGiven` adds a
+    constraint to `->definition()` of a built entry, which the
+    node-first assertion refuses; `SurfaceTest::testNestedMapDefaults`
+    sets a default on a definition after the data surface was made and
+    expects the surface to see it.
+  - A default-mode rule. `LocationNodeTest::testNoNodeIsServed` asserts a
+    build cache row holds no MODEL; a node-first row holds the nodes.
+  - Definitions of another class: the hand corpus's `NotAMapDefinition`
+    inside a map. Kept definition-first by the class rule at every depth;
+    with it the hand corpus passes.
+  The mode has no finding of the first kind (a reader comparing
+  definitions by identity): every comparison the scout listed compares
+  the definitions of entries, and an entry keeps the definition it
+  derived, so two asks of one entry give one object.
+- **The build cache.** A node-first row holds the nodes: their texts,
+  `Computed`, `Resolve` and `Arrangement` objects serialize, and the
+  cache's two refusals (a closure, a container name) do not fire on any
+  row of the development site. Over its 55 declared builds the rows
+  measure 1,578,148 bytes against 1,278,405 (1.23 times; from 0.84 to
+  2.09 per build). Unserialized, every entry answers `schema()` with an
+  equal node and `definition()` with an equal definition. `SerializedMaps`
+  finds no map on a node-first entry, whose definition is not
+  serialized; a node keeps a map's properties without it. What the cache
+  would need is slice 33's to decide.
+- **The price list.** Measured on the development site with assertions
+  off, the mode against the default mode on the same tree, as the sum
+  over 171 operations of each one's minimum: building costs 26 percent
+  more (67.2 ms against 84.7 ms), since every definition is read into
+  its node at build (5,646 reads, 7,722 nodes) and
+  `Resources::assertWidgetsDraw()` then asks every entry for its
+  definition, which derives it (5,448 of the 5,520 definitions derived in
+  fresh builds). What follows is cheaper or the same: the first accept 23
+  percent less, `Outbound::project()` 14 percent less, a read 6 percent
+  less, validation 1 percent more, the form, the document and the full
+  schema 1 to 2 percent less, a whole write request 1.7 percent less. The
+  tool definitions take 32 ms more to rebuild (40 percent): 3,625
+  definitions derived, by `InputDefinitions::fromChild()` (1,075),
+  `DefinitionMap::toArray()` (1,110), `SiteListBudget::over()` (530),
+  `InputDefinitions::surfaceMap()` (480) and `OperationInputs` (335). A
+  write request peaks 44 to 53 KB higher. With the mode off, no phase is
+  slower by more than 2 percent than before this change. These are the
+  readers that still ask for a definition, and the parts that follow
+  move them.
+
+(`Entry`, `DefinitionMap`, `Contract\NodeDefinition`,
+`SurfaceKernelTestBase`, `EntryTest`, `NodeFirstModeTest`,
+`DefinitionReadCallersTest`)
 
 ### The value pipeline reads nodes
 

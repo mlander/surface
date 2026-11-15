@@ -16,6 +16,7 @@ use Drupal\surface\ResourceBuild\Location;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\SurfaceRefinerInterface;
 use Drupal\surface\Entry;
+use Drupal\Tests\surface\Kernel\DefinitionEqualityTrait;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 use PortableSchema\Builder\Schema;
@@ -34,11 +35,20 @@ use PortableSchema\Builder\Schema;
  * same definition, never serialized, and refused at schema(), never at
  * construction, for a definition that holds itself.
  *
+ * A node-first entry (Entry::ofSchema()) holds the node its source gave
+ * and derives its definition on the first definition() call: the same
+ * object after, kept or dropped by the copies as their source says, only
+ * the node serialized, refused at definition() with the key's name for a
+ * node no definition derives from, and asserted not stale either way.
+ *
  * @see \Drupal\surface\Entry
  * @see docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone
+ * @see docs/decisions.md#an-entry-holds-the-form-its-source-gave
  */
 #[Group('surface')]
 class EntryTest extends UnitTestCase {
+
+  use DefinitionEqualityTrait;
 
   /**
    * Tests the defaults a key that declares nothing extra takes.
@@ -121,6 +131,11 @@ class EntryTest extends UnitTestCase {
     // defaults: none here.
     $typed = $this->createMock(TypedDataManagerInterface::class);
     $typed->method('getDefaultConstraints')->willReturn([]);
+    // A node-first entry derives its definition (NodeDefinition::of()),
+    // which asks whether the type is defined, and a derived definition is
+    // compared by its class, which asks the type's definition.
+    $typed->method('hasDefinition')->willReturnCallback(static fn (string $type): bool => $type !== 'not_a_type');
+    $typed->method('getDefinition')->willReturn(['class' => \stdClass::class]);
     $container = new ContainerBuilder();
     $container->set('typed_data_manager', $typed);
     \Drupal::setContainer($container);
@@ -280,6 +295,142 @@ class EntryTest extends UnitTestCase {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('holds itself');
     $entry->schema();
+  }
+
+  /**
+   * Tests a node-first entry answers with its node and a derived definition.
+   */
+  public function testNodeFirstEntryDerivesItsDefinition(): void {
+    $definition = static::map();
+    $node = DefinitionSchema::of($definition);
+    $refiner = static::refiner();
+    $entry = Entry::ofSchema('where', $node, contributor: 'other_module', locked: TRUE, dependencies: ['venue'], refiners: [SurfaceInterface::OWNER => [$refiner]]);
+    $this->assertSame($node, $entry->schema(), 'schema() is the node given.');
+    $this->assertSame($node, $entry->schema(), 'And the same on a second ask.');
+    $derived = $entry->definition();
+    $this->assertSame([], static::definitionDifferences($definition, $derived, 'where'), 'The derived definition equals the one the node was read from.');
+    $this->assertSame($derived, $entry->definition(), 'A second ask returns the same object.');
+    $this->assertSame('other_module', $entry->contributor, 'The other members are the ones handed.');
+    $this->assertTrue($entry->locked);
+    $this->assertSame(['venue'], $entry->dependencies);
+    $this->assertSame([SurfaceInterface::OWNER => [$refiner]], $entry->refiners);
+  }
+
+  /**
+   * Tests the copies keep the source, and the other form when it is the same.
+   */
+  public function testCopiesKeepTheSource(): void {
+    $node = DefinitionSchema::of(static::map());
+    $child = $this->createMock(SurfaceInterface::class);
+    $entry = Entry::ofSchema('where', $node, attachment: new Attachment($child, reads: ['venue' => 'venue']));
+    $derived = $entry->definition();
+
+    $bound = $entry->readingFrom(['venue' => 'hall']);
+    $this->assertNotNull($bound);
+    $this->assertSame($node, $bound->schema(), 'readingFrom() keeps the node given.');
+    $this->assertSame($derived, $bound->definition(), 'And the definition derived from it.');
+    $this->assertSame(serialize(Entry::ofSchema('where', $node, attachment: $bound->attachment)), serialize($bound), 'And it stays node-first.');
+
+    $same = $entry->withDefinition($derived);
+    $this->assertSame([$node, $derived], [$same->schema(), $same->definition()], 'withDefinition() handed the derived definition keeps both.');
+
+    $other = static::map()->setLabel('Elsewhere');
+    $narrowed = $entry->withDefinition($other);
+    $this->assertSame($other, $narrowed->definition(), 'withDefinition() handed another definition is definition-first.');
+    $this->assertNotSame($node, $narrowed->schema(), 'It starts unread.');
+    $this->assertSame('Elsewhere', $narrowed->schema()->get('title'));
+
+    $again = $entry->withSchema($node);
+    $this->assertSame([$node, $derived], [$again->schema(), $again->definition()], 'withSchema() handed the node it holds keeps the derived definition.');
+    $next = DefinitionSchema::of($other);
+    $moved = $entry->withSchema($next);
+    $this->assertSame($next, $moved->schema(), 'withSchema() handed another node holds it.');
+    $this->assertNotSame($derived, $moved->definition(), 'And derives its definition anew.');
+    $this->assertSame('Elsewhere', $moved->definition()->getLabel());
+
+    $given = static::map();
+    $read = new Entry('where', $given);
+    $its = $read->schema();
+    $turned = $read->withSchema($its);
+    $this->assertSame([$its, $given], [$turned->schema(), $turned->definition()], 'A definition-first entry handed its own node keeps the definition, which reads as it.');
+  }
+
+  /**
+   * Tests each kind serializes the form given, and answers both after.
+   */
+  public function testEachKindSerializesTheFormGiven(): void {
+    $definition = static::map();
+    $node = DefinitionSchema::of($definition);
+    $entry = Entry::ofSchema('where', $node);
+    $unread = serialize($entry);
+    $entry->definition();
+    $this->assertSame($unread, serialize($entry), 'A node-first entry serializes the same whether or not its definition was derived.');
+    $this->assertStringContainsString(DefinitionSchema::MODEL, $unread, 'It serializes its node.');
+    $this->assertStringNotContainsString('MapDataDefinition', $unread, 'And no definition.');
+    // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
+    $woken = unserialize($unread);
+    $this->assertInstanceOf(Entry::class, $woken);
+    $this->assertSame(static::json($node), static::json($woken->schema()), 'Unserialized, it answers schema() with an equal node.');
+    $this->assertSame([], static::definitionDifferences($definition, $woken->definition(), 'where', FALSE), 'And definition() with an equal definition.');
+    $this->assertSame($woken->definition(), $woken->definition());
+
+    $first = new Entry('where', static::map());
+    $first->schema();
+    $kept = serialize($first);
+    $this->assertStringNotContainsString(DefinitionSchema::MODEL, $kept, 'A definition-first entry serializes no node.');
+    // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
+    $back = unserialize($kept);
+    $this->assertInstanceOf(Entry::class, $back);
+    // Core drops a map's properties when it serializes the map, which a
+    // data surface keeps beside itself (SerializedMaps); an entry alone
+    // does not. A node keeps them.
+    $this->assertSame('{"title":"Where","x-surface-model":{"type":"map","definitionClass":"Drupal\\\\Core\\\\TypedData\\\\MapDataDefinition"}}', static::json($back->schema()), 'Unserialized alone, a definition-first map reads with no properties.');
+  }
+
+  /**
+   * Tests a node no definition derives from is refused at definition().
+   */
+  public function testNodeNoDefinitionDerivesFromIsRefused(): void {
+    $node = DefinitionSchema::of(DataDefinition::create('not_a_type')->setLabel('Odd'));
+    $entry = Entry::ofSchema('odd', $node);
+    $this->assertSame($node, $entry->schema(), 'Made, with nothing derived.');
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('The "odd" key\'s source gave a node, and no definition derives from it: No definition of the not_a_type type is derived');
+    $entry->definition();
+  }
+
+  /**
+   * Tests both staleness assertions, each with a planted write.
+   */
+  public function testStalenessIsAssertedEitherWay(): void {
+    if ((int) ini_get('zend.assertions') !== 1) {
+      $this->markTestSkipped('Assertions are off.');
+    }
+    $node = DefinitionSchema::of(static::map());
+    $entry = Entry::ofSchema('where', $node);
+    $derived = $entry->definition();
+    $this->assertSame($derived, $entry->definition(), 'Nothing written: the later ask passes.');
+    $this->assertInstanceOf(MapDataDefinition::class, $derived);
+    $derived->setLabel('Written');
+    try {
+      $entry->definition();
+      $this->fail('A derived definition written after it was derived is not seen.');
+    }
+    catch (\AssertionError $error) {
+      $this->assertStringContainsString('derived from the node its source gave, was written after it was derived', $error->getMessage());
+    }
+
+    $definition = static::map();
+    $first = new Entry('where', $definition);
+    $first->schema();
+    $definition->setLabel('Written');
+    try {
+      $first->schema();
+      $this->fail('A definition written after its node was read is not seen.');
+    }
+    catch (\AssertionError $error) {
+      $this->assertStringContainsString('its source, was written after its node was read', $error->getMessage());
+    }
   }
 
   /**
