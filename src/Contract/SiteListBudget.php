@@ -124,7 +124,7 @@ final class SiteListBudget {
     if ($entry->variants !== NULL) {
       return DefinitionMetadata::variantsListedBySite($entry->variants->shell);
     }
-    return $entry->attachment !== NULL && DefinitionMetadata::eachOf($entry->definition) !== NULL;
+    return $entry->attachment !== NULL && DefinitionMetadata::eachOf($entry->definition()) !== NULL;
   }
 
   /**

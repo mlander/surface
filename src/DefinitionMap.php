@@ -298,7 +298,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *   The definition, or NULL when the map declares no such key.
    */
   public function get(string $name): ?DataDefinitionInterface {
-    return $this->entries[$name]->definition ?? NULL;
+    return ($this->entries[$name] ?? NULL)?->definition();
   }
 
   /**
@@ -610,7 +610,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    */
   public function toArray(): array {
     return array_map(
-      static fn (Entry $entry): DataDefinitionInterface => $entry->definition,
+      static fn (Entry $entry): DataDefinitionInterface => $entry->definition(),
       $this->entries,
     );
   }
@@ -620,7 +620,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    */
   public function getIterator(): \Traversable {
     foreach ($this->entries as $name => $entry) {
-      yield $name => $entry->definition;
+      yield $name => $entry->definition();
     }
   }
 

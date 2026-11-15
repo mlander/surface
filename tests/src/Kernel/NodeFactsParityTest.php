@@ -314,7 +314,7 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
       foreach ($map->entries() as $name => $entry) {
         $here = "$at $side:$name";
         $entries++;
-        array_push($differ, ...static::parity($entry->definition, $entry->schema(), $here, $counts, $seen, $stated));
+        array_push($differ, ...static::parity($entry->definition(), $entry->schema(), $here, $counts, $seen, $stated));
         $children = [];
         if ($entry->variants !== NULL) {
           foreach ($entry->variants->variantIds() as $variant) {

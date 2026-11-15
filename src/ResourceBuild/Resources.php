@@ -1074,7 +1074,7 @@ final class Resources implements ResourcesInterface {
       }
     };
     foreach ($sealed->getDefinitions()->entries() as $name => $entry) {
-      $walk($entry->definition, (string) $name);
+      $walk($entry->definition(), (string) $name);
     }
   }
 

@@ -1117,8 +1117,8 @@ test errored or failed and every gate passed.
   cache; it orders classes slowest first.
 
 On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-14: the
-full lane takes 15m36s at the defaults (phpunit 14m52s) and the fast
-lane 9m02s (phpunit 8m56s). As of 2026-10-23, with a smaller suite, the
+full lane takes 16m01s at the defaults (phpunit 15m16s) and the fast
+lane 9m08s (phpunit 8m50s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first

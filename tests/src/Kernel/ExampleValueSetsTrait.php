@@ -108,8 +108,8 @@ trait ExampleValueSetsTrait {
         $child = $entry->list->child();
         $values[$name] = [static::withItems($child, $child->getDefaultValues())];
       }
-      elseif (!$entry->isNested() && $entry->definition instanceof ListDataDefinitionInterface) {
-        $item = $entry->definition->getItemDefinition();
+      elseif (!$entry->isNested() && $entry->definition() instanceof ListDataDefinitionInterface) {
+        $item = $entry->definition()->getItemDefinition();
         $values[$name] = [
           match ($item->getDataType()) {
             'integer' => 1,
@@ -275,7 +275,7 @@ trait ExampleValueSetsTrait {
         }
         continue;
       }
-      $pointers = [...$pointers, ...static::below($entry->definition, $value, $at)];
+      $pointers = [...$pointers, ...static::below($entry->definition(), $value, $at)];
     }
     return $pointers;
   }

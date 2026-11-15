@@ -265,11 +265,11 @@ trait HeldToConfigSchemaTrait {
       }
       return;
     }
-    if ($entry->attachment === NULL && $entry->list === NULL && $entry->definition instanceof ComplexDataDefinitionInterface && str_contains((string) ($property['sequence']['type'] ?? ''), '[%key]')) {
+    if ($entry->attachment === NULL && $entry->list === NULL && $entry->definition() instanceof ComplexDataDefinitionInterface && str_contains((string) ($property['sequence']['type'] ?? ''), '[%key]')) {
       // The map other modules mount their keys in: each module's part
       // has the type its own key names.
       $item = (string) ($property['sequence']['type'] ?? '');
-      foreach ($entry->definition->getPropertyDefinitions() as $module => $part) {
+      foreach ($entry->definition()->getPropertyDefinitions() as $module => $part) {
         $resolved = str_replace('[%key]', (string) $module, $item);
         if ($resolved === '' || str_contains($resolved, ']') || !$this->typedConfig->hasConfigSchema($resolved)) {
           $wider[$path . '.' . $module] = 'no config schema describes what this module mounts here';
@@ -299,12 +299,12 @@ trait HeldToConfigSchemaTrait {
         $wider[$path] = sprintf('it is a list, which the schema types %s', $type);
         return;
       }
-      $this->constraintsWider($entry->definition, $schema, $path, $wider);
+      $this->constraintsWider($entry->definition(), $schema, $path, $wider);
       $this->mapWider($entry->list->child()->getDefinitions(), $this->merged($schema['sequence'] ?? []), $path, $strict, $wider);
       return;
     }
     if ($entry->attachment !== NULL) {
-      $each = DefinitionMetadata::eachOf($entry->definition);
+      $each = DefinitionMetadata::eachOf($entry->definition());
       if ($each !== NULL) {
         if (!$this->isA($schema, Sequence::class)) {
           $wider[$path] = sprintf('it holds a key per thing the site has, which the schema types %s', $type);
@@ -321,7 +321,7 @@ trait HeldToConfigSchemaTrait {
     }
     // A plain key's facts are read from its node; the shells above keep
     // their own on their definitions (Entry::isShell()).
-    $this->definitionWider($entry->schema(), $entry->definition, $schema, $path, $strict, $wider);
+    $this->definitionWider($entry->schema(), $entry->definition(), $schema, $path, $strict, $wider);
   }
 
   /**

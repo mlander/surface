@@ -148,7 +148,7 @@ trait DoorAgreementTrait {
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
       $documents[$name . ' sent null'] = [$name => NULL] + $defaults;
-      $documents[$name . ' sent a value of another type'] = [$name => static::otherType($entry->definition, $entry->attachment !== NULL || $entry->variants !== NULL)] + $defaults;
+      $documents[$name . ' sent a value of another type'] = [$name => static::otherType($entry->definition(), $entry->attachment !== NULL || $entry->variants !== NULL)] + $defaults;
     }
     return $documents;
   }

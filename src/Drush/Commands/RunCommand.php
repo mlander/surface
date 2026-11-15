@@ -263,8 +263,8 @@ final class RunCommand extends Command {
       // is a shell, whose own facts are read from its definition.
       $node = $entry->isShell() ? NULL : $entry->schema();
       $takes[(string) $key] = [
-        'type' => $node === NULL ? $entry->definition->getDataType() : NodeFacts::dataType($node),
-        'required' => $node === NULL ? $entry->definition->isRequired() : NodeFacts::isRequired($node),
+        'type' => $node === NULL ? $entry->definition()->getDataType() : NodeFacts::dataType($node),
+        'required' => $node === NULL ? $entry->definition()->isRequired() : NodeFacts::isRequired($node),
       ];
     }
     if ($json) {

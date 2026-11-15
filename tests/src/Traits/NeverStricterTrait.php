@@ -260,7 +260,7 @@ trait NeverStricterTrait {
       if (!property_exists($values, $name)) {
         continue;
       }
-      if ($values->{$name} === NULL && DefinitionMetadata::isSecret($entry->definition)) {
+      if ($values->{$name} === NULL && DefinitionMetadata::isSecret($entry->definition())) {
         unset($values->{$name});
         continue;
       }

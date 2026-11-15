@@ -614,7 +614,7 @@ final class SiteCatalog {
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
       $path = $prefix . $name;
-      $definition = $entry->definition;
+      $definition = $entry->definition();
       $computed = Computed::of($definition);
       // Variants the site lists past the budget are listed by value, and
       // their keys not walked: one structure a variant, at every depth, is

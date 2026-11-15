@@ -413,7 +413,7 @@ final class KeyPaths {
       $kind = match (TRUE) {
         $entry->variants !== NULL => 'variants',
         $entry->list !== NULL => 'collection',
-        ($entry->isShell() ? DefinitionMetadata::eachOf($entry->definition) : NodeFacts::each($entry->schema())) !== NULL => 'site',
+        ($entry->isShell() ? DefinitionMetadata::eachOf($entry->definition()) : NodeFacts::each($entry->schema())) !== NULL => 'site',
         $entry->attachment !== NULL => 'child',
         default => NULL,
       };
@@ -452,7 +452,7 @@ final class KeyPaths {
           continue;
         }
       }
-      $at = $entry->definition;
+      $at = $entry->definition();
       $node = $entry->schema();
       foreach (array_slice($segments, $depth + 1) as $segment) {
         if (DefinitionSchema::isList($node)) {
@@ -548,7 +548,7 @@ final class KeyPaths {
     foreach ($values as $key => $value) {
       $key = (string) $key;
       $entry = $surface->getDefinitions()->entry($key);
-      $child = $entry !== NULL && $entry->variants === NULL && $entry->list === NULL && DefinitionMetadata::eachOf($entry->definition) === NULL ? $entry->attachment : NULL;
+      $child = $entry !== NULL && $entry->variants === NULL && $entry->list === NULL && DefinitionMetadata::eachOf($entry->definition()) === NULL ? $entry->attachment : NULL;
       $paths += match (TRUE) {
         // A value that is no array is held whole: no node is read for it.
         !is_array($value) => [$prefix . $key => $value],

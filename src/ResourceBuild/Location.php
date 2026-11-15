@@ -92,7 +92,7 @@ final class Location {
         return NULL;
       }
       $value = $values[$name] ?? NULL;
-      $definition = $entry->definition;
+      $definition = $entry->definition();
       $holder = $entry;
       $child = $entry->list === NULL ? $entry->childFor($values) : NULL;
       if ($entry->list !== NULL && $segments !== []) {
@@ -165,7 +165,7 @@ final class Location {
    *   What is there, or NULL where nothing declares the place.
    */
   protected static function below(Entry $entry, mixed $value, array $segments): ?static {
-    $definition = $entry->definition;
+    $definition = $entry->definition();
     $node = $entry->schema();
     foreach ($segments as $segment) {
       // A built node holds a node for every property and item its

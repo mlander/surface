@@ -272,17 +272,17 @@ final class DoorCorpusRecorder {
     }
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $record = [
-        'fromDefinition' => static::attempt(fn (): mixed => static::tree($defs->fromDefinition($entry->definition))),
-        'outputFromDefinition' => static::attempt(fn (): mixed => static::tree($defs->outputFromDefinition($entry->definition))),
+        'fromDefinition' => static::attempt(fn (): mixed => static::tree($defs->fromDefinition($entry->definition()))),
+        'outputFromDefinition' => static::attempt(fn (): mixed => static::tree($defs->outputFromDefinition($entry->definition()))),
       ];
       if ($entry->variants !== NULL) {
-        $record['fromVariants'] = static::attempt(fn (): mixed => static::tree($defs->fromVariants($entry->variants, $entry->definition)));
+        $record['fromVariants'] = static::attempt(fn (): mixed => static::tree($defs->fromVariants($entry->variants, $entry->definition())));
       }
       $held = [];
       foreach (self::RAWS as $i => $raw) {
         $held[$i] = [
-          static::attempt(fn (): mixed => static::plain($this->keyPaths->held(clone $entry->definition, $raw, self::WHERE, (string) $name))),
-          static::attempt(fn (): mixed => static::plain($this->keyPaths->held(clone $entry->definition, $raw, ['verb' => 'fixes'] + self::WHERE, (string) $name))),
+          static::attempt(fn (): mixed => static::plain($this->keyPaths->held(clone $entry->definition(), $raw, self::WHERE, (string) $name))),
+          static::attempt(fn (): mixed => static::plain($this->keyPaths->held(clone $entry->definition(), $raw, ['verb' => 'fixes'] + self::WHERE, (string) $name))),
         ];
       }
       $record['held builder'] = $held;
@@ -392,7 +392,7 @@ final class DoorCorpusRecorder {
       $entry_rows = new \ReflectionMethod($this->panel, 'entryRows');
       foreach ($refined->getDefinitions()->entries() as $name => $entry) {
         $declared = $surface->getDefinitions()->entry((string) $name);
-        $arguments = [&$rows, (string) $name, $entry, $declared?->definition, $refined, $value, $declared];
+        $arguments = [&$rows, (string) $name, $entry, $declared?->definition(), $refined, $value, $declared];
         $entry_rows->invokeArgs($this->panel, $arguments);
       }
       return static::plain($rows);

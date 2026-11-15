@@ -212,7 +212,7 @@ class PortableServedContractTest extends SurfaceKernelTestBase {
     // The reader keeps no hint in a fragment; one a structure states is
     // served as stated.
     $hinted = static function (SurfaceInterface $surface) use ($fragment): SurfaceInterface {
-      $surface->getDefinitions()->entry('odd')->definition->addConstraint('JsonSchema', ['schema' => $fragment]);
+      $surface->getDefinitions()->entry('odd')->definition()->addConstraint('JsonSchema', ['schema' => $fragment]);
       return $surface;
     };
     $read = $hinted($resources->buildStatic($structure, $context));

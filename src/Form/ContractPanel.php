@@ -122,7 +122,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
     $rows = [];
     foreach ($refined->getDefinitions()->entries() as $name => $entry) {
       $declared_entry = $declared->getDefinitions()->entry((string) $name);
-      $this->entryRows($rows, (string) $name, $entry, $declared_entry?->definition, $refined, $values, $declared_entry);
+      $this->entryRows($rows, (string) $name, $entry, $declared_entry?->definition(), $refined, $values, $declared_entry);
     }
     $resource_id = $this->registry->getDefinition($served->resource)->id;
     $tool_id = 'surface:' . $resource_id . ':' . $served->operation->id;
@@ -255,7 +255,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    *   and its properties', are read from its definition.
    */
   protected function entryRows(array &$rows, string $path, Entry $entry, ?DataDefinitionInterface $declared, SurfaceInterface $refined, array $values, ?Entry $declared_entry = NULL): void {
-    $definition = $entry->definition;
+    $definition = $entry->definition();
     $depends = $refined->getDefinitions()->dependencies($entry->name);
     if ($entry->variants !== NULL) {
       $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? $refined->getDefault($entry->variants->by));

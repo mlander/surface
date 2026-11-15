@@ -1093,7 +1093,7 @@ final class SurfaceBuilder {
     }
     $this->reserveThirdPartyMount($provider);
     foreach ($attachment->child->getDefinitions()->entries() as $name => $entry) {
-      $this->thirdParty[$provider][(string) $name] = Surface::deepClone($entry->definition);
+      $this->thirdParty[$provider][(string) $name] = Surface::deepClone($entry->definition());
     }
     $this->mounted[$provider] = $attachment;
     $this->cacheability->addCacheableDependency($attachment->child);

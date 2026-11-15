@@ -230,7 +230,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
       if (in_array((string) $name, $skip, TRUE)) {
         continue;
       }
-      if (References::storedByUuid($entry->definition) || static::bare($entry) !== NULL) {
+      if (References::storedByUuid($entry->definition()) || static::bare($entry) !== NULL) {
         return TRUE;
       }
       foreach (static::children($entry) as $child) {
@@ -238,7 +238,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
           return TRUE;
         }
       }
-      if (static::definitionHolds($entry->definition)) {
+      if (static::definitionHolds($entry->definition())) {
         return TRUE;
       }
     }
@@ -318,7 +318,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
     // The author keeps the id on the key the structure is attached at, or
     // the structure on its own id.
     $id = $entry->attachment->child->getDefinition(self::ID);
-    if ($id === NULL || $id->getSetting(References::TARGETS) === NULL || $entry->definition->getSetting(References::STORED_AS) === References::BY_ID || $id->getSetting(References::STORED_AS) === References::BY_ID) {
+    if ($id === NULL || $id->getSetting(References::TARGETS) === NULL || $entry->definition()->getSetting(References::STORED_AS) === References::BY_ID || $id->getSetting(References::STORED_AS) === References::BY_ID) {
       return NULL;
     }
     return $id;
@@ -337,11 +337,11 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   protected static function listUuidKeys(DefinitionMap $map, string $prefix, array &$schema): void {
     foreach ($map->entries() as $name => $entry) {
       $path = $prefix . $name;
-      if (References::storedByUuid($entry->definition)) {
+      if (References::storedByUuid($entry->definition())) {
         $schema[$path] = self::UUID_SCHEMA;
         continue;
       }
-      $each = $entry->attachment === NULL ? NULL : DefinitionMetadata::eachOf($entry->definition);
+      $each = $entry->attachment === NULL ? NULL : DefinitionMetadata::eachOf($entry->definition());
       if ($each !== NULL) {
         static::listEachKeys($entry, $each, $path, $schema);
         continue;
@@ -359,8 +359,8 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
       foreach ($children as $module => $child) {
         static::listUuidKeys($child, $path . '.' . $module . '.', $schema);
       }
-      if ($entry->definition instanceof ComplexDataDefinitionInterface) {
-        foreach ($entry->definition->getPropertyDefinitions() as $part => $property) {
+      if ($entry->definition() instanceof ComplexDataDefinitionInterface) {
+        foreach ($entry->definition()->getPropertyDefinitions() as $part => $property) {
           if (isset($children[(string) $part])) {
             continue;
           }
@@ -452,8 +452,8 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
         continue;
       }
       $value = $values[$name];
-      if (References::storedByUuid($entry->definition)) {
-        $values[$name] = $this->one($entry->definition, $value, $to);
+      if (References::storedByUuid($entry->definition())) {
+        $values[$name] = $this->one($entry->definition(), $value, $to);
         continue;
       }
       if (!is_array($value)) {
@@ -495,7 +495,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
             $values[$name][$part] = $this->map($mounted[(string) $part], $settings, $to);
           }
         }
-        elseif ($entry->definition instanceof ComplexDataDefinitionInterface && ($property = $entry->definition->getPropertyDefinition((string) $part)) !== NULL) {
+        elseif ($entry->definition() instanceof ComplexDataDefinitionInterface && ($property = $entry->definition()->getPropertyDefinition((string) $part)) !== NULL) {
           $values[$name][$part] = $this->plain($property, $settings, $to);
         }
       }
@@ -609,8 +609,8 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
       }
       $value = $values[$name];
       $held = $stored[$name];
-      if (References::storedByUuid($entry->definition)) {
-        if (($value === NULL || $value === '') && is_string($held) && Uuid::isValid($held) && $this->one($entry->definition, $held, FALSE) === NULL) {
+      if (References::storedByUuid($entry->definition())) {
+        if (($value === NULL || $value === '') && is_string($held) && Uuid::isValid($held) && $this->one($entry->definition(), $held, FALSE) === NULL) {
           $values[$name] = $held;
         }
         continue;
@@ -664,7 +664,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
         continue;
       }
       $value = $values[$name];
-      $target = References::target($entry->definition);
+      $target = References::target($entry->definition());
       if ($target !== NULL) {
         $entity = $value === NULL || $value === '' ? NULL : $this->entity($target['entityType'], $value);
         if ($entity !== NULL) {

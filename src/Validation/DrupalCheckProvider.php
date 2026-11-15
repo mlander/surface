@@ -526,7 +526,7 @@ final class DrupalCheckProvider implements CheckProvider {
         $ran = TRUE;
         $map = MapDataDefinition::create();
         foreach ($frame->getDefinitions()->entries() as $key => $entry) {
-          $map->setPropertyDefinition((string) $key, $entry->definition);
+          $map->setPropertyDefinition((string) $key, $entry->definition());
         }
         $options = json_decode((string) json_encode($checks[$name]), TRUE);
         foreach ($this->runner->check($id, is_array($options) ? $options : [], $location['value'], $map) as $violation) {

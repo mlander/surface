@@ -222,7 +222,7 @@ class SecretsParityTest extends SurfaceKernelTestBase {
         $key = $segments[$i + 1];
         foreach ($entry->variants->variants as $variant) {
           $other = $variant->child->getDefinitions()->entry($key);
-          if ($document && $other !== NULL && DefinitionMetadata::isSecret($other->definition)) {
+          if ($document && $other !== NULL && DefinitionMetadata::isSecret($other->definition())) {
             return 'another variant';
           }
         }

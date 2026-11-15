@@ -352,7 +352,7 @@ final class Choices {
       $list = $entry->variants;
       $values = $entry->variants->variantIds();
     }
-    elseif ($entry->attachment !== NULL && DefinitionMetadata::eachOf($entry->definition) !== NULL) {
+    elseif ($entry->attachment !== NULL && DefinitionMetadata::eachOf($entry->definition()) !== NULL) {
       $list = $entry->attachment->child;
       $values = array_map('strval', $list->getDefinitions()->names());
     }

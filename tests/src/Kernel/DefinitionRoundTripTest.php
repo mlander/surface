@@ -524,8 +524,8 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     foreach (['in' => $surface->getDefinitions(), 'out' => $surface->getOutputDefinitions()] as $side => $map) {
       foreach ($map->entries() as $name => $entry) {
         $here = "$at $side:$name";
-        if (!$tops->contains($entry->definition)) {
-          $tops->attach($entry->definition, $here);
+        if (!$tops->contains($entry->definition())) {
+          $tops->attach($entry->definition(), $here);
         }
         $children = [];
         if ($entry->variants !== NULL) {

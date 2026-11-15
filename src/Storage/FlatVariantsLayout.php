@@ -269,7 +269,7 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
         continue;
       }
       if ($entry->attachment !== NULL) {
-        $each = DefinitionMetadata::eachOf($entry->definition);
+        $each = DefinitionMetadata::eachOf($entry->definition());
         if ($each === NULL) {
           static::walk($entry->attachment->child->getDefinitions(), [...$steps, static::step($name)], $at . '.', [], $marks, $schema);
         }

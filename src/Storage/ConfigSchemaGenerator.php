@@ -678,7 +678,7 @@ final class ConfigSchemaGenerator {
    */
   protected function entry(Entry $entry, string $path, ResourceDefinition $owner, array &$entries, array $existing, ?Schema $deciding = NULL, ?array $installed = NULL, string $at = ''): array {
     $held = $installed === NULL ? NULL : ($installed[$entry->name] ?? NULL);
-    $definition = $entry->definition;
+    $definition = $entry->definition();
     // A plain key's facts are read from its node; a key that holds a child
     // frame is a shell (Entry::isShell()), whose own facts are read from
     // its definition; a collection's declared constraints from its own
@@ -1016,10 +1016,10 @@ final class ConfigSchemaGenerator {
         // refuses a map and a list, so a shell is a secret only where its
         // definition was marked some other way: then its label is its
         // definition's, and what it holds is written from its node.
-        if ($entry->isShell() ? DefinitionMetadata::isSecret($entry->definition) : Secrets::marked($entry->schema())) {
+        if ($entry->isShell() ? DefinitionMetadata::isSecret($entry->definition()) : Secrets::marked($entry->schema())) {
           $node = $entry->schema();
-          $label = $entry->isShell() ? DefinitionMetadata::ownLabel($entry->definition) : NodeFacts::ownLabel($node);
-          $kept[$name] = $this->definition($node, $entry->definition, static::label($label, $name)) + ['requiredKey' => FALSE];
+          $label = $entry->isShell() ? DefinitionMetadata::ownLabel($entry->definition()) : NodeFacts::ownLabel($node);
+          $kept[$name] = $this->definition($node, $entry->definition(), static::label($label, $name)) + ['requiredKey' => FALSE];
         }
       }
     }
@@ -1044,7 +1044,7 @@ final class ConfigSchemaGenerator {
    *   The owner's sequence.
    */
   protected function thirdParty(Entry $entry, string $config, ResourceDefinition $owner, array &$entries, array $existing): array {
-    $definition = $entry->definition;
+    $definition = $entry->definition();
     $ruled = [];
     foreach ($entry->mayNotApply() as $path) {
       if (str_contains($path, '.')) {
@@ -1380,7 +1380,7 @@ final class ConfigSchemaGenerator {
         continue;
       }
       $held = array_key_exists($name, $existing) ? $existing[$name] : NULL;
-      $definition = $entry->definition;
+      $definition = $entry->definition();
       // A plain key's facts from its node; a shell's own from its
       // definition (Entry::isShell()).
       $node = $entry->isShell() ? NULL : $entry->schema();

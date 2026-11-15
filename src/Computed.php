@@ -183,9 +183,9 @@ final class Computed {
    */
   public static function apply(SurfaceInterface $surface, array $values, array $stored): array {
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
-      $computed = static::of($entry->definition);
+      $computed = static::of($entry->definition());
       if ($computed !== NULL && !$entry->locked && !($computed->takesSent() && ValueState::isConfigured($values[$name] ?? NULL))) {
-        $values[$name] = $computed->value((string) $name, $values, $stored, $entry->definition);
+        $values[$name] = $computed->value((string) $name, $values, $stored, $entry->definition());
       }
     }
     return $values;

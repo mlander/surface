@@ -249,7 +249,7 @@ final class Validating {
       // and a computed key's value.
       // Decision: see
       // docs/decisions.md#the-validators-checks-and-the-document-read-nodes.
-      $definition = $entry->definition;
+      $definition = $entry->definition();
       $node = $entry->isShell() ? NULL : $entry->schema();
       $value = $values[$name] ?? NULL;
       $computed = $entry->locked ? NULL : ($node === NULL ? Computed::of($definition) : NodeFacts::compute($node));
@@ -416,9 +416,9 @@ final class Validating {
    */
   protected function notComputed(SurfaceInterface $surface, Entry $entry, Schema $node, Computed $computed, array $values, array $current): ?Violation {
     $name = $entry->name;
-    $held = $computed->value($name, $values, $current, $entry->definition, $this->creates);
+    $held = $computed->value($name, $values, $current, $entry->definition(), $this->creates);
     try {
-      $held = $this->accepting->acceptValue($node, $entry->definition, $held, $held, $name);
+      $held = $this->accepting->acceptValue($node, $entry->definition(), $held, $held, $name);
     }
     catch (\InvalidArgumentException) {
       // Compared as computed.
@@ -466,10 +466,10 @@ final class Validating {
     foreach ($violations as $violation) {
       $entry = $violation->key === '' ? NULL : $surface->getDefinitions()->entry($violation->key);
       $node = $entry === NULL || $entry->isShell() ? NULL : $entry->schema();
-      $computed = $entry === NULL ? NULL : ($node === NULL ? Computed::of($entry->definition) : NodeFacts::compute($node));
+      $computed = $entry === NULL ? NULL : ($node === NULL ? Computed::of($entry->definition()) : NodeFacts::compute($node));
       // A key computed unless sent holding a value its sources do not give
       // holds the caller's own: its refusals stand as they are.
-      if ($entry === NULL || $computed === NULL || $violation->code === Violation::COMPUTED || ($computed->takesSent() && !$this->holdsComputed($violation->key, $node ?? $entry->schema(), $entry->definition, $computed, $values, $current))) {
+      if ($entry === NULL || $computed === NULL || $violation->code === Violation::COMPUTED || ($computed->takesSent() && !$this->holdsComputed($violation->key, $node ?? $entry->schema(), $entry->definition(), $computed, $values, $current))) {
         $named[] = $violation;
         continue;
       }
@@ -770,7 +770,7 @@ final class Validating {
    *   The label, or NULL.
    */
   protected static function ownLabel(Entry $entry, ?Schema $node): string|\Stringable|null {
-    return $node === NULL ? $entry->definition->getLabel() : NodeFacts::label($node);
+    return $node === NULL ? $entry->definition()->getLabel() : NodeFacts::label($node);
   }
 
   /**
@@ -786,7 +786,7 @@ final class Validating {
    *   TRUE when null clears it.
    */
   protected static function shellIsNullable(Entry $entry): bool {
-    return !DefinitionMetadata::holdsValue($entry->definition) && !DefinitionMetadata::isSecret($entry->definition);
+    return !DefinitionMetadata::holdsValue($entry->definition()) && !DefinitionMetadata::isSecret($entry->definition());
   }
 
   /**
@@ -1230,7 +1230,7 @@ final class Validating {
       $port = $parents === [] ? $surface->getPortDefinition($first) : NULL;
       return $port === NULL ? NULL : [DefinitionSchema::of($port), $port];
     }
-    $definition = $entry->definition;
+    $definition = $entry->definition();
     $node = $entry->schema();
     foreach ($parents as $property) {
       $property = (string) $property;

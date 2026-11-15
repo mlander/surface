@@ -648,7 +648,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $label = NULL;
     foreach ($this->examples() as [, , $surface]) {
       foreach ($surface->getDefinitions()->entries() as $entry) {
-        if (!$entry->isNested() && $entry->list === NULL && $entry->definition->getDataType() === 'string') {
+        if (!$entry->isNested() && $entry->list === NULL && $entry->definition()->getDataType() === 'string') {
           $label = $entry;
           break 2;
         }
@@ -657,15 +657,15 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $this->assertNotNull($label, 'An example holds a string key.');
     $node = $label->schema();
     $this->assertSame($node, $label->schema(), 'An entry reads its node once.');
-    $refined = Surface::deepClone($label->definition);
+    $refined = Surface::deepClone($label->definition());
     $again = $label->withDefinition($refined)->schema();
     $this->assertNotSame($node, $again, 'A refined key is a definition of its own, read for its own entry.');
-    $this->assertSame(static::json($definitions->published($node, $label->definition)), static::json($definitions->published($again, $refined)));
+    $this->assertSame(static::json($definitions->published($node, $label->definition())), static::json($definitions->published($again, $refined)));
     $properties = 0;
     $listed = 0;
     foreach ($this->examples() as [, , $surface]) {
       foreach ($surface->getDefinitions()->entries() as $entry) {
-        $map = $entry->definition;
+        $map = $entry->definition();
         if ($entry->isNested() || $entry->list !== NULL || !$map instanceof MapDataDefinition || $map->getPropertyDefinitions() === []) {
           continue;
         }
@@ -729,8 +729,8 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
         if ($entry->list !== NULL) {
           // Its items are the child's def; its default is the emitter's.
           $theirs = ['items', 'default'];
-          $head = DefinitionSchema::head($entry->definition);
-          $counted = $this->compare($definitions, $entry->definition, $served, "$id:$operation/$name", $head, $theirs);
+          $head = DefinitionSchema::head($entry->definition());
+          $counted = $this->compare($definitions, $entry->definition(), $served, "$id:$operation/$name", $head, $theirs);
           $collections += $counted;
           $compared += $counted;
           continue;
@@ -738,7 +738,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
         if ($entry->isNested() && !isset($served['properties'])) {
           continue;
         }
-        $compared += $this->compare($definitions, $entry->definition, $served, "$id:$operation/$name");
+        $compared += $this->compare($definitions, $entry->definition(), $served, "$id:$operation/$name");
       }
     }
     $this->assertGreaterThan(100, $compared, 'The examples\' keys are compared.');

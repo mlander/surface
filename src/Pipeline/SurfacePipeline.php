@@ -235,7 +235,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
       }
       $kept[$name] = $values[$name];
       $child = $entry->list === NULL ? $entry->childFor($values) : NULL;
-      if ($sent && $child === NULL && $entry->list === NULL && !is_array($values[$name]) && array_key_exists($name, $current) && $this->heldAlike($entry->schema(), $entry->definition, $values[$name], $current[$name])) {
+      if ($sent && $child === NULL && $entry->list === NULL && !is_array($values[$name]) && array_key_exists($name, $current) && $this->heldAlike($entry->schema(), $entry->definition(), $values[$name], $current[$name])) {
         $kept[$name] = $current[$name];
         continue;
       }
@@ -257,7 +257,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
       }
       $kept[$name] = ($child !== NULL
         ? $this->kept($child, $values[$name], $own, $below)
-        : $this->keptInMap($entry->schema(), $entry->definition, $values[$name], $own, $below)) + $aside;
+        : $this->keptInMap($entry->schema(), $entry->definition(), $values[$name], $own, $below)) + $aside;
     }
     return array_diff_key($kept + $values, $unwritten);
   }

@@ -94,8 +94,8 @@ class AnonymousMapTest extends SurfaceKernelTestBase {
     $definitions = $this->built()->getDefinitions();
     $where = $definitions->entry('where');
     $this->assertNull($where->attachment, 'A map of plain keys is a map definition at the key.');
-    $this->assertInstanceOf(MapDataDefinition::class, $where->definition);
-    $this->assertSame(['row', 'point'], array_keys($where->definition->getPropertyDefinitions()));
+    $this->assertInstanceOf(MapDataDefinition::class, $where->definition());
+    $this->assertSame(['row', 'point'], array_keys($where->definition()->getPropertyDefinitions()));
     $this->assertSame(['row' => 'A'], $this->built()->getDefault('where'));
 
     $kit = $definitions->entry('kit')->attachment;

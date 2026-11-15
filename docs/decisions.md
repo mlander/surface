@@ -3399,7 +3399,9 @@ that code is deleted. No served document, refusal or value changed.
   refusal, a definition that holds itself, is thrown at the first
   `schema()` call, never at build. `definition` stays the public
   constructor member, and `Entry` stays `final`; the node is a private
-  member that no constructor takes.
+  member that no constructor takes. (Since 2026-11-14 the definition is
+  a private member read through `Entry::definition()`: see
+  [The definition of an entry is asked for](#the-definition-of-an-entry-is-asked-for).)
 - **One direction only.** Every source gives a definition today, so the
   entry reads its node from its definition. Nothing in `src/` calls
   `NodeDefinition::of()`. The entry that holds a node a source gave and
@@ -3505,6 +3507,35 @@ Later: the node-first entry, for a source that produces a node
 `LocationNodeTest`, `EntryNodeIsNeverStaleTest`,
 `DefinitionReadCallersTest`, `DefinitionSchemaTest`,
 `DefinitionReadIsPureTest`)
+
+### The definition of an entry is asked for
+
+Decided 2026-11-14. `Entry::$definition` was a public constructor
+member, read as `$entry->definition` in about 180 places. It is a
+private member now, read through `Entry::definition()`. Nothing else
+changed: every reader was changed one for one, and no served document,
+refusal or value moved.
+
+- **Why.** The next step lets an entry hold the node its source gave and
+  derive a definition only when something asks. A property cannot be
+  derived on demand at the module's PHP floor (8.3 has no property
+  hooks); a method can.
+- **Who asks.** A definition is asked for only where an edge needs one:
+  the option resolver, a computed value, a refiner, a widget's claim,
+  `ConstraintRunner`, and the own facts of a key that holds a child
+  frame. A key's facts are read from its node (`Entry::schema()`).
+- **One reader was not one for one.** `DefinitionMap::get()` read the
+  property of an entry that may be missing and let `??` answer NULL; a
+  method call on a missing entry would throw, so it asks the entry first
+  (`($entry ?? NULL)?->definition()`).
+- **Serialized entries.** A private member serializes under the class's
+  name, so a build cache row written before this change does not match
+  the class. The cache is rebuilt, as after any change to a serialized
+  class. `SerializedMaps` walks an entry's members as an array and finds
+  the definition under that name.
+
+(`Entry`, `DefinitionMap`, every reader of an entry's definition in
+`src/`, `modules/` and `tests/`)
 
 ### The value pipeline reads nodes
 

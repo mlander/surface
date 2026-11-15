@@ -215,7 +215,7 @@ final class Accepting {
     $deferred = [];
     $computed = [];
     foreach ($definitions->entries() as $name => $entry) {
-      if (!$entry->locked && Computed::of($entry->definition) !== NULL) {
+      if (!$entry->locked && Computed::of($entry->definition()) !== NULL) {
         // Computed from the accepted values of the keys it names, so last.
         // Decision: see
         // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
@@ -380,8 +380,8 @@ final class Accepting {
     }
     $node = $entry->schema();
     return Secrets::marked($node)
-      ? $this->acceptSecret($node, $entry->definition, $input[$name], $fallback, $path)
-      : $this->acceptValue($node, $entry->definition, $input[$name], $fallback, $path);
+      ? $this->acceptSecret($node, $entry->definition(), $input[$name], $fallback, $path)
+      : $this->acceptValue($node, $entry->definition(), $input[$name], $fallback, $path);
   }
 
   /**
@@ -420,19 +420,19 @@ final class Accepting {
   protected function acceptComputed(SurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values): mixed {
     $name = $entry->name;
     $path = static::joinPath($prefix, $name);
-    $computed = Computed::of($entry->definition);
+    $computed = Computed::of($entry->definition());
     assert($computed !== NULL);
     if ($computed->takesSent() && array_key_exists($name, $input) && ValueState::isConfigured($input[$name])) {
       // Typed over: kept as sent, and judged as any key.
       $fallback = array_key_exists($name, $current) ? $current[$name] : NULL;
-      return $this->acceptValue($entry->schema(), $entry->definition, $input[$name], $fallback, $path);
+      return $this->acceptValue($entry->schema(), $entry->definition(), $input[$name], $fallback, $path);
     }
-    $value = $computed->value($name, $values, $current, $entry->definition, $this->creates);
-    $held = $this->acceptValue($entry->schema(), $entry->definition, $value, $value, $path);
+    $value = $computed->value($name, $values, $current, $entry->definition(), $this->creates);
+    $held = $this->acceptValue($entry->schema(), $entry->definition(), $value, $value, $path);
     if (!array_key_exists($name, $input) || $computed->takesSent()) {
       return $held;
     }
-    $sent = $this->acceptValue($entry->schema(), $entry->definition, $input[$name], $held, $path);
+    $sent = $this->acceptValue($entry->schema(), $entry->definition(), $input[$name], $held, $path);
     if (!static::sameValue($sent, $held)) {
       return $sent;
     }

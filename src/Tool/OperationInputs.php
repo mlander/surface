@@ -841,7 +841,7 @@ final class OperationInputs {
       // definition (Entry::isShell()).
       $computed = static function (string $name) use ($built): ?Computed {
         $entry = $built->getDefinitions()->entry($name);
-        return $entry === NULL ? NULL : ($entry->isShell() ? Computed::of($entry->definition) : NodeFacts::compute($entry->schema()));
+        return $entry === NULL ? NULL : ($entry->isShell() ? Computed::of($entry->definition()) : NodeFacts::compute($entry->schema()));
       };
       $properties = array_filter($properties, static fn (string $name): bool => $computed($name)?->takesSent() !== FALSE || $built->getDefinitions()->isLocked($name), ARRAY_FILTER_USE_KEY);
     }
@@ -1234,7 +1234,7 @@ final class OperationInputs {
     $label = ucfirst(str_replace('_', ' ', $parameter->name));
     $key = $neutral?->getDefinitions()->entry($parameter->name);
     if ($key !== NULL && $key->attachment === NULL && $key->variants === NULL && $key->list === NULL) {
-      $input = $this->inputDefinitions->fromDefinition($key->definition, $key->schema());
+      $input = $this->inputDefinitions->fromDefinition($key->definition(), $key->schema());
       $input->setRequired(!$parameter->optional);
       return $input;
     }

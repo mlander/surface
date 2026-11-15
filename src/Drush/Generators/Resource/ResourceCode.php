@@ -316,7 +316,7 @@ final class ResourceCode {
   protected function key(SurfaceInterface $surface, Entry $entry, string $path): string {
     $name = $entry->name;
     $at = $path . $name;
-    $definition = $entry->definition;
+    $definition = $entry->definition();
     // A plain key's facts are read from its node; a key that holds a child
     // frame is a shell (Entry::isShell()), whose own facts are read from
     // its definition.

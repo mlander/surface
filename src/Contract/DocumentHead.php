@@ -570,7 +570,7 @@ final class DocumentHead {
     $emission = $emission->withoutStale();
     foreach ($surface->getOutputDefinitions()->entries() as $name => $entry) {
       $node = $entry->schema();
-      [$schema] = $this->propertySchema->property($entry->definition, $node, NULL, NULL, NULL, (string) $name, FALSE, [], $emission);
+      [$schema] = $this->propertySchema->property($entry->definition(), $node, NULL, NULL, NULL, (string) $name, FALSE, [], $emission);
       $properties[(string) $name] = $this->propertySchema->withoutExtension($schema);
       if (NodeFacts::isRequired($node)) {
         $required[] = (string) $name;

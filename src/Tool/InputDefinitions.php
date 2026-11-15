@@ -337,9 +337,9 @@ final class InputDefinitions {
       // A plain key's facts from its node; a shell's own from its
       // definition (Entry::isShell()).
       $node = $entry->isShell() ? NULL : $entry->schema();
-      $target = $node === NULL ? References::target($entry->definition) : References::targetIn($node);
-      $bare = ($node === NULL ? $entry->definition->getSetting(References::TARGETS) : NodeFacts::setting($node, References::TARGETS)) !== NULL;
-      if (($target === NULL || $this->options->resolve($entry->definition) !== NULL) && !$bare) {
+      $target = $node === NULL ? References::target($entry->definition()) : References::targetIn($node);
+      $bare = ($node === NULL ? $entry->definition()->getSetting(References::TARGETS) : NodeFacts::setting($node, References::TARGETS)) !== NULL;
+      if (($target === NULL || $this->options->resolve($entry->definition()) !== NULL) && !$bare) {
         continue;
       }
       // Whether a key lists its candidates depends on the limit, so the
@@ -643,15 +643,15 @@ final class InputDefinitions {
    */
   protected function fromEntry(Entry $entry, ?string $narrowing = NULL): InputDefinitionInterface {
     if ($this->deferred($entry)) {
-      return $this->leftOut($entry, $entry->definition, $narrowing);
+      return $this->leftOut($entry, $entry->definition(), $narrowing);
     }
     $was = $this->at;
     try {
-      if ($entry->variants !== NULL && DefinitionMetadata::variantsBy($entry->definition) !== NULL) {
+      if ($entry->variants !== NULL && DefinitionMetadata::variantsBy($entry->definition()) !== NULL) {
         $this->enter($entry->name);
-        return $this->fromVariants($entry->variants, $entry->definition, $narrowing);
+        return $this->fromVariants($entry->variants, $entry->definition(), $narrowing);
       }
-      $item = $entry->definition instanceof ListDataDefinitionInterface ? $entry->definition->getItemDefinition() : NULL;
+      $item = $entry->definition() instanceof ListDataDefinitionInterface ? $entry->definition()->getItemDefinition() : NULL;
       if ($entry->list !== NULL && $item instanceof ComplexDataDefinitionInterface) {
         // A collection is a list of the child's maps, its Count carried as
         // the list's constraint, each item converted the way the child's
@@ -659,14 +659,14 @@ final class InputDefinitions {
         // A shell (Entry::isShell()): the list's own facts are read from
         // its definition, its item from the child's own entries.
         $this->enter($entry->name, '0');
-        return $this->headOf($entry->definition, item: $this->fromChild($entry->list->child(), $item, $narrowing));
+        return $this->headOf($entry->definition(), item: $this->fromChild($entry->list->child(), $item, $narrowing));
       }
       $child = $entry->attachment?->child;
-      if ($child === NULL || !$entry->definition instanceof ComplexDataDefinitionInterface) {
-        return $this->whole($entry, $entry->definition);
+      if ($child === NULL || !$entry->definition() instanceof ComplexDataDefinitionInterface) {
+        return $this->whole($entry, $entry->definition());
       }
       $this->enter($entry->name);
-      return $this->fromChild($child, $entry->definition, $narrowing);
+      return $this->fromChild($child, $entry->definition(), $narrowing);
     }
     finally {
       $this->at = $was;
@@ -717,7 +717,7 @@ final class InputDefinitions {
    */
   public function deferred(Entry $entry): bool {
     if (static::listedVariants($entry)) {
-      return DefinitionMetadata::variantsBy($entry->definition) !== NULL;
+      return DefinitionMetadata::variantsBy($entry->definition()) !== NULL;
     }
     return $this->over($entry);
   }
@@ -914,7 +914,7 @@ final class InputDefinitions {
     }
     $converted_all = [];
     foreach ($child->getDefinitions()->entries() as $name => $child_entry) {
-      $property = $properties[$name] ?? $child_entry->definition;
+      $property = $properties[$name] ?? $child_entry->definition();
       $converted = match (TRUE) {
         $this->deferred($child_entry) => $this->leftOut($child_entry, $property, $narrowing),
         $child_entry->variants !== NULL && isset($properties[$name]) && DefinitionMetadata::variantsBy($properties[$name]) !== NULL => $this->variantsAt((string) $name, $child_entry->variants, $properties[$name], $narrowing),
@@ -961,7 +961,7 @@ final class InputDefinitions {
    *   The input definition.
    */
   protected function whole(Entry $entry, DataDefinitionInterface $definition): InputDefinitionInterface {
-    if ($definition !== $entry->definition) {
+    if ($definition !== $entry->definition()) {
       // Advertised otherwise than the key's own definition, which no
       // entry holds.
       return $this->fromDefinition($definition);
@@ -1148,7 +1148,7 @@ final class InputDefinitions {
       $keys = [];
       foreach ($variant->child->getDefinitions()->entries() as $name => $entry) {
         $owners[$name][] = (string) $id;
-        $first[$name] ??= $entry->definition;
+        $first[$name] ??= $entry->definition();
         $entries[$name] ??= $entry;
         $keys[] = $name;
       }
@@ -1241,7 +1241,7 @@ final class InputDefinitions {
   public function outputsFromSurface(SurfaceInterface $surface): array {
     $outputs = [];
     foreach ($surface->getOutputDefinitions()->entries() as $name => $entry) {
-      $outputs[$name] = $this->outputFromDefinition($entry->definition, $entry->schema());
+      $outputs[$name] = $this->outputFromDefinition($entry->definition(), $entry->schema());
     }
     return $outputs;
   }
@@ -1493,7 +1493,7 @@ final class InputDefinitions {
     $properties = $map->getPropertyDefinitions();
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $property = $properties[$name] ?? NULL;
-      if (!$property instanceof InputDefinitionInterface || !array_key_exists($name, $stored) || ($entry->isShell() ? DefinitionMetadata::isSecret($entry->definition) : Secrets::marked($entry->schema()))) {
+      if (!$property instanceof InputDefinitionInterface || !array_key_exists($name, $stored) || ($entry->isShell() ? DefinitionMetadata::isSecret($entry->definition()) : Secrets::marked($entry->schema()))) {
         continue;
       }
       if (!$entry->isNested()) {

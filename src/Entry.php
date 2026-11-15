@@ -138,7 +138,7 @@ final class Entry {
    */
   public function __construct(
     public readonly string $name,
-    public readonly DataDefinitionInterface $definition,
+    private readonly DataDefinitionInterface $definition,
     public readonly string $contributor = SurfaceInterface::OWNER,
     public readonly bool $locked = FALSE,
     public readonly array $dependencies = [],
@@ -199,6 +199,23 @@ final class Entry {
   }
 
   /**
+   * Gets the key's Typed Data definition.
+   *
+   * Asked for only where an edge needs a definition: the option resolver,
+   * a computed value, a refiner, a widget's claim, ConstraintRunner, and
+   * the own facts of a key that holds a child frame (isShell()). A key's
+   * facts are read from its node (schema()).
+   *
+   * Decision: see docs/decisions.md#the-definition-of-an-entry-is-asked-for.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The definition.
+   */
+  public function definition(): DataDefinitionInterface {
+    return $this->definition;
+  }
+
+  /**
    * Gets the built node of the key's definition.
    *
    * Read from the definition on the first call (DefinitionSchema::of()) and
@@ -226,7 +243,10 @@ final class Entry {
    *
    * The serialized entry is the same whether or not its node was read, so
    * a build cache row does not depend on what a consumer asked before it
-   * was written.
+   * was written. The definition is a private member, which serializes
+   * under the class's name: a row written while it was a public member
+   * does not match the class, and the cache is rebuilt, as after any
+   * change to a serialized class.
    *
    * @return string[]
    *   The constructor's members, in their order.

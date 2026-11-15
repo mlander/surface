@@ -205,7 +205,7 @@ final class Resolve {
         }
       }
       elseif ($entry->attachment !== NULL) {
-        $at = DefinitionMetadata::eachOf($entry->definition) === NULL ? $name . '.' : $name . '.*.';
+        $at = DefinitionMetadata::eachOf($entry->definition()) === NULL ? $name . '.' : $name . '.*.';
         $children[] = [$at, static::entryChild($entry)];
       }
       foreach ($children as [$at, $child]) {
@@ -233,7 +233,7 @@ final class Resolve {
    */
   protected static function entryChild(Entry $entry): ?SurfaceInterface {
     $child = $entry->attachment?->child;
-    if ($child === NULL || DefinitionMetadata::eachOf($entry->definition) === NULL) {
+    if ($child === NULL || DefinitionMetadata::eachOf($entry->definition()) === NULL) {
       return $child;
     }
     $entries = $child->getDefinitions()->entries();
@@ -254,8 +254,8 @@ final class Resolve {
   protected static function own(DefinitionMap $map): array {
     $declared = [];
     foreach ($map->entries() as $name => $entry) {
-      if ($name === RefinesInputRefiner::MOUNT && $entry->definition instanceof ComplexDataDefinitionInterface) {
-        foreach ($entry->definition->getPropertyDefinitions() as $module => $mount) {
+      if ($name === RefinesInputRefiner::MOUNT && $entry->definition() instanceof ComplexDataDefinitionInterface) {
+        foreach ($entry->definition()->getPropertyDefinitions() as $module => $mount) {
           if (!$mount instanceof ComplexDataDefinitionInterface || isset($entry->mounted[$module])) {
             continue;
           }
@@ -268,9 +268,9 @@ final class Resolve {
         }
         continue;
       }
-      $resolve = static::of($entry->definition);
+      $resolve = static::of($entry->definition());
       if ($resolve !== NULL) {
-        $declared[(string) $name] = [$resolve, $entry->definition];
+        $declared[(string) $name] = [$resolve, $entry->definition()];
       }
     }
     return $declared;

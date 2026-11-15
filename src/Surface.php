@@ -352,7 +352,7 @@ final class Surface implements SurfaceInterface {
       // The secrets kept for other variants stay beside the chosen one's.
       return $entry->variants->variant($chosen)->child->withDefaults($own) + $held;
     }
-    return static::mapWithDefaults($entry->definition, DefinitionMetadata::defaultOf($entry->definition), $held);
+    return static::mapWithDefaults($entry->definition(), DefinitionMetadata::defaultOf($entry->definition()), $held);
   }
 
   /**
@@ -411,7 +411,7 @@ final class Surface implements SurfaceInterface {
       $chosen = $entry->variants->chosen($this->getDefault($entry->variants->by));
       return $chosen === NULL ? NULL : $entry->variants->defaultsOf($chosen);
     }
-    return DefinitionMetadata::defaultOf($entry->definition);
+    return DefinitionMetadata::defaultOf($entry->definition());
   }
 
   /**
@@ -672,7 +672,7 @@ final class Surface implements SurfaceInterface {
    *   The key for these values, or NULL when nothing about it changes.
    */
   protected function refineMounted(Entry $entry, ?DataDefinitionInterface $refined, array $values, array $admitted, int $runtime, CacheableMetadata $cacheability): ?DataDefinitionInterface {
-    $before = $refined ?? $entry->definition;
+    $before = $refined ?? $entry->definition();
     $definition = NULL;
     foreach ($entry->mounted as $path => $attachment) {
       $parents = explode('.', (string) $path);
@@ -777,7 +777,7 @@ final class Surface implements SurfaceInterface {
     if (DoesNotApply::marks($answer)) {
       return $answer;
     }
-    $narrowed = Narrowing::narrowed($entry->definition, $answer);
+    $narrowed = Narrowing::narrowed($entry->definition(), $answer);
     if ($narrowed !== NULL) {
       throw new \LogicException(sprintf(
         'Refining "%s", which holds a child, %s. A parent may only answer that a key holding a child does not apply; what the child holds is the child\'s to narrow.',
@@ -807,7 +807,7 @@ final class Surface implements SurfaceInterface {
    *   When the items were narrowed.
    */
   public static function assertItemsUntouched(Entry $entry, DataDefinitionInterface $refined): void {
-    $before = $entry->definition instanceof ListDataDefinition ? $entry->definition->getItemDefinition() : NULL;
+    $before = $entry->definition() instanceof ListDataDefinition ? $entry->definition()->getItemDefinition() : NULL;
     $after = $refined instanceof ListDataDefinition ? $refined->getItemDefinition() : NULL;
     $narrowed = $before === NULL || $after === NULL
       ? 'the list is no longer a list'
@@ -948,13 +948,13 @@ final class Surface implements SurfaceInterface {
     elseif ($refined === $child) {
       return NULL;
     }
-    elseif ($entry->definition instanceof MapDataDefinition) {
-      $definition = Attachment::mapOf($entry->definition, $refined);
+    elseif ($entry->definition() instanceof MapDataDefinition) {
+      $definition = Attachment::mapOf($entry->definition(), $refined);
     }
     else {
       throw new \LogicException(sprintf('The "%s" key no longer holds a map, so its attached child has nowhere to be written.', $entry->name));
     }
-    Narrowing::assertNarrows($entry->name, 'the child attached there', $entry->definition, $definition);
+    Narrowing::assertNarrows($entry->name, 'the child attached there', $entry->definition(), $definition);
     return $definition;
   }
 
@@ -1100,7 +1100,7 @@ final class Surface implements SurfaceInterface {
    */
   protected function unionOfContributions(Entry $entry, array $chains, array $values, CacheableMetadata $cacheability): DataDefinitionInterface {
     $target = $entry->name;
-    $advertised = $entry->definition;
+    $advertised = $entry->definition();
     $contributed = $entry->contributions;
     $advertised_set = ChoiceSet::of($advertised);
 

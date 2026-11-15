@@ -84,3 +84,14 @@ parameters:
     -
       identifier: method.alreadyNarrowedType
       path: modules/*/tests/*
+    # Two anonymous classes in tests override an untyped core method with
+    # its types in a docblock. Analyzed with the whole module that is
+    # read; analyzed alone (the fast lane hands PHPStan the changed files
+    # only) the docblock of an anonymous class's method is not, and these
+    # two are reported. They are the tool's, not the code's.
+    -
+      identifier: missingType.parameter
+      path: tests/src/Kernel/DefinitionReadServiceFreeTest.php
+    -
+      identifier: return.unusedType
+      path: tests/src/Kernel/DefinitionSchemaTest.php

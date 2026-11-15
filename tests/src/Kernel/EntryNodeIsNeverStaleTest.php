@@ -160,7 +160,7 @@ class EntryNodeIsNeverStaleTest extends SurfaceKernelTestBase {
     $stale = [];
     foreach ($entries as $entry) {
       assert($entry instanceof Entry);
-      array_push($stale, ...static::nodeDifferences(DefinitionSchema::of($entry->definition), $entry->schema(), $entries[$entry]));
+      array_push($stale, ...static::nodeDifferences(DefinitionSchema::of($entry->definition()), $entry->schema(), $entries[$entry]));
     }
     $this->assertSame([], array_slice($stale, 0, 20), 'Every kept node says what its definition says now.');
     $this->assertSame(self::COUNTS, [$surfaces, $sets, $refused, count($entries)], 'The data surfaces built, the value sets run, those the accept refuses, and the entries read.');

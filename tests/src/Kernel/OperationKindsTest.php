@@ -149,7 +149,7 @@ class OperationKindsTest extends SurfaceKernelTestBase {
       $built = $resources->buildStatic($resource->name(), $context);
       $requires = [];
       foreach ($built->getDefinitions()->entries() as $name => $entry) {
-        if ($values->getPropertyDefinition($name) !== NULL && $entry->definition->isRequired() && !in_array('', $entry->mayNotApply(), TRUE) && !DefinitionMetadata::isSecret($entry->definition)) {
+        if ($values->getPropertyDefinition($name) !== NULL && $entry->definition()->isRequired() && !in_array('', $entry->mayNotApply(), TRUE) && !DefinitionMetadata::isSecret($entry->definition())) {
           $requires[] = $name;
         }
       }

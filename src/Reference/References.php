@@ -718,7 +718,7 @@ final class References {
     if ($found !== NULL) {
       return $found;
     }
-    if (($entry->isShell() ? $entry->definition->getSetting(self::TARGETS) : NodeFacts::setting($entry->schema(), self::TARGETS)) === NULL) {
+    if (($entry->isShell() ? $entry->definition()->getSetting(self::TARGETS) : NodeFacts::setting($entry->schema(), self::TARGETS)) === NULL) {
       return NULL;
     }
     $types = $surface->getDefinitions()->entry(self::TYPE_KEY);
@@ -749,10 +749,10 @@ final class References {
    */
   protected static function referring(Entry $entry): ?array {
     if ($entry->isShell()) {
-      return static::target($entry->definition) === NULL ? NULL : [$entry->schema(), $entry->definition];
+      return static::target($entry->definition()) === NULL ? NULL : [$entry->schema(), $entry->definition()];
     }
     $node = $entry->schema();
-    return static::targetIn($node) === NULL ? NULL : [$node, $entry->definition];
+    return static::targetIn($node) === NULL ? NULL : [$node, $entry->definition()];
   }
 
   /**

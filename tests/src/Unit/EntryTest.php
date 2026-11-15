@@ -48,7 +48,7 @@ class EntryTest extends UnitTestCase {
     $entry = new Entry('title', $definition);
 
     $this->assertSame('title', $entry->name);
-    $this->assertSame($definition, $entry->definition);
+    $this->assertSame($definition, $entry->definition());
     $this->assertSame(SurfaceInterface::OWNER, $entry->contributor);
     $this->assertFalse($entry->locked);
     $this->assertSame([], $entry->dependencies);
@@ -75,7 +75,7 @@ class EntryTest extends UnitTestCase {
     $next = $entry->withDefinition($narrowed);
 
     $this->assertNotSame($entry, $next);
-    $this->assertSame($narrowed, $next->definition);
+    $this->assertSame($narrowed, $next->definition());
     $this->assertSame('variant', $next->name);
     $this->assertSame('other_module', $next->contributor);
     $this->assertTrue($next->locked);
@@ -83,7 +83,7 @@ class EntryTest extends UnitTestCase {
     $this->assertSame([SurfaceInterface::OWNER => [$refiner]], $next->refiners);
     $this->assertSame(['other_module' => ['ribbon']], $next->contributions);
     // The entry it came from is untouched.
-    $this->assertNotSame($narrowed, $entry->definition);
+    $this->assertNotSame($narrowed, $entry->definition());
   }
 
   /**
@@ -276,7 +276,7 @@ class EntryTest extends UnitTestCase {
     $map = MapDataDefinition::create()->setLabel('Loop');
     $map->setPropertyDefinition('self', $map);
     $entry = new Entry('loop', $map);
-    $this->assertSame($map, $entry->withDefinition($map)->definition, 'Made, and made again, with nothing read.');
+    $this->assertSame($map, $entry->withDefinition($map)->definition(), 'Made, and made again, with nothing read.');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('holds itself');
     $entry->schema();

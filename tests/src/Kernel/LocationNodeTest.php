@@ -190,7 +190,7 @@ class LocationNodeTest extends SurfaceKernelTestBase {
               $entry = $parent->frame->getDefinitions()->entry($last);
               $this->assertNotNull($entry, "$at, $how");
               $this->assertSame(static::json($entry->schema()), static::json($node), "$at, $how: the node of the entry at the key.");
-              if ($closure !== NULL && $entry->definition === $location->definition) {
+              if ($closure !== NULL && $entry->definition() === $location->definition) {
                 // The same level, refined once: the very node.
                 $this->assertSame($entry->schema(), $node, "$at, $how: the very node of the entry at the key.");
                 $shared++;

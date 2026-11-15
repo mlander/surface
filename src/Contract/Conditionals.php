@@ -559,7 +559,7 @@ final class Conditionals {
     $vanishing = [];
     foreach ($combinations as $i => [$combination, $surface]) {
       $holder = $surface->getDefinitions()->entry($entry->name) ?? $entry;
-      $definition = $holder->definition;
+      $definition = $holder->definition();
       $schema = $this->answer($entry, $definition, $emission, $applicability, $holder);
       // In development and tests only, and for one combination per key:
       // asked again, a static refiner answers the same.
@@ -764,7 +764,7 @@ final class Conditionals {
       return $this->propertySchema->listKeywords($this->propertySchema->listNode($definition), $definition)[0];
     }
     $holder ??= $entry;
-    $node = $holder->definition === $definition ? $holder->schema() : DefinitionSchema::of($definition);
+    $node = $holder->definition() === $definition ? $holder->schema() : DefinitionSchema::of($definition);
     return $this->propertySchema->property($definition, $node, NULL, NULL, NULL, $emission->at($entry->name), FALSE, [], $emission->withoutStale())[0];
   }
 
@@ -783,7 +783,7 @@ final class Conditionals {
    *   Whether the schema requires it.
    */
   protected static function requires(Entry $holder): bool {
-    return $holder->isNested() || $holder->list !== NULL ? DefinitionSchema::required($holder->definition) : PropertySchema::required($holder->schema());
+    return $holder->isNested() || $holder->list !== NULL ? DefinitionSchema::required($holder->definition()) : PropertySchema::required($holder->schema());
   }
 
   /**
@@ -865,7 +865,7 @@ final class Conditionals {
    */
   protected function answersAgain(SurfaceInterface $declared, Entry $entry, array $values, Schema|false $schema, Emission $emission, bool $applicability = FALSE): bool {
     $holder = $declared->refine($values, $emission->kinds())->getDefinitions()->entry($entry->name) ?? $entry;
-    $again = $this->answer($entry, $holder->definition, $emission, $applicability, $holder);
+    $again = $this->answer($entry, $holder->definition(), $emission, $applicability, $holder);
     if (json_encode($again === FALSE ? FALSE : $this->propertySchema->withoutExtension($again)) === json_encode($schema === FALSE ? FALSE : $this->propertySchema->withoutExtension($schema))) {
       return TRUE;
     }
@@ -918,7 +918,7 @@ final class Conditionals {
     if (ValueState::isConfigured($value)) {
       return [is_int($value) || is_string($value) ? $this->propertySchema->cast($value, $node) : $value];
     }
-    $set = $this->propertySchema->optionSet($entry->definition, $cacheability);
+    $set = $this->propertySchema->optionSet($entry->definition(), $cacheability);
     if ($set === NULL || count($set->options) > ContractEmitter::ENUMERATION_CAP) {
       return NULL;
     }

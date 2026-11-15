@@ -239,7 +239,7 @@ class ContentEntityAccessTest extends SurfaceKernelTestBase {
     // Its own refiner, which watches nothing, ran when it was built.
     $this->assertSame(20, $value->getConstraints()['Length']['max']);
     // The field's own facts stay derived.
-    $this->assertSame('Phone', (string) $edit->getDefinitions()->entry('field_phone')?->definition->getLabel());
+    $this->assertSame('Phone', (string) $edit->getDefinitions()->entry('field_phone')?->definition()->getLabel());
 
     // And the storage writes it by its property name.
     $context = $this->resources()->operation('entity.content:node.page', 'update', ['id' => $this->node->id()]);

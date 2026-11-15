@@ -329,7 +329,7 @@ trait SurfaceFormatterTrait {
         $this->appendSettingSummary($summary, $node, NodeFacts::label($node) ?? $name, $value);
         continue;
       }
-      $label = $entry->definition->getLabel() ?? $name;
+      $label = $entry->definition()->getLabel() ?? $name;
       if ($entry->mounted !== [] && !$entry->isNested() && $entry->list === NULL) {
         $this->appendSettingSummary($summary, $entry->schema(), $label, $value);
         continue;
@@ -341,7 +341,7 @@ trait SurfaceFormatterTrait {
       if ($entry->attachment !== NULL) {
         $child = $entry->attachment->child;
       }
-      elseif ($entry->variants !== NULL && $entry->definition->getDataType() !== 'any') {
+      elseif ($entry->variants !== NULL && $entry->definition()->getDataType() !== 'any') {
         // Variants chosen when the data surface was sealed (a locked
         // deciding key): the key is that variant's map.
         $by = $surface->getDefinitions()->entry($entry->variants->by);
