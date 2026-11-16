@@ -132,7 +132,6 @@ refused.
 | `DeclaresByProperties` | `use Drupal\surface\Resource\DeclaresByProperties;` |
 | `DefinesOutputsInterface` | `use Drupal\surface\Resource\DefinesOutputsInterface;` |
 | `DefinitionMetadata` | `use Drupal\surface\DefinitionMetadata;` |
-| `DefinitionWidgetInterface` | `use Drupal\surface\Contract\DefinitionWidgetInterface;` |
 | `DeletableStorageInterface` | `use Drupal\surface\Resource\DeletableStorageInterface;` |
 | `DerivedOperation` | `use Drupal\surface\Resource\DerivedOperation;` |
 | `DerivedResource` | `use Drupal\surface\Resource\DerivedResource;` |
@@ -152,6 +151,7 @@ refused.
 | `MachineName` | `use Drupal\surface\Compute\MachineName;` |
 | `Map` | `use Drupal\surface\Resource\Attribute\Map;` |
 | `MixIn` | `use Drupal\surface\Resource\Attribute\MixIn;` |
+| `NodeFacts` | `use Drupal\surface\Contract\NodeFacts;` |
 | `NotEmitted` | `use Drupal\surface\Pipeline\NotEmitted;` |
 | `Operation` | `use Drupal\surface\Resource\Attribute\Operation;` |
 | `OperationAccessInterface` | `use Drupal\surface\Resource\OperationAccessInterface;` |
@@ -170,6 +170,7 @@ refused.
 | `Rule` | `use Drupal\surface\Resource\Attribute\Rule;` |
 | `SchemaReader` | `use Drupal\surface\Contract\SchemaReader;` |
 | `SchemaViolations` | `use Drupal\surface\Storage\SchemaViolations;` |
+| `SchemaWidgetInterface` | `use Drupal\surface\Contract\SchemaWidgetInterface;` |
 | `Setting` | `use Drupal\surface\Resource\Attribute\Setting;` |
 | `Shape` | `use Drupal\surface\Resource\Attribute\Shape;` |
 | `ShapeInterface` | `use Drupal\surface\Resource\ShapeInterface;` |

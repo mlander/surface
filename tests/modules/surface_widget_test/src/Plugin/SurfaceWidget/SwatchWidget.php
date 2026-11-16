@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Drupal\surface_widget_test\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
@@ -26,12 +25,12 @@ use PortableSchema\Builder\Schema;
   claims: [['type' => 'string', 'format' => 'color']],
   priority: 5,
 )]
-final class SwatchWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+final class SwatchWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
     return TRUE;
   }
 

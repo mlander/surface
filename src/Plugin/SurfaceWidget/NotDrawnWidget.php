@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
@@ -34,7 +34,7 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('Not drawn'),
   weight: 10,
 )]
-final class NotDrawnWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+final class NotDrawnWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
   /**
    * The data types it draws.
@@ -44,9 +44,9 @@ final class NotDrawnWidget extends SurfaceWidgetBase implements DefinitionWidget
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    $value = $definition instanceof ListDataDefinitionInterface ? $definition->getItemDefinition() : $definition;
-    return in_array($value->getDataType(), self::TYPES, TRUE);
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    $value = DefinitionSchema::isList($schema) ? DefinitionSchema::itemNode($schema) : $schema;
+    return $value !== NULL && in_array(NodeFacts::dataType($value), self::TYPES, TRUE);
   }
 
   /**

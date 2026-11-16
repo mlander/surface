@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Widget\SurfaceWidgetBase;
@@ -31,7 +31,7 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('String'),
   weight: 10,
 )]
-final class StringWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+final class StringWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
   /**
    * The presentation settings a definition may give this widget.
@@ -44,8 +44,8 @@ final class StringWidget extends SurfaceWidgetBase implements DefinitionWidgetIn
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return in_array($definition->getDataType(), ['string', 'email', 'uri', 'duration_iso8601'], TRUE);
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return in_array(NodeFacts::dataType($schema), ['string', 'email', 'uri', 'duration_iso8601'], TRUE);
   }
 
   /**

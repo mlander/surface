@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\OptionSet;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Widget\ChoiceWidgetBase;
@@ -35,7 +34,7 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('Select'),
   weight: -10,
 )]
-final class OptionsWidget extends ChoiceWidgetBase implements DefinitionWidgetInterface {
+final class OptionsWidget extends ChoiceWidgetBase implements SchemaWidgetInterface {
 
   /**
    * How many rows a multiple select shows at most.
@@ -52,8 +51,8 @@ final class OptionsWidget extends ChoiceWidgetBase implements DefinitionWidgetIn
    *
    * Decision: see docs/decisions.md#a-key-that-does-not-apply.
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return $choice->optionSet($definition) !== NULL;
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return $choice->optionSet($schema) !== NULL;
   }
 
   /**
@@ -101,7 +100,7 @@ final class OptionsWidget extends ChoiceWidgetBase implements DefinitionWidgetIn
   }
 
   /**
-   * Answers whether a definition is drawn as the one value it may hold.
+   * Answers whether a key is drawn as the one value it may hold.
    *
    * A deciding key whose variants offer one value, or a key its
    * operation's context fixed to one, which may not hold nothing,
@@ -112,8 +111,8 @@ final class OptionsWidget extends ChoiceWidgetBase implements DefinitionWidgetIn
    * Decision: see
    * docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    * @param \Drupal\surface\Options\OptionSet $set
    *   The values it offers.
    * @param mixed $value
@@ -122,10 +121,10 @@ final class OptionsWidget extends ChoiceWidgetBase implements DefinitionWidgetIn
    * @return bool
    *   TRUE when it is drawn fixed.
    */
-  public static function drawsFixed(DataDefinitionInterface $definition, OptionSet $set, mixed $value): bool {
-    return !$definition instanceof ListDataDefinitionInterface
-      && (DefinitionMetadata::isOneVariant($definition) || DefinitionMetadata::isFixed($definition))
-      && DefinitionMetadata::holdsValue($definition)
+  public static function drawsFixed(Schema $schema, OptionSet $set, mixed $value): bool {
+    return !DefinitionSchema::isList($schema)
+      && (NodeFacts::isOneVariant($schema) || NodeFacts::isFixed($schema))
+      && NodeFacts::holdsValue($schema)
       && count($set->options) === 1
       && (!ValueState::isConfigured($value) || $set->allows($value));
   }

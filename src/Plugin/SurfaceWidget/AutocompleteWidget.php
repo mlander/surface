@@ -9,10 +9,10 @@ use Drupal\Core\Entity\Element\EntityAutocomplete;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Contract\WidgetChoice;
@@ -53,7 +53,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
   label: new TranslatableMarkup('Autocomplete'),
   weight: -5,
 )]
-final class AutocompleteWidget extends SurfaceWidgetBase implements ContainerFactoryPluginInterface, DefinitionWidgetInterface {
+final class AutocompleteWidget extends SurfaceWidgetBase implements ContainerFactoryPluginInterface, SchemaWidgetInterface {
 
   /**
    * The check a reference's node names its entity type in.
@@ -97,23 +97,23 @@ final class AutocompleteWidget extends SurfaceWidgetBase implements ContainerFac
   /**
    * Answers whether a key refers to one entity type.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    *
    * @return bool
    *   TRUE for one value whose constraint names its entity type; what it
    *   is drawn as, a select or this, is whether its candidates are listed.
    */
-  public static function draws(DataDefinitionInterface $definition): bool {
-    return !$definition instanceof ListDataDefinitionInterface && References::target($definition) !== NULL;
+  public static function draws(Schema $schema): bool {
+    return !DefinitionSchema::isList($schema) && References::targetIn($schema) !== NULL;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return static::draws($definition)
-      && ($definition->getSetting('widget') === 'autocomplete' || $choice->optionSet($definition) === NULL);
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return static::draws($schema)
+      && (NodeFacts::setting($schema, 'widget') === 'autocomplete' || $choice->optionSet($schema) === NULL);
   }
 
   /**

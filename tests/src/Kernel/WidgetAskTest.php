@@ -71,7 +71,7 @@ class WidgetAskTest extends SurfaceKernelTestBase {
     $this->assertSame('widget_test_pair', $built->getDefinition('asked')->getSetting('widget'));
     $this->assertSame('fieldset', $built->getDefinition('owned')->getSetting('widget'), 'The owner\'s ask at the key wins.');
     $manager = $this->container->get('surface.widget_choice');
-    $this->assertInstanceOf(PairWidget::class, $manager->forDefinition($built->getDefinition('asked')));
+    $this->assertInstanceOf(PairWidget::class, $manager->forSchema($built->getDefinitions()->entry('asked')->schema()));
 
     $form = $this->formBuilder()->buildSurfaceForm($built, ['asked' => ['left' => 'L', 'right' => 'R']], new FormState());
     $this->assertSame(['widget-test-pair'], $form['asked']['#attributes']['class']);
@@ -125,14 +125,17 @@ class WidgetAskTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a build derives a definition only where one is asked.
+   * Tests a build derives no definition, where a widget is asked too.
    *
    * The pair's own keys ask for no widget, and its build derives no
-   * definition. The pairs ask for one at both keys that hold the pair, so
-   * those two entries derive one for the widget's claim; the seal builds
-   * no map of the pair's keys for them, so the pair's keys derive none.
+   * definition. The pairs ask for one at both keys that hold the pair;
+   * until 2026-11-16 those two entries derived a definition for the
+   * widget's claim, which now takes the key's schema, so they derive none
+   * either (docs/decisions.md#a-widget-is-chosen-by-the-keys-schema). The
+   * seal builds no map of the pair's keys for them, so the pair's keys
+   * derive none.
    */
-  public function testNodeFirstBuildDerivesOnlyWhereWidgetsAreAsked(): void {
+  public function testNodeFirstBuildDerivesNoDefinitionWhereWidgetsAreAsked(): void {
     $derived = new \ReflectionProperty(Entry::class, 'definition');
     $pair = $this->built(PairStructure::class);
     foreach ($pair->getDefinitions()->entries() as $name => $entry) {
@@ -142,7 +145,7 @@ class WidgetAskTest extends SurfaceKernelTestBase {
     $pairs = $this->built(PairsStructure::class);
     foreach ($pairs->getDefinitions()->entries() as $name => $entry) {
       $this->assertTrue($entry->isNodeFirst());
-      $this->assertNotNull($derived->getValue($entry), sprintf('"%s" asks for a widget, whose claim takes a definition.', $name));
+      $this->assertNull($derived->getValue($entry), sprintf('"%s" asks for a widget, whose claim takes the key\'s schema: no definition is derived.', $name));
       foreach ($entry->attachment?->child->getDefinitions()->entries() ?? [] as $inside => $child_entry) {
         $this->assertNull($derived->getValue($child_entry), sprintf('The pair\'s "%s" inside "%s" derives no definition.', $inside, $name));
       }

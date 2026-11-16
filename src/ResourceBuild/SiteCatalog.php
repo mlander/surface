@@ -7,7 +7,6 @@ namespace Drupal\surface\ResourceBuild;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Session\AccountSwitcherInterface;
 use Drupal\Core\Session\AnonymousUserSession;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Collection;
 use Drupal\surface\Computed;
 use Drupal\surface\Contract\ContractBaselines;
@@ -16,6 +15,7 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Contract\WidgetChoice;
+use PortableSchema\Builder\Schema;
 
 /**
  * The live map of a site: what discovery found, its doors, its refusals.
@@ -659,7 +659,7 @@ final class SiteCatalog {
         ],
         'items' => $entry->list === NULL ? NULL : ($entry->list->item->id ?? $entry->list->item->source),
         // A list of maps is drawn as a collection, which no widget is.
-        'widget' => $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL && !Collection::holdsMaps($definition) ? $this->widget($definition) : NULL,
+        'widget' => $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL && !Collection::holdsMaps($definition) ? $this->widget($entry->schema()) : NULL,
       ];
       if ($entry->attachment !== NULL) {
         array_push($keys, ...$this->keys($entry->attachment->child, $entry->attachment->source, $path . '.', $within));
@@ -682,18 +682,18 @@ final class SiteCatalog {
    *
    * Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key's definition, as built.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    *
    * @return string|null
    *   The word, or NULL when no widget draws the key.
    */
-  protected function widget(DataDefinitionInterface $definition): ?string {
+  protected function widget(Schema $schema): ?string {
     if ($this->widgets === NULL) {
       return NULL;
     }
     try {
-      return $this->widgets->wordOf($this->widgets->forDefinition($definition));
+      return $this->widgets->wordOf($this->widgets->forSchema($schema));
     }
     catch (\InvalidArgumentException) {
       return NULL;

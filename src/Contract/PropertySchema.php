@@ -380,14 +380,15 @@ final class PropertySchema {
   /**
    * Describes one key that is not a child, recursing through maps.
    *
-   * Every fact of the key is read from its node, and the options service
-   * is handed the node (optionSet(), signature()). The definition is
-   * walked beside the node, in step, for what still takes one until slice
-   * 32: the widget claims (WidgetChoice, a widget's drawsDefinition() and
-   * its stock rules).
+   * Every fact of the key is read from its node, the options service and
+   * the widget claims (WidgetChoice, a widget's drawsSchema() and its
+   * stock rules) are handed the node. The definition is still walked beside the
+   * node, in step, and handed down; nothing here reads it until the
+   * emitter stops handing one (part 32.9b).
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key as it stands, refined, for the widget claims.
+   *   The key as it stands, refined; walked beside the node, read by
+   *   nothing.
    * @param \PortableSchema\Builder\Schema $node
    *   The definition's built node: its entry's (Entry::schema()), the node
    *   of the property or item below it that its parent's node holds, or,
@@ -449,15 +450,15 @@ final class PropertySchema {
       [$items] = $this->property($item, $item_node, NULL, NULL, NULL, $path . '.*', FALSE, [], $emission->withoutStale());
       $schema = $schema->with('items', static::neverNull($items));
       // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
-      $checkboxes = $set !== NULL && CheckboxesWidget::drawsList($definition, $set);
+      $checkboxes = $set !== NULL && CheckboxesWidget::drawsList($node, $set);
       $extension = $this->extension($depends, $refined);
       // A module's widget that claims the list, or draws it by a setting
       // of its own: the word it answers to.
-      $module = $this->widgets?->module($definition);
+      $module = $this->widgets?->module($node);
       // A list the list widget does not draw, its items lists or of any
       // type, is the JSON widget's, which no document names: a list of
       // maps is a collection, the form builder's.
-      $json = $module === NULL && !$listed && !is_a(DefinitionSchema::classOf($item_node), ComplexDataDefinitionInterface::class, TRUE) && $this->widgets?->wordFor($definition) === 'json';
+      $json = $module === NULL && !$listed && !is_a(DefinitionSchema::classOf($item_node), ComplexDataDefinitionInterface::class, TRUE) && $this->widgets?->wordFor($node) === 'json';
       $ui = match (TRUE) {
         $module !== NULL => PortableUi::write($this->widgets->wordOf($module), $this->published($module, $node)),
         $checkboxes => PortableUi::write($this->word('checkboxes')),
@@ -512,26 +513,26 @@ final class PropertySchema {
       $shown = $nested === [] ? new \stdClass() : $nested;
     }
     else {
-      $radios = $listed && RadiosWidget::drawsOne($definition);
-      $fixed = $listed && OptionsWidget::drawsFixed($definition, $set, $value);
+      $radios = $listed && RadiosWidget::drawsOne($node);
+      $fixed = $listed && OptionsWidget::drawsFixed($node, $set, $value);
       // A reference with too many candidates to list is looked up.
       // Decision: see
       // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
       // A module's widget that claims the key, unless its owner asked for
       // one by name: the word it answers to.
       // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
-      $claimed = $this->widgets?->module($definition);
+      $claimed = $this->widgets?->module($node);
       $widget = match (TRUE) {
         $claimed !== NULL => $this->widgets->wordOf($claimed),
         // A reference that asks for the autocomplete by its word is drawn
         // with it, listed or not (SurfaceWidgetManager::getWidgetFor()).
-        AutocompleteWidget::draws($definition) && NodeFacts::setting($node, 'widget') === 'autocomplete' => $this->word('autocomplete'),
+        AutocompleteWidget::draws($node) && NodeFacts::setting($node, 'widget') === 'autocomplete' => $this->word('autocomplete'),
         $fixed => $this->word('fixed'),
         $listed => $this->word($radios ? 'radios' : 'select'),
         // A bare reference's id is drawn once its entity type is chosen:
         // listed, or looked up.
-        AutocompleteWidget::draws($definition), NodeFacts::setting($node, References::TARGETS) !== NULL => $this->word('autocomplete'),
-        default => $this->word(WidgetChoice::valueWord($definition)),
+        AutocompleteWidget::draws($node), NodeFacts::setting($node, References::TARGETS) !== NULL => $this->word('autocomplete'),
+        default => $this->word(WidgetChoice::valueWord($node)),
       };
       $extension = $this->extension($depends, $refined);
       $ui = PortableUi::write($widget, $claimed !== NULL ? $this->published($claimed, $node) : $this->stringSettings($widget, $node));
@@ -622,7 +623,7 @@ final class PropertySchema {
       // keyword by keyword as any key; named() refers to the shape at the
       // end. Decision: see docs/decisions.md#a-shape-is-a-named-definition.
       // The shape's definition is walked beside its node, as every
-      // property's is, for the options service and the widget claims.
+      // property's is.
       $shape = DefinitionMetadata::shapeDefinition($definition) ?? throw new \LogicException(sprintf('The node at "%s" holds a shape its definition does not: the two are out of step.', $path));
       $schema = $schema->with(self::SHAPED, [
         'id' => $id,

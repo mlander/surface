@@ -4321,7 +4321,9 @@ the two faults below, fixed on purpose.
 - *The widget claims* (`DefinitionWidgetInterface::drawsDefinition()`,
   19 implementers, and the reads in each plugin) and `WidgetChoice`
   (`claimed()`, `forDefinition()`, `valueWord()`, `optionSet()`),
-  `SiteCatalog`'s claim.
+  `SiteCatalog`'s claim. (2026-11-16: they take the key's schema,
+  `SchemaWidgetInterface::drawsSchema()` and `WidgetChoice::forSchema()`:
+  [A widget is chosen by the key's schema](#a-widget-is-chosen-by-the-keys-schema).)
 - *`ConstraintRunner`* (`conforms()`, `check()`, `typed()`), and
   `KeyPaths::violation()`'s copy that is not required.
 - *Ports* (`SurfaceInterface::getPortDefinition()`), read in
@@ -4363,6 +4365,8 @@ The public interfaces that take or return a definition, for slice 32:
 (15) and `SurfaceOptions::resolve()`, `ComputesValueInterface` (15),
 `SurfaceRefinerInterface` (13), `HeldToConfigSchemaInterface` (2, it
 takes a surface), `StorageLayoutInterface` (values only).
+(2026-11-16: the widget contract is `SchemaWidgetInterface` and takes
+the key's schema: [A widget is chosen by the key's schema](#a-widget-is-chosen-by-the-keys-schema).)
 
 ### A key that holds a child frame has a node of its own
 
@@ -4550,7 +4554,9 @@ byte, refusal or value changed.
   is walked by its definition: reading its node would be a read the
   build does not make now. The definition branch goes when no source
   makes a definition (parts 32.7 and 32.9). The refusal is the same in
-  either form, at any depth (`WidgetAskTest`).
+  either form, at any depth (`WidgetAskTest`). (2026-11-16: the walk
+  reads every entry's schema and hands it to `WidgetChoice::forSchema()`;
+  the definition branch is gone: [A widget is chosen by the key's schema](#a-widget-is-chosen-by-the-keys-schema).)
 - **The tool door.** Its product is Tool API input and output
   definitions, Typed Data by that API's contract. Its conversion
   (`fromEntry()`, `fromChild()`, `fromVariants()`, `outputsFromSurface()`,
@@ -5181,6 +5187,115 @@ are restored; none known differs. Public shapes changed (below).
   refined surface is stored; a sealed row is unchanged). Accepted for
   this part, nothing tuned; the cost proof at the end of slice 32
   measures it again.
+
+### A widget is chosen by the key's schema
+
+Decided 2026-11-16. The emitter, the build and the catalog choose a
+key's widget from the key's schema, as built (`Entry::schema()`). Until
+now the choice took a Typed Data definition, so the emitter and the
+build's widget walk derived a definition for a key only to ask which
+widget draws it. Every fact a widget reads is in the key's schema, with
+a reader. No served byte, refusal, message, stored value or drawn form
+changed. One public contract changed, by decision.
+
+- **The contract.** `Contract\DefinitionWidgetInterface` and its one
+  method, `drawsDefinition(DataDefinitionInterface $definition,
+  WidgetChoice $choice): bool`, are deleted, with no alias.
+  `Contract\SchemaWidgetInterface` replaces them:
+
+  ```php
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool;
+  ```
+
+  `$schema` is the key's schema: `Entry::schema()`, or the schema of a
+  property or an item below it, refined where the key was. All 19
+  implementers moved: the 15 stock widgets, the extras' comma separated
+  list and the three widgets of `surface_widget_test`. The names say
+  schema, not node: in Drupal a node is a content entity.
+- **`WidgetChoice` takes the key's schema.** `forDefinition()` is now
+  `forSchema()`; `optionSet()`, `wordFor()`, `valueWord()`, `claimed()`,
+  `module()`, `draws()` and `asked()` take the schema. A list's options
+  are resolved from its item's schema, anything else's from its own
+  (`SurfaceOptions::resolve(Schema)`). The static helpers the widgets
+  and the emitter share take the schema too: `JsonWidget::draws()`,
+  `TimeWidget::draws()`, `DateWidget::draws()`,
+  `AutocompleteWidget::draws()`, `CheckboxesWidget::drawsList()`,
+  `RadiosWidget::drawsOne()`, `ScalarsWidget::stated()`,
+  `OptionsWidget::drawsFixed()`, and `SchemaReader::statedTypes()`,
+  which reads the JsonSchema check's options from
+  `NodeFacts::constraints()`.
+- **How each fact is read.** The data type with `NodeFacts::dataType()`,
+  a setting with `NodeFacts::setting()`, the shape with
+  `NodeFacts::shape()`, variants with `NodeFacts::variantsBy()`, the
+  fixed and one-variant marks and whether a key holds a value with their
+  `NodeFacts` readers, a secret with `Secrets::marked()`, the entity
+  type a reference names with `References::targetIn()`. A list and a
+  map are told by the class the schema was read from
+  (`DefinitionSchema::isList()`, `isComplex()`), which answers what
+  `instanceof` answered, for a class outside the three `NodeDefinition`
+  derives too; a list's item is `DefinitionSchema::itemNode()`. No reader
+  was added. A list's schema that holds no item, which no read makes,
+  offers no options and is drawn by none of the list widgets.
+- **The hosts hand the schema they hold.** `PropertySchema::property()`
+  hands its node to every claim. The build's widget walk
+  (`Resources::assertWidgetsDraw()`) walks each entry's schema and asks
+  `forSchema()`; its definition branch and `definitionAt()` are gone,
+  and an entry kept definition-first (a class outside the three) is
+  walked by its schema too. The catalog hands each entry's schema, the
+  list widget its item's schema. `DefinitionSchema::type()` reads the
+  `widget` setting itself where it asked `DateWidget::draws()`.
+- **What still hands a definition to nobody.** `PropertySchema::property()`
+  still takes the key's definition and the advertised one and walks them
+  beside the node; nothing reads them now. The emitter still derives a
+  definition per key it describes to hand them on. The emitter's own
+  reads of definitions are the next part.
+- **The parity, before the flip.** With the tree at the base, an
+  instrumented copy asked, at every place a widget was asked about a
+  definition (each `drawsDefinition()`, each static helper, each
+  `WidgetChoice` method that took one), the twin that reads the key's
+  schema too, with the schema the host held for that key, and recorded
+  each call whose answers differ. Over every operation of the
+  development site as user 1 and anonymous (the documents, corpus,
+  door-digest, value and catalog instruments), the hand and door
+  corpora, the widget kernel tests, `ServedContractTest`,
+  `ResourceCatalogTest` and the five class cases below: 15,593,731 calls
+  compared, none differs, so no reader was changed. 96 of them, made by
+  tests that hand a widget a definition they built, were compared on the
+  schema `DefinitionSchema::of()` reads; every other on the schema its
+  host held. The bodies moved into the tree are the twins, method for
+  method, renamed.
+- **The proofs.** Both sides recorded in one sitting (the base a copy
+  of the module before this part, loaded over the tree): 39,109 and
+  3,737 value cases, 684 and 364 documents, the narrowed, anonymous and
+  corpus records, and 8,344 door digests, none differs.
+  `WidgetSchemaClassCasesTest` asks every stock widget about the schema
+  read from a class outside the three (the hand corpus's
+  `NotAMapDefinition`), the variants' placeholder, a list of maps, a
+  list a refiner narrowed (the refined entry's schema) and a secret, and
+  pins the answers recorded on the base. The widget tests that asked
+  with a definition ask with the entry's schema, or with the schema
+  `DefinitionSchema::of()` reads of the definition they built.
+  `WidgetAskTest` pinned that an entry whose key asks for a widget
+  derives a definition at the build; it now derives none. Over the
+  instrument's run (262 operations as two accounts) the definitions
+  derived fall from 5,507 to 5,237: the build's widget walk asks none
+  (602 before); 308 of the entries it asked first are now asked first by
+  the emitter's `frame()`, which still hands `property()` a definition,
+  and 24 by refinement, so the emitter's count rises from 4,397 to
+  4,705. The calls of `SurfaceOptions::resolve()` that reach a resolver
+  fall from 3,282 to 2,106: a claim handed a definition, another memo key
+  than the node the emitter resolves for the same key, ran the resolver
+  again (1,181 calls); a claim now hands the very same object.
+- **What names Typed Data.** The 15 stock widgets, the extras' widget
+  and `WidgetChoice` no longer do, and `DefinitionWidgetInterface` is
+  gone (`TypedDataFootprintTest`, 128 to 110).
+- **A widget outside the module reads internal readers.** The extras'
+  widget and the test module's widgets read the key's schema through
+  `NodeFacts` and `DefinitionSchema`, both `@internal`: the data type
+  and a setting have no keyword a public reader gives. Where a keyword
+  says the fact, a widget reads the keyword (`writeOnly` for a secret,
+  as [the claiming widget](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)
+  shows). Open: which readers a widget may rely on.
 
 ### A key that does not apply
 
@@ -14984,7 +15099,8 @@ app draws it, and reads nothing else to draw.
   collaborator. The emitter's choice is the producer's side:
   `Contract\WidgetChoice`, the old definition rule moved out of the
   manager, each widget's own predicate `drawsDefinition()`
-  (`DefinitionWidgetInterface`); `WidgetAgreementTest` holds the two
+  (`DefinitionWidgetInterface`; 2026-11-16: `drawsSchema()` on
+  `SchemaWidgetInterface`, [A widget is chosen by the key's schema](#a-widget-is-chosen-by-the-keys-schema)); `WidgetAgreementTest` holds the two
   sides to each other for every example key. A module's widget that the
   emitter chooses by a setting of its own (the extras' comma separated
   list) is named in the document, where `list` stood; a list the list

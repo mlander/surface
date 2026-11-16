@@ -148,9 +148,13 @@ class TypedDataFootprintTest extends UnitTestCase {
    * Pipeline/Accepting.php and Pipeline/SurfacePipeline.php name no Typed
    * Data. Lowered on 2026-11-16 to 128: the form's extraction reads a
    * refined key's node and hands it to the options service, so
-   * Form/Extracting.php names no Typed Data.
+   * Form/Extracting.php names no Typed Data. Lowered on 2026-11-16 to 110:
+   * a widget is chosen by the key's schema, so the 15 stock widgets, the
+   * extras' comma separated list widget and WidgetChoice name no Typed
+   * Data, and DefinitionWidgetInterface is gone (SchemaWidgetInterface
+   * names none).
    */
-  public const OUTSIDE_THE_EDGES = 128;
+  public const OUTSIDE_THE_EDGES = 110;
 
   /**
    * Finds the files that use Typed Data.

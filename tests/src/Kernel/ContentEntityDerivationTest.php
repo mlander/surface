@@ -230,7 +230,8 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $this->assertSame('autocomplete', $uid->getSetting('widget'));
     $this->assertSame('CONTAINS', $uid->getSetting('match_operator'));
     $this->assertSame(10, $uid->getSetting('match_limit'));
-    $this->assertInstanceOf(AutocompleteWidget::class, $this->container->get('class_resolver')->getInstanceFromDefinition(WidgetChoice::class)->forDefinition($uid));
+    $uid_schema = static::child($this->add('page'), 'uid')->getDefinitions()->entry('target_id')->schema();
+    $this->assertInstanceOf(AutocompleteWidget::class, $this->container->get('class_resolver')->getInstanceFromDefinition(WidgetChoice::class)->forSchema($uid_schema));
     $hinted = $this->container->get('surface.contract_emitter')->emitFull($this->add('page'), 'entity.content:node.page', 'create', widgets: TRUE)->document['schema'];
     $target = $hinted['$defs']['field.item:node.page.uid']['properties']['target_id'];
     $this->assertSame('autocomplete', $target['x-portable-ui']['widget']);

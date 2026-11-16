@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
@@ -21,13 +21,13 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('Checkbox'),
   weight: 10,
 )]
-final class BooleanWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+final class BooleanWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return $definition->getDataType() === 'boolean';
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return NodeFacts::dataType($schema) === 'boolean';
   }
 
   /**

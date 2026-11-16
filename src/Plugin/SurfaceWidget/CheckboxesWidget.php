@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Options\OptionSet;
 use Drupal\surface\Widget\ChoiceWidgetBase;
@@ -41,7 +41,7 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('Checkboxes'),
   weight: -15,
 )]
-final class CheckboxesWidget extends ChoiceWidgetBase implements DefinitionWidgetInterface {
+final class CheckboxesWidget extends ChoiceWidgetBase implements SchemaWidgetInterface {
 
   /**
    * The most values a list offers and is still drawn as checkboxes.
@@ -57,8 +57,8 @@ final class CheckboxesWidget extends ChoiceWidgetBase implements DefinitionWidge
    * The served contract's emitter asks the same, so its widget hint is
    * this widget's choice.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    * @param \Drupal\surface\Options\OptionSet $set
    *   The values one of its items may be.
    *
@@ -66,20 +66,20 @@ final class CheckboxesWidget extends ChoiceWidgetBase implements DefinitionWidge
    *   TRUE for a list that asks for checkboxes, or asks for nothing and
    *   offers at most MAXIMUM_OPTIONS values.
    */
-  public static function drawsList(DataDefinitionInterface $definition, OptionSet $set): bool {
-    if (!$definition instanceof ListDataDefinitionInterface) {
+  public static function drawsList(Schema $schema, OptionSet $set): bool {
+    if (!DefinitionSchema::isList($schema)) {
       return FALSE;
     }
-    $asked = $definition->getSetting('widget');
+    $asked = NodeFacts::setting($schema, 'widget');
     return $asked === 'checkboxes' || ($asked === NULL && count($set->options) <= self::MAXIMUM_OPTIONS);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    $set = $definition instanceof ListDataDefinitionInterface ? $choice->optionSet($definition) : NULL;
-    return $set !== NULL && static::drawsList($definition, $set);
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    $set = DefinitionSchema::isList($schema) ? $choice->optionSet($schema) : NULL;
+    return $set !== NULL && static::drawsList($schema, $set);
   }
 
   /**

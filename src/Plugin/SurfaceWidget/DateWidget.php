@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Widget\SurfaceWidgetBase;
@@ -31,26 +31,26 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('Date'),
   weight: 9,
 )]
-final class DateWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+final class DateWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
   /**
-   * Answers whether a definition is drawn as a date input.
+   * Answers whether a key is drawn as a date input.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    *
    * @return bool
    *   TRUE for a string that asks for one.
    */
-  public static function draws(DataDefinitionInterface $definition): bool {
-    return $definition->getDataType() === 'string' && $definition->getSetting('widget') === 'date';
+  public static function draws(Schema $schema): bool {
+    return NodeFacts::dataType($schema) === 'string' && NodeFacts::setting($schema, 'widget') === 'date';
   }
 
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return static::draws($definition);
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return static::draws($schema);
   }
 
   /**

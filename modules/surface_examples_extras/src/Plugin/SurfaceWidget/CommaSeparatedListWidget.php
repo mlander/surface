@@ -6,10 +6,10 @@ namespace Drupal\surface_examples_extras\Plugin\SurfaceWidget;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
@@ -37,7 +37,7 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('Comma-separated list'),
   weight: 0,
 )]
-final class CommaSeparatedListWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+final class CommaSeparatedListWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
   /**
    * The definition setting that asks for this widget.
@@ -47,10 +47,11 @@ final class CommaSeparatedListWidget extends SurfaceWidgetBase implements Defini
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return $definition instanceof ListDataDefinitionInterface
-      && $definition->getSetting(self::SETTING) === TRUE
-      && $definition->getItemDefinition()->getDataType() === 'string';
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    $item = DefinitionSchema::itemNode($schema);
+    return DefinitionSchema::isList($schema)
+      && NodeFacts::setting($schema, self::SETTING) === TRUE
+      && $item !== NULL && NodeFacts::dataType($item) === 'string';
   }
 
   /**

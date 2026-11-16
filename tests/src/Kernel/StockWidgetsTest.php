@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Form\Document\DocumentNodes;
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Form\FormState;
@@ -219,7 +220,7 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
       'a word no widget answers to' => DataDefinition::create('string')->setSetting('widget', 'sparkly'),
     ] as $label => $definition) {
       try {
-        $manager->forDefinition($definition);
+        $manager->forSchema(DefinitionSchema::of($definition));
       }
       catch (\InvalidArgumentException $e) {
         $refusals[$label] = $e->getMessage();
@@ -427,8 +428,8 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
         continue;
       }
       $definition = $typed->createDataDefinition($type);
-      $drawn[$type] = SurfaceWidgetManager::wordOf($manager->forDefinition($definition));
-      $lists[$type] = SurfaceWidgetManager::wordOf($manager->forDefinition(new ListDataDefinition(['type' => 'list'], $definition)));
+      $drawn[$type] = SurfaceWidgetManager::wordOf($manager->forSchema(DefinitionSchema::of($definition)));
+      $lists[$type] = SurfaceWidgetManager::wordOf($manager->forSchema(DefinitionSchema::of(new ListDataDefinition(['type' => 'list'], $definition))));
     }
     $primitives = [
       'any' => 'json',

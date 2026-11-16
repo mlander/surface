@@ -93,9 +93,11 @@ class DefinitionReadIsPureTest extends UnitTestCase {
    * Secrets::marked() and NodeFacts::compute()), 2026-11-15; 70 with the
    * composer of a refined shell and what it asks (withProperties(),
    * withPropertyAt(), shell(), the requiredOf() it shares with around(),
-   * and nodeIsMap()), part 32.8.
+   * and nodeIsMap()), part 32.8; 69 since type() reads a key's `widget`
+   * setting where it asked DateWidget::draws(), which takes a schema now
+   * (part 32.9a).
    */
-  protected const REACHED = 70;
+  protected const REACHED = 69;
 
   /**
    * How many methods the node readers reach, their entry points too.

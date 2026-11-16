@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Widget\ChoiceWidgetBase;
@@ -39,7 +39,7 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('Radios'),
   weight: -15,
 )]
-final class RadiosWidget extends ChoiceWidgetBase implements DefinitionWidgetInterface {
+final class RadiosWidget extends ChoiceWidgetBase implements SchemaWidgetInterface {
 
   /**
    * Answers whether one value of a list of allowed values is radios.
@@ -47,21 +47,21 @@ final class RadiosWidget extends ChoiceWidgetBase implements DefinitionWidgetInt
    * The served contract's emitter asks the same, so its widget hint is
    * this widget's choice.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition, which offers a list.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema, which offers a list.
    *
    * @return bool
    *   TRUE when it is one value and asks for radios.
    */
-  public static function drawsOne(DataDefinitionInterface $definition): bool {
-    return !$definition instanceof ListDataDefinitionInterface && $definition->getSetting('widget') === 'radios';
+  public static function drawsOne(Schema $schema): bool {
+    return !DefinitionSchema::isList($schema) && NodeFacts::setting($schema, 'widget') === 'radios';
   }
 
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return static::drawsOne($definition) && $choice->optionSet($definition) !== NULL;
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return static::drawsOne($schema) && $choice->optionSet($schema) !== NULL;
   }
 
   /**

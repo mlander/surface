@@ -88,8 +88,8 @@ word, and the drawer draws it as JSON.
 
 The emitter's side is `Contract\WidgetChoice`: a widget that claims the
 key first, then the widget the key asks for by its word, then every
-widget in weight order whose `drawsDefinition()` says it draws the
-definition (`Contract\DefinitionWidgetInterface`). Every stock widget
+widget in weight order whose `drawsSchema()` says it draws the key's
+schema (`Contract\SchemaWidgetInterface`). Every stock widget
 implements both halves; `WidgetAgreementTest` holds them to each other
 for every key of every example, collections, keys with variants and keys
 with no word among them.
@@ -97,7 +97,7 @@ with no word among them.
 ### How a widget declines
 
 By returning `FALSE` from `isApplicable()`, and on the emitter's side
-from `drawsDefinition()`. Every data type core defines is drawn by a
+from `drawsSchema()`. Every data type core defines is drawn by a
 stock widget, a type whose value nobody types (bytes, a language) as an
 item saying it is not drawn here, and the `json` widget is the last
 resort for an `any` key and a list nothing else draws, so the form never
@@ -338,11 +338,11 @@ pointer, relative to the state handed over.
   label: new TranslatableMarkup('Color'),
   weight: 5,
 )]
-final class ColorWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+final class ColorWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return $definition->getDataType() === 'string'
-      && $definition->getSetting('my_module_color') === TRUE;
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return NodeFacts::dataType($schema) === 'string'
+      && NodeFacts::setting($schema, 'my_module_color') === TRUE;
   }
 
   public function isApplicable(Schema $node, WidgetContext $context): bool {
@@ -361,8 +361,10 @@ final class ColorWidget extends SurfaceWidgetBase implements DefinitionWidgetInt
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-`drawsDefinition()` is the emitter's question: it is asked in weight
-order, and the widget that says yes first is the word the document
+`drawsSchema()` is the emitter's question: it is asked in weight
+order, about the key's schema (the data type and settings the key
+was declared with, `NodeFacts::dataType()` and `NodeFacts::setting()`),
+and the widget that says yes first is the word the document
 carries. `isApplicable()` is the drawer's, asked only of a node whose word
 names no widget that draws it. `baseElement()` supplies what every
 element wants from a node (`#title` from `title`, `#description` from
@@ -414,10 +416,10 @@ instead:
   claims: [['type' => 'string', 'format' => 'color']],
   priority: 10,
 )]
-final class ColorWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+final class ColorWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return !DefinitionMetadata::isSecret($definition);
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return $schema->get('writeOnly') !== TRUE;
   }
 
   public function isApplicable(Schema $node, WidgetContext $context): bool {
@@ -450,11 +452,11 @@ How the emitter chooses (`WidgetChoice::claimed()`):
    is drawn by that widget, and no claim is asked. The owner wins.
 2. **The claims**, the highest `priority` first, then by plugin ID. The
    first widget whose claim matches the key and whose
-   `drawsDefinition()` says yes draws it. A claimed widget may still decline a key, as the
+   `drawsSchema()` says yes draws it. A claimed widget may still decline a key, as the
    one above declines a secret.
 3. **The stock rule**, by weight, as above. A widget that claims is not
    asked here for a key it does not claim, unless the key names it, so
-   its `drawsDefinition()` answers for the keys it claims alone, and its
+   its `drawsSchema()` answers for the keys it claims alone, and its
    weight matters only when a key asks for it by name.
 
 `x-portable-ui.widget` says the chosen widget's word, the first word it

@@ -6,10 +6,9 @@ namespace Drupal\surface_widget_test\Plugin\SurfaceWidget;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Widget\SurfaceWidgetBase;
@@ -27,13 +26,13 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('Pair'),
   claims: [['shape' => 'widget_test.nothing']],
 )]
-final class PairWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+final class PairWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return $definition instanceof ComplexDataDefinitionInterface;
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return DefinitionSchema::isComplex($schema);
   }
 
   /**

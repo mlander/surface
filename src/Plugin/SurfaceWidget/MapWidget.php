@@ -8,10 +8,9 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Render\Element;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Widget\SurfaceWidgetBase;
@@ -40,7 +39,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
   label: new TranslatableMarkup('Fieldset'),
   weight: 5,
 )]
-final class MapWidget extends SurfaceWidgetBase implements ContainerFactoryPluginInterface, DefinitionWidgetInterface {
+final class MapWidget extends SurfaceWidgetBase implements ContainerFactoryPluginInterface, SchemaWidgetInterface {
 
   /**
    * Constructs a MapWidget.
@@ -73,8 +72,8 @@ final class MapWidget extends SurfaceWidgetBase implements ContainerFactoryPlugi
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return $definition instanceof ComplexDataDefinitionInterface;
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return DefinitionSchema::isComplex($schema);
   }
 
   /**

@@ -15,7 +15,6 @@ use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Computed;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\SurfaceOptions;
-use Drupal\surface\Plugin\SurfaceWidget\DateWidget;
 use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
 use PortableSchema\Builder\Schema;
 
@@ -1161,7 +1160,7 @@ final class DefinitionSchema {
     // drawn as one is that format. A time input posts `HH:MM`, which
     // RFC 3339's time refuses (it needs seconds and an offset), so a time
     // states no format.
-    if ($definition->getDataType() === 'string' && DateWidget::draws($definition)) {
+    if ($definition->getDataType() === 'string' && $definition->getSetting('widget') === 'date') {
       return ['type' => 'string', 'format' => 'date'];
     }
     return LeafTypes::spelled($definition) ?? [];

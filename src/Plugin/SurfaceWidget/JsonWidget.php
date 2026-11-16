@@ -7,12 +7,11 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
@@ -43,7 +42,7 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('JSON'),
   weight: 1000,
 )]
-final class JsonWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+final class JsonWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
   /**
    * The plain words for each JSON type, in the order they are named.
@@ -51,28 +50,28 @@ final class JsonWidget extends SurfaceWidgetBase implements DefinitionWidgetInte
   protected const TYPES = ['object', 'array', 'string', 'integer', 'number', 'boolean', 'null'];
 
   /**
-   * Answers whether a definition is drawn as JSON.
+   * Answers whether a key is drawn as JSON.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    *
    * @return bool
    *   TRUE for a key of type `any` that is no variants' placeholder, and
    *   for a list; the manager asks this widget last, so a list reaches it
    *   only when every other widget refused it.
    */
-  public static function draws(DataDefinitionInterface $definition): bool {
-    if ($definition instanceof ListDataDefinitionInterface) {
+  public static function draws(Schema $schema): bool {
+    if (DefinitionSchema::isList($schema)) {
       return TRUE;
     }
-    return $definition->getDataType() === 'any' && DefinitionMetadata::variantsBy($definition) === NULL;
+    return NodeFacts::dataType($schema) === 'any' && NodeFacts::variantsBy($schema) === NULL;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return static::draws($definition);
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return static::draws($schema);
   }
 
   /**

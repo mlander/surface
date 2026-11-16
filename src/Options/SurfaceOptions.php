@@ -131,8 +131,8 @@ final class SurfaceOptions {
    * The key is its node or, for a caller that holds no node, its
    * definition. Handed a node, the constraints are the node's
    * (NodeFacts::constraints()) and each resolver is handed that node.
-   * Handed a definition (core's options provider, a widget's claim, the
-   * form's extraction), the constraints are the definition's, and the
+   * Handed a definition (core's options provider, the form's
+   * extraction), the constraints are the definition's, and the
    * node each resolver is handed is read from the definition when a
    * resolver is first about to be called (DefinitionSchema::of()): a
    * definition no resolver answers for costs no read, and the memo above

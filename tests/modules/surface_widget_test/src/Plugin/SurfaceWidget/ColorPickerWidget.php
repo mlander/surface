@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Drupal\surface_widget_test\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Widget\SurfaceWidgetBase;
@@ -18,7 +16,7 @@ use PortableSchema\Builder\Schema;
 /**
  * A color picker for every string key whose format is color, on any resource.
  *
- * The claim chooses the keys; drawsDefinition() declines a secret, which
+ * The claim chooses the keys; drawsSchema() declines a secret, which
  * stays a password. Its `palette` setting is presentation, published into
  * the document as `x-portable-ui.options.palette` and drawn as the
  * input's list of suggested colors.
@@ -29,13 +27,13 @@ use PortableSchema\Builder\Schema;
   claims: [['type' => 'string', 'format' => 'color']],
   priority: 10,
 )]
-final class ColorPickerWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+final class ColorPickerWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return !DefinitionMetadata::isSecret($definition);
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return !Secrets::marked($schema);
   }
 
   /**

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
@@ -24,13 +24,13 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('Number'),
   weight: 10,
 )]
-final class NumberWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+final class NumberWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return in_array($definition->getDataType(), ['integer', 'float', 'decimal', 'timestamp', 'timespan'], TRUE);
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return in_array(NodeFacts::dataType($schema), ['integer', 'float', 'decimal', 'timestamp', 'timespan'], TRUE);
   }
 
   /**

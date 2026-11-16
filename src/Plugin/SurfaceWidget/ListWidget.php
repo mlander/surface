@@ -10,11 +10,9 @@ use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Render\Element;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Pipeline\ValueState;
@@ -58,7 +56,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
   label: new TranslatableMarkup('List'),
   weight: 8,
 )]
-final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPluginInterface, DefinitionWidgetInterface {
+final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPluginInterface, SchemaWidgetInterface {
 
   /**
    * Constructs a ListWidget.
@@ -102,16 +100,16 @@ final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPlug
    * single value a row holds, so the whole list is drawn as JSON; an item
    * the form does not draw leaves the list not drawn.
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    if (!$definition instanceof ListDataDefinitionInterface) {
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    if (!DefinitionSchema::isList($schema)) {
       return FALSE;
     }
-    $item = $definition->getItemDefinition();
-    if ($item instanceof ComplexDataDefinitionInterface || $item instanceof ListDataDefinitionInterface || $choice->optionSet($item) !== NULL) {
+    $item = DefinitionSchema::itemNode($schema);
+    if ($item === NULL || DefinitionSchema::isComplex($item) || DefinitionSchema::isList($item) || $choice->optionSet($item) !== NULL) {
       return FALSE;
     }
     try {
-      $widget = $choice->forDefinition($item);
+      $widget = $choice->forSchema($item);
       return !$widget instanceof JsonWidget && !$widget instanceof NotDrawnWidget;
     }
     catch (\InvalidArgumentException) {

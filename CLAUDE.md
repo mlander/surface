@@ -1180,7 +1180,7 @@ test errored or failed and every gate passed.
   cache; it orders classes slowest first.
 
 On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-16: the
-full lane takes 18m21s at the defaults (phpunit 17m34s) and the fast
+full lane takes 17m08s at the defaults (phpunit 16m19s) and the fast
 lane 9m51s (phpunit 9m41s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
@@ -1212,7 +1212,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2616, Assertions: 103314, Errors: 0, Failures: 0, Skipped: 3. Classes: 367 of 367, 8 at a time, browser classes 4.
+phpunit: Tests: 2618, Assertions: 103341, Errors: 0, Failures: 0, Skipped: 3. Classes: 368 of 368, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1236,8 +1236,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2502, Assertions: 98760, Deprecations: 811, Skipped: 3. Classes:
-314, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2504, Assertions: 98787, Deprecations: 811, Skipped: 3. Classes:
+315, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 
@@ -1667,10 +1667,11 @@ src/Widget/ src/Plugin/  A node of the served document to a form element
                          WidgetHostInterface, NodeDrawerInterface; the
                          manager's words() table, widgetFor() and
                          stockWord(), React's stock order); the
-                         emitter's choice from a definition is
+                         emitter's choice from a key's schema is
                          Contract/WidgetChoice.php (service
                          surface.widget_choice) over each widget's
-                         drawsDefinition(); resolvers, hosts, constraints.
+                         drawsSchema() (Contract/SchemaWidgetInterface.php);
+                         resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots;
                          ConfigSchemaTypes, a config schema type's.

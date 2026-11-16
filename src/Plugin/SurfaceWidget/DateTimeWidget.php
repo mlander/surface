@@ -7,8 +7,8 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Widget\SurfaceWidgetBase;
@@ -29,13 +29,13 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('Date and time'),
   weight: 10,
 )]
-final class DateTimeWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+final class DateTimeWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return $definition->getDataType() === 'datetime_iso8601';
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return NodeFacts::dataType($schema) === 'datetime_iso8601';
   }
 
   /**

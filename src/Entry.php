@@ -529,9 +529,9 @@ final class Entry {
   /**
    * Gets the key's Typed Data definition.
    *
-   * Asked for only where an edge needs a definition: a refiner, a
-   * widget's claim, ConstraintRunner, a caller of the options service
-   * that holds no node. A key's facts are read from its node (schema()),
+   * Asked for only where an edge needs a definition: a refiner,
+   * ConstraintRunner, a caller of the options service that holds no
+   * node. A key's facts are read from its node (schema()),
    * a key that holds a child frame's too, and the options service is
    * handed the node.
    *

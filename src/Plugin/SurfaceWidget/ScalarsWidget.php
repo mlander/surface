@@ -6,12 +6,11 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionWidgetInterface;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Contract\SchemaReader;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
 use PortableSchema\Builder\Schema;
@@ -41,7 +40,7 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('Text for several types'),
   weight: 999,
 )]
-final class ScalarsWidget extends SurfaceWidgetBase implements DefinitionWidgetInterface {
+final class ScalarsWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
   /**
    * The scalar types, in the order what was typed is read as them.
@@ -49,21 +48,21 @@ final class ScalarsWidget extends SurfaceWidgetBase implements DefinitionWidgetI
   public const ORDER = ['integer', 'number', 'boolean', 'string'];
 
   /**
-   * Reads the scalar types a definition holds, when it is a union of them.
+   * Reads the scalar types a key holds, when it is a union of them.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    *
    * @return string[]|null
    *   The stated types other than null, in ORDER, for a key of type `any`
    *   holding no variants whose kept schema states two or more scalar
-   *   types and nothing else but null; NULL for any other definition.
+   *   types and nothing else but null; NULL for any other key.
    */
-  public static function stated(DataDefinitionInterface $definition): ?array {
-    if ($definition->getDataType() !== 'any' || DefinitionMetadata::variantsBy($definition) !== NULL) {
+  public static function stated(Schema $schema): ?array {
+    if (NodeFacts::dataType($schema) !== 'any' || NodeFacts::variantsBy($schema) !== NULL) {
       return NULL;
     }
-    $stated = array_diff(SchemaReader::statedTypes($definition), ['null']);
+    $stated = array_diff(SchemaReader::statedTypes($schema), ['null']);
     if (count($stated) < 2 || array_diff($stated, self::ORDER) !== []) {
       return NULL;
     }
@@ -73,8 +72,8 @@ final class ScalarsWidget extends SurfaceWidgetBase implements DefinitionWidgetI
   /**
    * {@inheritdoc}
    */
-  public function drawsDefinition(DataDefinitionInterface $definition, WidgetChoice $choice): bool {
-    return static::stated($definition) !== NULL;
+  public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+    return static::stated($schema) !== NULL;
   }
 
   /**
