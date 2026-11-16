@@ -8,7 +8,9 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\Core\TypedData\Plugin\DataType\Uri;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Reference\References;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface_values_test\HandBuiltSurfaces;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -124,7 +126,9 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
     'settings' => 1067,
     'shape' => 1067,
     'shapeNode' => 1067,
+    'storedByUuid' => 1067,
     'typeOf' => 1067,
+    'valueClass' => 1067,
     'variantsBy' => 1067,
     'variantsFrom' => 1067,
   ];
@@ -173,7 +177,9 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
     'settings' => 82,
     'shape' => 11,
     'shapeNode' => 11,
+    'storedByUuid' => 4,
     'typeOf' => 656,
+    'valueClass' => 1067,
     'variantsBy' => 46,
     'variantsFrom' => 102,
   ];
@@ -349,6 +355,12 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
     $cases['a label of \'\''] = DataDefinition::create('string')->setLabel('');
     $cases['a label of NULL'] = new DataDefinition(['type' => 'string', 'label' => NULL]);
     $cases['no label'] = DataDefinition::create('string');
+    // A key that refers to one content entity type, stored by uuid, and
+    // one whose author kept the id.
+    $cases['stored by uuid'] = DataDefinition::create('integer')->setLabel('Page')->setSetting(References::CONTENT, TRUE);
+    $cases['stored by id'] = DataDefinition::create('integer')->setLabel('Page')->setSetting(References::CONTENT, TRUE)->setSetting(References::STORED_AS, References::BY_ID);
+    // A value whose definition names its own class.
+    $cases['a class of its own'] = new DataDefinition(['type' => 'string', 'label' => 'Code', 'class' => Uri::class]);
 
     // A map's own default over the defaults of a map below it: merged at
     // every depth.

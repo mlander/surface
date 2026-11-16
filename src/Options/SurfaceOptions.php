@@ -9,6 +9,7 @@ use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Pipeline\PipelineGuard;
 use PortableSchema\Builder\Schema;
 use Psr\Log\LoggerInterface;
@@ -39,22 +40,33 @@ final class SurfaceOptions {
   protected array $resolvers;
 
   /**
-   * Resolved answers, keyed by the definition asked.
+   * Resolved answers, keyed by the key asked: its node or its definition.
    *
    * An identity memo and nothing more. Resolving a list can mean reading
    * entity types, bundles, languages or countries, and a generated form
-   * asks the same definition at least twice: once to pick the widget,
-   * once to build the element. There is no invalidation because there is
-   * nothing to invalidate: a refined definition is a different object, so
-   * narrowing can never be served a stale list.
+   * asks the same key at least twice: once to pick the widget, once to
+   * build the element. Narrowing needs no invalidation: a refined key is
+   * another object than the declared key, its definition and its node
+   * alike. A refined entry holds the refined definition and reads its
+   * node from it, or composes the node around the refined child it was
+   * built from, so its node is never the declared entry's node, and
+   * narrowing is never served a stale list. An answer is read from the
+   * node alone (its constraints, and what a resolver reads of it) and the
+   * site, and a node is never written once it is built (Schema::with()
+   * makes a new one), so two places that hold one node object are served
+   * one right answer: a key that holds a child frame composes its node of
+   * the very nodes its child's entries hold (Entry::schema()), so the
+   * shell's property and the child's key are one key with one list.
+   * invalidateTags() forgets an answer read from the site, whichever kind
+   * of key it is under.
    *
-   * Weak, so an entry lives exactly as long as its definition. Every
-   * refine makes new definitions, and a worker that outlives a request
-   * (an MCP stdio server, a queue, a Drush batch) would otherwise keep
-   * every one it ever resolved. FALSE stands for no list: no constraint
-   * on the definition names one.
+   * Weak, so an entry lives exactly as long as its key. Every refine makes
+   * new definitions and nodes, and a worker that outlives a request (an
+   * MCP stdio server, a queue, a Drush batch) would otherwise keep every
+   * one it ever resolved. FALSE stands for no list: no constraint on the
+   * key names one.
    *
-   * @var \WeakMap<\Drupal\Core\TypedData\DataDefinitionInterface, \Drupal\surface\Options\OptionSet|false>
+   * @var \WeakMap<\PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface, \Drupal\surface\Options\OptionSet|false>
    */
   protected \WeakMap $resolved;
 
@@ -103,9 +115,9 @@ final class SurfaceOptions {
   }
 
   /**
-   * Resolves the values a definition allows, with their labels.
+   * Resolves the values a key allows, with their labels.
    *
-   * Every constraint on the definition has to hold at once, so when more
+   * Every constraint on the key has to hold at once, so when more
    * than one of them names a list the answer is their intersection.
    *
    * A constraint whose plugin is not registered is skipped rather than
@@ -116,28 +128,34 @@ final class SurfaceOptions {
    * Validation still sees the same constraint and refuses on its own
    * terms.
    *
-   * Each resolver is handed the key's node. A caller that holds it hands
-   * it on; for one that holds the definition alone, the node is read from
-   * the definition when a resolver is first about to be called
-   * (DefinitionSchema::of()). A definition no resolver answers for costs
-   * no read, and the memo above makes the read once per definition.
+   * The key is its node or, for a caller that holds no node, its
+   * definition. Handed a node, the constraints are the node's
+   * (NodeFacts::constraints()) and each resolver is handed that node.
+   * Handed a definition (core's options provider, a widget's claim, the
+   * form's extraction), the constraints are the definition's, and the
+   * node each resolver is handed is read from the definition when a
+   * resolver is first about to be called (DefinitionSchema::of()): a
+   * definition no resolver answers for costs no read, and the memo above
+   * makes the read once per definition.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition to read.
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The definition's node, when the caller holds it: its entry's, or the
-   *   node the entry's node holds for it. NULL to have it read when a
-   *   resolver is called.
+   * Decision: see
+   * docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node.
+   *
+   * @param \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface $key
+   *   The key's node: its entry's (Entry::schema()), or the node its
+   *   entry's node holds for a property or an item. Or the key's
+   *   definition, where the caller holds no node.
    *
    * @return \Drupal\surface\Options\OptionSet|null
    *   The allowed values, or NULL when no constraint names a list.
    */
-  public function resolve(DataDefinitionInterface $definition, ?Schema $node = NULL): ?OptionSet {
-    if ($this->resolved->offsetExists($definition)) {
-      return $this->resolved[$definition] ?: NULL;
+  public function resolve(Schema|DataDefinitionInterface $key): ?OptionSet {
+    if ($this->resolved->offsetExists($key)) {
+      return $this->resolved[$key] ?: NULL;
     }
     $resolved = NULL;
-    foreach ($definition->getConstraints() as $name => $options) {
+    $node = NULL;
+    foreach ($key instanceof Schema ? NodeFacts::constraints($key) : $key->getConstraints() as $name => $options) {
       try {
         $constraint = $this->constraintManager->create($name, $options);
       }
@@ -146,12 +164,12 @@ final class SurfaceOptions {
         continue;
       }
       foreach ($this->readers($constraint) as $resolver) {
-        $node ??= DefinitionSchema::of($definition);
+        $node ??= $key instanceof Schema ? $key : DefinitionSchema::of($key);
         $set = PipelineGuard::onBehalf(PipelineGuard::OPTIONS, get_class($resolver), 'resolve', static fn (): OptionSet => $resolver->resolve($constraint, $node));
         $resolved = $resolved === NULL ? $set : $resolved->intersect($set);
       }
     }
-    $this->resolved[$definition] = $resolved ?? FALSE;
+    $this->resolved[$key] = $resolved ?? FALSE;
     return $resolved;
   }
 
@@ -182,8 +200,9 @@ final class SurfaceOptions {
    * Forgets the answers read from what is being invalidated.
    *
    * A list read from the site (a module's config entities, say) is
-   * answered with its cacheability; a definition kept for the rest of the
-   * request is asked again once a tag that list named is invalidated, so
+   * answered with its cacheability; a key kept for the rest of the
+   * request, by its node or its definition, is asked again once a tag
+   * that list named is invalidated, so
    * a venue added by one call is offered by the next in the same worker.
    *
    * @param string[] $tags
@@ -195,13 +214,13 @@ final class SurfaceOptions {
    */
   public function invalidateTags(array $tags): void {
     $forget = [];
-    foreach ($this->resolved as $definition => $set) {
+    foreach ($this->resolved as $key => $set) {
       if ($set instanceof OptionSet && array_intersect($set->getCacheTags(), $tags) !== []) {
-        $forget[] = $definition;
+        $forget[] = $key;
       }
     }
-    foreach ($forget as $definition) {
-      unset($this->resolved[$definition]);
+    foreach ($forget as $key) {
+      unset($this->resolved[$key]);
     }
   }
 

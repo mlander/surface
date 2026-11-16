@@ -184,7 +184,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $this->assertSame($held['SurfaceUnique'], DefinitionSchema::options($built, 'SurfaceUnique'));
     $this->assertSame(['max' => 2], DefinitionSchema::options($built, 'Length'), 'A keyword-stated constraint runs with its own options.');
 
-    $published = static::json($this->definitions()->published($built, $leaf));
+    $published = static::json($this->definitions()->published($built));
     $this->assertSame([
       'title' => 'Code',
       'description' => 'Two letters & no digits.',
@@ -210,7 +210,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $built = DefinitionSchema::of($tags);
     $this->assertSame([PortableKeywords::PROVIDER . 'LanguageExists' => []], $built->get(PortableKeywords::CHECK));
     $this->assertNull($built->get(PortableKeywords::MESSAGES), 'A check given no message holds none: its label is the projection\'s.');
-    $this->assertSame(['type' => ['string', 'null']], static::json($this->definitions()->published($built->get('items'), $tags->getItemDefinition())), 'The item is a node of its own.');
+    $this->assertSame(['type' => ['string', 'null']], static::json($this->definitions()->published($built->get('items'))), 'The item is a node of its own.');
     $this->assertSame(['type'], array_keys(DefinitionSchema::model($built->get('items'))), 'The item states its data type alone: its type\'s constraints are derived from it.');
     $this->assertSame(['PrimitiveType' => []], NodeFacts::constraints($built->get('items')));
     $this->assertSame([
@@ -220,7 +220,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
       'maxItems' => 3,
       'portable-check' => ['drupal:LanguageExists' => []],
       'x-portable-messages' => ['check.drupal:LanguageExists' => 'Language exists'],
-    ], static::json($this->definitions()->published($built, $tags)));
+    ], static::json($this->definitions()->published($built)));
 
     $inner = MapDataDefinition::create()->setLabel('Where')
       ->setPropertyDefinition('city', DataDefinition::create('string')->setLabel('City')->setRequired(TRUE));
@@ -234,8 +234,8 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $built = DefinitionSchema::of($map);
     $this->assertSame([PortableKeywords::PROVIDER . 'JsonSchema' => ['schema' => $schema]], $built->get(PortableKeywords::CHECK));
     $this->assertSame(['name', 'gone', 'where'], array_keys($built->get('properties')), 'A key ruled out is on the node: the mark is the definition\'s.');
-    $this->assertSame(static::json($this->definitions()->published(DefinitionSchema::of($inner), $inner)), static::json($this->definitions()->published($built->get('properties')['where'], $inner)), 'The nested map is a node of its own.');
-    $published = static::json($this->definitions()->published($built, $map));
+    $this->assertSame(static::json($this->definitions()->published(DefinitionSchema::of($inner))), static::json($this->definitions()->published($built->get('properties')['where'])), 'The nested map is a node of its own.');
+    $published = static::json($this->definitions()->published($built));
     $this->assertSame([
       'title' => 'Person',
       'type' => ['object', 'null'],
@@ -255,14 +255,14 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
       'x-portable-messages' => ['check.drupal:JsonSchema' => 'Checked on the server against the schema it was read from: type, required.'],
     ], $published);
     $this->assertSame(['name', 'where'], array_keys($published['properties']), 'A key ruled out is no property of the document.');
-    $this->assertStringNotContainsString(DefinitionSchema::MODEL, (string) json_encode(Schemas::arrayed($this->definitions()->published($built, $map))));
+    $this->assertStringNotContainsString(DefinitionSchema::MODEL, (string) json_encode(Schemas::arrayed($this->definitions()->published($built))));
 
     // A ruled-out key that is required leaves the map's `required` too.
     $ruled = MapDataDefinition::create()->setLabel('Pair')
       ->setPropertyDefinition('kept', DataDefinition::create('string')->setRequired(TRUE))
       ->setPropertyDefinition('gone', DoesNotApply::marked(DataDefinition::create('string')->setRequired(TRUE)));
     $this->assertSame(['kept', 'gone'], DefinitionSchema::of($ruled)->get('required'));
-    $this->assertSame(['kept'], static::json($this->definitions()->published(DefinitionSchema::of($ruled), $ruled))['required']);
+    $this->assertSame(['kept'], static::json($this->definitions()->published(DefinitionSchema::of($ruled)))['required']);
   }
 
   /**
@@ -272,7 +272,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $email = DataDefinition::create('email')->setLabel('Email');
     $built = DefinitionSchema::of($email);
     $this->assertSame([PortableKeywords::PROVIDER . 'Email' => $email->getConstraints()['Email']], $built->get(PortableKeywords::CHECK));
-    $published = static::json($this->definitions()->published($built, $email));
+    $published = static::json($this->definitions()->published($built));
     $this->assertSame('email', $published['format']);
     $this->assertSame(['drupal:Email' => []], $published['portable-check']);
     $this->assertArrayNotHasKey('x-portable-messages', $published, 'A twin says no message of its own.');
@@ -281,7 +281,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $composite = DataDefinition::create('string')->setLabel('Code')->addConstraint('Sequentially', $parts);
     $built = DefinitionSchema::of($composite);
     $this->assertSame($parts, $built->get(PortableKeywords::CHECK)[PortableKeywords::PROVIDER . 'Sequentially'], 'A composite holds its parts.');
-    $this->assertSame([], static::json($this->definitions()->published($built, $composite))['portable-check']['drupal:Sequentially']);
+    $this->assertSame([], static::json($this->definitions()->published($built))['portable-check']['drupal:Sequentially']);
 
     $target = [
       'entityTypeId' => 'node',
@@ -292,7 +292,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $reference = DataDefinition::create('string')->setLabel('Article')->addConstraint('SurfaceValidReference', $target);
     $built = DefinitionSchema::of($reference);
     $this->assertSame($target, DefinitionSchema::options($built, 'SurfaceValidReference'), 'The handler and its settings are on the node.');
-    $this->assertSame(['entityTypeId' => 'node', 'bundles' => ['article']], static::json($this->definitions()->published($built, $reference))['portable-check']['drupal:SurfaceValidReference']);
+    $this->assertSame(['entityTypeId' => 'node', 'bundles' => ['article']], static::json($this->definitions()->published($built))['portable-check']['drupal:SurfaceValidReference']);
   }
 
   /**
@@ -453,7 +453,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
       'title' => 'Bare',
       'type' => ['string', 'null'],
       'maxLength' => 4,
-    ], static::json($this->definitions()->published(DefinitionSchema::of($bare), $bare)), 'A definition with no array access is read: no default, no examples.');
+    ], static::json($this->definitions()->published(DefinitionSchema::of($bare))), 'A definition with no array access is read: no default, no examples.');
 
     foreach (['decimal', 'binary', 'any'] as $type) {
       $definition = DataDefinition::create($type)->setLabel('Amount');
@@ -469,7 +469,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
       }
       $this->assertNotNull($expected, "$type: the leaf table has no row for it.");
       try {
-        $this->definitions()->published($node, $definition);
+        $this->definitions()->published($node);
         $this->fail("$type: the projection refuses it.");
       }
       catch (\LogicException $refusal) {
@@ -598,7 +598,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     ];
     $builder = new SurfaceBuilder();
     foreach ($cases as $name => $definition) {
-      $this->assertSame($published[$name], static::json($this->definitions()->published(DefinitionSchema::of($definition), $definition, TRUE)), "$name: published as listed.");
+      $this->assertSame($published[$name], static::json($this->definitions()->published(DefinitionSchema::of($definition), TRUE)), "$name: published as listed.");
       $builder->setDefinition($name, Surface::deepClone($definition));
     }
     $schema = $this->container->get('surface.contract_emitter')->emitFull($builder->seal(), 'surface_test.listed', 'configure')->document['schema'];
@@ -623,7 +623,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
       ->with('$defs', ['leaf' => $inner])
       ->with('patternProperties', ['^x' => $inner])
       ->with('not', $inner);
-    $published = static::json($this->definitions()->published($node, $map));
+    $published = static::json($this->definitions()->published($node));
     $this->assertStringNotContainsString(DefinitionSchema::MODEL, (string) json_encode($published));
     $kept = ['title' => 'Leaf', 'type' => ['string', 'null']];
     $this->assertSame([$kept, ['allOf' => [$kept]]], $published['allOf']);
@@ -646,7 +646,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $definitions = $this->definitions();
     $loose = DataDefinition::create('string')->setLabel('Loose');
     $this->assertNotSame(DefinitionSchema::of($loose), DefinitionSchema::of($loose), 'A definition is read afresh on each call.');
-    $this->assertSame(static::json($definitions->published(DefinitionSchema::of($loose), $loose)), static::json($definitions->published(DefinitionSchema::of($loose), $loose)), 'Two reads say the same.');
+    $this->assertSame(static::json($definitions->published(DefinitionSchema::of($loose))), static::json($definitions->published(DefinitionSchema::of($loose))), 'Two reads say the same.');
     $label = NULL;
     foreach ($this->examples() as [, , $surface]) {
       foreach ($surface->getDefinitions()->entries() as $entry) {
@@ -662,7 +662,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $refined = Surface::deepClone($label->definition());
     $again = $label->withDefinition($refined)->schema();
     $this->assertNotSame($node, $again, 'A refined key is a definition of its own, read for its own entry.');
-    $this->assertSame(static::json($definitions->published($node, $label->definition())), static::json($definitions->published($again, $refined)));
+    $this->assertSame(static::json($definitions->published($node)), static::json($definitions->published($again)));
     $properties = 0;
     $listed = 0;
     foreach ($this->examples() as [, , $surface]) {
@@ -779,7 +779,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     // what the list states.
     $listed = $definitions->listed($definition);
     $this->listedCompared += $node === NULL && $listed ? 1 : 0;
-    $published = static::json($definitions->published($node ?? DefinitionSchema::of($definition), $definition, $node === NULL ? $listed : FALSE));
+    $published = static::json($definitions->published($node ?? DefinitionSchema::of($definition), $node === NULL ? $listed : FALSE));
     $static = array_diff_key($served, array_flip([...self::DECORATION, ...$theirs]));
     $this->assertSame(array_keys($static), array_keys($published), $at . ': the same keywords, in order.');
     $compared = 1;

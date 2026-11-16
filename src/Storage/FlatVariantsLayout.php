@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface\Storage;
 
 use Drupal\surface\DefinitionMap;
-use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Variants;
 
@@ -235,14 +235,14 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
   /**
    * Lists the flat keys of one map, and walks the maps it holds.
    *
-   * The walk reads no node. Its one fact of a definition, `each`, is read
-   * only for a key that holds an attachment, from its definition: that
-   * key's node is composed of the child's entries' nodes
-   * (Entry::schema()), and a storage layout reads none of them, so the
-   * node would read every key of the child for one fact.
+   * Its one fact of a key, `each`, is read only for a key that holds an
+   * attachment, from its node, composed of the child's entries' nodes
+   * (Entry::schema()).
    *
-   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes and
-   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
+   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes,
+   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own
+   * and
+   * docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node.
    *
    * @param \Drupal\surface\DefinitionMap $map
    *   The keys of one level.
@@ -271,7 +271,7 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
         continue;
       }
       if ($entry->attachment !== NULL) {
-        $each = DefinitionMetadata::eachOf($entry->definition());
+        $each = NodeFacts::each($entry->schema());
         if ($each === NULL) {
           static::walk($entry->attachment->child->getDefinitions(), [...$steps, static::step($name)], $at . '.', [], $marks, $schema);
         }

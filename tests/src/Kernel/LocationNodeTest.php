@@ -283,8 +283,8 @@ class LocationNodeTest extends SurfaceKernelTestBase {
    *   TRUE where the two differ.
    */
   protected function assertListedDiffersOnlyInWhatItsListStates(DefinitionSchema $definitions, DataDefinitionInterface $definition, Schema $node, string $at): bool {
-    $unlisted = json_decode(static::json($definitions->publishedNode($node, $definition, FALSE)), TRUE);
-    $listed = json_decode(static::json($definitions->publishedNode($node, $definition, TRUE)), TRUE);
+    $unlisted = json_decode(static::json($definitions->publishedNode($node, FALSE)), TRUE);
+    $listed = json_decode(static::json($definitions->publishedNode($node, TRUE)), TRUE);
     if (DefinitionSchema::isMap($definition)) {
       foreach (['properties', 'type', 'required', 'additionalProperties'] as $keyword) {
         $this->assertArrayNotHasKey($keyword, $listed, "$at: a map that offers a list is one value.");

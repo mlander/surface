@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Block\BlockPluginInterface;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entry;
 use Drupal\surface\Options\OptionSet;
 use Drupal\surface\Options\SurfaceOptionsResolverInterface;
+use Drupal\surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\surface_examples\Venues;
 use PortableSchema\Builder\Schema;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -259,7 +263,8 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
    *
    * Handed the definition alone, the service hands each resolver the node
    * it reads from the definition: the title and the keywords the key
-   * declares. Handed the key's node as well, it hands that very node on.
+   * declares. Handed the key's node, it hands that very node on, and the
+   * constraints it reads are the node's.
    */
   public function testTheResolverIsHandedTheKeysNode(): void {
     $recorder = new class () implements SurfaceOptionsResolverInterface {
@@ -303,10 +308,117 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
     $this->assertSame(['string', 'null'], $node->get('type'), 'Not required, so it may be NULL.');
     $this->assertTrue(DefinitionSchema::same(DefinitionSchema::of($definition), $node), 'Read, it is the definition\'s node.');
 
-    $entry = DefinitionMap::fromArrays(['room' => (clone $definition)->setLabel('Hall')])->entry('room');
-    $options->resolve($entry->definition(), $entry->schema());
-    $this->assertSame($entry->schema(), $recorder->handed[1], 'A caller that holds the key\'s node hands that node on.');
-    $this->assertSame('Hall', (string) $recorder->handed[1]->get('title'));
+    foreach ([FALSE, TRUE] as $node_first) {
+      DefinitionMap::$nodeFirst = $node_first;
+      $derived = new \ReflectionProperty(Entry::class, 'definition');
+      $entry = DefinitionMap::fromArrays(['room' => (clone $definition)->setLabel('Hall')])->entry('room');
+      $recorder->handed = [];
+      $this->assertSame(['east' => 'east', 'west' => 'west'], $options->resolve($entry->schema())->options);
+      $this->assertSame([$entry->schema()], $recorder->handed, 'Handed the key\'s node, the service hands that very node on.');
+      $this->assertSame('Hall', (string) $entry->schema()->get('title'), 'The entry\'s own node, its own title.');
+      if ($node_first) {
+        $this->assertNull($derived->getValue($entry), 'Handed a node, the service derives no definition.');
+      }
+    }
+
+    // The constraints read are the node's: a node that holds a list no
+    // definition stands beside answers with that list.
+    $node = DefinitionSchema::of(DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['north']]));
+    $this->assertSame(['north' => 'north'], $options->resolve($node)->options);
+  }
+
+  /**
+   * Tests a refined key and its declared key resolve apart.
+   *
+   * A refined entry holds the refined definition and reads its node from
+   * it, so its node is another object than the declared entry's: the memo
+   * keyed by the node serves each its own list, in either order and in
+   * either mode, and narrowing is never served a stale list.
+   */
+  public function testRefinedAndDeclaredKeysResolveApart(): void {
+    $options = $this->options();
+    foreach ([FALSE, TRUE] as $node_first) {
+      DefinitionMap::$nodeFirst = $node_first;
+      $room = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['east', 'west', 'north']]);
+      $declared = DefinitionMap::fromArrays(['room' => $room])->entry('room');
+      // What refinement makes of a key: a copy, narrowed, and an entry of it.
+      $refined = $declared->withDefinition((clone $declared->definition())->addConstraint('Choice', ['choices' => ['east']]));
+      $this->assertNotSame($declared->schema(), $refined->schema());
+      $this->assertSame(['east', 'west', 'north'], array_keys($options->resolve($declared->schema())->options));
+      $this->assertSame(['east'], array_keys($options->resolve($refined->schema())->options), 'The refined key is not served the declared list.');
+      $this->assertSame(['east', 'west', 'north'], array_keys($options->resolve($declared->schema())->options), 'Nor the declared key the refined one.');
+    }
+
+    // The same through a resource's own refiner: example 3's room is
+    // narrowed to the rooms of the venue chosen.
+    $this->enableModules(['serialization', 'tool', 'surface_http', 'surface_examples']);
+    $this->installConfig(['surface_examples']);
+    foreach ([FALSE, TRUE] as $node_first) {
+      DefinitionMap::$nodeFirst = $node_first;
+      $resources = $this->container->get('surface.resources');
+      $surface = $resources->build(RegistrationStep3Resource::class, $resources->operation(RegistrationStep3Resource::class, 'configure'));
+      $options = $this->options();
+      $declared = $surface->getDefinitions()->entry('room');
+      $refined = $surface->refine(['venue' => 'library'])->getDefinitions()->entry('room');
+      $this->assertNotNull($declared);
+      $this->assertNotNull($refined);
+      $all = array_keys($options->resolve($declared->schema())->options);
+      $library = array_keys($options->resolve($refined->schema())->options);
+      $this->assertSame(array_keys(Venues::rooms()), $all);
+      $this->assertSame(array_keys(Venues::rooms('library')), $library);
+      $this->assertNotSame($all, $library);
+      $this->assertSame($all, array_keys($options->resolve($declared->schema())->options));
+    }
+  }
+
+  /**
+   * Tests invalidateTags() forgets an answer kept under a node.
+   *
+   * A list read from the site carries the tags it was read under; once one
+   * of them is invalidated, the key is resolved again, whether it was
+   * asked by its node or by its definition.
+   */
+  public function testInvalidatingForgetsNodeKeyedAnswer(): void {
+    $tagged = new class () implements SurfaceOptionsResolverInterface {
+
+      /**
+       * The lists it resolved.
+       */
+      public int $calls = 0;
+
+      /**
+       * {@inheritdoc}
+       */
+      public function applies(Constraint $constraint): bool {
+        return $constraint instanceof Choice;
+      }
+
+      /**
+       * {@inheritdoc}
+       */
+      public function resolve(Constraint $constraint, Schema $node): OptionSet {
+        assert($constraint instanceof Choice);
+        $this->calls++;
+        return new OptionSet(array_combine($constraint->choices, $constraint->choices), [], (new CacheableMetadata())->addCacheTags(['surface_test_rooms']));
+      }
+
+    };
+    $options = $this->options();
+    (new \ReflectionProperty($options, 'resolvers'))->setValue($options, ['tagged' => $tagged]);
+    $definition = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['east']]);
+    $node = DefinitionSchema::of($definition);
+
+    $options->resolve($node);
+    $options->resolve($node);
+    $options->resolve($definition);
+    $this->assertSame(2, $tagged->calls, 'Each key is resolved once: the node and the definition are two keys.');
+    $options->invalidateTags(['some_other_tag']);
+    $options->resolve($node);
+    $this->assertSame(2, $tagged->calls, 'A tag the list did not name forgets nothing.');
+    $options->invalidateTags(['surface_test_rooms']);
+    $options->resolve($node);
+    $options->resolve($definition);
+    $this->assertSame(4, $tagged->calls, 'The tag forgets the answer under the node and under the definition.');
   }
 
 }

@@ -6,7 +6,10 @@ namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\surface\Attachment;
+use Drupal\surface\Entry;
 use Drupal\surface\Surface;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\DefinitionMetadata;
@@ -64,6 +67,50 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
       'endpoint' => DataDefinition::create('string')->setLabel('Endpoint'),
       'token' => $token,
     ]));
+  }
+
+  /**
+   * Tests a node-first surface's secret keys are read from its nodes.
+   *
+   * A key that holds a child frame has its secret flag read from its node
+   * too, composed of its own facts around the child's entries' nodes (a
+   * map is never a secret), so the layout derives no definition; the keys
+   * are those the definitions say, in either mode.
+   */
+  public function testSecretKeysOfNodeFirstSurfaceDeriveNoDefinition(): void {
+    $derived = new \ReflectionProperty(Entry::class, 'definition');
+    $found = [];
+    foreach ([FALSE, TRUE] as $node_first) {
+      // The child as a sealed child is, and the map of its keys the build
+      // makes of it; then the surface the layout reads, in the mode.
+      $child = new Surface(DefinitionMap::fromArrays(definitions: ['code' => DataDefinition::create('string')->setLabel('Code')]));
+      $place = Attachment::mapOf(MapDataDefinition::create()->setLabel('Place'), $child);
+      DefinitionMap::$nodeFirst = $node_first;
+      try {
+        $token = DataDefinition::create('string')->setLabel('API key');
+        DefinitionMetadata::setSecret($token);
+        $surface = new Surface(DefinitionMap::fromArrays(
+          definitions: [
+            'endpoint' => DataDefinition::create('string')->setLabel('Endpoint'),
+            'token' => $token,
+            'place' => $place,
+          ],
+          attachments: ['place' => new Attachment($child)],
+        ));
+        $found[] = EncryptedStorageLayout::secretKeys($surface);
+        if ($node_first) {
+          foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+            $this->assertTrue($entry->isNodeFirst());
+            $this->assertNull($derived->getValue($entry), sprintf('Reading whether "%s" is secret derives no definition.', $name));
+          }
+        }
+      }
+      finally {
+        DefinitionMap::$nodeFirst = FALSE;
+      }
+    }
+    $this->assertSame(['token'], $found[0]);
+    $this->assertSame($found[0], $found[1], 'The same keys in either mode.');
   }
 
   /**

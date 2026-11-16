@@ -219,15 +219,15 @@ takes an entity type and an id.
 
 The tool bridge declares no entity input. An operation's parameter is a
 value, never an object, so a parameter named for a key of the resource
-is that key's own definition, the id typed as the key holds it, for
-every connector:
+is converted from that key's own node, the id typed as the key holds
+it, for every connector:
 
 <!-- excerpt: src/Tool/OperationInputs.php -->
 
 ```php
 $key = $neutral?->getDefinitions()->entry($parameter->name);
 if ($key !== NULL && $key->attachment === NULL && $key->variants === NULL && $key->list === NULL) {
-  $input = $this->inputDefinitions->fromDefinition($key->definition(), $key->schema());
+  $input = $this->inputDefinitions->fromSchema($key->schema());
   $input->setRequired(!$parameter->optional);
   return $input;
 }

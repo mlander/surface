@@ -65,7 +65,7 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *   a collection's declared constraints, and what every entry of a map
    *   of entries from the site is, are read from the key's own node,
    *   which is composed of its child's entries' nodes (Entry::schema()).
-   * - src/Pipeline/Validating.php, of(): placeAt() reads a port's node. A
+   * - src/Pipeline/Validating.php, of(): nodeAt() reads a port's node. A
    *   port has no entry: the container hands the child a bare definition
    *   (SurfaceInterface::getPortDefinition()), whose label a refusal
    *   names.

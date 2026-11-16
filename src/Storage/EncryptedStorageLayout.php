@@ -6,7 +6,6 @@ namespace Drupal\surface\Storage;
 
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMetadata;
 
 /**
  * Encrypts a data surface's secret keys on their way into storage.
@@ -124,14 +123,14 @@ final class EncryptedStorageLayout implements StorageLayoutInterface {
   /**
    * Names the keys a data surface declared secret.
    *
-   * Read from each key's node (Secrets::marked()). A key that holds a
-   * child frame has its own flag read from its definition: its node is
-   * composed of the child's entries' nodes (Entry::schema()), which a
-   * storage layout does not read, so the node would read every key of
-   * the child for one flag.
+   * Read from each key's node (Secrets::marked()), a key that holds a
+   * child frame's too: its node is composed of its own facts around the
+   * child's entries' nodes (Entry::schema()).
    *
-   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes and
-   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
+   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes,
+   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own
+   * and
+   * docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface to read.
@@ -142,7 +141,7 @@ final class EncryptedStorageLayout implements StorageLayoutInterface {
   public static function secretKeys(SurfaceInterface $surface): array {
     $keys = [];
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
-      if ($entry->isShell() ? DefinitionMetadata::isSecret($entry->definition()) : Secrets::marked($entry->schema())) {
+      if (Secrets::marked($entry->schema())) {
         $keys[] = (string) $name;
       }
     }

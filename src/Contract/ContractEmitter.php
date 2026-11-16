@@ -1607,7 +1607,7 @@ final class ContractEmitter {
     $definition = $current->definition();
     // The list's own node, without its items: they are the child's.
     $head = $this->propertySchema->listNode($definition);
-    [$schema, $checks] = $this->propertySchema->listKeywords($head, $definition);
+    [$schema, $checks] = $this->propertySchema->listKeywords($head);
     $schema = $schema->with('items', $items);
     if (NodeFacts::hasDefault($head) && !$declaring) {
       $schema = $schema->with('default', NodeFacts::default($head));

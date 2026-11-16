@@ -12,7 +12,9 @@ use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Reference\References;
 use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Storage\ConfigObjectStorage;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -77,6 +79,8 @@ trait NodeFactsParityTrait {
     'setting' => 'getSetting(), for each setting held and one not',
     'typeOf' => 'DefinitionSchema::type()',
     'keywordsOf' => 'DefinitionSchema::keywords(), with the type\'s own keywords given',
+    'storedByUuid' => 'References::storedByUuid()',
+    'valueClass' => 'getClass()',
   ];
 
   /**
@@ -208,6 +212,11 @@ trait NodeFactsParityTrait {
       'isReadOnly' => [NodeFacts::isReadOnly($node), (bool) $definition->isReadOnly()],
       'isComputed' => [NodeFacts::isComputed($node), (bool) $definition->isComputed()],
       'setting' => static::settingAnswers($definition, $node),
+      'storedByUuid' => [References::storedByUuidIn($node), References::storedByUuid($definition)],
+      'valueClass' => [
+        ConfigObjectStorage::valueClass($node, static fn (): DataDefinitionInterface => $definition),
+        (string) $definition->getClass(),
+      ],
     ];
     // The type a leaf states and the keywords its checks state, read from
     // the node as the document's classes read them.

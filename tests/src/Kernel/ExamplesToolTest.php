@@ -7,6 +7,10 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Form\FormState;
 use Drupal\surface_examples\ExampleCalls;
+use Drupal\surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\surface_examples\Venues;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entry;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\MapInputDefinition;
@@ -300,6 +304,42 @@ class ExamplesToolTest extends SurfaceKernelTestBase {
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
     $stored = $this->config('surface_examples.registration_step3')->get();
     $this->assertSame(['Summer meetup', 40], [$stored['title'], $stored['capacity']]);
+  }
+
+  /**
+   * Tests a node-first resource's tool definitions derive no definition.
+   *
+   * The tool door reads each key from its node and hands the options
+   * service the node (InputDefinitions), so a key the service answers for,
+   * a venue and a room offered as lists, converts with no definition
+   * derived (Entry::definition() is derived on the first ask and kept, so
+   * the entry's private member says whether it was asked).
+   */
+  public function testToolDefinitionsOfNodeFirstResourceDeriveNoDefinition(): void {
+    DefinitionMap::$nodeFirst = TRUE;
+    $resources = $this->container->get('surface.resources');
+    $surface = $resources->build(RegistrationStep3Resource::class, $resources->operation(RegistrationStep3Resource::class, 'configure'));
+    $derived = new \ReflectionProperty(Entry::class, 'definition');
+    $unread = [];
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      $this->assertTrue($entry->isNodeFirst());
+      if ($derived->getValue($entry) === NULL) {
+        $unread[(string) $name] = $entry;
+      }
+    }
+    $this->assertArrayHasKey('venue', $unread);
+    $this->assertArrayHasKey('room', $unread);
+
+    $inputs = $this->container->get('surface.input_definitions');
+    $map = $inputs->fromSurface($surface, 'Registration', '');
+    $inputs->withLookups($map, $surface, NULL);
+    $inputs->outputsFromSurface($surface);
+    $properties = $map->getPropertyDefinitions();
+    $this->assertSame(array_keys(Venues::VENUES), $properties['venue']->getConstraints()['Choice']['choices'] ?? NULL, 'The options service answered for the venue.');
+    $this->assertSame(array_keys(Venues::rooms()), $properties['room']->getConstraints()['Choice']['choices'] ?? NULL, 'And for the room.');
+    foreach ($unread as $name => $entry) {
+      $this->assertNull($derived->getValue($entry), sprintf('Converting "%s" for the tool door derives no definition.', $name));
+    }
   }
 
 }

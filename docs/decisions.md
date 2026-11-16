@@ -4524,7 +4524,9 @@ byte, refusal or value changed.
   derived. `SiteListBudget::listedBySite()` reads whether an attached
   map is one of keys from the site (`each`) so, and the tool door's
   `InputDefinitions::deferred()` whether variants are chosen by a key
-  (`variantsBy`).
+  (`variantsBy`). Replaced on 2026-11-15: a fact of a key is read from
+  its node, whatever form the entry holds
+  ([A fact is read from the node, and the options service takes a node](#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node)).
 - **The widget walk walks the form the entry holds.**
   `Resources::assertWidgetsDraw()` looks at every key, at any depth, for
   a `widget` setting. One walk reads either form through one reader
@@ -4542,7 +4544,9 @@ byte, refusal or value changed.
   `OperationInputs::parameterInput()`) reads each key's facts from its
   node and walks the definition in step only to hand each key's
   definition to the options service, which takes one. That is the edge
-  doing its job and stays until the options service takes a node. What
+  doing its job and stays until the options service takes a node (it
+  does since 2026-11-15, and the walk is gone: see
+  [A fact is read from the node, and the options service takes a node](#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node)). What
   moved: `deferred()` (one flag, above), and `withLookups()`, which
   derived the definition of each key of an attached child to ask the
   options service whether a reference key lists its candidates. It now
@@ -4696,6 +4700,119 @@ does not give it. No served byte, refusal, message or value changed.
   mapped and an unmapped constraint interleave. `type` and
   `definitionClass` stay members: they hold facts no keyword holds
   (`timestamp` against `integer`, an empty map, a plain `any`).
+
+### A fact is read from the node, and the options service takes a node
+
+Decided 2026-11-15. The next part makes production node-first: every
+sealed entry holds its node, and its definition is derived only where an
+edge asks for one. A node read off such an entry is free; a definition
+costs a derivation. In the node-first test mode the instrument's run
+still derived 11,308 definitions, and most of the askers wanted one fact
+a node reader answers, or a definition only to hand it to the options
+service. Both now read the node. No served byte, refusal, message or
+value changed.
+
+- **One rule.** A fact of a key is read from its node (`Entry::schema()`),
+  whatever form the entry holds. It replaces "one fact is read from the
+  form the entry holds" of
+  [Nothing asks for a definition it does not need](#nothing-asks-for-a-definition-it-does-not-need).
+  `Entry::isNodeFirst()` is left for the build's widget walk alone. In
+  the default mode these readers now read a node where they read a
+  definition, so nodes read rise there until the flip; the cost is
+  proven once, at the end of slice 32.
+- **The readers moved.** The accept's computed flag
+  (`Accepting::acceptLevel()`, `acceptComputed()`) and
+  `Computed::apply()` read `NodeFacts::compute()`; `Surface::defaultOf()`
+  reads `NodeFacts::defaultOf()`; `SiteListBudget::listedBySite()` reads
+  `NodeFacts::each()` and the tool door's `deferred()`
+  `NodeFacts::variantsBy()`, with no ternary on the entry's form; the
+  flat variants layout reads `each`, and the encrypted layout a shell's
+  secret flag (`Secrets::marked()`), from the key's node. The reference
+  layout reads every fact from nodes, walked down a plain map's
+  properties: whether a key is stored by uuid (a new reader,
+  `References::storedByUuidIn()`, beside `storedByUuid()`), the entity
+  type (`targetIn()`), a bare key's parts, the data type, `each`. The
+  config schema check (`HeldToConfigSchemaTrait`) reads the mount's
+  parts, a map's properties and a key's constraints from nodes, and a
+  value's PHP class too (`valueClass()`: the class its definition names,
+  under the node's `stored` member, else the one the typed data manager
+  gives its data type, as `DataDefinition::getClass()` answers); its
+  definition is asked only for a node read from another class.
+  `NodeFactsParityTest` holds the two new readers to `storedByUuid()`
+  and `getClass()` over every example and two hand cases.
+- **The options service takes the key.** `SurfaceOptions::resolve(Schema|DataDefinitionInterface $key)`,
+  one parameter. Handed a node, the constraints are the node's
+  (`NodeFacts::constraints()`) and each resolver is handed that node.
+  Handed a definition, by a caller that holds no node, the constraints
+  are the definition's and the node is read from it where a resolver is
+  about to be called. One loop serves both, and the memo is keyed by the
+  object handed. A refined entry holds the refined definition and reads
+  its node from it, or composes it around the refined child, so a
+  refined key is another object than the declared key in both forms, and
+  narrowing is never served a stale list. An answer is read from the
+  node alone (its constraints, and what a resolver reads of it) and the
+  site, and a node is never written once built, so two places that hold
+  one node object are served one right answer: a shell composes its node
+  of the very nodes its child's entries hold, so the shell's property
+  and the child's key are one key with one list. `invalidateTags()` forgets an answer under
+  either kind of key; `provider()` and core's `OptionsProvider` keep
+  handing definitions, core's edge.
+- **Who hands what.** The node: the accept (`coerce()`, so the accept,
+  the kept walk and the validator's computed checks carry no definition
+  beside the node), `Validating` (always held, stale, and the two
+  watched-key sentences, whose node is the place's: `optionsKeyAt()`, a
+  port's definition for a port, which has no entry), the tool door
+  (`constraintsOf()`, `withLookups()`), `DefinitionSchema::listed()` and
+  the projection (`publishedNode()`, `published()` take no definition),
+  `PropertySchema::optionSet()` and `signature()` (a collection's own
+  node holds no item, so its signature still asks the item's
+  definition), `ContractPanel::allows()`, `Conditionals::domain()`. A
+  definition, where no node is held without a new read: the widget
+  claims (`WidgetChoice::optionSet()`, until slice 32's public
+  contracts), the form's extraction (`Extracting::isOrphaned()` and
+  `fits()` walk a refined surface's definitions; its entries are
+  definition-first, so their nodes would be reads), core's options
+  provider, and the contract panel's rows for a property of a key that
+  holds a child.
+- **The tool door and the accept derive nothing.** `fromEntry()`,
+  `fromChild()`, `whole()`, `fromVariants()`, `outputsFromSurface()` and
+  `OperationInputs::parameterInput()` walk the node alone; label,
+  description, required, list or map and `variantsBy` are read from it.
+  `fromDefinition()` and `outputFromDefinition()`, for a definition no
+  entry holds, stay as edges; `fromSchema()` converts a node.
+  `fromVariants()` takes the placeholder's node, or a definition from a
+  caller that holds no node. `acceptValue()` takes the node alone.
+- **The proof.** In the node-first mode the instrument's run (262
+  operations as two accounts) derives 6,477 definitions, from 11,308:
+  the tool door none (from 3,318, with `parameterInput()`), the defaults
+  none (from 846), the reference layout none (from 841), the accept's
+  computed flag and key none (from 697), the flat and encrypted layouts
+  and the config schema check none (from 141). The config schema check
+  of a resource's build, which the instrument's cached builds do not
+  reach, derived a definition for every plain key of a resource stored
+  in config. What remains: the seal's shells (2,308, part 32.7) and the
+  structure the build mounts (28), the emitter's `frame()` (2,462), the
+  build's widget walk (602) and an output handed to `property()` (87),
+  all for the widget claims (part 32.9), refinement and the marks it
+  leaves (948, part 32.8), the ports (42). Refinement rises from 354:
+  the first ask of a sealed entry is counted against the first asker,
+  and with the accept and the defaults no longer asking first, the
+  refinement that asked next shows. In the default mode, both sides
+  recorded in one sitting (the base a copy of the module before this
+  part, loaded over the tree): 39,109 and 3,737 value cases, 684 and 364
+  documents, the narrowed, anonymous and corpus records, and 8,344 door
+  digests, none differs. `SurfaceOptionsResolverTest` shows a resolver
+  handed the node it was given, a refined key and its declared key
+  resolved apart (by hand and through example 3's room), and
+  `invalidateTags()` forgetting an answer under a node; `ExamplesToolTest`,
+  `ReferenceStoredByUuidTest`, `FlatVariantsLayoutTest` and
+  `EncryptedStorageLayoutTest` build a node-first resource and show its
+  tool definitions, its storage layouts and its config schema check
+  derive no definition; each fails against the file it covers as it was
+  before this part.
+- **What names Typed Data.** `Pipeline/Accepting.php` and
+  `Pipeline/SurfacePipeline.php` no longer do (`TypedDataFootprintTest`,
+  131 to 129).
 
 ### A key that does not apply
 

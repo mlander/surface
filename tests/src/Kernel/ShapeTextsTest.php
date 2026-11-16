@@ -166,7 +166,7 @@ class ShapeTextsTest extends SurfaceKernelTestBase {
    *   The node, as JSON reads it, in the language set now.
    */
   protected function said(DataDefinitionInterface $definition): array {
-    return (array) Schemas::decoded($this->container->get('surface.definition_schema')->published(DefinitionSchema::of($definition), $definition, FALSE));
+    return (array) Schemas::decoded($this->container->get('surface.definition_schema')->published(DefinitionSchema::of($definition), FALSE));
   }
 
   /**

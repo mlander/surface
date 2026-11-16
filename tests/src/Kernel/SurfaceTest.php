@@ -169,11 +169,14 @@ class SurfaceTest extends SurfaceKernelTestBase {
 
     // A default declared on the map itself merges over what its
     // properties declare rather than replacing it: naming one property
-    // is a statement about that property, not about its siblings.
-    DefinitionMetadata::setDefaultValue($outer, ['provider' => ['note' => 'fixed']]);
+    // is a statement about that property, not about its siblings. It is
+    // declared on a copy, of which a data surface is made: an entry's
+    // definition is never written once the entry is made.
+    $declared = clone $outer;
+    DefinitionMetadata::setDefaultValue($declared, ['provider' => ['note' => 'fixed']]);
     $this->assertSame(
       ['provider' => ['badge' => 'star', 'note' => 'fixed']],
-      $surface->getDefault('settings'),
+      (new Surface(DefinitionMap::fromArrays(definitions: ['settings' => $declared])))->getDefault('settings'),
     );
   }
 

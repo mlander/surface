@@ -170,8 +170,8 @@ class DefinitionReadServiceFreeTest extends SurfaceKernelTestBase {
     \Drupal::setContainer($recording);
     try {
       $projection = new DefinitionSchema(\Drupal::service('surface.options'), $constraints);
-      foreach ($nodes as $index => $node) {
-        $projection->published($node, $definitions[$index]);
+      foreach ($nodes as $node) {
+        $projection->published($node);
       }
     }
     finally {

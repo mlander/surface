@@ -13,6 +13,8 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Pipeline\SurfacePipeline;
+use Drupal\surface\Pipeline\Validating;
 use Drupal\surface\Pipeline\ViolationSummary;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -267,6 +269,29 @@ class RefusalMessagesTest extends SurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_NAME, $route_name);
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
+  }
+
+  /**
+   * Tests a refusal's path that names no place in a key says its choices.
+   *
+   * Validating::choices() hands the options service the node at the
+   * refusal's path inside the key; where the path names no node there,
+   * the key's own choices are said, and a name that is no key says none.
+   * No refusal the pipeline makes reaches such a path today (a map that
+   * offers a list is one value in the document, so its refusals are at
+   * the key, and an item's path names the item's node), so choices() is
+   * asked directly.
+   */
+  public function testChoicesAtPathNamingNoNodeAreTheKeys(): void {
+    $room = DataDefinition::create('string')->setLabel('Room')->addConstraint('Choice', ['choices' => ['east', 'west']]);
+    $surface = new Surface(DefinitionMap::fromArrays(definitions: ['room' => $room]));
+    $validating = (new \ReflectionProperty(SurfacePipeline::class, 'validating'))->getValue($this->pipeline());
+    $choices = new \ReflectionMethod(Validating::class, 'choices');
+    $own = $choices->invoke($validating, $surface, 'room', '');
+    $this->assertNotNull($own);
+    $this->assertSame((string) $own, (string) $choices->invoke($validating, $surface, 'room', 'nowhere'), 'A path that names no node says the key\'s own choices.');
+    $this->assertNull($choices->invoke($validating, $surface, 'ghost', ''), 'A name that is no key says none.');
+    $this->assertNull($choices->invoke($validating, $surface, 'ghost', 'nowhere'));
   }
 
 }

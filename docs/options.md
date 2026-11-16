@@ -228,12 +228,15 @@ resolver did not exist.
 ### The service
 
 `surface.options` (`Options\SurfaceOptions`) is what consumers
-call. `resolve(DataDefinitionInterface $definition, ?Schema $node = NULL): ?OptionSet`
-walks the definition's constraints, asks each resolver, and answers with
-the list, or `NULL` when no constraint on the definition names one. A
-caller that holds the key's node hands it, and each resolver is handed
-that node; otherwise the node is read from the definition when a
-resolver first reads it.
+call. `resolve(Schema|DataDefinitionInterface $key): ?OptionSet` takes
+the key: its node, or its definition where the caller holds no node. It
+walks the key's constraints, asks each resolver, and answers with the
+list, or `NULL` when no constraint on the key names one. Handed a node,
+the constraints are the node's (`NodeFacts::constraints()`) and each
+resolver is handed that node. Handed a definition (core's options
+provider, a widget's claim, the form's extraction), the constraints are
+the definition's, and the node is read from it when a resolver first
+reads it.
 
 When more than one constraint resolves, the answer is their
 **intersection**, because every constraint on a definition has to hold at
@@ -241,12 +244,14 @@ once. Labels come from the first set, and the cacheability of both is
 merged, since an answer is only reusable for as long as its
 shorter-lived half.
 
-Answers are memoized weakly, keyed by the definition object: an answer
-lives as long as its definition, so a worker that outlives a request (an
-MCP stdio server, a queue, a Drush batch) keeps none it no longer uses.
-There is no invalidation because there is nothing to invalidate: a
-refined definition is a different object, so narrowing can never be
-served a stale list.
+Answers are memoized weakly, keyed by the object handed, the node or
+the definition: an answer lives as long as its key, so a worker that
+outlives a request (an MCP stdio server, a queue, a Drush batch) keeps
+none it no longer uses. Narrowing needs no invalidation: a refined key
+is another object than the declared one, its node as much as its
+definition, so narrowing is never served a stale list. A list read from
+the site is forgotten when a tag it names is invalidated, under either
+kind of key.
 
 A constraint plugin that is not registered is logged as a warning rather
 than thrown: the definition renders as free input and the constraint
@@ -573,7 +578,7 @@ it the resolver reads, is then named under no `portable-check`. Example
 the venues the site has, read by `EventVenueRoomOptions`
 (why: [decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
 A memoized answer is dropped when a tag it was read under is
-invalidated, so a definition kept for the rest of a request is answered
+invalidated, so a key kept for the rest of a request is answered
 afresh, and a tool's definition carrying the list as its enum is cleared
 with the tag.
 

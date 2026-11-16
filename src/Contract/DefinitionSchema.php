@@ -90,9 +90,8 @@ use PortableSchema\Builder\Schema;
  *   and that check's message leave `portable-check`, and a map that offers
  *   one is said as one value, made from its node (oneValue(): its
  *   properties, `type`, `required` and `additionalProperties` are no
- *   keywords of it). Of a listed map's definition the projection reads
- *   only whether it offers a list; whether it is a map comes from its
- *   node (nodeIsMap()).
+ *   keywords of it). The options service is handed the node; whether
+ *   it is a map comes from its node too (nodeIsMap()).
  * - Whether a list states a check (SurfaceOptions::isStatedByList(),
  *   SurfaceOptions::readsAsList()), kept on the service by plugin id and
  *   options; a check's label is kept by plugin id as its plugin holds it.
@@ -1391,34 +1390,32 @@ final class DefinitionSchema {
   /**
    * Answers whether a key offers a list of values.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key.
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   Its node, where the caller holds it, which the options service hands
-   *   a resolver: of its item for a list.
+   * @param \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface $key
+   *   The key's node, which the options service is handed, of its item
+   *   for a list; or its definition, where the caller holds no node.
    *
    * @return bool
    *   TRUE where the options service resolves a set for it, of its item
    *   for a list.
    */
-  public function listed(DataDefinitionInterface $definition, ?Schema $node = NULL): bool {
-    $list = $definition instanceof ListDataDefinitionInterface;
-    return $this->options->resolve($list ? $definition->getItemDefinition() : $definition, $list && $node !== NULL ? static::itemNode($node) : $node) !== NULL;
+  public function listed(Schema|DataDefinitionInterface $key): bool {
+    if ($key instanceof Schema) {
+      $item = static::isList($key) ? static::itemNode($key) : NULL;
+      return $this->options->resolve($item ?? $key) !== NULL;
+    }
+    return $this->options->resolve($key instanceof ListDataDefinitionInterface ? $key->getItemDefinition() : $key) !== NULL;
   }
 
   /**
    * Projects a built node, and every node inside it, to the document form.
    *
-   * Each node as publishedNode() projects it, beside its own definition: a
-   * list's item beside the item's, a map's properties beside theirs, each
-   * offering a list of values or not as the options service says. A node
-   * at any other keyword position has no definition beside it: MODEL is
-   * stripped from it, at every depth, and nothing else.
+   * Each node as publishedNode() projects it: a list's item and a map's
+   * properties too, each offering a list of values or not as the options
+   * service says. A node at any other keyword position is no key's: MODEL
+   * is stripped from it, at every depth, and nothing else.
    *
    * @param \PortableSchema\Builder\Schema $built
    *   A built node (of(), head()).
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition it was read from.
    * @param bool|null $listed
    *   Whether the key offers a list of values; NULL to ask the options
    *   service.
@@ -1426,17 +1423,15 @@ final class DefinitionSchema {
    * @return \PortableSchema\Builder\Schema
    *   What a document says of it, at every depth.
    */
-  public function published(Schema $built, DataDefinitionInterface $definition, ?bool $listed = NULL): Schema {
-    return Schemas::map($this->projected($built, $definition, $listed), static fn (Schema $node): Schema => $node->has(self::MODEL) ? $node->without(self::MODEL) : $node);
+  public function published(Schema $built, ?bool $listed = NULL): Schema {
+    return Schemas::map($this->projected($built, $listed), static fn (Schema $node): Schema => $node->has(self::MODEL) ? $node->without(self::MODEL) : $node);
   }
 
   /**
-   * Projects a node, its item and its properties, beside their definitions.
+   * Projects a node, its item and its properties.
    *
    * @param \PortableSchema\Builder\Schema $built
    *   A built node.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition it was read from.
    * @param bool|null $listed
    *   Whether the key offers a list of values; NULL to ask the options
    *   service.
@@ -1444,21 +1439,19 @@ final class DefinitionSchema {
    * @return \PortableSchema\Builder\Schema
    *   The node, each item and property projected (publishedNode()).
    */
-  private function projected(Schema $built, DataDefinitionInterface $definition, ?bool $listed = NULL): Schema {
-    $node = $this->publishedNode($built, $definition, $listed);
+  private function projected(Schema $built, ?bool $listed = NULL): Schema {
+    $node = $this->publishedNode($built, $listed);
     if (static::isList($built)) {
       $item = $node->get('items');
-      return $item instanceof Schema && $definition instanceof ListDataDefinitionInterface ? $node->with('items', $this->projected($item, $definition->getItemDefinition())) : $node;
+      return $item instanceof Schema ? $node->with('items', $this->projected($item)) : $node;
     }
     $properties = $node->get('properties');
     if (!is_array($properties) || !static::nodeIsMap($built)) {
       return $node;
     }
-    $definitions = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinitions() : [];
     foreach ($properties as $name => $property) {
-      $below = $definitions[$name] ?? NULL;
-      if ($property instanceof Schema && $below instanceof DataDefinitionInterface) {
-        $properties[$name] = $this->projected($property, $below);
+      if ($property instanceof Schema) {
+        $properties[$name] = $this->projected($property);
       }
     }
     return $node->with('properties', $properties);
@@ -1477,11 +1470,9 @@ final class DefinitionSchema {
    *
    * @param \PortableSchema\Builder\Schema $node
    *   The built node (of(), head()).
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition it was read from.
    * @param bool|null $listed
    *   Whether the key offers a list of values; NULL to ask the options
-   *   service.
+   *   service, which is handed the node.
    *
    * @return \PortableSchema\Builder\Schema
    *   The node as a document says it.
@@ -1490,7 +1481,7 @@ final class DefinitionSchema {
    *   For a value of a type no row is for (LeafTypes::unwritten()), whose
    *   type is named by MODEL's `type` alone.
    */
-  public function publishedNode(Schema $node, DataDefinitionInterface $definition, ?bool $listed = NULL): Schema {
+  public function publishedNode(Schema $node, ?bool $listed = NULL): Schema {
     if ($node->isBoolean()) {
       return $node;
     }
@@ -1499,7 +1490,7 @@ final class DefinitionSchema {
     $read = $node;
     $map = static::nodeIsMap($read);
     if ($map) {
-      $listed ??= $this->listed($definition, $read);
+      $listed ??= $this->listed($read);
     }
     if ($map && $listed) {
       $node = static::oneValue($node);
@@ -1516,7 +1507,7 @@ final class DefinitionSchema {
     }
     // A list's own checks and a map's are never stated by a list of its
     // values, so the options service is asked only for a value's.
-    $listed = $value && ($listed ?? $this->listed($definition, $read));
+    $listed = $value && ($listed ?? $this->listed($read));
     $node = $this->publishedChecks(static::publishedTexts($node), $map, $listed);
     return $node->has(self::MODEL) ? $node->without(self::MODEL) : $node;
   }

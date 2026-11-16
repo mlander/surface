@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Pipeline\PipelineGuard;
 use Drupal\surface\Resource\Compute;
@@ -186,9 +187,10 @@ final class Computed {
    */
   public static function apply(SurfaceInterface $surface, array $values, array $stored): array {
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
-      $computed = static::of($entry->definition());
+      $node = $entry->schema();
+      $computed = NodeFacts::compute($node);
       if ($computed !== NULL && !$entry->locked && !($computed->takesSent() && ValueState::isConfigured($values[$name] ?? NULL))) {
-        $values[$name] = $computed->value((string) $name, $values, $stored, $entry->schema());
+        $values[$name] = $computed->value((string) $name, $values, $stored, $node);
       }
     }
     return $values;

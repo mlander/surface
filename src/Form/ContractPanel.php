@@ -313,7 +313,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       NodeFacts::dataType($node),
       $definition,
       $refined->getDefault($entry->name),
-      $this->allows($definition, $node),
+      $this->allows($node),
       $depends,
       $this->status($declared, $definition, $entry->locked, $entry->isRefinedAtRuntime(), $declared_node, $node),
       $node,
@@ -399,27 +399,25 @@ final class ContractPanel implements SurfaceFormPanelInterface {
   }
 
   /**
-   * Says what a definition allows, in words.
+   * Says what a key allows, in words.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition, which the options service is handed.
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   Its node, whose constraints are read; NULL for a property of a key
-   *   that holds a child frame, whose constraints are read from its
-   *   definition.
+   * @param \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface $key
+   *   The key's node; or, for a property of a key that holds a child
+   *   frame, its definition. Its constraints are read from it, and the
+   *   options service is handed it.
    *
    * @return string
    *   One phrase per constraint, or "anything of its type".
    */
-  protected function allows(DataDefinitionInterface $definition, ?Schema $node = NULL): string {
+  protected function allows(Schema|DataDefinitionInterface $key): string {
     $phrases = [];
-    $set = $this->options->resolve($definition, $node);
+    $set = $this->options->resolve($key);
     if ($set !== NULL) {
       $phrases[] = (string) $this->t('one of @values', [
         '@values' => implode(', ', array_map('strval', $set->options)),
       ]);
     }
-    foreach ($node === NULL ? $definition->getConstraints() : NodeFacts::constraints($node) as $name => $options) {
+    foreach ($key instanceof Schema ? NodeFacts::constraints($key) : $key->getConstraints() as $name => $options) {
       $listed = $set !== NULL && in_array($name, ['Choice', 'LabeledChoice', 'AllowedValues'], TRUE);
       if ($listed || in_array($name, self::SAID_ELSEWHERE, TRUE)) {
         continue;
@@ -516,7 +514,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       return $this->t('locked');
     }
     $required = static fn (DataDefinitionInterface $definition, ?Schema $node): bool => $node === NULL ? (bool) $definition->isRequired() : NodeFacts::isRequired($node);
-    $narrowed = $declared !== NULL && ($required($declared, $declared_node) !== $required($refined, $refined_node) || $this->allows($declared, $declared_node) !== $this->allows($refined, $refined_node));
+    $narrowed = $declared !== NULL && ($required($declared, $declared_node) !== $required($refined, $refined_node) || $this->allows($declared_node ?? $declared) !== $this->allows($refined_node ?? $refined));
     return match (TRUE) {
       // Narrowed by whatever refines it, and a rule only the site applies
       // checks it too: which of them narrowed it is not known here.

@@ -9,6 +9,8 @@ use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entry;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Pipeline\VariantMismatchException;
@@ -24,6 +26,7 @@ use Drupal\surface\Variants;
 use Drupal\surface_resource_test\Resource\Broken\FlatStateResource;
 use Drupal\surface_resource_test\Resource\Campsite\CampsiteResource;
 use Drupal\surface_resource_test\Resource\Kit\KitResource;
+use Drupal\surface_resource_test\Resource\Pantry\PantryResource;
 use Drupal\surface_resource_test\Structure\Broken\Flat\FlatListedClashStructure;
 use Drupal\surface_resource_test\Structure\Broken\Flat\FlatListedNestedStructure;
 use Drupal\surface_resource_test\Structure\Broken\Flat\FlatMixinClashStructure;
@@ -723,6 +726,49 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('resource_test.broken.flat_listed_clash stores the variants at "gear" flat beside its own keys (Variants::STORED_AS), and the variant for "a", resource_test.broken.kit.weight_only, declares "weight", which resource_test.broken.flat_listed_clash declares too.');
     $variant->child->getDefinitions();
+  }
+
+  /**
+   * Tests the layout reads a node-first resource from its nodes.
+   *
+   * The walk reads one fact of a key, `each`, from its node, so a
+   * node-first build is laid out with no definition derived that the build
+   * did not derive: the kit stored flat, the campsite's pitches, and the
+   * pantry's attached keys, which the walk steps into.
+   */
+  public function testNodeFirstResourceIsLaidOutWithNoDefinitionDerived(): void {
+    DefinitionMap::$nodeFirst = TRUE;
+    $resources = $this->container->get('surface.resources');
+    $built = [
+      'kit' => $this->kit(),
+      'campsite' => $resources->build(CampsiteResource::class, $resources->operation(CampsiteResource::class, 'configure')),
+      'pantry' => $resources->build(PantryResource::class, PantryResource::create()),
+    ];
+    $derived = new \ReflectionProperty(Entry::class, 'definition');
+    $unread = [];
+    foreach ($built as $id => $surface) {
+      foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+        $this->assertTrue($entry->isNodeFirst());
+        if ($derived->getValue($entry) === NULL) {
+          $unread[$id . '.' . $name] = $entry;
+        }
+      }
+    }
+    $this->assertArrayHasKey('pantry.shelf', $unread);
+    $this->assertArrayHasKey('pantry.label', $unread);
+
+    $kit = FlatVariantsLayout::forSurface($built['kit']);
+    $this->assertInstanceOf(FlatVariantsLayout::class, $kit);
+    $this->assertSame(self::READ, $kit->fromStorage(self::KIT));
+    $this->assertSame(['title', 'kind', 'weight', 'poles', 'fly', 'notes'], array_keys($kit->toStorage(self::READ)));
+    $campsite = FlatVariantsLayout::forSurface($built['campsite']);
+    $this->assertInstanceOf(FlatVariantsLayout::class, $campsite);
+    $pitch = ['name' => 'North', 'kind' => 'cot'];
+    $this->assertSame([$pitch + ['gear' => []]], $campsite->fromStorage(['title' => 'Lakeside', 'pitches' => [$pitch]])['pitches']);
+    $this->assertNull(FlatVariantsLayout::forSurface($built['pantry']), 'The pantry stores no variants flat.');
+    foreach ($unread as $name => $entry) {
+      $this->assertNull($derived->getValue($entry), sprintf('The layout derives no definition for "%s".', $name));
+    }
   }
 
 }

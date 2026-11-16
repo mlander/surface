@@ -11,6 +11,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\DeclaredRefiner;
@@ -395,7 +396,11 @@ final class Surface implements SurfaceInterface {
    * variants starts from the defaults of the variant its deciding key's
    * default chooses, and from nothing when that chooses none. A collection
    * starts from what its list declares, which is no items unless the owner
-   * said otherwise.
+   * said otherwise. Any other key's default is read from its node
+   * (NodeFacts::defaultOf()), a map's properties' defaults under it.
+   *
+   * Decision: see
+   * docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node.
    *
    * @param \Drupal\surface\Entry $entry
    *   The key.
@@ -411,7 +416,7 @@ final class Surface implements SurfaceInterface {
       $chosen = $entry->variants->chosen($this->getDefault($entry->variants->by));
       return $chosen === NULL ? NULL : $entry->variants->defaultsOf($chosen);
     }
-    return DefinitionMetadata::defaultOf($entry->definition());
+    return NodeFacts::defaultOf($entry->schema());
   }
 
   /**

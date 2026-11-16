@@ -566,7 +566,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
       $definition = $surface->getDefinition('code');
       $this->assertSame($source, $definition->getConstraints()['Regex']['message'], $case);
       $this->assertSame($source, ConstraintMessages::source($definition->getConstraints()['Regex']['message']), $case);
-      $node = (array) Schemas::decoded($this->container->get('surface.definition_schema')->published(DefinitionSchema::of($definition), $definition, FALSE));
+      $node = (array) Schemas::decoded($this->container->get('surface.definition_schema')->published(DefinitionSchema::of($definition), FALSE));
       $this->assertSame($messages, $node['x-portable-messages'] ?? NULL, $case);
       $served = json_decode((string) json_encode($this->container->get('surface.contract_emitter')->emitFull($surface, 'test.code', 'configure')->document['schema']), TRUE);
       $this->assertSame($messages, $served['properties']['code']['x-portable-messages'] ?? NULL, $case);

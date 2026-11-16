@@ -7,7 +7,6 @@ namespace Drupal\surface\Pipeline;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\Secrets;
@@ -235,7 +234,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
       }
       $kept[$name] = $values[$name];
       $child = $entry->list === NULL ? $entry->childFor($values) : NULL;
-      if ($sent && $child === NULL && $entry->list === NULL && !is_array($values[$name]) && array_key_exists($name, $current) && $this->heldAlike($entry->schema(), $entry->definition(), $values[$name], $current[$name])) {
+      if ($sent && $child === NULL && $entry->list === NULL && !is_array($values[$name]) && array_key_exists($name, $current) && $this->heldAlike($entry->schema(), $values[$name], $current[$name])) {
         $kept[$name] = $current[$name];
         continue;
       }
@@ -257,7 +256,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
       }
       $kept[$name] = ($child !== NULL
         ? $this->kept($child, $values[$name], $own, $below)
-        : $this->keptInMap($entry->schema(), $entry->definition(), $values[$name], $own, $below)) + $aside;
+        : $this->keptInMap($entry->schema(), $values[$name], $own, $below)) + $aside;
     }
     return array_diff_key($kept + $values, $unwritten);
   }
@@ -265,14 +264,11 @@ final class SurfacePipeline implements SurfacePipelineInterface {
   /**
    * Puts back what storage holds under a map's properties left out.
    *
-   * The map's node says what it holds; its definition is walked in step
-   * only to hand a property's to heldAlike(), whose accept reads a key's
-   * choices from the options service, which takes a definition.
+   * The map's node says what it holds, its properties' nodes too, which
+   * heldAlike() hands the accept.
    *
    * @param \PortableSchema\Builder\Schema $node
    *   The map's node, as declared.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The map's definition, which the node was read from.
    * @param array $value
    *   The accepted map.
    * @param array $stored
@@ -283,7 +279,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
    * @return array
    *   The map to write.
    */
-  protected function keptInMap(Schema $node, DataDefinitionInterface $definition, array $value, array $stored, ?array $input = NULL): array {
+  protected function keptInMap(Schema $node, array $value, array $stored, ?array $input = NULL): array {
     if (DefinitionSchema::isLeaf($node) || DefinitionSchema::isList($node)) {
       return $value;
     }
@@ -301,12 +297,12 @@ final class SurfacePipeline implements SurfacePipelineInterface {
         $unwritten[$property] = TRUE;
         continue;
       }
-      if ($sent && !is_array($value[$property]) && array_key_exists($property, $stored) && $this->heldAlike($property_node, Accepting::propertyDefinition($definition, $property), $value[$property], $stored[$property])) {
+      if ($sent && !is_array($value[$property]) && array_key_exists($property, $stored) && $this->heldAlike($property_node, $value[$property], $stored[$property])) {
         $kept[$property] = $stored[$property];
         continue;
       }
       $kept[$property] = is_array($value[$property]) && is_array($stored[$property] ?? NULL)
-        ? $this->keptInMap($property_node, Accepting::propertyDefinition($definition, $property), $value[$property], $stored[$property], $input === NULL ? NULL : (is_array($input[$property] ?? NULL) ? $input[$property] : []))
+        ? $this->keptInMap($property_node, $value[$property], $stored[$property], $input === NULL ? NULL : (is_array($input[$property] ?? NULL) ? $input[$property] : []))
         : $value[$property];
     }
     return array_diff_key($kept + $value, $unwritten);
@@ -349,10 +345,8 @@ final class SurfacePipeline implements SurfacePipelineInterface {
    * Decision: see docs/decisions.md#absent-keeps-null-clears.
    *
    * @param \PortableSchema\Builder\Schema $node
-   *   The key's or the property's node.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition the node was read from, which the accept hands the
-   *   options service for the key's choices (Accepting::acceptValue()).
+   *   The key's or the property's node, which the accept reads, the
+   *   key's choices included (Accepting::acceptValue()).
    * @param mixed $accepted
    *   The accepted value, not an array.
    * @param mixed $stored
@@ -361,12 +355,12 @@ final class SurfacePipeline implements SurfacePipelineInterface {
    * @return bool
    *   TRUE when the two are one value.
    */
-  protected function heldAlike(Schema $node, DataDefinitionInterface $definition, mixed $accepted, mixed $stored): bool {
+  protected function heldAlike(Schema $node, mixed $accepted, mixed $stored): bool {
     if (Secrets::marked($node) || DefinitionSchema::isList($node) || is_array($stored)) {
       return FALSE;
     }
     try {
-      return Accepting::sameValue($accepted, $this->accepting->acceptValue($node, $definition, $stored, $stored, ''));
+      return Accepting::sameValue($accepted, $this->accepting->acceptValue($node, $stored, $stored, ''));
     }
     catch (\InvalidArgumentException) {
       return FALSE;

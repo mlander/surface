@@ -142,9 +142,13 @@ class TypedDataFootprintTest extends UnitTestCase {
    * options resolver and the class computing a key are handed the key's
    * node, so SurfaceOptionsResolverInterface, ComputesValueInterface, the
    * nine stock resolvers, MachineName, the five example resolvers and the
-   * two example computing classes name no Typed Data.
+   * two example computing classes name no Typed Data. Lowered on
+   * 2026-11-15 to 129: the options service takes a key's node, so the
+   * accept hands a value's node alone and walks no definition beside it:
+   * Pipeline/Accepting.php and Pipeline/SurfacePipeline.php name no Typed
+   * Data.
    */
-  public const OUTSIDE_THE_EDGES = 131;
+  public const OUTSIDE_THE_EDGES = 129;
 
   /**
    * Finds the files that use Typed Data.

@@ -709,11 +709,15 @@ the record of the rework that brought the module to the pattern.
   without it, and `NodeFirstModeTest` pins both modes alike
   (`docs/decisions.md#an-entry-holds-the-form-its-source-gave`). Ask for
   what is needed: the keys alone are `DefinitionMap::keys()` (name to
-  TRUE) or `names()`, never `toArray()`, and one fact is read from the
-  form the entry holds (`Entry::isNodeFirst()`: the node of a node-first
-  entry, the definition of the other), so no definition is derived and
-  no node read for it
-  (`docs/decisions.md#nothing-asks-for-a-definition-it-does-not-need`). A key
+  TRUE) or `names()`, never `toArray()`
+  (`docs/decisions.md#nothing-asks-for-a-definition-it-does-not-need`),
+  and a fact of a key is read from its node (`Entry::schema()`), never
+  from `definition()`. The options service takes the key:
+  `SurfaceOptions::resolve(Schema|DataDefinitionInterface $key)`, its node
+  wherever the caller holds it, a definition only where the caller holds
+  none, the memo keyed by the object handed
+  (`docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node`).
+  `Entry::isNodeFirst()` is for the build's widget walk alone. A key
   that holds a child frame (attached, variants, a collection, a mount:
   `Entry::isShell()`) composes its node: its own facts read once
   (`DefinitionSchema::around()`) around the nodes its child's entries
@@ -731,7 +735,7 @@ the record of the rework that brought the module to the pattern.
   it over the examples. `PropertySchema::property()` takes its node
   from its caller and reads nothing, so what still calls `of()` or
   `head()` is every read there is (the options service reads one where a
-  resolver is called and its caller held none, and `Resolve` one for a
+  resolver is called and its caller handed a definition, and `Resolve` one for a
   resolved key's class), pinned by file (`DefinitionReadCallersTest`). Never in the build cache or a served
   document. `Location::definitionAt()` gives the check provider and the
   form the node at a place (the entry's, walked in step; a place with a
@@ -750,9 +754,9 @@ the record of the rework that brought the module to the pattern.
   fact, each naming the definition call it stands for), the node readers
   of `DefinitionSchema` and `Secrets::marked()`; pipeline code names no
   member. `Coercion` takes facts (`scalar($type, $dateOnly, ...)`,
-  `served($value, $dateOnly)`), never a definition. The definition is
-  carried beside the node only for the options service (a key's choices)
-  and `Computed`, until slice 32; the refinement's marks in
+  `served($value, $dateOnly)`), never a definition. The accept and the
+  kept walk carry no definition: the options service is handed the node
+  (2026-11-15); the refinement's marks in
   `withoutWhatDoesNotApply()` and `Outbound::project()` stay on
   definitions until slice 33.
   `NodeFactsParityTest` holds each reader to its call
@@ -763,9 +767,9 @@ the record of the rework that brought the module to the pattern.
   required property of a plain map, stale, the labels its refusals name)
   read the node, a key that holds a child frame's too since its node is
   composed of its child's entries' nodes (2026-11-14). And
-  `Validating::nodeAt()` walks to the node at a key path
-  (`placeAt()` gives the definition beside it for the options service;
-  a port's node is read from its bare definition). `PropertySchema`,
+  `Validating::nodeAt()` walks to the node at a key path (a port's node
+  is read from its bare definition; `optionsKeyAt()` hands the options
+  service the node, a port's definition for a port). `PropertySchema`,
   `ContractEmitter`, `Conditionals` and `DocumentHead` read a plain key's
   facts from its node (`describe()`, `required()`, `nullable()`,
   `cast()`, `signature()` take one; `DefinitionSchema::typeOf()` and
@@ -775,8 +779,8 @@ the record of the rework that brought the module to the pattern.
   child's keys, which the document reads again from its own refinement
   of the child, and a collection through its own node without items
   (`PropertySchema::listNode()`). The
-  definition stays beside the node for the options service, the widget
-  claims, `References::target()` and `Computed`
+  definition stays beside the node for the widget claims; the options
+  service is handed the node (2026-11-15)
   (`docs/decisions.md#the-validators-checks-and-the-document-read-nodes`).
 - **The remaining readers read nodes**: `KeyPaths` (`reachedOn()`,
   `heldOn()`, `held()`, `pathsOf()`), `EncryptedStorageLayout`'s secret
@@ -785,13 +789,13 @@ the record of the rework that brought the module to the pattern.
   outputs, `OperationInputs`), `ConfigSchemaGenerator` and
   `HeldToConfigSchemaTrait`, `ResourceCode`, `RunCommand`, the contract
   panel's plain rows, `CompiledFlow` and the formatter's summary read a
-  plain key's facts from its entry's node, stepped down in step with the
-  definition, which goes on only to the options service, the constraint
-  runner and `getClass()`. A key that holds a child frame reads its own
-  facts from its composed node too (2026-11-14), but in the two storage
-  layouts (`EncryptedStorageLayout::secretKeys()`, `FlatVariantsLayout`'s
-  `each`), which read no child key, so the node would read every one for
-  one flag; and the tool door, the
+  plain key's facts from its entry's node; the tool door, the storage
+  layouts and the config schema check walk no definition beside it
+  (2026-11-15: the options service is handed the node, and the check
+  reads a value's class from its node, `HeldToConfigSchemaTrait::valueClass()`),
+  and the constraint runner still takes one. A key that holds a child
+  frame reads its own facts from its composed node too (2026-11-14), the
+  two storage layouts' flags included (2026-11-15); and the tool door, the
   config schema writer and the formatter take what lies below it from
   the child's entries; the tool door finds a child's key advertised as
   its entry says by its node, the very object. A walk into a mount's
@@ -1156,8 +1160,8 @@ test errored or failed and every gate passed.
   cache; it orders classes slowest first.
 
 On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-15: the
-full lane takes 15m31s at the defaults (phpunit 14m45s) and the fast
-lane 8m59s (phpunit 8m53s). As of 2026-10-23, with a smaller suite, the
+full lane takes 17m28s at the defaults (phpunit 16m42s) and the fast
+lane 9m23s (phpunit 9m11s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1188,7 +1192,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2580, Assertions: 102963, Errors: 0, Failures: 0, Skipped: 3. Classes: 366 of 366, 8 at a time, browser classes 4.
+phpunit: Tests: 2587, Assertions: 103110, Errors: 0, Failures: 0, Skipped: 3. Classes: 366 of 366, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1212,7 +1216,7 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2466, Assertions: 98409, Deprecations: 811, Skipped: 3. Classes:
+`Tests: 2473, Assertions: 98556, Deprecations: 811, Skipped: 3. Classes:
 313, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.

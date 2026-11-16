@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entry;
 use Drupal\surface\Reference\ReferenceStorageLayout;
 use Drupal\surface_examples_references\Resource\SponsorshipResource;
 use Drupal\surface_examples_references\Sponsorship;
@@ -231,6 +233,57 @@ class ReferenceStoredByUuidTest extends SurfaceKernelTestBase {
     $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(SponsorshipStorage::class);
     $this->assertSame(['contact' => ReferenceStorageLayout::UUID_SCHEMA, 'page' => ReferenceStorageLayout::UUID_SCHEMA], $storage->translatedKeys($built));
     $this->assertSame([], $storage->widerThanSchema($built));
+  }
+
+  /**
+   * Tests the layout stores and loads a node-first resource from nodes.
+   *
+   * Every fact the layout reads (stored by uuid, the entity type, a bare
+   * key's parts, the data type) is read from each key's node, so a
+   * node-first build is stored, loaded, kept and named in its config
+   * dependencies with no definition derived that the build did not
+   * derive; the config schema check reads its nodes too.
+   */
+  public function testNodeFirstResourceIsStoredWithNoDefinitionDerived(): void {
+    DefinitionMap::$nodeFirst = TRUE;
+    $resources = $this->container->get('surface.resources');
+    $built = $resources->build(SponsorshipResource::class, $resources->operation(SponsorshipResource::class, 'configure'));
+    $derived = new \ReflectionProperty(Entry::class, 'definition');
+    $unread = [];
+    foreach ($built->getDefinitions()->entries() as $name => $entry) {
+      $this->assertTrue($entry->isNodeFirst());
+      $children = $entry->attachment === NULL ? [] : $entry->attachment->child->getDefinitions()->entries();
+      foreach (['' => $entry] + $children as $below => $one) {
+        if ($derived->getValue($one) === NULL) {
+          $unread[$name . ($below === '' ? '' : '.' . $below)] = $one;
+        }
+      }
+    }
+    foreach (['venue', 'page', 'contact'] as $name) {
+      $this->assertArrayHasKey($name, $unread);
+    }
+
+    $article = $this->article();
+    $values = [
+      'page' => (int) $article->id(),
+      'contact' => (int) $this->sponsor->id(),
+      'thing' => ['entity_type' => 'node', 'id' => (string) $article->id()],
+    ];
+    $layout = ReferenceStorageLayout::forSurface($built, $this->container->get('surface.references'));
+    $this->assertNotNull($layout);
+    $stored = $layout->toStorage($values);
+    $this->assertSame($article->uuid(), $stored['page']);
+    $this->assertSame($this->sponsor->uuid(), $stored['contact']);
+    $this->assertSame(['entity_type' => 'node', 'id' => $article->uuid()], $stored['thing']);
+    $this->assertSame($values, $layout->fromStorage($stored));
+    $this->assertSame($stored, $layout->keepUnresolved($stored, $stored));
+    $this->assertSame(['contact' => ReferenceStorageLayout::UUID_SCHEMA, 'page' => ReferenceStorageLayout::UUID_SCHEMA], $layout->storedSchema());
+    $this->assertNotSame([], $layout->dependencies($values));
+    $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(SponsorshipStorage::class);
+    $this->assertSame([], $storage->widerThanSchema($built));
+    foreach ($unread as $name => $entry) {
+      $this->assertNull($derived->getValue($entry), sprintf('The layout and the check derive no definition for "%s".', $name));
+    }
   }
 
 }

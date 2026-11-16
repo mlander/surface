@@ -427,7 +427,7 @@ class ShapesTest extends SurfaceKernelTestBase {
       'Lowercase code' => 'XX Lowercase code',
     ]), 100);
     $definitions = $this->container->get('surface.definition_schema');
-    $said = static fn (DataDefinitionInterface $shape): array => (array) Schemas::decoded($definitions->published(DefinitionSchema::of($shape), $shape, FALSE));
+    $said = static fn (DataDefinitionInterface $shape): array => (array) Schemas::decoded($definitions->published(DefinitionSchema::of($shape), FALSE));
 
     $translation->setDefaultLangcode('xx');
     $read = DefinitionMetadata::shapeDefinition(Shapes::unaltered(TranslatedShape::class));

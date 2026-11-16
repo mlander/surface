@@ -761,7 +761,7 @@ final class Conditionals {
    */
   public function stated(Entry $entry, DataDefinitionInterface $definition, Emission $emission, ?Entry $holder = NULL): Schema {
     if ($entry->list !== NULL) {
-      return $this->propertySchema->listKeywords($this->propertySchema->listNode($definition), $definition)[0];
+      return $this->propertySchema->listKeywords($this->propertySchema->listNode($definition))[0];
     }
     $holder ??= $entry;
     $node = $holder->definition() === $definition ? $holder->schema() : DefinitionSchema::of($definition);
@@ -917,7 +917,7 @@ final class Conditionals {
     if (ValueState::isConfigured($value)) {
       return [is_int($value) || is_string($value) ? $this->propertySchema->cast($value, $node) : $value];
     }
-    $set = $this->propertySchema->optionSet($entry->definition(), $cacheability);
+    $set = $this->propertySchema->optionSet($node, $cacheability);
     if ($set === NULL || count($set->options) > ContractEmitter::ENUMERATION_CAP) {
       return NULL;
     }

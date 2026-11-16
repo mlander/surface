@@ -1232,7 +1232,7 @@ final class OperationInputs {
     $label = ucfirst(str_replace('_', ' ', $parameter->name));
     $key = $neutral?->getDefinitions()->entry($parameter->name);
     if ($key !== NULL && $key->attachment === NULL && $key->variants === NULL && $key->list === NULL) {
-      $input = $this->inputDefinitions->fromDefinition($key->definition(), $key->schema());
+      $input = $this->inputDefinitions->fromSchema($key->schema());
       $input->setRequired(!$parameter->optional);
       return $input;
     }

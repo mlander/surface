@@ -8,9 +8,6 @@ use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Computed;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeFacts;
@@ -41,13 +38,13 @@ use PortableSchema\Builder\Schema;
  *
  * A key's facts come from its node (Entry::schema(), and the node below
  * it walked in step: NodeFacts, DefinitionSchema's node readers,
- * Secrets::marked()). Its definition is still read for what a contract
- * takes a definition for: a key's choices from the options service
- * (coerce()), whether a key is computed and its value (Computed::of(),
- * Computed::value()), and the marks a refinement leaves
- * (withoutWhatDoesNotApply()).
+ * Secrets::marked()), and so do a key's choices from the options service,
+ * which is handed the node (coerce()), and whether a key is computed
+ * (NodeFacts::compute()). A refined level's definition is still read for
+ * the marks a refinement leaves (withoutWhatDoesNotApply()).
  *
- * Decision: see docs/decisions.md#the-value-pipeline-reads-nodes.
+ * Decision: see docs/decisions.md#the-value-pipeline-reads-nodes and
+ * docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node.
  *
  * Decision: see docs/decisions.md#the-pipeline-is-read-by-verb.
  *
@@ -215,7 +212,7 @@ final class Accepting {
     $deferred = [];
     $computed = [];
     foreach ($definitions->entries() as $name => $entry) {
-      if (!$entry->locked && Computed::of($entry->definition()) !== NULL) {
+      if (!$entry->locked && NodeFacts::compute($entry->schema()) !== NULL) {
         // Computed from the accepted values of the keys it names, so last.
         // Decision: see
         // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
@@ -380,8 +377,8 @@ final class Accepting {
     }
     $node = $entry->schema();
     return Secrets::marked($node)
-      ? $this->acceptSecret($node, $entry->definition(), $input[$name], $fallback, $path)
-      : $this->acceptValue($node, $entry->definition(), $input[$name], $fallback, $path);
+      ? $this->acceptSecret($node, $input[$name], $fallback, $path)
+      : $this->acceptValue($node, $input[$name], $fallback, $path);
   }
 
   /**
@@ -420,19 +417,20 @@ final class Accepting {
   protected function acceptComputed(SurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values): mixed {
     $name = $entry->name;
     $path = static::joinPath($prefix, $name);
-    $computed = Computed::of($entry->definition());
+    $node = $entry->schema();
+    $computed = NodeFacts::compute($node);
     assert($computed !== NULL);
     if ($computed->takesSent() && array_key_exists($name, $input) && ValueState::isConfigured($input[$name])) {
       // Typed over: kept as sent, and judged as any key.
       $fallback = array_key_exists($name, $current) ? $current[$name] : NULL;
-      return $this->acceptValue($entry->schema(), $entry->definition(), $input[$name], $fallback, $path);
+      return $this->acceptValue($node, $input[$name], $fallback, $path);
     }
-    $value = $computed->value($name, $values, $current, $entry->schema(), $this->creates);
-    $held = $this->acceptValue($entry->schema(), $entry->definition(), $value, $value, $path);
+    $value = $computed->value($name, $values, $current, $node, $this->creates);
+    $held = $this->acceptValue($node, $value, $value, $path);
     if (!array_key_exists($name, $input) || $computed->takesSent()) {
       return $held;
     }
-    $sent = $this->acceptValue($entry->schema(), $entry->definition(), $input[$name], $held, $path);
+    $sent = $this->acceptValue($node, $input[$name], $held, $path);
     if (!static::sameValue($sent, $held)) {
       return $sent;
     }
@@ -800,9 +798,6 @@ final class Accepting {
    *
    * @param \PortableSchema\Builder\Schema $node
    *   The key's node.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition the node was read from, for the key's choices
-   *   (acceptValue()).
    * @param mixed $input
    *   The raw input value.
    * @param mixed $fallback
@@ -818,18 +813,18 @@ final class Accepting {
    * @throws \Drupal\surface\Pipeline\TypeMismatchException
    *   When the input carries a value the definition cannot hold.
    */
-  protected function acceptSecret(Schema $node, DataDefinitionInterface $definition, mixed $input, mixed $fallback, string $path): mixed {
+  protected function acceptSecret(Schema $node, mixed $input, mixed $fallback, string $path): mixed {
     if ($input === SurfacePipelineInterface::CLEAR_SECRET) {
       return NULL;
     }
     if (!ValueState::isConfigured($input)) {
       return $fallback;
     }
-    return $this->acceptValue($node, $definition, $input, $fallback, $path);
+    return $this->acceptValue($node, $input, $fallback, $path);
   }
 
   /**
-   * Accepts one value against one definition.
+   * Accepts one value against one key.
    *
    * Input that holds nothing (NULL, or the empty string a form sends for
    * nothing) means the key holds nothing, NULL, for every type but a
@@ -842,15 +837,14 @@ final class Accepting {
    * through untouched.
    *
    * What the key is comes from its node, walked down a map's properties
-   * and a list's item. The definition the node was read from is walked in
-   * step, and read for one thing only: the options service, which takes a
-   * definition, gives a key's choices for a near miss to snap onto
-   * (coerce()).
+   * and a list's item, and so do its choices for a near miss to snap onto:
+   * the options service is handed the node (coerce()).
+   *
+   * Decision: see
+   * docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node.
    *
    * @param \PortableSchema\Builder\Schema $node
    *   The node of the key the value belongs to.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition the node was read from.
    * @param mixed $input
    *   The raw input value.
    * @param mixed $fallback
@@ -867,16 +861,16 @@ final class Accepting {
    * @throws \Drupal\surface\Pipeline\TypeMismatchException
    *   When the input cannot be held by the definition at all.
    */
-  public function acceptValue(Schema $node, DataDefinitionInterface $definition, mixed $input, mixed $fallback, string $path): mixed {
+  public function acceptValue(Schema $node, mixed $input, mixed $fallback, string $path): mixed {
     if (DefinitionSchema::isList($node)) {
-      return $this->acceptList($node, $definition, $input, $fallback, $path);
+      return $this->acceptList($node, $input, $fallback, $path);
     }
     if (!ValueState::isConfigured($input)) {
       return NULL;
     }
     $properties = NodeFacts::properties($node);
     if ($properties === []) {
-      return $this->coerce($node, $definition, $input, $path);
+      return $this->coerce($node, $input, $path);
     }
     $input = Coercion::decoded($input, FALSE);
     if (!is_array($input)) {
@@ -897,30 +891,10 @@ final class Accepting {
         ? $fallback[$property]
         : NodeFacts::defaultOf($property_node);
       $values[$property] = array_key_exists($property, $input)
-        ? $this->acceptValue($property_node, static::propertyDefinition($definition, $property), $input[$property], $child, $path . '.' . $property)
+        ? $this->acceptValue($property_node, $input[$property], $child, $path . '.' . $property)
         : $child;
     }
     return $values;
-  }
-
-  /**
-   * Gets a property's definition, the step a node's walk takes beside it.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The map's definition.
-   * @param string|int $name
-   *   The property, as the map's node names it.
-   *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   Its definition.
-   *
-   * @throws \LogicException
-   *   When the definition holds no such property: the node was read from
-   *   the definition, so the two are out of step.
-   */
-  public static function propertyDefinition(DataDefinitionInterface $definition, string|int $name): DataDefinitionInterface {
-    $property = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition((string) $name) : NULL;
-    return $property ?? throw new \LogicException(sprintf('The node holds a property "%s" its definition does not: the two are out of step.', $name));
   }
 
   /**
@@ -962,9 +936,6 @@ final class Accepting {
    *
    * @param \PortableSchema\Builder\Schema $node
    *   The list's node.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The list's definition, walked in step for its item's choices
-   *   (acceptValue()).
    * @param mixed $input
    *   The raw input value.
    * @param mixed $fallback
@@ -981,18 +952,16 @@ final class Accepting {
    * @throws \Drupal\surface\Pipeline\TypeMismatchException
    *   When an item cannot be held by the item definition.
    * @throws \LogicException
-   *   When the list's node holds no node for its item, or its definition
-   *   is no list: the two are out of step.
+   *   When the list's node holds no node for its item.
    */
-  protected function acceptList(Schema $node, DataDefinitionInterface $definition, mixed $input, mixed $fallback, string $path): mixed {
+  protected function acceptList(Schema $node, mixed $input, mixed $fallback, string $path): mixed {
     if (!ValueState::isConfigured($input)) {
       return $fallback;
     }
     $item_node = DefinitionSchema::itemNode($node);
-    if ($item_node === NULL || !$definition instanceof ListDataDefinitionInterface) {
-      throw new \LogicException('A list\'s node holds no node for its item, or its definition is no list: the two are out of step.');
+    if ($item_node === NULL) {
+      throw new \LogicException('A list\'s node holds no node for its item: a built list\'s node holds one.');
     }
-    $item_definition = $definition->getItemDefinition();
     $input = Coercion::decoded($input, TRUE);
     $properties = array_keys(NodeFacts::properties($item_node));
     if (!is_array($input) || ($properties !== [] && static::isItem($input, $properties))) {
@@ -1006,7 +975,7 @@ final class Accepting {
         continue;
       }
       try {
-        $values[] = $this->acceptValue($item_node, $item_definition, $item, NULL, $path . '.' . $delta);
+        $values[] = $this->acceptValue($item_node, $item, NULL, $path . '.' . $delta);
       }
       catch (TypeMismatchException $exception) {
         // An item is never null.
@@ -1031,10 +1000,8 @@ final class Accepting {
    *
    * @param \PortableSchema\Builder\Schema $node
    *   The key's node: its data type, whether it holds a date alone,
-   *   whether it declares any constraint.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition the node was read from, which the options service
-   *   takes to give the key's choices.
+   *   whether it declares any constraint, and the key the options service
+   *   gives the choices of.
    * @param mixed $value
    *   The raw value; always configured.
    * @param string $path
@@ -1047,7 +1014,7 @@ final class Accepting {
    * @throws \Drupal\surface\Pipeline\TypeMismatchException
    *   When an array arrives for a type that holds a single value.
    */
-  protected function coerce(Schema $node, DataDefinitionInterface $definition, mixed $value, string $path): mixed {
+  protected function coerce(Schema $node, mixed $value, string $path): mixed {
     $type = NodeFacts::dataType($node);
     if (is_array($value)) {
       if (in_array($type, SurfacePipeline::SCALAR_TYPES, TRUE)) {
@@ -1057,7 +1024,7 @@ final class Accepting {
     }
     $choices = [];
     if (is_string($value) && NodeFacts::hasConstraints($node)) {
-      $set = $this->options->resolve($definition, $node);
+      $set = $this->options->resolve($node);
       $choices = $set === NULL ? [] : array_keys($set->options);
     }
     return Coercion::scalar($type, DefinitionSchema::declares($node, 'DateOnly'), $value, $choices);

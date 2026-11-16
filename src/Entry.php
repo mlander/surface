@@ -402,12 +402,13 @@ final class Entry {
   /**
    * Answers which form the entry holds as its source.
    *
-   * For a reader that needs one fact and reads it from the form the entry
-   * holds, so it reads no node off a definition-first entry and derives
-   * no definition off a node-first one.
+   * For the build's widget walk alone, which walks a definition-first
+   * entry by its definition and a node-first one by its node. Every other
+   * reader reads a fact from the key's node.
    *
    * Decision: see
-   * docs/decisions.md#nothing-asks-for-a-definition-it-does-not-need.
+   * docs/decisions.md#nothing-asks-for-a-definition-it-does-not-need and
+   * docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node.
    *
    * @return bool
    *   TRUE when its source gave the node (node-first), FALSE when its
@@ -420,11 +421,11 @@ final class Entry {
   /**
    * Gets the key's Typed Data definition.
    *
-   * Asked for only where an edge needs a definition: the options
-   * service, a refiner, a widget's claim, ConstraintRunner. A key's facts
-   * are read from its node (schema()), a key that holds a child frame's
-   * too; a reader that needs one fact reads it from the form the entry
-   * holds (isNodeFirst()).
+   * Asked for only where an edge needs a definition: a refiner, a
+   * widget's claim, ConstraintRunner, a caller of the options service
+   * that holds no node. A key's facts are read from its node (schema()),
+   * a key that holds a child frame's too, and the options service is
+   * handed the node.
    *
    * On a node-first entry it is derived from the node on the first call
    * (NodeDefinition::of(), which asks core's typed data manager whether

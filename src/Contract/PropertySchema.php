@@ -128,9 +128,6 @@ final class PropertySchema {
    *
    * @param \PortableSchema\Builder\Schema $head
    *   The list's node (listNode()).
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The list, for the projection, which asks the options service of a
-   *   map alone (DefinitionSchema::publishedNode()).
    *
    * @return array{0: \PortableSchema\Builder\Schema, 1: array}
    *   Its title, description, `type` and keywords (`minItems`,
@@ -138,8 +135,8 @@ final class PropertySchema {
    *   `portable-check` and their messages, which go right before its
    *   `x-surface` (PortableKeywords::before()).
    */
-  public function listKeywords(Schema $head, DataDefinitionInterface $definition): array {
-    $schema = $this->definitions->publishedNode($head, $definition, FALSE);
+  public function listKeywords(Schema $head): array {
+    $schema = $this->definitions->publishedNode($head, FALSE);
     $checks = array_intersect_key($schema->all(), array_flip([PortableKeywords::CHECK, PortableKeywords::MESSAGES]));
     foreach (array_keys($checks) as $keyword) {
       $schema = $schema->without($keyword);
@@ -383,14 +380,14 @@ final class PropertySchema {
   /**
    * Describes one key that is not a child, recursing through maps.
    *
-   * Every fact of the key is read from its node. The definition is walked
-   * beside the node, in step, for what still takes one until slice 32:
-   * the options service (optionSet(), signature()) and the widget claims
-   * (WidgetChoice, a widget's drawsDefinition() and its stock rules).
+   * Every fact of the key is read from its node, and the options service
+   * is handed the node (optionSet(), signature()). The definition is
+   * walked beside the node, in step, for what still takes one until slice
+   * 32: the widget claims (WidgetChoice, a widget's drawsDefinition() and
+   * its stock rules).
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key as it stands, refined, for the options service and the
-   *   widget claims.
+   *   The key as it stands, refined, for the widget claims.
    * @param \PortableSchema\Builder\Schema $node
    *   The definition's built node: its entry's (Entry::schema()), the node
    *   of the property or item below it that its parent's node holds, or,
@@ -424,11 +421,11 @@ final class PropertySchema {
     $shown = $value;
     $list = DefinitionSchema::isList($node);
     $item = $list ? static::itemDefinition($definition, $path) : NULL;
-    $set = $this->optionSet($item ?? $definition, $cacheability, $item === NULL ? $node : DefinitionSchema::itemNode($node));
+    $set = $this->optionSet($item === NULL ? $node : DefinitionSchema::itemNode($node) ?? $item, $cacheability);
     // A list of no values is still a list: a select offering nothing.
     // Decision: see docs/decisions.md#a-key-that-does-not-apply.
     $listed = $set !== NULL;
-    $refined = $advertised !== NULL && $advertised_node !== NULL && $this->signature($advertised_node, $advertised) !== $this->signature($node, $definition);
+    $refined = $advertised !== NULL && $advertised_node !== NULL && $this->signature($advertised_node) !== $this->signature($node);
     // The node as the document says it; its properties and items are each
     // described below as their own key, and what the request adds goes
     // between what the definition says, where it always stood.
@@ -438,7 +435,7 @@ final class PropertySchema {
     // Decision: see
     // docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request,
     // docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone.
-    $schema = $this->definitions->publishedNode($node, $definition, $listed);
+    $schema = $this->definitions->publishedNode($node, $listed);
     $held = [];
     foreach (['writeOnly', 'default', 'examples', PortableKeywords::CHECK, PortableKeywords::MESSAGES] as $keyword) {
       if ($schema->has($keyword)) {
@@ -1032,21 +1029,19 @@ final class PropertySchema {
   }
 
   /**
-   * Resolves the values a definition offers, and notes what they rest on.
+   * Resolves the values a key offers, and notes what they rest on.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   * @param \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface $key
+   *   The key's node, which the options service is handed; or its
+   *   definition, where the caller holds no node.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects the list's cacheability.
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The definition's node, where the caller holds it, which the options
-   *   service hands a resolver.
    *
    * @return \Drupal\surface\Options\OptionSet|null
-   *   The set, or NULL when the definition names no list.
+   *   The set, or NULL when the key names no list.
    */
-  public function optionSet(DataDefinitionInterface $definition, CacheableMetadata $cacheability, ?Schema $node = NULL): ?OptionSet {
-    $set = $this->options->resolve($definition, $node);
+  public function optionSet(Schema|DataDefinitionInterface $key, CacheableMetadata $cacheability): ?OptionSet {
+    $set = $this->options->resolve($key);
     if ($set !== NULL) {
       $cacheability->addCacheableDependency($set);
     }
@@ -1059,25 +1054,33 @@ final class PropertySchema {
    * Every fact is read from the node: its data type, its own `required`
    * flag, its constraints as the document would state them for its type's
    * row (DefinitionSchema::keywordsOf(), typeOf()), and each property's
-   * signature. The definition, walked beside the node, is read for the
-   * options service alone.
+   * signature, and so are the values it offers: the options service is
+   * handed the node, its item's for a list. A collection's own node
+   * (listNode()) holds no item, so its item's values are asked of the
+   * definition the caller hands.
    *
    * @param \PortableSchema\Builder\Schema $node
    *   The key's built node; a collection's own (PropertySchema::listNode()).
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition it was read from, for the values it offers.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
+   *   For a collection's own node, the collection's definition; NULL for
+   *   any node that holds its item.
    *
    * @return string
    *   A fingerprint of its requiredness, its stated constraints and the
    *   values it offers.
    */
-  public function signature(Schema $node, DataDefinitionInterface $definition): string {
+  public function signature(Schema $node, ?DataDefinitionInterface $definition = NULL): string {
     $list = DefinitionSchema::isList($node);
-    $set = $this->options->resolve($list ? static::itemDefinition($definition, '') : $definition, $list ? DefinitionSchema::itemNode($node) : $node);
+    $item = $list ? DefinitionSchema::itemNode($node) : NULL;
+    $set = $this->options->resolve(match (TRUE) {
+      !$list => $node,
+      $item !== NULL => $item,
+      default => static::itemDefinition($definition ?? throw new \LogicException('A collection\'s own node holds no item: its definition is handed for the values its item offers.'), ''),
+    });
     $properties = [];
     if (is_a(DefinitionSchema::classOf($node), ComplexDataDefinitionInterface::class, TRUE)) {
       foreach (NodeFacts::properties($node) as $name => $property) {
-        $properties[$name] = $this->signature($property, static::propertyDefinition($definition, (string) $name, ''));
+        $properties[$name] = $this->signature($property);
       }
     }
     $type = DefinitionSchema::typeOf($node);

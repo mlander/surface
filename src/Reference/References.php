@@ -442,6 +442,25 @@ final class References {
   }
 
   /**
+   * Answers whether a config storage stores a key by its uuid, from its node.
+   *
+   * As storedByUuid() answers it, from the key's node: its two settings
+   * (NodeFacts::setting()).
+   *
+   * Decision: see
+   * docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   The key's built node.
+   *
+   * @return bool
+   *   As storedByUuid() answers.
+   */
+  public static function storedByUuidIn(Schema $node): bool {
+    return NodeFacts::setting($node, self::CONTENT) === TRUE && NodeFacts::setting($node, self::STORED_AS) !== self::BY_ID;
+  }
+
+  /**
    * Gives the uuid of the content entity an id names.
    *
    * @param string $entity_type_id
