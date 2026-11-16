@@ -267,7 +267,7 @@ final class Validating {
       // What is ruled out inside the key is walked in its node: a mounted
       // key is a property of its mount, refined one property at a time,
       // and a child's key a property of its shell.
-      $ruled_out = static::ruledOut($node);
+      $ruled_out = NodeFacts::ruledOutInside($node);
       if ($ruled_out !== []) {
         foreach ($ruled_out as $path) {
           $parents = explode('.', $path);
@@ -991,38 +991,6 @@ final class Validating {
       2 => $this->t('@label does not apply when @first and @second.', $arguments, $context),
       default => $this->formatPlural(count($conditions), '@label does not apply when this holds: @conditions.', '@label does not apply when all @count of these hold: @conditions.', $arguments, $context),
     };
-  }
-
-  /**
-   * Lists the ruled-out properties inside a map, by dotted path.
-   *
-   * What DoesNotApply::inside() lists of the definition, read from the
-   * node: a key an alter mounted is a property of the mount, refined one
-   * property at a time, so it is ruled out inside the map rather than at
-   * the top of the frame.
-   *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A key's node, as refined.
-   * @param string $prefix
-   *   The path so far.
-   *
-   * @return string[]
-   *   The dotted paths below the key, in declaration order.
-   */
-  protected static function ruledOut(Schema $node, string $prefix = ''): array {
-    if (!static::isComplex($node) || DefinitionSchema::isList($node)) {
-      return [];
-    }
-    $paths = [];
-    foreach (NodeFacts::properties($node) as $name => $property) {
-      $path = $prefix . $name;
-      if (NodeFacts::doesNotApply($property)) {
-        $paths[] = $path;
-        continue;
-      }
-      array_push($paths, ...static::ruledOut($property, $path . '.'));
-    }
-    return $paths;
   }
 
   /**

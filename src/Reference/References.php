@@ -672,7 +672,7 @@ final class References {
    *   at the path refers to one entity type.
    */
   public function definitionAt(SurfaceInterface $surface, array $path, ?string $entity_type_id = NULL): ?DataDefinitionInterface {
-    return $this->placeAt($surface, $path, $entity_type_id)[1] ?? NULL;
+    return $this->placeAt($surface, $path, $entity_type_id)?->definition();
   }
 
   /**
@@ -696,14 +696,15 @@ final class References {
    *   none.
    */
   public function nodeAt(SurfaceInterface $surface, array $path, ?string $entity_type_id = NULL): ?Schema {
-    return $this->placeAt($surface, $path, $entity_type_id)[0] ?? NULL;
+    return $this->placeAt($surface, $path, $entity_type_id)?->schema();
   }
 
   /**
-   * Finds the node and the definition of a key that refers to one type.
+   * Finds the entry of a key that refers to one type.
    *
    * The key's facts are read from its entry's node (Entry::schema()), a
-   * key that holds a child frame's too.
+   * key that holds a child frame's too; its definition is asked of the
+   * entry only by definitionAt().
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource, built.
@@ -712,12 +713,12 @@ final class References {
    * @param string|null $entity_type_id
    *   For a reference to any entity type, the entity type.
    *
-   * @return array{0: \PortableSchema\Builder\Schema, 1: \Drupal\Core\TypedData\DataDefinitionInterface}|null
-   *   The key's node and definition, refined for the entity type handed
-   *   to a reference to any entity type; NULL when no key at the path
-   *   refers to one entity type.
+   * @return \Drupal\surface\Entry|null
+   *   The key's entry, refined for the entity type handed to a reference
+   *   to any entity type; NULL when no key at the path refers to one
+   *   entity type.
    */
-  protected function placeAt(SurfaceInterface $surface, array $path, ?string $entity_type_id): ?array {
+  protected function placeAt(SurfaceInterface $surface, array $path, ?string $entity_type_id): ?Entry {
     $name = array_shift($path);
     $entry = $name === NULL ? NULL : $surface->getDefinitions()->entry($name);
     if ($entry === NULL) {
@@ -752,18 +753,18 @@ final class References {
   }
 
   /**
-   * Gives a key's node and definition, if it refers to one entity type.
+   * Gives a key's entry, if it refers to one entity type.
+   *
+   * Read from the key's node; nothing asks the entry for its definition.
    *
    * @param \Drupal\surface\Entry $entry
    *   The key.
    *
-   * @return array{0: \PortableSchema\Builder\Schema, 1: \Drupal\Core\TypedData\DataDefinitionInterface}|null
-   *   Its node and definition; NULL for a key that refers to no one entity
-   *   type.
+   * @return \Drupal\surface\Entry|null
+   *   The entry; NULL for a key that refers to no one entity type.
    */
-  protected static function referring(Entry $entry): ?array {
-    $node = $entry->schema();
-    return static::targetIn($node) === NULL ? NULL : [$node, $entry->definition()];
+  protected static function referring(Entry $entry): ?Entry {
+    return static::targetIn($entry->schema()) === NULL ? NULL : $entry;
   }
 
   /**

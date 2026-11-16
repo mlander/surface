@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Drupal\surface\Refinement;
 
 use Drupal\Component\Utility\NestedArray;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\SurfaceInterface;
 
 /**
@@ -115,39 +114,6 @@ final class DoesNotApply {
   }
 
   /**
-   * Lists the ruled-out properties inside a map, by dotted path.
-   *
-   * A key an alter mounted is a property of the mount, refined one
-   * property at a time, so it is ruled out inside the map rather than at
-   * the top of the frame.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   A key's definition, as refined.
-   * @param string $prefix
-   *   The path so far.
-   *
-   * @return string[]
-   *   The dotted paths below the key, in declaration order.
-   *
-   * @internal
-   */
-  public static function inside(DataDefinitionInterface $definition, string $prefix = ''): array {
-    if (!$definition instanceof ComplexDataDefinitionInterface || $definition instanceof ListDataDefinitionInterface) {
-      return [];
-    }
-    $paths = [];
-    foreach ($definition->getPropertyDefinitions() as $name => $property) {
-      $path = $prefix . $name;
-      if (self::marks($property)) {
-        $paths[] = $path;
-        continue;
-      }
-      array_push($paths, ...self::inside($property, $path . '.'));
-    }
-    return $paths;
-  }
-
-  /**
    * Leaves out of a set of values every key that does not apply to it.
    *
    * What a reader of stored values is answered with: the read tool's
@@ -173,8 +139,10 @@ final class DoesNotApply {
     }
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
-      $definition = $refined->getDefinition($name);
-      if (self::marks($definition)) {
+      // The mark and what is ruled out below it are read from the refined
+      // key's node.
+      $node = $refined->getDefinitions()->entry($name)?->schema();
+      if ($node !== NULL && NodeFacts::doesNotApply($node)) {
         unset($values[$name]);
         continue;
       }
@@ -186,7 +154,7 @@ final class DoesNotApply {
         $values[$name] = self::leftOut($child, $values[$name]);
         continue;
       }
-      foreach ($definition === NULL ? [] : self::inside($definition) as $path) {
+      foreach ($node === NULL ? [] : NodeFacts::ruledOutInside($node) as $path) {
         NestedArray::unsetValue($values[$name], explode('.', $path));
       }
     }

@@ -630,9 +630,9 @@ final class ContractEmitter {
       $name = (string) $name;
       $current = $now->entry($name) ?? $entry;
       $stated = $ahead->entry($name) ?? $entry;
-      // Compared by definition: a refinement rebinds a child's ports on
-      // its entry whether or not the definition moved.
-      $answered = ($coded->entry($name) ?? $entry)->definition() !== $entry->definition();
+      // Compared by source (Entry::sameSource()): a refinement rebinds a
+      // child's ports on its entry whether or not the key moved.
+      $answered = !($coded->entry($name) ?? $entry)->sameSource($entry);
       // A def is the declaration, which no context has locked.
       $locked = ($entry->locked || $frozen) && !$declaring;
       if ($full && !$entry->isNested() && $this->conditionals->watchesFree($advertised, $entry, $declaring)) {
@@ -643,7 +643,7 @@ final class ContractEmitter {
         $stated = $entry;
         $answered = FALSE;
       }
-      if (DoesNotApply::marks($current->definition())) {
+      if (NodeFacts::doesNotApply($current->schema())) {
         // Ruled out for these values: not a property, not required, no
         // value; the frame says what it depends on, so a client refines
         // when that changes. Decision: see
@@ -836,9 +836,9 @@ final class ContractEmitter {
           default => $values[$name] ?? $declared->getDefault($name),
         };
         // A key as advertised is compared with what it is now only where
-        // its definition moved: one definition has one signature, and the
-        // advertised node is not read for nothing.
-        $moved = $entry->definition() !== $current->definition();
+        // a refinement moved it (Entry::sameSource()): one source has one
+        // signature, and the advertised node is not read for nothing.
+        $moved = !$entry->sameSource($current);
         [$properties[$name], $shown[$name]] = $this->propertySchema->property($current->definition(), $node, $moved ? $entry->definition() : NULL, $moved ? $entry->schema() : NULL, $value, $prefix . $name, $locked, $depends, $emission);
         $properties[$name] = $this->linked($properties[$name], $node, $name, $declaring);
         if ($declaring && $entry->locked) {
@@ -885,9 +885,9 @@ final class ContractEmitter {
           // narrowed for these values): a runtime refiner may have
           // narrowed it for the present moment already, and a conditional
           // says what the coded ones add.
-          $base = $current->definition() === $stated->definition() ? $properties[$name] : $this->propertySchema->property($stated->definition(), $stated->schema(), NULL, NULL, NULL, $prefix . $name, FALSE, [], $emission->withoutStale())[0];
+          $base = $current->sameSource($stated) ? $properties[$name] : $this->propertySchema->property($stated->definition(), $stated->schema(), NULL, NULL, NULL, $prefix . $name, FALSE, [], $emission->withoutStale())[0];
           $enumerated = $this->conditionals->enumerate($declared, $static, $entry, $values, $base, $emission);
-          if ($enumerated !== NULL && $current->definition() === $stated->definition()) {
+          if ($enumerated !== NULL && $current->sameSource($stated)) {
             $properties[$name] = $enumerated['base'];
           }
         }
@@ -1616,9 +1616,9 @@ final class ContractEmitter {
       $schema = $schema->with('readOnly', TRUE);
     }
     $schema = Schemas::defaults($schema, $checks);
-    // As advertised: read only where the definition moved, and compared
-    // only there.
-    $moved = $entry->definition() !== $definition;
+    // As advertised: read only where a refinement moved the key
+    // (Entry::sameSource()), and compared only there.
+    $moved = !$entry->sameSource($current);
     $advertised = $moved ? $this->propertySchema->listNode($entry->definition()) : $head;
     $schema = PortableUi::set($schema, $this->propertySchema->hints(PortableUi::write('list'), NodeFacts::arrangement($advertised)));
     $refined = $moved && $this->propertySchema->signature($advertised, $entry->definition()) !== $this->propertySchema->signature($head, $definition);

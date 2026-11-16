@@ -7,8 +7,10 @@ namespace Drupal\surface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Pipeline\ValueState;
+use PortableSchema\Builder\Schema;
 
 /**
  * Variants: the structures a sibling key chooses between at one key.
@@ -59,6 +61,15 @@ final class Variants {
    * The value of STORED_AS that stores the chosen keys beside the deciding key.
    */
   public const FLAT = 'flat';
+
+  /**
+   * The shell's own facts as a map's node, read on the first ask.
+   *
+   * NULL until shellNode() reads it, and never serialized (__sleep()): a
+   * Variants read back from a build cache row reads it again on the first
+   * ask. The shell is sealed and never written.
+   */
+  private ?Schema $shellNode = NULL;
 
   /**
    * Constructs a Variants.
@@ -153,6 +164,39 @@ final class Variants {
    */
   public function definitionFor(string $id, ?SurfaceInterface $child = NULL): MapDataDefinition {
     return Attachment::mapOf($this->shell, $child ?? $this->variant($id)->child);
+  }
+
+  /**
+   * Gets the node of the shell's own facts, as the node of a map.
+   *
+   * What a chosen variant's node is composed of, around the nodes of the
+   * variant's entries (DefinitionSchema::withProperties()): read from the
+   * shell once (DefinitionSchema::shell()) on the first ask, and kept, so
+   * a refinement that chooses a variant reads nothing of the shell. With
+   * assertions on, each later ask reads the shell again and checks the
+   * two still say the same.
+   *
+   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-nodes.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The node, `properties` empty.
+   */
+  public function shellNode(): Schema {
+    assert($this->shellNode === NULL || DefinitionSchema::same($this->shellNode, DefinitionSchema::shell($this->shell)), sprintf('The shell of the variants chosen by "%s" was written after its node was read.', $this->by));
+    return $this->shellNode ??= DefinitionSchema::shell($this->shell);
+  }
+
+  /**
+   * Names what a Variants serializes: every member but the shell's node.
+   *
+   * So a build cache row is the same whether or not a refinement asked
+   * for the shell's node, and the same as before the node was kept.
+   *
+   * @return string[]
+   *   The constructor's members, in their order.
+   */
+  public function __sleep(): array {
+    return ['by', 'shell', 'variants'];
   }
 
   /**

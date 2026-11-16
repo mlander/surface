@@ -173,15 +173,15 @@ class LocationNodeTest extends SurfaceKernelTestBase {
             if ($location === NULL) {
               continue;
             }
-            if ($location->definition === NULL) {
+            if ($location->definition() === NULL) {
               $this->assertNull($location->node, "$at, $how: a frame of its own has no node.");
               continue;
             }
             $node = $location->node;
             $this->assertNotNull($node, "$at, $how: a place with a definition has a node.");
             $this->assertSame([], array_diff(array_keys(DefinitionSchema::model($node)), DefinitionSchema::MEMBERS), "$at, $how: MODEL holds its members alone.");
-            $this->assertSame(DefinitionMetadata::isSecret($location->definition), Secrets::marked($node), "$at, $how: the node says it is secret where its definition is.");
-            $this->assertSame([], static::nodeDifferences(DefinitionSchema::of($location->definition), $node, "$at, $how"), "$at, $how: the node says what a read of the definition says.");
+            $this->assertSame(DefinitionMetadata::isSecret($location->definition()), Secrets::marked($node), "$at, $how: the node says it is secret where its definition is.");
+            $this->assertSame([], static::nodeDifferences(DefinitionSchema::of($location->definition()), $node, "$at, $how"), "$at, $how: the node says what a read of the definition says.");
             $segments = Location::segments($pointer);
             $last = (string) array_pop($segments);
             $parentPointer = implode('', array_map(static fn (string $segment): string => Location::append('', $segment), $segments));
@@ -192,7 +192,7 @@ class LocationNodeTest extends SurfaceKernelTestBase {
               $entry = $parent->frame->getDefinitions()->entry($last);
               $this->assertNotNull($entry, "$at, $how");
               $this->assertSame(static::json($entry->schema()), static::json($node), "$at, $how: the node of the entry at the key.");
-              if ($closure !== NULL && $entry->definition() === $location->definition) {
+              if ($closure !== NULL && $entry->definition() === $location->definition()) {
                 // The same level, refined once: the very node.
                 $this->assertSame($entry->schema(), $node, "$at, $how: the very node of the entry at the key.");
                 $shared++;
@@ -210,9 +210,9 @@ class LocationNodeTest extends SurfaceKernelTestBase {
               $below = ctype_digit($last) && DefinitionSchema::itemNode($parent->node) !== NULL ? DefinitionSchema::itemNode($parent->node) : DefinitionSchema::propertyNode($parent->node, $last);
               $this->assertNotNull($below, "$at, $how: its parent's node holds it.");
               $this->assertSame(static::json($below), static::json($node), "$at, $how: the node under its parent's node.");
-              $parentDefinition = $parent->definition;
+              $parentDefinition = $parent->definition();
               $stepped = $parentDefinition instanceof ListDataDefinitionInterface ? $parentDefinition->getItemDefinition() : ($parentDefinition instanceof ComplexDataDefinitionInterface ? $parentDefinition->getPropertyDefinition($last) : NULL);
-              if ($closure !== NULL && $stepped === $location->definition) {
+              if ($closure !== NULL && $stepped === $location->definition()) {
                 $this->assertSame($below, $node, "$at, $how: the very node under its parent's node.");
                 $shared++;
               }
@@ -222,11 +222,11 @@ class LocationNodeTest extends SurfaceKernelTestBase {
               $inStep++;
             }
             $again = Location::definitionAt($surface, $values, $pointer, $closure);
-            if ($closure !== NULL && $again->definition === $location->definition) {
+            if ($closure !== NULL && $again->definition() === $location->definition()) {
               $this->assertSame($node, $again->node, "$at, $how: asked again, the same node.");
             }
-            $this->assertDeclaresTheDefinitionsConstraints($location->definition, $node, "$at, $how");
-            if ($this->assertListedDiffersOnlyInWhatItsListStates($definitions, $location->definition, $node, "$at, $how")) {
+            $this->assertDeclaresTheDefinitionsConstraints($location->definition(), $node, "$at, $how");
+            if ($this->assertListedDiffersOnlyInWhatItsListStates($definitions, $location->definition(), $node, "$at, $how")) {
               $stated++;
             }
           }

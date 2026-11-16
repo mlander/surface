@@ -24,40 +24,78 @@ use PortableSchema\Builder\Schema;
  * level of keys: the top, a child, an item), and for a frame reached at a
  * key, also that key's definition.
  *
- * The node beside the definition is the built node of the entry that
- * holds the key (Entry::schema()), and below a plain key that node walked
- * in step with the definition: a property's node under `properties`, an
- * item's under `items` (DefinitionSchema::propertyNode(), itemNode()).
- * Nothing here reads a definition into a node, and only the entry of the
- * place itself is asked for its node, never a level it passes through.
+ * The node is the built node of the entry that holds the key
+ * (Entry::schema()), and below a plain key that node walked down: a
+ * property's node under `properties`, an item's under `items`
+ * (DefinitionSchema::propertyNode(), itemNode()). Nothing here reads a
+ * definition into a node, and only the entry of the place itself is asked
+ * for its node, never a level it passes through. The definition at the
+ * place is derived only when it is asked (definition()): the entry's,
+ * walked down the same properties and items.
  *
  * Decision: see
  * docs/decisions.md#validation-runs-through-the-dialects-validator.
+ *
+ * @internal
+ *   The check provider's (DrupalCheckProvider) and the module's own
+ *   readers' (FormWidgetHost); no contract hands it out.
  */
 final class Location {
 
   /**
    * Constructs a Location.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
-   *   The definition at the place: a key's or a property's; for a frame
-   *   reached at a key, that key's; NULL for the top.
    * @param \Drupal\surface\SurfaceInterface|null $frame
    *   The frame at the place, refined against its values; NULL for a
    *   place that is not a frame.
    * @param mixed $value
    *   The value at the place, as accepted.
    * @param \PortableSchema\Builder\Schema|null $node
-   *   The built node of the definition at the place: its entry's node, or
-   *   that node walked down to the property or item; NULL where the
-   *   definition is NULL.
+   *   The built node at the place: a key's entry's node, or that node
+   *   walked down to the property or item; for a frame reached at a key,
+   *   that key's; NULL for the top and for an item's frame.
+   * @param \Drupal\surface\Entry|null $holder
+   *   The entry whose key the place is or is below; NULL where $node is.
+   * @param string[] $below
+   *   The property names and deltas from the holder's key to the place.
    */
   public function __construct(
-    public readonly ?DataDefinitionInterface $definition,
     public readonly ?SurfaceInterface $frame,
     public readonly mixed $value,
     public readonly ?Schema $node = NULL,
+    private readonly ?Entry $holder = NULL,
+    private readonly array $below = [],
   ) {
+  }
+
+  /**
+   * Gets the definition at the place, derived when it is asked.
+   *
+   * The holder's definition (Entry::definition()), walked down its
+   * property and item definitions as the node was walked: for the one
+   * reader that hands a check a definition (ConstraintRunner, through the
+   * check provider).
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The definition at the place: a key's or a property's; for a frame
+   *   reached at a key, that key's; NULL where the node is NULL.
+   *
+   * @throws \LogicException
+   *   When the holder's definition holds no definition where its node
+   *   holds a node.
+   */
+  public function definition(): ?DataDefinitionInterface {
+    $definition = $this->holder?->definition();
+    foreach ($this->below as $segment) {
+      $definition = static::step($definition, (string) $segment);
+      if ($definition === NULL) {
+        assert($this->holder !== NULL);
+        // A place with a node and no definition: the node was read from
+        // another definition than the one its entry holds.
+        throw new \LogicException(sprintf('The definition of the "%s" key holds no definition at "%s" where its node holds one: a built node holds one for every property and item of its definition.', $this->holder->name, $segment));
+      }
+    }
+    return $definition;
   }
 
   /**
@@ -82,8 +120,7 @@ final class Location {
     $refine ??= static fn (SurfaceInterface $level, array $values): SurfaceInterface => $level->refine($values);
     $segments = static::segments($pointer);
     $frame = $refine($surface, $values);
-    $definition = NULL;
-    // The entry whose definition is the place's, so far.
+    // The entry whose key is the place, so far.
     $holder = NULL;
     while ($segments !== []) {
       $name = (string) array_shift($segments);
@@ -92,7 +129,6 @@ final class Location {
         return NULL;
       }
       $value = $values[$name] ?? NULL;
-      $definition = $entry->definition();
       $holder = $entry;
       $child = $entry->list === NULL ? $entry->childFor($values) : NULL;
       if ($entry->list !== NULL && $segments !== []) {
@@ -104,7 +140,6 @@ final class Location {
         }
         $child = $entry->list->child();
         $value = $items[(int) $delta];
-        $definition = NULL;
         $holder = NULL;
       }
       elseif ($child === NULL || !is_array($value)) {
@@ -114,7 +149,7 @@ final class Location {
       $values = $value;
       $frame = $refine($child, $values);
     }
-    return new static($definition, $frame, $values, $holder?->schema());
+    return new static($frame, $values, $holder?->schema(), $holder);
   }
 
   /**
@@ -152,7 +187,7 @@ final class Location {
   }
 
   /**
-   * Reads down a plain key's property and item definitions, and its node.
+   * Reads down a plain key's node, its properties and items.
    *
    * @param \Drupal\surface\Entry $entry
    *   The key's entry.
@@ -165,35 +200,53 @@ final class Location {
    *   What is there, or NULL where nothing declares the place.
    */
   protected static function below(Entry $entry, mixed $value, array $segments): ?static {
-    $definition = $entry->definition();
     $node = $entry->schema();
+    // A definition the entry's source gave is walked beside the node, and
+    // says what is declared there; a node-first entry's node says it, and
+    // its definition, derived from the node, is not asked.
+    $given = $entry->isNodeFirst() ? NULL : $entry->definition();
     foreach ($segments as $segment) {
-      // A built node holds a node for every property and item its
-      // definition has, so the two trees step together.
-      if ($definition instanceof ListDataDefinitionInterface) {
-        $definition = ctype_digit($segment) ? $definition->getItemDefinition() : NULL;
-        $below = $definition === NULL ? NULL : DefinitionSchema::itemNode($node);
+      $node = match (TRUE) {
+        DefinitionSchema::isList($node) => ctype_digit($segment) ? DefinitionSchema::itemNode($node) : NULL,
+        DefinitionSchema::isComplex($node) => DefinitionSchema::propertyNode($node, $segment),
+        default => NULL,
+      };
+      if ($given !== NULL) {
+        $given = $given instanceof ListDataDefinitionInterface && !ctype_digit($segment) ? NULL : static::step($given, $segment);
+        if ($given === NULL) {
+          return NULL;
+        }
+        if ($node === NULL) {
+          // A place with a definition and no node would answer "no secret,
+          // no check" for a key that may have both.
+          throw new \LogicException(sprintf('The node of the "%s" key holds no node at "%s" where its definition holds one: a built node holds one for every property and item.', $entry->name, $segment));
+        }
       }
-      elseif ($definition instanceof ComplexDataDefinitionInterface) {
-        $definition = $definition->getPropertyDefinition($segment);
-        $below = $definition === NULL ? NULL : DefinitionSchema::propertyNode($node, $segment);
-      }
-      else {
-        $definition = NULL;
-        $below = NULL;
-      }
-      if ($definition === NULL) {
+      if ($node === NULL) {
         return NULL;
       }
-      if ($below === NULL) {
-        // A place with a definition and no node would answer "no secret,
-        // no check" for a key that may have both.
-        throw new \LogicException(sprintf('The node of the "%s" key holds no node at "%s" where its definition holds one: a built node holds one for every property and item.', $entry->name, $segment));
-      }
-      $node = $below;
       $value = is_array($value) ? $value[$segment] ?? NULL : NULL;
     }
-    return new static($definition, NULL, $value, $node);
+    return new static(NULL, $value, $node, $entry, $segments);
+  }
+
+  /**
+   * Steps from a definition to its item or one of its properties.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
+   *   The definition.
+   * @param string $segment
+   *   A delta below a list, a property name below a complex definition.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The item's or the property's definition; NULL below anything else.
+   */
+  protected static function step(?DataDefinitionInterface $definition, string $segment): ?DataDefinitionInterface {
+    return match (TRUE) {
+      $definition instanceof ListDataDefinitionInterface => $definition->getItemDefinition(),
+      $definition instanceof ComplexDataDefinitionInterface => $definition->getPropertyDefinition($segment),
+      default => NULL,
+    };
   }
 
 }

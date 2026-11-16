@@ -12,8 +12,8 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * An entry holds its key's node (Entry::schema()), and a reader that
  * walks down from an entry walks the entry's node in step. What is left
- * calling DefinitionSchema::of(), head() or around() holds a definition
- * no entry holds. The list is pinned (CALLERS): a new caller
+ * calling DefinitionSchema::of(), head(), around() or shell() holds a
+ * definition no entry holds. The list is pinned (CALLERS): a new caller
  * changes it, and so does a caller that moves to an entry's node. Each is
  * a reader a later slice moves. Comments are not read. What the scan
  * cannot see: a call from inside DefinitionSchema itself (a new public
@@ -28,7 +28,7 @@ use PHPUnit\Framework\Attributes\Group;
 class DefinitionReadCallersTest extends UnitTestCase {
 
   /**
-   * The calls of DefinitionSchema::of(), head() and around().
+   * The calls of DefinitionSchema::of(), head(), around() and shell().
    *
    * In src and modules/*\/src.
    *
@@ -78,6 +78,15 @@ class DefinitionReadCallersTest extends UnitTestCase {
    * - src/Resolve.php, of(): a resolved key's class is handed the node of
    *   the key's definition; a key a mount holds has no entry of its own
    *   (since 2026-11-15).
+   * - src/Surface.php, around(): a mount its own refiners refined, with a
+   *   structure refined in it too, keeps the definition built as before
+   *   (refineMounted()), and its node is composed of the refiners'
+   *   answer's own facts and the refined structures' entries' nodes, so
+   *   no key of a structure is read again (since 2026-11-16).
+   * - src/Variants.php, shell(): the shell of variants, which every chosen
+   *   variant wears, is read once into the node a chosen variant's node is
+   *   composed of (shellNode()), and once more per later ask inside an
+   *   assertion (since 2026-11-16).
    * property() takes its node from its caller and reads nothing, so a
    * caller that stops handing an entry's node on has to call of() itself,
    * which this list then shows.
@@ -89,7 +98,9 @@ class DefinitionReadCallersTest extends UnitTestCase {
     'src/Options/SurfaceOptions.php' => ['of' => 1],
     'src/Pipeline/Validating.php' => ['of' => 1],
     'src/Resolve.php' => ['of' => 1],
+    'src/Surface.php' => ['around' => 2],
     'src/Tool/InputDefinitions.php' => ['of' => 2],
+    'src/Variants.php' => ['shell' => 2],
   ];
 
   /**
@@ -112,7 +123,7 @@ class DefinitionReadCallersTest extends UnitTestCase {
       // The class is called by its own name: under another name, or
       // through a variable, a call would not be counted below.
       $this->assertDoesNotMatchRegularExpression('/\bDefinitionSchema\s+as\s+\w|\bDefinitionSchema::class\b/', $code, substr($file, strlen($root) + 1) . ' names DefinitionSchema by an alias or as a class string.');
-      if (preg_match_all('/\bDefinitionSchema::(of|head|around)\s*\(/', $code, $matches) === 0) {
+      if (preg_match_all('/\bDefinitionSchema::(of|head|around|shell)\s*\(/', $code, $matches) === 0) {
         continue;
       }
       $relative = substr($file, strlen($root) + 1);

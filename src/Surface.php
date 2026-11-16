@@ -11,6 +11,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Refinement\ChoiceSet;
@@ -20,6 +21,7 @@ use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Refinement\RuntimeRefiner;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
 use Drupal\surface\Storage\StorageLayoutInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The immutable data surface a builder seals.
@@ -533,14 +535,15 @@ final class Surface implements SurfaceInterface {
       if (!ValueState::isConfigured(NestedArray::getValue($admitted, $parents))) {
         continue;
       }
-      $definition = $refined->getDefinition((string) array_shift($parents));
-      $marked = DoesNotApply::marks($definition);
-      foreach ($parents as $property) {
-        $definition = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($property) : NULL;
-        $marked = $marked || DoesNotApply::marks($definition);
-      }
-      if ($marked) {
-        $ruled[] = $path;
+      // The mark is read at each place on the way: from the refined key's
+      // node and the nodes below it, or, for a key whose source gave its
+      // definition, from that definition and the ones below it.
+      $entry = $refined->getDefinitions()->entry((string) array_shift($parents));
+      foreach ($entry === NULL ? [] : static::watchedPlaces($entry, $parents) as $place) {
+        if ($place instanceof Schema ? NodeFacts::doesNotApply($place) : DoesNotApply::marks($place)) {
+          $ruled[] = $path;
+          break;
+        }
       }
     }
     return $ruled;
@@ -584,14 +587,12 @@ final class Surface implements SurfaceInterface {
         // An attached structure is refined by its child, in the child's
         // frame, and by nothing else in the parent: no parent refiner can
         // narrow into it. Its ports read what the parent may hand a
-        // refiner.
-        $frames = [];
-        $resolved = $this->refineNested($entry, $values, $cacheability, $runtime, $admitted, $frames);
-        // Whatever reads the refined data surface hands the child what it
-        // was refined with.
+        // refiner. Whatever reads the refined data surface hands the child
+        // what it was refined with.
         $bound = $entry->readingFrom($admitted);
+        $resolved = $this->refineNested($entry, $bound ?? $entry, $values, $cacheability, $runtime, $admitted);
         if ($resolved !== NULL || $bound !== NULL) {
-          $definitions = $definitions->with($resolved === NULL ? $bound : ($bound ?? $entry)->withDefinition($resolved, $frames));
+          $definitions = $definitions->with($resolved ?? $bound);
           $changed = TRUE;
         }
         continue;
@@ -599,11 +600,11 @@ final class Surface implements SurfaceInterface {
       if ($entry->mounted !== []) {
         // The key holding the alters' mounts, some of which hold a
         // structure that refines its own keys there.
-        $frames = [];
-        $refined = $this->refineMounted($entry, $refines ? $this->refinedEntry($entry, $admitted, $runtime, $cacheability) : NULL, $values, $admitted, $runtime, $cacheability, $frames);
+        $answer = $refines ? $this->refinedEntry($entry, $admitted, $runtime, $cacheability) : NULL;
         $bound = $entry->readingFrom($admitted);
+        $refined = $this->refineMounted($entry, $bound ?? $entry, $answer, $values, $admitted, $runtime, $cacheability);
         if ($refined !== NULL || $bound !== NULL) {
-          $definitions = $definitions->with($refined === NULL ? $bound : ($bound ?? $entry)->withDefinition($refined, $frames));
+          $definitions = $definitions->with($refined ?? $bound);
           $changed = TRUE;
         }
         continue;
@@ -659,13 +660,28 @@ final class Surface implements SurfaceInterface {
    * at its mount, where its keys are accepted and stored as any key an
    * alter mounted is. Nothing of the parent's narrows a key there.
    *
-   * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
+   * Where the key's own refiners left it as it was, its node is the
+   * entry's with the node at each refined structure's mount replaced by
+   * the structure's own node around the refined structure's entries'
+   * nodes (DefinitionSchema::withProperties(), withPropertyAt()), and the
+   * entry is node-first. Where they answered, their answer is the key's
+   * source: its definition is built as before, each refined structure
+   * written into a copy of the answer, and handed with the node composed
+   * of the answer's own facts and the refined structures' entries'
+   * nodes, so the narrowing check of the whole map stands. So does a key
+   * whose composed node holds a class no node derives a definition of.
+   *
+   * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value and
+   * docs/decisions.md#a-refined-shell-is-composed-of-nodes.
    *
    * @param \Drupal\surface\Entry $entry
    *   The key holding the mounts, as advertised.
+   * @param \Drupal\surface\Entry $base
+   *   The entry the refined one is made from: the advertised one, or its
+   *   copy bound to these values' ports.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $refined
    *   The key as its own refiners left it for these values, or NULL when
-   *   they changed nothing.
+   *   none ran.
    * @param array $values
    *   The values the data surface is being refined against.
    * @param array $admitted
@@ -674,26 +690,42 @@ final class Surface implements SurfaceInterface {
    *   The kinds of refiner that run.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what each structure's refinement depended on.
-   * @param array<string, \Drupal\surface\SurfaceInterface> $frames
-   *   Gains each refined structure written into the key, by its mount's
-   *   path: what the key's node is composed of (Entry::withDefinition()).
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   * @return \Drupal\surface\Entry|null
    *   The key for these values, or NULL when nothing about it changes.
    */
-  protected function refineMounted(Entry $entry, ?DataDefinitionInterface $refined, array $values, array $admitted, int $runtime, CacheableMetadata $cacheability, array &$frames = []): ?DataDefinitionInterface {
-    $before = $refined ?? $entry->definition();
-    $definition = NULL;
+  protected function refineMounted(Entry $entry, Entry $base, ?DataDefinitionInterface $refined, array $values, array $admitted, int $runtime, CacheableMetadata $cacheability): ?Entry {
+    $answers = [];
     foreach ($entry->mounted as $path => $attachment) {
       $parents = explode('.', (string) $path);
       $child = $attachment->readFrom($admitted)->bound([]);
       $value = NestedArray::getValue($values, [$entry->name, ...$parents]);
       $answer = $child->refine(array_replace($child->getDefaultValues(), is_array($value) ? $value : []), $runtime);
       $cacheability->addCacheableDependency($answer);
-      if ($answer === $child) {
-        continue;
+      if ($answer !== $child) {
+        $answers[(string) $path] = $answer;
       }
-      $definition ??= static::deepClone($before);
+    }
+    if ($answers === []) {
+      return $refined === NULL ? NULL : $base->withDefinition($refined);
+    }
+    $node = $refined === NULL ? static::composedMount($entry, $base->schema(), $answers) : NULL;
+    if ($node !== NULL && !$entry->madeByRefinement() && DefinitionMap::derivedClasses($node)) {
+      // Each structure's keys were held to the narrowing check when the
+      // structure refined them, against the sealed structure's, and the
+      // rest of the map is the sealed entry's: nothing the map says can be
+      // wider than what it advertises. A mount a refinement made is held
+      // to the check below: its structures are refined from the sealed
+      // ones, not from what that refinement made of them.
+      return $base->withSchema($node, TRUE);
+    }
+    // The definition, as before: the structures written into a copy of
+    // the key as its own refiners left it, or as advertised.
+    $before = $refined ?? $entry->definition();
+    $definition = static::deepClone($before);
+    $parts = [];
+    foreach ($answers as $path => $answer) {
+      $parents = explode('.', $path);
       $map = $definition;
       foreach (array_slice($parents, 0, -1) as $parent) {
         $map = $map instanceof ComplexDataDefinitionInterface ? $map->getPropertyDefinition($parent) : NULL;
@@ -702,14 +734,84 @@ final class Surface implements SurfaceInterface {
       if (!$map instanceof MapDataDefinition || !$shell instanceof MapDataDefinition) {
         throw new \LogicException(sprintf('The "%s.%s" mount no longer holds a map, so the structure attached there has nowhere to be written.', $entry->name, $path));
       }
-      $map->setPropertyDefinition((string) end($parents), Attachment::mapOf($shell, $answer));
-      $frames[(string) $path] = $answer;
-    }
-    if ($definition === NULL) {
-      return $refined;
+      $written = Attachment::mapOf($shell, $answer);
+      $map->setPropertyDefinition((string) end($parents), $written);
+      $nodes = static::nodesOf($answer);
+      if (count($parents) === 1 && $nodes !== []) {
+        // The structure's own facts around its refined entries' nodes.
+        $parts[$path] = DefinitionSchema::around($written, $nodes);
+      }
     }
     Narrowing::assertNarrows($entry->name, 'the structures attached at its mounts', $before, $definition);
-    return $definition;
+    return $base->withDefinition($definition, $node ?? DefinitionSchema::around($definition, $parts));
+  }
+
+  /**
+   * Composes a mount's node with each refined structure's node in place.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The key holding the mounts, as advertised.
+   * @param \PortableSchema\Builder\Schema $node
+   *   Its node.
+   * @param array<string, \Drupal\surface\SurfaceInterface> $answers
+   *   Each refined structure, by its mount's path.
+   *
+   * @return \PortableSchema\Builder\Schema|null
+   *   The node; NULL where a structure has no keys, whose map is read as a
+   *   value, which no composition gives.
+   *
+   * @throws \LogicException
+   *   When a mount no longer holds a map.
+   */
+  protected static function composedMount(Entry $entry, Schema $node, array $answers): ?Schema {
+    foreach ($answers as $path => $answer) {
+      $parents = explode('.', (string) $path);
+      $map = $node;
+      foreach (array_slice($parents, 0, -1) as $parent) {
+        $map = $map !== NULL && DefinitionSchema::isComplex($map) ? DefinitionSchema::propertyNode($map, $parent) : NULL;
+      }
+      $shell = $map !== NULL && static::isMapNode($map) ? DefinitionSchema::propertyNode($map, (string) end($parents)) : NULL;
+      if ($shell === NULL || !static::isMapNode($shell)) {
+        throw new \LogicException(sprintf('The "%s.%s" mount no longer holds a map, so the structure attached there has nowhere to be written.', $entry->name, $path));
+      }
+      $nodes = static::nodesOf($answer);
+      if ($nodes === [] || !DefinitionSchema::nodeIsMap($shell)) {
+        return NULL;
+      }
+      $node = DefinitionSchema::withPropertyAt($node, $parents, DefinitionSchema::withProperties($shell, $nodes));
+    }
+    return $node;
+  }
+
+  /**
+   * Answers whether a node was read from a MapDataDefinition.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A built node.
+   *
+   * @return bool
+   *   What `instanceof MapDataDefinition` answers for the definition it
+   *   was read from, or derives.
+   */
+  protected static function isMapNode(Schema $node): bool {
+    return is_a(DefinitionSchema::classOf($node), MapDataDefinition::class, TRUE);
+  }
+
+  /**
+   * Gets the nodes a refined child's entries hold, by name.
+   *
+   * @param \Drupal\surface\SurfaceInterface $child
+   *   The refined child.
+   *
+   * @return array<string, \PortableSchema\Builder\Schema>
+   *   Each entry's node (Entry::schema()), in the child's order.
+   */
+  protected static function nodesOf(SurfaceInterface $child): array {
+    $nodes = [];
+    foreach ($child->getDefinitions()->entries() as $name => $entry) {
+      $nodes[(string) $name] = $entry->schema();
+    }
+    return $nodes;
   }
 
   /**
@@ -871,15 +973,61 @@ final class Surface implements SurfaceInterface {
       if ($this->definitions->entry($parents[0])?->isNested() !== FALSE) {
         continue;
       }
-      $definition = $refined->getDefinition((string) array_shift($parents));
-      foreach ($parents as $property) {
-        $definition = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($property) : NULL;
+      // The place is found as watchedPlaces() finds it; for a key whose
+      // source gave its node, the check is handed a definition derived for
+      // the key only when it is asked, walked down to the place.
+      $entry = $refined->getDefinitions()->entry((string) array_shift($parents));
+      if ($entry === NULL || $this->watchedValueCheck === NULL) {
+        continue;
       }
-      if ($definition !== NULL && $this->watchedValueCheck !== NULL && !$this->watchedValueCheck->admits($definition, $value)) {
+      $places = static::watchedPlaces($entry, $parents);
+      $definition = end($places);
+      if ($definition instanceof Schema) {
+        $definition = $entry->definition();
+        foreach ($parents as $property) {
+          $definition = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($property) : NULL;
+        }
+      }
+      if ($definition instanceof DataDefinitionInterface && !$this->watchedValueCheck->admits($definition, $value)) {
         $refused[] = $path;
       }
     }
     return $refused;
+  }
+
+  /**
+   * Walks a watched key down to the place a watched path names.
+   *
+   * The two watched-value walks (ruledOutWatchedValues(),
+   * refusedWatchedValues()) find a place one way: a key whose source gave
+   * its node (Entry::isNodeFirst()) by its node and the nodes below it,
+   * so no definition is derived to find it; a key whose source gave its
+   * definition by that definition, part by part
+   * (getPropertyDefinition()), as before, so a class that answers for a
+   * property its node does not hold is walked as it answers, as
+   * Location::below() walks it.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The watched key's entry, refined.
+   * @param string[] $parents
+   *   The property names below the key.
+   *
+   * @return array<int, \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface|null>
+   *   The key's own node or definition, then one per part: the place
+   *   there, or NULL from the first part that names nothing on.
+   */
+  private static function watchedPlaces(Entry $entry, array $parents): array {
+    $place = $entry->isNodeFirst() ? $entry->schema() : $entry->definition();
+    $places = [$place];
+    foreach ($parents as $property) {
+      $place = match (TRUE) {
+        $place instanceof Schema => DefinitionSchema::isComplex($place) ? DefinitionSchema::propertyNode($place, (string) $property) : NULL,
+        $place instanceof ComplexDataDefinitionInterface => $place->getPropertyDefinition($property),
+        default => NULL,
+      };
+      $places[] = $place;
+    }
+    return $places;
   }
 
   /**
@@ -917,14 +1065,33 @@ final class Surface implements SurfaceInterface {
    * child's refined map for an attached child, and for variants the
    * chosen variant's refined map, or nothing while no variant is chosen.
    *
-   * The result is held to the same narrowing check as any refiner link,
-   * against what the key advertises. For an attached child that is the
-   * map rule: the same properties, each no wider. For variants it is the
-   * one resolution refinement allows from a placeholder: `any`, to the
-   * map of a variant declared before anything was chosen.
+   * The key's node is composed of its own node and the refined child's
+   * entries' nodes (DefinitionSchema::withProperties()): an attached
+   * child's in the entry's own node, a chosen variant's in the node of
+   * the variants' shell (Variants::shellNode()), whatever the child left
+   * as it was. The entry is node-first, a new one even where the child
+   * changed nothing, as the key's definition was a new one before.
+   *
+   * The narrowing check the key's definition was held to before is
+   * implied there: the key's own facts are the advertised ones, and each
+   * of the child's keys was held to the check when the child refined it.
+   * It is kept, on the definition built as before (Attachment::mapOf(),
+   * Variants::definitionFor()), handed with the composed node, for what
+   * the check still guards: a variant chosen where the deciding key is
+   * locked, which the key already holds the map of (another variant
+   * gains and loses keys), and a key whose node holds a class no node
+   * derives a definition of, whose own definition the node does not say
+   * all of, and a key a refinement made (Entry::madeByRefinement()),
+   * refined again: its child is the sealed one, whose keys were checked
+   * against the sealed child's, not against what the first refinement
+   * made of them. A child with no keys, whose map is read as a value,
+   * takes the definition too.
    *
    * @param \Drupal\surface\Entry $entry
    *   The key, as advertised.
+   * @param \Drupal\surface\Entry $base
+   *   The entry the refined one is made from: the advertised one, or its
+   *   copy bound to these values' ports.
    * @param array $values
    *   The values the data surface is being refined against.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
@@ -934,15 +1101,11 @@ final class Surface implements SurfaceInterface {
    * @param array|null $admitted
    *   The values a refiner may be handed, which an attached child's ports
    *   read; NULL for $values.
-   * @param array<string, \Drupal\surface\SurfaceInterface> $frames
-   *   Gains the refined child the definition is built from, under '':
-   *   what the key's node is composed of (Entry::withDefinition()).
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
-   *   The key's definition for these values, or NULL when nothing about
-   *   it changes.
+   * @return \Drupal\surface\Entry|null
+   *   The key for these values, or NULL when nothing about it changes.
    */
-  protected function refineNested(Entry $entry, array $values, CacheableMetadata $cacheability, int $runtime = self::EVERY, ?array $admitted = NULL, array &$frames = []): ?DataDefinitionInterface {
+  protected function refineNested(Entry $entry, Entry $base, array $values, CacheableMetadata $cacheability, int $runtime = self::EVERY, ?array $admitted = NULL): ?Entry {
     $child = $entry->attachment !== NULL ? $entry->attachment->readFrom($admitted ?? $values)->bound([]) : $entry->childFor($values);
     if ($child === NULL) {
       return NULL;
@@ -956,21 +1119,35 @@ final class Surface implements SurfaceInterface {
     }
     $refined = $child->refine(array_replace($child->getDefaultValues(), is_array($value) ? $value : []), $runtime);
     $cacheability->addCacheableDependency($refined);
-    if ($chosen !== NULL) {
-      $definition = $entry->variants->definitionFor($chosen, $refined);
-    }
-    elseif ($refined === $child) {
+    if ($chosen === NULL && $refined === $child) {
       return NULL;
     }
-    elseif ($entry->definition() instanceof MapDataDefinition) {
-      $definition = Attachment::mapOf($entry->definition(), $refined);
-    }
-    else {
+    $advertised = $entry->schema();
+    if ($chosen === NULL && !static::isMapNode($advertised)) {
       throw new \LogicException(sprintf('The "%s" key no longer holds a map, so its attached child has nowhere to be written.', $entry->name));
     }
+    $nodes = static::nodesOf($refined);
+    $shell = $chosen === NULL ? $base->schema() : $entry->variants->shellNode();
+    $node = $nodes === [] || !DefinitionSchema::nodeIsMap($shell) ? NULL : DefinitionSchema::withProperties($shell, $nodes);
+    // A key with variants whose node is no placeholder holds a variant's
+    // map already: its deciding key is locked.
+    $locked = $chosen !== NULL && !(NodeFacts::dataType($advertised) === 'any' && NodeFacts::variantsBy($advertised) !== NULL);
+    // A key a refinement made, refined again, is held to the check: its
+    // child is the sealed one, so its keys were checked against the sealed
+    // child's, not against what that refinement made of them.
+    if ($node !== NULL && !$locked && !$entry->madeByRefinement() && DefinitionMap::derivedClasses($node)) {
+      return $base->withSchema($node, TRUE);
+    }
+    if ($chosen === NULL) {
+      $definition = $entry->definition();
+      assert($definition instanceof MapDataDefinition);
+      $definition = Attachment::mapOf($definition, $refined);
+    }
+    else {
+      $definition = $entry->variants->definitionFor($chosen, $refined);
+    }
     Narrowing::assertNarrows($entry->name, 'the child attached there', $entry->definition(), $definition);
-    $frames[''] = $refined;
-    return $definition;
+    return $base->withDefinition($definition, $node);
   }
 
   /**

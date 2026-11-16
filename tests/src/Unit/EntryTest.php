@@ -196,22 +196,24 @@ class EntryTest extends UnitTestCase {
       $this->assertSame($children->entry($name)?->schema(), DefinitionSchema::propertyNode($node, $name), "A child entry's node is the very object under properties.");
     }
 
-    // A refinement hands the refined child its definition was built from.
+    // A refinement composes the refined shell of the shell's own node and
+    // the refined child's entries' nodes (Surface::refineNested()).
     $refined_children = static::children('Town');
     $refined = $this->createMock(SurfaceInterface::class);
     $refined->method('getDefinitions')->willReturn($refined_children);
-    $narrowed = $entry->withDefinition(Attachment::mapOf($definition, $refined), ['' => $refined]);
+    $narrowed = $entry->withSchema(DefinitionSchema::withProperties($node, static::nodes($refined_children)));
+    $this->assertTrue($narrowed->isNodeFirst(), 'The refined shell is node-first.');
     $this->assertSame('Town', DefinitionSchema::propertyNode($narrowed->schema(), 'city')?->get('title'));
     $this->assertSame($refined_children->entry('city')?->schema(), DefinitionSchema::propertyNode($narrowed->schema(), 'city'), "The refined child's entry's node is the one under properties.");
-    $this->assertSame(static::json(DefinitionSchema::of($narrowed->definition())), static::json($narrowed->schema()), 'And it is the read of the refined definition.');
+    $this->assertSame(static::json(DefinitionSchema::of(Attachment::mapOf($definition, $refined))), static::json($narrowed->schema()), 'And it is the read of the definition the refinement built before.');
   }
 
   /**
-   * Tests a refined shell keeps the child it was built from, and only it.
+   * Tests a refined shell keeps the nodes it was composed of, and only them.
    *
-   * A copy bound to its container's values (readingFrom()) still composes
-   * of the refined child; a refined mount no refined structure stands for
-   * reads its keys, and takes nothing by name from the sealed structure.
+   * A copy bound to its container's values (readingFrom()) holds the
+   * composed node; a refined mount no refined structure stands for reads
+   * its keys, and takes nothing by name from the sealed structure.
    */
   public function testRefinedShellKeepsItsChild(): void {
     $children = static::children('City');
@@ -223,9 +225,12 @@ class EntryTest extends UnitTestCase {
     $refined_children = static::children('Town');
     $refined = $this->createMock(SurfaceInterface::class);
     $refined->method('getDefinitions')->willReturn($refined_children);
-    $bound = $entry->withDefinition(Attachment::mapOf($definition, $refined), ['' => $refined])->readingFrom(['venue' => 'hall']);
+    $composed = $entry->withSchema(DefinitionSchema::withProperties($entry->schema(), static::nodes($refined_children)));
+    $bound = $composed->readingFrom(['venue' => 'hall']);
     $this->assertNotNull($bound);
-    $this->assertSame($refined_children->entry('city')?->schema(), DefinitionSchema::propertyNode($bound->schema(), 'city'), 'A bound copy composes of the refined child, the very node.');
+    $this->assertSame($refined_children->entry('city')?->schema(), DefinitionSchema::propertyNode($bound->schema(), 'city'), 'A bound copy holds the composed node, the refined child\'s very node in it.');
+    $this->assertTrue($bound->sameSource($composed), 'It has the refined shell\'s source.');
+    $this->assertFalse($bound->sameSource($entry), 'Not the sealed one\'s.');
 
     // A mount: the module's map holds a deep copy of the structure's
     // definitions, as SurfaceBuilder::mountStructure() mounts them.
@@ -241,6 +246,80 @@ class EntryTest extends UnitTestCase {
     $read = DefinitionSchema::propertyNode(DefinitionSchema::propertyNode($copy->schema(), 'module') ?? $mount, 'city');
     $this->assertNotSame($city, $read, 'A refined mount no refined structure stands for reads its keys.');
     $this->assertSame(static::json(DefinitionSchema::of($copy->definition())), static::json($copy->schema()), 'And it is the read of its definition.');
+  }
+
+  /**
+   * Tests which entries have the same source.
+   *
+   * The same form and the very object of it: what the served contract
+   * tells a key a refinement moved by (ContractEmitter::frame()).
+   */
+  public function testTheSameSource(): void {
+    $node = DefinitionSchema::of(static::map());
+    $child = $this->createMock(SurfaceInterface::class);
+    $child->method('getDefinitions')->willReturn(static::children('City'));
+    $child->method('withPorts')->willReturnSelf();
+    $sealed = Entry::ofSchema('where', $node, attachment: new Attachment($child, reads: ['venue' => 'venue']));
+    $this->assertTrue($sealed->sameSource($sealed), 'An entry and itself.');
+    $copy = $sealed->readingFrom(['venue' => 'hall']);
+    $this->assertNotNull($copy);
+    $this->assertTrue($copy->sameSource($sealed), 'A port copy and its original.');
+    $this->assertTrue($sealed->sameSource($copy), 'Its original and the port copy.');
+    $copy->definition();
+    $this->assertTrue($sealed->sameSource($copy), 'Whatever either derived since.');
+    $mount = Entry::ofSchema('third_party_settings', $node, mounted: ['module' => new Attachment($child, reads: ['venue' => 'venue'])]);
+    $mounted = $mount->readingFrom(['venue' => 'hall']);
+    $this->assertNotNull($mounted);
+    $this->assertNotSame($mount, $mounted);
+    $this->assertTrue($mounted->sameSource($mount), 'A port copy of a mount and its original.');
+    $refined = $sealed->withSchema(DefinitionSchema::withProperties($node, static::nodes(static::children('City'))));
+    $this->assertFalse($refined->sameSource($sealed), 'A refined shell and its sealed entry, even where the child changed nothing.');
+    $this->assertTrue(DefinitionSchema::same($refined->schema(), DefinitionSchema::withProperties($node, static::nodes(static::children('City')))));
+    $answer = Surface::deepClone($sealed->definition());
+    $made = $sealed->withDefinition($answer);
+    $this->assertFalse($made->sameSource($sealed), 'A refiner\'s answer and the sealed entry.');
+    $this->assertTrue($sealed->withDefinition($sealed->definition())->sameSource($sealed), 'The derived definition handed back keeps the source.');
+    $definition = static::map();
+    $one = new Entry('where', $definition);
+    $two = new Entry('where', $definition);
+    $this->assertTrue($one->sameSource($two), 'Two definition-first entries of one definition object.');
+    $this->assertFalse($one->sameSource(new Entry('where', static::map())), 'Not of an equal one.');
+    $nodeFirst = Entry::ofSchema('where', $one->schema());
+    $this->assertFalse($one->sameSource($nodeFirst), 'A definition-first entry and a node-first one of its node.');
+    $this->assertFalse($nodeFirst->sameSource($one), 'Either way round.');
+  }
+
+  /**
+   * Tests a port copy carries the mark that a refinement made its source.
+   */
+  public function testPortCopyCarriesTheRefinementMark(): void {
+    $node = DefinitionSchema::of(static::map());
+    $child = $this->createMock(SurfaceInterface::class);
+    $child->method('getDefinitions')->willReturn(static::children('City'));
+    $sealed = Entry::ofSchema('where', $node, attachment: new Attachment($child, reads: ['venue' => 'venue']));
+    $this->assertFalse($sealed->readingFrom(['venue' => 'hall'])?->madeByRefinement(), 'A copy of a sealed entry: no mark.');
+    $composed = $sealed->withSchema(DefinitionSchema::withProperties($node, static::nodes(static::children('Town'))), TRUE);
+    $this->assertTrue($composed->madeByRefinement());
+    $this->assertTrue($composed->readingFrom(['venue' => 'hall'])?->madeByRefinement(), 'A copy of a shell a refinement composed carries it.');
+    $answer = $sealed->withDefinition(Surface::deepClone($sealed->definition()));
+    $this->assertTrue($answer->readingFrom(['venue' => 'hall'])?->madeByRefinement(), 'A copy of a refiner\'s answer carries it.');
+  }
+
+  /**
+   * Gets a child's entries' nodes, by name.
+   *
+   * @param \Drupal\surface\DefinitionMap $entries
+   *   The entries.
+   *
+   * @return array<string, \PortableSchema\Builder\Schema>
+   *   Each entry's node.
+   */
+  protected static function nodes(DefinitionMap $entries): array {
+    $nodes = [];
+    foreach ($entries->entries() as $name => $entry) {
+      $nodes[(string) $name] = $entry->schema();
+    }
+    return $nodes;
   }
 
   /**

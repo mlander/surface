@@ -239,17 +239,18 @@ final class DrupalCheckProvider implements CheckProvider {
    * @param string $pointer
    *   The place's JSON Pointer.
    *
-   * @return array{node: ?\PortableSchema\Builder\Schema, definition: ?\Drupal\Core\TypedData\DataDefinitionInterface, frame: ?\Drupal\surface\SurfaceInterface, value: mixed}|null
-   *   The built node there and its definition, the frame there, and the
-   *   value there (Location::definitionAt()); NULL where nothing declares
-   *   it.
+   * @return array{node: ?\PortableSchema\Builder\Schema, location: \Drupal\surface\ResourceBuild\Location, frame: ?\Drupal\surface\SurfaceInterface, value: mixed}|null
+   *   The built node there, the place itself, whose definition is derived
+   *   only when a check is run on it (Location::definition()), the frame
+   *   there, and the value there (Location::definitionAt()); NULL where
+   *   nothing declares it.
    */
   private function at(string $pointer): ?array {
     if (!array_key_exists($pointer, $this->places)) {
       $location = Location::definitionAt($this->surface, $this->values, $pointer, $this->refine(...));
       $this->places[$pointer] = $location === NULL ? NULL : [
         'node' => $location->node,
-        'definition' => $location->definition,
+        'location' => $location,
         'frame' => $location->frame,
         'value' => $location->value,
       ];
@@ -403,13 +404,15 @@ final class DrupalCheckProvider implements CheckProvider {
   public function constraintMessage(string $location, array $ids, ?array $others = NULL): string|\Stringable|null {
     $place = $this->at($location);
     $node = $place['node'] ?? NULL;
-    $definition = $place['definition'] ?? NULL;
-    if ($place === NULL || $definition === NULL) {
+    // A place has a definition where it has a node: a key's or a
+    // property's.
+    if ($place === NULL || $node === NULL) {
       return NULL;
     }
     // Every constraint the place declares, the ones its keywords state
     // among them: a keyword's refusal is worded by its constraint.
-    $constraints = $node instanceof Schema ? NodeFacts::constraints($node) : [];
+    $constraints = NodeFacts::constraints($node);
+    $definition = NULL;
     if ($others !== NULL) {
       $type = ['NotNull', 'PrimitiveType', 'ComplexData'];
       $ids = array_unique([...$ids, ...array_diff(array_map('strval', array_keys($constraints)), $others, $type)]);
@@ -418,6 +421,8 @@ final class DrupalCheckProvider implements CheckProvider {
       if (!array_key_exists($id, $constraints)) {
         continue;
       }
+      $definition ??= $place['location']->definition();
+      assert($definition !== NULL);
       foreach ($this->runner->check($id, $constraints[$id], $place['value'], $definition) as $violation) {
         if ((string) $violation->getPropertyPath() === '') {
           return ViolationMessage::of($violation);
@@ -470,9 +475,10 @@ final class DrupalCheckProvider implements CheckProvider {
     $ran = FALSE;
     $errors = [];
     $node = $location['node'];
-    $definition = $location['definition'];
     $frame = $location['frame'];
-    if ($definition !== NULL && DefinitionSchema::declares($node, $id)) {
+    // A place has a definition where it has a node, derived here, for the
+    // check alone.
+    if ($node !== NULL && DefinitionSchema::declares($node, $id)) {
       $options = DefinitionSchema::options($node, $id);
       if ($id === 'JsonSchema' && is_array($options['schema'] ?? NULL)) {
         $foreign = self::foreignChecks($options['schema']);
@@ -482,6 +488,8 @@ final class DrupalCheckProvider implements CheckProvider {
         }
       }
       $ran = TRUE;
+      $definition = $location['location']->definition();
+      assert($definition !== NULL);
       foreach ($this->runner->check($id, $options, $location['value'], $definition) as $violation) {
         $error = $this->error($request, $name, $violation, $definition);
         // One error per location, code and params; said() joins their

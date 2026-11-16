@@ -331,15 +331,20 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *
    * The node, its properties, its item, and the nodes a shape, a config
    * type and `each` hold, at every depth: what NodeDefinition::of()
-   * derives a definition from, and refuses for any other class.
+   * derives a definition from, and refuses for any other class. The one
+   * test of whether an entry may be node-first: at the seal (sealed())
+   * and for a shell a refinement composes (Surface::refineNested(),
+   * refineMounted()).
    *
    * @param \PortableSchema\Builder\Schema $node
    *   A built node.
    *
    * @return bool
    *   TRUE when each is of one of NodeDefinition::DERIVED.
+   *
+   * @internal
    */
-  private static function derivedClasses(Schema $node): bool {
+  public static function derivedClasses(Schema $node): bool {
     if (!in_array(DefinitionSchema::classOf($node), NodeDefinition::DERIVED, TRUE)) {
       return FALSE;
     }
@@ -671,33 +676,6 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    */
   public function isRuntimeAccess(string $name): bool {
     return $this->entries[$name]->runtimeAccess ?? FALSE;
-  }
-
-  /**
-   * Returns the map with every key's variants resolved to the chosen one.
-   *
-   * Only the shape: each key whose variants' deciding key holds a variant id in
-   * the given values takes that variant's advertised map, and nothing is
-   * refined. This is what reading a value needs — a form's extraction
-   * places the value by the shape the deciding key chose, and leaves
-   * narrowing to validation. A key whose deciding key holds nothing, or a
-   * value naming no variant, keeps the variants' placeholder.
-   *
-   * @param array $values
-   *   The values the deciding keys are read from.
-   *
-   * @return static
-   *   The map, or this same map when no variant was chosen.
-   */
-  public function withVariantsResolved(array $values): static {
-    $map = $this;
-    foreach ($this->entries as $entry) {
-      $chosen = $entry->variants?->chosen($values[$entry->variants->by] ?? NULL);
-      if ($chosen !== NULL) {
-        $map = $map->with($entry->withDefinition($entry->variants->definitionFor($chosen)));
-      }
-    }
-    return $map;
   }
 
   /**

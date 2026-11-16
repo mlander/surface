@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
@@ -11,7 +12,9 @@ use Drupal\surface\Attachment;
 use Drupal\surface\Collection;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\DefinitionMap;
 use Drupal\surface\Entry;
+use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\Tests\surface\HandCorpus\DoorSurfaces;
 use Drupal\Tests\surface\HandCorpus\HandSurfaces;
@@ -26,19 +29,25 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * A key that holds a child frame (an attachment, variants, a collection,
  * a mount: Entry::isShell()) composes its node of its own facts and the
- * nodes its child's entries hold (Entry::schema()). This test reads the
- * node of every shell of every pinned example surface
+ * nodes its child's entries hold: at the seal (Entry::sealed()), and in a
+ * refinement, which composes a refined shell of its own node and the
+ * refined child's entries' nodes (Surface::refineNested(),
+ * refineMounted(), DefinitionSchema::withProperties()). This test reads
+ * the node of every shell of every pinned example surface
  * (ExampleSurfacesTrait), built for the account and for no account, and
  * of every hand and door surface (HandSurfaces, DoorSurfaces) with the
  * other forms they are run in; then the same of each data surface refined
- * against each of its value sets by each kind of refiner, and of its map
- * with the variants those values choose resolved. For each, the composed
+ * against each of its value sets by each kind of refiner. For each, the
  * node and DefinitionSchema::of() of the shell's definition are the same
- * (DefinitionSchema::same()). The counts, by kind of shell and whether
- * the entry is the sealed one or a refinement's, are pinned.
+ * (DefinitionSchema::same()); and each refined shell's node is the node
+ * of the definition the refinement built before 2026-11-16
+ * (Attachment::mapOf(), Variants::definitionFor(), the mount's map),
+ * which the test builds again. The counts, by kind of shell and how the
+ * entry was made, are pinned.
  *
  * Decision: see
- * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
+ * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own
+ * and docs/decisions.md#a-refined-shell-is-composed-of-nodes.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -60,8 +69,10 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
     'collection, sealed' => 30,
     'mount, refined' => 75,
     'mount, sealed' => 2,
-    'variants, chosen, refined' => 978,
-    'variants, none chosen, refined' => 96,
+    // 978 and 96 until 2026-11-16: DefinitionMap::withVariantsResolved(),
+    // deleted with no caller (part 32.8), added 163 and 16 entries.
+    'variants, chosen, refined' => 815,
+    'variants, none chosen, refined' => 80,
     'variants, none chosen, sealed' => 43,
   ];
 
@@ -79,35 +90,72 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
   ];
 
   /**
-   * The refined shells, by kind and by what they were built from.
+   * The refined shells, by kind and by how the refinement made them.
    *
-   * "from the refined child": a refinement built the definition from a
-   * child and handed it on; "read": a refinement made the definition
-   * otherwise (a deep copy), so its properties are read.
+   * "composed": node-first, the node composed of the shell's own node and
+   * the refined child's entries' nodes; "the sealed source": a copy made
+   * for its ports, or the sealed entry itself, the child refined to
+   * nothing new; "with its definition": the definition built as before,
+   * handed with the composed node (a locked deciding key, a class no node
+   * derives a definition of, a mount its own refiners refined too: no
+   * example and no hand or door surface has one, RefinedShellTest builds
+   * each); "read": a definition read whole, a refiner's answer (a
+   * collection's Count) or a chosen variant with no keys, whose map reads
+   * as a value, built as before. Until 2026-11-16 the refinement built
+   * every one of them as a definition, and they were counted as "from the
+   * refined child" (76 attachments, 39 mounts, 815 chosen and 80 none
+   * chosen, the variants with no keys) and "read" (108 collections); the
+   * sealed source was not counted. No count fell.
    */
-  protected const FRAMED = [
-    'attachment, from the refined child' => 76,
+  protected const REFINED = [
+    'attachment, composed' => 76,
+    'attachment, the sealed source' => 30,
     'collection, read' => 108,
-    'mount, from the refined child' => 39,
-    'variants, chosen, from the refined child' => 815,
-    'variants, chosen, read' => 163,
-    'variants, none chosen, from the refined child' => 80,
-    'variants, none chosen, read' => 16,
+    'mount, composed' => 39,
+    'mount, the sealed source' => 36,
+    'variants, chosen, composed' => 815,
+    'variants, none chosen, read' => 80,
   ];
 
   /**
-   * The shells of the refined examples woken from serialize(), by kind.
+   * The refined shells checked against the definition built before, by kind.
+   *
+   * Each shell the refinement made anew: composed, or with its definition
+   * built as before (the variants with no keys).
+   */
+  protected const AS_BEFORE = [
+    'attachment, composed' => 76,
+    'mount, composed' => 39,
+    'variants, composed' => 815,
+    'variants, with its definition' => 80,
+  ];
+
+  /**
+   * The composed shells of the refined examples woken, and every shell.
+   *
+   * Each woken with the data surface that holds it, through serialize()
+   * and back: the properties whose node was its sealed child's entry's
+   * node ("kept") are again the very node the woken child's entry holds,
+   * and the rest ("its own") are nodes only the shell holds. Until
+   * 2026-11-16 a woken refined shell read its kept keys again (36, 134
+   * and 13: the "kept" counts), and a chosen variant with no keys (16) was
+   * counted with the composed ones; it is built as before.
    */
   protected const WOKEN = [
     'attachment' => 842,
-    'attachment, from the refined child, woken' => 23,
+    'attachment, composed, woken' => 23,
+    'attachment, composed, woken, its own' => 27,
+    'attachment, composed, woken, kept' => 36,
     'collection' => 490,
     'mount' => 15,
-    'mount, from the refined child, woken' => 13,
+    'mount, composed, woken' => 13,
+    'mount, composed, woken, its own' => 13,
+    'mount, composed, woken, kept' => 13,
     'variants, chosen' => 79,
-    'variants, chosen, from the refined child, woken' => 79,
+    'variants, chosen, composed, woken' => 79,
+    'variants, chosen, composed, woken, its own' => 23,
+    'variants, chosen, composed, woken, kept' => 134,
     'variants, none chosen' => 725,
-    'variants, none chosen, from the refined child, woken' => 16,
   ];
 
   /**
@@ -191,11 +239,10 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
     $differ = [];
     $reread = [];
     $counts = [];
-    $framed = [];
-    $unframed = [];
+    $made = [];
     foreach ($shells as $entry) {
       assert($entry instanceof Entry);
-      [$kind, $where] = $shells[$entry];
+      [$kind, $where, $how] = $shells[$entry];
       $counts["$kind, $where"] = ($counts["$kind, $where"] ?? 0) + 1;
       $composed = $entry->schema();
       $read = DefinitionSchema::of($entry->definition());
@@ -205,17 +252,167 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
       if ($where === 'sealed' && !static::holdsItsChildNodes($entry, $composed)) {
         $reread[] = sprintf('%s (%s)', $entry->name, $kind);
       }
-      if ($where === 'refined') {
-        static::framedBy($entry, $composed, $kind, $framed, $unframed);
+      if ($how !== NULL) {
+        $made["$kind, $how"] = ($made["$kind, $how"] ?? 0) + 1;
       }
     }
     ksort($counts);
-    ksort($framed);
-    $this->assertSame([], array_slice($differ, 0, 20), 'Every shell\'s composed node is the node its definition reads.');
+    ksort($made);
+    $this->assertSame([], array_slice($differ, 0, 20), 'Every shell\'s node is the node its definition reads.');
     $this->assertSame([], array_slice($reread, 0, 20), 'Every sealed shell holds the very nodes its child\'s entries hold.');
-    $this->assertSame([], array_slice($unframed, 0, 20), 'Every refined shell holds the very nodes of the refined child it was built from, and nothing of a sealed child it was not.');
     $this->assertSame(static::COUNTS, $counts, 'The shells read, by kind, sealed or refined.');
-    $this->assertSame(static::FRAMED, $framed, 'The refined shells, by kind and by what they were built from.');
+    $this->assertSame(static::REFINED, $made, 'The refined shells, by kind and by how the refinement made them.');
+  }
+
+  /**
+   * Tests every refined shell's node is what the refinement built before.
+   *
+   * Until 2026-11-16 a refinement built a refined shell's definition
+   * (Attachment::mapOf() of the key's definition and the refined child,
+   * Variants::definitionFor() of the chosen variant and the refined
+   * child, the mount's map with each refined structure's map written in
+   * it) and its node was read from that. For every refined shell of the
+   * pinned examples (each value set, each kind of refiner) and of the
+   * hand and door surfaces (each form, each case) that the refinement
+   * made anew, this test builds that definition again from the advertised
+   * entry and the child refined as the refinement refines it, and asserts
+   * DefinitionSchema::same() between its node and the refined entry's.
+   * A shell a parent ruled out is a refiner's answer, not built from the
+   * child, and is counted apart. A shell made with its definition holds
+   * the definition built as before: its node is held to that definition.
+   * Counted by kind and how it was made; and every composed node holds
+   * only nodes of a class a node derives a definition of, every other one
+   * the definition built as before.
+   */
+  public function testTheRefinedNodeIsWhatTheRefinementBuiltBefore(): void {
+    $counts = [];
+    $differ = [];
+    $check = function (SurfaceInterface $surface, array $values) use (&$counts, &$differ): void {
+      foreach (self::KINDS as $kind) {
+        try {
+          $refined = $surface->refine($values, $kind);
+        }
+        catch (\InvalidArgumentException | \LogicException) {
+          continue;
+        }
+        foreach ($refined->getDefinitions()->entries() as $name => $entry) {
+          $sealed = $surface->getDefinitions()->entry((string) $name);
+          if ($sealed === NULL || !$entry->isShell() || $entry->list !== NULL || $entry->sameSource($sealed)) {
+            continue;
+          }
+          $what = match (TRUE) {
+            $entry->attachment !== NULL => 'attachment',
+            $entry->variants !== NULL => 'variants',
+            default => 'mount',
+          };
+          if (NodeFacts::doesNotApply($entry->schema())) {
+            $counts["$what, ruled out"] = ($counts["$what, ruled out"] ?? 0) + 1;
+            continue;
+          }
+          $how = match (TRUE) {
+            $entry->isNodeFirst() => 'composed',
+            !DefinitionMap::derivedClasses($entry->schema()) => 'with its definition, a class no node derives',
+            default => 'with its definition',
+          };
+          $before = $entry->isNodeFirst() ? static::builtBefore($surface, $sealed, $values, $kind) : $entry->definition();
+          if ($before === NULL) {
+            $counts["$what, $how, its child not refined again here"] = ($counts["$what, $how, its child not refined again here"] ?? 0) + 1;
+            continue;
+          }
+          $counts["$what, $how"] = ($counts["$what, $how"] ?? 0) + 1;
+          // Texts are compared by what they say: the child is refined again
+          // here, and a refiner that makes a text makes another object.
+          $differences = static::nodeDifferences(DefinitionSchema::of($before), $entry->schema(), (string) $name, FALSE);
+          if ($differences !== []) {
+            $differ[] = sprintf('%s (%s, %s): %s', $name, $what, $how, implode('; ', array_slice($differences, 0, 3)));
+          }
+
+        }
+      }
+    };
+    foreach ($this->examples() as [, , $surface]) {
+      foreach ($this->valueSets($surface) as $values) {
+        $check($surface, $values);
+      }
+    }
+    foreach ([...HandSurfaces::NAMES, ...DoorSurfaces::NAMES] as $name) {
+      [$surface, $stored, $cases, $alternates] = in_array($name, HandSurfaces::NAMES, TRUE) ? HandSurfaces::build($name) : DoorSurfaces::build($name);
+      $forms = [[$surface, $stored]];
+      foreach ($alternates as $alternate) {
+        $forms[] = [$alternate[0], $alternate[1]];
+      }
+      foreach ($forms as [$form, $held]) {
+        $check($form, $held);
+        foreach ($cases as $inputs) {
+          $check($form, array_replace($held, $inputs));
+        }
+      }
+    }
+    ksort($counts);
+    $this->assertSame([], array_slice($differ, 0, 20), 'Every refined shell\'s node is the node of the definition the refinement built before.');
+    $this->assertSame(static::AS_BEFORE, $counts, 'The refined shells checked, by kind and how they were made.');
+  }
+
+  /**
+   * Builds the definition a refinement built before for a refined shell.
+   *
+   * Refines the key's child as Surface::refineNested() and
+   * refineMounted() do, against the values given (a data surface here
+   * reads no port and withholds no watched value), and builds the
+   * definition from the advertised entry and that child.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The data surface, as sealed.
+   * @param \Drupal\surface\Entry $entry
+   *   The key, as sealed.
+   * @param array $values
+   *   The values the data surface was refined against.
+   * @param int $kind
+   *   The kinds of refiner that ran.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The definition; NULL where the child refined here is the sealed one,
+   *   so the refinement found something this test does not see (a port,
+   *   a withheld value).
+   */
+  protected static function builtBefore(SurfaceInterface $surface, Entry $entry, array $values, int $kind): ?DataDefinitionInterface {
+    if ($entry->mounted !== []) {
+      $definition = NULL;
+      foreach ($entry->mounted as $path => $attachment) {
+        $parents = explode('.', (string) $path);
+        $child = $attachment->readFrom($values)->bound([]);
+        $value = NestedArray::getValue($values, [$entry->name, ...$parents]);
+        $answer = $child->refine(array_replace($child->getDefaultValues(), is_array($value) ? $value : []), $kind);
+        if ($answer === $child) {
+          continue;
+        }
+        $definition ??= Surface::deepClone($entry->definition());
+        $map = $definition;
+        foreach (array_slice($parents, 0, -1) as $parent) {
+          $map = $map instanceof MapDataDefinition ? $map->getPropertyDefinition($parent) : NULL;
+        }
+        $shell = $map instanceof MapDataDefinition ? $map->getPropertyDefinition((string) end($parents)) : NULL;
+        if ($map instanceof MapDataDefinition && $shell instanceof MapDataDefinition) {
+          $map->setPropertyDefinition((string) end($parents), Attachment::mapOf($shell, $answer));
+        }
+      }
+      return $definition;
+    }
+    if ($entry->variants !== NULL) {
+      $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? NULL);
+      if ($chosen === NULL) {
+        return NULL;
+      }
+      $child = $entry->variants->variant($chosen)->child;
+      $value = $entry->variants->held($chosen, $values[$entry->name] ?? NULL) ?? [];
+      return $entry->variants->definitionFor($chosen, $child->refine(array_replace($child->getDefaultValues(), $value), $kind));
+    }
+    assert($entry->attachment !== NULL);
+    $child = $entry->attachment->readFrom($values)->bound([]);
+    $value = $values[$entry->name] ?? NULL;
+    $refined = $child->refine(array_replace($child->getDefaultValues(), is_array($value) ? $value : []), $kind);
+    $definition = $entry->definition();
+    return $refined === $child || !$definition instanceof MapDataDefinition ? NULL : Attachment::mapOf($definition, $refined);
   }
 
   /**
@@ -366,22 +563,23 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a refined shell wakes with the children it was built from.
+   * Tests a refined shell wakes holding its child's very nodes.
    *
    * Every pinned example built for no account, refined against each of
-   * its value sets by every kind of refiner, through serialize() and
-   * back: each shell's node is the node its definition reads, and each
-   * refined child's key in it is a node that says what that child's entry
-   * says: a sealed entry is node-first and serializes its node alone, so
-   * the woken refined shell's definition holds a definition derived
-   * again, and the shell reads that key.
-   * And registration.step3 configure for 400 attendees, whose mounted
-   * compliance structure asks for 8 stewards: after the round trip its
-   * node says so, from the woken structure's own entry.
+   * its value sets by every kind of refiner, through serialize() and back,
+   * the whole refined data surface at once: each shell's node is the node
+   * its definition reads; and each shell the refinement composed holds,
+   * for every key its child left as it was, the very node the woken
+   * child's entry holds, as it did before the round trip (one serialized
+   * graph keeps object identity), so nothing is read twice; the keys the
+   * child refined are nodes the shell alone holds. And registration.step3
+   * configure for 400 attendees, whose mounted compliance structure asks
+   * for 8 stewards: after the round trip its node says so.
    */
   public function testRefinedShellWakesWithItsChildren(): void {
     $counts = [];
     $differ = [];
+    $lost = [];
     foreach ($this->examples() as [, , $surface]) {
       foreach ($this->valueSets($surface) as $values) {
         try {
@@ -389,6 +587,13 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
         }
         catch (\InvalidArgumentException | \LogicException) {
           continue;
+        }
+        $kept = [];
+        foreach ($refined->getDefinitions()->entries() as $name => $entry) {
+          $sealed = $surface->getDefinitions()->entry((string) $name);
+          if ($sealed !== NULL && $entry->isNodeFirst() && $entry->isShell() && !$entry->sameSource($sealed)) {
+            $kept[(string) $name] = static::keptNodes($entry, $values);
+          }
         }
         // The whole refined surface is woken, every class in it, which is
         // the thing under test.
@@ -403,27 +608,32 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
           if (!DefinitionSchema::same($entry->schema(), DefinitionSchema::of($entry->definition()))) {
             $differ[] = "$entry->name ($kind)";
           }
-          $framed = [];
-          $wrong = [];
-          static::framedBy($entry, $entry->schema(), $kind, $framed, $wrong);
-          // A node-first entry serializes its node alone, so a child's key
-          // wakes with a definition derived again, another object than the
-          // one the woken shell's definition holds: the shell reads that
-          // key (the same node, read), so what framedBy() finds wrong of
-          // the identity is not asked.
-          foreach ($framed as $what => $n) {
-            $counts["$what, woken"] = ($counts["$what, woken"] ?? 0) + $n;
+        }
+        foreach ($kept as $name => $before) {
+          $entry = $woken->getDefinitions()->entry($name);
+          assert($entry !== NULL);
+          $after = static::keptNodes($entry, $values);
+          $kind = $shells[$entry][0] ?? 'none';
+          $counts["$kind, composed, woken"] = ($counts["$kind, composed, woken"] ?? 0) + 1;
+          foreach ($before as $path => $same) {
+            $counts["$kind, composed, woken, " . ($same ? 'kept' : 'its own')] = ($counts["$kind, composed, woken, " . ($same ? 'kept' : 'its own')] ?? 0) + 1;
+            if ($same !== ($after[$path] ?? NULL)) {
+              $lost[] = "$name.$path ($kind)";
+            }
           }
         }
       }
     }
     ksort($counts);
     $this->assertSame([], array_slice($differ, 0, 20), 'Every woken shell\'s node is the node its definition reads.');
-    $this->assertSame(static::WOKEN, $counts, 'The woken shells, by kind and by what they were built from.');
+    $this->assertSame([], array_slice($lost, 0, 20), 'Every woken composed shell holds the very node of its woken child\'s entry where it did before.');
+    $this->assertSame(static::WOKEN, $counts, 'The woken shells, by kind.');
 
     $resources = $this->container->get('surface.resources');
     $surface = $resources->buildOperation(RegistrationStep3Resource::class, 'configure');
-    $refined = $surface->refine(array_replace($surface->getDefaultValues(), ['capacity' => 400]), SurfaceInterface::CODED);
+    $values = array_replace($surface->getDefaultValues(), ['capacity' => 400]);
+    $refined = $surface->refine($values, SurfaceInterface::CODED);
+    $before = static::keptNodes($refined->getDefinitions()->entry('third_party_settings'), $values);
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
     $woken = unserialize(serialize($refined))->getDefinitions()->entry('third_party_settings');
     $this->assertNotNull($woken);
@@ -431,59 +641,40 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
     $this->assertTrue(DefinitionSchema::same($node, DefinitionSchema::of($woken->definition())), 'The woken mount\'s node is the node its definition reads.');
     $stewards = DefinitionSchema::propertyNode(DefinitionSchema::propertyNode($node, 'surface_examples_compliance') ?? $node, 'stewards');
     $this->assertSame(8, $stewards?->get('minimum'), 'It asks for 8 stewards, as the refined structure says.');
-    $frames = (new \ReflectionProperty(Entry::class, 'frames'))->getValue($woken);
-    $this->assertIsArray($frames);
-    $this->assertTrue(DefinitionSchema::same($frames['surface_examples_compliance']->getDefinitions()->entry('stewards')?->schema(), $stewards), 'The stewards node says what the woken structure\'s own entry says.');
+    $this->assertFalse($before['surface_examples_compliance.stewards'] ?? TRUE, 'The stewards node is the refined structure\'s own.');
+    $this->assertSame($before, static::keptNodes($woken, $values), 'Woken, it holds the very node of each key the structure left as it was.');
   }
 
   /**
-   * Tallies what a refined shell's node was composed of.
-   *
-   * A refined shell made by Surface::refine() holds the refined children
-   * its definition was built from (Entry::withDefinition()): each of
-   * their keys is that key's entry's node, the very object. At a refined
-   * mount a structure no refined child stands for is read, never taken
-   * by name from the sealed structure.
+   * Tells, for each child's key in a composed shell, whether it is kept.
    *
    * @param \Drupal\surface\Entry $entry
-   *   The shell, refined or woken.
-   * @param \PortableSchema\Builder\Schema $node
-   *   Its node.
-   * @param string $kind
-   *   Its kind, as add() names it.
-   * @param array<string, int> $framed
-   *   The shells by kind and by what they were built from; gains this.
-   * @param string[] $wrong
-   *   What is not as the rule says; gains it.
+   *   A refined shell, node-first.
+   * @param array $values
+   *   The values its data surface was refined against, which choose a
+   *   variant.
+   *
+   * @return array<string, bool>
+   *   By the key's path below the shell (`<module>.<key>` at a mount):
+   *   TRUE where the shell's node holds the very node the sealed child's
+   *   entry holds, FALSE where it holds another.
    */
-  protected static function framedBy(Entry $entry, Schema $node, string $kind, array &$framed, array &$wrong): void {
-    $frames = (new \ReflectionProperty(Entry::class, 'frames'))->getValue($entry);
-    if ($frames === NULL) {
-      // A sealed entry the refinement kept as it was.
-      return;
-    }
-    $what = $frames === [] ? "$kind, read" : "$kind, from the refined child";
-    $framed[$what] = ($framed[$what] ?? 0) + 1;
+  protected static function keptNodes(Entry $entry, array $values): array {
+    $node = $entry->schema();
+    $frames = match (TRUE) {
+      $entry->attachment !== NULL => ['' => $entry->attachment->child],
+      $entry->variants !== NULL => ($chosen = $entry->variants->chosen($values[$entry->variants->by] ?? NULL)) === NULL ? [] : ['' => $entry->variants->variant($chosen)->child],
+      default => array_map(static fn ($attachment): SurfaceInterface => $attachment->child, $entry->mounted),
+    };
+    $kept = [];
     foreach ($frames as $path => $child) {
-      $map = $path === '' ? ($entry->list !== NULL ? DefinitionSchema::itemNode($node) : $node) : DefinitionSchema::propertyNode($node, (string) $path);
+      $map = $path === '' ? $node : DefinitionSchema::propertyNode($node, (string) $path);
       foreach ($child->getDefinitions()->entries() as $name => $child_entry) {
-        if ($map === NULL || DefinitionSchema::propertyNode($map, (string) $name) !== $child_entry->schema()) {
-          $wrong[] = "$entry->name.$path.$name ($kind): not the refined child's node";
-        }
+        $at = $path === '' ? (string) $name : "$path.$name";
+        $kept[$at] = $map !== NULL && DefinitionSchema::propertyNode($map, (string) $name) === $child_entry->schema();
       }
     }
-    foreach ($entry->mounted as $path => $attachment) {
-      if (isset($frames[$path])) {
-        continue;
-      }
-      $framed["$kind, a structure no refined child stands for"] = ($framed["$kind, a structure no refined child stands for"] ?? 0) + 1;
-      $map = DefinitionSchema::propertyNode($node, (string) $path);
-      foreach ($attachment->child->getDefinitions()->entries() as $name => $sealed) {
-        if ($map !== NULL && DefinitionSchema::propertyNode($map, (string) $name) === $sealed->schema()) {
-          $wrong[] = "$entry->name.$path.$name ($kind): the sealed structure's node, taken by name";
-        }
-      }
-    }
+    return $kept;
   }
 
   /**
@@ -534,15 +725,12 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
   protected function refined(SurfaceInterface $surface, array $values, \SplObjectStorage $shells): void {
     foreach (self::KINDS as $kind) {
       try {
-        static::collect($surface->refine($values, $kind), $shells, 'refined');
+        static::collect($surface->refine($values, $kind), $shells, 'refined', sealed: $surface);
       }
       catch (\InvalidArgumentException | \UnexpectedValueException | \LogicException) {
         // A value set no refinement takes, as a request is refused.
         continue;
       }
-    }
-    foreach ($surface->getDefinitions()->withVariantsResolved($values)->entries() as $entry) {
-      static::add($entry, $shells, 'refined');
     }
   }
 
@@ -560,15 +748,17 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
    *   Either 'sealed' or 'refined'.
    * @param array<int, true> $seen
    *   The data surfaces walked, by object id.
+   * @param \Drupal\surface\SurfaceInterface|null $sealed
+   *   For a refined data surface, the one it was refined from.
    */
-  protected static function collect(SurfaceInterface $surface, \SplObjectStorage $shells, string $where, array &$seen = []): void {
+  protected static function collect(SurfaceInterface $surface, \SplObjectStorage $shells, string $where, array &$seen = [], ?SurfaceInterface $sealed = NULL): void {
     if (isset($seen[spl_object_id($surface)])) {
       return;
     }
     $seen[spl_object_id($surface)] = TRUE;
     foreach ([$surface->getDefinitions(), $surface->getOutputDefinitions()] as $map) {
-      foreach ($map->entries() as $entry) {
-        static::add($entry, $shells, $where);
+      foreach ($map->entries() as $name => $entry) {
+        static::add($entry, $shells, $where, $sealed?->getDefinitions()->entry((string) $name));
         $children = [$entry->attachment?->settledChild(), $entry->list?->item->settledChild()];
         foreach ($entry->variants->variants ?? [] as $attachment) {
           $children[] = $attachment->settledChild();
@@ -592,8 +782,10 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
    *   The shells; gains it.
    * @param string $where
    *   Either 'sealed' or 'refined'.
+   * @param \Drupal\surface\Entry|null $sealed
+   *   For a refined entry, the entry it was refined from.
    */
-  protected static function add(Entry $entry, \SplObjectStorage $shells, string $where): void {
+  protected static function add(Entry $entry, \SplObjectStorage $shells, string $where, ?Entry $sealed = NULL): void {
     if (!$entry->isShell() || $shells->contains($entry)) {
       return;
     }
@@ -603,7 +795,16 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
       $entry->list !== NULL => 'collection',
       default => 'mount',
     };
-    $shells[$entry] = [$kind, $where];
+    // How a refinement made it, asked before anything reads its node: a
+    // definition-first entry handed a node holds it already.
+    $how = match (TRUE) {
+      $where !== 'refined' => NULL,
+      $sealed !== NULL && $entry->sameSource($sealed) => 'the sealed source',
+      $entry->isNodeFirst() => 'composed',
+      (new \ReflectionProperty(Entry::class, 'node'))->getValue($entry) !== NULL => 'with its definition',
+      default => 'read',
+    };
+    $shells[$entry] = [$kind, $where, $how];
   }
 
 }

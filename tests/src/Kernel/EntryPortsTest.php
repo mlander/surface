@@ -280,14 +280,15 @@ class EntryPortsTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a copy bound to its ports holds the sealed entry's definition.
+   * Tests a copy bound to its ports has the sealed entry's source.
    *
    * A sealed entry is node-first and derives its definition on the first
-   * ask. A copy bound to its container's values (Entry::readingFrom()) is
-   * handed the very definition object the entry holds, in either order of
-   * asking: the emitter tells a definition a refinement moved from a child
-   * whose ports were only rebound by identity. Then the document served
-   * for the same values is the same whether the build's definitions were
+   * ask. A copy bound to its container's values (Entry::readingFrom())
+   * holds the entry's very node, so it has the entry's source
+   * (Entry::sameSource()), which is what the emitter tells a key a
+   * refinement moved by, and making it derives nothing; a definition the
+   * entry derived already is the copy's too. Then the document served for
+   * the same values is the same whether the build's definitions were
    * asked before or not.
    */
   public function testPortCopyHoldsTheSealedDefinition(): void {
@@ -307,7 +308,11 @@ class EntryPortsTest extends SurfaceKernelTestBase {
     $this->assertNull($derived->getValue($limits), 'Nothing asked the sealed entry yet.');
     $copy = $limits->readingFrom($values);
     $this->assertNotNull($copy, 'limits reads a port.');
-    $this->assertSame($limits->definition(), $copy->definition(), 'The copy holds the entry\'s very definition.');
+    $this->assertNull($derived->getValue($limits), 'Making the copy derives nothing.');
+    $this->assertNull($derived->getValue($copy), 'Nor does the copy hold a definition.');
+    $this->assertSame($limits->schema(), $copy->schema(), 'The copy holds the entry\'s very node.');
+    $this->assertTrue($copy->sameSource($limits), 'The copy has the entry\'s source.');
+    $this->assertTrue($limits->sameSource($copy), 'Either way round.');
 
     // The entry asked first.
     $limits = $fresh()->getDefinitions()->entry('limits');

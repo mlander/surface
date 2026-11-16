@@ -161,7 +161,7 @@ grep:
 - `ContractEmitter::slot()` → `ContractEmitter::variants()`;
 - `DerivedVariantsInterface::slot()` → `DerivedVariantsInterface::variantsAt()`;
 - `DefinitionMetadata::setSlot()`, `slotOf()` → `setVariantsBy()`, `variantsBy()`;
-- `DefinitionMap::withSlotsResolved()` → `withVariantsResolved()`;
+- `DefinitionMap::withSlotsResolved()` → `withVariantsResolved()` (deleted 2026-11-16, part 32.8: no caller; see [A refined shell is composed of nodes](#a-refined-shell-is-composed-of-nodes));
 - `InputDefinitions::fromSlot()` → `InputDefinitions::fromVariants()`;
 - the glossary's Slot → Variants ([Variants, not slots](#variants-not-slots));
 - the decisions "A slot nothing fills" and "No OpenAPI discriminator on a slot" → [Variants nothing declares](#variants-nothing-declares) and [No OpenAPI discriminator for variants](#no-openapi-discriminator-for-variants), and the served contract's "A slot is a conditional" → [Variants are conditionals](served-contract.md#variants-are-conditionals);
@@ -4414,6 +4414,12 @@ changed.
   so a woken refined shell still finds its child's keys by identity.
   Without them it woke as a sealed one, and a mount took its keys by
   name from the sealed structure: a stale node, with assertions off.
+  (2026-11-16: superseded by [A refined shell is composed of
+  nodes](#a-refined-shell-is-composed-of-nodes). A refined shell is
+  node-first, its node composed of the refined child's entries' nodes;
+  it holds no children and serializes its node, which holds those nodes,
+  so a woken shell holds its woken child's very nodes. A refiner's answer
+  is read whole.)
 - **A wrong composition is caught at once.** With assertions on, the
   first ask of a shell reads its definition too and asserts the two the
   same, naming the cause (children other than the ones the definition
@@ -4897,7 +4903,12 @@ refusal, message or value changed.
   entry made for its ports (`readingFrom()`) holds the very definition
   the sealed entry derived, which it derives first: the emitter tells a
   definition a refinement moved from a child whose ports were only
-  rebound by identity, until it compares nodes (part 32.9). A node-first entry serializes its
+  rebound by identity, until it compares nodes (part 32.9).
+  (2026-11-16: superseded by [A refined shell is composed of
+  nodes](#a-refined-shell-is-composed-of-nodes). Refinement builds no
+  refined shell's definition and its readers ask none; the emitter
+  compares sources (`Entry::sameSource()`), so a port copy derives
+  nothing first.) A node-first entry serializes its
   node, which is larger than its definition, so a cached operation build
   is larger: 1.23 times over the development site's 171 operation builds.
   That is a matter for the build cache (slice 33).
@@ -4959,6 +4970,217 @@ refusal, message or value changed.
   where it was reported first before: the seal settles it when it
   composes the chosen key, after `assertGroupsAgree()`. Each error alone
   is unchanged.
+
+### A refined shell is composed of nodes
+
+Decided 2026-11-16. A refinement no longer builds the definition of a key
+that holds a child frame only to read a node from it, and the readers of
+a refined surface read nodes. Until now each refine pass built a map
+definition for every such key (`Attachment::mapOf()`,
+`Variants::definitionFor()`), which derived the definition of each of its
+child's entries, and the node was composed later by matching definitions
+by identity (`Entry::$frames`, `framed()`). No served byte, refusal,
+message or value changed: the review found two refusals the first build
+of this part had lost (a refined surface refined again, and a watched
+key that a definition answers for and its node does not hold), and both
+are restored; none known differs. Public shapes changed (below).
+
+- **What composes.** An attachment, chosen variants and a structure at a
+  mount, refined by their child, are node-first: the key's node is
+  composed of its own node and the refined child's entries' nodes by one
+  composer, `DefinitionSchema::withProperties()`. It replaces the node's
+  `properties` by the nodes given, in their order, and rewrites the map's
+  `required` list from each of them (`requiredOf()`, the rule
+  `around()` places a given node by, stated once); everything else the
+  node holds, its own keywords, checks and MODEL, is left as it is. It
+  writes a map's `properties` and `required` list alone: no `declared`,
+  no `constraints` member, no key's own `required`, no description,
+  default or mark. An attachment's node is composed over the sealed
+  entry's node; chosen variants over the node of the variants' shell,
+  read once from `Variants::$shell` and kept on `Variants`
+  (`shellNode()`, `DefinitionSchema::shell()`, never serialized); a
+  structure at a mount over the node at its path, put back in place by
+  `DefinitionSchema::withPropertyAt()`. The refined entry holds no
+  `frames`: `Entry::$frames`, its member in `__sleep()` and the identity
+  matching that served refined shells are gone. `composed()` and
+  `framed()` serve the seal and the entries it keeps definition-first
+  (`whole()`).
+- **The class rule.** A composed node that holds, at any depth, a node
+  of a class outside `NodeDefinition::DERIVED` cannot give a
+  definition. Such a shell keeps the definition built as before and is
+  handed the composed node with it (`Entry::withDefinition($definition,
+  $node)`), so it needs no identity matching either.
+  `DefinitionMap::derivedClasses()` is the one test, shared with the
+  seal. `RefinedShellTest::testTheClassRule` exercises it for an
+  attachment, chosen variants (open and locked), a shell inside a shell
+  and a mount; no example and no hand or door surface has one.
+- **Why a key with a refiner stays definition-first.** A refiner is
+  handed a definition and returns one, by a public contract that flips in
+  part 32.9. Its answer is the refined entry's source ("an entry holds
+  the form its source gave"), so the entry is definition-first and its
+  node is read from that answer whole on the first ask, as before
+  (`withDefinition()`; the entry marks that a refinement made its source,
+  `Entry::madeByRefinement()`, so a key that holds a child frame does not
+  compose of its sealed child). Reading the
+  answer back to call the entry node-first would only relabel it. That
+  holds for a parent's answer that a key does not apply, for a
+  collection's Count and for a mount's own refiners; a mount whose own
+  refiners and a structure in it both refined keeps the definition built
+  as before, handed with the node composed of the refiners' answer's own
+  facts and the structures' refined entries' nodes (`around()`), so no
+  key is read twice.
+- **The same source, and why a new source even for an unchanged child.**
+  The emitter tells a key a refinement moved from one it left alone
+  (`ContractEmitter::frame()`'s `$answered`, `$moved` and the two
+  `$ahead_of_time` tests, and `collection()`'s `$moved`). It compared
+  definition objects; it now asks `Entry::sameSource()`: the same form
+  and the very source object, the node of a node-first entry, the
+  definition of a definition-first one. Wherever the code before made a
+  new definition object for a key, the refinement makes a new entry with
+  a new source object, even where the result says the same: before,
+  every nested key the refinement touched got a new definition, chosen
+  variants even when the child was the very child. Keeping the sealed
+  entry where the result is `same()` would flip those answers and change
+  documents with no value change. A copy made for ports
+  (`readingFrom()`) holds its original's node, so it has the same source
+  with no definition derived: the eager derive of part 32.7 is gone.
+- **The narrowing check of a whole shell.** Before, the refined map was
+  held to `Narrowing::assertNarrows()` against the sealed one
+  (`refineNested()`, `refineMounted()`). For a composed shell it cannot
+  fire, case by case:
+  - An attachment: its own facts are the sealed node's, unchanged. Its
+    child is `Attachment::readFrom()->bound()`, the sealed child with
+    its ports bound (`withPorts()`, `throughPorts()`), whose refinement
+    replaces entries by name and never adds or drops one (`with()`), so
+    the keys are the sealed child's. Each key the child refined was
+    checked link by link when the child refined it (`runChain()`), the
+    first link against the advertised definition with its choices
+    narrowed, and the union of contributions writes values the
+    advertised list holds; the table `Narrowing` reads (required,
+    constraints, bounds, choices, a type's derivative) is transitive,
+    so each key's result narrows what the sealed shell holds. A key a
+    child shell holds is the same argument one level down; a key ruled
+    out narrows anything.
+  - Variants nothing has chosen: the check compares the placeholder
+    (`any`, its variants marked) with the chosen map, and reads the
+    required flag and constraints alone, which the placeholder takes
+    from the shell (`placeholder()`). It cannot refuse anything the
+    child's own checks do not.
+  - Variants whose deciding key is locked: the sealed node is the locked
+    variant's map, and values naming another variant would make the key
+    gain and lose keys, which only the whole-shell check refuses. Not
+    redundant: such a key keeps the definition built as before and the
+    check on it (`RefinedShellTest::testLockedVariantIsNotSwapped`).
+  - A structure at a mount with no refiner of the mount's own: the rest
+    of the mount is the sealed node's, the structure's own facts are
+    the sealed part's, and its keys were checked when the structure
+    refined them, as above. Where the mount's own refiners ran, their
+    answer was held to the check at `runChain()` and the whole-shell
+    check stands on the definition built as before, as it did: the
+    structure path adds nothing to what an alter's refiner wrote.
+  - A key a refinement made, refined again (a refined surface handed to
+    `refine()`): not redundant. Its child is the sealed one, so its keys
+    were checked against the sealed child's, not against what the first
+    refinement made of them, and only the whole-shell check sees a
+    second refinement give back what the first narrowed. A refined shell
+    therefore carries the same mark a refiner's answer carries
+    (`Entry::madeByRefinement()`, set by `withSchema($node, TRUE)` from
+    `refineNested()` and `refineMounted()`, copied by `readingFrom()`,
+    serialized only when set, so a sealed entry serializes as before and
+    a woken refined surface still refuses), and such a key takes the
+    definition built as before and the check, for an attachment, chosen
+    variants, a shell inside a shell and a mount alike
+    (`RefinedShellTest::testRefinedAgainKeepsTheNarrowingCheck`, fresh and
+    woken). A key the refinement left as it was has no mark and composes.
+    No production caller refines a refined surface; the rule keeps what
+    `SurfaceInterface::refine()` promised before.
+  The check stays for the definition-first arm (the class rule, a
+  locked variant, a mount its refiners refined, a key a refinement made
+  refined again). A widening refiner
+  inside the child of an attachment, of chosen variants, of a locked
+  variant, of a shell inside a shell and of a structure at a mount is
+  refused with the child's own message, the one the code before gave,
+  since the child's check fired first there too
+  (`RefinedShellTest::testWideningIsRefusedByTheChild`).
+- **Readers read nodes.** The accept's and the read tool's marks
+  (`Accepting::withoutWhatDoesNotApply()`, `DoesNotApply::leftOut()`)
+  read the refined key's node and walk below it with one walk,
+  `NodeFacts::ruledOutInside()`, which the validator uses too and which
+  reads each node's `properties` and its mark alone. The watched-value
+  walks (`Surface::ruledOutWatchedValues()`, `refusedWatchedValues()`)
+  find a watched place one way (`Surface::watchedPlaces()`): a
+  node-first key by its node, its definition asked only where
+  `WatchedValueCheckInterface::admits()` is handed one; a key whose
+  source is a definition by that definition, part by part, as before
+  and as `Location::below()` walks it, so a class that answers for a
+  property its node does not hold is marked and judged as before. The form's
+  extraction (`Extracting::nodeAt()`, `isOrphaned()`, `stillStands()`)
+  reads the node and hands it to the options service. A reference's
+  place (`References::placeAt()`) is an entry, its definition asked only
+  by `definitionAt()`. A place in the values (`Location`) holds its
+  entry and derives its definition when asked (`definition()`, for the
+  check provider). The contract panel's plain keys read their nodes.
+  The emitter's mark reads the node. `DefinitionMap::withVariantsResolved()`
+  had no caller and is deleted; `Variants::definitionFor()` is called by
+  the definition-first arm above and by the contract panel's rows.
+- **Public shapes changed.** `Location::$definition`, a public readonly
+  property, is now a method, `Location::definition()`, and the
+  constructor takes the holding entry and the path below it in place of
+  a definition; `Location` is now marked `@internal` (the check
+  provider's and the module's own readers'). `DoesNotApply::inside()`
+  (`@internal`) is deleted: its two callers read the node now.
+  `DefinitionMap::withVariantsResolved()` is deleted (no caller).
+  `Entry::withDefinition()`'s second parameter is `?Schema $node` in
+  place of `array $frames`, and `Entry::withSchema()` gains `bool
+  $refined`. `DefinitionMap::derivedClasses()` is public (`@internal`).
+  `Entry::madeByRefinement()` and `Entry::sameSource()` are new. Nothing
+  outside the module calls any of them.
+- **The proof.** Both sides recorded in one sitting (the base a copy of
+  the module before this part, loaded over the tree): 39,109 and 3,737
+  value cases, 684 and 364 documents, the narrowed, anonymous and
+  corpus records, and 8,344 door digests, none differs. The five
+  identity answers of the emitter, logged at each site by a copy of it
+  on each side over every operation, the corpus and the hand and door
+  surfaces: 288,689 answers, none differs (13,313 at `$answered`,
+  13,464 and 38 at `$moved`, 7,076 and 4,134 the same source at the
+  two `$ahead_of_time` tests, a port copy of a mount among them).
+  `ShellNodeCompositionTest` builds again, for every refined shell the
+  refinement made anew (76 attachments, 39 mounts, 815 chosen variants
+  composed, and 80 chosen variants with no keys, built as before), the
+  definition the refinement built before from the advertised entry and
+  the child refined again, and holds the node to it; and a woken
+  refined surface's composed shells hold again the very node of each
+  key their child left as it was (36, 134 and 13 keys, the ones a woken
+  refined shell read again before). Over the instrument's run (262
+  operations as two accounts) the definitions derived fall from 5,601 to
+  5,507: the marks refinement leaves (513), the refined shells it builds
+  (281 to 4, chosen variants with no keys) and the port copies (38) to
+  none or nearly, refinement and the watched-value check from 613 to
+  434; the emitter's first asks rise from 3,484 to 4,397, since it now
+  derives the definition of a node-first refined shell where it reads
+  its `required` flag and its widget (`frame()`, part 32.9), which the
+  refined shell held before. On `event.sales:read` a second read
+  derives nothing (A8.1); on the node operations the accept, the read
+  tool, `Variants::definitionFor()` and the refinement of shells derive
+  nothing (234 before). Timed against the base in one sitting (sum of
+  minimums over 171 operations, 8 rounds of fresh builds, after the fix
+  pass): the build, the first accept, validation, the first read, the
+  form and both emits within 2.1 percent either way.
+- **What costs more, and until when.** The second accept, the second read
+  and the projection are slower by minimum: 20.7, 24.7 and 6.4 percent,
+  1.5, 1.4 and 1.6 milliseconds in sums of 7.4, 5.9 and 25 milliseconds
+  over the 171 operations (about 24, 25 and 6 percent, 1.7, 1.5 and 1.5
+  milliseconds, in the first run). What is read: each refiner's answer's
+  node, `DefinitionSchema::of()` through `Entry::schema()` on the entry
+  `withDefinition()` made, on the first ask, which the code before never
+  read, since its readers asked `getDefinition()`; the accept's and the
+  read tool's marks and the composer (`nodesOf()`) ask every refined
+  key's node. No node is read twice. It ends when a refiner returns a
+  node (part 32.9). Woken builds are within 2.5 percent by minimum in
+  every phase, and the cache rows are the same size, byte for byte (no
+  refined surface is stored; a sealed row is unchanged). Accepted for
+  this part, nothing tuned; the cost proof at the end of slice 32
+  measures it again.
 
 ### A key that does not apply
 

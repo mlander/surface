@@ -54,7 +54,6 @@ door src/Drush/Generators/Resource/ResourceCode.php
 model src/Entry.php
 door src/Form/CompiledFlow.php
 door src/Form/ContractPanel.php
-door src/Form/Extracting.php
 door src/Form/SurfaceFieldTypeTrait.php
 door src/Form/SurfaceFormBuilderInterface.php
 pipeline src/Options/OptionsProvider.php

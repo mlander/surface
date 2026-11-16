@@ -721,15 +721,28 @@ the record of the rework that brought the module to the pattern.
   wherever the caller holds it, a definition only where the caller holds
   none, the memo keyed by the object handed
   (`docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node`).
-  `Entry::isNodeFirst()` is for the build's widget walk alone. A key
-  that holds a child frame (attached, variants, a collection, a mount:
-  `Entry::isShell()`) composes its node: its own facts read once
-  (`DefinitionSchema::around()`) around the nodes its child's entries
-  hold, the very objects, and a refined one around the refined child
-  `Surface::refineNested()` and `refineMounted()` hand it
-  (`Entry::withDefinition($definition, $frames)`);
-  `ShellNodeCompositionTest` proves it the read of the definition
-  (`docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own`). And
+  `Entry::isNodeFirst()` is for the build's widget walk, `Location` and
+  the watched-value walks in `Surface` (`watchedPlaces()`) alone. A key that holds a child frame (attached, variants, a
+  collection, a mount: `Entry::isShell()`) composes its node: its own
+  facts read once (`DefinitionSchema::around()`) around the nodes its
+  child's entries hold, the very objects. A refined one is composed by
+  the refinement (`Surface::refineNested()`, `refineMounted()`) of the
+  shell's own node and the refined child's entries' nodes
+  (`DefinitionSchema::withProperties()`; chosen variants over
+  `Variants::shellNode()`, a mount's part put back by `withPropertyAt()`)
+  and is node-first (`withSchema()`); where its node holds a class
+  `NodeDefinition` does not derive (`DefinitionMap::derivedClasses()`), a
+  deciding key is locked, or a mount's own refiners refined it too, the
+  definition is built as before and handed with that node
+  (`withDefinition($definition, $node)`). A key whose refiner chain ran
+  is definition-first, its node read from the refiner's answer whole. The
+  emitter tells a moved key by `Entry::sameSource()`, and a refinement
+  makes a new source wherever it made a new definition before, even for
+  an unchanged child; a port copy (`readingFrom()`) has its original's
+  source and derives nothing. `ShellNodeCompositionTest` proves each node
+  the read of its definition and of the definition the refinement built
+  before (`docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own`,
+  `docs/decisions.md#a-refined-shell-is-composed-of-nodes`). And
   a reader that walks down from an entry walks its node in step
   (`DefinitionSchema::propertyNode()`, `itemNode()`, `shapeNode()`). The
   rule it rests on: a definition an entry holds is never written after
@@ -742,9 +755,10 @@ the record of the rework that brought the module to the pattern.
   resolver is called and its caller handed a definition, and `Resolve` one for a
   resolved key's class), pinned by file (`DefinitionReadCallersTest`). Never in the build cache or a served
   document. `Location::definitionAt()` gives the check provider and the
-  form the node at a place (the entry's, walked in step; a place with a
-  definition and no node throws) beside the definition, the frame and
-  the value, and both refine each level once (`KeepsRefines`); never a
+  form the node at a place (the entry's, walked down; a place with a
+  definition and no node throws), the frame and the value, the
+  definition derived only when asked (`Location::definition()`), and
+  both refine each level once (`KeepsRefines`); never a
   node of the served document
   (`docs/decisions.md#a-definition-is-read-once-into-a-built-node`,
   `docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request`,
@@ -761,8 +775,10 @@ the record of the rework that brought the module to the pattern.
   `served($value, $dateOnly)`), never a definition. The accept and the
   kept walk carry no definition: the options service is handed the node
   (2026-11-15); the refinement's marks in
-  `withoutWhatDoesNotApply()` and `Outbound::project()` stay on
-  definitions until slice 33.
+  `withoutWhatDoesNotApply()` and the read tool's `DoesNotApply::leftOut()`
+  (which `Outbound::project()` calls) are read from the refined key's
+  node, walked below it by `NodeFacts::ruledOutInside()`, the one walk
+  the validator uses too (2026-11-16).
   `NodeFactsParityTest` holds each reader to its call
   (`docs/decisions.md#the-value-pipeline-reads-nodes`).
 - **The validator's checks and the document read nodes**: `Validating`
@@ -1164,8 +1180,8 @@ test errored or failed and every gate passed.
   cache; it orders classes slowest first.
 
 On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-16: the
-full lane takes 18m05s at the defaults (phpunit 17m10s) and the fast
-lane 11m03s (phpunit 10m52s). As of 2026-10-23, with a smaller suite, the
+full lane takes 18m21s at the defaults (phpunit 17m34s) and the fast
+lane 9m51s (phpunit 9m41s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1196,7 +1212,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2597, Assertions: 103103, Errors: 0, Failures: 0, Skipped: 3. Classes: 366 of 366, 8 at a time, browser classes 4.
+phpunit: Tests: 2616, Assertions: 103314, Errors: 0, Failures: 0, Skipped: 3. Classes: 367 of 367, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1220,8 +1236,8 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2483, Assertions: 98549, Deprecations: 811, Skipped: 3. Classes:
-313, 8 at a time.`; its deprecation count is per process, so it is
+`Tests: 2502, Assertions: 98760, Deprecations: 811, Skipped: 3. Classes:
+314, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
 

@@ -14,7 +14,6 @@ use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Options\SurfaceOptions;
-use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Entry;
 use Drupal\surface\Collection;
 use PortableSchema\Builder\Schema;
@@ -266,8 +265,10 @@ final class Accepting {
     $defaults = NULL;
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
-      $definition = $refined->getDefinition($name);
-      $paths = DoesNotApply::marks($definition) ? [''] : ($definition === NULL ? [] : DoesNotApply::inside($definition));
+      // The mark and what is ruled out below it are read from the
+      // refined key's node.
+      $node = $refined->getDefinitions()->entry($name)?->schema();
+      $paths = $node === NULL ? [] : (NodeFacts::doesNotApply($node) ? [''] : NodeFacts::ruledOutInside($node));
       foreach ($paths as $path) {
         $parents = $path === '' ? [$name] : [$name, ...explode('.', $path)];
         $defaults ??= $surface->getDefaultValues();

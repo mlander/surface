@@ -112,37 +112,49 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    * the seal makes every entry node-first (2026-11-15) one more object is
    * reached than the 1,097 before: example 3's compliance mount's license
    * key, held by a refined copy of the mount's derived definition beside
-   * the structure's own entry. It is the same key.
+   * the structure's own entry. It is the same key. Since a refinement
+   * composes a refined attachment's or chosen variants' node and the
+   * entry is node-first (2026-11-16, part 32.8), 101 fewer are reached,
+   * 997: the definitions of the keys a refined child refined, which only
+   * the refined shell's definition held before; the shell's definition is
+   * now derived from its node, with copies, which reach() does not walk,
+   * as for any node-first shell. Every definition compared is compared
+   * still.
    */
   protected const COUNTS = [
     'surfaces' => 327,
     'compared' => 793,
-    'reachable' => 1098,
+    'reachable' => 997,
   ];
 
   /**
    * The distinct definitions reachable, by class.
+   *
+   * 705, 43 and 350 before 2026-11-16: the 101 fewer of COUNTS.
    */
   protected const CLASSES = [
-    DataDefinition::class => 705,
-    ListDataDefinition::class => 43,
-    MapDataDefinition::class => 350,
+    DataDefinition::class => 647,
+    ListDataDefinition::class => 39,
+    MapDataDefinition::class => 311,
   ];
 
   /**
    * The distinct definitions reachable, by data type.
+   *
+   * Before 2026-11-16 (the 101 fewer of COUNTS): any 47, boolean 64,
+   * email 28, integer 122, list 43, map 350, string 404.
    */
   protected const TYPES = [
-    'any' => 47,
-    'boolean' => 64,
+    'any' => 31,
+    'boolean' => 58,
     'datetime_iso8601' => 7,
     'decimal' => 1,
-    'email' => 28,
+    'email' => 13,
     'float' => 14,
-    'integer' => 122,
-    'list' => 43,
-    'map' => 350,
-    'string' => 404,
+    'integer' => 114,
+    'list' => 39,
+    'map' => 311,
+    'string' => 391,
     'timestamp' => 5,
     'uri' => 13,
   ];

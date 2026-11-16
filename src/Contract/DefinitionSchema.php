@@ -495,6 +495,132 @@ final class DefinitionSchema {
   }
 
   /**
+   * Reads a map's own facts as the node of a map that holds no property.
+   *
+   * The node of() reads of the map once a child's keys fill it, its
+   * `properties` empty and no `required`: what withProperties() places a
+   * child's keys in. Its own keywords, its checks and MODEL are read from
+   * the definition alone: the shell of variants (Variants::$shell), which
+   * every chosen variant wears.
+   *
+   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-nodes.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The map, its own facts alone.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   Its built node, as a map's.
+   */
+  public static function shell(DataDefinitionInterface $definition): Schema {
+    return self::build($definition, '', [spl_object_id($definition) => TRUE], asMap: TRUE);
+  }
+
+  /**
+   * Places a map's properties in a map's node, by name, in the order given.
+   *
+   * The composer of a refined shell (an attachment, chosen variants, a
+   * structure at a mount): the shell's node with `properties` replaced by
+   * the nodes given, and its `required` list rewritten from each of them
+   * (requiredOf(), the rule around() places a node given by). Everything
+   * else the node holds (its own keywords, its checks, MODEL) is left as
+   * it is: nothing the node says of itself depends on its properties. No
+   * node given is read or copied: each is placed as it is. It writes no
+   * fact of a property and no own fact of the map: not `declared`, not
+   * the `constraints` member, not a key's own `required`.
+   *
+   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-nodes.
+   *
+   * @param \PortableSchema\Builder\Schema $shell
+   *   A map's node (one that holds `properties`): a sealed shell's, or
+   *   shell()'s.
+   * @param array<string, \PortableSchema\Builder\Schema> $properties
+   *   The nodes of its properties, by name, in their order: a refined
+   *   child's entries' nodes.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The node, the very nodes given under `properties`.
+   */
+  public static function withProperties(Schema $shell, array $properties): Schema {
+    assert(static::nodeIsMap($shell));
+    $required = static::requiredOf($properties);
+    $node = $shell->with('properties', $properties);
+    if ($required === [] || $node->has('required')) {
+      return $required === [] ? $node->without('required') : $node->with('required', $required);
+    }
+    // `required` comes right after `additionalProperties`, where build()
+    // writes it: what follows is taken off and put back after it.
+    $after = [];
+    $seen = FALSE;
+    foreach ($node->all() as $name => $value) {
+      if ($seen) {
+        $after[(string) $name] = $value;
+      }
+      $seen = $seen || $name === 'additionalProperties';
+    }
+    foreach (array_keys($after) as $name) {
+      $node = $node->without((string) $name);
+    }
+    $node = $node->with('required', $required);
+    foreach ($after as $name => $value) {
+      $node = $node->with((string) $name, $value);
+    }
+    return $node;
+  }
+
+  /**
+   * Replaces the node at a path of properties below a map's node.
+   *
+   * Each map on the way keeps its `required` list: the node placed is
+   * composed of the one it replaces (withProperties()), and says what
+   * that one says of itself, so whether it is required is unchanged.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A map's node: a mount's.
+   * @param string[] $parents
+   *   The property names from it to the place.
+   * @param \PortableSchema\Builder\Schema $with
+   *   The node to place there.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The node, the one at the path replaced.
+   */
+  public static function withPropertyAt(Schema $node, array $parents, Schema $with): Schema {
+    if ($parents === []) {
+      return $with;
+    }
+    $name = array_shift($parents);
+    $name = (string) $name;
+    $properties = $node->get('properties');
+    assert(is_array($properties) && ($properties[$name] ?? NULL) instanceof Schema);
+    $properties[$name] = static::withPropertyAt($properties[$name], $parents, $with);
+    return $node->with('properties', $properties);
+  }
+
+  /**
+   * Lists the properties a map requires, by their nodes.
+   *
+   * The one rule for the `required` list of a map composed of nodes: a
+   * property is listed where its own node says it is required
+   * (PropertySchema::required(): required, and neither a secret nor
+   * computed), as required() says it of a definition.
+   *
+   * @param array<string, \PortableSchema\Builder\Schema> $properties
+   *   The nodes of the map's properties, by name.
+   *
+   * @return string[]
+   *   The names, in the order given.
+   */
+  private static function requiredOf(array $properties): array {
+    $required = [];
+    foreach ($properties as $name => $node) {
+      if (PropertySchema::required($node)) {
+        $required[] = (string) $name;
+      }
+    }
+    return $required;
+  }
+
+  /**
    * Reads one definition into its built node.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -547,11 +673,14 @@ final class DefinitionSchema {
    *   The nodes of properties already read, by name (around()).
    * @param \PortableSchema\Builder\Schema|null $item
    *   The node of the item, already read (around()).
+   * @param bool $asMap
+   *   Whether a complex definition that holds no property is read as a
+   *   map all the same (shell()).
    *
    * @return \PortableSchema\Builder\Schema
    *   The built node.
    */
-  private static function build(DataDefinitionInterface $definition, string $path, array $above, array $given = [], ?Schema $item = NULL): Schema {
+  private static function build(DataDefinitionInterface $definition, string $path, array $above, array $given = [], ?Schema $item = NULL, bool $asMap = FALSE): Schema {
     $schema = static::describe($definition);
     if ($definition instanceof ListDataDefinitionInterface) {
       $list = [
@@ -561,8 +690,9 @@ final class DefinitionSchema {
       $schema = Schemas::defaults($schema, $list + static::keywords($definition, 'array'));
     }
     // A map that holds no property is read as a value, unless nodes are
-    // given for properties it does not hold (around()).
-    elseif ($definition instanceof ComplexDataDefinitionInterface && (static::isMap($definition) || $given !== [])) {
+    // given for properties it does not hold (around()), or it is read as
+    // a shell (shell()).
+    elseif ($definition instanceof ComplexDataDefinitionInterface && (static::isMap($definition) || $given !== [] || $asMap)) {
       $properties = [];
       $required = [];
       foreach ($definition->getPropertyDefinitions() as $name => $property) {
@@ -580,13 +710,12 @@ final class DefinitionSchema {
       // A node given for a property the map does not hold (a shell the
       // seal handed its own facts alone, around()) comes after the ones it
       // holds, in the order given, and its own node says whether it is
-      // required (PropertySchema::required(), rule for rule required()).
-      foreach (array_diff_key($given, $properties) as $name => $node) {
+      // required (requiredOf(), rule for rule required()).
+      $placed = array_diff_key($given, $properties);
+      foreach ($placed as $name => $node) {
         $properties[(string) $name] = $node;
-        if (PropertySchema::required($node)) {
-          $required[] = (string) $name;
-        }
       }
+      array_push($required, ...static::requiredOf($placed));
       $schema = Schemas::defaults($schema, [
         'type' => static::nullable('object', $definition),
         // Every key ruled out leaves an object still.

@@ -13,6 +13,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
@@ -122,7 +123,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
     $rows = [];
     foreach ($refined->getDefinitions()->entries() as $name => $entry) {
       $declared_entry = $declared->getDefinitions()->entry((string) $name);
-      $this->entryRows($rows, (string) $name, $entry, $declared_entry?->definition(), $refined, $values, $declared_entry);
+      $this->entryRows($rows, (string) $name, $entry, NULL, $refined, $values, $declared_entry);
     }
     $resource_id = $this->registry->getDefinition($served->resource)->id;
     $tool_id = 'surface:' . $resource_id . ':' . $served->operation->id;
@@ -243,7 +244,8 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    * @param \Drupal\surface\Entry $entry
    *   The key, refined.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $declared
-   *   The key as declared, or NULL.
+   *   The key as declared; NULL to derive it from $declared_entry where a
+   *   row reads it.
    * @param \Drupal\surface\SurfaceInterface $refined
    *   The refined data surface the key belongs to.
    * @param array $values
@@ -252,11 +254,29 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    *   The key's entry as declared, or NULL: a key's own facts are read
    *   from its node and the refined key's (Entry::schema()), a key that
    *   holds a child frame's too; the properties of such a key are read
-   *   from its definition.
+   *   from its definition, the only definitions asked.
    */
   protected function entryRows(array &$rows, string $path, Entry $entry, ?DataDefinitionInterface $declared, SurfaceInterface $refined, array $values, ?Entry $declared_entry = NULL): void {
-    $definition = $entry->definition();
     $depends = $refined->getDefinitions()->dependencies($entry->name);
+    $node = $entry->schema();
+    $declared_node = $declared_entry?->schema();
+    if ($entry->variants === NULL && $entry->list === NULL && $entry->attachment === NULL && !(DefinitionSchema::isComplex($node) && NodeFacts::properties($node) !== [])) {
+      // A plain key: its facts from its node, the refined key's and the
+      // declared key's.
+      $rows[] = $this->row(
+        $path,
+        NodeFacts::dataType($node),
+        NULL,
+        $refined->getDefault($entry->name),
+        $this->allows($node),
+        $depends,
+        $this->status(NULL, NULL, $entry->locked, $entry->isRefinedAtRuntime(), $declared_node, $node),
+        $node,
+      );
+      return;
+    }
+    $definition = $entry->definition();
+    $declared ??= $declared_entry?->definition();
     if ($entry->variants !== NULL) {
       $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? $refined->getDefault($entry->variants->by));
       $variants = [];
@@ -304,10 +324,8 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       $this->propertyRows($rows, $path, $definition, $declared instanceof ComplexDataDefinitionInterface ? $declared->getPropertyDefinitions() : [], $depends);
       return;
     }
-    // A plain key: its facts from its node, the refined key's and the
-    // declared key's.
-    $node = $entry->schema();
-    $declared_node = $declared_entry?->schema();
+    // A key no branch above draws: its facts from its node, as a plain
+    // key's.
     $rows[] = $this->row(
       $path,
       NodeFacts::dataType($node),
@@ -361,8 +379,8 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    *   The key's path.
    * @param string|\Stringable $type
    *   What kind of key it is.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key, refined.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
+   *   The key, refined; NULL where its node is given.
    * @param mixed $default
    *   Its default, or NULL for none.
    * @param string|\Stringable $allows
@@ -379,7 +397,8 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    * @return array
    *   The table row.
    */
-  protected function row(string $path, string|\Stringable $type, DataDefinitionInterface $definition, mixed $default, string|\Stringable $allows, array $depends, string|\Stringable $status, ?Schema $node = NULL): array {
+  protected function row(string $path, string|\Stringable $type, ?DataDefinitionInterface $definition, mixed $default, string|\Stringable $allows, array $depends, string|\Stringable $status, ?Schema $node = NULL): array {
+    assert($node !== NULL || $definition !== NULL);
     $label = $node === NULL ? $definition->getLabel() : NodeFacts::label($node);
     $required = $node === NULL ? $definition->isRequired() : NodeFacts::isRequired($node);
     return [
@@ -493,9 +512,10 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    * Says whether a key allows right now what it was declared to.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $declared
-   *   The key as declared.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $refined
-   *   The key now.
+   *   The key as declared; NULL where its node is given, or for a key not
+   *   declared.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $refined
+   *   The key now; NULL where its node is given.
    * @param bool $locked
    *   Whether the key is locked.
    * @param bool $runtime
@@ -509,12 +529,15 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The status.
    */
-  protected function status(?DataDefinitionInterface $declared, DataDefinitionInterface $refined, bool $locked, bool $runtime = FALSE, ?Schema $declared_node = NULL, ?Schema $refined_node = NULL): TranslatableMarkup {
+  protected function status(?DataDefinitionInterface $declared, ?DataDefinitionInterface $refined, bool $locked, bool $runtime = FALSE, ?Schema $declared_node = NULL, ?Schema $refined_node = NULL): TranslatableMarkup {
     if ($locked) {
       return $this->t('locked');
     }
-    $required = static fn (DataDefinitionInterface $definition, ?Schema $node): bool => $node === NULL ? (bool) $definition->isRequired() : NodeFacts::isRequired($node);
-    $narrowed = $declared !== NULL && ($required($declared, $declared_node) !== $required($refined, $refined_node) || $this->allows($declared_node ?? $declared) !== $this->allows($refined_node ?? $refined));
+    $now = $refined_node ?? $refined;
+    assert($now !== NULL);
+    $was = $declared_node ?? $declared;
+    $required = static fn (Schema|DataDefinitionInterface $key): bool => $key instanceof Schema ? NodeFacts::isRequired($key) : (bool) $key->isRequired();
+    $narrowed = $was !== NULL && ($required($was) !== $required($now) || $this->allows($was) !== $this->allows($now));
     return match (TRUE) {
       // Narrowed by whatever refines it, and a rule only the site applies
       // checks it too: which of them narrowed it is not known here.

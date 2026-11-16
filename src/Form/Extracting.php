@@ -10,10 +10,8 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Computed;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Pipeline\Accepting;
@@ -213,23 +211,26 @@ final class Extracting {
   }
 
   /**
-   * Reads a definition by key, or by dotted path to a mounted key.
+   * Reads a key's node, or the node at a dotted path to a mounted key.
+   *
+   * The key's entry's node (Entry::schema()), walked down its properties:
+   * a key's facts are read from its node, a refined key's too.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param string $path
    *   A key, or `third_party_settings.<module>.<key>`.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
-   *   The definition, or NULL when nothing is declared there.
+   * @return \PortableSchema\Builder\Schema|null
+   *   The node, or NULL when nothing is declared there.
    */
-  protected static function definitionAt(SurfaceInterface $surface, string $path): ?DataDefinitionInterface {
+  protected static function nodeAt(SurfaceInterface $surface, string $path): ?Schema {
     $parents = explode('.', $path);
-    $definition = $surface->getDefinition((string) array_shift($parents));
+    $node = $surface->getDefinitions()->entry((string) array_shift($parents))?->schema();
     foreach ($parents as $property) {
-      $definition = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($property) : NULL;
+      $node = $node !== NULL && DefinitionSchema::isComplex($node) ? DefinitionSchema::propertyNode($node, $property) : NULL;
     }
-    return $definition;
+    return $node;
   }
 
   /**
@@ -458,11 +459,11 @@ final class Extracting {
     if (!$moved) {
       return FALSE;
     }
-    $definition = static::definitionAt($refined, $name);
-    if ($definition === NULL || $definition instanceof ListDataDefinitionInterface || $refined->getDefinitions()->entry($name)?->variants !== NULL) {
+    $node = static::nodeAt($refined, $name);
+    if ($node === NULL || DefinitionSchema::isList($node) || $refined->getDefinitions()->entry($name)?->variants !== NULL) {
       return FALSE;
     }
-    $set = $this->options->resolve($definition);
+    $set = $this->options->resolve($node);
     return $set !== NULL && !$set->allows($value);
   }
 
@@ -554,11 +555,11 @@ final class Extracting {
     // alone. A list is left alone for the same reason the stale rule
     // leaves one alone: some items kept and others dropped is a shape
     // neither the widget nor this rule has.
-    $definition = static::definitionAt($refined, $name);
-    if ($definition === NULL || $definition instanceof ListDataDefinitionInterface || (!is_int($value) && !is_string($value))) {
+    $node = static::nodeAt($refined, $name);
+    if ($node === NULL || DefinitionSchema::isList($node) || (!is_int($value) && !is_string($value))) {
       return TRUE;
     }
-    $set = $this->options->resolve($definition);
+    $set = $this->options->resolve($node);
     return $set === NULL || $set->allows($value);
   }
 

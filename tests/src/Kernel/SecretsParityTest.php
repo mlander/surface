@@ -265,13 +265,13 @@ class SecretsParityTest extends SurfaceKernelTestBase {
           foreach ($paths as $path) {
             $pointer = static::pointerOf($path);
             $location = Location::definitionAt($surface, $values, $pointer);
-            if ($location?->definition === NULL) {
+            if ($location?->definition() === NULL) {
               $counts['no definition']++;
               continue;
             }
             $counts['places']++;
             $said = Secrets::at($document, $pointer);
-            $secret = DefinitionMetadata::isSecret($location->definition);
+            $secret = DefinitionMetadata::isSecret($location->definition());
             $counts['secret'] += (int) $secret;
             if ($said === $secret) {
               $counts['agree']++;
@@ -393,7 +393,7 @@ class SecretsParityTest extends SurfaceKernelTestBase {
     $document = static::schemaOf($emitter->emitFull($surface, 'test.variants', 'configure')->document['schema']);
     $values = ['kind' => 'a', 'settings' => ['key' => 'x']];
     $this->assertTrue(Secrets::at($document, '/settings/key'), 'The document says secret in any branch.');
-    $this->assertFalse(DefinitionMetadata::isSecret(Location::definitionAt($surface, $values, '/settings/key')->definition), 'The chosen variant says plain.');
+    $this->assertFalse(DefinitionMetadata::isSecret(Location::definitionAt($surface, $values, '/settings/key')->definition()), 'The chosen variant says plain.');
     $this->assertSame('another variant', static::family($surface, $values, '/settings/key', TRUE));
     $this->assertSame(['settings' => ['key' => TRUE]], Secrets::within($document));
     $this->assertSame(Outbound::secrets($surface), Secrets::within($document));
@@ -427,7 +427,7 @@ class SecretsParityTest extends SurfaceKernelTestBase {
     $values = ['layout' => 'vault', 'panels' => ['pin' => '1234']];
     $full = static::schemaOf($emitter->emitFull($poster, 'resource_test.poster', 'configure')->document['schema']);
     $this->assertFalse(Secrets::at($full, '/panels/pin'), 'The full document names the layouts alone.');
-    $this->assertTrue(DefinitionMetadata::isSecret(Location::definitionAt($poster, $values, '/panels/pin')->definition), 'The vault, built, says secret.');
+    $this->assertTrue(DefinitionMetadata::isSecret(Location::definitionAt($poster, $values, '/panels/pin')->definition()), 'The vault, built, says secret.');
     $this->assertSame('not in the document', static::family($poster, $values, '/panels/pin', FALSE));
     $this->assertSame(['panels' => ['pin' => TRUE]], Outbound::secrets($poster));
     $this->assertSame('not in the document', static::treeFamily(Secrets::within($full), Outbound::secrets($poster)));

@@ -22,10 +22,11 @@ use Symfony\Component\HttpFoundation\RequestStack;
 /**
  * Tests that reading a definition into a node is a pure function.
  *
- * DefinitionSchema::of(), head(), around() and describe(), every static
- * method of the module they reach and the constructor of every module
- * class they make (`new X(`), are read from their source, and so is every
- * reader of a node (NodeFacts) and what it reaches. None may:
+ * DefinitionSchema::of(), head(), around(), shell(), describe() and the
+ * composer of a refined shell (withProperties(), withPropertyAt()), every
+ * static method of the module they reach and the constructor of every
+ * module class they make (`new X(`), are read from their source, and so
+ * is every reader of a node (NodeFacts) and what it reaches. None may:
  * - use `$this` (a constructor may), or be an instance method (but a
  *   constructor);
  * - take a service by its type;
@@ -62,7 +63,18 @@ class DefinitionReadIsPureTest extends UnitTestCase {
   /**
    * The read's entry points.
    */
-  protected const ENTRIES = ['of', 'head', 'around', 'describe', 'propertyNode', 'itemNode', 'shapeNode'];
+  protected const ENTRIES = [
+    'of',
+    'head',
+    'around',
+    'shell',
+    'withProperties',
+    'withPropertyAt',
+    'describe',
+    'propertyNode',
+    'itemNode',
+    'shapeNode',
+  ];
 
   /**
    * How many methods and constructors the read reaches, entry points too.
@@ -78,20 +90,26 @@ class DefinitionReadIsPureTest extends UnitTestCase {
    * (part 32.5); 65 since around() places a node given for a property the
    * map does not hold, the seal's shells, and asks its node whether it is
    * required (PropertySchema::required(), with NodeFacts::isRequired(),
-   * Secrets::marked() and NodeFacts::compute()), 2026-11-15.
+   * Secrets::marked() and NodeFacts::compute()), 2026-11-15; 70 with the
+   * composer of a refined shell and what it asks (withProperties(),
+   * withPropertyAt(), shell(), the requiredOf() it shares with around(),
+   * and nodeIsMap()), part 32.8.
    */
-  protected const REACHED = 65;
+  protected const REACHED = 70;
 
   /**
    * How many methods the node readers reach, their entry points too.
    *
-   * NodeFacts's 36 public methods, and the 6 readers of DefinitionSchema
+   * NodeFacts's 37 public methods, and the 6 readers of DefinitionSchema
    * and Secrets they reach: model(), isLeaf(), isList(), classOf(),
-   * implied() and Secrets::marked(). 20 before the validator's checks and
-   * the document's classes read nodes, with 14 public methods; 41 before
-   * NodeFacts::derived(), the merged constraint list (part 32.5).
+   * implied() and Secrets::marked(). 20 before the validator's
+   * checks and the document's classes read nodes, with 14 public methods;
+   * 41 before NodeFacts::derived(), the merged constraint list (part
+   * 32.5); 42 before NodeFacts::ruledOutInside(), the one walk of what a
+   * refinement ruled out below a key, which reads `properties` and the
+   * mark alone (part 32.8).
    */
-  protected const NODE_READERS_REACHED = 42;
+  protected const NODE_READERS_REACHED = 43;
 
   /**
    * The types a reached method may not take: services and the request.

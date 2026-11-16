@@ -11,6 +11,7 @@ use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Resource\OperationContext;
@@ -146,8 +147,8 @@ class DoesNotApplyTest extends SurfaceKernelTestBase {
     $this->assertFalse(DoesNotApply::marks($post->getDefinition('address')));
     $this->assertTrue(DoesNotApply::marks($post->getDefinition('schedule')), 'Variants are ruled out like any key.');
     $this->assertSame(['surface_resource_test.signature'], $notice->getDefinitions()->entry('third_party_settings')->mayNotApply(), 'A mounted key, by its path inside the mount.');
-    $this->assertSame(['surface_resource_test.signature'], DoesNotApply::inside($post->getDefinition('third_party_settings')));
-    $this->assertSame([], DoesNotApply::inside($email->getDefinition('third_party_settings')));
+    $this->assertSame(['surface_resource_test.signature'], NodeFacts::ruledOutInside($post->getDefinitions()->entry('third_party_settings')->schema()));
+    $this->assertSame([], NodeFacts::ruledOutInside($email->getDefinitions()->entry('third_party_settings')->schema()));
 
     $narrows = $this->built(NarrowsAttachedStructure::class);
     $this->expectException(\LogicException::class);

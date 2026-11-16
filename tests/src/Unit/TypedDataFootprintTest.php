@@ -146,9 +146,11 @@ class TypedDataFootprintTest extends UnitTestCase {
    * 2026-11-15 to 129: the options service takes a key's node, so the
    * accept hands a value's node alone and walks no definition beside it:
    * Pipeline/Accepting.php and Pipeline/SurfacePipeline.php name no Typed
-   * Data.
+   * Data. Lowered on 2026-11-16 to 128: the form's extraction reads a
+   * refined key's node and hands it to the options service, so
+   * Form/Extracting.php names no Typed Data.
    */
-  public const OUTSIDE_THE_EDGES = 129;
+  public const OUTSIDE_THE_EDGES = 128;
 
   /**
    * Finds the files that use Typed Data.

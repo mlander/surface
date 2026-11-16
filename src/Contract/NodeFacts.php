@@ -413,6 +413,49 @@ final class NodeFacts {
   }
 
   /**
+   * Lists the ruled-out properties inside a map, by dotted path.
+   *
+   * The one walk of what a refinement ruled out below a key, for the
+   * accept, the validator and the read tool's values: a key an alter
+   * mounted is a property of the mount, refined one property at a time,
+   * and a child's key a property of its shell, so each is ruled out
+   * inside the map rather than at the top of the frame. A property ruled
+   * out is listed and not walked into.
+   *
+   * It reads each node's `properties` and its MODEL's mark alone. A node
+   * that holds `properties` was read from a complex definition and never
+   * from a list's: DefinitionSchema::build() writes `properties` only in
+   * its branch for a complex definition that is no list, and a list's
+   * node holds `items`. So a list's, a value's and a boolean node give
+   * none, as the walk on definitions it replaces gave none.
+   *
+   * @param \PortableSchema\Builder\Schema $node
+   *   A key's node, as refined.
+   * @param string $path
+   *   The path so far, with its trailing dot.
+   *
+   * @return string[]
+   *   The dotted paths below the key, in the order of its properties;
+   *   none for a node that holds no `properties`.
+   */
+  public static function ruledOutInside(Schema $node, string $path = ''): array {
+    $properties = $node->isBoolean() ? NULL : $node->get('properties');
+    $paths = [];
+    foreach (is_array($properties) ? $properties : [] as $name => $property) {
+      if (!$property instanceof Schema) {
+        continue;
+      }
+      $name = $path . $name;
+      if (static::doesNotApply($property)) {
+        $paths[] = $name;
+        continue;
+      }
+      array_push($paths, ...static::ruledOutInside($property, $name . '.'));
+    }
+    return $paths;
+  }
+
+  /**
    * Gets what a computed key is computed from.
    *
    * Stands for Computed::of(), the metadata getter computedOf().
