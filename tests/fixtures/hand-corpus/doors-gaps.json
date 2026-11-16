@@ -3,19 +3,19 @@
   "rows": 330,
   "digests": {
     "plain | door": {
-      "fromSurface": "29c8a579b942",
-      "fromSurface stored": "29c8a579b942",
-      "fromSurface narrowing": "29c8a579b942",
-      "withLookups": "29c8a579b942",
-      "withDependencies": "bcb1e2c93695",
-      "withStored": "fabaca3491cd",
-      "shapeOf": "234c578170c1",
-      "withoutRequired": "29c8a579b942",
-      "outputFromInput": "15ba3aa7b4a3",
+      "fromSurface": "96799a65c00d",
+      "fromSurface stored": "96799a65c00d",
+      "fromSurface narrowing": "96799a65c00d",
+      "withLookups": "96799a65c00d",
+      "withDependencies": "4efaecea135a",
+      "withStored": "718edffbafc4",
+      "shapeOf": "66ee14cc5286",
+      "withoutRequired": "96799a65c00d",
+      "outputFromInput": "09f3cbbad2f8",
       "secrets": "fee1b7110371",
       "outputs": "39347ff402b6",
-      "values update": "8bc6a6d80b82",
-      "values create": "5337cc8175dc",
+      "values update": "cff8c0c9eec9",
+      "values create": "d7a04c580e7e",
       "stored": "5bbd59081b80",
       "secretKeys": "050243622825",
       "config schema": "afe1073d6041",
@@ -28,52 +28,52 @@
       "flow placed grouped": "931d6cb213ac"
     },
     "plain | values": {
-      "stored": "9c9d60579e7c",
-      "gate narrow": "ece80d7e3cab",
-      "gate open": "81c75cd2cc98",
-      "sc b": "fafc80212690",
-      "sc0 b": "418650ae7271",
-      "ss b": "978ccf73593e",
-      "narrowed kept": "bdaf2844c566",
-      "stale sent": "9954afa2dc64",
-      "stale changed": "86602a063f9a",
-      "src long": "d14bd67d5055",
-      "vault one left": "c496aa11d967",
-      "vault moved": "551f7a39d1f3",
-      "coll two": "f78dc0c06a45",
-      "tags x": "925b41107d0b",
-      "gi 2": "d1fe90eaa8fc",
-      "gi text": "007355f0aae9",
-      "gb true": "5e0a483a5484",
-      "gb one": "66cf74b9a9f1"
+      "stored": "92df108259ac",
+      "gate narrow": "0c155a031fab",
+      "gate open": "b2a28ac83362",
+      "sc b": "1842066da708",
+      "sc0 b": "3f93194aee78",
+      "ss b": "05a8556eba68",
+      "narrowed kept": "24b145b98a66",
+      "stale sent": "6645ed3809f9",
+      "stale changed": "fb5277c25332",
+      "src long": "70ca079d21fa",
+      "vault one left": "fd8e7c59f92b",
+      "vault moved": "72691205ce1e",
+      "coll two": "e585bf455660",
+      "tags x": "2851d51b3c01",
+      "gi 2": "e559050fad60",
+      "gi text": "ea35553ddff5",
+      "gb true": "2c59cc1af193",
+      "gb one": "8ead3e69f3d8"
     },
     "plain | key": {
-      "gate": "f228a06be48b",
-      "sc": "b6147e9eeb08",
-      "sc0": "86b9fdc81028",
-      "ss": "7d506c183294",
-      "stc": "92ed991a0a2d",
-      "stc0": "54dceb21c6dd",
-      "sts": "bcde3b993bda",
-      "src": "376791126d32",
-      "comp0": "e42aae63070b",
-      "vault": "93bf86beef12",
-      "coll": "e454db2b01ee",
-      "arranged": "81c507582b79",
-      "accent": "d5aa284c8f47",
-      "tags": "1d87505218be",
-      "dep_tags": "d1783ad61cc4",
-      "tags2": "e5ae2cae6a9a",
-      "dep_tags2": "48a4937c3959",
-      "gio": "867bff9a8c2c",
-      "level": "f4c217c0ecd8",
-      "per_level": "98fb0277ecfb",
-      "flag": "8760d264dfa7",
-      "per_flag": "e53221292d09",
-      "gi": "50805b8bdd19",
-      "gb": "9bb5cf9f23e0",
-      "dep_gi": "8c6f28e2b335",
-      "dep_gb": "17b3c7b31cb9"
+      "gate": "e47708c96e9e",
+      "sc": "6fd2d63dc7da",
+      "sc0": "1ea87c2bef8c",
+      "ss": "9c2d99f1959c",
+      "stc": "9e20f2a2812e",
+      "stc0": "3eb1e9d25224",
+      "sts": "aea91556381d",
+      "src": "2385ac523e0e",
+      "comp0": "29280bb10323",
+      "vault": "1ae5cc87526a",
+      "coll": "a87853f180b6",
+      "arranged": "98097f1e5db7",
+      "accent": "db651502488e",
+      "tags": "f708d391d2f8",
+      "dep_tags": "e740d8eb372e",
+      "tags2": "4ccdde34512a",
+      "dep_tags2": "7c9fcdcce1b4",
+      "gio": "60e473e58b04",
+      "level": "a064f6f690a4",
+      "per_level": "7688f2523cec",
+      "flag": "3a348664a816",
+      "per_flag": "dac7a1ee2bef",
+      "gi": "0c1570e66eb7",
+      "gb": "7da9680304c9",
+      "dep_gi": "4e525bbea9f0",
+      "dep_gb": "cca7dddcac49"
     },
     "plain | path": {
       "nope": "1bf169f7d887",
@@ -93,14 +93,14 @@
       "per_level.high": "00e81a4abdff",
       "per_flag.off_note": "a54016b0cd9b",
       "per_flag.on_note": "3c3dd443d7d2",
-      "gate": "fa9c9db4397d",
-      "sc": "0f62242a1782",
-      "sc0": "13ea79a50083",
+      "gate": "d700db7069b1",
+      "sc": "f06fa0d10617",
+      "sc0": "d329ce41b02f",
       "ss": "511844d57612",
-      "stc": "8e45a3903d3e",
-      "stc0": "4b2516532ee7",
+      "stc": "b4e3ab4a61b8",
+      "stc0": "7d3dbb9a2a93",
       "sts": "9f937d990463",
-      "src": "10f953e38ee8",
+      "src": "a4ebf254e2da",
       "comp0": "dbef41726268",
       "vault": "4a9a6f31e1b4",
       "vault.0": "7d0590746088",
@@ -108,23 +108,23 @@
       "coll": "b7cf9539862b",
       "coll.0": "07df4235dfc5",
       "coll.0.nope": "408cccd25a0c",
-      "arranged": "ace4c1ef7cd9",
-      "accent": "5ef15f0ae1d8",
-      "tags": "b7cf54187b01",
+      "arranged": "ff8fbc79a0d1",
+      "accent": "6e2d1fb61589",
+      "tags": "e194306a6caf",
       "tags.0": "416835392aa9",
-      "dep_tags": "372e79b9b8a3",
-      "tags2": "e9c2dd798afc",
+      "dep_tags": "85b6bef35797",
+      "tags2": "3a2bfa3b6d1d",
       "tags2.0": "7ba73a4bf76d",
-      "dep_tags2": "d0f35b1f0a16",
-      "gio": "fcf8f5c3c475",
-      "level": "79fbb8002ce8",
+      "dep_tags2": "cd5da2e25742",
+      "gio": "9a55b8b61f06",
+      "level": "2679d925a6c0",
       "per_level": "cbd4b51ecced",
-      "flag": "d797b0049751",
+      "flag": "150eae363463",
       "per_flag": "e3d5165a36c0",
-      "gi": "b57f5b958318",
-      "gb": "7ed5608e744f",
-      "dep_gi": "29060915cc88",
-      "dep_gb": "f382cfaa4bcb"
+      "gi": "56dd41148df9",
+      "gb": "0f54d7f75dc6",
+      "dep_gi": "337b6f491d29",
+      "dep_gb": "4dbc98d9cc6c"
     },
     "plain | nodes": {
       "nope": "85cf5ad1bdc5",
@@ -178,19 +178,19 @@
       "dep_gb": "85cf5ad1bdc5"
     },
     "texts | door": {
-      "fromSurface": "29c8a579b942",
-      "fromSurface stored": "29c8a579b942",
-      "fromSurface narrowing": "29c8a579b942",
-      "withLookups": "29c8a579b942",
-      "withDependencies": "bcb1e2c93695",
-      "withStored": "ad757e6b5ceb",
-      "shapeOf": "234c578170c1",
-      "withoutRequired": "29c8a579b942",
-      "outputFromInput": "15ba3aa7b4a3",
+      "fromSurface": "96799a65c00d",
+      "fromSurface stored": "96799a65c00d",
+      "fromSurface narrowing": "96799a65c00d",
+      "withLookups": "96799a65c00d",
+      "withDependencies": "4efaecea135a",
+      "withStored": "abf1dceb2e0b",
+      "shapeOf": "66ee14cc5286",
+      "withoutRequired": "96799a65c00d",
+      "outputFromInput": "09f3cbbad2f8",
       "secrets": "fee1b7110371",
       "outputs": "39347ff402b6",
-      "values update": "6a55ce944431",
-      "values create": "5337cc8175dc",
+      "values update": "a3e6e43a69eb",
+      "values create": "d7a04c580e7e",
       "stored": "5ee771a166c3",
       "secretKeys": "050243622825",
       "config schema": "afe1073d6041",
@@ -203,52 +203,52 @@
       "flow placed grouped": "931d6cb213ac"
     },
     "texts | values": {
-      "stored": "2c670d02b372",
-      "gate narrow": "ece80d7e3cab",
-      "gate open": "81c75cd2cc98",
-      "sc b": "fafc80212690",
-      "sc0 b": "418650ae7271",
-      "ss b": "978ccf73593e",
-      "narrowed kept": "bdaf2844c566",
-      "stale sent": "9954afa2dc64",
-      "stale changed": "86602a063f9a",
-      "src long": "d14bd67d5055",
-      "vault one left": "c496aa11d967",
-      "vault moved": "551f7a39d1f3",
-      "coll two": "f78dc0c06a45",
-      "tags x": "925b41107d0b",
-      "gi 2": "d1fe90eaa8fc",
-      "gi text": "007355f0aae9",
-      "gb true": "5e0a483a5484",
-      "gb one": "66cf74b9a9f1"
+      "stored": "9ebe6ea870a0",
+      "gate narrow": "0c155a031fab",
+      "gate open": "b2a28ac83362",
+      "sc b": "1842066da708",
+      "sc0 b": "3f93194aee78",
+      "ss b": "05a8556eba68",
+      "narrowed kept": "24b145b98a66",
+      "stale sent": "6645ed3809f9",
+      "stale changed": "fb5277c25332",
+      "src long": "70ca079d21fa",
+      "vault one left": "fd8e7c59f92b",
+      "vault moved": "72691205ce1e",
+      "coll two": "e585bf455660",
+      "tags x": "2851d51b3c01",
+      "gi 2": "e559050fad60",
+      "gi text": "ea35553ddff5",
+      "gb true": "2c59cc1af193",
+      "gb one": "8ead3e69f3d8"
     },
     "texts | key": {
-      "gate": "f228a06be48b",
-      "sc": "b6147e9eeb08",
-      "sc0": "86b9fdc81028",
-      "ss": "7d506c183294",
-      "stc": "92ed991a0a2d",
-      "stc0": "54dceb21c6dd",
-      "sts": "bcde3b993bda",
-      "src": "376791126d32",
-      "comp0": "e42aae63070b",
-      "vault": "93bf86beef12",
-      "coll": "e454db2b01ee",
-      "arranged": "81c507582b79",
-      "accent": "d5aa284c8f47",
-      "tags": "1d87505218be",
-      "dep_tags": "d1783ad61cc4",
-      "tags2": "e5ae2cae6a9a",
-      "dep_tags2": "48a4937c3959",
-      "gio": "867bff9a8c2c",
-      "level": "f4c217c0ecd8",
-      "per_level": "98fb0277ecfb",
-      "flag": "8760d264dfa7",
-      "per_flag": "e53221292d09",
-      "gi": "50805b8bdd19",
-      "gb": "9bb5cf9f23e0",
-      "dep_gi": "8c6f28e2b335",
-      "dep_gb": "17b3c7b31cb9"
+      "gate": "e47708c96e9e",
+      "sc": "6fd2d63dc7da",
+      "sc0": "1ea87c2bef8c",
+      "ss": "9c2d99f1959c",
+      "stc": "9e20f2a2812e",
+      "stc0": "3eb1e9d25224",
+      "sts": "aea91556381d",
+      "src": "2385ac523e0e",
+      "comp0": "29280bb10323",
+      "vault": "1ae5cc87526a",
+      "coll": "a87853f180b6",
+      "arranged": "98097f1e5db7",
+      "accent": "db651502488e",
+      "tags": "f708d391d2f8",
+      "dep_tags": "e740d8eb372e",
+      "tags2": "4ccdde34512a",
+      "dep_tags2": "7c9fcdcce1b4",
+      "gio": "60e473e58b04",
+      "level": "a064f6f690a4",
+      "per_level": "7688f2523cec",
+      "flag": "3a348664a816",
+      "per_flag": "dac7a1ee2bef",
+      "gi": "0c1570e66eb7",
+      "gb": "7da9680304c9",
+      "dep_gi": "4e525bbea9f0",
+      "dep_gb": "cca7dddcac49"
     },
     "texts | path": {
       "nope": "1bf169f7d887",
@@ -268,14 +268,14 @@
       "per_level.high": "00e81a4abdff",
       "per_flag.off_note": "a54016b0cd9b",
       "per_flag.on_note": "3c3dd443d7d2",
-      "gate": "fa9c9db4397d",
-      "sc": "0f62242a1782",
-      "sc0": "13ea79a50083",
+      "gate": "d700db7069b1",
+      "sc": "f06fa0d10617",
+      "sc0": "d329ce41b02f",
       "ss": "511844d57612",
-      "stc": "8e45a3903d3e",
-      "stc0": "4b2516532ee7",
+      "stc": "b4e3ab4a61b8",
+      "stc0": "7d3dbb9a2a93",
       "sts": "9f937d990463",
-      "src": "10f953e38ee8",
+      "src": "a4ebf254e2da",
       "comp0": "dbef41726268",
       "vault": "4a9a6f31e1b4",
       "vault.0": "7d0590746088",
@@ -283,23 +283,23 @@
       "coll": "b7cf9539862b",
       "coll.0": "07df4235dfc5",
       "coll.0.nope": "408cccd25a0c",
-      "arranged": "ace4c1ef7cd9",
-      "accent": "5ef15f0ae1d8",
-      "tags": "b7cf54187b01",
+      "arranged": "ff8fbc79a0d1",
+      "accent": "6e2d1fb61589",
+      "tags": "e194306a6caf",
       "tags.0": "416835392aa9",
-      "dep_tags": "372e79b9b8a3",
-      "tags2": "e9c2dd798afc",
+      "dep_tags": "85b6bef35797",
+      "tags2": "3a2bfa3b6d1d",
       "tags2.0": "7ba73a4bf76d",
-      "dep_tags2": "d0f35b1f0a16",
-      "gio": "fcf8f5c3c475",
-      "level": "79fbb8002ce8",
+      "dep_tags2": "cd5da2e25742",
+      "gio": "9a55b8b61f06",
+      "level": "2679d925a6c0",
       "per_level": "cbd4b51ecced",
-      "flag": "d797b0049751",
+      "flag": "150eae363463",
       "per_flag": "e3d5165a36c0",
-      "gi": "b57f5b958318",
-      "gb": "7ed5608e744f",
-      "dep_gi": "29060915cc88",
-      "dep_gb": "f382cfaa4bcb"
+      "gi": "56dd41148df9",
+      "gb": "0f54d7f75dc6",
+      "dep_gi": "337b6f491d29",
+      "dep_gb": "4dbc98d9cc6c"
     },
     "texts | nodes": {
       "nope": "85cf5ad1bdc5",
@@ -378,10 +378,10 @@
         "constraints": [],
         "settings": [],
         "array": {
-          "type": "map",
-          "label": "L",
           "description": "D",
-          "required": false
+          "label": "L",
+          "required": false,
+          "type": "map"
         },
         "properties": {
           "gate": {
@@ -405,10 +405,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Gate",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -417,7 +413,11 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Gate",
+              "required": false,
+              "type": "string"
             }
           },
           "sc": {
@@ -435,13 +435,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Stale choice",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Stale choice",
+              "required": false,
+              "type": "string"
             }
           },
           "sc0": {
@@ -461,15 +461,15 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "description": "",
               "label": {
                 "@text": "string value"
               },
-              "description": "",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "ss": {
@@ -489,15 +489,15 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Stale secret",
+              "constraints": {
+                "PrimitiveType": []
+              },
               "description": {
                 "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
               },
+              "label": "Stale secret",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "stc": {
@@ -531,10 +531,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Pick",
-              "description": "",
-              "required": false,
               "constraints": {
                 "LabeledChoice": {
                   "choices": [
@@ -553,7 +549,11 @@
                     "other"
                   ]
                 }
-              }
+              },
+              "description": "",
+              "label": "Pick",
+              "required": false,
+              "type": "string"
             }
           },
           "stc0": {
@@ -589,12 +589,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "string value"
-              },
-              "description": "",
-              "required": false,
               "constraints": {
                 "LabeledChoice": {
                   "choices": [
@@ -613,7 +607,13 @@
                     "other"
                   ]
                 }
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "string value"
+              },
+              "required": false,
+              "type": "string"
             }
           },
           "sts": {
@@ -649,12 +649,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Secret pick",
-              "description": {
-                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
-              },
-              "required": false,
               "constraints": {
                 "LabeledChoice": {
                   "choices": [
@@ -673,7 +667,13 @@
                     "other"
                   ]
                 }
-              }
+              },
+              "description": {
+                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "label": "Secret pick",
+              "required": false,
+              "type": "string"
             }
           },
           "src": {
@@ -691,13 +691,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Source",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Source",
+              "required": false,
+              "type": "string"
             }
           },
           "comp0": {
@@ -722,12 +722,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "string value"
-              },
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -735,7 +729,13 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "string value"
+              },
+              "required": false,
+              "type": "string"
             }
           },
           "vault": {
@@ -754,11 +754,10 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "list",
+              "description": "",
               "label": {
                 "@text": "list value"
               },
-              "description": "",
               "required": false
             },
             "item": {
@@ -776,12 +775,12 @@
               "constraints": [],
               "settings": [],
               "array": {
-                "type": "map",
+                "description": "",
                 "label": {
                   "@text": "map value"
                 },
-                "description": "",
-                "required": false
+                "required": false,
+                "type": "map"
               },
               "properties": {
                 "m": {
@@ -797,10 +796,10 @@
                   "constraints": [],
                   "settings": [],
                   "array": {
-                    "type": "map",
-                    "label": "Vault",
                     "description": "",
-                    "required": false
+                    "label": "Vault",
+                    "required": false,
+                    "type": "map"
                   },
                   "properties": {
                     "sec": {
@@ -820,15 +819,15 @@
                       },
                       "settings": [],
                       "array": {
-                        "type": "string",
-                        "label": "Vault code",
+                        "constraints": {
+                          "PrimitiveType": []
+                        },
                         "description": {
                           "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                         },
+                        "label": "Vault code",
                         "required": false,
-                        "constraints": {
-                          "PrimitiveType": []
-                        }
+                        "type": "string"
                       }
                     },
                     "x": {
@@ -846,13 +845,13 @@
                       },
                       "settings": [],
                       "array": {
-                        "type": "string",
-                        "label": "X",
-                        "description": "",
-                        "required": false,
                         "constraints": {
                           "PrimitiveType": []
-                        }
+                        },
+                        "description": "",
+                        "label": "X",
+                        "required": false,
+                        "type": "string"
                       }
                     }
                   }
@@ -871,9 +870,8 @@
                   "constraints": [],
                   "settings": [],
                   "array": {
-                    "type": "list",
-                    "label": "Rows",
                     "description": "",
+                    "label": "Rows",
                     "required": false
                   },
                   "item": {
@@ -889,10 +887,10 @@
                     "constraints": [],
                     "settings": [],
                     "array": {
-                      "type": "map",
-                      "label": "Row",
                       "description": "",
-                      "required": false
+                      "label": "Row",
+                      "required": false,
+                      "type": "map"
                     },
                     "properties": {
                       "pin": {
@@ -912,15 +910,15 @@
                         },
                         "settings": [],
                         "array": {
-                          "type": "string",
-                          "label": "Row pin",
+                          "constraints": {
+                            "PrimitiveType": []
+                          },
                           "description": {
                             "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                           },
+                          "label": "Row pin",
                           "required": false,
-                          "constraints": {
-                            "PrimitiveType": []
-                          }
+                          "type": "string"
                         }
                       }
                     }
@@ -940,9 +938,8 @@
                   "constraints": [],
                   "settings": [],
                   "array": {
-                    "type": "list",
-                    "label": "Pins",
                     "description": "",
+                    "label": "Pins",
                     "required": false
                   },
                   "item": {
@@ -962,15 +959,15 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "string",
-                      "label": "Pin",
+                      "constraints": {
+                        "PrimitiveType": []
+                      },
                       "description": {
                         "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                       },
+                      "label": "Pin",
                       "required": false,
-                      "constraints": {
-                        "PrimitiveType": []
-                      }
+                      "type": "string"
                     }
                   }
                 }
@@ -997,11 +994,10 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "list",
+              "description": "",
               "label": {
                 "@text": "list value"
               },
-              "description": "",
               "required": false
             },
             "item": {
@@ -1019,12 +1015,12 @@
               "constraints": [],
               "settings": [],
               "array": {
-                "type": "map",
+                "description": "",
                 "label": {
                   "@text": "map value"
                 },
-                "description": "",
-                "required": false
+                "required": false,
+                "type": "map"
               },
               "properties": {
                 "cname": {
@@ -1042,13 +1038,13 @@
                   },
                   "settings": [],
                   "array": {
-                    "type": "string",
-                    "label": "Child name",
-                    "description": "",
-                    "required": false,
                     "constraints": {
                       "PrimitiveType": []
-                    }
+                    },
+                    "description": "",
+                    "label": "Child name",
+                    "required": false,
+                    "type": "string"
                   }
                 }
               }
@@ -1069,13 +1065,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Arranged",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Arranged",
+              "required": false,
+              "type": "string"
             }
           },
           "accent": {
@@ -1093,13 +1089,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Accent",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Accent",
+              "required": false,
+              "type": "string"
             }
           },
           "tags": {
@@ -1116,9 +1112,8 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "list",
-              "label": "Tags",
               "description": "",
+              "label": "Tags",
               "required": false
             },
             "item": {
@@ -1142,10 +1137,6 @@
               },
               "settings": [],
               "array": {
-                "type": "string",
-                "label": "Tag",
-                "description": "",
-                "required": false,
                 "constraints": {
                   "Choice": {
                     "choices": [
@@ -1154,7 +1145,11 @@
                     ]
                   },
                   "PrimitiveType": []
-                }
+                },
+                "description": "",
+                "label": "Tag",
+                "required": false,
+                "type": "string"
               }
             }
           },
@@ -1173,13 +1168,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Dep tags",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Dep tags",
+              "required": false,
+              "type": "string"
             }
           },
           "tags2": {
@@ -1204,10 +1199,6 @@
             },
             "settings": [],
             "array": {
-              "type": "list",
-              "label": "Tags two",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -1216,7 +1207,10 @@
                   ],
                   "multiple": true
                 }
-              }
+              },
+              "description": "",
+              "label": "Tags two",
+              "required": false
             },
             "item": {
               "class": "Drupal\\tool\\TypedData\\InputDefinition",
@@ -1233,13 +1227,13 @@
               },
               "settings": [],
               "array": {
-                "type": "string",
-                "label": "Tag",
-                "description": "",
-                "required": false,
                 "constraints": {
                   "PrimitiveType": []
-                }
+                },
+                "description": "",
+                "label": "Tag",
+                "required": false,
+                "type": "string"
               }
             }
           },
@@ -1258,13 +1252,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Dep tags two",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Dep tags two",
+              "required": false,
+              "type": "string"
             }
           },
           "gio": {
@@ -1288,10 +1282,6 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": "Padded",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -1300,7 +1290,11 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Padded",
+              "required": false,
+              "type": "integer"
             }
           },
           "level": {
@@ -1324,10 +1318,6 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": "Level",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -1336,7 +1326,11 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Level",
+              "required": false,
+              "type": "integer"
             }
           },
           "per_level": {
@@ -1354,12 +1348,12 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Per level",
               "description": {
                 "@text": "Its keys depend on level. 1: low; 2: high."
               },
-              "required": false
+              "label": "Per level",
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "low": {
@@ -1379,15 +1373,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Low",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
                   "description": {
                     "@text": "Only when level is 1."
                   },
+                  "label": "Low",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "high": {
@@ -1407,15 +1401,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "High",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
                   "description": {
                     "@text": "Only when level is 2."
                   },
+                  "label": "High",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               }
             }
@@ -1441,10 +1435,6 @@
             },
             "settings": [],
             "array": {
-              "type": "boolean",
-              "label": "Flag",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -1453,7 +1443,11 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Flag",
+              "required": false,
+              "type": "boolean"
             }
           },
           "per_flag": {
@@ -1471,12 +1465,12 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Per flag",
               "description": {
                 "@text": "Its keys depend on flag. 0: off_note; 1: on_note."
               },
-              "required": false
+              "label": "Per flag",
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "off_note": {
@@ -1496,15 +1490,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Off note",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
                   "description": {
                     "@text": "Only when flag is 0."
                   },
+                  "label": "Off note",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "on_note": {
@@ -1524,15 +1518,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "On note",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
                   "description": {
                     "@text": "Only when flag is 1."
                   },
+                  "label": "On note",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               }
             }
@@ -1558,10 +1552,6 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": "Gi",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -1570,7 +1560,11 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Gi",
+              "required": false,
+              "type": "integer"
             }
           },
           "gb": {
@@ -1588,13 +1582,13 @@
             },
             "settings": [],
             "array": {
-              "type": "boolean",
-              "label": "Gb",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Gb",
+              "required": false,
+              "type": "boolean"
             }
           },
           "dep_gi": {
@@ -1612,13 +1606,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Dep gi",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Dep gi",
+              "required": false,
+              "type": "string"
             }
           },
           "dep_gb": {
@@ -1636,13 +1630,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Dep gb",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Dep gb",
+              "required": false,
+              "type": "string"
             }
           }
         }
@@ -2434,13 +2428,13 @@
         },
         "settings": [],
         "array": {
-          "type": "string",
-          "label": "Source",
-          "description": "",
-          "required": false,
           "constraints": {
             "PrimitiveType": []
-          }
+          },
+          "description": "",
+          "label": "Source",
+          "required": false,
+          "type": "string"
         }
       },
       "outputFromDefinition": {
@@ -2457,14 +2451,14 @@
         },
         "settings": [],
         "array": {
-          "type": "string",
-          "label": "Source",
-          "description": "",
-          "required": false,
           "constraints": {
             "PrimitiveType": []
           },
-          "nullable": false
+          "description": "",
+          "label": "Source",
+          "nullable": false,
+          "required": false,
+          "type": "string"
         }
       },
       "held builder": [
@@ -2630,8 +2624,8 @@
         },
         "settings": [],
         "array": {
-          "type": "boolean",
-          "label": "Gb"
+          "label": "Gb",
+          "type": "boolean"
         }
       },
       "reachedOn fixes": {
@@ -2645,8 +2639,8 @@
         },
         "settings": [],
         "array": {
-          "type": "boolean",
-          "label": "Gb"
+          "label": "Gb",
+          "type": "boolean"
         }
       },
       "heldOn raws": [

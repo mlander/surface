@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\Entry;
@@ -269,6 +270,24 @@ class DefinitionMapTest extends UnitTestCase {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('A definition map cannot be written to');
     unset($map['kind']);
+  }
+
+  /**
+   * Tests a chosen variant without nodeFirst is refused, with assertions on.
+   */
+  public function testChosenWithoutNodeFirstIsRefused(): void {
+    $this->expectException(\AssertionError::class);
+    $this->expectExceptionMessage('A chosen variant is passed only with nodeFirst');
+    DefinitionMap::fromArrays(['pick' => MapDataDefinition::create()], chosen: ['pick' => 'x']);
+  }
+
+  /**
+   * Tests a chosen variant at a key with no variants is refused.
+   */
+  public function testChosenAtKeyWithoutVariantsIsRefused(): void {
+    $this->expectException(\AssertionError::class);
+    $this->expectExceptionMessage('A chosen variant is passed only at a key with variants, not at pick.');
+    DefinitionMap::fromArrays(['pick' => MapDataDefinition::create()], nodeFirst: TRUE, chosen: ['pick' => 'x']);
   }
 
 }

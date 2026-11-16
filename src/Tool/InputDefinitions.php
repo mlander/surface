@@ -1130,10 +1130,9 @@ final class InputDefinitions {
    *
    * @param \Drupal\surface\Variants $variants
    *   The variant table.
-   * @param \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface $placeholder
-   *   The variants' placeholder: its node, or for a caller that holds no
-   *   node, its definition, whose label, description and requiredness
-   *   alone are read.
+   * @param \PortableSchema\Builder\Schema $placeholder
+   *   The variants' placeholder's node, whose label, description and
+   *   requiredness alone are read.
    * @param string|null $narrowing
    *   The narrowing tool's id, which a key inside a variant whose entries
    *   the listing leaves out names; NULL when there is none.
@@ -1141,7 +1140,7 @@ final class InputDefinitions {
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The union map.
    */
-  public function fromVariants(Variants $variants, Schema|DataDefinitionInterface $placeholder, ?string $narrowing = NULL): MapInputDefinition {
+  public function fromVariants(Variants $variants, Schema $placeholder, ?string $narrowing = NULL): MapInputDefinition {
     $at = $this->at;
     $owners = [];
     $entries = [];
@@ -1187,9 +1186,9 @@ final class InputDefinitions {
       '@table' => $table === [] ? $this->t('No variant fills it') : implode('; ', array_map('strval', $table)),
     ]);
     return new MapInputDefinition(
-      label: $placeholder instanceof Schema ? $this->labelOf($placeholder) : $this->label($placeholder),
-      description: $this->appended($placeholder instanceof Schema ? $this->describe(NodeFacts::description($placeholder)) : $this->description($placeholder), $note),
-      required: $placeholder instanceof Schema ? NodeFacts::isRequired($placeholder) : $placeholder->isRequired(),
+      label: $this->labelOf($placeholder),
+      description: $this->appended($this->describe(NodeFacts::description($placeholder)), $note),
+      required: NodeFacts::isRequired($placeholder),
       property_definitions: $properties,
     );
   }
@@ -1913,20 +1912,7 @@ final class InputDefinitions {
   }
 
   /**
-   * Gets a definition's label, which an input definition must have.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition to read.
-   *
-   * @return \Drupal\Core\StringTranslation\TranslatableMarkup|string
-   *   The label, as plain text: a tool listing renders no markup.
-   */
-  protected function label(DataDefinitionInterface $definition): TranslatableMarkup|string {
-    return $this->labeled($definition->getLabel(), $definition->getDataType());
-  }
-
-  /**
-   * Gets a key's label, from its node, as label() gives a definition's.
+   * Gets a key's label, from its node, which an input definition must have.
    *
    * @param \PortableSchema\Builder\Schema $node
    *   The key's node.

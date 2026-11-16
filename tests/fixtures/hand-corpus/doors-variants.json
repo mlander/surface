@@ -3,19 +3,19 @@
   "rows": 153,
   "digests": {
     "plain | door": {
-      "fromSurface": "161f94a439c5",
-      "fromSurface stored": "161f94a439c5",
-      "fromSurface narrowing": "161f94a439c5",
-      "withLookups": "161f94a439c5",
-      "withDependencies": "161f94a439c5",
-      "withStored": "05cab9336889",
-      "shapeOf": "9181346af7c5",
-      "withoutRequired": "1349b6c90e6e",
-      "outputFromInput": "81c62fe37a08",
+      "fromSurface": "84e8c345bb00",
+      "fromSurface stored": "84e8c345bb00",
+      "fromSurface narrowing": "84e8c345bb00",
+      "withLookups": "84e8c345bb00",
+      "withDependencies": "84e8c345bb00",
+      "withStored": "347b8ac9190f",
+      "shapeOf": "681da711afca",
+      "withoutRequired": "2422a286293a",
+      "outputFromInput": "e6beaa8be780",
       "secrets": "28e772fbf6bb",
       "outputs": "39347ff402b6",
-      "values update": "1f03d41b5319",
-      "values create": "c4dbd9d69df1",
+      "values update": "701ad9f27565",
+      "values create": "e633032c0e00",
       "stored": "4a0c3136e55f",
       "secretKeys": "39347ff402b6",
       "config schema": "aefcf3d07549",
@@ -28,20 +28,20 @@
       "flow placed grouped": "5ddfb99e50cf"
     },
     "plain | values": {
-      "stored": "535fbc45d41f",
-      "b": "4eb5a4dd97e5",
-      "a wrong": "14a64496d02c",
-      "flat a": "abdd6800c7a0"
+      "stored": "a2ea1febec62",
+      "b": "a5191b82e464",
+      "a wrong": "bb8149dc1608",
+      "flat a": "0bf6f187d50a"
     },
     "plain | key": {
-      "kind": "1a22a6277a1e",
-      "settings": "ac96faf4a613",
-      "kind2": "bba317990a44",
-      "flat": "7ecc82c56869",
-      "kind4": "3db2ac562619",
-      "labeled": "dc0ebdb3b5d2",
-      "kind3": "43ce1e2b4ba7",
-      "req_v": "4a22169ee977"
+      "kind": "e9062178cf0d",
+      "settings": "3ae8c4141d42",
+      "kind2": "6c8b9c02bc90",
+      "flat": "982e41d26f52",
+      "kind4": "8c2c6360f36b",
+      "labeled": "58e8bf313e9c",
+      "kind3": "1e8e4bf95922",
+      "req_v": "fb0ccb87b14b"
     },
     "plain | path": {
       "nope": "1bf169f7d887",
@@ -95,13 +95,13 @@
       "req_v.nn": "9a2e90af2946",
       "req_v.rq": "1b75c6556000",
       "req_v.only_b": "138ca8d9769c",
-      "kind": "43e53293fc3e",
+      "kind": "48fd529bc247",
       "settings": "19c5f00b9e5c",
-      "kind2": "c141e653c139",
+      "kind2": "42b37cf19762",
       "flat": "0197f33fcf7f",
-      "kind4": "dbd3edc5dddf",
+      "kind4": "4f5637b59ab9",
       "labeled": "0e74f6f60e8f",
-      "kind3": "b7a178c98ee2",
+      "kind3": "2f31630dc5dc",
       "req_v": "2f9e7b28ad15"
     },
     "plain | nodes": {
@@ -203,10 +203,10 @@
         "constraints": [],
         "settings": [],
         "array": {
-          "type": "map",
-          "label": "L",
           "description": "D",
-          "required": false
+          "label": "L",
+          "required": false,
+          "type": "map"
         },
         "properties": {
           "kind": {
@@ -230,10 +230,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Kind",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -242,7 +238,11 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Kind",
+              "required": false,
+              "type": "string"
             }
           },
           "settings": {
@@ -258,10 +258,10 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Settings",
               "description": "Settings desc",
-              "required": false
+              "label": "Settings",
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "k": {
@@ -282,16 +282,16 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "integer",
-                  "label": "K in b",
-                  "description": "",
-                  "required": false,
                   "constraints": {
                     "Range": {
                       "min": 1
                     },
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": "",
+                  "label": "K in b",
+                  "required": false,
+                  "type": "integer"
                 }
               },
               "nn": {
@@ -310,14 +310,14 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "integer",
-                  "label": "NotNull in b",
-                  "description": "",
-                  "required": true,
                   "constraints": {
                     "NotNull": [],
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": "",
+                  "label": "NotNull in b",
+                  "required": true,
+                  "type": "integer"
                 }
               },
               "rq": {
@@ -335,13 +335,13 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Optional in b",
-                  "description": "",
-                  "required": false,
                   "constraints": {
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": "",
+                  "label": "Optional in b",
+                  "required": false,
+                  "type": "string"
                 }
               },
               "only_b": {
@@ -365,10 +365,6 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Only b",
-                  "description": "",
-                  "required": false,
                   "constraints": {
                     "Choice": {
                       "choices": [
@@ -377,7 +373,11 @@
                       ]
                     },
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": "",
+                  "label": "Only b",
+                  "required": false,
+                  "type": "string"
                 }
               }
             }
@@ -403,10 +403,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Kind two",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -415,7 +411,11 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Kind two",
+              "required": false,
+              "type": "string"
             }
           },
           "flat": {
@@ -433,12 +433,12 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Flat",
               "description": {
                 "@text": "Its keys depend on kind2. a: k, only_a, nn, rq, vsec, vm, vl, shell; b: k, nn, rq, only_b."
               },
-              "required": false
+              "label": "Flat",
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "k": {
@@ -458,15 +458,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "K in a",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
                   "description": {
                     "@text": "From a Only when kind2 is a, b."
                   },
+                  "label": "K in a",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "only_a": {
@@ -486,15 +486,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "integer",
-                  "label": "Only a",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
                   "description": {
                     "@text": "Only when kind2 is a."
                   },
+                  "label": "Only a",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "integer"
                 }
               },
               "nn": {
@@ -515,16 +515,16 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Declares NotNull",
-                  "description": {
-                    "@text": "Only when kind2 is a, b."
-                  },
-                  "required": false,
                   "constraints": {
                     "NotNull": [],
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": {
+                    "@text": "Only when kind2 is a, b."
+                  },
+                  "label": "Declares NotNull",
+                  "required": false,
+                  "type": "string"
                 }
               },
               "rq": {
@@ -544,15 +544,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Required in a",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
                   "description": {
                     "@text": "Only when kind2 is a, b."
                   },
+                  "label": "Required in a",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "vsec": {
@@ -572,15 +572,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Variant secret",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
                   "description": {
                     "@text": "Only when kind2 is a. Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                   },
+                  "label": "Variant secret",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "vm": {
@@ -598,12 +598,12 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "map",
-                  "label": "Variant map",
                   "description": {
                     "@text": "Only when kind2 is a."
                   },
-                  "required": false
+                  "label": "Variant map",
+                  "required": false,
+                  "type": "map"
                 },
                 "properties": {
                   "x": {
@@ -622,14 +622,14 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "string",
-                      "label": "X",
-                      "description": "",
-                      "required": true,
                       "constraints": {
                         "PrimitiveType": [],
                         "NotNull": []
-                      }
+                      },
+                      "description": "",
+                      "label": "X",
+                      "required": true,
+                      "type": "string"
                     }
                   }
                 }
@@ -650,11 +650,10 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "list",
-                  "label": "Variant list",
                   "description": {
                     "@text": "Only when kind2 is a."
                   },
+                  "label": "Variant list",
                   "required": false
                 },
                 "item": {
@@ -672,13 +671,13 @@
                   },
                   "settings": [],
                   "array": {
-                    "type": "string",
-                    "label": "Vi",
-                    "description": "",
-                    "required": false,
                     "constraints": {
                       "PrimitiveType": []
-                    }
+                    },
+                    "description": "",
+                    "label": "Vi",
+                    "required": false,
+                    "type": "string"
                   }
                 }
               },
@@ -697,12 +696,12 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "map",
-                  "label": "Shell member",
                   "description": {
                     "@text": "A child in a variant Only when kind2 is a."
                   },
-                  "required": false
+                  "label": "Shell member",
+                  "required": false,
+                  "type": "map"
                 },
                 "properties": {
                   "kname": {
@@ -721,14 +720,14 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "string",
-                      "label": "Kid name",
-                      "description": "",
-                      "required": true,
                       "constraints": {
                         "PrimitiveType": [],
                         "NotNull": []
-                      }
+                      },
+                      "description": "",
+                      "label": "Kid name",
+                      "required": true,
+                      "type": "string"
                     }
                   },
                   "ksec": {
@@ -748,15 +747,15 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "string",
-                      "label": "Kid secret",
+                      "constraints": {
+                        "PrimitiveType": []
+                      },
                       "description": {
                         "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                       },
+                      "label": "Kid secret",
                       "required": false,
-                      "constraints": {
-                        "PrimitiveType": []
-                      }
+                      "type": "string"
                     }
                   }
                 }
@@ -784,12 +783,6 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Only b",
-                  "description": {
-                    "@text": "Only when kind2 is b."
-                  },
-                  "required": false,
                   "constraints": {
                     "Choice": {
                       "choices": [
@@ -798,7 +791,13 @@
                       ]
                     },
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": {
+                    "@text": "Only when kind2 is b."
+                  },
+                  "label": "Only b",
+                  "required": false,
+                  "type": "string"
                 }
               }
             }
@@ -834,10 +833,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Kind four",
-              "description": "",
-              "required": false,
               "constraints": {
                 "LabeledChoice": {
                   "choices": [
@@ -856,7 +851,11 @@
                     "b"
                   ]
                 }
-              }
+              },
+              "description": "",
+              "label": "Kind four",
+              "required": false,
+              "type": "string"
             }
           },
           "labeled": {
@@ -874,12 +873,12 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Labeled variants",
               "description": {
                 "@text": "Its keys depend on kind4. a: k, only_a, nn, rq, vsec, vm, vl, shell; b: k, nn, rq, only_b."
               },
-              "required": false
+              "label": "Labeled variants",
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "k": {
@@ -899,15 +898,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "K in a",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
                   "description": {
                     "@text": "From a Only when kind4 is a, b."
                   },
+                  "label": "K in a",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "only_a": {
@@ -927,15 +926,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "integer",
-                  "label": "Only a",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
                   "description": {
                     "@text": "Only when kind4 is a."
                   },
+                  "label": "Only a",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "integer"
                 }
               },
               "nn": {
@@ -956,16 +955,16 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Declares NotNull",
-                  "description": {
-                    "@text": "Only when kind4 is a, b."
-                  },
-                  "required": false,
                   "constraints": {
                     "NotNull": [],
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": {
+                    "@text": "Only when kind4 is a, b."
+                  },
+                  "label": "Declares NotNull",
+                  "required": false,
+                  "type": "string"
                 }
               },
               "rq": {
@@ -985,15 +984,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Required in a",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
                   "description": {
                     "@text": "Only when kind4 is a, b."
                   },
+                  "label": "Required in a",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "vsec": {
@@ -1013,15 +1012,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Variant secret",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
                   "description": {
                     "@text": "Only when kind4 is a. Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                   },
+                  "label": "Variant secret",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "vm": {
@@ -1039,12 +1038,12 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "map",
-                  "label": "Variant map",
                   "description": {
                     "@text": "Only when kind4 is a."
                   },
-                  "required": false
+                  "label": "Variant map",
+                  "required": false,
+                  "type": "map"
                 },
                 "properties": {
                   "x": {
@@ -1063,14 +1062,14 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "string",
-                      "label": "X",
-                      "description": "",
-                      "required": true,
                       "constraints": {
                         "PrimitiveType": [],
                         "NotNull": []
-                      }
+                      },
+                      "description": "",
+                      "label": "X",
+                      "required": true,
+                      "type": "string"
                     }
                   }
                 }
@@ -1091,11 +1090,10 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "list",
-                  "label": "Variant list",
                   "description": {
                     "@text": "Only when kind4 is a."
                   },
+                  "label": "Variant list",
                   "required": false
                 },
                 "item": {
@@ -1113,13 +1111,13 @@
                   },
                   "settings": [],
                   "array": {
-                    "type": "string",
-                    "label": "Vi",
-                    "description": "",
-                    "required": false,
                     "constraints": {
                       "PrimitiveType": []
-                    }
+                    },
+                    "description": "",
+                    "label": "Vi",
+                    "required": false,
+                    "type": "string"
                   }
                 }
               },
@@ -1138,12 +1136,12 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "map",
-                  "label": "Shell member",
                   "description": {
                     "@text": "A child in a variant Only when kind4 is a."
                   },
-                  "required": false
+                  "label": "Shell member",
+                  "required": false,
+                  "type": "map"
                 },
                 "properties": {
                   "kname": {
@@ -1162,14 +1160,14 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "string",
-                      "label": "Kid name",
-                      "description": "",
-                      "required": true,
                       "constraints": {
                         "PrimitiveType": [],
                         "NotNull": []
-                      }
+                      },
+                      "description": "",
+                      "label": "Kid name",
+                      "required": true,
+                      "type": "string"
                     }
                   },
                   "ksec": {
@@ -1189,15 +1187,15 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "string",
-                      "label": "Kid secret",
+                      "constraints": {
+                        "PrimitiveType": []
+                      },
                       "description": {
                         "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                       },
+                      "label": "Kid secret",
                       "required": false,
-                      "constraints": {
-                        "PrimitiveType": []
-                      }
+                      "type": "string"
                     }
                   }
                 }
@@ -1225,12 +1223,6 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Only b",
-                  "description": {
-                    "@text": "Only when kind4 is b."
-                  },
-                  "required": false,
                   "constraints": {
                     "Choice": {
                       "choices": [
@@ -1239,7 +1231,13 @@
                       ]
                     },
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": {
+                    "@text": "Only when kind4 is b."
+                  },
+                  "label": "Only b",
+                  "required": false,
+                  "type": "string"
                 }
               }
             }
@@ -1266,12 +1264,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "string value"
-              },
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -1279,7 +1271,13 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "string value"
+              },
+              "required": false,
+              "type": "string"
             }
           },
           "req_v": {
@@ -1302,12 +1300,12 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Required variants",
               "description": {
                 "@text": "Its keys depend on kind3. x: k, nn, rq, only_b."
               },
-              "required": true
+              "label": "Required variants",
+              "required": true,
+              "type": "map"
             },
             "properties": {
               "k": {
@@ -1330,18 +1328,18 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "integer",
-                  "label": "K in b",
-                  "description": {
-                    "@text": "Only when kind3 is x."
-                  },
-                  "required": false,
                   "constraints": {
                     "Range": {
                       "min": 1
                     },
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": {
+                    "@text": "Only when kind3 is x."
+                  },
+                  "label": "K in b",
+                  "required": false,
+                  "type": "integer"
                 }
               },
               "nn": {
@@ -1362,16 +1360,16 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "integer",
-                  "label": "NotNull in b",
-                  "description": {
-                    "@text": "Only when kind3 is x."
-                  },
-                  "required": false,
                   "constraints": {
                     "NotNull": [],
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": {
+                    "@text": "Only when kind3 is x."
+                  },
+                  "label": "NotNull in b",
+                  "required": false,
+                  "type": "integer"
                 }
               },
               "rq": {
@@ -1391,15 +1389,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Optional in b",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
                   "description": {
                     "@text": "Only when kind3 is x."
                   },
+                  "label": "Optional in b",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "only_b": {
@@ -1425,12 +1423,6 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Only b",
-                  "description": {
-                    "@text": "Only when kind3 is x."
-                  },
-                  "required": false,
                   "constraints": {
                     "Choice": {
                       "choices": [
@@ -1439,7 +1431,13 @@
                       ]
                     },
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": {
+                    "@text": "Only when kind3 is x."
+                  },
+                  "label": "Only b",
+                  "required": false,
+                  "type": "string"
                 }
               }
             }
@@ -1816,13 +1814,12 @@
         },
         "settings": [],
         "array": {
-          "type": "any",
-          "label": "Required variants",
-          "description": "",
-          "required": true,
           "constraints": {
             "NotNull": []
-          }
+          },
+          "description": "",
+          "label": "Required variants",
+          "required": true
         }
       },
       "outputFromDefinition": {
@@ -1839,14 +1836,13 @@
         },
         "settings": [],
         "array": {
-          "type": "any",
-          "label": "Required variants",
-          "description": "",
-          "required": true,
           "constraints": {
             "NotNull": []
           },
-          "nullable": false
+          "description": "",
+          "label": "Required variants",
+          "nullable": false,
+          "required": true
         }
       },
       "fromVariants": {
@@ -1869,12 +1865,12 @@
         "constraints": [],
         "settings": [],
         "array": {
-          "type": "map",
-          "label": "Required variants",
           "description": {
             "@text": "Its keys depend on kind3. x: k, nn, rq, only_b."
           },
-          "required": true
+          "label": "Required variants",
+          "required": true,
+          "type": "map"
         },
         "properties": {
           "k": {
@@ -1897,18 +1893,18 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": "K in b",
-              "description": {
-                "@text": "Only when kind3 is x."
-              },
-              "required": false,
               "constraints": {
                 "Range": {
                   "min": 1
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": {
+                "@text": "Only when kind3 is x."
+              },
+              "label": "K in b",
+              "required": false,
+              "type": "integer"
             }
           },
           "nn": {
@@ -1929,16 +1925,16 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": "NotNull in b",
-              "description": {
-                "@text": "Only when kind3 is x."
-              },
-              "required": false,
               "constraints": {
                 "NotNull": [],
                 "PrimitiveType": []
-              }
+              },
+              "description": {
+                "@text": "Only when kind3 is x."
+              },
+              "label": "NotNull in b",
+              "required": false,
+              "type": "integer"
             }
           },
           "rq": {
@@ -1958,15 +1954,15 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Optional in b",
+              "constraints": {
+                "PrimitiveType": []
+              },
               "description": {
                 "@text": "Only when kind3 is x."
               },
+              "label": "Optional in b",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "only_b": {
@@ -1992,12 +1988,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Only b",
-              "description": {
-                "@text": "Only when kind3 is x."
-              },
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -2006,7 +1996,13 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": {
+                "@text": "Only when kind3 is x."
+              },
+              "label": "Only b",
+              "required": false,
+              "type": "string"
             }
           }
         }
@@ -2202,8 +2198,6 @@
         },
         "settings": [],
         "array": {
-          "type": "string",
-          "label": "Kind two",
           "constraints": {
             "Choice": {
               "choices": [
@@ -2211,7 +2205,9 @@
                 "b"
               ]
             }
-          }
+          },
+          "label": "Kind two",
+          "type": "string"
         }
       },
       "reachedOn fixes": {
@@ -2231,8 +2227,6 @@
         },
         "settings": [],
         "array": {
-          "type": "string",
-          "label": "Kind two",
           "constraints": {
             "Choice": {
               "choices": [
@@ -2240,7 +2234,9 @@
                 "b"
               ]
             }
-          }
+          },
+          "label": "Kind two",
+          "type": "string"
         }
       },
       "heldOn raws": [

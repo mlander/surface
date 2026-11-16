@@ -3604,6 +3604,8 @@ producing nodes. No served byte, refusal or value changed.
   answer (accept, validate, the document with and without the widget
   hints, the full schema, the envelope, the form build, every tool's
   serialized inputs), so the lanes pin the mode in their default run.
+  Since 2026-11-15 the seal makes every entry node-first and the mode is
+  gone: see [A sealed entry holds its node](#a-sealed-entry-holds-its-node).
 - **What the mode showed.** With it on, unedited: the four
   `ValueBaseline*` classes, `PipelineHandCasesTest`, `HandCorpusTest`,
   `HandCorpusNarrowTest`, `ContractBaselineTest` and the other fixture
@@ -4466,7 +4468,10 @@ changed.
   on its definition.
 - **The node-first mode.** `DefinitionMap::fromArrays()` makes each
   entry node-first from the node the entry reads (`Entry::nodeFirst()`),
-  a shell's composed, and derives its definition from it on demand.
+  a shell's composed, and derives its definition from it on demand. The
+  seal does so since 2026-11-15, with the shell handed its own facts
+  alone (`Entry::sealed()`; see
+  [A sealed entry holds its node](#a-sealed-entry-holds-its-node)).
 - **What it costs.** Counted over 262 operations of the development
   site as two accounts on fresh builds, nodes read per phase fall where a
   shell's node was read whole before: what goes out after a commit 545
@@ -4490,7 +4495,9 @@ changed.
 ### Nothing asks for a definition it does not need
 
 Decided 2026-11-15. A node-first entry (the test mode of
-[An entry holds the form its source gave](#an-entry-holds-the-form-its-source-gave))
+[An entry holds the form its source gave](#an-entry-holds-the-form-its-source-gave);
+every sealed entry since the later part
+[A sealed entry holds its node](#a-sealed-entry-holds-its-node))
 derived its definition 12,145 times over 262 operations of the
 development site as two accounts. Most of the askers did not need a
 definition: they wanted the key names, one flag, or a walk that looks
@@ -4703,7 +4710,8 @@ does not give it. No served byte, refusal, message or value changed.
 
 ### A fact is read from the node, and the options service takes a node
 
-Decided 2026-11-15. The next part makes production node-first: every
+Decided 2026-11-15. The next part makes production node-first (done:
+[A sealed entry holds its node](#a-sealed-entry-holds-its-node)): every
 sealed entry holds its node, and its definition is derived only where an
 edge asks for one. A node read off such an entry is free; a definition
 costs a derivation. In the node-first test mode the instrument's run
@@ -4813,6 +4821,144 @@ value changed.
 - **What names Typed Data.** `Pipeline/Accepting.php` and
   `Pipeline/SurfacePipeline.php` no longer do (`TypedDataFootprintTest`,
   131 to 129).
+
+### A sealed entry holds its node
+
+Decided 2026-11-15. The seal makes every entry node-first: its node is
+its source, and its definition is derived from the node only where an
+edge still asks for one (the emitter's widget claims, refinement, the
+ports, the public `getDefinition()`). Until now an entry held its
+definition and read its node on the first ask, and the node-first form
+was a test mode. The seal also stops building a definition of each key
+that holds a child frame only to read a node from it. No served byte,
+refusal, message or value changed.
+
+- **The seal composes shells.** An attachment, a collection and variants
+  whose deciding key is locked are handed to `DefinitionMap::fromArrays()`
+  with their own facts alone: a copy of the shell the author described
+  (`SurfaceBuilder::assertShell()`, `assertListShell()`, with a
+  collection's item an empty map, as `Collection::listOf()` makes it).
+  `Entry::sealed()` composes the key's node of those facts around the
+  nodes its child's entries hold (`composed()`, `framed()`,
+  `DefinitionSchema::around()`), by name: at the seal nothing is
+  refined, so the child's entries are the keys the key holds. One way
+  composes, used by the seal and by a refined shell, which still takes
+  its child's nodes by identity. `around()` places a node given for a
+  property the map does not hold after the ones it holds, and its node
+  says whether it is required (`PropertySchema::required()`, rule for
+  rule `DefinitionSchema::required()`). `Attachment::mapOf()`,
+  `Collection::listOf()` and `Variants::definitionFor()` are no longer
+  called by the seal; refinement keeps them (`Surface::refineNested()`).
+  Variants nothing has chosen keep their placeholder
+  (`Variants::placeholder()`, read with `of()`): a node made without it
+  would state the placeholder's facts a second way. The mount does not
+  change: `mountedMap()` and `mountStructure()` build the mounted map, as
+  alters write mounted keys by path. `ConstraintMessages::sources()` and
+  `assertGroupsAgree()` run before any node is read, on the definitions
+  the seal holds: each child's definitions passed `sources()` when the
+  child was sealed (every data surface is sealed by `seal()`, and the
+  rewrite is the same when run twice), and `assertGroupsAgree()` reads a
+  frame's own keys and each mount's keys alone.
+- **The flip.** `seal()` passes `nodeFirst: TRUE` to both calls of
+  `fromArrays()`, inputs and outputs, and names the variant chosen at
+  each locked deciding key (`chosen:`). `fromArrays()` called without it
+  makes entries from definitions as before, which tests and any direct
+  caller keep. An entry whose definition is of a class other than the
+  three `NodeDefinition` derives, or whose node holds a node of another
+  class at any depth, stays definition-first; a key that holds a child
+  frame with such a key in it is then made whole (`Entry::whole()`) with
+  the builders above. No example and no test module keeps one; the hand
+  corpus keeps one on purpose (`ruled`'s `m1`, a `NotAMapDefinition`).
+- **No mode remains.** `DefinitionMap::$nodeFirst`, its counters,
+  `SURFACE_NODE_FIRST` and its read in `SurfaceKernelTestBase` are gone,
+  and no definition-first mode replaces them: the seal has one path, the
+  comparison of both sides in one sitting proves the flip changed
+  nothing, and definition-first entry code stays exercised by refined
+  entries (`withDefinition()`) and by the tests that call `fromArrays()`
+  and `new Entry()` with definitions. `NodeFirstModeTest` is replaced by
+  `SealedEntryHoldsItsNodeTest`.
+- **A definition a sealed surface hands out is for reading.** Before
+  this part a write to it changed the sealed surface for the rest of the
+  request. Now it writes a derived copy, kept on that entry for the
+  request and never stored: the node, the source, is not changed, and
+  nothing served from it changes. With assertions on, every later ask of
+  a node-first entry's definition reads it again and refuses one that was
+  written (`Entry::definition()`), a shell's derived definition too, at
+  any depth. A test that needs another definition builds it before the
+  seal, or makes an entry of a copy (`withDefinition()`).
+- **What still derives a definition.** After the flip a request still
+  derives a definition where an edge asks for one. Refinement does:
+  `Surface::refineNested()` builds a refined shell of its child's
+  definitions, `Variants::definitionFor()` does at refine time, and the
+  accept and `DoesNotApply` ask `$refined->getDefinition()` of every key.
+  These go when refinement reads nodes (part 32.8). The emitter's
+  `frame()` and the widget claims ask for definitions, and so do the
+  ports; these go with the public contracts (part 32.9). A copy of an
+  entry made for its ports (`readingFrom()`) holds the very definition
+  the sealed entry derived, which it derives first: the emitter tells a
+  definition a refinement moved from a child whose ports were only
+  rebound by identity, until it compares nodes (part 32.9). A node-first entry serializes its
+  node, which is larger than its definition, so a cached operation build
+  is larger: 1.23 times over the development site's 171 operation builds.
+  That is a matter for the build cache (slice 33).
+- **The door recorder reads a definition's array without its top-level
+  order.** A definition derived from a node differs from the one its
+  author built only in the order of its array's top-level keys and in a
+  `type: list` key on a list: over the 4,669 door rows, every difference
+  is at the top level of the array, none deeper. Neither is a fact.
+  `DoorCorpusRecorder::tree()` sorts the array's top-level keys alone
+  and leaves out a `type` key that holds what `getDataType()` gives
+  without it (`list` on a list, `any` otherwise). Every array below the
+  top keeps its order, so the order of constraints, of their options and
+  of the metadata stored there is still recorded.
+- **The proof.** Both sides recorded in one sitting (the base a copy
+  of the module before this part, loaded over the tree), recorded again
+  after the fix passes: 39,109 and 3,737 value cases, 684 and 364
+  documents, the narrowed, anonymous and corpus records, and 8,344 door
+  digests under the recorder's narrowed rule, none differs. For a surface built by hand with every kind of
+  shell (an attachment and a collection with defaults of their own,
+  variants chosen and open, a shell inside a shell and inside a
+  collection's item, a mount whose structure holds a shell), and for any
+  variants, `ShellNodeCompositionTest` holds each sealed shell's node
+  `DefinitionSchema::same()` as the node of the definition the old seal
+  built from the builder's own shell. For an example's attachment or
+  collection the seal keeps no copy of the author's shell, so the test's
+  reference is rebuilt from the shell's derived definition and proves
+  only that the child's keys are placed as before (39 attachments, 19
+  collections, 3 mounts, 1 chosen and 30 open variants in all). That the
+  examples' shells say what they said is proven against the code before
+  this part: the comparison above, and eight hand cases of the
+  adversarial review run against that code (462 members: nodes,
+  definition trees, documents, accept and validate, the tool door, the
+  form and refinement, fresh, woken and woken twice; none differs). The door corpus
+  under the new rule: HEAD in the default mode against this tree, 4,669
+  rows, none differs. Over the instrument's run (262 operations as two
+  accounts) the definitions derived fall from 6,477 (the node-first mode
+  before this part) to 5,601: the seal's shells from 2,177 to none. What
+  remains: the emitter for the widget claims (3,484, part 32.9; it rises
+  because the counter counts each entry's first ask, which the seal made
+  before), refinement and the watched-value check (613), the marks
+  refinement leaves (513) and the refined shells refinement builds (281,
+  all part 32.8), the build's widget walk (602) and the ports (42, part
+  32.9), the sealed entries a port copy derives once to share (38), the
+  structure the build mounts (28). The build cache rows
+  of the 55 declared builds of the development site: 1,378,233 bytes
+  before, 1,434,089 now (1.04 times); unserializing all of them takes
+  1,940 and 1,943 microseconds (median of 20). Timed against the base
+  in one sitting (8 rounds, sum of minimums over 171 operations), a
+  fresh build is 17.2 percent slower: about three quarters of the extra
+  is the leaf nodes the seal now reads, moved from their first ask to
+  the seal, about a sixth is the composition of shells, and the rest the
+  walk that checks every node's class. A request after a cache hit is
+  faster in every phase by sum, by minimum: the accept 36 percent,
+  validation 40, a read 79, the form 31, the emit 34. The cost is
+  accepted for this part and measured again at the end of slice 32, when
+  sources give nodes and the seal reads none.
+- **One order changed.** A deferred variant's child that fails to settle
+  is now reported after a disagreement about a group in the same frame,
+  where it was reported first before: the seal settles it when it
+  composes the chosen key, after `assertGroupsAgree()`. Each error alone
+  is unchanged.
 
 ### A key that does not apply
 

@@ -1329,10 +1329,15 @@ final class SurfaceBuilder {
       ));
     }
     $definitions = $this->definitions;
-    foreach ($this->attachments as $key => $attachment) {
-      $definitions[$key] = Attachment::mapOf($this->assertShell((string) $key), $attachment->child);
+    // A key that holds a child frame is handed its own facts alone, a copy
+    // of the shell its author described: its node is composed of them
+    // around the nodes its child's entries hold (Entry::sealed()), so no
+    // definition of the child's keys is built for it.
+    foreach (array_keys($this->attachments) as $key) {
+      $definitions[$key] = clone $this->assertShell((string) $key);
     }
     $sealed = [];
+    $picked = [];
     foreach ($this->variants as $key => ['by' => $by, 'variants' => $members]) {
       $variants = new Variants($by, $this->assertShell((string) $key), $members);
       $sealed[$key] = $variants;
@@ -1342,10 +1347,20 @@ final class SurfaceBuilder {
       $chosen = in_array($by, $this->locked, TRUE)
         ? $variants->chosen(DefinitionMetadata::defaultOf($this->named($by)))
         : NULL;
-      $definitions[$key] = $chosen === NULL ? $variants->placeholder() : $variants->definitionFor($chosen);
+      if ($chosen === NULL) {
+        $definitions[$key] = $variants->placeholder();
+      }
+      else {
+        $definitions[$key] = clone $variants->shell;
+        $picked[$key] = $chosen;
+      }
     }
-    foreach ($this->lists as $key => $list) {
-      $definitions[$key] = Collection::listOf($this->assertListShell((string) $key), $list->item->child);
+    foreach (array_keys($this->lists) as $key) {
+      // The list's own facts around an empty map, the item the child's
+      // keys fill, as Collection::listOf() makes it.
+      $shell = clone $this->assertListShell((string) $key);
+      $shell->setItemDefinition(MapDataDefinition::create());
+      $definitions[$key] = $shell;
     }
     if ($this->thirdParty !== []) {
       $definitions['third_party_settings'] = $this->mountedMap($this->thirdParty);
@@ -1394,9 +1409,11 @@ final class SurfaceBuilder {
         runtimeAccess: $this->runtimeAccessWhole ? array_map('strval', array_keys($definitions)) : array_values(array_intersect($this->runtimeAccess, array_keys($definitions))),
         lockReasons: array_intersect_key($this->lockReasons, $definitions),
         frameConstraints: $this->frameConstraints,
+        nodeFirst: TRUE,
+        chosen: $picked,
       ),
       $this->cacheability,
-      DefinitionMap::fromArrays(definitions: $outputs),
+      DefinitionMap::fromArrays(definitions: $outputs, nodeFirst: TRUE),
       $this->thirdPartyLayouts,
       $this->watchedValueCheck,
       lockedWhole: $this->lockedWhole,

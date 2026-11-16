@@ -75,9 +75,12 @@ class DefinitionReadIsPureTest extends UnitTestCase {
    * model(); 60 with around(), a shell's own facts around its children's
    * nodes (2026-11-14); 61 with NodeFacts::derived(), which the read asks
    * whether the merged constraint list is derived or kept as a member
-   * (part 32.5).
+   * (part 32.5); 65 since around() places a node given for a property the
+   * map does not hold, the seal's shells, and asks its node whether it is
+   * required (PropertySchema::required(), with NodeFacts::isRequired(),
+   * Secrets::marked() and NodeFacts::compute()), 2026-11-15.
    */
-  protected const REACHED = 61;
+  protected const REACHED = 65;
 
   /**
    * How many methods the node readers reach, their entry points too.

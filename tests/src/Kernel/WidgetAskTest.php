@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
-use Drupal\surface\DefinitionMap;
 use Drupal\surface\Entry;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Widget\SurfaceWidgetManager;
@@ -109,40 +108,31 @@ class WidgetAskTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a widget asked for below a key is refused alike in either form.
+   * Tests a widget asked for below a key is refused at its depth.
    *
-   * The build walks a definition-first entry by its definition and a
-   * node-first entry by its node (DefinitionMap::$nodeFirst), deriving a
-   * definition only for a key that asks for a widget: the refusal names
-   * the same key, at the same depth, with the same message.
+   * The build walks a sealed entry by its node, deriving a definition only
+   * for a key that asks for a widget: the refusal names the key and the
+   * depth it asks at.
    */
-  public function testWidgetAskedAtDepthIsRefusedInEitherForm(): void {
-    $said = [];
-    foreach ([FALSE, TRUE] as $node_first) {
-      DefinitionMap::$nodeFirst = $node_first;
-      try {
-        $this->built(DeepWrongWidgetStructure::class);
-        $this->fail('The list whose item asks for no widget is refused.');
-      }
-      catch (\LogicException $e) {
-        $said[] = $e->getMessage();
-      }
+  public function testWidgetAskedAtDepthIsRefused(): void {
+    try {
+      $this->built(DeepWrongWidgetStructure::class);
+      $this->fail('The list whose item asks for no widget is refused.');
     }
-    $this->assertStringContainsString('widget_test.deep_wrong_widget asks for the "no_such_widget" widget at "tags.*", which no widget answers to or which does not draw it', $said[0]);
-    $this->assertSame($said[0], $said[1], 'The same refusal, whichever form the entry holds.');
+    catch (\LogicException $e) {
+      $this->assertStringContainsString('widget_test.deep_wrong_widget asks for the "no_such_widget" widget at "tags.*", which no widget answers to or which does not draw it', $e->getMessage());
+    }
   }
 
   /**
-   * Tests a node-first build derives a definition only where one is asked.
+   * Tests a build derives a definition only where one is asked.
    *
    * The pair's own keys ask for no widget, and its build derives no
    * definition. The pairs ask for one at both keys that hold the pair, so
-   * those two entries derive one for the widget's claim. (The pair's keys
-   * inside them derive theirs when the build makes each key's map of
-   * them, Attachment::mapOf(), which is not the walk.)
+   * those two entries derive one for the widget's claim; the seal builds
+   * no map of the pair's keys for them, so the pair's keys derive none.
    */
   public function testNodeFirstBuildDerivesOnlyWhereWidgetsAreAsked(): void {
-    DefinitionMap::$nodeFirst = TRUE;
     $derived = new \ReflectionProperty(Entry::class, 'definition');
     $pair = $this->built(PairStructure::class);
     foreach ($pair->getDefinitions()->entries() as $name => $entry) {
@@ -153,6 +143,9 @@ class WidgetAskTest extends SurfaceKernelTestBase {
     foreach ($pairs->getDefinitions()->entries() as $name => $entry) {
       $this->assertTrue($entry->isNodeFirst());
       $this->assertNotNull($derived->getValue($entry), sprintf('"%s" asks for a widget, whose claim takes a definition.', $name));
+      foreach ($entry->attachment?->child->getDefinitions()->entries() ?? [] as $inside => $child_entry) {
+        $this->assertNull($derived->getValue($child_entry), sprintf('The pair\'s "%s" inside "%s" derives no definition.', $inside, $name));
+      }
     }
   }
 

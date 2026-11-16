@@ -59,6 +59,14 @@ use Drupal\surface\Tool\OperationInputs;
  *   handlerIn() and the node's data type, which readers older than slice
  *   31b do not have.
  *
+ * A definition's tree holds its array (toArray()) with its top-level keys
+ * sorted, and a `type` key left out where it holds what getDataType()
+ * gives without it (typeWithout()). Every array below the top keeps its
+ * order. A definition derived from a node differs from the one its author
+ * built only there: the order of its array's top-level keys, and a
+ * `type: list` key on a list (4,669 door rows measured, 2026-11-15).
+ * Neither is a fact of the definition.
+ *
  * What was thrown is recorded as its class and message. Nothing here
  * writes: no storage commits and no fixture is touched.
  */
@@ -276,7 +284,7 @@ final class DoorCorpusRecorder {
         'outputFromDefinition' => static::attempt(fn (): mixed => static::tree($defs->outputFromDefinition($entry->definition()))),
       ];
       if ($entry->variants !== NULL) {
-        $record['fromVariants'] = static::attempt(fn (): mixed => static::tree($defs->fromVariants($entry->variants, $entry->definition())));
+        $record['fromVariants'] = static::attempt(fn (): mixed => static::tree($defs->fromVariants($entry->variants, $entry->schema())));
       }
       $held = [];
       foreach (self::RAWS as $i => $raw) {
@@ -497,6 +505,11 @@ final class DoorCorpusRecorder {
     $tree['array'] = static::attempt(function () use ($definition, $depth): mixed {
       $array = method_exists($definition, 'toArray') ? $definition->toArray() : [];
       unset($array['class']);
+      if (array_key_exists('type', $array) && $array['type'] === static::typeWithout($definition)) {
+        unset($array['type']);
+      }
+      // The top-level keys alone: an array below them keeps its order.
+      ksort($array);
       return static::plain($array, $depth + 1);
     });
     if ($definition instanceof ComplexDataDefinitionInterface) {
@@ -509,6 +522,36 @@ final class DoorCorpusRecorder {
       $tree['item'] = static::tree($definition->getItemDefinition(), $depth + 1);
     }
     return $tree;
+  }
+
+  /**
+   * Gets the data type a definition gives with no `type` key in its array.
+   *
+   * A `type` key that holds this says nothing the definition does not say
+   * without it: a list is `list` whatever its array holds, and any other
+   * definition core makes is `any` with no type. So the key is left out
+   * of the tree where it holds this, and kept where it holds anything
+   * else. A definition that holds its array elsewhere keeps the key.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   *
+   * @return string|null
+   *   The data type, or NULL when it cannot be asked.
+   */
+  protected static function typeWithout(DataDefinitionInterface $definition): ?string {
+    if (!property_exists($definition, 'definition')) {
+      return NULL;
+    }
+    $bare = clone $definition;
+    $member = new \ReflectionProperty($bare, 'definition');
+    $array = $member->getValue($bare);
+    if (!is_array($array)) {
+      return NULL;
+    }
+    unset($array['type']);
+    $member->setValue($bare, $array);
+    return $bare->getDataType();
   }
 
   /**

@@ -3,19 +3,19 @@
   "rows": 320,
   "digests": {
     "plain | door": {
-      "fromSurface": "9a81135e3298",
-      "fromSurface stored": "9a81135e3298",
-      "fromSurface narrowing": "9a81135e3298",
-      "withLookups": "9a81135e3298",
-      "withDependencies": "a490052743f9",
-      "withStored": "7fbee79c86a5",
-      "shapeOf": "00858c23bcb8",
-      "withoutRequired": "3fc44200bddd",
-      "outputFromInput": "dade7dd159ac",
+      "fromSurface": "8fe314443a4a",
+      "fromSurface stored": "8fe314443a4a",
+      "fromSurface narrowing": "8fe314443a4a",
+      "withLookups": "8fe314443a4a",
+      "withDependencies": "4b3147e5f6c5",
+      "withStored": "49e805b16baf",
+      "shapeOf": "0a270fb4d9d2",
+      "withoutRequired": "fc702a30fb11",
+      "outputFromInput": "669524477db6",
       "secrets": "2ad9df4a60a7",
       "outputs": "39347ff402b6",
-      "values update": "8e0aeac58372",
-      "values create": "3cc1aad7963d",
+      "values update": "482ecf37bd27",
+      "values create": "9d7f55f5872a",
       "stored": "3a8bf7e97565",
       "secretKeys": "ed596757db3f",
       "config schema": "c92a3a272c19",
@@ -28,193 +28,193 @@
       "flow placed grouped": "8c9682db0b87"
     },
     "plain | values": {
-      "stored": "2fa434786fb3",
-      "narrow": "5e462b5b2443",
-      "out": "eaea61183a94",
-      "req": "b11abee70bb5",
-      "full": "281b13c64e5e"
+      "stored": "3b8141b9d044",
+      "narrow": "91090d9fd331",
+      "out": "693a58bbfaab",
+      "req": "8045416014e3",
+      "full": "d5c6532a9085"
     },
     "plain | key": {
-      "gate": "16895652c5b6",
-      "l_blank": "3d404845e2ad",
-      "lr_blank": "09724e7f18db",
-      "lm_blank": "353bc977bd8a",
-      "ll_blank": "e8c969b3f956",
-      "lc_blank": "d23f9fc26484",
-      "l_zero": "046fb5f5dc51",
-      "lr_zero": "f2c59e954d39",
-      "lm_zero": "c1c6f7ca80b7",
-      "ll_zero": "a34d156393d7",
-      "lc_zero": "e64883015247",
-      "l_none": "e28c289e296f",
-      "lr_none": "066b878e958d",
-      "lm_none": "0c8ec03b516a",
-      "ll_none": "103d2c17f704",
-      "lc_none": "d6d848ee0785",
-      "l_mk": "66b0bbfd42cd",
-      "lr_mk": "bf67b9b39091",
-      "lm_mk": "5426c49fdb8f",
-      "ll_mk": "da02dac1e610",
-      "lc_mk": "58edcc5af947",
-      "req": "5383ce7fa4cb",
-      "held": "6c5c4c0fe95d",
-      "held_bool": "3982b55da000",
-      "sec": "11545dc15044",
-      "sec_d": "26ea5b54afc7",
-      "sec_held": "2c28ff36ae53",
-      "src": "376791126d32",
-      "comp": "c6511651c22f",
-      "ucomp": "54f476e393b8",
-      "lk": "4b7addb43dd2",
-      "fixed": "50c2c0bb2b43",
-      "d_null": "39c64df5825d",
-      "d_int": "50c645aaa304",
-      "d_bool": "25c33587e0ca",
-      "d_map": "fbd25f5200b4",
-      "d_mapnull": "2695f0261074",
-      "rd": "141c5a31586e",
-      "empty_map": "e4daf033be75",
-      "reworded": "88c463e12e2d",
-      "d_list": "8899ac44074a",
-      "mm": "8d5484194063",
-      "lom": "f64a253e39d8",
-      "lol": "19607aeecfe7",
-      "c_str": "e1faed9b2ff9",
-      "c_int": "90a320268b9b",
-      "c_flt": "9994d1abcbc3",
-      "c_bool": "7ef98749988c",
-      "lc_bool": "611493b15f35",
-      "lc_num": "f3841f43f391",
-      "ts": "581f1c764e7d",
-      "dt": "41e9d8014776",
-      "do": "a897bf2e9b23",
-      "bool": "6712e0364a3a",
-      "flt": "d3c6dbe19c0f",
-      "email": "45d5a0e36793",
-      "uri": "0b8ff265b22c",
-      "cons": "a22bcf1691b2",
-      "any": "47a1c2714d24",
-      "narrowed": "5fe782621477",
-      "sec_stale": "26c025ba926a",
-      "sec_len": "c647921df09d",
-      "sec_int": "be1e4e809365",
-      "sec_email": "fc4639822b44",
-      "lsec": "b2be301b76a9",
-      "ruled": "3d99d438a567",
-      "each": "b1310d87764c",
-      "third_party_settings": "97c369341092"
+      "gate": "a2c115ded816",
+      "l_blank": "487435d21590",
+      "lr_blank": "0bf980198c9e",
+      "lm_blank": "c847cfe9c853",
+      "ll_blank": "6740438187af",
+      "lc_blank": "9fbb87ba4c5b",
+      "l_zero": "8557c7889bc4",
+      "lr_zero": "3efe0c10befe",
+      "lm_zero": "4fffa3ecb874",
+      "ll_zero": "1bfc0eb493d4",
+      "lc_zero": "3c511b44f292",
+      "l_none": "96e3d9ea2665",
+      "lr_none": "1e2e05a2a494",
+      "lm_none": "3a0eea4ab2a7",
+      "ll_none": "952ebbbba807",
+      "lc_none": "1b6b8a947d4c",
+      "l_mk": "467b60c752d5",
+      "lr_mk": "cc8b1340086a",
+      "lm_mk": "b59ff596ada4",
+      "ll_mk": "e3ad76a65605",
+      "lc_mk": "db990695711c",
+      "req": "cb1dcdc4945e",
+      "held": "aea5392572a2",
+      "held_bool": "a47b5b1307b0",
+      "sec": "e06301ef4ef6",
+      "sec_d": "4c16020b5dac",
+      "sec_held": "dba963ae339a",
+      "src": "2385ac523e0e",
+      "comp": "11329631b7de",
+      "ucomp": "640fd52eb12c",
+      "lk": "948f9802ffae",
+      "fixed": "bda5e938d44e",
+      "d_null": "b4f166b6fe2b",
+      "d_int": "428ffa5ebdbf",
+      "d_bool": "b3738e7ed4fa",
+      "d_map": "ac2308c36194",
+      "d_mapnull": "30e9f2593510",
+      "rd": "54b729cf848f",
+      "empty_map": "227e9a733d37",
+      "reworded": "92d67aaa886d",
+      "d_list": "ab239b50fb25",
+      "mm": "b338cf4d2492",
+      "lom": "d9c5e87d07c3",
+      "lol": "c2a59ac925a9",
+      "c_str": "09a473fb63c3",
+      "c_int": "ee543256250a",
+      "c_flt": "f079d17a8f6b",
+      "c_bool": "d2bae9a0b7da",
+      "lc_bool": "1715d95d8ec7",
+      "lc_num": "baed8b7e1590",
+      "ts": "d9c7023229f9",
+      "dt": "51bf3324c637",
+      "do": "8c7f729885d3",
+      "bool": "2bae2a57fb20",
+      "flt": "26d59276a6f5",
+      "email": "118f76c012de",
+      "uri": "59f43a1f74ef",
+      "cons": "0dcd185b02de",
+      "any": "b029aafa18f0",
+      "narrowed": "69b018082c47",
+      "sec_stale": "a5e7b793f37e",
+      "sec_len": "3e9a9f177c96",
+      "sec_int": "4b824d664b33",
+      "sec_email": "2884a7ce6db5",
+      "lsec": "e1ac00e1e4c4",
+      "ruled": "d82951db9a27",
+      "each": "37ec58fadc6d",
+      "third_party_settings": "4304a9cc67f9"
     },
     "plain | path": {
       "nope": "1bf169f7d887",
       "nope.deeper": "ed8a9f9798ca",
-      "gate": "6ca9d957afff",
-      "l_blank": "49cab12dfa48",
-      "lr_blank": "853d41dc2f30",
+      "gate": "1ae33952ee04",
+      "l_blank": "87112427de10",
+      "lr_blank": "214474f9b3ed",
       "lm_blank": "ec4e699338f6",
-      "lm_blank.p": "9f5c5557bf1e",
+      "lm_blank.p": "b5d0fe7e1253",
       "lm_blank.nope": "c967f21b19d2",
-      "ll_blank": "79dc2736d081",
+      "ll_blank": "19b9262aa4d6",
       "ll_blank.0": "33fdf2f48ede",
-      "lc_blank": "320482d25015",
-      "l_zero": "e2e27a2edae1",
-      "lr_zero": "7f7bbcb8989e",
+      "lc_blank": "d9c93492692c",
+      "l_zero": "ffdccc0b3797",
+      "lr_zero": "1e9745b80b07",
       "lm_zero": "8a204e60880c",
-      "lm_zero.p": "4124f694202a",
+      "lm_zero.p": "84d45537f823",
       "lm_zero.nope": "882ab135ecd1",
-      "ll_zero": "769b1d980496",
+      "ll_zero": "7051a3a074ae",
       "ll_zero.0": "5fde4760e3a3",
-      "lc_zero": "34c3788897fc",
-      "l_none": "dea0ee671525",
-      "lr_none": "2195edc3f79e",
+      "lc_zero": "0167ca5e7776",
+      "l_none": "13d1fa4d9085",
+      "lr_none": "50a29466b041",
       "lm_none": "11e62f1f56bb",
-      "lm_none.p": "e39afa06edea",
+      "lm_none.p": "dd8ade7ffdac",
       "lm_none.nope": "dc2ae90b8202",
-      "ll_none": "becae0850756",
+      "ll_none": "c357bd3d6867",
       "ll_none.0": "631446a2ef22",
-      "lc_none": "42f5f690c899",
-      "l_mk": "e8fce82f9838",
-      "lr_mk": "9eec4e53c5c1",
+      "lc_none": "2d1f0bf571d4",
+      "l_mk": "806de8683ee1",
+      "lr_mk": "17ac00bd221f",
       "lm_mk": "4df207b94669",
-      "lm_mk.p": "8a8094b566c0",
+      "lm_mk.p": "dd120e69346c",
       "lm_mk.nope": "7edc498934c8",
-      "ll_mk": "0ea861d25f9f",
+      "ll_mk": "accd393d8dbf",
       "ll_mk.0": "1386c334788b",
-      "lc_mk": "d35bbcf0f815",
-      "req": "dbbd3b809989",
-      "held": "9b4b3254541f",
-      "held_bool": "adaa94057eea",
+      "lc_mk": "6c2bc6767aaf",
+      "req": "2de697d00100",
+      "held": "201909e30155",
+      "held_bool": "7540303abeb1",
       "sec": "ea5a9897ba0b",
       "sec_d": "9a1412234802",
       "sec_held": "7e26feb1de58",
-      "src": "10f953e38ee8",
+      "src": "a4ebf254e2da",
       "comp": "efae780425c9",
       "ucomp": "2ef76a4cc962",
       "lk": "e32d611a2d94",
       "fixed": "e32d611a2d94",
-      "d_null": "e2605099096a",
-      "d_int": "cd1ac93bb969",
-      "d_bool": "917f279fef59",
+      "d_null": "d6b2830a858c",
+      "d_int": "807985130124",
+      "d_bool": "f52940ced1f2",
       "d_map": "c5e8cd14b5be",
-      "d_map.a": "7b651415847c",
-      "d_map.b": "0dba1ba5478f",
-      "d_map.c": "edd77e355c29",
+      "d_map.a": "4c9b132d87d8",
+      "d_map.b": "a979e2b898e9",
+      "d_map.c": "b5bf90b3f6b6",
       "d_map.nope": "7fef04ae975d",
       "d_mapnull": "4a4dc96a767b",
-      "d_mapnull.a": "f275fb2b7576",
+      "d_mapnull.a": "2dc152f90d2a",
       "d_mapnull.nope": "ab5c6fbf1ec5",
-      "rd": "782db20603f8",
-      "empty_map": "359de8670032",
+      "rd": "0f2a21512871",
+      "empty_map": "11f8fcccf509",
       "empty_map.nope": "9981c39f64fd",
-      "reworded": "e3ac30fee2b5",
-      "d_list": "2f0daf22314c",
+      "reworded": "6a7ddb22fbdd",
+      "d_list": "a32712143e95",
       "d_list.0": "79322ca8a834",
       "mm": "c0e6f6608e7f",
       "mm.in": "e11221b81a8e",
-      "mm.in.deep": "7833a0c4607b",
+      "mm.in.deep": "bafa11ca8f3e",
       "mm.in.dsec": "cdd91bc168ef",
       "mm.in.nope": "3b6b74244967",
-      "mm.t": "1827bb3c72b8",
+      "mm.t": "264a817c7ec6",
       "mm.nope": "64e745a0e0d6",
-      "lom": "4338586b9fa0",
+      "lom": "3fd0d986eacc",
       "lom.0": "5ae1d09b02e5",
       "lom.0.n": "09a8b806daff",
       "lom.0.rsec": "90ce6ca8591d",
       "lom.0.k": "6dcd8fd0b7cb",
       "lom.0.nope": "5833bd66d212",
-      "lol": "01cc44af4d7f",
+      "lol": "b1d35d037aa3",
       "lol.0": "06ed2ad465ca",
       "lol.0.0": "e42d9fd608fc",
-      "c_str": "ebfc68423258",
-      "c_int": "089e352909a5",
-      "c_flt": "1f13921888ae",
-      "c_bool": "762b507914e3",
-      "lc_bool": "02eb7510d317",
-      "lc_num": "4ceefd010cf2",
-      "ts": "5561cffb2bc3",
-      "dt": "5a4613ed43fd",
-      "do": "d30e6d99ab87",
-      "bool": "a07fe3e65363",
-      "flt": "41c0f6e9576c",
-      "email": "6113bafce96d",
-      "uri": "d90ef536d84c",
-      "cons": "b3f5e4799d4e",
-      "any": "c8329d8e071b",
-      "narrowed": "02515330716a",
+      "c_str": "2e1075544e6a",
+      "c_int": "8f204bb4219f",
+      "c_flt": "dc5f48274043",
+      "c_bool": "9857ef68131a",
+      "lc_bool": "0f28eb98914d",
+      "lc_num": "a3ca8711f546",
+      "ts": "fd4bb3712bbe",
+      "dt": "9b235b57d7d4",
+      "do": "b05ed0a3c8ce",
+      "bool": "124820295771",
+      "flt": "cd85cd6359b7",
+      "email": "25df4a896d00",
+      "uri": "040ae6dae9bb",
+      "cons": "535b37ad1daf",
+      "any": "ac3718725dfe",
+      "narrowed": "6e4bd8cf8120",
       "sec_stale": "a73185787c8b",
       "sec_len": "082a2ba8b052",
       "sec_int": "bc2c5a917070",
       "sec_email": "fac453c81c21",
       "lsec": "6492a6f0f84c",
-      "ruled": "673de742636e",
+      "ruled": "aab66ba56b64",
       "each": "7e1dca745674",
       "each.nope": "bba544f88b8b",
       "third_party_settings": "b8e937687917",
       "third_party_settings.surface": "22c3b8aca436",
       "third_party_settings.surface.mk": "d81b96792754",
-      "third_party_settings.surface.mk.a": "d2c28d571e73",
+      "third_party_settings.surface.mk.a": "2da0e3676935",
       "third_party_settings.surface.mk.ms": "5c890ae9d7d4",
       "third_party_settings.surface.mk.nope": "ff82b373bdd1",
-      "third_party_settings.surface.mk2": "d2dc9f323c32",
+      "third_party_settings.surface.mk2": "6d7b4f11e989",
       "third_party_settings.surface.nope": "784e3b71cb70",
       "third_party_settings.nope": "4dd306536a2c"
     },
@@ -364,10 +364,10 @@
         "constraints": [],
         "settings": [],
         "array": {
-          "type": "map",
-          "label": "L",
           "description": "D",
-          "required": false
+          "label": "L",
+          "required": false,
+          "type": "map"
         },
         "properties": {
           "gate": {
@@ -393,10 +393,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Gate",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -407,7 +403,11 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Gate",
+              "required": false,
+              "type": "string"
             }
           },
           "l_blank": {
@@ -427,15 +427,15 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "description": "",
               "label": {
                 "@text": "string value"
               },
-              "description": "",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "lr_blank": {
@@ -456,16 +456,16 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": {
-                "@text": "integer value"
-              },
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "integer value"
+              },
+              "required": true,
+              "type": "integer"
             }
           },
           "lm_blank": {
@@ -483,12 +483,12 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
+              "description": "",
               "label": {
                 "@text": "map value"
               },
-              "description": "",
-              "required": false
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "p": {
@@ -508,15 +508,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
+                  "description": "",
                   "label": {
                     "@text": "string value"
                   },
-                  "description": "",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               }
             }
@@ -537,11 +537,10 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "list",
+              "description": "",
               "label": {
                 "@text": "list value"
               },
-              "description": "",
               "required": false
             },
             "item": {
@@ -561,15 +560,15 @@
               },
               "settings": [],
               "array": {
-                "type": "string",
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "description": "",
                 "label": {
                   "@text": "string value"
                 },
-                "description": "",
                 "required": false,
-                "constraints": {
-                  "PrimitiveType": []
-                }
+                "type": "string"
               }
             }
           },
@@ -602,12 +601,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "string value"
-              },
-              "description": "",
-              "required": false,
               "constraints": {
                 "LabeledChoice": {
                   "choices": {
@@ -622,7 +615,13 @@
                     "b"
                   ]
                 }
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "string value"
+              },
+              "required": false,
+              "type": "string"
             }
           },
           "l_zero": {
@@ -640,13 +639,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "0",
-              "description": "0",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "0",
+              "label": "0",
+              "required": false,
+              "type": "string"
             }
           },
           "lr_zero": {
@@ -665,14 +664,14 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": "0",
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": "0",
+              "required": true,
+              "type": "integer"
             }
           },
           "lm_zero": {
@@ -688,10 +687,10 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "0",
               "description": "0",
-              "required": false
+              "label": "0",
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "p": {
@@ -709,13 +708,13 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "0",
-                  "description": "0",
-                  "required": false,
                   "constraints": {
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": "0",
+                  "label": "0",
+                  "required": false,
+                  "type": "string"
                 }
               }
             }
@@ -734,9 +733,8 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "list",
-              "label": "0",
               "description": "0",
+              "label": "0",
               "required": false
             },
             "item": {
@@ -754,13 +752,13 @@
               },
               "settings": [],
               "array": {
-                "type": "string",
-                "label": "0",
-                "description": "",
-                "required": false,
                 "constraints": {
                   "PrimitiveType": []
-                }
+                },
+                "description": "",
+                "label": "0",
+                "required": false,
+                "type": "string"
               }
             }
           },
@@ -791,10 +789,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "0",
-              "description": "",
-              "required": false,
               "constraints": {
                 "LabeledChoice": {
                   "choices": {
@@ -809,7 +803,11 @@
                     "b"
                   ]
                 }
-              }
+              },
+              "description": "",
+              "label": "0",
+              "required": false,
+              "type": "string"
             }
           },
           "l_none": {
@@ -829,15 +827,15 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "description": "",
               "label": {
                 "@text": "string value"
               },
-              "description": "",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "lr_none": {
@@ -858,16 +856,16 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": {
-                "@text": "integer value"
-              },
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "integer value"
+              },
+              "required": true,
+              "type": "integer"
             }
           },
           "lm_none": {
@@ -885,12 +883,12 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
+              "description": "",
               "label": {
                 "@text": "map value"
               },
-              "description": "",
-              "required": false
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "p": {
@@ -910,15 +908,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
+                  "description": "",
                   "label": {
                     "@text": "string value"
                   },
-                  "description": "",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               }
             }
@@ -939,11 +937,10 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "list",
+              "description": "",
               "label": {
                 "@text": "list value"
               },
-              "description": "",
               "required": false
             },
             "item": {
@@ -963,15 +960,15 @@
               },
               "settings": [],
               "array": {
-                "type": "string",
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "description": "",
                 "label": {
                   "@text": "string value"
                 },
-                "description": "",
                 "required": false,
-                "constraints": {
-                  "PrimitiveType": []
-                }
+                "type": "string"
               }
             }
           },
@@ -1004,12 +1001,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "string value"
-              },
-              "description": "",
-              "required": false,
               "constraints": {
                 "LabeledChoice": {
                   "choices": {
@@ -1024,7 +1015,13 @@
                     "b"
                   ]
                 }
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "string value"
+              },
+              "required": false,
+              "type": "string"
             }
           },
           "l_mk": {
@@ -1046,17 +1043,17 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "Marked up"
+              "constraints": {
+                "PrimitiveType": []
               },
               "description": {
                 "@text": "Marked up"
               },
+              "label": {
+                "@text": "Marked up"
+              },
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "lr_mk": {
@@ -1077,16 +1074,16 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": {
-                "@text": "Marked up"
-              },
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "Marked up"
+              },
+              "required": true,
+              "type": "integer"
             }
           },
           "lm_mk": {
@@ -1106,14 +1103,14 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": {
-                "@text": "Marked up"
-              },
               "description": {
                 "@text": "Marked up"
               },
-              "required": false
+              "label": {
+                "@text": "Marked up"
+              },
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "p": {
@@ -1135,17 +1132,17 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": {
-                    "@text": "Marked up"
+                  "constraints": {
+                    "PrimitiveType": []
                   },
                   "description": {
                     "@text": "Marked up"
                   },
+                  "label": {
+                    "@text": "Marked up"
+                  },
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               }
             }
@@ -1168,11 +1165,10 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "list",
-              "label": {
+              "description": {
                 "@text": "Marked up"
               },
-              "description": {
+              "label": {
                 "@text": "Marked up"
               },
               "required": false
@@ -1194,15 +1190,15 @@
               },
               "settings": [],
               "array": {
-                "type": "string",
+                "constraints": {
+                  "PrimitiveType": []
+                },
+                "description": "",
                 "label": {
                   "@text": "Marked up"
                 },
-                "description": "",
                 "required": false,
-                "constraints": {
-                  "PrimitiveType": []
-                }
+                "type": "string"
               }
             }
           },
@@ -1235,12 +1231,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "Marked up"
-              },
-              "description": "",
-              "required": false,
               "constraints": {
                 "LabeledChoice": {
                   "choices": {
@@ -1255,7 +1245,13 @@
                     "b"
                   ]
                 }
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "Marked up"
+              },
+              "required": false,
+              "type": "string"
             }
           },
           "req": {
@@ -1274,14 +1270,14 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Req",
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": "Req",
+              "required": true,
+              "type": "string"
             }
           },
           "held": {
@@ -1299,13 +1295,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Held",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Held",
+              "required": false,
+              "type": "string"
             }
           },
           "held_bool": {
@@ -1323,13 +1319,13 @@
             },
             "settings": [],
             "array": {
-              "type": "boolean",
-              "label": "Held bool",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Held bool",
+              "required": false,
+              "type": "boolean"
             }
           },
           "sec": {
@@ -1350,16 +1346,16 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Sec",
-              "description": {
-                "@text": "Secret desc Write only: the stored value is never returned, and sending nothing leaves it unchanged."
-              },
-              "required": false,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": {
+                "@text": "Secret desc Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "label": "Sec",
+              "required": false,
+              "type": "string"
             }
           },
           "sec_d": {
@@ -1379,15 +1375,15 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Sec default",
+              "constraints": {
+                "PrimitiveType": []
+              },
               "description": {
                 "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
               },
+              "label": "Sec default",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "sec_held": {
@@ -1407,15 +1403,15 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Sec held",
+              "constraints": {
+                "PrimitiveType": []
+              },
               "description": {
                 "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
               },
+              "label": "Sec held",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "src": {
@@ -1433,13 +1429,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Source",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Source",
+              "required": false,
+              "type": "string"
             }
           },
           "comp": {
@@ -1457,13 +1453,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Comp",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Comp",
+              "required": false,
+              "type": "string"
             }
           },
           "ucomp": {
@@ -1482,14 +1478,14 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Ucomp",
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": "Ucomp",
+              "required": true,
+              "type": "string"
             }
           },
           "lk": {
@@ -1507,13 +1503,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Locked",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Locked",
+              "required": false,
+              "type": "string"
             }
           },
           "fixed": {
@@ -1531,13 +1527,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Fixed",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Fixed",
+              "required": false,
+              "type": "string"
             }
           },
           "d_null": {
@@ -1555,13 +1551,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Null default",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Null default",
+              "required": false,
+              "type": "string"
             }
           },
           "d_int": {
@@ -1579,13 +1575,13 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": "Int default",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Int default",
+              "required": false,
+              "type": "integer"
             }
           },
           "d_bool": {
@@ -1603,13 +1599,13 @@
             },
             "settings": [],
             "array": {
-              "type": "boolean",
-              "label": "Bool default",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Bool default",
+              "required": false,
+              "type": "boolean"
             }
           },
           "d_map": {
@@ -1627,10 +1623,10 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Map default",
               "description": "",
-              "required": false
+              "label": "Map default",
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "a": {
@@ -1648,13 +1644,13 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "A",
-                  "description": "",
-                  "required": false,
                   "constraints": {
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": "",
+                  "label": "A",
+                  "required": false,
+                  "type": "string"
                 }
               },
               "b": {
@@ -1672,13 +1668,13 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "integer",
-                  "label": "B",
-                  "description": "",
-                  "required": false,
                   "constraints": {
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": "",
+                  "label": "B",
+                  "required": false,
+                  "type": "integer"
                 }
               },
               "c": {
@@ -1696,13 +1692,13 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "C",
-                  "description": "",
-                  "required": false,
                   "constraints": {
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": "",
+                  "label": "C",
+                  "required": false,
+                  "type": "string"
                 }
               }
             }
@@ -1722,10 +1718,10 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Map default null",
               "description": "",
-              "required": false
+              "label": "Map default null",
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "a": {
@@ -1743,13 +1739,13 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "A",
-                  "description": "",
-                  "required": false,
                   "constraints": {
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": "",
+                  "label": "A",
+                  "required": false,
+                  "type": "string"
                 }
               }
             }
@@ -1770,14 +1766,14 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": "Required default",
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": "Required default",
+              "required": true,
+              "type": "integer"
             }
           },
           "empty_map": {
@@ -1793,10 +1789,10 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Empty map",
               "description": "",
-              "required": false
+              "label": "Empty map",
+              "required": false,
+              "type": "map"
             }
           },
           "reworded": {
@@ -1814,13 +1810,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Reworded label",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Reworded label",
+              "required": false,
+              "type": "string"
             }
           },
           "d_list": {
@@ -1840,9 +1836,8 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "list",
-              "label": "List default",
               "description": "",
+              "label": "List default",
               "required": false
             },
             "item": {
@@ -1860,13 +1855,13 @@
               },
               "settings": [],
               "array": {
-                "type": "string",
-                "label": "I",
-                "description": "",
-                "required": false,
                 "constraints": {
                   "PrimitiveType": []
-                }
+                },
+                "description": "",
+                "label": "I",
+                "required": false,
+                "type": "string"
               }
             }
           },
@@ -1888,13 +1883,13 @@
             },
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Map in map",
-              "description": "",
-              "required": true,
               "constraints": {
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": "Map in map",
+              "required": true,
+              "type": "map"
             },
             "properties": {
               "in": {
@@ -1910,10 +1905,10 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "map",
-                  "label": "In",
                   "description": "",
-                  "required": false
+                  "label": "In",
+                  "required": false,
+                  "type": "map"
                 },
                 "properties": {
                   "deep": {
@@ -1936,10 +1931,6 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "integer",
-                      "label": "Deep",
-                      "description": "",
-                      "required": true,
                       "constraints": {
                         "Range": {
                           "min": 1,
@@ -1947,7 +1938,11 @@
                         },
                         "PrimitiveType": [],
                         "NotNull": []
-                      }
+                      },
+                      "description": "",
+                      "label": "Deep",
+                      "required": true,
+                      "type": "integer"
                     }
                   },
                   "dsec": {
@@ -1967,15 +1962,15 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "string",
-                      "label": "Deep secret",
+                      "constraints": {
+                        "PrimitiveType": []
+                      },
                       "description": {
                         "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                       },
+                      "label": "Deep secret",
                       "required": false,
-                      "constraints": {
-                        "PrimitiveType": []
-                      }
+                      "type": "string"
                     }
                   }
                 }
@@ -1995,13 +1990,13 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "timestamp",
-                  "label": "Ts",
-                  "description": "",
-                  "required": false,
                   "constraints": {
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": "",
+                  "label": "Ts",
+                  "required": false,
+                  "type": "timestamp"
                 }
               }
             }
@@ -2025,16 +2020,15 @@
             },
             "settings": [],
             "array": {
-              "type": "list",
-              "label": "List of maps",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Count": {
                   "min": 1,
                   "max": 3
                 }
-              }
+              },
+              "description": "",
+              "label": "List of maps",
+              "required": false
             },
             "item": {
               "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
@@ -2049,10 +2043,10 @@
               "constraints": [],
               "settings": [],
               "array": {
-                "type": "map",
-                "label": "Row",
                 "description": "",
-                "required": false
+                "label": "Row",
+                "required": false,
+                "type": "map"
               },
               "properties": {
                 "n": {
@@ -2071,14 +2065,14 @@
                   },
                   "settings": [],
                   "array": {
-                    "type": "string",
-                    "label": "N",
-                    "description": "",
-                    "required": true,
                     "constraints": {
                       "PrimitiveType": [],
                       "NotNull": []
-                    }
+                    },
+                    "description": "",
+                    "label": "N",
+                    "required": true,
+                    "type": "string"
                   }
                 },
                 "rsec": {
@@ -2098,15 +2092,15 @@
                   },
                   "settings": [],
                   "array": {
-                    "type": "string",
-                    "label": "Row secret",
+                    "constraints": {
+                      "PrimitiveType": []
+                    },
                     "description": {
                       "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                     },
+                    "label": "Row secret",
                     "required": false,
-                    "constraints": {
-                      "PrimitiveType": []
-                    }
+                    "type": "string"
                   }
                 },
                 "k": {
@@ -2130,10 +2124,6 @@
                   },
                   "settings": [],
                   "array": {
-                    "type": "integer",
-                    "label": "K",
-                    "description": "",
-                    "required": false,
                     "constraints": {
                       "Choice": {
                         "choices": [
@@ -2142,7 +2132,11 @@
                         ]
                       },
                       "PrimitiveType": []
-                    }
+                    },
+                    "description": "",
+                    "label": "K",
+                    "required": false,
+                    "type": "integer"
                   }
                 }
               }
@@ -2162,9 +2156,8 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "list",
-              "label": "List of lists",
               "description": "",
+              "label": "List of lists",
               "required": false
             },
             "item": {
@@ -2181,9 +2174,8 @@
               "constraints": [],
               "settings": [],
               "array": {
-                "type": "list",
-                "label": "Inner",
                 "description": "",
+                "label": "Inner",
                 "required": false
               },
               "item": {
@@ -2204,16 +2196,16 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "float",
-                  "label": "F",
-                  "description": "",
-                  "required": false,
                   "constraints": {
                     "Range": {
                       "min": 0
                     },
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": "",
+                  "label": "F",
+                  "required": false,
+                  "type": "float"
                 }
               }
             }
@@ -2239,10 +2231,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Choice str",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -2251,7 +2239,11 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Choice str",
+              "required": false,
+              "type": "string"
             }
           },
           "c_int": {
@@ -2276,10 +2268,6 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": "Choice int",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -2289,7 +2277,11 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Choice int",
+              "required": false,
+              "type": "integer"
             }
           },
           "c_flt": {
@@ -2313,10 +2305,6 @@
             },
             "settings": [],
             "array": {
-              "type": "float",
-              "label": "Choice float",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -2325,7 +2313,11 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Choice float",
+              "required": false,
+              "type": "float"
             }
           },
           "c_bool": {
@@ -2349,10 +2341,6 @@
             },
             "settings": [],
             "array": {
-              "type": "boolean",
-              "label": "Choice bool",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -2361,7 +2349,11 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Choice bool",
+              "required": false,
+              "type": "boolean"
             }
           },
           "lc_bool": {
@@ -2391,10 +2383,6 @@
             },
             "settings": [],
             "array": {
-              "type": "boolean",
-              "label": "Labeled bool",
-              "description": "",
-              "required": false,
               "constraints": {
                 "LabeledChoice": {
                   "choices": {
@@ -2409,7 +2397,11 @@
                     0
                   ]
                 }
-              }
+              },
+              "description": "",
+              "label": "Labeled bool",
+              "required": false,
+              "type": "boolean"
             }
           },
           "lc_num": {
@@ -2439,10 +2431,6 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": "Labeled num",
-              "description": "",
-              "required": false,
               "constraints": {
                 "LabeledChoice": {
                   "choices": {
@@ -2457,7 +2445,11 @@
                     2
                   ]
                 }
-              }
+              },
+              "description": "",
+              "label": "Labeled num",
+              "required": false,
+              "type": "integer"
             }
           },
           "ts": {
@@ -2475,13 +2467,13 @@
             },
             "settings": [],
             "array": {
-              "type": "timestamp",
-              "label": "When",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "When",
+              "required": false,
+              "type": "timestamp"
             }
           },
           "dt": {
@@ -2499,13 +2491,13 @@
             },
             "settings": [],
             "array": {
-              "type": "datetime_iso8601",
-              "label": "Date time",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Date time",
+              "required": false,
+              "type": "datetime_iso8601"
             }
           },
           "do": {
@@ -2524,14 +2516,14 @@
             },
             "settings": [],
             "array": {
-              "type": "datetime_iso8601",
-              "label": "Date only",
-              "description": "",
-              "required": false,
               "constraints": {
                 "DateOnly": [],
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Date only",
+              "required": false,
+              "type": "datetime_iso8601"
             }
           },
           "bool": {
@@ -2549,13 +2541,13 @@
             },
             "settings": [],
             "array": {
-              "type": "boolean",
-              "label": "Bool",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Bool",
+              "required": false,
+              "type": "boolean"
             }
           },
           "flt": {
@@ -2573,13 +2565,13 @@
             },
             "settings": [],
             "array": {
-              "type": "float",
-              "label": "Float",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Float",
+              "required": false,
+              "type": "float"
             }
           },
           "email": {
@@ -2599,15 +2591,15 @@
             },
             "settings": [],
             "array": {
-              "type": "email",
-              "label": "Email",
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "Email": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": "Email",
+              "required": true,
+              "type": "email"
             }
           },
           "uri": {
@@ -2625,13 +2617,13 @@
             },
             "settings": [],
             "array": {
-              "type": "uri",
-              "label": "Uri",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Uri",
+              "required": false,
+              "type": "uri"
             }
           },
           "cons": {
@@ -2658,10 +2650,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Constrained",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Length": {
                   "min": 2,
@@ -2673,7 +2661,11 @@
                 "NotBlank": [],
                 "NotNull": [],
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Constrained",
+              "required": false,
+              "type": "string"
             }
           },
           "any": {
@@ -2689,9 +2681,8 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "any",
-              "label": "Any",
               "description": "",
+              "label": "Any",
               "required": false
             }
           },
@@ -2715,10 +2706,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Narrowed",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -2726,7 +2713,11 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Narrowed",
+              "required": false,
+              "type": "string"
             }
           },
           "sec_stale": {
@@ -2751,12 +2742,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Stale secret",
-              "description": {
-                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
-              },
-              "required": false,
               "constraints": {
                 "Choice": {
                   "choices": [
@@ -2764,7 +2749,13 @@
                   ]
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": {
+                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "label": "Stale secret",
+              "required": false,
+              "type": "string"
             }
           },
           "sec_len": {
@@ -2790,12 +2781,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Short secret",
-              "description": {
-                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
-              },
-              "required": false,
               "constraints": {
                 "Length": {
                   "max": 3
@@ -2804,7 +2789,13 @@
                   "pattern": "/^[a-z]+$/"
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": {
+                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "label": "Short secret",
+              "required": false,
+              "type": "string"
             }
           },
           "sec_int": {
@@ -2827,18 +2818,18 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": "Int secret",
-              "description": {
-                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
-              },
-              "required": false,
               "constraints": {
                 "Range": {
                   "max": 3
                 },
                 "PrimitiveType": []
-              }
+              },
+              "description": {
+                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "label": "Int secret",
+              "required": false,
+              "type": "integer"
             }
           },
           "sec_email": {
@@ -2859,16 +2850,16 @@
             },
             "settings": [],
             "array": {
-              "type": "email",
-              "label": "Email secret",
-              "description": {
-                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
-              },
-              "required": false,
               "constraints": {
                 "PrimitiveType": [],
                 "Email": []
-              }
+              },
+              "description": {
+                "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+              },
+              "label": "Email secret",
+              "required": false,
+              "type": "email"
             }
           },
           "lsec": {
@@ -2888,15 +2879,15 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Locked secret",
+              "constraints": {
+                "PrimitiveType": []
+              },
               "description": {
                 "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
               },
+              "label": "Locked secret",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "ruled": {
@@ -2914,13 +2905,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Ruled",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Ruled",
+              "required": false,
+              "type": "string"
             }
           },
           "each": {
@@ -2936,10 +2927,10 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Each map",
               "description": "",
-              "required": false
+              "label": "Each map",
+              "required": false,
+              "type": "map"
             }
           },
           "third_party_settings": {
@@ -2959,14 +2950,14 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": {
-                "@text": "Third party settings"
-              },
               "description": {
                 "@text": "Settings added by other modules."
               },
-              "required": false
+              "label": {
+                "@text": "Third party settings"
+              },
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "surface": {
@@ -2982,10 +2973,10 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "map",
-                  "label": "Surface API",
                   "description": "",
-                  "required": false
+                  "label": "Surface API",
+                  "required": false,
+                  "type": "map"
                 },
                 "properties": {
                   "mk": {
@@ -3001,10 +2992,10 @@
                     "constraints": [],
                     "settings": [],
                     "array": {
-                      "type": "map",
-                      "label": "Mounted map",
                       "description": "",
-                      "required": false
+                      "label": "Mounted map",
+                      "required": false,
+                      "type": "map"
                     },
                     "properties": {
                       "a": {
@@ -3023,14 +3014,14 @@
                         },
                         "settings": [],
                         "array": {
-                          "type": "string",
-                          "label": "Ay",
-                          "description": "",
-                          "required": true,
                           "constraints": {
                             "PrimitiveType": [],
                             "NotNull": []
-                          }
+                          },
+                          "description": "",
+                          "label": "Ay",
+                          "required": true,
+                          "type": "string"
                         }
                       },
                       "ms": {
@@ -3050,15 +3041,15 @@
                         },
                         "settings": [],
                         "array": {
-                          "type": "string",
-                          "label": "Mount secret",
+                          "constraints": {
+                            "PrimitiveType": []
+                          },
                           "description": {
                             "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                           },
+                          "label": "Mount secret",
                           "required": false,
-                          "constraints": {
-                            "PrimitiveType": []
-                          }
+                          "type": "string"
                         }
                       }
                     }
@@ -3084,10 +3075,6 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "string",
-                      "label": "Mounted two",
-                      "description": "",
-                      "required": false,
                       "constraints": {
                         "Choice": {
                           "choices": [
@@ -3096,7 +3083,11 @@
                           ]
                         },
                         "PrimitiveType": []
-                      }
+                      },
+                      "description": "",
+                      "label": "Mounted two",
+                      "required": false,
+                      "type": "string"
                     }
                   }
                 }
@@ -5087,9 +5078,8 @@
         "constraints": [],
         "settings": [],
         "array": {
-          "type": "any",
-          "label": "Any",
           "description": "",
+          "label": "Any",
           "required": false
         }
       },
@@ -5105,11 +5095,10 @@
         "constraints": [],
         "settings": [],
         "array": {
-          "type": "any",
-          "label": "Any",
           "description": "",
-          "required": false,
-          "nullable": false
+          "label": "Any",
+          "nullable": false,
+          "required": false
         }
       },
       "held builder": [

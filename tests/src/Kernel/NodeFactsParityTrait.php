@@ -128,8 +128,12 @@ trait NodeFactsParityTrait {
    *   Where it is, for a difference.
    * @param array<string, int> $counts
    *   The comparisons made, by reader.
-   * @param \SplObjectStorage<\Drupal\Core\TypedData\DataDefinitionInterface, null>|null $seen
-   *   The definitions compared already; each is compared once.
+   * @param \SplObjectStorage<\PortableSchema\Builder\Schema, null>|null $seen
+   *   The nodes compared already; each is compared once. Counted by node,
+   *   not by definition: a node-first entry derives its definition, and a
+   *   key that holds a child frame derives one that holds its own copies
+   *   of the child's definitions, while its node holds the very nodes the
+   *   child's entries hold. One node is one key read once, in either form.
    * @param array<string, int> $stated
    *   The comparisons whose definition call states the fact (an answer
    *   that is not NULL, FALSE, empty or a setting nothing holds), by
@@ -140,10 +144,10 @@ trait NodeFactsParityTrait {
    */
   protected static function parity(DataDefinitionInterface $definition, Schema $node, string $at, array &$counts, ?\SplObjectStorage $seen = NULL, array &$stated = []): array {
     $seen ??= new \SplObjectStorage();
-    if ($seen->contains($definition)) {
+    if ($seen->contains($node)) {
       return [];
     }
-    $seen->attach($definition);
+    $seen->attach($node);
     $differ = [];
     $holds = DefinitionMetadata::canHoldDefaultValue($definition);
     $complex = $definition instanceof ComplexDataDefinitionInterface;

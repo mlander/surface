@@ -9,7 +9,6 @@ use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
-use Drupal\surface\DefinitionMap;
 use Drupal\surface\Entry;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
@@ -737,7 +736,6 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
    * pantry's attached keys, which the walk steps into.
    */
   public function testNodeFirstResourceIsLaidOutWithNoDefinitionDerived(): void {
-    DefinitionMap::$nodeFirst = TRUE;
     $resources = $this->container->get('surface.resources');
     $built = [
       'kit' => $this->kit(),

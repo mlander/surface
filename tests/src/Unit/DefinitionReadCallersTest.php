@@ -43,10 +43,11 @@ class DefinitionReadCallersTest extends UnitTestCase {
    * - src/Entry.php, around(): a key that holds a child frame composes its
    *   node of its own facts around its child's entries' nodes (composed()
    *   for a collection, around a collection's item and a mount's, and
-   *   framed() for a map of a child's keys). With the node-first switch
-   *   on, DefinitionMap::fromArrays() makes each entry node-first from the
-   *   node it reads (Entry::nodeFirst()), and reads nothing itself (since
-   *   2026-11-14).
+   *   framed() for a map of a child's keys). The seal makes each entry
+   *   node-first (Entry::sealed(), from DefinitionMap::fromArrays() with
+   *   nodeFirst): a shell is handed its own facts alone and composed by
+   *   the same calls, its child's keys placed by name (since 2026-11-15);
+   *   fromArrays() reads nothing itself.
    * - src/Contract/Conditionals.php, of(): stated() describes a definition
    *   no entry holds: a declared rule's answer, made on a copy (rules()),
    *   and a key a caller describes by its definition alone (describeKey()

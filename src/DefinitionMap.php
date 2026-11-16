@@ -79,49 +79,6 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   private array $frameConstraints = [];
 
   /**
-   * Whether fromArrays() makes every entry node-first: tests and probes.
-   *
-   * Off by default, and never read from the environment here. With it on,
-   * fromArrays() reads each definition it is handed into its node
-   * (DefinitionSchema::of()) and makes the entry node-first from that
-   * node, the definition dropped (Entry::withSchema()), so every reader
-   * that asks the entry for a definition is handed one derived from the
-   * node (NodeDefinition::of()). A definition of a class other than the
-   * three the inverse derives, or one whose node holds a node of another
-   * class at any depth, stays definition-first. It lives here
-   * because fromArrays() is the one place a built data surface's entries
-   * are made; the other entries made in src/ are a refinement's copies
-   * (Entry::withDefinition(), definition-first by rule) and two
-   * transient entries that are never sealed (ContractEmitter's for a
-   * declared rule's stated branches, Binding's for a collection's
-   * advertised definition). SurfaceKernelTestBase::setUp() turns it on
-   * when SURFACE_NODE_FIRST=1 is set, and a dev-site probe from its boot
-   * file.
-   *
-   * Decision: see docs/decisions.md#an-entry-holds-the-form-its-source-gave.
-   *
-   * @internal
-   */
-  public static bool $nodeFirst = FALSE;
-
-  /**
-   * How many entries fromArrays() made node-first while $nodeFirst was on.
-   *
-   * @internal
-   */
-  public static int $madeNodeFirst = 0;
-
-  /**
-   * How many fromArrays() kept definition-first while $nodeFirst was on.
-   *
-   * A definition of a class other than DataDefinition, ListDataDefinition
-   * and MapDataDefinition (NodeDefinition::DERIVED), at any depth.
-   *
-   * @internal
-   */
-  public static int $keptDefinitionFirst = 0;
-
-  /**
    * Constructs a DefinitionMap.
    *
    * This is where a data surface's shape is checked, once: afterwards every
@@ -237,6 +194,19 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * @param array<int, array> $frameConstraints
    *   What the frame as a whole is held to beyond its keys, each a JSON
    *   Schema (frameConstraints()).
+   * @param bool $nodeFirst
+   *   Whether every entry is made node-first, as the seal makes it
+   *   (Entry::sealed()): each key's node read from its definition, a key
+   *   that holds a child frame composed of its own facts around its
+   *   child's entries' nodes, the definition dropped. A definition of a
+   *   class other than the three NodeDefinition derives, or whose node
+   *   holds a node of another class at any depth, stays definition-first,
+   *   made whole (Entry::whole()). FALSE makes every entry from its
+   *   definition, definition-first, as any caller but the seal does.
+   * @param array<string, string> $chosen
+   *   With $nodeFirst, the variant chosen at each key whose variants'
+   *   deciding key is locked, by key: the key is handed the variants'
+   *   empty map and holds that variant's keys.
    *
    * @return static
    *   The map.
@@ -263,7 +233,13 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     array $runtimeAccess = [],
     array $lockReasons = [],
     array $frameConstraints = [],
+    bool $nodeFirst = FALSE,
+    array $chosen = [],
   ): static {
+    // The seal alone passes these, and as it uses them: a chosen variant
+    // only for node-first entries, and only at a key with variants.
+    assert($chosen === [] || $nodeFirst, 'A chosen variant is passed only with nodeFirst: the seal hands such a key its own facts alone.');
+    assert(array_diff_key($chosen, $variants) === [], sprintf('A chosen variant is passed only at a key with variants, not at %s.', implode(', ', array_keys(array_diff_key($chosen, $variants)))));
     foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($variants), array_keys($lists), array_keys($mounted)) as $key) {
       if (!isset($definitions[$key])) {
         throw new \InvalidArgumentException(sprintf('"%s" is not a data surface definition.', $key));
@@ -315,8 +291,8 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         runtimeAccess: in_array($name, $runtimeAccess, TRUE),
         lockedBecause: in_array($name, $locked, TRUE) ? ($lockReasons[$name] ?? NULL) : NULL,
       );
-      if (self::$nodeFirst) {
-        $entries[] = static::nodeFirst(array_pop($entries), $definition);
+      if ($nodeFirst) {
+        $entries[] = static::sealed(array_pop($entries), $definition, $chosen[$name] ?? NULL);
       }
     }
     $map = new static($entries, $ports, $mixins);
@@ -325,31 +301,29 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   }
 
   /**
-   * Makes an entry node-first, for the mode $nodeFirst turns on.
+   * Makes an entry node-first, as the seal makes it.
    *
    * @param \Drupal\surface\Entry $entry
    *   The entry, as made from its definition.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   Its definition.
+   *   Its definition: a key that holds a child frame its own facts alone,
+   *   or whole.
+   * @param string|null $chosen
+   *   The variant chosen at the key, if its deciding key is locked.
    *
    * @return \Drupal\surface\Entry
-   *   The entry, node-first from the definition's node; the same entry
-   *   for a definition of a class the inverse does not derive, at any
-   *   depth its node holds a node.
+   *   The entry, node-first (Entry::sealed()); definition-first and made
+   *   whole (Entry::whole()) for a definition of a class the inverse does
+   *   not derive, at any depth its node holds a node.
    */
-  private static function nodeFirst(Entry $entry, DataDefinitionInterface $definition): Entry {
-    if (!in_array($definition::class, NodeDefinition::DERIVED, TRUE)) {
-      self::$keptDefinitionFirst++;
-      return $entry;
+  private static function sealed(Entry $entry, DataDefinitionInterface $definition, ?string $chosen): Entry {
+    if (in_array($definition::class, NodeDefinition::DERIVED, TRUE)) {
+      $sealed = $entry->sealed($chosen);
+      if (static::derivedClasses($sealed->schema())) {
+        return $sealed;
+      }
     }
-    // The entry's own node: a key that holds a child frame composes it of
-    // its children's (Entry::schema()).
-    if (!static::derivedClasses($entry->schema())) {
-      self::$keptDefinitionFirst++;
-      return $entry;
-    }
-    self::$madeNodeFirst++;
-    return $entry->nodeFirst();
+    return $entry->whole($chosen);
   }
 
   /**

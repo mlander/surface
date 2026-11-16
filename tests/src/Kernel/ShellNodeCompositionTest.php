@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinition;
+use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Attachment;
+use Drupal\surface\Collection;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Entry;
 use Drupal\surface\SurfaceInterface;
 use Drupal\Tests\surface\HandCorpus\DoorSurfaces;
@@ -41,13 +46,12 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
 
   use DefinitionEqualityTrait;
   use ExampleSurfacesTrait;
+  use SealedShellsTrait;
   use ExampleValueSetsTrait;
   use UserCreationTrait;
 
   /**
    * The distinct shell entries read, by kind, sealed or refined.
-   *
-   * The same with DefinitionMap::$nodeFirst on.
    */
   protected const COUNTS = [
     'attachment, refined' => 106,
@@ -59,6 +63,19 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
     'variants, chosen, refined' => 978,
     'variants, none chosen, refined' => 96,
     'variants, none chosen, sealed' => 43,
+  ];
+
+  /**
+   * The sealed shells compared with the old seal's read, by kind.
+   *
+   * Those the hand-built surface holds (SealedShellsTrait) included.
+   */
+  protected const SEALED = [
+    'attachment' => 39,
+    'collection' => 19,
+    'mount' => 3,
+    'variants, chosen' => 1,
+    'variants, none chosen' => 30,
   ];
 
   /**
@@ -202,14 +219,162 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests every sealed shell's node is what the seal read before.
+   *
+   * Until 2026-11-15 the seal built a shell's definition of its own facts
+   * and its child's definitions (Attachment::mapOf(), Collection::listOf(),
+   * Variants::definitionFor() or placeholder()) and read its node from
+   * it. Now it composes the node of the shell's own facts around its
+   * child's entries' nodes, building no such definition (Entry::sealed()).
+   * For every sealed shell of the pinned examples, built for the account
+   * and for no account, of the hand and door surfaces, and of a surface
+   * built here with every kind of shell (SealedShellsTrait: an attachment,
+   * a collection, variants chosen at the seal and variants open, a shell
+   * inside a shell and inside a collection's item, a mount whose
+   * structure holds a shell), this test builds the definition the old
+   * seal built and asserts DefinitionSchema::same() between its node and
+   * the sealed node. Counted by kind.
+   *
+   * What this proves differs by where the shell's own facts come from:
+   * - The hand-built surface (SealedShellsTrait) keeps the builder's own
+   *   shells, so for its shells the reference is the old seal's: a shell
+   *   fact the composition drops (required, description, default, a
+   *   collection's Count) fails here.
+   * - Any variants keep their shell (Variants::$shell), so the same holds.
+   * - An example's attachment or collection keeps no copy of the shell
+   *   its author described: its reference is rebuilt from the sealed
+   *   entry's own derived definition with the child's keys taken out (an
+   *   empty map; a list of an empty map). A fact the composition drops is
+   *   dropped from that reference too, so for these shells the test proves
+   *   only that the child's keys are placed as the old seal placed them.
+   *   That the examples' shells say what the old seal said is proven
+   *   against the code before 2026-11-15 itself: the comparison of both
+   *   sides in one sitting (values, documents, the corpus and the door
+   *   digests), and eight hand cases of the adversarial review run against
+   *   that code (462 members: nodes, definition trees, documents, accept
+   *   and validate, the tool door, the form and refinement, fresh, woken
+   *   and woken twice, none differs).
+   * - A mount is built as before (SurfaceBuilder::mountedMap()), so its
+   *   old definition is its derived one.
+   */
+  public function testTheSealedNodeIsWhatTheOldSealRead(): void {
+    $counts = [];
+    $differ = [];
+    $check = static function (string $at, Entry $entry, DataDefinitionInterface $old) use (&$counts, &$differ): void {
+      $kind = match (TRUE) {
+        $entry->attachment !== NULL => 'attachment',
+        $entry->variants !== NULL => DefinitionSchema::nodeIsMap($entry->schema()) ? 'variants, chosen' : 'variants, none chosen',
+        $entry->list !== NULL => 'collection',
+        default => 'mount',
+      };
+      $counts[$kind] = ($counts[$kind] ?? 0) + 1;
+      if (!DefinitionSchema::same($entry->schema(), DefinitionSchema::of($old))) {
+        $differ[] = "$at ($kind): " . implode('; ', array_slice(static::nodeDifferences(DefinitionSchema::of($old), $entry->schema(), $at), 0, 3));
+      }
+    };
+    // The surface with every kind of shell, from the builder's own shells.
+    [$surface, $shells, $children] = static::everyShell();
+    foreach ($shells as $key => $shell) {
+      $check("every shell $key", $surface->getDefinitions()->entry($key), static::oldSeal($surface, $key, $shell));
+    }
+    foreach (['surface' => $surface] + $children as $at => $each) {
+      foreach ($each->getDefinitions()->entries() as $name => $entry) {
+        if ($entry->isShell() && !($at === 'surface' && isset($shells[$name]))) {
+          $check("every shell $at.$name", $entry, static::rebuilt($entry));
+        }
+      }
+    }
+    ksort($counts);
+    $every = [
+      'attachment' => 2,
+      'collection' => 1,
+      'mount' => 1,
+      'variants, chosen' => 1,
+      'variants, none chosen' => 1,
+    ];
+    $this->assertSame($every, $counts, 'Every kind of shell, by hand: the holder\'s attachment counted once, at its own entry.');
+    // The examples and the hand and door surfaces.
+    $sealed = new \SplObjectStorage();
+    foreach ([TRUE, FALSE] as $declared) {
+      foreach ($this->examples($declared) as [, , $example]) {
+        static::collect($example, $sealed, 'sealed');
+      }
+    }
+    foreach ([...HandSurfaces::NAMES, ...DoorSurfaces::NAMES] as $name) {
+      [$hand, , , $alternates] = in_array($name, HandSurfaces::NAMES, TRUE) ? HandSurfaces::build($name) : DoorSurfaces::build($name);
+      static::collect($hand, $sealed, 'sealed');
+      foreach ($alternates as [$each]) {
+        static::collect($each, $sealed, 'sealed');
+      }
+    }
+    foreach ($sealed as $entry) {
+      assert($entry instanceof Entry);
+      $check($entry->name, $entry, static::rebuilt($entry));
+    }
+    ksort($counts);
+    $this->assertSame([], array_slice($differ, 0, 20), 'Every sealed shell\'s node is the node of the definition the old seal built.');
+    $this->assertSame(static::SEALED, $counts, 'The sealed shells compared, by kind, the hand-built ones included.');
+  }
+
+  /**
+   * Builds what the old seal built for a sealed shell of an example.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The sealed shell.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The definition.
+   */
+  protected static function rebuilt(Entry $entry): DataDefinitionInterface {
+    if ($entry->variants !== NULL) {
+      $chosen = DefinitionSchema::nodeIsMap($entry->schema()) ? static::chosenOf($entry) : NULL;
+      return $chosen === NULL ? $entry->variants->placeholder() : $entry->variants->definitionFor($chosen);
+    }
+    $derived = $entry->definition();
+    if ($entry->attachment !== NULL && $derived instanceof MapDataDefinition) {
+      $shell = clone $derived;
+      foreach (array_keys($shell->getPropertyDefinitions()) as $name) {
+        $shell->setPropertyDefinition((string) $name, NULL);
+      }
+      return Attachment::mapOf($shell, $entry->attachment->child);
+    }
+    if ($entry->list !== NULL && $derived instanceof ListDataDefinition) {
+      $shell = clone $derived;
+      $shell->setItemDefinition(MapDataDefinition::create());
+      return Collection::listOf($shell, $entry->list->item->child);
+    }
+    return $derived;
+  }
+
+  /**
+   * Finds the variant a sealed key's node holds the keys of.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   A key with variants whose node is a map.
+   *
+   * @return string|null
+   *   The variant whose child's keys are the node's, in order.
+   */
+  protected static function chosenOf(Entry $entry): ?string {
+    $keys = array_keys(NodeFacts::properties($entry->schema()));
+    foreach ($entry->variants->variants as $id => $variant) {
+      if (array_map('strval', array_keys($variant->child->getDefinitions()->keys())) === array_map('strval', $keys)) {
+        return (string) $id;
+      }
+    }
+    return NULL;
+  }
+
+  /**
    * Tests a refined shell wakes with the children it was built from.
    *
    * Every pinned example built for no account, refined against each of
    * its value sets by every kind of refiner, through serialize() and
    * back: each shell's node is the node its definition reads, and each
-   * refined child's key in it is that child's entry's node, the very
-   * object (with DefinitionMap::$nodeFirst off; with it on, a node-first
-   * child's key is read, since such an entry serializes its node alone).
+   * refined child's key in it is a node that says what that child's entry
+   * says: a sealed entry is node-first and serializes its node alone, so
+   * the woken refined shell's definition holds a definition derived
+   * again, and the shell reads that key.
    * And registration.step3 configure for 400 attendees, whose mounted
    * compliance structure asks for 8 stewards: after the round trip its
    * node says so, from the woken structure's own entry.
@@ -217,7 +382,6 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
   public function testRefinedShellWakesWithItsChildren(): void {
     $counts = [];
     $differ = [];
-    $unframed = [];
     foreach ($this->examples() as [, , $surface]) {
       foreach ($this->valueSets($surface) as $values) {
         try {
@@ -245,11 +409,8 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
           // A node-first entry serializes its node alone, so a child's key
           // wakes with a definition derived again, another object than the
           // one the woken shell's definition holds: the shell reads that
-          // key (the same node, read), and the identity holds only with
-          // the switch off.
-          if (!DefinitionMap::$nodeFirst) {
-            array_push($unframed, ...$wrong);
-          }
+          // key (the same node, read), so what framedBy() finds wrong of
+          // the identity is not asked.
           foreach ($framed as $what => $n) {
             $counts["$what, woken"] = ($counts["$what, woken"] ?? 0) + $n;
           }
@@ -258,7 +419,6 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
     }
     ksort($counts);
     $this->assertSame([], array_slice($differ, 0, 20), 'Every woken shell\'s node is the node its definition reads.');
-    $this->assertSame([], array_slice($unframed, 0, 20), 'Every woken refined shell holds the very nodes of the refined child it woke with.');
     $this->assertSame(static::WOKEN, $counts, 'The woken shells, by kind and by what they were built from.');
 
     $resources = $this->container->get('surface.resources');
@@ -273,9 +433,7 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
     $this->assertSame(8, $stewards?->get('minimum'), 'It asks for 8 stewards, as the refined structure says.');
     $frames = (new \ReflectionProperty(Entry::class, 'frames'))->getValue($woken);
     $this->assertIsArray($frames);
-    if (!DefinitionMap::$nodeFirst) {
-      $this->assertSame($frames['surface_examples_compliance']->getDefinitions()->entry('stewards')?->schema(), $stewards, 'The stewards node is the woken structure\'s own entry\'s node, the very object.');
-    }
+    $this->assertTrue(DefinitionSchema::same($frames['surface_examples_compliance']->getDefinitions()->entry('stewards')?->schema(), $stewards), 'The stewards node says what the woken structure\'s own entry says.');
   }
 
   /**

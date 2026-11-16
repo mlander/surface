@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\surface\DefinitionMap;
 use Drupal\surface\Entry;
 use Drupal\surface\Reference\ReferenceStorageLayout;
 use Drupal\surface_examples_references\Resource\SponsorshipResource;
@@ -245,7 +244,6 @@ class ReferenceStoredByUuidTest extends SurfaceKernelTestBase {
    * derive; the config schema check reads its nodes too.
    */
   public function testNodeFirstResourceIsStoredWithNoDefinitionDerived(): void {
-    DefinitionMap::$nodeFirst = TRUE;
     $resources = $this->container->get('surface.resources');
     $built = $resources->build(SponsorshipResource::class, $resources->operation(SponsorshipResource::class, 'configure'));
     $derived = new \ReflectionProperty(Entry::class, 'definition');

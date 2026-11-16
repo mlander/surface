@@ -10,7 +10,12 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\Core\TypedData\Plugin\DataType\Uri;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Compute\MachineName;
+use Drupal\surface\Computed;
+use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Reference\References;
+use Drupal\surface\Resolve;
+use Drupal\surface\Resource\Arrangement;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface_values_test\HandBuiltSurfaces;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -28,10 +33,17 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * sets, and for every definition below an entry at every depth (a
  * property, an item, a shape's, a config type's and `each`'s definition),
  * each reader on the node answers what the definition call it stands for
- * answers (NodeFactsParityTrait::READERS), by strict equality. Then one
- * hand case for each fact no example states (STATED says which the
- * examples state). The counts are pinned as literals, so a walk that
- * finds nothing fails.
+ * answers (NodeFactsParityTrait::READERS), by strict equality. The counts
+ * are pinned as literals, so a walk that finds nothing fails.
+ *
+ * Since the seal makes every entry node-first (2026-11-15), a sealed
+ * example's definition is derived from the very node it is compared with
+ * (NodeDefinition::of()). So the example walk proves the inverse says what
+ * the node says. It no longer proves that DefinitionSchema::of() reads an
+ * authored definition faithfully: a reading fault the derivation mirrors
+ * would pass it. That is proven by the hand cases (testHandCases()):
+ * definitions built by hand and read with of(), at least one of which
+ * states each reader's fact.
  *
  * Decision: see docs/decisions.md#the-value-pipeline-reads-nodes,
  * docs/decisions.md#the-validators-checks-and-the-document-read-nodes.
@@ -81,93 +93,100 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
   /**
    * The comparisons made, by reader, over the examples.
    *
-   * Each distinct definition is compared once, wherever it is first met.
+   * Each distinct node is compared once, wherever it is first met
+   * (parity()), against the definition derived from it (see the class
+   * docblock). 1,067 while each distinct definition was: the two keys of
+   * example 3's compliance mount, license and stewards, were compared
+   * twice, as the mount's deep copy and as the structure's own entry (or
+   * its refined copy), which hold one node. Since 2026-11-15 they are
+   * compared once, in either form.
    */
   protected const READS = [
-    'arrangement' => 1067,
-    'compute' => 1067,
-    'configType' => 1067,
-    'configTypeNode' => 1067,
-    'constraints' => 1067,
-    'constraintsJson' => 1067,
-    'dataType' => 1067,
-    'dateOnly' => 1067,
-    'declaredConstraints' => 1067,
-    'default' => 1067,
-    'defaultOf' => 1067,
-    'description' => 1067,
-    'doesNotApply' => 1067,
-    'each' => 1067,
-    'hasConstraints' => 1067,
-    'hasDefault' => 1067,
-    'holdsValue' => 1067,
-    'isAlwaysHeld' => 1067,
-    'isComplex' => 1067,
-    'isComputed' => 1067,
-    'isFixed' => 1067,
-    'isGrouping' => 1067,
-    'isHeldWhole' => 1067,
-    'isLeaf' => 1067,
-    'isList' => 1067,
-    'isMap' => 1067,
-    'isNullable' => 1067,
-    'isOneVariant' => 1067,
-    'isReadOnly' => 1067,
-    'isRequired' => 1067,
-    'keywordsOf' => 1067,
-    'label' => 1067,
-    'ownLabel' => 1067,
-    'placedAfter' => 1067,
-    'properties' => 1067,
-    'readVariants' => 1067,
-    'resolve' => 1067,
-    'secret' => 1067,
-    'setting' => 1067,
-    'settings' => 1067,
-    'shape' => 1067,
-    'shapeNode' => 1067,
-    'storedByUuid' => 1067,
-    'typeOf' => 1067,
-    'valueClass' => 1067,
-    'variantsBy' => 1067,
-    'variantsFrom' => 1067,
+    'arrangement' => 1065,
+    'compute' => 1065,
+    'configType' => 1065,
+    'configTypeNode' => 1065,
+    'constraints' => 1065,
+    'constraintsJson' => 1065,
+    'dataType' => 1065,
+    'dateOnly' => 1065,
+    'declaredConstraints' => 1065,
+    'default' => 1065,
+    'defaultOf' => 1065,
+    'description' => 1065,
+    'doesNotApply' => 1065,
+    'each' => 1065,
+    'hasConstraints' => 1065,
+    'hasDefault' => 1065,
+    'holdsValue' => 1065,
+    'isAlwaysHeld' => 1065,
+    'isComplex' => 1065,
+    'isComputed' => 1065,
+    'isFixed' => 1065,
+    'isGrouping' => 1065,
+    'isHeldWhole' => 1065,
+    'isLeaf' => 1065,
+    'isList' => 1065,
+    'isMap' => 1065,
+    'isNullable' => 1065,
+    'isOneVariant' => 1065,
+    'isReadOnly' => 1065,
+    'isRequired' => 1065,
+    'keywordsOf' => 1065,
+    'label' => 1065,
+    'ownLabel' => 1065,
+    'placedAfter' => 1065,
+    'properties' => 1065,
+    'readVariants' => 1065,
+    'resolve' => 1065,
+    'secret' => 1065,
+    'setting' => 1065,
+    'settings' => 1065,
+    'shape' => 1065,
+    'shapeNode' => 1065,
+    'storedByUuid' => 1065,
+    'typeOf' => 1065,
+    'valueClass' => 1065,
+    'variantsBy' => 1065,
+    'variantsFrom' => 1065,
   ];
 
   /**
    * The comparisons whose definition states the fact, by reader.
    *
-   * A reader no example states has a hand case that does
-   * (testHandCases()).
+   * Over the examples, whose definitions are derived from their nodes.
+   * Every reader also has a definition built by hand that states its
+   * fact (testHandCases()).
    */
   protected const STATED = [
     'arrangement' => 43,
     'compute' => 5,
     'configType' => 4,
     'configTypeNode' => 4,
-    'constraints' => 684,
-    'constraintsJson' => 684,
-    'dataType' => 1067,
+    'constraints' => 682,
+    'constraintsJson' => 682,
+    'dataType' => 1065,
     'dateOnly' => 1,
-    'declaredConstraints' => 352,
-    'default' => 242,
-    'defaultOf' => 441,
-    'description' => 360,
+    'declaredConstraints' => 351,
+    'default' => 241,
+    'defaultOf' => 440,
+    'description' => 359,
     'doesNotApply' => 41,
     'each' => 4,
-    'hasConstraints' => 684,
-    'hasDefault' => 297,
-    'holdsValue' => 277,
+    'hasConstraints' => 682,
+    'hasDefault' => 296,
+    'holdsValue' => 276,
     'isAlwaysHeld' => 77,
     'isComplex' => 320,
     'isGrouping' => 29,
-    'isLeaf' => 704,
+    'isLeaf' => 702,
     'isList' => 43,
     'isMap' => 301,
-    'isNullable' => 775,
-    'isRequired' => 200,
-    'keywordsOf' => 677,
-    'label' => 1029,
-    'ownLabel' => 1029,
+    'isNullable' => 774,
+    'isRequired' => 199,
+    'keywordsOf' => 675,
+    'label' => 1027,
+    'ownLabel' => 1027,
     'placedAfter' => 15,
     'properties' => 301,
     'readVariants' => 102,
@@ -175,11 +194,11 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
     'secret' => 18,
     'setting' => 82,
     'settings' => 82,
-    'shape' => 11,
-    'shapeNode' => 11,
+    'shape' => 10,
+    'shapeNode' => 10,
     'storedByUuid' => 4,
-    'typeOf' => 656,
-    'valueClass' => 1067,
+    'typeOf' => 654,
+    'valueClass' => 1065,
     'variantsBy' => 46,
     'variantsFrom' => 102,
   ];
@@ -245,7 +264,7 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
     $sources[HandBuiltSurfaces::UNWRITTEN_ID] = HandBuiltSurfaces::unwritten();
     /** @var \SplObjectStorage<\Drupal\surface\SurfaceInterface, true> $walked */
     $walked = new \SplObjectStorage();
-    /** @var \SplObjectStorage<\Drupal\Core\TypedData\DataDefinitionInterface, null> $seen */
+    /** @var \SplObjectStorage<\PortableSchema\Builder\Schema, null> $seen */
     $seen = new \SplObjectStorage();
     $counts = [];
     $stated = [];
@@ -281,11 +300,13 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
       $differ = static::parity($definition, DefinitionSchema::of($definition), $case, $counts, NULL, $stated);
       $this->assertSame([], $differ, $case);
     }
+    // The examples' definitions are derived from the very nodes they are
+    // compared with: only a definition built by hand shows the read says
+    // what an author's definition says. Each reader has one that states
+    // its fact.
     foreach (array_keys(self::READERS) as $reader) {
       $this->assertGreaterThan(0, $counts[$reader] ?? 0, "A hand case compares $reader.");
-      if ((self::STATED[$reader] ?? 0) === 0) {
-        $this->assertGreaterThan(0, $stated[$reader] ?? 0, "No example states $reader: a hand case does.");
-      }
+      $this->assertGreaterThan(0, $stated[$reader] ?? 0, "A definition built by hand states $reader.");
     }
   }
 
@@ -298,8 +319,8 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
    *   Where it is, for a difference.
    * @param \SplObjectStorage<\Drupal\surface\SurfaceInterface, true> $walked
    *   The surfaces walked.
-   * @param \SplObjectStorage<\Drupal\Core\TypedData\DataDefinitionInterface, null> $seen
-   *   The definitions compared.
+   * @param \SplObjectStorage<\PortableSchema\Builder\Schema, null> $seen
+   *   The nodes compared.
    * @param array<string, int> $counts
    *   The comparisons made, by reader.
    * @param list<string> $differ
@@ -463,6 +484,37 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
     $whole = DataDefinition::create('any')->setLabel('Whole');
     DefinitionMetadata::setHeldWhole($whole);
     $cases['an any held whole'] = $whole;
+
+    // An authored definition for each fact the node-first examples no
+    // longer compare with one an author built (testHandCases()): the
+    // examples' definitions are now derived from the node they are read
+    // against.
+    $cases['a description'] = DataDefinition::create('string')->setLabel('Said')->setDescription('What it says.');
+    $placed = DataDefinition::create('string')->setLabel('Placed');
+    DefinitionMetadata::setPlacedAfter($placed, 'title');
+    DefinitionMetadata::setArrangement($placed, new Arrangement(weight: 5, help: 'Help text.'));
+    $cases['placed after a key, arranged'] = $placed;
+    $computed = DataDefinition::create('string')->setLabel('Slug');
+    DefinitionMetadata::setComputed($computed, new Computed(['title'], MachineName::class));
+    $cases['computed from a key'] = $computed;
+    $resolved = DataDefinition::create('string')->setLabel('Owner');
+    DefinitionMetadata::setResolve($resolved, new Resolve(['account' => 'uid'], MachineName::class, SurfaceInterface::OWNER));
+    $cases['resolved from a key'] = $resolved;
+    $cases['marked as not applying'] = DoesNotApply::marked(DataDefinition::create('string')->setLabel('Ruled'));
+    $variants = DataDefinition::create('any')->setLabel('Settings');
+    DefinitionMetadata::setVariantsBy($variants, 'kind');
+    DefinitionMetadata::setVariantsFrom($variants, 'surface_examples');
+    DefinitionMetadata::setReadVariants($variants);
+    $cases['variants by a key, from a provider, read'] = $variants;
+    $each = MapDataDefinition::create()->setLabel('Per entry');
+    DefinitionMetadata::setEach($each, DataDefinition::create('string')->setLabel('Entry'));
+    $cases['a map of entries from the site'] = $each;
+    $shaped = DataDefinition::create('string')->setLabel('Phone');
+    DefinitionMetadata::setShape($shaped, 'hand.phone', DataDefinition::create('string')->setLabel('Phone'));
+    $cases['a shape'] = $shaped;
+    $typed = MapDataDefinition::create()->setLabel('Typed')->setPropertyDefinition('a', DataDefinition::create('string')->setLabel('A'));
+    DefinitionMetadata::setConfigType($typed, 'hand.typed', MapDataDefinition::create()->setPropertyDefinition('a', DataDefinition::create('string')));
+    $cases['a config type'] = $typed;
     return $cases;
   }
 

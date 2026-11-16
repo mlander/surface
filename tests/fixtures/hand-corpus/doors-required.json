@@ -3,19 +3,19 @@
   "rows": 563,
   "digests": {
     "plain | door": {
-      "fromSurface": "613f7927058b",
-      "fromSurface stored": "613f7927058b",
-      "fromSurface narrowing": "613f7927058b",
-      "withLookups": "613f7927058b",
-      "withDependencies": "613f7927058b",
-      "withStored": "89ccd7638eb8",
-      "shapeOf": "e8e7c61246b6",
-      "withoutRequired": "8d7f6ee6f52a",
-      "outputFromInput": "ef0acad3b7e1",
+      "fromSurface": "7cc68932c430",
+      "fromSurface stored": "7cc68932c430",
+      "fromSurface narrowing": "7cc68932c430",
+      "withLookups": "7cc68932c430",
+      "withDependencies": "7cc68932c430",
+      "withStored": "cc3c5464e720",
+      "shapeOf": "f1926378fc6d",
+      "withoutRequired": "8a7e63ae7006",
+      "outputFromInput": "9e07d0d20f2b",
       "secrets": "f68a751d44b0",
       "outputs": "39347ff402b6",
-      "values update": "9d3bbccabf32",
-      "values create": "73cb578f1c37",
+      "values update": "9451298d1a73",
+      "values create": "d4e52fb75676",
       "stored": "88f2fa5f902e",
       "secretKeys": "1427a44cd4fe",
       "config schema": "baafb76c65df",
@@ -28,443 +28,443 @@
       "flow placed grouped": "22f78e532695"
     },
     "plain | values": {
-      "stored": "bc3f7180aec3",
-      "r_blank=__out": "debebce196e1",
-      "r_blank=null": "3277d8ef4ee7",
-      "r_blank=empty": "2e259478653b",
-      "r_blank=zero": "e9c8a53b2a32",
-      "r_blank=arr": "0b4ec2112856",
-      "r_blank=word": "bdbb878633b6",
-      "r_blank=int": "6c737344cde3",
-      "ri_blank=__out": "debebce196e1",
-      "ri_blank=null": "86f1420a03e1",
-      "ri_blank=empty": "e38b65b187e0",
-      "ri_blank=zero": "d61c616a7f0f",
-      "ri_blank=arr": "d4c75b62db4a",
-      "ri_blank=word": "562aaf42a1ee",
-      "ri_blank=int": "9fb74881c6c7",
-      "h_blank=__out": "debebce196e1",
-      "h_blank=null": "deb5387fcd53",
-      "h_blank=empty": "1efe696708bf",
-      "h_blank=zero": "48d7ac03e167",
-      "h_blank=arr": "3d30cf5bf77b",
-      "h_blank=word": "fb4ce22b5a5d",
-      "h_blank=int": "4f68a61b91e6",
-      "hn_blank=__out": "debebce196e1",
-      "hn_blank=null": "206bb2675465",
-      "hn_blank=empty": "44ad2f13d2ef",
-      "hn_blank=zero": "6d8295d9dea4",
-      "hn_blank=arr": "09309a04ca15",
-      "hn_blank=word": "7a1d2850447a",
-      "hn_blank=int": "023844361a53",
-      "hc_blank=__out": "debebce196e1",
-      "hc_blank=null": "d87499a40e51",
-      "hc_blank=empty": "092096190a3d",
-      "hc_blank=zero": "9767d6dc8834",
-      "hc_blank=arr": "43c6002cd3be",
-      "hc_blank=word": "f7f63d3cb1c4",
-      "hc_blank=int": "7cd6d0665906",
-      "hs_blank=__out": "debebce196e1",
-      "hs_blank=null": "864c2128dcd5",
-      "hs_blank=empty": "f62058573dab",
-      "hs_blank=zero": "07dbfc01ec8e",
-      "hs_blank=arr": "bedbe1d53f2d",
-      "hs_blank=word": "808d77cf34d0",
-      "hs_blank=int": "506511386666",
-      "l_blank=__out": "debebce196e1",
-      "l_blank=null": "3650cf4177a0",
-      "l_blank=empty": "6715937b7b3f",
-      "l_blank=zero": "a4cf5e9d557d",
-      "l_blank=arr": "d0fab7b4c902",
-      "l_blank=word": "6cf43b273b82",
-      "l_blank=int": "67aa25c267ee",
-      "mr_blank=__out": "debebce196e1",
-      "mr_blank=null": "e0ca4abea507",
-      "mr_blank=empty": "bb7817976774",
-      "mr_blank=zero": "91d74ae4ec71",
-      "mr_blank=arr": "f42af0f2d2af",
-      "mr_blank=word": "f7d69b7abf34",
-      "mr_blank=int": "b9ce54c024d7",
-      "m_blank {}": "057bf3090bbf",
-      "m_blank req null": "edfa9dd993e3",
-      "m_blank req ''": "57a51c136d92",
-      "m_blank req 0": "47a4d84e32b5",
-      "m_blank hp null": "bdf89531d331",
-      "m_blank hp ''": "f53c2919dff9",
-      "m_blank mm {}": "4aa67af6f016",
-      "m_blank mm req2 null": "2964bd29d500",
-      "m_blank mm req2 ''": "88c9c5a474db",
-      "m_blank rows [{}]": "81cb45a57d81",
-      "m_blank rows name ''": "c2d3519a8b6c",
-      "m_blank sec null": "8f45d32bee88",
-      "m_blank full": "311303a8e0d2",
-      "m_blank null": "36e8d8405a17",
-      "mr_blank {}": "f42af0f2d2af",
-      "mr_blank x ''": "c4a2bc533c97",
-      "r_zero=__out": "debebce196e1",
-      "r_zero=null": "f23eda6dfbb3",
-      "r_zero=empty": "22cdab183b1e",
-      "r_zero=zero": "4a2a5c710d71",
-      "r_zero=arr": "5bac4b27339b",
-      "r_zero=word": "57b72f56b2be",
-      "r_zero=int": "990a4322641d",
-      "ri_zero=__out": "debebce196e1",
-      "ri_zero=null": "a39de4c46eda",
-      "ri_zero=empty": "2c91c56ff401",
-      "ri_zero=zero": "a39a04017b17",
-      "ri_zero=arr": "4f2ceee632e7",
-      "ri_zero=word": "cec1e3c30ad9",
-      "ri_zero=int": "d8f23e21792f",
-      "h_zero=__out": "debebce196e1",
-      "h_zero=null": "06d6efb3df33",
-      "h_zero=empty": "8e2226df787a",
-      "h_zero=zero": "0b37e61aefcc",
-      "h_zero=arr": "67d6945d6075",
-      "h_zero=word": "72d5db5dc7d2",
-      "h_zero=int": "8c9f84d9fd6c",
-      "hn_zero=__out": "debebce196e1",
-      "hn_zero=null": "726524b9b5ba",
-      "hn_zero=empty": "568c0cc6456e",
-      "hn_zero=zero": "4127fe66d716",
-      "hn_zero=arr": "b11a2541faee",
-      "hn_zero=word": "54411aa22672",
-      "hn_zero=int": "13993bac8c4d",
-      "hc_zero=__out": "debebce196e1",
-      "hc_zero=null": "5716202bc446",
-      "hc_zero=empty": "773c207cb094",
-      "hc_zero=zero": "6e311468b26c",
-      "hc_zero=arr": "1e6822a6b553",
-      "hc_zero=word": "2b0c63c95176",
-      "hc_zero=int": "00d3934383b3",
-      "hs_zero=__out": "debebce196e1",
-      "hs_zero=null": "33c69d94dfa1",
-      "hs_zero=empty": "ef759488d522",
-      "hs_zero=zero": "804dc81b9667",
-      "hs_zero=arr": "fb1481adf8de",
-      "hs_zero=word": "45b0dcbcb021",
-      "hs_zero=int": "ba51e11ea301",
-      "l_zero=__out": "debebce196e1",
-      "l_zero=null": "35d6bd096537",
-      "l_zero=empty": "9933d083e256",
-      "l_zero=zero": "e432ce6af894",
-      "l_zero=arr": "9e9b0c4c480b",
-      "l_zero=word": "f266840178ac",
-      "l_zero=int": "ceffdf6e405d",
-      "mr_zero=__out": "debebce196e1",
-      "mr_zero=null": "7598232942e7",
-      "mr_zero=empty": "35799992c7d2",
-      "mr_zero=zero": "a3c7179303cb",
-      "mr_zero=arr": "410dc6b406cc",
-      "mr_zero=word": "bce6a628f98b",
-      "mr_zero=int": "13e61681cfad",
-      "m_zero {}": "0e7fe0d12df7",
-      "m_zero req null": "2df8e16e38a6",
-      "m_zero req ''": "53c8f480fceb",
-      "m_zero req 0": "3b147e6ac7a3",
-      "m_zero hp null": "92e2a215c35b",
-      "m_zero hp ''": "0b500b1ed0c4",
-      "m_zero mm {}": "e64732b6d79b",
-      "m_zero mm req2 null": "2f76045cae22",
-      "m_zero mm req2 ''": "c4195db04b72",
-      "m_zero rows [{}]": "ef4136621dc0",
-      "m_zero rows name ''": "d3a31a3005a7",
-      "m_zero sec null": "cdc5e042ed02",
-      "m_zero full": "546bc6084171",
-      "m_zero null": "9a8cefcd7339",
-      "mr_zero {}": "410dc6b406cc",
-      "mr_zero x ''": "ed301b95f106",
-      "r_none=__out": "debebce196e1",
-      "r_none=null": "e0e032dc0617",
-      "r_none=empty": "cf31ff730651",
-      "r_none=zero": "27ccf0f9007b",
-      "r_none=arr": "7537b8109dbc",
-      "r_none=word": "e357f2caaf9e",
-      "r_none=int": "55a5c5681815",
-      "ri_none=__out": "debebce196e1",
-      "ri_none=null": "2ff419c663c2",
-      "ri_none=empty": "8e561bd19359",
-      "ri_none=zero": "a24f2586d5e5",
-      "ri_none=arr": "8b1a762c81f7",
-      "ri_none=word": "0502a0fb9ad9",
-      "ri_none=int": "9f1201c783db",
-      "h_none=__out": "debebce196e1",
-      "h_none=null": "026f50b26876",
-      "h_none=empty": "caf2a9359c6c",
-      "h_none=zero": "60e783342708",
-      "h_none=arr": "c4faa1d19166",
-      "h_none=word": "2e8d82149ee5",
-      "h_none=int": "6bef80b9f338",
-      "hn_none=__out": "debebce196e1",
-      "hn_none=null": "9546525e06aa",
-      "hn_none=empty": "0a61a2cf02c4",
-      "hn_none=zero": "f3eadf85323f",
-      "hn_none=arr": "d96a4c18c656",
-      "hn_none=word": "de8df81ff34c",
-      "hn_none=int": "c016b1689daa",
-      "hc_none=__out": "debebce196e1",
-      "hc_none=null": "8d680dc8d9f6",
-      "hc_none=empty": "4ef49aff5dc4",
-      "hc_none=zero": "26df1e30c0a1",
-      "hc_none=arr": "7f93070245ab",
-      "hc_none=word": "0cb77fe080a4",
-      "hc_none=int": "00f818e0483a",
-      "hs_none=__out": "debebce196e1",
-      "hs_none=null": "22aac002cc25",
-      "hs_none=empty": "f699be23387e",
-      "hs_none=zero": "154a137ba09e",
-      "hs_none=arr": "b4cd1117e29e",
-      "hs_none=word": "7dccdea04945",
-      "hs_none=int": "b2ae7471c507",
-      "l_none=__out": "debebce196e1",
-      "l_none=null": "fa02a20b27cd",
-      "l_none=empty": "e1620aa6d612",
-      "l_none=zero": "f5ebdb4c4507",
-      "l_none=arr": "434f2d0ab3da",
-      "l_none=word": "12c294e57efc",
-      "l_none=int": "9f738896a3da",
-      "mr_none=__out": "debebce196e1",
-      "mr_none=null": "1f945d19da0b",
-      "mr_none=empty": "0c5ceb2669b2",
-      "mr_none=zero": "86cfea3dded1",
-      "mr_none=arr": "531f895fda5d",
-      "mr_none=word": "4b4ed585ba40",
-      "mr_none=int": "80c7b250e76e",
-      "m_none {}": "f0c3033193dd",
-      "m_none req null": "3aad8839e7d7",
-      "m_none req ''": "f41ecb664c28",
-      "m_none req 0": "4c3df5ebb2c5",
-      "m_none hp null": "be558586b815",
-      "m_none hp ''": "2413bf98af00",
-      "m_none mm {}": "e258f1c70bb4",
-      "m_none mm req2 null": "6db596f551a9",
-      "m_none mm req2 ''": "448f5b1be9b9",
-      "m_none rows [{}]": "7b308bf9e15f",
-      "m_none rows name ''": "77c2f5c034ca",
-      "m_none sec null": "74229e681fe5",
-      "m_none full": "27a25d5b5856",
-      "m_none null": "2b536adb3fa4",
-      "mr_none {}": "531f895fda5d",
-      "mr_none x ''": "4735d9a79bb6",
-      "r_mk=__out": "debebce196e1",
-      "r_mk=null": "c8d48a8bb1ce",
-      "r_mk=empty": "5f7b3766b2d8",
-      "r_mk=zero": "ecf727be0ae7",
-      "r_mk=arr": "47e44cba03cb",
-      "r_mk=word": "0c7b773849e3",
-      "r_mk=int": "e70958fb49c4",
-      "ri_mk=__out": "debebce196e1",
-      "ri_mk=null": "07f59b22ca36",
-      "ri_mk=empty": "c5220fb0338b",
-      "ri_mk=zero": "fb88132d842a",
-      "ri_mk=arr": "0361dc8e7db1",
-      "ri_mk=word": "25da0c1ef11f",
-      "ri_mk=int": "6a122a700cea",
-      "h_mk=__out": "debebce196e1",
-      "h_mk=null": "06b2d1ea72a4",
-      "h_mk=empty": "a100964bd673",
-      "h_mk=zero": "971057eb3c67",
-      "h_mk=arr": "d01959e61a93",
-      "h_mk=word": "4f580d2c8a17",
-      "h_mk=int": "04d6d88426f1",
-      "hn_mk=__out": "debebce196e1",
-      "hn_mk=null": "f88cd405d6e7",
-      "hn_mk=empty": "17d02bf8498f",
-      "hn_mk=zero": "74d32a3bc7e4",
-      "hn_mk=arr": "a5c2d8918802",
-      "hn_mk=word": "e2227ebae782",
-      "hn_mk=int": "952fccb66279",
-      "hc_mk=__out": "debebce196e1",
-      "hc_mk=null": "2657389c79b0",
-      "hc_mk=empty": "6fb8eb0d3b6d",
-      "hc_mk=zero": "f4524dade2cb",
-      "hc_mk=arr": "b27443c4b025",
-      "hc_mk=word": "4327949d7626",
-      "hc_mk=int": "8cab3dcea7fc",
-      "hs_mk=__out": "debebce196e1",
-      "hs_mk=null": "227785dabfab",
-      "hs_mk=empty": "bcba76b3a32e",
-      "hs_mk=zero": "03f9a3a46504",
-      "hs_mk=arr": "72d64462e87b",
-      "hs_mk=word": "948eb0c50ea5",
-      "hs_mk=int": "f2eabda46f66",
-      "l_mk=__out": "debebce196e1",
-      "l_mk=null": "c239bc1d1dfe",
-      "l_mk=empty": "482c9f5b9c24",
-      "l_mk=zero": "81b5c5063811",
-      "l_mk=arr": "b270e9c75d9c",
-      "l_mk=word": "e969f10ebc2d",
-      "l_mk=int": "75c690492ee6",
-      "mr_mk=__out": "debebce196e1",
-      "mr_mk=null": "31ec4d36c183",
-      "mr_mk=empty": "7f885a0a30be",
-      "mr_mk=zero": "e7a465c6cfb9",
-      "mr_mk=arr": "99b78ce76caa",
-      "mr_mk=word": "9ea1ba80932a",
-      "mr_mk=int": "16e09993aa64",
-      "m_mk {}": "b1045b417a09",
-      "m_mk req null": "e03360ef419d",
-      "m_mk req ''": "912c819af541",
-      "m_mk req 0": "d8757223d503",
-      "m_mk hp null": "c92f528631a6",
-      "m_mk hp ''": "b97274f7f96b",
-      "m_mk mm {}": "a7df0e3ab8ba",
-      "m_mk mm req2 null": "04a3dfb1b927",
-      "m_mk mm req2 ''": "df2503e54b6e",
-      "m_mk rows [{}]": "b67e5cb7f93a",
-      "m_mk rows name ''": "562badb4aa1d",
-      "m_mk sec null": "096f6c4a1917",
-      "m_mk full": "bebea5f74dd3",
-      "m_mk null": "a7baac310cc5",
-      "mr_mk {}": "99b78ce76caa",
-      "mr_mk x ''": "508786fcd619",
-      "lk other": "f12c93c87b89",
-      "lk_blank other": "25378cc73d4d",
-      "lk null": "c5135cd2dae4",
-      "unknown": "d01068142205",
-      "unknown nested": "70b6678dc47a"
+      "stored": "96e964b4384a",
+      "r_blank=__out": "5481e99012d5",
+      "r_blank=null": "f98b1f242371",
+      "r_blank=empty": "ab7f8e17cd52",
+      "r_blank=zero": "38bc0ee522d3",
+      "r_blank=arr": "494022aa7afa",
+      "r_blank=word": "c273586318a7",
+      "r_blank=int": "fd3a95584356",
+      "ri_blank=__out": "5481e99012d5",
+      "ri_blank=null": "b9b4d23f3de4",
+      "ri_blank=empty": "5f2a11fb454c",
+      "ri_blank=zero": "c4cc032d5c73",
+      "ri_blank=arr": "446b0af539f4",
+      "ri_blank=word": "5f5fff7fe723",
+      "ri_blank=int": "3ca8bc9b86b0",
+      "h_blank=__out": "5481e99012d5",
+      "h_blank=null": "048427da3cd8",
+      "h_blank=empty": "b783adaa41c1",
+      "h_blank=zero": "dcbf2d3276ab",
+      "h_blank=arr": "f7eb5387c2cb",
+      "h_blank=word": "b561a16e46a1",
+      "h_blank=int": "e8182181b004",
+      "hn_blank=__out": "5481e99012d5",
+      "hn_blank=null": "5262b759382b",
+      "hn_blank=empty": "512c6fbbd03b",
+      "hn_blank=zero": "f4bd9bd51103",
+      "hn_blank=arr": "f36f3beb1e5f",
+      "hn_blank=word": "058ee9626ed2",
+      "hn_blank=int": "12d3f0427d69",
+      "hc_blank=__out": "5481e99012d5",
+      "hc_blank=null": "a8068b4df0e2",
+      "hc_blank=empty": "3b73fcd02651",
+      "hc_blank=zero": "cdc9bf7f8e1c",
+      "hc_blank=arr": "1a1a29fad943",
+      "hc_blank=word": "7c2e843c2b7a",
+      "hc_blank=int": "846b3b02f283",
+      "hs_blank=__out": "5481e99012d5",
+      "hs_blank=null": "bc86293a25d5",
+      "hs_blank=empty": "372527144662",
+      "hs_blank=zero": "f910759684c9",
+      "hs_blank=arr": "95c804e9195e",
+      "hs_blank=word": "222b6d908545",
+      "hs_blank=int": "4e26ccaac829",
+      "l_blank=__out": "5481e99012d5",
+      "l_blank=null": "7ed6cf4c3c59",
+      "l_blank=empty": "5b1faeec7550",
+      "l_blank=zero": "66b1e6a2df88",
+      "l_blank=arr": "ea2ffa3b811e",
+      "l_blank=word": "c28b889355cd",
+      "l_blank=int": "903049da1e42",
+      "mr_blank=__out": "5481e99012d5",
+      "mr_blank=null": "1a8c7319c1d7",
+      "mr_blank=empty": "f2f554d14f72",
+      "mr_blank=zero": "c3c483eb3a31",
+      "mr_blank=arr": "63aa6d2ec748",
+      "mr_blank=word": "d22dd2feac03",
+      "mr_blank=int": "9bfb660e09f7",
+      "m_blank {}": "4d00a3197f1f",
+      "m_blank req null": "7abebb87fc7b",
+      "m_blank req ''": "62b14415eee9",
+      "m_blank req 0": "a4055b670249",
+      "m_blank hp null": "6b74add2576e",
+      "m_blank hp ''": "903acbce3102",
+      "m_blank mm {}": "5e216e0863cc",
+      "m_blank mm req2 null": "55d8bf2f82e1",
+      "m_blank mm req2 ''": "226ee96c4e22",
+      "m_blank rows [{}]": "f3b8ed031d8f",
+      "m_blank rows name ''": "af1f7ffa98ef",
+      "m_blank sec null": "e95fbb2ce091",
+      "m_blank full": "6553786367d0",
+      "m_blank null": "212ec88817f5",
+      "mr_blank {}": "63aa6d2ec748",
+      "mr_blank x ''": "f17477f85afb",
+      "r_zero=__out": "5481e99012d5",
+      "r_zero=null": "4912dc05a33c",
+      "r_zero=empty": "03063b5d2651",
+      "r_zero=zero": "11f07620e969",
+      "r_zero=arr": "cac131cfec1e",
+      "r_zero=word": "ef89b55a9608",
+      "r_zero=int": "68fda89da05d",
+      "ri_zero=__out": "5481e99012d5",
+      "ri_zero=null": "d5dcced37ea7",
+      "ri_zero=empty": "c6b5caa15579",
+      "ri_zero=zero": "d96fd5efe801",
+      "ri_zero=arr": "66b4dbfe8b37",
+      "ri_zero=word": "1e99c04c7d52",
+      "ri_zero=int": "52508e4df7e8",
+      "h_zero=__out": "5481e99012d5",
+      "h_zero=null": "e8382f35843f",
+      "h_zero=empty": "834d576476cd",
+      "h_zero=zero": "7663c805842b",
+      "h_zero=arr": "852810047e25",
+      "h_zero=word": "e3d3105f3756",
+      "h_zero=int": "f86c038ebdf4",
+      "hn_zero=__out": "5481e99012d5",
+      "hn_zero=null": "ebd2ff56466c",
+      "hn_zero=empty": "21cea36bdd94",
+      "hn_zero=zero": "27843ba3d688",
+      "hn_zero=arr": "c6fbe90e1c67",
+      "hn_zero=word": "f26a367e206c",
+      "hn_zero=int": "8ea11c737486",
+      "hc_zero=__out": "5481e99012d5",
+      "hc_zero=null": "00f4a2fe39e7",
+      "hc_zero=empty": "cd10b96904f1",
+      "hc_zero=zero": "b768d999e20e",
+      "hc_zero=arr": "c0d2b1b63e4f",
+      "hc_zero=word": "b902369d4f53",
+      "hc_zero=int": "e5c75e0164e5",
+      "hs_zero=__out": "5481e99012d5",
+      "hs_zero=null": "b36184167d77",
+      "hs_zero=empty": "7dfe22c2aab3",
+      "hs_zero=zero": "d628e3013246",
+      "hs_zero=arr": "7ae143d29bc3",
+      "hs_zero=word": "f68d7eb0bd3b",
+      "hs_zero=int": "28ec051058f9",
+      "l_zero=__out": "5481e99012d5",
+      "l_zero=null": "166668dac20a",
+      "l_zero=empty": "016a4faa94bd",
+      "l_zero=zero": "456c5478222d",
+      "l_zero=arr": "cee6c9362cbd",
+      "l_zero=word": "8cf541ce63c3",
+      "l_zero=int": "7b0d5a4b5c0c",
+      "mr_zero=__out": "5481e99012d5",
+      "mr_zero=null": "8227a7ce71ed",
+      "mr_zero=empty": "c4f6ea415bd2",
+      "mr_zero=zero": "4ec059eaef48",
+      "mr_zero=arr": "79f95fb29a05",
+      "mr_zero=word": "2d6b3d7433f6",
+      "mr_zero=int": "942f7012cca6",
+      "m_zero {}": "3a990e0f9633",
+      "m_zero req null": "9c1ae4876ae8",
+      "m_zero req ''": "38ef6410b1ec",
+      "m_zero req 0": "62100246fb16",
+      "m_zero hp null": "d1ee2fb55dfe",
+      "m_zero hp ''": "568ccd1d305b",
+      "m_zero mm {}": "bb3d33d71d97",
+      "m_zero mm req2 null": "691af55be9e3",
+      "m_zero mm req2 ''": "9c6589752f27",
+      "m_zero rows [{}]": "4afedf3282a3",
+      "m_zero rows name ''": "2b781e73e1bb",
+      "m_zero sec null": "99b311673b3c",
+      "m_zero full": "b7636fc62236",
+      "m_zero null": "2b6b139fe18b",
+      "mr_zero {}": "79f95fb29a05",
+      "mr_zero x ''": "c5f60fdfdd03",
+      "r_none=__out": "5481e99012d5",
+      "r_none=null": "7323bc4c2047",
+      "r_none=empty": "cd24e53c1611",
+      "r_none=zero": "65f3a9d898b6",
+      "r_none=arr": "f7b3d0deff88",
+      "r_none=word": "6c9902e3c9e2",
+      "r_none=int": "62d5be70faf2",
+      "ri_none=__out": "5481e99012d5",
+      "ri_none=null": "42b1d291af20",
+      "ri_none=empty": "4d5c83dc79eb",
+      "ri_none=zero": "cf5a4aef561c",
+      "ri_none=arr": "ebec9f2010bc",
+      "ri_none=word": "5c5c356f8488",
+      "ri_none=int": "2ae5ae6af6c9",
+      "h_none=__out": "5481e99012d5",
+      "h_none=null": "aaf2741928df",
+      "h_none=empty": "6b247635ac20",
+      "h_none=zero": "2acbb480d33b",
+      "h_none=arr": "009b25dc601a",
+      "h_none=word": "2b581d997276",
+      "h_none=int": "6894341b1e95",
+      "hn_none=__out": "5481e99012d5",
+      "hn_none=null": "a16ac2d544b6",
+      "hn_none=empty": "1cb646dac4fb",
+      "hn_none=zero": "b99912ab2594",
+      "hn_none=arr": "e746824356e7",
+      "hn_none=word": "1a8ff55d787b",
+      "hn_none=int": "845a44e79f6b",
+      "hc_none=__out": "5481e99012d5",
+      "hc_none=null": "df896490933a",
+      "hc_none=empty": "98275fe42b8e",
+      "hc_none=zero": "f034383d8e7c",
+      "hc_none=arr": "ad5f7fb6a1e8",
+      "hc_none=word": "eddb1c37edfe",
+      "hc_none=int": "f38d9bca8806",
+      "hs_none=__out": "5481e99012d5",
+      "hs_none=null": "9e6abb1d437f",
+      "hs_none=empty": "b4d9ef8bb328",
+      "hs_none=zero": "c68d1a4c8b95",
+      "hs_none=arr": "a20e60fa8aef",
+      "hs_none=word": "40d548b29e63",
+      "hs_none=int": "ad82dab51242",
+      "l_none=__out": "5481e99012d5",
+      "l_none=null": "e1935a8bb9f2",
+      "l_none=empty": "f160e1b8e76b",
+      "l_none=zero": "e088eb11816c",
+      "l_none=arr": "0f6ac62bd126",
+      "l_none=word": "8117937a281c",
+      "l_none=int": "c2b3742c9380",
+      "mr_none=__out": "5481e99012d5",
+      "mr_none=null": "4e2f4c090447",
+      "mr_none=empty": "a82dcba49f2b",
+      "mr_none=zero": "82b3b1ea0131",
+      "mr_none=arr": "abab532b2a66",
+      "mr_none=word": "25edf686fbfb",
+      "mr_none=int": "593e3e0be84f",
+      "m_none {}": "4adebaaf27a7",
+      "m_none req null": "b4af8a2ebbd5",
+      "m_none req ''": "e358b73dcc6f",
+      "m_none req 0": "68f88b21e2d9",
+      "m_none hp null": "a53d0a1d6ed0",
+      "m_none hp ''": "23b32b4e66f7",
+      "m_none mm {}": "085ac99740bc",
+      "m_none mm req2 null": "8027abb01eb6",
+      "m_none mm req2 ''": "11ff8f6238ec",
+      "m_none rows [{}]": "215f44634f05",
+      "m_none rows name ''": "bc475e0720f5",
+      "m_none sec null": "cfd7d3ba78a5",
+      "m_none full": "d32ddc887042",
+      "m_none null": "6fe9d1cc67f0",
+      "mr_none {}": "abab532b2a66",
+      "mr_none x ''": "0dff69b11654",
+      "r_mk=__out": "5481e99012d5",
+      "r_mk=null": "9c259d4fe829",
+      "r_mk=empty": "b7708123423b",
+      "r_mk=zero": "a1416ab5266f",
+      "r_mk=arr": "1d41599573f5",
+      "r_mk=word": "6dfa32c9966a",
+      "r_mk=int": "a4f05aab343d",
+      "ri_mk=__out": "5481e99012d5",
+      "ri_mk=null": "20c72cdadc22",
+      "ri_mk=empty": "8386505d0bef",
+      "ri_mk=zero": "70d88143d713",
+      "ri_mk=arr": "36a77c35a38f",
+      "ri_mk=word": "a70730e2ce95",
+      "ri_mk=int": "fcbc39d66a0d",
+      "h_mk=__out": "5481e99012d5",
+      "h_mk=null": "4022a1b3e309",
+      "h_mk=empty": "86b51db987fa",
+      "h_mk=zero": "8cdff80303d5",
+      "h_mk=arr": "d6a3facf5e89",
+      "h_mk=word": "15f9b4e82054",
+      "h_mk=int": "083c693d5056",
+      "hn_mk=__out": "5481e99012d5",
+      "hn_mk=null": "ce6e4778c684",
+      "hn_mk=empty": "31ab9391cbd5",
+      "hn_mk=zero": "310e73e32ff4",
+      "hn_mk=arr": "56711bf223c1",
+      "hn_mk=word": "402d61a25025",
+      "hn_mk=int": "35178384a7cb",
+      "hc_mk=__out": "5481e99012d5",
+      "hc_mk=null": "cacb730f85fe",
+      "hc_mk=empty": "51d970b8775b",
+      "hc_mk=zero": "80fe22dd0620",
+      "hc_mk=arr": "2126dfa89f0f",
+      "hc_mk=word": "5a9254b4dd1f",
+      "hc_mk=int": "3f84f13042d7",
+      "hs_mk=__out": "5481e99012d5",
+      "hs_mk=null": "c41bfc9997f9",
+      "hs_mk=empty": "e52f83e02e9c",
+      "hs_mk=zero": "2c9d2eb42bda",
+      "hs_mk=arr": "a4fd4ae8e820",
+      "hs_mk=word": "50470c4d45ec",
+      "hs_mk=int": "281f5f9ad12f",
+      "l_mk=__out": "5481e99012d5",
+      "l_mk=null": "c921b4ac30db",
+      "l_mk=empty": "042b49ab1641",
+      "l_mk=zero": "9f663acf025f",
+      "l_mk=arr": "4ce914982a74",
+      "l_mk=word": "4fe6b685b71e",
+      "l_mk=int": "6984a9691fe2",
+      "mr_mk=__out": "5481e99012d5",
+      "mr_mk=null": "9a13e9ff0690",
+      "mr_mk=empty": "b4b533ae4b72",
+      "mr_mk=zero": "20ece4a96651",
+      "mr_mk=arr": "f842e3a356a6",
+      "mr_mk=word": "b1d9c9104a31",
+      "mr_mk=int": "3a29b7d4830e",
+      "m_mk {}": "9f1ae6302817",
+      "m_mk req null": "e0e4a34b1962",
+      "m_mk req ''": "09084aa9f456",
+      "m_mk req 0": "eba73effadee",
+      "m_mk hp null": "b347721d9f9b",
+      "m_mk hp ''": "33ea1e00cdc6",
+      "m_mk mm {}": "303bf1c4f796",
+      "m_mk mm req2 null": "8e9d6a5fae92",
+      "m_mk mm req2 ''": "aa61ccf51d62",
+      "m_mk rows [{}]": "027cf363518f",
+      "m_mk rows name ''": "b33c4a4cbb5c",
+      "m_mk sec null": "79047fbabc6a",
+      "m_mk full": "01307a89b19c",
+      "m_mk null": "25ecb256df62",
+      "mr_mk {}": "f842e3a356a6",
+      "mr_mk x ''": "0dee3a0512c7",
+      "lk other": "fdae51df2cf5",
+      "lk_blank other": "ea0eca7987ed",
+      "lk null": "2c9c83811afb",
+      "unknown": "cf44e13baccd",
+      "unknown nested": "0ed9bde6058e"
     },
     "plain | key": {
-      "r_blank": "860b39ce3e77",
-      "ri_blank": "26c465183c2f",
-      "h_blank": "4e58816c3f13",
-      "hn_blank": "32e3c613fbb9",
-      "hc_blank": "7fe1f82c1839",
-      "hs_blank": "169b3dbbc3cc",
-      "m_blank": "2c8c7e3bf953",
-      "mr_blank": "48c8d5c12a3f",
-      "l_blank": "6ed3bf36deda",
-      "r_zero": "8c6931fd4f8d",
-      "ri_zero": "dda8ee16f5c4",
-      "h_zero": "8bbfb2a66a0e",
-      "hn_zero": "831a299935ff",
-      "hc_zero": "3c501a1e9e5e",
-      "hs_zero": "ddcfe798e1f0",
-      "m_zero": "fef67cf1d694",
-      "mr_zero": "c387598fb8be",
-      "l_zero": "b54e6205915a",
-      "r_none": "25d890ae72dc",
-      "ri_none": "8d3ccce18cdb",
-      "h_none": "099002c7961d",
-      "hn_none": "203fc0357e3e",
-      "hc_none": "fae1503e0488",
-      "hs_none": "1fe9ebc585bf",
-      "m_none": "8b1d184cfa65",
-      "mr_none": "7e42d02aed23",
-      "l_none": "6b11b450895e",
-      "r_mk": "416a56e12640",
-      "ri_mk": "403bf81a1c0a",
-      "h_mk": "d61b6093b12d",
-      "hn_mk": "4b676776734f",
-      "hc_mk": "e67178d30234",
-      "hs_mk": "fc756355e518",
-      "m_mk": "092128dfa4cd",
-      "mr_mk": "052424f5c3e9",
-      "l_mk": "4c596cf9bfc3",
-      "lk": "4b7addb43dd2",
-      "lk_blank": "07eb84318fba"
+      "r_blank": "16eb7716304f",
+      "ri_blank": "9111bed4c067",
+      "h_blank": "e6257ccb4b37",
+      "hn_blank": "0cd26bef8de1",
+      "hc_blank": "e4695dbdf8cb",
+      "hs_blank": "700af06c32d0",
+      "m_blank": "885a8f955636",
+      "mr_blank": "a44377a3d0ff",
+      "l_blank": "b98c9c7c6125",
+      "r_zero": "3f4367f94885",
+      "ri_zero": "c51ac0cb2567",
+      "h_zero": "fedaf17df74a",
+      "hn_zero": "7dc3636bcb15",
+      "hc_zero": "454d0cb6d67c",
+      "hs_zero": "c0c1dce173e8",
+      "m_zero": "d13cbfa47e49",
+      "mr_zero": "118b62f45ac4",
+      "l_zero": "8a4c53840531",
+      "r_none": "98f0d91cc956",
+      "ri_none": "9ced014f34ee",
+      "h_none": "6c245373c24a",
+      "hn_none": "e469d2b3261b",
+      "hc_none": "fb42087f6607",
+      "hs_none": "2a1aba38932c",
+      "m_none": "f039b88043f6",
+      "mr_none": "92d47e63833a",
+      "l_none": "aa276abde062",
+      "r_mk": "d63ecacc0296",
+      "ri_mk": "1ffdc365477e",
+      "h_mk": "e176efbb5d26",
+      "hn_mk": "3d1259166473",
+      "hc_mk": "4d25bf9cb675",
+      "hs_mk": "0d1150b71dee",
+      "m_mk": "41425c6e3b5f",
+      "mr_mk": "9345a602d976",
+      "l_mk": "ee679a0bcf4e",
+      "lk": "948f9802ffae",
+      "lk_blank": "ebabe2347274"
     },
     "plain | path": {
       "nope": "1bf169f7d887",
       "nope.deeper": "ed8a9f9798ca",
-      "r_blank": "c747716aeed5",
-      "ri_blank": "b14bd7e194e3",
-      "h_blank": "1d9802548a75",
-      "hn_blank": "a0dff557cd78",
-      "hc_blank": "29a5a66beb08",
+      "r_blank": "117a67c5e695",
+      "ri_blank": "4338bb6e4c8b",
+      "h_blank": "3f5a518cde87",
+      "hn_blank": "77aa63c45fc7",
+      "hc_blank": "aa1657c92c24",
       "hs_blank": "bfbd659f73ce",
       "m_blank": "d07d2ed87ba0",
-      "m_blank.req": "ece6242c4a40",
-      "m_blank.opt": "89b11235375a",
-      "m_blank.hp": "5803bdf4f21d",
+      "m_blank.req": "f855f8e4d339",
+      "m_blank.opt": "92b810f70916",
+      "m_blank.hp": "c4ea36aef1c9",
       "m_blank.mm": "8b65c5f9bac4",
-      "m_blank.mm.req2": "d26b7940241a",
-      "m_blank.mm.o2": "970ddb79b989",
+      "m_blank.mm.req2": "1efef95ecd08",
+      "m_blank.mm.o2": "668bb18522f6",
       "m_blank.mm.nope": "e635c8d47ec4",
-      "m_blank.rows": "c564a61c314c",
+      "m_blank.rows": "24d1391b0509",
       "m_blank.rows.0": "4bf986f7b9db",
       "m_blank.rows.0.name": "6e672260cc46",
       "m_blank.rows.0.nope": "b64f52053539",
       "m_blank.sec": "5df666a986fd",
       "m_blank.nope": "b3a82134a682",
       "mr_blank": "bd1e8c2203d4",
-      "mr_blank.x": "1ed237801bb6",
+      "mr_blank.x": "7705545a3083",
       "mr_blank.nope": "8c623fa30671",
-      "l_blank": "b240c6d7f572",
+      "l_blank": "d43f78ba79e9",
       "l_blank.0": "aa164c1d8c7f",
-      "r_zero": "88767155c239",
-      "ri_zero": "c8f7a088e9ec",
-      "h_zero": "318bf2a4e114",
-      "hn_zero": "c48a06e2ebba",
-      "hc_zero": "bb1d33d1def8",
+      "r_zero": "67f10d381515",
+      "ri_zero": "26b86cb53c38",
+      "h_zero": "36b48eb273ce",
+      "hn_zero": "dc34c0ed9600",
+      "hc_zero": "97f563ba39b8",
       "hs_zero": "64f5da11a92c",
       "m_zero": "0e468e8be491",
-      "m_zero.req": "951a1af5600b",
-      "m_zero.opt": "5ac6e8d70c77",
-      "m_zero.hp": "75941e4d34f6",
+      "m_zero.req": "16d8d3f1f207",
+      "m_zero.opt": "23910a0d31d0",
+      "m_zero.hp": "d04594024675",
       "m_zero.mm": "949f1253c0b9",
-      "m_zero.mm.req2": "3385f17b194f",
-      "m_zero.mm.o2": "57eacee3280d",
+      "m_zero.mm.req2": "ae7757de8a5b",
+      "m_zero.mm.o2": "df65298bfd6c",
       "m_zero.mm.nope": "66b1b0812cde",
-      "m_zero.rows": "1c99ab337108",
+      "m_zero.rows": "cfc2a0a774b9",
       "m_zero.rows.0": "e141dccf1987",
       "m_zero.rows.0.name": "c65b9820188e",
       "m_zero.rows.0.nope": "7d49d31b6c07",
       "m_zero.sec": "ae1f42365ae0",
       "m_zero.nope": "8ba08c2e8466",
       "mr_zero": "e9ccea9763c3",
-      "mr_zero.x": "e1f4df01d168",
+      "mr_zero.x": "20b8a4ca7d83",
       "mr_zero.nope": "fee878df7649",
-      "l_zero": "6548fc9cb43c",
+      "l_zero": "57eb5bd9c929",
       "l_zero.0": "656aa3f3c20c",
-      "r_none": "83a9274275ce",
-      "ri_none": "d3bce3cdb93e",
-      "h_none": "a2614f1890b4",
-      "hn_none": "5b2402742d58",
-      "hc_none": "c99d220b99f7",
+      "r_none": "fff6bb0c19f1",
+      "ri_none": "dca62146bade",
+      "h_none": "bf8c869c89de",
+      "hn_none": "80e5e30fcd33",
+      "hc_none": "cd278e900f21",
       "hs_none": "023ae50e02de",
       "m_none": "ce50f7813efd",
-      "m_none.req": "8a221e522ee2",
+      "m_none.req": "01ba4a8066b5",
       "m_none.opt": "a140ca67781c",
-      "m_none.hp": "5952320a03a1",
+      "m_none.hp": "e4cb24414682",
       "m_none.mm": "82436817e1de",
-      "m_none.mm.req2": "d2fa9c2e82e6",
-      "m_none.mm.o2": "cc8ba2b29198",
+      "m_none.mm.req2": "a16439bc83dd",
+      "m_none.mm.o2": "2f806eec25c2",
       "m_none.mm.nope": "7a2d0346a17e",
-      "m_none.rows": "264ad2310a59",
+      "m_none.rows": "6a7aa3583c19",
       "m_none.rows.0": "35c8b541bdeb",
       "m_none.rows.0.name": "adee307c460c",
       "m_none.rows.0.nope": "8830edce6c84",
       "m_none.sec": "076cf3408b16",
       "m_none.nope": "87b148c2675d",
       "mr_none": "54908d0863da",
-      "mr_none.x": "bdeb302e91b7",
+      "mr_none.x": "ccfbe7ce0718",
       "mr_none.nope": "0ab4318d009b",
-      "l_none": "531182f1287b",
+      "l_none": "300ac70fb141",
       "l_none.0": "0e55e4e7a751",
-      "r_mk": "e8aca6aef406",
-      "ri_mk": "d4fe16e71eb0",
-      "h_mk": "8d61f4e9a5c8",
-      "hn_mk": "011cd959ccc5",
-      "hc_mk": "e01a1e997f00",
+      "r_mk": "d3973abb812c",
+      "ri_mk": "592b06b66955",
+      "h_mk": "d26176924419",
+      "hn_mk": "506dd36fcd4e",
+      "hc_mk": "401cc079c9f8",
       "hs_mk": "43e2ae162669",
       "m_mk": "912ad1fcc83e",
-      "m_mk.req": "30ed28ed3ee0",
-      "m_mk.opt": "46dd5cd53977",
-      "m_mk.hp": "63deb6b88c99",
+      "m_mk.req": "bf49dfdb0dc2",
+      "m_mk.opt": "8b92314b795e",
+      "m_mk.hp": "9b3b18b44625",
       "m_mk.mm": "9b08f6f1d031",
-      "m_mk.mm.req2": "e33a73229635",
-      "m_mk.mm.o2": "eb56af933ed2",
+      "m_mk.mm.req2": "0fdd409db190",
+      "m_mk.mm.o2": "e0371f592cb7",
       "m_mk.mm.nope": "605f908861dd",
-      "m_mk.rows": "eed68c9bd039",
+      "m_mk.rows": "895930d2b4ab",
       "m_mk.rows.0": "e5cd6cf20240",
       "m_mk.rows.0.name": "4ba56e36ee99",
       "m_mk.rows.0.nope": "d2898d9f2a0b",
       "m_mk.sec": "526bbc14ec9d",
       "m_mk.nope": "f9781154300d",
       "mr_mk": "bf90f349b9d9",
-      "mr_mk.x": "65d6e4712f39",
+      "mr_mk.x": "2856c7a1c0b9",
       "mr_mk.nope": "06d2411601a2",
-      "l_mk": "fc2e74cf92f9",
+      "l_mk": "94569a9ba485",
       "l_mk.0": "c278eec982de",
       "lk": "e32d611a2d94",
       "lk_blank": "e32d611a2d94"
@@ -599,10 +599,10 @@
         "constraints": [],
         "settings": [],
         "array": {
-          "type": "map",
-          "label": "L",
           "description": "D",
-          "required": false
+          "label": "L",
+          "required": false,
+          "type": "map"
         },
         "properties": {
           "r_blank": {
@@ -623,16 +623,16 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "string value"
-              },
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "string value"
+              },
+              "required": true,
+              "type": "string"
             }
           },
           "ri_blank": {
@@ -653,16 +653,16 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": {
-                "@text": "integer value"
-              },
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "integer value"
+              },
+              "required": true,
+              "type": "integer"
             }
           },
           "h_blank": {
@@ -682,15 +682,15 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "description": "",
               "label": {
                 "@text": "string value"
               },
-              "description": "",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "hn_blank": {
@@ -710,15 +710,15 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "description": "",
               "label": {
                 "@text": "integer value"
               },
-              "description": "",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "integer"
             }
           },
           "hc_blank": {
@@ -750,12 +750,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "string value"
-              },
-              "description": "",
-              "required": false,
               "constraints": {
                 "LabeledChoice": {
                   "choices": {
@@ -770,7 +764,13 @@
                     "b"
                   ]
                 }
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "string value"
+              },
+              "required": false,
+              "type": "string"
             }
           },
           "hs_blank": {
@@ -792,17 +792,17 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "string value"
+              "constraints": {
+                "PrimitiveType": []
               },
               "description": {
                 "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
               },
+              "label": {
+                "@text": "string value"
+              },
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "m_blank": {
@@ -820,12 +820,12 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
+              "description": "",
               "label": {
                 "@text": "map value"
               },
-              "description": "",
-              "required": false
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "req": {
@@ -846,16 +846,16 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": {
-                    "@text": "string value"
-                  },
-                  "description": "",
-                  "required": true,
                   "constraints": {
                     "PrimitiveType": [],
                     "NotNull": []
-                  }
+                  },
+                  "description": "",
+                  "label": {
+                    "@text": "string value"
+                  },
+                  "required": true,
+                  "type": "string"
                 }
               },
               "opt": {
@@ -875,15 +875,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
+                  "description": "",
                   "label": {
                     "@text": "string value"
                   },
-                  "description": "",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "hp": {
@@ -903,15 +903,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
+                  "description": "",
                   "label": {
                     "@text": "string value"
                   },
-                  "description": "",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "mm": {
@@ -929,12 +929,12 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "map",
+                  "description": "",
                   "label": {
                     "@text": "map value"
                   },
-                  "description": "",
-                  "required": false
+                  "required": false,
+                  "type": "map"
                 },
                 "properties": {
                   "req2": {
@@ -955,16 +955,16 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "integer",
-                      "label": {
-                        "@text": "integer value"
-                      },
-                      "description": "",
-                      "required": true,
                       "constraints": {
                         "PrimitiveType": [],
                         "NotNull": []
-                      }
+                      },
+                      "description": "",
+                      "label": {
+                        "@text": "integer value"
+                      },
+                      "required": true,
+                      "type": "integer"
                     }
                   },
                   "o2": {
@@ -982,13 +982,13 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "string",
-                      "label": "O2",
-                      "description": "",
-                      "required": false,
                       "constraints": {
                         "PrimitiveType": []
-                      }
+                      },
+                      "description": "",
+                      "label": "O2",
+                      "required": false,
+                      "type": "string"
                     }
                   }
                 }
@@ -1007,9 +1007,8 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "list",
-                  "label": "Rows",
                   "description": "",
+                  "label": "Rows",
                   "required": false
                 },
                 "item": {
@@ -1027,12 +1026,12 @@
                   "constraints": [],
                   "settings": [],
                   "array": {
-                    "type": "map",
+                    "description": "",
                     "label": {
                       "@text": "map value"
                     },
-                    "description": "",
-                    "required": false
+                    "required": false,
+                    "type": "map"
                   },
                   "properties": {
                     "name": {
@@ -1053,16 +1052,16 @@
                       },
                       "settings": [],
                       "array": {
-                        "type": "string",
-                        "label": {
-                          "@text": "string value"
-                        },
-                        "description": "",
-                        "required": true,
                         "constraints": {
                           "PrimitiveType": [],
                           "NotNull": []
-                        }
+                        },
+                        "description": "",
+                        "label": {
+                          "@text": "string value"
+                        },
+                        "required": true,
+                        "type": "string"
                       }
                     }
                   }
@@ -1088,18 +1087,18 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": {
-                    "@text": "string value"
+                  "constraints": {
+                    "PrimitiveType": [],
+                    "NotNull": []
                   },
                   "description": {
                     "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                   },
+                  "label": {
+                    "@text": "string value"
+                  },
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": [],
-                    "NotNull": []
-                  }
+                  "type": "string"
                 }
               }
             }
@@ -1121,13 +1120,13 @@
             },
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Required map",
-              "description": "",
-              "required": true,
               "constraints": {
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": "Required map",
+              "required": true,
+              "type": "map"
             },
             "properties": {
               "x": {
@@ -1148,16 +1147,16 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": {
-                    "@text": "string value"
-                  },
-                  "description": "",
-                  "required": true,
                   "constraints": {
                     "PrimitiveType": [],
                     "NotNull": []
-                  }
+                  },
+                  "description": "",
+                  "label": {
+                    "@text": "string value"
+                  },
+                  "required": true,
+                  "type": "string"
                 }
               }
             }
@@ -1180,15 +1179,14 @@
             },
             "settings": [],
             "array": {
-              "type": "list",
+              "constraints": {
+                "NotNull": []
+              },
+              "description": "",
               "label": {
                 "@text": "list value"
               },
-              "description": "",
-              "required": true,
-              "constraints": {
-                "NotNull": []
-              }
+              "required": true
             },
             "item": {
               "class": "Drupal\\tool\\TypedData\\InputDefinition",
@@ -1205,13 +1203,13 @@
               },
               "settings": [],
               "array": {
-                "type": "string",
-                "label": "Item",
-                "description": "",
-                "required": false,
                 "constraints": {
                   "PrimitiveType": []
-                }
+                },
+                "description": "",
+                "label": "Item",
+                "required": false,
+                "type": "string"
               }
             }
           },
@@ -1231,14 +1229,14 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "0",
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": "0",
+              "required": true,
+              "type": "string"
             }
           },
           "ri_zero": {
@@ -1257,14 +1255,14 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": "0",
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": "0",
+              "required": true,
+              "type": "integer"
             }
           },
           "h_zero": {
@@ -1282,13 +1280,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "0",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "0",
+              "required": false,
+              "type": "string"
             }
           },
           "hn_zero": {
@@ -1306,13 +1304,13 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": "0",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "0",
+              "required": false,
+              "type": "integer"
             }
           },
           "hc_zero": {
@@ -1342,10 +1340,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "0",
-              "description": "",
-              "required": false,
               "constraints": {
                 "LabeledChoice": {
                   "choices": {
@@ -1360,7 +1354,11 @@
                     "b"
                   ]
                 }
-              }
+              },
+              "description": "",
+              "label": "0",
+              "required": false,
+              "type": "string"
             }
           },
           "hs_zero": {
@@ -1380,15 +1378,15 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "0",
+              "constraints": {
+                "PrimitiveType": []
+              },
               "description": {
                 "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
               },
+              "label": "0",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "m_zero": {
@@ -1404,10 +1402,10 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "0",
               "description": "",
-              "required": false
+              "label": "0",
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "req": {
@@ -1426,14 +1424,14 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "0",
-                  "description": "",
-                  "required": true,
                   "constraints": {
                     "PrimitiveType": [],
                     "NotNull": []
-                  }
+                  },
+                  "description": "",
+                  "label": "0",
+                  "required": true,
+                  "type": "string"
                 }
               },
               "opt": {
@@ -1451,13 +1449,13 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "0",
-                  "description": "",
-                  "required": false,
                   "constraints": {
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": "",
+                  "label": "0",
+                  "required": false,
+                  "type": "string"
                 }
               },
               "hp": {
@@ -1475,13 +1473,13 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "0",
-                  "description": "",
-                  "required": false,
                   "constraints": {
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": "",
+                  "label": "0",
+                  "required": false,
+                  "type": "string"
                 }
               },
               "mm": {
@@ -1497,10 +1495,10 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "map",
-                  "label": "0",
                   "description": "",
-                  "required": false
+                  "label": "0",
+                  "required": false,
+                  "type": "map"
                 },
                 "properties": {
                   "req2": {
@@ -1519,14 +1517,14 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "integer",
-                      "label": "0",
-                      "description": "",
-                      "required": true,
                       "constraints": {
                         "PrimitiveType": [],
                         "NotNull": []
-                      }
+                      },
+                      "description": "",
+                      "label": "0",
+                      "required": true,
+                      "type": "integer"
                     }
                   },
                   "o2": {
@@ -1544,13 +1542,13 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "string",
-                      "label": "O2",
-                      "description": "",
-                      "required": false,
                       "constraints": {
                         "PrimitiveType": []
-                      }
+                      },
+                      "description": "",
+                      "label": "O2",
+                      "required": false,
+                      "type": "string"
                     }
                   }
                 }
@@ -1569,9 +1567,8 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "list",
-                  "label": "Rows",
                   "description": "",
+                  "label": "Rows",
                   "required": false
                 },
                 "item": {
@@ -1589,12 +1586,12 @@
                   "constraints": [],
                   "settings": [],
                   "array": {
-                    "type": "map",
+                    "description": "",
                     "label": {
                       "@text": "map value"
                     },
-                    "description": "",
-                    "required": false
+                    "required": false,
+                    "type": "map"
                   },
                   "properties": {
                     "name": {
@@ -1613,14 +1610,14 @@
                       },
                       "settings": [],
                       "array": {
-                        "type": "string",
-                        "label": "0",
-                        "description": "",
-                        "required": true,
                         "constraints": {
                           "PrimitiveType": [],
                           "NotNull": []
-                        }
+                        },
+                        "description": "",
+                        "label": "0",
+                        "required": true,
+                        "type": "string"
                       }
                     }
                   }
@@ -1644,16 +1641,16 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "0",
-                  "description": {
-                    "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
-                  },
-                  "required": false,
                   "constraints": {
                     "PrimitiveType": [],
                     "NotNull": []
-                  }
+                  },
+                  "description": {
+                    "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
+                  },
+                  "label": "0",
+                  "required": false,
+                  "type": "string"
                 }
               }
             }
@@ -1675,13 +1672,13 @@
             },
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Required map",
-              "description": "",
-              "required": true,
               "constraints": {
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": "Required map",
+              "required": true,
+              "type": "map"
             },
             "properties": {
               "x": {
@@ -1700,14 +1697,14 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "0",
-                  "description": "",
-                  "required": true,
                   "constraints": {
                     "PrimitiveType": [],
                     "NotNull": []
-                  }
+                  },
+                  "description": "",
+                  "label": "0",
+                  "required": true,
+                  "type": "string"
                 }
               }
             }
@@ -1728,13 +1725,12 @@
             },
             "settings": [],
             "array": {
-              "type": "list",
-              "label": "0",
-              "description": "",
-              "required": true,
               "constraints": {
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": "0",
+              "required": true
             },
             "item": {
               "class": "Drupal\\tool\\TypedData\\InputDefinition",
@@ -1751,13 +1747,13 @@
               },
               "settings": [],
               "array": {
-                "type": "string",
-                "label": "Item",
-                "description": "",
-                "required": false,
                 "constraints": {
                   "PrimitiveType": []
-                }
+                },
+                "description": "",
+                "label": "Item",
+                "required": false,
+                "type": "string"
               }
             }
           },
@@ -1779,16 +1775,16 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "string value"
-              },
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "string value"
+              },
+              "required": true,
+              "type": "string"
             }
           },
           "ri_none": {
@@ -1809,16 +1805,16 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": {
-                "@text": "integer value"
-              },
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "integer value"
+              },
+              "required": true,
+              "type": "integer"
             }
           },
           "h_none": {
@@ -1838,15 +1834,15 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "description": "",
               "label": {
                 "@text": "string value"
               },
-              "description": "",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "hn_none": {
@@ -1866,15 +1862,15 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "description": "",
               "label": {
                 "@text": "integer value"
               },
-              "description": "",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "integer"
             }
           },
           "hc_none": {
@@ -1906,12 +1902,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "string value"
-              },
-              "description": "",
-              "required": false,
               "constraints": {
                 "LabeledChoice": {
                   "choices": {
@@ -1926,7 +1916,13 @@
                     "b"
                   ]
                 }
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "string value"
+              },
+              "required": false,
+              "type": "string"
             }
           },
           "hs_none": {
@@ -1948,17 +1944,17 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "string value"
+              "constraints": {
+                "PrimitiveType": []
               },
               "description": {
                 "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
               },
+              "label": {
+                "@text": "string value"
+              },
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "m_none": {
@@ -1976,12 +1972,12 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
+              "description": "",
               "label": {
                 "@text": "map value"
               },
-              "description": "",
-              "required": false
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "req": {
@@ -2002,16 +1998,16 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": {
-                    "@text": "string value"
-                  },
-                  "description": "",
-                  "required": true,
                   "constraints": {
                     "PrimitiveType": [],
                     "NotNull": []
-                  }
+                  },
+                  "description": "",
+                  "label": {
+                    "@text": "string value"
+                  },
+                  "required": true,
+                  "type": "string"
                 }
               },
               "opt": {
@@ -2031,15 +2027,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
+                  "description": "",
                   "label": {
                     "@text": "string value"
                   },
-                  "description": "",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "hp": {
@@ -2059,15 +2055,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
+                  "description": "",
                   "label": {
                     "@text": "string value"
                   },
-                  "description": "",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "mm": {
@@ -2085,12 +2081,12 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "map",
+                  "description": "",
                   "label": {
                     "@text": "map value"
                   },
-                  "description": "",
-                  "required": false
+                  "required": false,
+                  "type": "map"
                 },
                 "properties": {
                   "req2": {
@@ -2111,16 +2107,16 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "integer",
-                      "label": {
-                        "@text": "integer value"
-                      },
-                      "description": "",
-                      "required": true,
                       "constraints": {
                         "PrimitiveType": [],
                         "NotNull": []
-                      }
+                      },
+                      "description": "",
+                      "label": {
+                        "@text": "integer value"
+                      },
+                      "required": true,
+                      "type": "integer"
                     }
                   },
                   "o2": {
@@ -2138,13 +2134,13 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "string",
-                      "label": "O2",
-                      "description": "",
-                      "required": false,
                       "constraints": {
                         "PrimitiveType": []
-                      }
+                      },
+                      "description": "",
+                      "label": "O2",
+                      "required": false,
+                      "type": "string"
                     }
                   }
                 }
@@ -2163,9 +2159,8 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "list",
-                  "label": "Rows",
                   "description": "",
+                  "label": "Rows",
                   "required": false
                 },
                 "item": {
@@ -2183,12 +2178,12 @@
                   "constraints": [],
                   "settings": [],
                   "array": {
-                    "type": "map",
+                    "description": "",
                     "label": {
                       "@text": "map value"
                     },
-                    "description": "",
-                    "required": false
+                    "required": false,
+                    "type": "map"
                   },
                   "properties": {
                     "name": {
@@ -2209,16 +2204,16 @@
                       },
                       "settings": [],
                       "array": {
-                        "type": "string",
-                        "label": {
-                          "@text": "string value"
-                        },
-                        "description": "",
-                        "required": true,
                         "constraints": {
                           "PrimitiveType": [],
                           "NotNull": []
-                        }
+                        },
+                        "description": "",
+                        "label": {
+                          "@text": "string value"
+                        },
+                        "required": true,
+                        "type": "string"
                       }
                     }
                   }
@@ -2244,18 +2239,18 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": {
-                    "@text": "string value"
+                  "constraints": {
+                    "PrimitiveType": [],
+                    "NotNull": []
                   },
                   "description": {
                     "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                   },
+                  "label": {
+                    "@text": "string value"
+                  },
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": [],
-                    "NotNull": []
-                  }
+                  "type": "string"
                 }
               }
             }
@@ -2277,13 +2272,13 @@
             },
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Required map",
-              "description": "",
-              "required": true,
               "constraints": {
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": "Required map",
+              "required": true,
+              "type": "map"
             },
             "properties": {
               "x": {
@@ -2304,16 +2299,16 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": {
-                    "@text": "string value"
-                  },
-                  "description": "",
-                  "required": true,
                   "constraints": {
                     "PrimitiveType": [],
                     "NotNull": []
-                  }
+                  },
+                  "description": "",
+                  "label": {
+                    "@text": "string value"
+                  },
+                  "required": true,
+                  "type": "string"
                 }
               }
             }
@@ -2336,15 +2331,14 @@
             },
             "settings": [],
             "array": {
-              "type": "list",
+              "constraints": {
+                "NotNull": []
+              },
+              "description": "",
               "label": {
                 "@text": "list value"
               },
-              "description": "",
-              "required": true,
-              "constraints": {
-                "NotNull": []
-              }
+              "required": true
             },
             "item": {
               "class": "Drupal\\tool\\TypedData\\InputDefinition",
@@ -2361,13 +2355,13 @@
               },
               "settings": [],
               "array": {
-                "type": "string",
-                "label": "Item",
-                "description": "",
-                "required": false,
                 "constraints": {
                   "PrimitiveType": []
-                }
+                },
+                "description": "",
+                "label": "Item",
+                "required": false,
+                "type": "string"
               }
             }
           },
@@ -2389,16 +2383,16 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "Marked up"
-              },
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "Marked up"
+              },
+              "required": true,
+              "type": "string"
             }
           },
           "ri_mk": {
@@ -2419,16 +2413,16 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
-              "label": {
-                "@text": "Marked up"
-              },
-              "description": "",
-              "required": true,
               "constraints": {
                 "PrimitiveType": [],
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "Marked up"
+              },
+              "required": true,
+              "type": "integer"
             }
           },
           "h_mk": {
@@ -2448,15 +2442,15 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "description": "",
               "label": {
                 "@text": "Marked up"
               },
-              "description": "",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "hn_mk": {
@@ -2476,15 +2470,15 @@
             },
             "settings": [],
             "array": {
-              "type": "integer",
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "description": "",
               "label": {
                 "@text": "Marked up"
               },
-              "description": "",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "integer"
             }
           },
           "hc_mk": {
@@ -2516,12 +2510,6 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "Marked up"
-              },
-              "description": "",
-              "required": false,
               "constraints": {
                 "LabeledChoice": {
                   "choices": {
@@ -2536,7 +2524,13 @@
                     "b"
                   ]
                 }
-              }
+              },
+              "description": "",
+              "label": {
+                "@text": "Marked up"
+              },
+              "required": false,
+              "type": "string"
             }
           },
           "hs_mk": {
@@ -2558,17 +2552,17 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": {
-                "@text": "Marked up"
+              "constraints": {
+                "PrimitiveType": []
               },
               "description": {
                 "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
               },
+              "label": {
+                "@text": "Marked up"
+              },
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           },
           "m_mk": {
@@ -2586,12 +2580,12 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
+              "description": "",
               "label": {
                 "@text": "Marked up"
               },
-              "description": "",
-              "required": false
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "req": {
@@ -2612,16 +2606,16 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": {
-                    "@text": "Marked up"
-                  },
-                  "description": "",
-                  "required": true,
                   "constraints": {
                     "PrimitiveType": [],
                     "NotNull": []
-                  }
+                  },
+                  "description": "",
+                  "label": {
+                    "@text": "Marked up"
+                  },
+                  "required": true,
+                  "type": "string"
                 }
               },
               "opt": {
@@ -2641,15 +2635,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
+                  "description": "",
                   "label": {
                     "@text": "Marked up"
                   },
-                  "description": "",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "hp": {
@@ -2669,15 +2663,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
+                  "description": "",
                   "label": {
                     "@text": "Marked up"
                   },
-                  "description": "",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "mm": {
@@ -2695,12 +2689,12 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "map",
+                  "description": "",
                   "label": {
                     "@text": "Marked up"
                   },
-                  "description": "",
-                  "required": false
+                  "required": false,
+                  "type": "map"
                 },
                 "properties": {
                   "req2": {
@@ -2721,16 +2715,16 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "integer",
-                      "label": {
-                        "@text": "Marked up"
-                      },
-                      "description": "",
-                      "required": true,
                       "constraints": {
                         "PrimitiveType": [],
                         "NotNull": []
-                      }
+                      },
+                      "description": "",
+                      "label": {
+                        "@text": "Marked up"
+                      },
+                      "required": true,
+                      "type": "integer"
                     }
                   },
                   "o2": {
@@ -2748,13 +2742,13 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "string",
-                      "label": "O2",
-                      "description": "",
-                      "required": false,
                       "constraints": {
                         "PrimitiveType": []
-                      }
+                      },
+                      "description": "",
+                      "label": "O2",
+                      "required": false,
+                      "type": "string"
                     }
                   }
                 }
@@ -2773,9 +2767,8 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "list",
-                  "label": "Rows",
                   "description": "",
+                  "label": "Rows",
                   "required": false
                 },
                 "item": {
@@ -2793,12 +2786,12 @@
                   "constraints": [],
                   "settings": [],
                   "array": {
-                    "type": "map",
+                    "description": "",
                     "label": {
                       "@text": "map value"
                     },
-                    "description": "",
-                    "required": false
+                    "required": false,
+                    "type": "map"
                   },
                   "properties": {
                     "name": {
@@ -2819,16 +2812,16 @@
                       },
                       "settings": [],
                       "array": {
-                        "type": "string",
-                        "label": {
-                          "@text": "Marked up"
-                        },
-                        "description": "",
-                        "required": true,
                         "constraints": {
                           "PrimitiveType": [],
                           "NotNull": []
-                        }
+                        },
+                        "description": "",
+                        "label": {
+                          "@text": "Marked up"
+                        },
+                        "required": true,
+                        "type": "string"
                       }
                     }
                   }
@@ -2854,18 +2847,18 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": {
-                    "@text": "Marked up"
+                  "constraints": {
+                    "PrimitiveType": [],
+                    "NotNull": []
                   },
                   "description": {
                     "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                   },
+                  "label": {
+                    "@text": "Marked up"
+                  },
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": [],
-                    "NotNull": []
-                  }
+                  "type": "string"
                 }
               }
             }
@@ -2887,13 +2880,13 @@
             },
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Required map",
-              "description": "",
-              "required": true,
               "constraints": {
                 "NotNull": []
-              }
+              },
+              "description": "",
+              "label": "Required map",
+              "required": true,
+              "type": "map"
             },
             "properties": {
               "x": {
@@ -2914,16 +2907,16 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": {
-                    "@text": "Marked up"
-                  },
-                  "description": "",
-                  "required": true,
                   "constraints": {
                     "PrimitiveType": [],
                     "NotNull": []
-                  }
+                  },
+                  "description": "",
+                  "label": {
+                    "@text": "Marked up"
+                  },
+                  "required": true,
+                  "type": "string"
                 }
               }
             }
@@ -2946,15 +2939,14 @@
             },
             "settings": [],
             "array": {
-              "type": "list",
+              "constraints": {
+                "NotNull": []
+              },
+              "description": "",
               "label": {
                 "@text": "Marked up"
               },
-              "description": "",
-              "required": true,
-              "constraints": {
-                "NotNull": []
-              }
+              "required": true
             },
             "item": {
               "class": "Drupal\\tool\\TypedData\\InputDefinition",
@@ -2971,13 +2963,13 @@
               },
               "settings": [],
               "array": {
-                "type": "string",
-                "label": "Item",
-                "description": "",
-                "required": false,
                 "constraints": {
                   "PrimitiveType": []
-                }
+                },
+                "description": "",
+                "label": "Item",
+                "required": false,
+                "type": "string"
               }
             }
           },
@@ -2996,13 +2988,13 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
-              "label": "Locked",
-              "description": "",
-              "required": false,
               "constraints": {
                 "PrimitiveType": []
-              }
+              },
+              "description": "",
+              "label": "Locked",
+              "required": false,
+              "type": "string"
             }
           },
           "lk_blank": {
@@ -3022,15 +3014,15 @@
             },
             "settings": [],
             "array": {
-              "type": "string",
+              "constraints": {
+                "PrimitiveType": []
+              },
+              "description": "",
               "label": {
                 "@text": "string value"
               },
-              "description": "",
               "required": false,
-              "constraints": {
-                "PrimitiveType": []
-              }
+              "type": "string"
             }
           }
         }
@@ -4718,13 +4710,13 @@
         },
         "settings": [],
         "array": {
-          "type": "string",
-          "label": "Locked",
-          "description": "",
-          "required": false,
           "constraints": {
             "PrimitiveType": []
-          }
+          },
+          "description": "",
+          "label": "Locked",
+          "required": false,
+          "type": "string"
         }
       },
       "outputFromDefinition": {
@@ -4741,14 +4733,14 @@
         },
         "settings": [],
         "array": {
-          "type": "string",
-          "label": "Locked",
-          "description": "",
-          "required": false,
           "constraints": {
             "PrimitiveType": []
           },
-          "nullable": false
+          "description": "",
+          "label": "Locked",
+          "nullable": false,
+          "required": false,
+          "type": "string"
         }
       },
       "held builder": [

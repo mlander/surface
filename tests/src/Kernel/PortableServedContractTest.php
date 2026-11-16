@@ -11,6 +11,7 @@ use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface_examples\Resource\CateringByMethodResource;
 use Drupal\surface_examples\Resource\DoorsResource;
@@ -210,10 +211,13 @@ class PortableServedContractTest extends SurfaceKernelTestBase {
     ];
     $expected = ['drupal:JsonSchema' => ['schema' => $fragment]];
     // The reader keeps no hint in a fragment; one a structure states is
-    // served as stated.
+    // served as stated. A sealed surface's definitions are for reading, so
+    // the key is stated on a copy, and the surface's map holds an entry
+    // of it (Entry::withDefinition()), as a refinement makes one.
     $hinted = static function (SurfaceInterface $surface) use ($fragment): SurfaceInterface {
-      $surface->getDefinitions()->entry('odd')->definition()->addConstraint('JsonSchema', ['schema' => $fragment]);
-      return $surface;
+      $entry = $surface->getDefinitions()->entry('odd');
+      $stated = (clone $entry->definition())->addConstraint('JsonSchema', ['schema' => $fragment]);
+      return new Surface($surface->getDefinitions()->with($entry->withDefinition($stated)), outputs: $surface->getOutputDefinitions());
     };
     $read = $hinted($resources->buildStatic($structure, $context));
     $built = $hinted($resources->build($structure, $context));

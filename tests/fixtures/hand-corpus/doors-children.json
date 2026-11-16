@@ -3,19 +3,19 @@
   "rows": 64,
   "digests": {
     "plain | door": {
-      "fromSurface": "59504c0b46db",
-      "fromSurface stored": "59504c0b46db",
-      "fromSurface narrowing": "59504c0b46db",
-      "withLookups": "59504c0b46db",
-      "withDependencies": "59504c0b46db",
-      "withStored": "134eb40fd634",
-      "shapeOf": "af52ed91a20a",
-      "withoutRequired": "b7ebb7188480",
-      "outputFromInput": "5c0e5698785b",
+      "fromSurface": "57d1ae144bee",
+      "fromSurface stored": "57d1ae144bee",
+      "fromSurface narrowing": "57d1ae144bee",
+      "withLookups": "57d1ae144bee",
+      "withDependencies": "57d1ae144bee",
+      "withStored": "0f90c7277ca2",
+      "shapeOf": "e0a6feedc24b",
+      "withoutRequired": "0caa5652ad8f",
+      "outputFromInput": "fb8f4d57be25",
       "secrets": "30a27b6e7441",
       "outputs": "39347ff402b6",
-      "values update": "db68fed06289",
-      "values create": "2d866286d445",
+      "values update": "a2bb212f6154",
+      "values create": "e8632b9b6887",
       "stored": "dddde9e8217c",
       "secretKeys": "39347ff402b6",
       "config schema": "12ea5744997e",
@@ -28,20 +28,20 @@
       "flow placed grouped": "7c579a9fa157"
     },
     "plain | values": {
-      "stored": "e60d64302e8c",
-      "coll many": "eecd0c18e905"
+      "stored": "1e56c43f134b",
+      "coll many": "44b3f599af54"
     },
     "plain | key": {
-      "att": "351ee90713d5",
-      "coll": "b96eca7814ae",
-      "third_party_settings": "1d7b23e7f276"
+      "att": "3abc5572cd25",
+      "coll": "d533cd00d0ba",
+      "third_party_settings": "4e29f6ecd968"
     },
     "plain | path": {
       "nope": "1bf169f7d887",
       "nope.deeper": "ed8a9f9798ca",
-      "att.name": "3cfaa2aa332e",
+      "att.name": "32d64ec1c71c",
       "att.pin": "4ac5863ad163",
-      "att.n": "3f759e3b94b1",
+      "att.n": "9e0943a99efb",
       "coll.0.name": "3f0af6ebcdb1",
       "coll.0.pin": "1dfb091b6947",
       "coll.0.n": "505b5345d9d9",
@@ -52,7 +52,7 @@
       "coll.0.nope": "408cccd25a0c",
       "third_party_settings": "b8e937687917",
       "third_party_settings.surface": "22c3b8aca436",
-      "third_party_settings.surface.mounted": "957f78682f70",
+      "third_party_settings.surface.mounted": "0d7660c502f3",
       "third_party_settings.surface.nope": "784e3b71cb70",
       "third_party_settings.nope": "4dd306536a2c"
     },
@@ -116,10 +116,10 @@
         "constraints": [],
         "settings": [],
         "array": {
-          "type": "map",
-          "label": "L",
           "description": "D",
-          "required": false
+          "label": "L",
+          "required": false,
+          "type": "map"
         },
         "properties": {
           "att": {
@@ -143,15 +143,15 @@
             },
             "settings": [],
             "array": {
-              "type": "map",
+              "constraints": {
+                "NotNull": []
+              },
+              "description": "0",
               "label": {
                 "@text": "map value"
               },
-              "description": "0",
               "required": true,
-              "constraints": {
-                "NotNull": []
-              }
+              "type": "map"
             },
             "properties": {
               "name": {
@@ -170,14 +170,14 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Kid name",
-                  "description": "",
-                  "required": true,
                   "constraints": {
                     "PrimitiveType": [],
                     "NotNull": []
-                  }
+                  },
+                  "description": "",
+                  "label": "Kid name",
+                  "required": true,
+                  "type": "string"
                 }
               },
               "pin": {
@@ -197,15 +197,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Kid PIN",
+                  "constraints": {
+                    "PrimitiveType": []
+                  },
                   "description": {
                     "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                   },
+                  "label": "Kid PIN",
                   "required": false,
-                  "constraints": {
-                    "PrimitiveType": []
-                  }
+                  "type": "string"
                 }
               },
               "n": {
@@ -223,13 +223,13 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "integer",
-                  "label": "Kid n",
-                  "description": "",
-                  "required": false,
                   "constraints": {
                     "PrimitiveType": []
-                  }
+                  },
+                  "description": "",
+                  "label": "Kid n",
+                  "required": false,
+                  "type": "integer"
                 }
               }
             }
@@ -252,15 +252,14 @@
             },
             "settings": [],
             "array": {
-              "type": "list",
-              "label": "Collection",
-              "description": "",
-              "required": false,
               "constraints": {
                 "Count": {
                   "max": 2
                 }
-              }
+              },
+              "description": "",
+              "label": "Collection",
+              "required": false
             },
             "item": {
               "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
@@ -277,12 +276,12 @@
               "constraints": [],
               "settings": [],
               "array": {
-                "type": "map",
+                "description": "",
                 "label": {
                   "@text": "map value"
                 },
-                "description": "",
-                "required": false
+                "required": false,
+                "type": "map"
               },
               "properties": {
                 "name": {
@@ -301,14 +300,14 @@
                   },
                   "settings": [],
                   "array": {
-                    "type": "string",
-                    "label": "Kid name",
-                    "description": "",
-                    "required": true,
                     "constraints": {
                       "PrimitiveType": [],
                       "NotNull": []
-                    }
+                    },
+                    "description": "",
+                    "label": "Kid name",
+                    "required": true,
+                    "type": "string"
                   }
                 },
                 "pin": {
@@ -328,15 +327,15 @@
                   },
                   "settings": [],
                   "array": {
-                    "type": "string",
-                    "label": "Kid PIN",
+                    "constraints": {
+                      "PrimitiveType": []
+                    },
                     "description": {
                       "@text": "Write only: the stored value is never returned, and sending nothing leaves it unchanged."
                     },
+                    "label": "Kid PIN",
                     "required": false,
-                    "constraints": {
-                      "PrimitiveType": []
-                    }
+                    "type": "string"
                   }
                 },
                 "n": {
@@ -354,13 +353,13 @@
                   },
                   "settings": [],
                   "array": {
-                    "type": "integer",
-                    "label": "Kid n",
-                    "description": "",
-                    "required": false,
                     "constraints": {
                       "PrimitiveType": []
-                    }
+                    },
+                    "description": "",
+                    "label": "Kid n",
+                    "required": false,
+                    "type": "integer"
                   }
                 }
               }
@@ -383,14 +382,14 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": {
-                "@text": "Third party settings"
-              },
               "description": {
                 "@text": "Settings added by other modules."
               },
-              "required": false
+              "label": {
+                "@text": "Third party settings"
+              },
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "surface": {
@@ -406,10 +405,10 @@
                 "constraints": [],
                 "settings": [],
                 "array": {
-                  "type": "map",
-                  "label": "Surface API",
                   "description": "",
-                  "required": false
+                  "label": "Surface API",
+                  "required": false,
+                  "type": "map"
                 },
                 "properties": {
                   "mounted": {
@@ -428,14 +427,14 @@
                     },
                     "settings": [],
                     "array": {
-                      "type": "string",
-                      "label": "Mounted",
-                      "description": "From a module",
-                      "required": true,
                       "constraints": {
                         "PrimitiveType": [],
                         "NotNull": []
-                      }
+                      },
+                      "description": "From a module",
+                      "label": "Mounted",
+                      "required": true,
+                      "type": "string"
                     }
                   }
                 }
@@ -744,14 +743,14 @@
         "constraints": [],
         "settings": [],
         "array": {
-          "type": "map",
-          "label": {
-            "@text": "Third party settings"
-          },
           "description": {
             "@text": "Settings added by other modules."
           },
-          "required": false
+          "label": {
+            "@text": "Third party settings"
+          },
+          "required": false,
+          "type": "map"
         },
         "properties": {
           "surface": {
@@ -767,10 +766,10 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Surface API",
               "description": "",
-              "required": false
+              "label": "Surface API",
+              "required": false,
+              "type": "map"
             },
             "properties": {
               "mounted": {
@@ -789,14 +788,14 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Mounted",
-                  "description": "From a module",
-                  "required": true,
                   "constraints": {
                     "PrimitiveType": [],
                     "NotNull": []
-                  }
+                  },
+                  "description": "From a module",
+                  "label": "Mounted",
+                  "required": true,
+                  "type": "string"
                 }
               }
             }
@@ -819,15 +818,15 @@
         "constraints": [],
         "settings": [],
         "array": {
-          "type": "map",
-          "label": {
-            "@text": "Third party settings"
-          },
           "description": {
             "@text": "Settings added by other modules."
           },
+          "label": {
+            "@text": "Third party settings"
+          },
+          "nullable": false,
           "required": false,
-          "nullable": false
+          "type": "map"
         },
         "properties": {
           "surface": {
@@ -842,11 +841,11 @@
             "constraints": [],
             "settings": [],
             "array": {
-              "type": "map",
-              "label": "Surface API",
               "description": "",
+              "label": "Surface API",
+              "nullable": false,
               "required": false,
-              "nullable": false
+              "type": "map"
             },
             "properties": {
               "mounted": {
@@ -864,15 +863,15 @@
                 },
                 "settings": [],
                 "array": {
-                  "type": "string",
-                  "label": "Mounted",
-                  "description": "From a module",
-                  "required": true,
                   "constraints": {
                     "PrimitiveType": [],
                     "NotNull": []
                   },
-                  "nullable": false
+                  "description": "From a module",
+                  "label": "Mounted",
+                  "nullable": false,
+                  "required": true,
+                  "type": "string"
                 }
               }
             }
@@ -1138,9 +1137,9 @@
         },
         "settings": [],
         "array": {
-          "type": "integer",
+          "default_value": 1,
           "label": "Kid n",
-          "default_value": 1
+          "type": "integer"
         }
       },
       "reachedOn fixes": {
@@ -1154,9 +1153,9 @@
         },
         "settings": [],
         "array": {
-          "type": "integer",
+          "default_value": 1,
           "label": "Kid n",
-          "default_value": 1
+          "type": "integer"
         }
       },
       "heldOn raws": [

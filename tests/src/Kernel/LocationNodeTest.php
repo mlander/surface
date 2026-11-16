@@ -16,6 +16,7 @@ use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Entry;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\Location;
 use Drupal\surface\SurfaceInterface;
@@ -493,7 +494,14 @@ class LocationNodeTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Asserts a serialized value keeps no built node.
+   * Asserts a serialized value keeps no built node but an entry's own.
+   *
+   * A node-first entry serializes the node it holds as its source
+   * (Entry::__sleep()), and that node alone. Outside such nodes the value
+   * holds no node at all: a definition-first entry serializes its
+   * definition, never its node, and nothing else keeps one. Where the
+   * value holds no node-first entry, its bytes name no MODEL and no
+   * NodeMessage, as before any entry held a node.
    *
    * @param string $serialized
    *   The value, serialized.
@@ -501,8 +509,6 @@ class LocationNodeTest extends SurfaceKernelTestBase {
    *   What it is, for the message.
    */
   protected function assertKeepsNoNode(string $serialized, string $what): void {
-    $this->assertStringNotContainsString(DefinitionSchema::MODEL, $serialized, "$what holds no MODEL.");
-    $this->assertStringNotContainsString(NodeMessage::class, $serialized, "$what holds no NodeMessage.");
     $objects = [];
     // Every class allowed, as the build cache restores a build.
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
@@ -517,12 +523,24 @@ class LocationNodeTest extends SurfaceKernelTestBase {
       }
     }
     $seen[spl_object_id($this->container)] = TRUE;
-    static::schemaObjects($value, $objects, $seen);
-    $this->assertSame([], array_unique($objects), "$what: a Schema holds plain JSON objects alone.");
+    $sources = 0;
+    $kept = [];
+    static::schemaObjects($value, $objects, $seen, $sources, $kept);
+    $this->assertSame([], array_unique($kept), "$what keeps no node but the one a node-first entry holds as its source.");
+    $this->assertSame([], array_unique($objects), "$what: a Schema outside an entry's own node holds plain JSON objects alone.");
+    if ($sources === 0) {
+      $this->assertStringNotContainsString(DefinitionSchema::MODEL, $serialized, "$what holds no MODEL.");
+      $this->assertStringNotContainsString(NodeMessage::class, $serialized, "$what holds no NodeMessage.");
+    }
   }
 
   /**
-   * Lists the objects other than a plain JSON object a Schema holds.
+   * Lists the nodes a value keeps outside an entry's own node.
+   *
+   * A node-first entry's own node is its source and is not walked; the
+   * rest of the entry is. Any other Schema holding MODEL is a kept node,
+   * and a Schema holding an object other than a plain JSON object is
+   * listed by that object's class.
    *
    * @param mixed $value
    *   A value that may hold a Schema, at any depth.
@@ -530,24 +548,39 @@ class LocationNodeTest extends SurfaceKernelTestBase {
    *   The classes so far; gains these.
    * @param array<int, true> $seen
    *   The objects walked, by id.
+   * @param int $sources
+   *   The node-first entries met; gains these.
+   * @param string[] $kept
+   *   What keeps a node outside an entry's own; gains these.
+   * @param string $in
+   *   The class of the object the value is a member of.
    */
-  protected static function schemaObjects(mixed $value, array &$found, array &$seen = []): void {
+  protected static function schemaObjects(mixed $value, array &$found, array &$seen = [], int &$sources = 0, array &$kept = [], string $in = ''): void {
     if (is_object($value)) {
       if (isset($seen[spl_object_id($value)])) {
         return;
       }
       $seen[spl_object_id($value)] = TRUE;
       if ($value instanceof Schema) {
+        if ($value->has(DefinitionSchema::MODEL)) {
+          $kept[] = "a node held by $in";
+        }
         if (!$value->isBoolean()) {
           array_push($found, ...static::objects(Schemas::arrayed($value)));
         }
         return;
       }
-      $value = (array) $value;
+      $in = $value::class;
+      $members = (array) $value;
+      if ($value instanceof Entry && $value->isNodeFirst()) {
+        $sources++;
+        unset($members["\0" . Entry::class . "\0node"]);
+      }
+      $value = $members;
     }
     foreach (is_array($value) ? $value : [] as $inside) {
       if (is_array($inside) || is_object($inside)) {
-        static::schemaObjects($inside, $found, $seen);
+        static::schemaObjects($inside, $found, $seen, $sources, $kept, $in);
       }
     }
   }

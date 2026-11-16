@@ -465,8 +465,13 @@ final class DefinitionSchema {
    * What the definition says of itself (its keywords, `required` from its
    * properties' flags, its checks and MODEL) is read once, and nothing
    * given is read again. A property or an item not given is read as of()
-   * reads it. Unlike head(), which reads a collection's own keywords with
-   * no items at all, in its own order, the node is the one of() reads:
+   * reads it. A node given for a property the map does not hold is placed
+   * after the ones it holds, in the order given, and is in `required`
+   * where its own node says so: the seal hands a shell its own facts
+   * alone and its child's keys as nodes (Entry::sealed()), and the node is
+   * the one of() reads of the map the child's definitions would fill.
+   * Unlike head(), which reads a collection's own keywords with no items
+   * at all, in its own order, the node is the one of() reads:
    * the same keywords in the same order, so DefinitionSchema::same()
    * holds between the two when each node given is the one of() reads for
    * its definition.
@@ -478,7 +483,7 @@ final class DefinitionSchema {
    *   The definition.
    * @param array<string, \PortableSchema\Builder\Schema> $properties
    *   For a map, the nodes of its properties, by name; those not given are
-   *   read.
+   *   read, and those it does not hold come after the ones it holds.
    * @param \PortableSchema\Builder\Schema|null $items
    *   For a list, the node of its item; NULL to read it.
    *
@@ -555,7 +560,9 @@ final class DefinitionSchema {
       ];
       $schema = Schemas::defaults($schema, $list + static::keywords($definition, 'array'));
     }
-    elseif ($definition instanceof ComplexDataDefinitionInterface && static::isMap($definition)) {
+    // A map that holds no property is read as a value, unless nodes are
+    // given for properties it does not hold (around()).
+    elseif ($definition instanceof ComplexDataDefinitionInterface && (static::isMap($definition) || $given !== [])) {
       $properties = [];
       $required = [];
       foreach ($definition->getPropertyDefinitions() as $name => $property) {
@@ -567,6 +574,16 @@ final class DefinitionSchema {
         ]);
         $properties[(string) $name] = $given[(string) $name] ?? static::read($property, $at, $above);
         if (static::required($property)) {
+          $required[] = (string) $name;
+        }
+      }
+      // A node given for a property the map does not hold (a shell the
+      // seal handed its own facts alone, around()) comes after the ones it
+      // holds, in the order given, and its own node says whether it is
+      // required (PropertySchema::required(), rule for rule required()).
+      foreach (array_diff_key($given, $properties) as $name => $node) {
+        $properties[(string) $name] = $node;
+        if (PropertySchema::required($node)) {
           $required[] = (string) $name;
         }
       }

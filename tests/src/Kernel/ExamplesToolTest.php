@@ -9,7 +9,6 @@ use Drupal\Core\Form\FormState;
 use Drupal\surface_examples\ExampleCalls;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\surface_examples\Venues;
-use Drupal\surface\DefinitionMap;
 use Drupal\surface\Entry;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -316,7 +315,6 @@ class ExamplesToolTest extends SurfaceKernelTestBase {
    * the entry's private member says whether it was asked).
    */
   public function testToolDefinitionsOfNodeFirstResourceDeriveNoDefinition(): void {
-    DefinitionMap::$nodeFirst = TRUE;
     $resources = $this->container->get('surface.resources');
     $surface = $resources->build(RegistrationStep3Resource::class, $resources->operation(RegistrationStep3Resource::class, 'configure'));
     $derived = new \ReflectionProperty(Entry::class, 'definition');

@@ -106,19 +106,25 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    *
    * Data surfaces (declared and refined, children included), definitions
    * an entry holds that are compared (each distinct object once), and the
-   * distinct definitions reachable at every depth.
+   * distinct definitions reachable at every depth. A sealed key that
+   * holds a child frame derives its definition with copies of its child's
+   * definitions, which are not reached a second time (reach()). Since
+   * the seal makes every entry node-first (2026-11-15) one more object is
+   * reached than the 1,097 before: example 3's compliance mount's license
+   * key, held by a refined copy of the mount's derived definition beside
+   * the structure's own entry. It is the same key.
    */
   protected const COUNTS = [
     'surfaces' => 327,
     'compared' => 793,
-    'reachable' => 1097,
+    'reachable' => 1098,
   ];
 
   /**
    * The distinct definitions reachable, by class.
    */
   protected const CLASSES = [
-    DataDefinition::class => 704,
+    DataDefinition::class => 705,
     ListDataDefinition::class => 43,
     MapDataDefinition::class => 350,
   ];
@@ -136,7 +142,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     'integer' => 122,
     'list' => 43,
     'map' => 350,
-    'string' => 403,
+    'string' => 404,
     'timestamp' => 5,
     'uri' => 13,
   ];
@@ -242,6 +248,8 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     $walked = new \SplObjectStorage();
     /** @var \SplObjectStorage<\Drupal\Core\TypedData\DataDefinitionInterface, string> $tops */
     $tops = new \SplObjectStorage();
+    /** @var \SplObjectStorage<\Drupal\Core\TypedData\DataDefinitionInterface, true> $derivedShells */
+    $derivedShells = new \SplObjectStorage();
     $sources = [];
     foreach ($this->examples(FALSE, [...self::WALKED, 'surface_values_test']) as [$id, $operation, $surface]) {
       $sources[$id . ($operation === NULL ? '' : ':' . $operation)] = $surface;
@@ -257,7 +265,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
         $refined["$name [$set]"] = $surface->refine($values);
       }
       foreach ($refined as $at => $each) {
-        $surfaces += static::surfacesIn($each, $at, $walked, $tops);
+        $surfaces += static::surfacesIn($each, $at, $walked, $tops, $derivedShells);
       }
     }
 
@@ -267,7 +275,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     $members = array_fill_keys(DefinitionSchema::MEMBERS, 0);
     foreach ($tops as $definition) {
       $at = (string) $tops[$definition];
-      static::reach($definition, $reachable);
+      static::reach($definition, $reachable, $derivedShells->contains($definition));
       array_push($differ, ...$this->roundTrip($definition, $at, $members));
     }
     $classes = [];
@@ -519,11 +527,15 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    *   The surfaces walked.
    * @param \SplObjectStorage<\Drupal\Core\TypedData\DataDefinitionInterface, string> $tops
    *   The definitions entries hold, each with where it was first found.
+   * @param \SplObjectStorage<\Drupal\Core\TypedData\DataDefinitionInterface, true> $derivedShells
+   *   The definitions a node-first key that holds an attached child, a
+   *   chosen variant or a collection derived: each holds its own copies of
+   *   the child's definitions, which the child's own entries hold too.
    *
    * @return int
    *   The surfaces walked here, not walked before.
    */
-  protected static function surfacesIn(SurfaceInterface $surface, string $at, \SplObjectStorage $walked, \SplObjectStorage $tops): int {
+  protected static function surfacesIn(SurfaceInterface $surface, string $at, \SplObjectStorage $walked, \SplObjectStorage $tops, \SplObjectStorage $derivedShells): int {
     if ($walked->contains($surface)) {
       return 0;
     }
@@ -534,6 +546,9 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
         $here = "$at $side:$name";
         if (!$tops->contains($entry->definition())) {
           $tops->attach($entry->definition(), $here);
+        }
+        if ($entry->isNodeFirst() && $entry->isShell() && $entry->mounted === []) {
+          $derivedShells->attach($entry->definition(), TRUE);
         }
         $children = [];
         if ($entry->variants !== NULL) {
@@ -554,7 +569,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
           $children["mounted $path"] = $mounted->settledChild();
         }
         foreach (array_filter($children) as $what => $child) {
-          $count += static::surfacesIn($child, "$here $what", $walked, $tops);
+          $count += static::surfacesIn($child, "$here $what", $walked, $tops, $derivedShells);
         }
       }
     }
@@ -568,8 +583,16 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    *   The definition.
    * @param \SplObjectStorage<\Drupal\Core\TypedData\DataDefinitionInterface, null> $reachable
    *   The definitions so far.
+   * @param bool $shell
+   *   Whether it is the definition a node-first key that holds a child
+   *   frame derived (not a mount): its own map, or its list and the list's
+   *   item map, is reached, and not the child's keys in it. Those are the
+   *   child's entries' keys, reached from the child's own entries; the
+   *   derived copies would count each key twice. A definition-first shell
+   *   holds the child's entries' very definitions, so the count is the
+   *   same in either form.
    */
-  protected static function reach(DataDefinitionInterface $definition, \SplObjectStorage $reachable): void {
+  protected static function reach(DataDefinitionInterface $definition, \SplObjectStorage $reachable, bool $shell = FALSE): void {
     if ($reachable->contains($definition)) {
       return;
     }
@@ -580,9 +603,14 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
       DefinitionMetadata::eachOf($definition),
     ];
     if ($definition instanceof ListDataDefinitionInterface) {
-      $below[] = $definition->getItemDefinition();
+      if ($shell) {
+        static::reach($definition->getItemDefinition(), $reachable, TRUE);
+      }
+      else {
+        $below[] = $definition->getItemDefinition();
+      }
     }
-    elseif ($definition instanceof ComplexDataDefinitionInterface) {
+    elseif ($definition instanceof ComplexDataDefinitionInterface && !$shell) {
       array_push($below, ...array_values($definition->getPropertyDefinitions()));
     }
     foreach ($below as $next) {

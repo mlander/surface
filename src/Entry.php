@@ -7,7 +7,9 @@ namespace Drupal\surface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeDefinition;
 use Drupal\surface\Refinement\ApplicabilityInterface;
@@ -61,15 +63,19 @@ use PortableSchema\Builder\Schema;
  *   (Surface::deepClone()). With assertions on, every later ask of the
  *   form that was not given checks it still says what the source says.
  *   EntryNodeIsNeverStaleTest proves it for every example surface and
- *   value set.
- * Every source gives a definition today. DefinitionMap::$nodeFirst, a
- * switch for tests and probes, makes every entry a built data surface
- * is sealed with node-first, which proves the derived definition serves
- * every reader that still asks for one.
+ *   value set. A definition a node-first entry hands out is for reading:
+ *   written, it is refused at the next ask, and with assertions off the
+ *   write changes that derived copy alone, never the node.
+ * The seal makes every entry node-first (sealed()): every source still
+ * gives a definition, and the seal reads it into the node, or composes
+ * the node of a key that holds a child frame, and drops it. A refinement's
+ * entry is definition-first (withDefinition()), and so is an entry the
+ * seal keeps for a class no node derives a definition of (whole()).
  *
  * Decisions: see
- * docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone and
- * docs/decisions.md#an-entry-holds-the-form-its-source-gave.
+ * docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone,
+ * docs/decisions.md#an-entry-holds-the-form-its-source-gave and
+ * docs/decisions.md#a-sealed-entry-holds-its-node.
  *
  * @see \Drupal\surface\DefinitionMap
  *   The ordered collection of entries a data surface is sealed with.
@@ -339,17 +345,76 @@ final class Entry {
   }
 
   /**
-   * Returns the same entry node-first from the node it reads.
+   * Returns the same entry node-first, as the seal makes it.
    *
-   * The node schema() gives (a shell's composed of its children's), as
-   * the source; the definition is dropped and derived from the node on
-   * the first ask. What DefinitionMap::$nodeFirst makes of each entry.
+   * The node is the source; the definition is dropped and derived from
+   * the node on the first ask. A key that holds a child frame composes
+   * its node of its own facts around the nodes its child's entries hold
+   * (composed()): the seal hands such a key its own facts alone (an
+   * attachment's or chosen variants' empty map, a collection's list of an
+   * empty map; SurfaceBuilder::seal()), and the child's keys are placed in
+   * it by name. By name is exact here, since at the seal nothing is
+   * refined: the child's entries are the very keys the key holds. A
+   * definition that holds the child's keys already has each taken from
+   * the child's entry where it is that entry's definition, as schema()
+   * does. Any other key's node is read from its definition.
+   *
+   * Decision: see docs/decisions.md#a-sealed-entry-holds-its-node.
+   *
+   * @param string|null $chosen
+   *   For a key with variants whose deciding key is locked, the variant
+   *   chosen: the one whose keys the key holds. NULL for any other key.
    *
    * @return static
    *   The new entry.
+   *
+   * @internal
+   *   The seal's alone, through DefinitionMap::fromArrays() with
+   *   nodeFirst.
    */
-  public function nodeFirst(): static {
-    return $this->remade(NULL, $this->schema(), TRUE);
+  public function sealed(?string $chosen = NULL): static {
+    assert(!$this->nodeFirst && $this->definition !== NULL);
+    if (!$this->isShell()) {
+      return $this->remade(NULL, $this->schema(), TRUE);
+    }
+    $child = match (TRUE) {
+      $this->attachment !== NULL => $this->attachment->child,
+      $this->list !== NULL => $this->list->item->child,
+      $chosen !== NULL && $this->variants !== NULL => $this->variants->variant($chosen)->child,
+      default => NULL,
+    };
+    return $this->remade(NULL, $this->composed($this->definition, $child), TRUE);
+  }
+
+  /**
+   * Returns the same entry definition-first, its definition made whole.
+   *
+   * For an entry the seal keeps definition-first (a key of a class no
+   * node derives a definition of): a key that holds a child frame was
+   * handed its own facts alone (sealed()), and its definition is made of
+   * them and its child's definitions as refinement makes it
+   * (Attachment::mapOf(), Collection::listOf(), Variants::definitionFor()).
+   *
+   * @param string|null $chosen
+   *   The variant chosen, as sealed() takes it.
+   *
+   * @return static
+   *   The new entry; this one for a key that holds no child frame or a
+   *   mount, whose definition is whole already.
+   *
+   * @internal
+   *   The seal's alone, through DefinitionMap::fromArrays() with
+   *   nodeFirst.
+   */
+  public function whole(?string $chosen = NULL): static {
+    $definition = $this->definition;
+    $whole = match (TRUE) {
+      $this->attachment !== NULL && $definition instanceof MapDataDefinition && $definition->getPropertyDefinitions() === [] => Attachment::mapOf($definition, $this->attachment->child),
+      $this->list !== NULL && $definition instanceof ListDataDefinition => Collection::listOf($definition, $this->list->item->child),
+      $chosen !== NULL && $this->variants !== NULL && $definition instanceof MapDataDefinition && $definition->getPropertyDefinitions() === [] => Attachment::mapOf($definition, $this->variants->variant($chosen)->child),
+      default => NULL,
+    };
+    return $whole === NULL ? $this : $this->remade($whole, NULL, FALSE);
   }
 
   /**
@@ -518,25 +583,31 @@ final class Entry {
    * mount a structure's keys are taken by name: the builder mounts a
    * deep copy of each of the structure's definitions
    * (SurfaceBuilder::mountStructure()), which reads as the original, and
-   * nothing writes either. Any other property is read.
+   * nothing writes either. Any other property is read. At the seal the
+   * key holds its own facts alone, and its child's keys are placed in it
+   * by name from the child given (sealed()).
    *
    * Decision: see
-   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
+   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own
+   * and docs/decisions.md#a-sealed-entry-holds-its-node.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key's definition.
+   * @param \Drupal\surface\SurfaceInterface|null $sealed
+   *   At the seal, the child whose keys the key holds (sealed()); NULL
+   *   otherwise.
    *
    * @return \PortableSchema\Builder\Schema
    *   Its node.
    */
-  private function composed(DataDefinitionInterface $definition): Schema {
+  private function composed(DataDefinitionInterface $definition, ?SurfaceInterface $sealed = NULL): Schema {
     $frames = $this->frames ?? [];
     if ($this->list !== NULL) {
       if (!$definition instanceof ListDataDefinitionInterface) {
         return DefinitionSchema::around($definition);
       }
       $children = array_filter([$frames[''] ?? NULL, $this->list->item->child]);
-      return DefinitionSchema::around($definition, items: static::framed($definition->getItemDefinition(), $children));
+      return DefinitionSchema::around($definition, items: static::framed($definition->getItemDefinition(), $children, sealed: $sealed));
     }
     if ($this->mounted !== []) {
       $parts = [];
@@ -562,7 +633,7 @@ final class Entry {
         }
       }
     }
-    return static::framed($definition, array_filter([$frames[''] ?? NULL, ...$children]));
+    return static::framed($definition, array_filter([$frames[''] ?? NULL, ...$children]), sealed: $sealed);
   }
 
   /**
@@ -575,14 +646,27 @@ final class Entry {
    * @param \Drupal\surface\SurfaceInterface|null $byName
    *   A child whose entries' nodes are taken by name: a structure at a
    *   sealed mount.
+   * @param \Drupal\surface\SurfaceInterface|null $sealed
+   *   At the seal, the child whose keys the map holds: each of its
+   *   entries the map does not hold as a property is placed after the
+   *   map's own properties, by name, its entry's node
+   *   (DefinitionSchema::around()).
    *
    * @return \PortableSchema\Builder\Schema
    *   The map's node.
    */
-  private static function framed(DataDefinitionInterface $map, array $children, ?SurfaceInterface $byName = NULL): Schema {
+  private static function framed(DataDefinitionInterface $map, array $children, ?SurfaceInterface $byName = NULL, ?SurfaceInterface $sealed = NULL): Schema {
     $nodes = [];
-    if ($map instanceof ComplexDataDefinitionInterface && DefinitionSchema::isMap($map)) {
-      foreach ($map->getPropertyDefinitions() as $name => $property) {
+    // The seal's shell holds no property: it is a map all the same once
+    // its child's keys are placed in it.
+    if ($map instanceof ComplexDataDefinitionInterface && !$map instanceof ListDataDefinitionInterface && (DefinitionSchema::isMap($map) || $sealed !== NULL)) {
+      $held = $map->getPropertyDefinitions();
+      foreach ($sealed?->getDefinitions()->entries() ?? [] as $name => $entry) {
+        if (!isset($held[$name])) {
+          $nodes[(string) $name] = $entry->schema();
+        }
+      }
+      foreach ($held as $name => $property) {
         $name = (string) $name;
         foreach ($children as $child) {
           $entry = $child->getDefinitions()->entry($name);
@@ -888,7 +972,23 @@ final class Entry {
       return NULL;
     }
     // The same source: the other form read or derived already is its own.
-    return $this->remade($this->definition, $this->node, $this->nodeFirst, $attachment, $mounted, $this->frames);
+    // A node-first entry derives its definition first, so the copy holds
+    // the very object this entry holds: the emitter tells a definition a
+    // refinement moved from a child whose ports it only rebound by the
+    // identity of the two (ContractEmitter::frame(), define()), and a copy
+    // that derived its own would read as moved. This goes when the
+    // emitter compares nodes (part 32.9). A node no definition derives
+    // from is refused at the copy's own first ask, as before.
+    $definition = $this->definition;
+    if ($definition === NULL && $this->nodeFirst) {
+      try {
+        $definition = $this->definition();
+      }
+      catch (\LogicException) {
+        $definition = NULL;
+      }
+    }
+    return $this->remade($definition, $this->node, $this->nodeFirst, $attachment, $mounted, $this->frames);
   }
 
   /**

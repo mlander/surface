@@ -695,19 +695,23 @@ the record of the rework that brought the module to the pattern.
   model stripped (at every keyword position); before anything compares it;
   the emitter decorates the projection with what the request adds.
   `of()` keeps nothing: the `Entry` holds its key's node
-  (`Entry::schema()`, read from the definition on the first ask, kept,
-  handed on to an entry with the same definition, never serialized). An
-  entry holds one form as its source: the definition (the constructor,
-  `withDefinition()`) or the node (`Entry::ofSchema()`, `withSchema()`),
-  the other made on the first ask and kept, only the given form
-  serialized; a node-first entry's `definition()` is derived by
-  `NodeDefinition::of()`, refused there with the key's name, and asserted
-  not written. Every source gives a definition today;
-  `DefinitionMap::$nodeFirst` (tests and probes only) makes every built
-  entry node-first. Run any kernel class in that mode with
-  `SURFACE_NODE_FIRST=1` in front of its phpunit command; the lanes run
-  without it, and `NodeFirstModeTest` pins both modes alike
-  (`docs/decisions.md#an-entry-holds-the-form-its-source-gave`). Ask for
+  (`Entry::schema()`). An entry holds one form as its source: the
+  definition (the constructor, `withDefinition()`) or the node
+  (`Entry::ofSchema()`, `withSchema()`), the other made on the first ask
+  and kept, only the given form serialized; a node-first entry's
+  `definition()` is derived by `NodeDefinition::of()`, refused there with
+  the key's name, and asserted not written
+  (`docs/decisions.md#an-entry-holds-the-form-its-source-gave`). The seal
+  makes every entry node-first (`DefinitionMap::fromArrays()` with
+  `nodeFirst: TRUE`, `Entry::sealed()`): a key that holds a child frame
+  is handed its own facts alone and its node composed around its child's
+  entries' nodes, by name; an entry of a class `NodeDefinition` does not
+  derive stays definition-first, made whole (`Entry::whole()`). There is
+  no definition-first mode. A definition a sealed entry hands out is for
+  reading: a write changes a derived copy alone and is refused at the
+  next ask with assertions on; build what a test needs before the seal,
+  or make an entry of a copy (`withDefinition()`)
+  (`docs/decisions.md#a-sealed-entry-holds-its-node`). Ask for
   what is needed: the keys alone are `DefinitionMap::keys()` (name to
   TRUE) or `names()`, never `toArray()`
   (`docs/decisions.md#nothing-asks-for-a-definition-it-does-not-need`),
@@ -1159,9 +1163,9 @@ test errored or failed and every gate passed.
   itself, so the full lane has no `--order-by=defects` and no result
   cache; it orders classes slowest first.
 
-On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-15: the
-full lane takes 17m28s at the defaults (phpunit 16m42s) and the fast
-lane 9m23s (phpunit 9m11s). As of 2026-10-23, with a smaller suite, the
+On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-11-16: the
+full lane takes 18m05s at the defaults (phpunit 17m10s) and the fast
+lane 11m03s (phpunit 10m52s). As of 2026-10-23, with a smaller suite, the
 full lane took 23m03s with both set to 1 (phpunit 22m36s; a plain
 phpunit run took 21m11s), and the fast lane 3m30s while its caches were
 empty. For the first
@@ -1192,7 +1196,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2587, Assertions: 103110, Errors: 0, Failures: 0, Skipped: 3. Classes: 366 of 366, 8 at a time, browser classes 4.
+phpunit: Tests: 2597, Assertions: 103103, Errors: 0, Failures: 0, Skipped: 3. Classes: 366 of 366, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1216,7 +1220,7 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2473, Assertions: 98556, Deprecations: 811, Skipped: 3. Classes:
+`Tests: 2483, Assertions: 98549, Deprecations: 811, Skipped: 3. Classes:
 313, 8 at a time.`; its deprecation count is per process, so it is
 higher than one
 run's.
@@ -1473,8 +1477,10 @@ so the rule is this sentence. `npm test` is not part of
   `tests/fixtures/hand-corpus/doors-*.json` (what the tool door, the key
   paths, the references, the storage layouts, the config schema writer,
   the generator, the panel, the formatter and the flow make of the same
-  surfaces and four more), by `DoorCorpusTest` and `DoorCorpusNarrowTest`
-  with the same flag, and
+  surfaces and four more; a definition's array is digested with its
+  top-level keys sorted and a `type` key that holds what `getDataType()`
+  gives without it left out, every array below kept in its order), by `DoorCorpusTest` and
+  `DoorCorpusNarrowTest` with the same flag, and
   the React app's fixtures,
   `modules/surface_examples_react/app/src/test/fixtures/`, by
   `ReactFixturesTest` with `SURFACE_REACT_FIXTURES_WRITE=1`, and the

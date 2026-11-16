@@ -309,9 +309,8 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
     $this->assertTrue(DefinitionSchema::same(DefinitionSchema::of($definition), $node), 'Read, it is the definition\'s node.');
 
     foreach ([FALSE, TRUE] as $node_first) {
-      DefinitionMap::$nodeFirst = $node_first;
       $derived = new \ReflectionProperty(Entry::class, 'definition');
-      $entry = DefinitionMap::fromArrays(['room' => (clone $definition)->setLabel('Hall')])->entry('room');
+      $entry = DefinitionMap::fromArrays(['room' => (clone $definition)->setLabel('Hall')], nodeFirst: $node_first)->entry('room');
       $recorder->handed = [];
       $this->assertSame(['east' => 'east', 'west' => 'west'], $options->resolve($entry->schema())->options);
       $this->assertSame([$entry->schema()], $recorder->handed, 'Handed the key\'s node, the service hands that very node on.');
@@ -332,15 +331,15 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
    *
    * A refined entry holds the refined definition and reads its node from
    * it, so its node is another object than the declared entry's: the memo
-   * keyed by the node serves each its own list, in either order and in
-   * either mode, and narrowing is never served a stale list.
+   * keyed by the node serves each its own list, in either order and with
+   * the declared entry in either form, and narrowing is never served a
+   * stale list.
    */
   public function testRefinedAndDeclaredKeysResolveApart(): void {
     $options = $this->options();
     foreach ([FALSE, TRUE] as $node_first) {
-      DefinitionMap::$nodeFirst = $node_first;
       $room = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['east', 'west', 'north']]);
-      $declared = DefinitionMap::fromArrays(['room' => $room])->entry('room');
+      $declared = DefinitionMap::fromArrays(['room' => $room], nodeFirst: $node_first)->entry('room');
       // What refinement makes of a key: a copy, narrowed, and an entry of it.
       $refined = $declared->withDefinition((clone $declared->definition())->addConstraint('Choice', ['choices' => ['east']]));
       $this->assertNotSame($declared->schema(), $refined->schema());
@@ -353,22 +352,20 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
     // narrowed to the rooms of the venue chosen.
     $this->enableModules(['serialization', 'tool', 'surface_http', 'surface_examples']);
     $this->installConfig(['surface_examples']);
-    foreach ([FALSE, TRUE] as $node_first) {
-      DefinitionMap::$nodeFirst = $node_first;
-      $resources = $this->container->get('surface.resources');
-      $surface = $resources->build(RegistrationStep3Resource::class, $resources->operation(RegistrationStep3Resource::class, 'configure'));
-      $options = $this->options();
-      $declared = $surface->getDefinitions()->entry('room');
-      $refined = $surface->refine(['venue' => 'library'])->getDefinitions()->entry('room');
-      $this->assertNotNull($declared);
-      $this->assertNotNull($refined);
-      $all = array_keys($options->resolve($declared->schema())->options);
-      $library = array_keys($options->resolve($refined->schema())->options);
-      $this->assertSame(array_keys(Venues::rooms()), $all);
-      $this->assertSame(array_keys(Venues::rooms('library')), $library);
-      $this->assertNotSame($all, $library);
-      $this->assertSame($all, array_keys($options->resolve($declared->schema())->options));
-    }
+    // A built resource's entries are node-first (the seal makes them so).
+    $resources = $this->container->get('surface.resources');
+    $surface = $resources->build(RegistrationStep3Resource::class, $resources->operation(RegistrationStep3Resource::class, 'configure'));
+    $options = $this->options();
+    $declared = $surface->getDefinitions()->entry('room');
+    $refined = $surface->refine(['venue' => 'library'])->getDefinitions()->entry('room');
+    $this->assertNotNull($declared);
+    $this->assertNotNull($refined);
+    $all = array_keys($options->resolve($declared->schema())->options);
+    $library = array_keys($options->resolve($refined->schema())->options);
+    $this->assertSame(array_keys(Venues::rooms()), $all);
+    $this->assertSame(array_keys(Venues::rooms('library')), $library);
+    $this->assertNotSame($all, $library);
+    $this->assertSame($all, array_keys($options->resolve($declared->schema())->options));
   }
 
   /**
