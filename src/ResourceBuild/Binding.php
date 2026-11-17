@@ -754,7 +754,7 @@ final class Binding {
       if ($module === NULL || in_array($watched, $input_keys, TRUE) || !in_array($watched, $mounted, TRUE)) {
         continue;
       }
-      $parameter = (new \ReflectionMethod($refiner->class, $refiner->method))->getParameters()[$position + 1] ?? NULL;
+      $parameter = (new \ReflectionMethod($refiner->class, $refiner->method))->getParameters()[$position + ($refiner->first === 'schema' ? 1 : 0)] ?? NULL;
       if ($parameter !== NULL && !$parameter->allowsNull()) {
         throw new \LogicException(sprintf(
           '%s watches "%s", a key its alter mounted on %s, which is handed as it stands and is NULL until answered: declare $%s nullable.',

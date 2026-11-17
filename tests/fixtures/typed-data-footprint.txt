@@ -18,7 +18,6 @@ example modules/surface_examples_node_type/src/Storage/NodeTypeStorage.php
 example modules/surface_examples_performance/src/Storage/PerformanceStorage.php
 example modules/surface_examples_plugins/src/Plugin/Field/FieldFormatter/ExampleFormatter.php
 example modules/surface_examples_plugins/src/Structure/ExampleBlockStructure.php
-example modules/surface_examples_references/src/Structure/AnyEntityStructure.php
 example modules/surface_examples_retitle/src/Resource/RetitleResource.php
 model src/Attachment.php
 model src/Collection.php
