@@ -181,7 +181,8 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
    * Before refiners answered with schemas, each link was held to the
    * narrowing check: a bound that moved out, a pattern replaced, a
    * constraint removed and the required flag turned off were refused at
-   * run time. An answer cannot remove or unrequire, so those rows went;
+   * run time. An answer cannot remove a constraint or make a key optional,
+   * so those rows went;
    * of a bound and a pattern the key's stands where it is the stricter
    * (decision 14), which the rows below say and testTheStricterStands()
    * reads.
