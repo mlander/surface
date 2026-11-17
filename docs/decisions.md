@@ -15742,6 +15742,10 @@ they served.
   the shape holds too is that bound, the key's options in the order the
   author wrote them and the shape's others after, as `addConstraint()`
   keeps the options it is handed (decided 2026-11-17).
+- **An entry that is a shape.** `addEach()` takes
+  `Schema::of(Shape::class)`, alone or with a `default`, as each entry
+  being that shape, as `add()` reads the shape's class: a shape is a
+  document the key refers to (decided 2026-11-17).
 - **Settings in the author's order.** A key's settings under
   `x-surface-settings` and those its `x-portable-ui` says are held in
   the order the two keywords are written, as `setSetting()` calls hold

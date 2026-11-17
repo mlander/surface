@@ -39,7 +39,7 @@ final class AliasSettingsResource implements ResourceInterface {
       from: AliasTypes::class,
       label: t('Types with aliases'),
     );
-    $inputs->addEach('marks', MarkAction::class, from: AliasMarks::class, label: t('Punctuation'));
+    $inputs->addEach('marks', Schema::of(MarkAction::class), from: AliasMarks::class, label: t('Punctuation'));
     $inputs->describe('marks', group: ArrangementGroup::details('punctuation', t('Punctuation'), collapsed: TRUE));
   }
 

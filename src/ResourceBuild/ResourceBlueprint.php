@@ -909,7 +909,13 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     if ($description !== NULL) {
       return static::stated($this->addEach($key, $type, $from, $label, $default), $description);
     }
-    if ($type instanceof Schema) {
+    if ($type instanceof Schema && ($shape = $this->shapeEntry($type)) !== NULL) {
+      // Each entry is the shape the schema refers to, as add() reads its
+      // class: Schema::of(Shape::class), its default beside it.
+      $default ??= $type->get('default');
+      $type = $shape;
+    }
+    elseif ($type instanceof Schema) {
       // What every entry is, as a schema: its default inside it.
       $schema = $this->schemaOfOne('addEach', $key, $type);
       $default ??= ValueSchema::factsOf($schema)['default_value'] ?? NULL;
@@ -1191,6 +1197,24 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     $definition = $this->add($key, $type, $label);
     DefinitionMetadata::setComputed($definition, $computed);
     return $definition;
+  }
+
+  /**
+   * Gets the shape an entry's schema refers to, where that is all it says.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The entry's schema.
+   *
+   * @return string|null
+   *   The shape's class, where the schema is a `$ref` to a shape's id,
+   *   with a `default` or nothing beside it; NULL otherwise.
+   */
+  protected function shapeEntry(Schema $schema): ?string {
+    $id = $schema->isBoolean() ? NULL : $schema->get('$ref');
+    if (!is_string($id) || array_diff(array_keys($schema->all()), ['$ref', 'default']) !== []) {
+      return NULL;
+    }
+    return $this->shapeOf($id);
   }
 
   /**
