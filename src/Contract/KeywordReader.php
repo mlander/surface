@@ -852,7 +852,7 @@ final class KeywordReader {
     $property = Schema::from($own);
     // The type as the site's config schema says it, read at the edge.
     $facts = $definition->toArray();
-    $facts['surface_config_type'] = ['type' => $type, 'node' => DefinitionSchema::of($declared)];
+    $facts['surface_config_type'] = ['type' => $type, 'schema' => DefinitionSchema::of($declared)];
     $json = LeafTypes::ROWS[$definition->getDataType()]['type'] ?? 'string';
     $types = $property->get('type') !== NULL ? $this->types($property, $pointer) : [$json];
     $foreign = [];

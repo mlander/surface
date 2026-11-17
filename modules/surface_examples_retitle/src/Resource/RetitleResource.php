@@ -18,19 +18,19 @@ use Drupal\surface_examples_retitle\TitleRewriter;
 use PortableSchema\Builder\Schema;
 
 /**
- * Example 17: a bulk retitle that borrows each schema's access.
+ * Example 17: a bulk retitle that borrows each node's access.
  *
- * Its keys, its storage and its permission are its own. Which schemas it
- * may retitle is not: each item's schema is asked core's update access and
- * its title field's edit access, the two answers schema's form asks, with
- * every module that alters them, and a schema either refuses is refused on
+ * Its keys, its storage and its permission are its own. Which nodes it
+ * may retitle is not: each item's node is asked core's update access and
+ * its title field's edit access, the two answers node's form asks, with
+ * every module that alters them, and a node either refuses is refused on
  * its own item. Nothing here copies a check.
  */
 #[Resource('ai.retitle', storage: RetitleStorage::class)]
 #[Operation('retitle',
-  label: new TranslatableMarkup('Retitle schemas'),
-  description: new TranslatableMarkup('Rewrites the titles of one to fifty schemas in the style chosen, each schema one the account may update and whose title it may edit; a new title sent is written as sent.'),
-  permission: 'retitle schemas',
+  label: new TranslatableMarkup('Retitle nodes'),
+  description: new TranslatableMarkup('Rewrites the titles of one to fifty nodes in the style chosen, each node one the account may update and whose title it may edit; a new title sent is written as sent.'),
+  permission: 'retitle nodes',
   gate: ['entity:node:update', 'field:node.title:edit'],
 )]
 final class RetitleResource implements ResourceInterface, DefinesOutputsInterface {
@@ -42,16 +42,16 @@ final class RetitleResource implements ResourceInterface, DefinesOutputsInterfac
     $inputs->attachList(
       'items',
       RetitleItemStructure::class,
-      t('Schemas'),
+      t('Nodes'),
       min: 1,
       max: 50,
-      description: t('Each schema to retitle, one to fifty.'),
+      description: t('Each node to retitle, one to fifty.'),
       required: TRUE,
     );
 
     $inputs->addSchema('style', Schema::options(TitleRewriter::styles())->type('string')
       ->title(t('Style'))
-      ->description(t('How the title of a schema sent no new title is rewritten.'))
+      ->description(t('How the title of a node sent no new title is rewritten.'))
       ->default(TitleRewriter::TITLE));
   }
 

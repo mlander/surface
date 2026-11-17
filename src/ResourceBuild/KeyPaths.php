@@ -675,7 +675,7 @@ final class KeyPaths {
    * nothing never reaches the validator: it is refused where the key is
    * required, the module's own rule, and taken otherwise.
    *
-   * @param \PortableSchema\Builder\Schema|null $node
+   * @param \PortableSchema\Builder\Schema|null $schema
    *   The key's schema; NULL for a builder's definition, whose schema is
    *   read from it (held()).
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -686,8 +686,8 @@ final class KeyPaths {
    * @return string|null
    *   The first refusal's message, or NULL when the value fits.
    */
-  protected function violation(?Schema $node, DataDefinitionInterface $definition, mixed $value): ?string {
-    $properties = static::propertiesOf($node, $definition);
+  protected function violation(?Schema $schema, DataDefinitionInterface $definition, mixed $value): ?string {
+    $properties = static::propertiesOf($schema, $definition);
     if ($properties !== [] && is_array($value)) {
       assert($definition instanceof ComplexDataDefinitionInterface);
       // A map is held key by key: what it leaves out starts from its
@@ -702,12 +702,12 @@ final class KeyPaths {
     }
     if (!ValueState::isConfigured($value)) {
       $label = (string) ($definition->getLabel() ?? '');
-      return ($node === NULL ? $definition->isRequired() : SchemaFacts::isRequired($node))
+      return ($schema === NULL ? $definition->isRequired() : SchemaFacts::isRequired($schema))
         ? sprintf('%s is required.', $label === '' ? 'A value' : $label)
         : NULL;
     }
-    $schema = $node ?? DefinitionSchema::of($definition);
-    foreach ($this->pipeline->conformOutput(Surface::holding($schema), ['value' => WatchedValueCheck::spelled($schema, $value)]) as $violation) {
+    $checked = $schema ?? DefinitionSchema::of($definition);
+    foreach ($this->pipeline->conformOutput(Surface::holding($checked), ['value' => WatchedValueCheck::spelled($checked, $value)]) as $violation) {
       $at = $violation->path;
       return ($at === '' ? '' : $at . ': ') . strip_tags((string) $violation->message);
     }

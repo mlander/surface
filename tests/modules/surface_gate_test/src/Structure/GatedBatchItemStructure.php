@@ -10,7 +10,7 @@ use Drupal\surface\Resource\StructureInterface;
 use PortableSchema\Builder\Schema;
 
 /**
- * One item of the batch: a schema, which the gates ask about, and a note.
+ * One item of the batch: a node, which the gates ask about, and a note.
  */
 #[Structure('gate_test.batch.item')]
 final class GatedBatchItemStructure implements StructureInterface {
@@ -20,7 +20,7 @@ final class GatedBatchItemStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addSchema('node', Schema::integer()
-      ->title('Schema')
+      ->title('Node')
       ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node'])
       ->required());
     $inputs->addSchema('note', Schema::string()

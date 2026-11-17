@@ -397,8 +397,7 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  * )]
  * final class RoleExistsOptions extends SurfaceOptionsResolverBase {
  *
- *   public function resolve(Constraint $constraint, Schema $schema): OptionSet
- *   {
+ *   public function resolve(Constraint $constraint, Schema $schema): OptionSet {
  *     $options = [];
  *     foreach ($this->roleStorage->loadMultiple() as $id => $role) {
  *       $options[$id] = $role->label();

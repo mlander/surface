@@ -14,7 +14,7 @@ use Drupal\surface_reference_test\Storage\ReferencingEntityStorage;
 use PortableSchema\Builder\Schema;
 
 /**
- * A config_test entity that refers to a schema and to a role.
+ * A config_test entity that refers to a node and to a role.
  */
 #[Resource('reference_test.entity',
   identity: ['id'],

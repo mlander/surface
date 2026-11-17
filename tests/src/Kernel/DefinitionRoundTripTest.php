@@ -525,11 +525,11 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     }
     $pairs['/shape'] = [
       DefinitionMetadata::shapeDefinition($definition),
-      $model['shape']['node'] ?? NULL,
+      $model['shape']['schema'] ?? NULL,
     ];
     $pairs['/configType'] = [
       DefinitionMetadata::configTypeDefinition($definition),
-      $model['configType']['node'] ?? NULL,
+      $model['configType']['schema'] ?? NULL,
     ];
     $pairs['/each'] = [DefinitionMetadata::eachOf($definition), $model['each'] ?? NULL];
     foreach ($pairs as $where => [$below, $held]) {
@@ -660,8 +660,8 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     $inside = [
       $schema->get('items'),
       ...array_values(is_array($schema->get('properties')) ? $schema->get('properties') : []),
-      $model['shape']['node'] ?? NULL,
-      $model['configType']['node'] ?? NULL,
+      $model['shape']['schema'] ?? NULL,
+      $model['configType']['schema'] ?? NULL,
       $model['each'] ?? NULL,
     ];
     foreach ($inside as $next) {
