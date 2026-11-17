@@ -15,9 +15,9 @@ use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_tool_test\Storage\SpecimenStorage;
 use Drupal\Tests\surface\Kernel\SurfaceKernelTestBase;
 use Drupal\Tests\user\Traits\UserCreationTrait;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PHPUnit\Framework\ExpectationFailedException;
 
 /**
  * One coercion table for every door: the form's and the tool's agree.
@@ -33,6 +33,12 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * storage. A rejected row is refused at both. The fixed-point pass feeds
  * every expected value back in and asserts it is unchanged: coercion is
  * idempotent, which is what lets the tool door coerce twice.
+ *
+ * The three tables run each row in one kernel: a row reads no state a
+ * previous row left (tool() writes the stored values itself before each
+ * call; form() builds a new surface), so one boot serves them all. A failed
+ * row does not stop the rest: each failure message starts with the row's
+ * name, and the test fails once at the end listing every failed row.
  *
  * Where the doors do not agree, a named test says so.
  */
@@ -134,6 +140,36 @@ class InputCoercionMatrixTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Runs a check over the rows of a table in this kernel.
+   *
+   * @param iterable $rows
+   *   The rows of a provider, by name. Each is the arguments of $check after
+   *   the name.
+   * @param callable $check
+   *   Takes the row's name, then the row; its assertion messages start with
+   *   the name.
+   */
+  protected function checkRows(iterable $rows, callable $check): void {
+    $count = 0;
+    $failed = [];
+    foreach ($rows as $name => $row) {
+      $count++;
+      try {
+        $check($name, ...$row);
+      }
+      catch (ExpectationFailedException $e) {
+        $failed[] = $e->getMessage();
+      }
+      catch (\Throwable $e) {
+        $failed[] = $name . ': ' . $e::class . ': ' . $e->getMessage();
+      }
+    }
+    if ($failed) {
+      $this->fail(count($failed) . ' of ' . $count . " rows failed:\n\n" . implode("\n\n", $failed));
+    }
+  }
+
+  /**
    * Values in the shapes they arrive in, and the value each must hold.
    *
    * @return \Generator
@@ -211,25 +247,27 @@ class InputCoercionMatrixTest extends SurfaceKernelTestBase {
   /**
    * Tests that a value arrives in the key's type, the same at both doors.
    */
-  #[DataProvider('acceptedProvider')]
-  public function testBothDoorsCoerceAlike(string $key, mixed $given, mixed $expected, array $stored = []): void {
-    $stored += ['name' => 'Specimen'];
-    $form = $this->form(['name' => 'Specimen', $key => $given], $stored);
-    $this->assertNotNull($form, 'The form door accepts it.');
-    $this->assertSame($expected, $form[$key], 'The form door.');
-    $tool = $this->tool(['name' => 'Specimen', $key => $given], $stored);
-    $this->assertNotNull($tool, 'The tool door accepts it.');
-    $this->assertSame($expected, $tool[$key], 'The tool door.');
+  public function testBothDoorsCoerceAlike(): void {
+    $this->checkRows(static::acceptedProvider(), function (string $name, string $key, mixed $given, mixed $expected, array $stored = []): void {
+      $stored += ['name' => 'Specimen'];
+      $form = $this->form(['name' => 'Specimen', $key => $given], $stored);
+      $this->assertNotNull($form, $name . ': The form door accepts it.');
+      $this->assertSame($expected, $form[$key], $name . ': The form door.');
+      $tool = $this->tool(['name' => 'Specimen', $key => $given], $stored);
+      $this->assertNotNull($tool, $name . ': The tool door accepts it.');
+      $this->assertSame($expected, $tool[$key], $name . ': The tool door.');
+    });
   }
 
   /**
    * Tests that a coerced value is a fixed point at both doors.
    */
-  #[DataProvider('acceptedProvider')]
-  public function testCoercedValuesAreFixedPoints(string $key, mixed $given, mixed $expected, array $stored = []): void {
-    $stored += ['name' => 'Specimen'];
-    $this->assertSame($expected, $this->form(['name' => 'Specimen', $key => $expected], $stored)[$key] ?? NULL, 'The form door.');
-    $this->assertSame($expected, $this->tool(['name' => 'Specimen', $key => $expected], $stored)[$key] ?? NULL, 'The tool door.');
+  public function testCoercedValuesAreFixedPoints(): void {
+    $this->checkRows(static::acceptedProvider(), function (string $name, string $key, mixed $given, mixed $expected, array $stored = []): void {
+      $stored += ['name' => 'Specimen'];
+      $this->assertSame($expected, $this->form(['name' => 'Specimen', $key => $expected], $stored)[$key] ?? NULL, $name . ': The form door.');
+      $this->assertSame($expected, $this->tool(['name' => 'Specimen', $key => $expected], $stored)[$key] ?? NULL, $name . ': The tool door.');
+    });
   }
 
   /**
@@ -255,10 +293,11 @@ class InputCoercionMatrixTest extends SurfaceKernelTestBase {
   /**
    * Tests that a doubtful or wrong value is refused at both doors.
    */
-  #[DataProvider('rejectedProvider')]
-  public function testBothDoorsRefuse(string $key, mixed $given): void {
-    $this->assertNull($this->form(['name' => 'Specimen', $key => $given], ['name' => 'Specimen']), 'The form door refuses it.');
-    $this->assertNull($this->tool(['name' => 'Specimen', $key => $given], ['name' => 'Specimen']), 'The tool door refuses it.');
+  public function testBothDoorsRefuse(): void {
+    $this->checkRows(static::rejectedProvider(), function (string $name, string $key, mixed $given): void {
+      $this->assertNull($this->form(['name' => 'Specimen', $key => $given], ['name' => 'Specimen']), $name . ': The form door refuses it.');
+      $this->assertNull($this->tool(['name' => 'Specimen', $key => $given], ['name' => 'Specimen']), $name . ': The tool door refuses it.');
+    });
   }
 
   /**
