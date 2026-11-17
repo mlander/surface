@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface_reference_test\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -57,8 +56,12 @@ final class ReferenceSettingsResource implements ResourceInterface {
     $inputs->attach('nested', AuthorStructure::class, 'Nested');
     $inputs->attachList('items', ItemStructure::class, 'Items', max: 5);
 
-    $inputs->addEach('pages', DataDefinition::create('integer')
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node']), from: ReferenceSlots::class, label: 'Pages');
+    $inputs->addEach(
+      'pages',
+      Schema::integer()->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node']),
+      from: ReferenceSlots::class,
+      label: 'Pages',
+    );
 
     $inputs->attachEach('authors', AuthorStructure::class, from: ReferenceSlots::class, label: 'Authors');
   }

@@ -14,6 +14,7 @@ use Drupal\surface_schema_test\Keys\AliasMarks;
 use Drupal\surface_schema_test\Keys\AliasTypes;
 use Drupal\surface_schema_test\Shape\MarkAction;
 use Drupal\surface_schema_test\Storage\AliasSettingsStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * Alias settings, as pathauto's settings form asks for two of them.
@@ -32,7 +33,12 @@ final class AliasSettingsResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('types', 'boolean', from: AliasTypes::class, label: t('Types with aliases'), default: FALSE);
+    $inputs->addEach(
+      'types',
+      Schema::bool()->default(FALSE),
+      from: AliasTypes::class,
+      label: t('Types with aliases'),
+    );
     $inputs->addEach('marks', MarkAction::class, from: AliasMarks::class, label: t('Punctuation'));
     $inputs->describe('marks', group: ArrangementGroup::details('punctuation', t('Punctuation'), collapsed: TRUE));
   }

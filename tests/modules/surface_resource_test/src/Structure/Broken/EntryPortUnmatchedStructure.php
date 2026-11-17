@@ -9,6 +9,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Keys\ShiftingBenches;
 use Drupal\surface_resource_test\Structure\Seating\SeatingStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Wires the seating's port at every entry to a map that lists one entry fewer.
@@ -20,7 +21,12 @@ final class EntryPortUnmatchedStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('layouts', 'string', from: ShiftingBenches::class, label: t('Layouts'));
+    $inputs->addEach(
+      'layouts',
+      Schema::string(),
+      from: ShiftingBenches::class,
+      label: t('Layouts'),
+    );
     $inputs->attachEach('seats', SeatingStructure::class, from: ShiftingBenches::class, reads: ['layout' => 'layouts']);
   }
 

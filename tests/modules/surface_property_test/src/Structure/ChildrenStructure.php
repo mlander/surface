@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_property_test\Structure;
 
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
@@ -51,12 +50,16 @@ final class ChildrenStructure implements StructureInterface {
 
     $inputs->attachVariants('ticket', by: 'pricing', label: t('Ticket'));
 
-    $inputs->addEach('on_sale', 'boolean', from: Letters::class, label: t('On sale'));
+    $inputs->addEach('on_sale', Schema::bool(), from: Letters::class, label: t('On sale'));
 
     $inputs->attachEach('limits', EntryStructure::class, from: Letters::class, label: t('Limits'), reads: ['selling' => 'on_sale']);
 
-    $inputs->addEach('roles', DataDefinition::create('string')
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user_role']), from: Letters::class, label: t('Roles'));
+    $inputs->addEach(
+      'roles',
+      Schema::string()->check('drupal:SurfaceValidReference', ['entityTypeId' => 'user_role']),
+      from: Letters::class,
+      label: t('Roles'),
+    );
   }
 
 }

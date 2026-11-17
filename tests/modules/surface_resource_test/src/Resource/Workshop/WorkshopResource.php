@@ -43,8 +43,13 @@ final class WorkshopResource implements ResourceInterface {
       ->title(t('Closed'))
       ->default(FALSE));
     $inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class, label: t('Benches'));
-    $inputs->addEach('lights', 'boolean', from: WorkshopBenches::class, label: t('Lights'), default: FALSE)
-      ->setDescription(t('Which benches have their lamp on.'));
+    $inputs->addEach(
+      'lights',
+      Schema::bool()->default(FALSE),
+      from: WorkshopBenches::class,
+      label: t('Lights'),
+      description: t('Which benches have their lamp on.'),
+    );
     $inputs->addEach('codes', Sku::class, from: WorkshopBenches::class, label: t('Bench codes'));
     $inputs->narrow('lights')
       ->when(Condition::equals('closed', TRUE))

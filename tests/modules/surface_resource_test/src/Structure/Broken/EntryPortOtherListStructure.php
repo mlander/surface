@@ -10,6 +10,7 @@ use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Keys\GalleryRooms;
 use Drupal\surface_resource_test\Keys\WorkshopBenches;
 use Drupal\surface_resource_test\Structure\Seating\SeatingStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Wires the seating's port at every entry to a map another provider lists.
@@ -21,7 +22,12 @@ final class EntryPortOtherListStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('layouts', 'string', from: GalleryRooms::class, label: t('Layouts'));
+    $inputs->addEach(
+      'layouts',
+      Schema::string(),
+      from: GalleryRooms::class,
+      label: t('Layouts'),
+    );
     $inputs->attachEach('seats', SeatingStructure::class, from: WorkshopBenches::class, reads: ['layout' => 'layouts']);
   }
 
