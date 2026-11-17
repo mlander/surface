@@ -451,7 +451,8 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * Lays what a verb that attaches is told by name on the map it returns.
    *
-   * The arguments `description:`, `required:` and `storedAs:` of attach(),
+   * The arguments `description:`, `required:`, `storedAs:` and, for
+   * attach(), `widget:` of attach(),
    * attachList(), attachVariants(), attachEach(), addEach() and addMap():
    * what an author chained on the returned definition before.
    *
@@ -467,6 +468,8 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *   How it is stored (the value of $setting); NULL to say nothing.
    * @param string|null $setting
    *   The setting $storedAs is written to.
+   * @param string|null $widget
+   *   The word of the widget that draws the key; NULL to say nothing.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
    *   The same definition.
@@ -475,7 +478,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * @phpstan-param T $shell
    * @phpstan-return T
    */
-  protected static function stated(DataDefinitionInterface $shell, string|\Stringable|null $description, bool $required = FALSE, ?string $storedAs = NULL, ?string $setting = NULL): DataDefinitionInterface {
+  protected static function stated(DataDefinitionInterface $shell, string|\Stringable|null $description, bool $required = FALSE, ?string $storedAs = NULL, ?string $setting = NULL, ?string $widget = NULL): DataDefinitionInterface {
     assert($shell instanceof DataDefinition);
     if ($description !== NULL) {
       $shell->setDescription($description);
@@ -485,6 +488,9 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     }
     if ($storedAs !== NULL && $setting !== NULL) {
       $shell->setSetting($setting, $storedAs);
+    }
+    if ($widget !== NULL) {
+      $shell->setSetting('widget', $widget);
     }
     return $shell;
   }
@@ -635,9 +641,9 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
-    if ($description !== NULL || $required || $storedAs !== NULL) {
-      return static::stated($this->attach($key, $structure, $label, $reads), $description, $required, $storedAs, References::STORED_AS);
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): MapDataDefinition {
+    if ($description !== NULL || $required || $storedAs !== NULL || $widget !== NULL) {
+      return static::stated($this->attach($key, $structure, $label, $reads), $description, $required, $storedAs, References::STORED_AS, $widget);
     }
     static::assertNoShape('attach', $key, $structure);
     static::assertReads($key, $reads);

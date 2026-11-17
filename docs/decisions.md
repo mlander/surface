@@ -15742,6 +15742,12 @@ they served.
   the shape holds too is that bound, the key's options in the order the
   author wrote them and the shape's others after, as `addConstraint()`
   keeps the options it is handed (decided 2026-11-17).
+- **The widget of an attached child.** `attach()` takes `widget:` by
+  name beside `description:`, `required:` and `storedAs:`, the word of
+  the widget that draws the child at this key (`widget: 'fieldset'`),
+  as `setSetting('widget', ...)` on the returned map wrote it and checked
+  at the build as every key's widget setting is. An attach takes no
+  schema, so no `ui()` can say it (decided 2026-11-17).
 - **An entry that is a shape.** `addEach()` takes
   `Schema::of(Shape::class)`, alone or with a `default`, as each entry
   being that shape, as `add()` reads the shape's class: a shape is a
