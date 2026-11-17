@@ -35,138 +35,138 @@
       "full": "d5c6532a9085"
     },
     "plain | key": {
-      "gate": "a2c115ded816",
-      "l_blank": "487435d21590",
-      "lr_blank": "0bf980198c9e",
+      "gate": "774294040843",
+      "l_blank": "1b882b91670e",
+      "lr_blank": "2afab5735749",
       "lm_blank": "c847cfe9c853",
-      "ll_blank": "6740438187af",
-      "lc_blank": "9fbb87ba4c5b",
-      "l_zero": "8557c7889bc4",
-      "lr_zero": "3efe0c10befe",
+      "ll_blank": "0a95cb63faee",
+      "lc_blank": "5f86056b654d",
+      "l_zero": "743981368675",
+      "lr_zero": "995c6583c4d5",
       "lm_zero": "4fffa3ecb874",
-      "ll_zero": "1bfc0eb493d4",
-      "lc_zero": "3c511b44f292",
-      "l_none": "96e3d9ea2665",
-      "lr_none": "1e2e05a2a494",
+      "ll_zero": "b561a6ac3f98",
+      "lc_zero": "8459fe859dcd",
+      "l_none": "88bc5348a116",
+      "lr_none": "4e1f08f276d9",
       "lm_none": "3a0eea4ab2a7",
-      "ll_none": "952ebbbba807",
-      "lc_none": "1b6b8a947d4c",
-      "l_mk": "467b60c752d5",
-      "lr_mk": "cc8b1340086a",
+      "ll_none": "0f3b27d22f8d",
+      "lc_none": "844656490e89",
+      "l_mk": "293503e11f84",
+      "lr_mk": "3ced35e4e1d0",
       "lm_mk": "b59ff596ada4",
-      "ll_mk": "e3ad76a65605",
-      "lc_mk": "db990695711c",
-      "req": "cb1dcdc4945e",
-      "held": "aea5392572a2",
-      "held_bool": "a47b5b1307b0",
+      "ll_mk": "e6f1d32167bc",
+      "lc_mk": "d132eff9aaf9",
+      "req": "3ddfd6dbab99",
+      "held": "967d1facdad1",
+      "held_bool": "ec59b0b0b3ba",
       "sec": "e06301ef4ef6",
       "sec_d": "4c16020b5dac",
       "sec_held": "dba963ae339a",
-      "src": "2385ac523e0e",
+      "src": "467a85f7574a",
       "comp": "11329631b7de",
       "ucomp": "640fd52eb12c",
-      "lk": "948f9802ffae",
-      "fixed": "bda5e938d44e",
-      "d_null": "b4f166b6fe2b",
-      "d_int": "428ffa5ebdbf",
-      "d_bool": "b3738e7ed4fa",
+      "lk": "67be2937157a",
+      "fixed": "157f61db3c7e",
+      "d_null": "94aa436bf96b",
+      "d_int": "69c98190895b",
+      "d_bool": "8d14a3ac29de",
       "d_map": "ac2308c36194",
       "d_mapnull": "30e9f2593510",
-      "rd": "54b729cf848f",
-      "empty_map": "227e9a733d37",
-      "reworded": "92d67aaa886d",
-      "d_list": "ab239b50fb25",
-      "mm": "b338cf4d2492",
-      "lom": "d9c5e87d07c3",
-      "lol": "c2a59ac925a9",
-      "c_str": "09a473fb63c3",
-      "c_int": "ee543256250a",
-      "c_flt": "f079d17a8f6b",
-      "c_bool": "d2bae9a0b7da",
-      "lc_bool": "1715d95d8ec7",
-      "lc_num": "baed8b7e1590",
-      "ts": "d9c7023229f9",
-      "dt": "51bf3324c637",
-      "do": "8c7f729885d3",
-      "bool": "2bae2a57fb20",
-      "flt": "26d59276a6f5",
-      "email": "118f76c012de",
-      "uri": "59f43a1f74ef",
-      "cons": "0dcd185b02de",
-      "any": "b029aafa18f0",
-      "narrowed": "69b018082c47",
+      "rd": "03172ca0219f",
+      "empty_map": "b0c96f7a0089",
+      "reworded": "cb2264cbf1a6",
+      "d_list": "23e9506caa28",
+      "mm": "78c823828a61",
+      "lom": "c761f655bd37",
+      "lol": "3e37e6a355a3",
+      "c_str": "7d779c66c5bd",
+      "c_int": "09adace619c5",
+      "c_flt": "f224df3e9ab0",
+      "c_bool": "429f47a48e76",
+      "lc_bool": "0462143b2a4e",
+      "lc_num": "726276ad0e67",
+      "ts": "80fab9b67dd5",
+      "dt": "7c40b93ff7c5",
+      "do": "ccea183f2cfe",
+      "bool": "36b625191766",
+      "flt": "19efc4dab927",
+      "email": "b93f5e09f68d",
+      "uri": "3fe89c6eaeb8",
+      "cons": "8afa84c814ad",
+      "any": "e168aeb8c810",
+      "narrowed": "7fdd3008a269",
       "sec_stale": "a5e7b793f37e",
       "sec_len": "3e9a9f177c96",
       "sec_int": "4b824d664b33",
       "sec_email": "2884a7ce6db5",
       "lsec": "e1ac00e1e4c4",
-      "ruled": "d82951db9a27",
-      "each": "37ec58fadc6d",
+      "ruled": "8b2d7cefd37e",
+      "each": "771ec2cb4c33",
       "third_party_settings": "4304a9cc67f9"
     },
     "plain | path": {
       "nope": "1bf169f7d887",
       "nope.deeper": "ed8a9f9798ca",
       "gate": "1ae33952ee04",
-      "l_blank": "87112427de10",
+      "l_blank": "6ffea307168b",
       "lr_blank": "214474f9b3ed",
       "lm_blank": "ec4e699338f6",
-      "lm_blank.p": "b5d0fe7e1253",
+      "lm_blank.p": "0c02299d3f54",
       "lm_blank.nope": "c967f21b19d2",
-      "ll_blank": "19b9262aa4d6",
+      "ll_blank": "bc982664e323",
       "ll_blank.0": "33fdf2f48ede",
       "lc_blank": "d9c93492692c",
-      "l_zero": "ffdccc0b3797",
+      "l_zero": "e0665cdd224b",
       "lr_zero": "1e9745b80b07",
       "lm_zero": "8a204e60880c",
-      "lm_zero.p": "84d45537f823",
+      "lm_zero.p": "9d9842356229",
       "lm_zero.nope": "882ab135ecd1",
-      "ll_zero": "7051a3a074ae",
+      "ll_zero": "a87a919ce73c",
       "ll_zero.0": "5fde4760e3a3",
       "lc_zero": "0167ca5e7776",
-      "l_none": "13d1fa4d9085",
+      "l_none": "63ae8cdf8bb9",
       "lr_none": "50a29466b041",
       "lm_none": "11e62f1f56bb",
-      "lm_none.p": "dd8ade7ffdac",
+      "lm_none.p": "a82aa52b7a9a",
       "lm_none.nope": "dc2ae90b8202",
-      "ll_none": "c357bd3d6867",
+      "ll_none": "b554fd11e14b",
       "ll_none.0": "631446a2ef22",
       "lc_none": "2d1f0bf571d4",
-      "l_mk": "806de8683ee1",
+      "l_mk": "9f01aa7584d4",
       "lr_mk": "17ac00bd221f",
       "lm_mk": "4df207b94669",
-      "lm_mk.p": "dd120e69346c",
+      "lm_mk.p": "4ec723ef21ba",
       "lm_mk.nope": "7edc498934c8",
-      "ll_mk": "accd393d8dbf",
+      "ll_mk": "ca6857f79077",
       "ll_mk.0": "1386c334788b",
       "lc_mk": "6c2bc6767aaf",
-      "req": "2de697d00100",
-      "held": "201909e30155",
+      "req": "dd5e076818e4",
+      "held": "d1fc6b433b4b",
       "held_bool": "7540303abeb1",
       "sec": "ea5a9897ba0b",
       "sec_d": "9a1412234802",
       "sec_held": "7e26feb1de58",
-      "src": "a4ebf254e2da",
+      "src": "68fd032874fc",
       "comp": "efae780425c9",
       "ucomp": "2ef76a4cc962",
       "lk": "e32d611a2d94",
       "fixed": "e32d611a2d94",
-      "d_null": "d6b2830a858c",
+      "d_null": "feb79256a420",
       "d_int": "807985130124",
       "d_bool": "f52940ced1f2",
       "d_map": "c5e8cd14b5be",
-      "d_map.a": "4c9b132d87d8",
+      "d_map.a": "4cc0bedbe6ea",
       "d_map.b": "a979e2b898e9",
-      "d_map.c": "b5bf90b3f6b6",
+      "d_map.c": "653e44094200",
       "d_map.nope": "7fef04ae975d",
       "d_mapnull": "4a4dc96a767b",
-      "d_mapnull.a": "2dc152f90d2a",
+      "d_mapnull.a": "72a32332c593",
       "d_mapnull.nope": "ab5c6fbf1ec5",
       "rd": "0f2a21512871",
-      "empty_map": "11f8fcccf509",
+      "empty_map": "c3f15602e938",
       "empty_map.nope": "9981c39f64fd",
-      "reworded": "6a7ddb22fbdd",
-      "d_list": "a32712143e95",
+      "reworded": "fa1c6a1e9ca1",
+      "d_list": "7115315bf4b0",
       "d_list.0": "79322ca8a834",
       "mm": "c0e6f6608e7f",
       "mm.in": "e11221b81a8e",
@@ -188,30 +188,30 @@
       "c_int": "8f204bb4219f",
       "c_flt": "dc5f48274043",
       "c_bool": "9857ef68131a",
-      "lc_bool": "0f28eb98914d",
+      "lc_bool": "b3cae5a1f3c1",
       "lc_num": "a3ca8711f546",
       "ts": "fd4bb3712bbe",
-      "dt": "9b235b57d7d4",
+      "dt": "9a528cbff4e2",
       "do": "b05ed0a3c8ce",
       "bool": "124820295771",
-      "flt": "cd85cd6359b7",
+      "flt": "292ddf362d72",
       "email": "25df4a896d00",
-      "uri": "040ae6dae9bb",
+      "uri": "dbb0940f260b",
       "cons": "535b37ad1daf",
-      "any": "ac3718725dfe",
+      "any": "b1c9bf81a8c0",
       "narrowed": "6e4bd8cf8120",
       "sec_stale": "a73185787c8b",
       "sec_len": "082a2ba8b052",
       "sec_int": "bc2c5a917070",
       "sec_email": "fac453c81c21",
       "lsec": "6492a6f0f84c",
-      "ruled": "aab66ba56b64",
+      "ruled": "fc4c238dd2b6",
       "each": "7e1dca745674",
       "each.nope": "bba544f88b8b",
       "third_party_settings": "b8e937687917",
       "third_party_settings.surface": "22c3b8aca436",
       "third_party_settings.surface.mk": "d81b96792754",
-      "third_party_settings.surface.mk.a": "2da0e3676935",
+      "third_party_settings.surface.mk.a": "a820bebecaaf",
       "third_party_settings.surface.mk.ms": "5c890ae9d7d4",
       "third_party_settings.surface.mk.nope": "ff82b373bdd1",
       "third_party_settings.surface.mk2": "6d7b4f11e989",
@@ -5064,41 +5064,53 @@
         }
       ]
     },
-    "plain | key | any": {
+    "plain | key | held": {
       "fromDefinition": {
         "class": "Drupal\\tool\\TypedData\\InputDefinition",
-        "type": "any",
-        "label": "Any",
+        "type": "string",
+        "label": "Held",
         "description": "",
         "required": false,
-        "getDefaultValue": null,
+        "getDefaultValue": "hv",
         "isLocked": false,
         "getExamples": [],
         "isMultiple": false,
-        "constraints": [],
+        "constraints": {
+          "PrimitiveType": []
+        },
         "settings": [],
         "array": {
+          "constraints": {
+            "PrimitiveType": []
+          },
           "description": "",
-          "label": "Any",
-          "required": false
+          "label": "Held",
+          "required": false,
+          "type": "string"
         }
       },
       "outputFromDefinition": {
         "class": "Drupal\\tool\\TypedData\\OutputDefinition",
-        "type": "any",
-        "label": "Any",
+        "type": "string",
+        "label": "Held",
         "description": "",
         "required": false,
         "getDefaultValue": null,
         "getExamples": [],
         "isMultiple": false,
-        "constraints": [],
+        "constraints": {
+          "PrimitiveType": []
+        },
         "settings": [],
         "array": {
+          "constraints": {
+            "PrimitiveType": []
+          },
           "description": "",
-          "label": "Any",
+          "label": "Held",
           "nullable": false,
-          "required": false
+          "required": false,
+          "type": "string"
         }
       },
       "held builder": [
@@ -5147,34 +5159,42 @@
           "{\"a\":1}"
         ],
         [
-          [
-            "a",
-            "b"
-          ],
-          [
-            "a",
-            "b"
-          ]
-        ],
-        [
           {
-            "a": 1
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.held\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
           },
           {
-            "a": 1
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.held\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
           }
         ],
         [
-          5,
-          5
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.held\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.held\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
+          }
         ],
         [
-          1.5,
-          1.5
+          "5",
+          "5"
         ],
         [
-          true,
-          true
+          "1.5",
+          "1.5"
+        ],
+        [
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.held\" on hand to true, which the key does not accept: This value must be of type string, boolean given."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.held\" on hand to true, which the key does not accept: This value must be of type string, boolean given."
+          }
         ],
         [
           null,
@@ -5190,26 +5210,62 @@
         "string 0": [],
         "string nullable 1": [],
         "string nullable 0": [],
-        "integer 1": [],
-        "integer 0": [],
-        "integer nullable 1": [],
-        "integer nullable 0": [],
-        "boolean 1": [],
-        "boolean 0": [],
-        "float 1": [],
-        "float 0": [],
+        "integer 1": {
+          "held": "it is a string, which the schema types integer, an integer"
+        },
+        "integer 0": {
+          "held": "it is a string, which the schema types integer, an integer"
+        },
+        "integer nullable 1": {
+          "held": "it is a string, which the schema types integer, an integer"
+        },
+        "integer nullable 0": {
+          "held": "it is a string, which the schema types integer, an integer"
+        },
+        "boolean 1": {
+          "held": "it is a string, which the schema types boolean, a boolean"
+        },
+        "boolean 0": {
+          "held": "it is a string, which the schema types boolean, a boolean"
+        },
+        "float 1": {
+          "held": "it is a string, which the schema types float, a float"
+        },
+        "float 0": {
+          "held": "it is a string, which the schema types float, a float"
+        },
         "ignore 1": [],
         "ignore 0": [],
-        "mapping 1": [],
-        "mapping 0": [],
-        "sequence string 1": [],
-        "sequence string 0": [],
-        "sequence mapping 1": [],
-        "sequence mapping 0": [],
-        "constrained 1": [],
-        "constrained 0": [],
-        "loose 1": [],
-        "loose 0": []
+        "mapping 1": {
+          "held": "it is one value, which the schema types mapping, a mapping"
+        },
+        "mapping 0": {
+          "held": "it is one value, which the schema types mapping, a mapping"
+        },
+        "sequence string 1": {
+          "held": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence string 0": {
+          "held": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence mapping 1": {
+          "held": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence mapping 0": {
+          "held": "it is one value, which the schema types sequence, a sequence"
+        },
+        "constrained 1": {
+          "held": "it may be more than 3 characters long, which the schema refuses"
+        },
+        "constrained 0": {
+          "held": "it may be more than 3 characters long, which the schema refuses"
+        },
+        "loose 1": {
+          "held": "it may be more than 99 characters long, which the schema refuses"
+        },
+        "loose 0": {
+          "held": "it may be more than 99 characters long, which the schema refuses"
+        }
       }
     },
     "plain | path | lk": {

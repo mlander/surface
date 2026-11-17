@@ -171,9 +171,12 @@ sealed one. The form, the pipeline and the contract emitter
   kind, in `src/Plugin/Validation/Constraint/`.
 - **Validation.** One class makes typed data to run a constraint on a
   data surface's definition, `ConstraintRunner`, with `TypedDataManager::create()`: one constraint
-  on one value for each check a document names (the module's own seven
-  on the plain value, with no typed data), or `validate()` on a
-  whole definition for an output, a watched value and a site's default
+  on one value for each check a document names (the module's own eight
+  on the plain value, with no typed data), or `validate()` on a whole
+  definition for a site's default; an output and a watched value are
+  held to their schema by the dialect's validator, with no typed data of
+  their own
+  ([decision](decisions.md#outputs-conform-through-the-dialects-validator))
   (`src/Validation/ConstraintRunner.php`,
   [decision](decisions.md#one-adapter-runs-a-constraint-the-typed-data-footprint-is-pinned)).
   It hands core a copy of the definition carrying a digest among its

@@ -89,10 +89,14 @@ final class DocumentHead {
    * Constructs a DocumentHead.
    *
    * @param \Drupal\surface\Contract\PropertySchema $propertySchema
-   *   What describes each output.
+   *   What describes each key.
+   * @param \Drupal\surface\Contract\OutputsDocument $outputsDocument
+   *   What writes the outputs' validation document, which the served
+   *   outputs document is written from.
    */
   public function __construct(
     protected readonly PropertySchema $propertySchema,
+    protected readonly OutputsDocument $outputsDocument,
   ) {}
 
   /**
@@ -553,8 +557,14 @@ final class DocumentHead {
   /**
    * Describes the outputs a data surface declares, if it declares any.
    *
-   * Outputs are never refined, never rendered and never locked, so they
-   * carry no `x-surface`.
+   * The outputs' validation document (OutputsDocument::of()) less what
+   * only the server reads: `portable-check` and `x-portable-messages`.
+   * Every object that names its keys is closed, the top included, so the
+   * document says what the check enforces. Outputs are never refined,
+   * never rendered and never locked, so they carry no `x-surface`.
+   *
+   * Decision: see
+   * docs/decisions.md#outputs-conform-through-the-dialects-validator.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
@@ -565,26 +575,8 @@ final class DocumentHead {
    *   The output schema, or NULL for a data surface with no outputs.
    */
   public function outputs(SurfaceInterface $surface, Emission $emission): ?Schema {
-    $properties = [];
-    $required = [];
-    $emission = $emission->withoutStale();
-    foreach ($surface->getOutputDefinitions()->entries() as $name => $entry) {
-      $node = $entry->schema();
-      [$schema] = $this->propertySchema->property($node, NULL, NULL, (string) $name, FALSE, [], $emission);
-      $properties[(string) $name] = $this->propertySchema->withoutExtension($schema);
-      if (NodeFacts::isRequired($node)) {
-        $required[] = (string) $name;
-      }
-    }
-    if ($properties === []) {
-      return NULL;
-    }
-    $outputs = Schema::keywords([
-      '$schema' => ContractEmitter::DIALECT,
-      'type' => 'object',
-      'properties' => $properties,
-    ]);
-    return $required === [] ? $outputs : $outputs->with('required', $required);
+    $outputs = $this->outputsDocument->of($surface, $emission);
+    return $outputs === NULL ? NULL : $this->propertySchema->withoutExtension($outputs);
   }
 
 }

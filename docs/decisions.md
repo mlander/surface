@@ -2448,22 +2448,26 @@ document, refusal or stored value changed.
   on one value, alone, never the definition's own constraints or its
   properties': the check provider asks it for every `drupal:<id>`
   check. `conforms($definition, $value)` holds a value to a whole
-  definition, the constraints it implies (`PrimitiveType`, `NotNull`,
-  `ComplexData`) included: outputs (`Conforming`), a watched value
-  (`WatchedValueCheck`) and a site's or a route's value (`KeyPaths`) ask
-  it. Nothing else takes the typed data manager to validate such a
-  value: `PortableValidator`, `DrupalCheckProvider`, `SurfacePipeline`,
-  `SiteDefaults` and the build step's declaring phase hold the runner,
+  definition, the constraints it implies included: a site's or a
+  route's value (`KeyPaths`) asks it. *Changed 2026-11-16 (slice 34):*
+  outputs and a watched value are held to their schema by the dialect's
+  validator instead
+  ([Outputs conform through the dialect's validator](#outputs-conform-through-the-dialects-validator)).
+  *Changed 2026-11-17 (slice 34):* a site's or a route's value is too,
+  and `conforms()` is deleted; the runner answers `check()` alone.
+  Nothing else takes the typed data manager to validate such a value:
+  `PortableValidator`, `DrupalCheckProvider` and the build step's
+  declaring phase hold the runner,
   and the provider asks core's constraint manager whether the site has a
   check's plugin. The runner stays when the model moves to `Schema`,
   because core's constraint plugins expect a typed value: some
   validators read the context object (`ValidKeys`,
   `EntityBundleExists`, `AllowedValues` with a callback), and the
   implied constraints always do.
-- **Surface's own constraints read the value.** The seven plugins the
+- **Surface's own constraints read the value.** The eight plugins the
   module ships (`JsonSchema`, `LabeledChoice`, `LanguageExists`,
-  `SurfaceReferenceableType`, `SurfaceUnique`, `UniqueItems`,
-  `SurfaceValidReference`) give a plain Symfony validator, on plain PHP
+  `SurfaceLinkUri`, `SurfaceReferenceableType`, `SurfaceUnique`,
+  `UniqueItems`, `SurfaceValidReference`) give a plain Symfony validator, on plain PHP
   values with the option sets the examples use, the violations the
   runner gives: the same message template, parameters, property path
   and code, the same message with its class and words, and the same
@@ -2671,7 +2675,7 @@ document, refusal or stored value changed.
   pipeline writes them, and an item of a collection whose structure
   names a check on its whole, run on a map of the structure's keys.
 - **Surface's own constraints run on plain values.**
-  `ConstraintRunner::check()` runs the seven plugins the module ships
+  `ConstraintRunner::check()` runs the plugins the module ships
   (`VALUE_ONLY`, each plugin id with the class the module ships) through
   a plain validator made once, core's `BasicRecursiveValidatorFactory`
   (Symfony's recursive validator with `DrupalTranslator`), in the
@@ -4135,7 +4139,9 @@ the two faults below, fixed on purpose.
   `held()`, which reads the type and the DateOnly flag from it and walks
   a list's item and a map's properties in step (`accepted()`,
   `violation()`; the definition goes to `ConstraintRunner::conforms()`
-  alone). `pathsOf()` reads a map's properties from its node, and reads
+  alone; since slice 34 the value is held to the key's schema by the
+  dialect's validator and the runner is not asked).
+  `pathsOf()` reads a map's properties from its node, and reads
   no node for a value that is no array, which it names whole. What a
   build writes (`writeDefaults()`, `resolve()`, `setDefault()`, and a
   context's fixed value in `Declaring`) is a builder's definitions before
@@ -4339,7 +4345,9 @@ the two faults below, fixed on purpose.
   `SchemaWidgetInterface::drawsSchema()` and `WidgetChoice::forSchema()`:
   [A widget is chosen by the key's schema](#a-widget-is-chosen-by-the-keys-schema).)
 - *`ConstraintRunner`* (`conforms()`, `check()`, `typed()`), and
-  `KeyPaths::violation()`'s copy that is not required.
+  `KeyPaths::violation()`'s copy that is not required. (Slice 34:
+  `conforms()` and that copy are gone; `KeyPaths` holds a value to its
+  key's schema by the dialect's validator.)
 - *Ports* (`SurfaceInterface::getPortDefinition()`), read in
   `Validating::placeAt()`.
 - *The builders and readers that make definitions*: `SurfaceBuilder`,
@@ -5417,7 +5425,11 @@ served byte, refusal, message, stored value or drawn form changed.
   per request, and `SerializedMaps` walks it as it walked
   `Attachment::$wired` before. Both members go when `admits()` takes a
   schema. `Surface::withPortKeys()` (internal) binds the schemas and
-  definitions an attachment holds without reading them. A wired key is
+  definitions an attachment holds without reading them. *Changed
+  2026-11-16 (slice 34):* `admits()` takes the port's schema, so those
+  members and `withPortKeys()` are gone, and `getPortDefinition()`
+  derives a definition of the three classes alone, as
+  `NodeDefinition::of()` does. A wired key is
   still read twice at build: `Attaching::wiredKeys()` hands the
   builder's definition to `withReads()`, and the key's own entry reads it
   again at the seal; the second read goes when the builder holds schemas.
@@ -7017,6 +7029,148 @@ behavior is unchanged: each read the cases that apply to it.
 
 (`SurfacePipeline::outputs()`, `ResourceOperationTool`,
 `ResourceApiController`, `StageStorage`, `BulkDeleteFlowTest`)
+
+### Outputs conform through the dialect's validator
+
+Decided 2026-11-15, built 2026-11-16 (slice 34). Outputs are held as
+inputs are: by the dialect's validator, over a document built from the
+output entries' schemas, in the input path's codes.
+
+- **The document.** `Contract\OutputsDocument` writes each output key
+  as the served document's writer of a key does
+  (`PropertySchema::property()`), keeps `portable-check` and
+  `x-portable-messages`, so a check no keyword states runs, and closes
+  every object that names its keys (`additionalProperties: false`), the
+  top included. A map that names no keys is `type: object`. The served
+  outputs document is this document less the checks and their messages
+  (`DocumentHead::outputs()`), so it says what is enforced: its top
+  gained `additionalProperties: false`.
+- **The check.** `conformOutput()` (`Pipeline\Conforming`) strips every
+  `NotEmitted` key; refuses an object anywhere with `type` (`actual:
+  object`), since an output is a plain value; refuses a key nothing
+  declares where it stands, at any depth, `unknown_key`, as `accept()`
+  refuses an input key; refuses a required output that is absent,
+  `required`, "@label was not emitted."; then holds the rest to the
+  document, once. Each `drupal:` check runs from the output entry's
+  schema, the entries read as a frame of plain keys
+  (`Location::definitionAt()`). A required property absent inside a map
+  is `required` at the property, in the same words; an
+  `unknownProperty` is not said twice.
+- **Codes, old to new.** NULL where the type takes none, `is_null` to
+  `type`; a required property absent, `is_null` to `required`;
+  `no_such_choice` to `enum`; `too_long`, `too_short` to `maxLength`,
+  `minLength`; `not_in_range` to `maximum` or `minimum`; `too_few`,
+  `too_many` to `minItems`, `maxItems`; `is_blank` to `minLength`;
+  `invalid_format` to `format.email`; `primitive_type` to `type` or a
+  `format.*`; `regex_failed` to `pattern`, or to the check where the
+  pattern is written as one; another plugin's code to
+  `check.drupal:<id>[.<name>]`; a plugin the site lacks to `unchecked`; a
+  list for a map, `unknown_key` for each item and `is_null`, to one
+  `type`.
+- **Verdicts the dialect gives.** Refused now: a map for a list, an
+  empty or all-null map with required keys, a numeric string for a
+  timestamp, a date and time with no offset, a URI that is not RFC 3986
+  (`route:<nolink>`: a link is held otherwise, see the next entry), a
+  required property that is NULL two maps deep, a string for a map that
+  names no keys. Taken now: `3.0` for an integer, `[]` for a required
+  list (required means present), NULL for an optional key with
+  `NotBlank` or a `Count` minimum (a place holding nothing is not asked a
+  check).
+- **Every resource.** The runner holds every resource's outputs, not the
+  stage's alone (`OperationRunner::conformed()`). A failure, or a check
+  that throws, is logged, the run is marked not conformed, and the
+  outputs are served as the storage gave them: nothing is refused after
+  a write, at any door.
+- **The tool door** holds the outputs to the Tool API's own check every
+  time, conformed or not, and leaves out only what that check refuses,
+  since the Tool API would otherwise fail the committed call
+  (`ResourceOperationTool::declared()`).
+- **A secret output is refused at declaration**, at any depth, when it
+  is added and again at seal (`SurfaceBuilder::assertOutputDeclarable()`):
+  an output is served to whoever runs the operation.
+- **A watched value, the same way.** The watched-value check
+  (`WatchedValueCheckInterface::admits(Schema $schema, $value)`) holds a
+  value to its key's schema as the one output of a frame
+  (`Surface::holding()`), the value read through the coercion table as
+  `accept()` reads what a form posts (a form's `"1"` is `TRUE`) and
+  written as the document holds it (a date and time with its offset); a
+  float the table leaves a float is not handed to a refiner typed for an
+  integer. *Open, revisit in slice 35:* a scalar at a string key (`TRUE`)
+  is read as its text and handed over, as Typed Data's string took any
+  scalar, since the value baseline pins it (`values_test.keys`, gate
+  `TRUE` and `FALSE`). It applies to the watched-value check alone, never
+  to a site's or a route's value (next point). A string
+  at a key that holds a list of field items, which Typed Data let
+  through, is withheld now; and a value whose check threw Symfony's
+  `UnexpectedTypeException` out of `accept()` (`TRUE` at a block's
+  `bundle`) is refused with `type` instead, which moves eight rows of the
+  value baseline (`block.surface_examples_plugins`, `/bundle TRUE` and
+  `FALSE`) and one (`block.placement--create`, where `accept()` takes
+  the value and `validate()` refuses it with `type`, beside `enum`; the
+  input's own check threw the same exception there until the check in a
+  branch was left unasked, see
+  [Validation runs through the dialect's validator](#validation-runs-through-the-dialects-validator)).
+  A port's key is held as its schema alone.
+- **A site's or a route's value, the same way** (built 2026-11-17).
+  `KeyPaths::violation()` holds a default or a fixed value to its key's
+  schema as the one output of a frame. The value held is the value
+  `accept()`'s table answered, itself, spelled as the document spells it
+  (`WatchedValueCheck::spelled()`: a date and time with its offset, as
+  `validate()` holds what `accept()` answered), and it is the value handed
+  on: a scalar at a string key is not read as its text here, so `TRUE`
+  there is refused with `type`, as `validate()` refuses it. A value that
+  holds nothing never reaches the validator: a required key refuses it
+  ("@label is required."), any other key takes it, as the check provider
+  leaves a place that holds nothing to the module. A key of the `any`
+  type that holds no variants and is not held whole has no document, at
+  inputs or here, so a value at it is refused with a `LogicException`
+  that names the source, the key and the resource, as `validate()` throws
+  for such a key. A builder's definition before sealing is read into its
+  schema first (`DefinitionSchema::of()`). A map is still held key by
+  key. `ConstraintRunner::conforms()` had no other caller and is
+  deleted. What moved in the door corpus: 316 rows over ten surfaces
+  (written), and 125 rows of `narrow`, which `DoorCorpusNarrowTest` pins
+  and which are not written yet. Typed Data's sentences become the
+  dialect's ("This value should be of the correct primitive type." becomes
+  "This value must be of type integer, string given."; "The value you
+  selected is not a valid choice." becomes a `type` sentence where the
+  type refuses first; "This value should not be null." becomes "@label is
+  required."). Refused now: a scalar other than a string at a string key,
+  in a list too (`[TRUE]`); a list for a map; an empty or all-null map
+  with required keys in a list (`[[]]`); a date and time with no offset
+  (`2026-01-01`, `"0"`); a URI with no scheme; `TRUE` for a float; a
+  float for a datetime. Taken now: a choice met in the key's type (`TRUE`
+  for an integer key whose choices are `"01"` and `"02"`, read as 1; a
+  boolean whose choices are written as numbers); NULL for an optional key
+  with NotBlank or a Count minimum.
+- **The input side of the open map** (a map that names no keys read as
+  `type: object` at inputs) is held for slice 35: it moves 20 rows of
+  the value baseline (`values_test.hand_built`, `/nested/spare` and
+  `/loose`).
+
+Why: the outputs were Surface's own walk and then Typed Data, read from
+definitions, in Symfony's codes, held for the stage alone; the inputs
+were the dialect's. One check, one document, one set of codes reads the
+same on both sides, and a client that validates what it is served
+against the served document gets the server's answer.
+
+(`OutputsDocument`, `Conforming`, `OperationRunner`,
+`ResourceOperationTool`, `WatchedValueCheck`, `KeyPaths`,
+`OutputsConformanceTest`, `OutputsRecordTest`, `DoorCorpusTest`)
+
+### A link is held to what a link field takes
+
+Decided 2026-11-16. The `uri` format stays RFC 3986's, which refuses
+`<` and `>`, so `route:<nolink>`, `route:<front>`, `route:<none>` and
+`route:<button>`, which core's link field stores, are refused at a `uri`
+key. A key that holds a link field's URI is text held to the module's
+`SurfaceLinkUri` check in place of the format: a value with a scheme, as
+`parse_url()` reads one (core's PrimitiveType for a `uri`) or as RFC 3986
+spells one, so it takes every value the format takes and Drupal's own.
+The content entity example declares it for a link field's `uri`
+(`FieldItemDerivation`), on inputs and outputs alike.
+
+(`LinkUriConstraint`, `LinkUriTest`, `ContentEntityDerivationTest`)
 
 ### A computed key is a pure function of its sources
 
@@ -9871,7 +10025,8 @@ closed.", `OperationRunner::NOT_ALLOWED`), where the tool said "You do
 not have permission to use the stage ..." and "You do not have
 permission to do this."; the permission and every withheld refusal keep
 "You do not have permission to do this.". The plugin's own outputs
-check went: the runner holds the stage's outputs and logs a mismatch.
+check went: the runner holds the stage's outputs and logs a mismatch
+(every resource's since slice 34).
 Kept, as recorded: a stage input that is not a string, which the Tool
 API lets through to a PHP caller, is answered by the tool (`not_found`,
 or `does_not_apply` on a tool that takes no stage), after the runner's
@@ -15090,7 +15245,17 @@ say is run by a check on the server.
   are asked where only that format refuses. `Validation\Nodes` reads the
   document's nodes that apply at each place; where it reads a keyword
   otherwise than the validator does, the run is made again with every
-  check asked.
+  check asked; a check is counted for that only where a schema that holds
+  in every case refuses, since a refusal in a branch is not filed where
+  another branch takes the value. A schema in a branch (`anyOf`, `oneOf`,
+  `then`, `else`) counts for a check it names itself, together with the
+  schemas around
+  it at the same place: the validator asks the check only where it
+  evaluates that branch (built 2026-11-17, slice 34: `TRUE` at a placed
+  block's `settings.bundle`, one branch for each plugin, threw Symfony's
+  `UnexpectedTypeException` from EntityBundleExists and is now refused
+  with `type`). A check a list's refusal is worded by is skipped on the
+  same terms (`DrupalCheckProvider::constraintMessage()`).
 - **Checks the document does not name yet.** The document writes a
   plain key's map (a key's settings, a map an alter mounted, the map
   each item of a list is) as its properties alone, never the map's own

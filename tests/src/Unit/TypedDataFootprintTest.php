@@ -160,9 +160,12 @@ class TypedDataFootprintTest extends UnitTestCase {
    * files whose #[RefinesInput] methods were their one use name no Typed
    * Data. Raised on 2026-11-17 to 97: Contract/KeywordReader.php, the
    * reader of a key's keywords, reads a config schema type it is handed
-   * (`drupal:config/<type>`) through typed config.
+   * (`drupal:config/<type>`) through typed config. Lowered on 2026-11-17
+   * to 94: the key paths a rule watches are read on the validator and
+   * ConstraintRunner::conforms() is gone, so Pipeline/Conforming.php,
+   * Refinement/WatchedValueCheck.php and its interface name no Typed Data.
    */
-  public const OUTSIDE_THE_EDGES = 97;
+  public const OUTSIDE_THE_EDGES = 94;
 
   /**
    * Finds the files that use Typed Data.

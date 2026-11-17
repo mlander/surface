@@ -75,7 +75,8 @@ use Symfony\Component\Validator\ConstraintViolationInterface;
  * it must hold one is the module's to say. A place whose value a keyword
  * of the document already refuses (Nodes::refusedByKeyword()) is not
  * asked: that refusal stands alone, and a check is never run on a value
- * of the wrong type or shape. DateTime and DateOnly, which state the
+ * of the wrong type or shape, in a branch (a block's settings for its
+ * plugin) as at the top. DateTime and DateOnly, which state the
  * same rule as the `date-time` or `date` format beside them, are still
  * asked where only that format refuses. A name outside `drupal:`, a
  * plugin the site does not have, a place
@@ -413,12 +414,19 @@ final class DrupalCheckProvider implements CheckProvider {
     // among them: a keyword's refusal is worded by its constraint.
     $constraints = NodeFacts::constraints($node);
     $definition = NULL;
+    $named = [];
     if ($others !== NULL) {
       $type = ['NotNull', 'PrimitiveType', 'ComplexData'];
-      $ids = array_unique([...$ids, ...array_diff(array_map('strval', array_keys($constraints)), $others, $type)]);
+      $named = array_diff(array_map('strval', array_keys($constraints)), $ids, $others, $type);
+      $ids = array_unique([...$ids, ...$named]);
     }
     foreach ($ids as $id) {
       if (!array_key_exists($id, $constraints)) {
+        continue;
+      }
+      if (in_array($id, $named, TRUE) && $this->nodes?->refusedByKeyword($location, $place['value'], !in_array($id, self::FORMAT_CHECKS, TRUE), self::PREFIX . $id)) {
+        // A check the document names, whose value a keyword refuses: it is
+        // not run on that value here either.
         continue;
       }
       $definition ??= $place['location']->definition();
@@ -460,9 +468,16 @@ final class DrupalCheckProvider implements CheckProvider {
       // module's to say (required, cannot be cleared), never a check's.
       return new CheckResult();
     }
-    if ($this->nodes?->refusedByKeyword($request->location, $request->value, !in_array($id, self::FORMAT_CHECKS, TRUE))) {
-      // A keyword refuses the value: that refusal stands alone.
-      $this->unasked[$request->location] = TRUE;
+    $formats = !in_array($id, self::FORMAT_CHECKS, TRUE);
+    if ($this->nodes?->refusedByKeyword($request->location, $request->value, $formats, $name)) {
+      // A keyword refuses the value: that refusal stands alone. Only a
+      // refusal by a schema that holds in every case is one the validator
+      // must file at the place, and so one PortableValidator::held() runs
+      // again for when it is not filed; a refusal in a branch is not filed
+      // where another branch takes the value.
+      if ($this->nodes->refusedByKeyword($request->location, $request->value, $formats)) {
+        $this->unasked[$request->location] = TRUE;
+      }
       return new CheckResult();
     }
     $composite = array_intersect(ConstraintKeywords::row($id)?->keywords() ?? [], ['allOf', 'anyOf']);

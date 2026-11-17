@@ -101,8 +101,9 @@ class SurfacePipelineCastingTest extends UnitTestCase {
     (new \ReflectionProperty(SurfaceOptions::class, 'resolved'))->setValue($options, new \WeakMap());
     $translation = $this->getStringTranslationStub();
     $runner = new ConstraintRunner($manager, $this->createMock(ClassResolverInterface::class));
-    $validator = new PortableValidator(Registry::withTypes(), new ContractEmitter($options, $translation), $runner, $this->createMock(ConstraintManager::class), $translation, $options, new AnonymousUserSession());
-    return new SurfacePipeline($runner, $options, $translation, $validator);
+    $emitter = new ContractEmitter($options, $translation);
+    $validator = new PortableValidator(Registry::withTypes(), $emitter, $runner, $this->createMock(ConstraintManager::class), $translation, $options, new AnonymousUserSession());
+    return new SurfacePipeline($options, $translation, $validator, $emitter);
   }
 
   /**

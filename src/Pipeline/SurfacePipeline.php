@@ -7,6 +7,7 @@ namespace Drupal\surface\Pipeline;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\Secrets;
@@ -15,7 +16,6 @@ use Drupal\surface\SurfaceInterface;
 use PortableSchema\Builder\Schema;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\ResourceBuild\OutputsStorageInterface;
-use Drupal\surface\Validation\ConstraintRunner;
 use Drupal\surface\Validation\PortableValidator;
 
 /**
@@ -98,8 +98,6 @@ final class SurfacePipeline implements SurfacePipelineInterface {
   /**
    * Constructs a SurfacePipeline, and the three verbs over its services.
    *
-   * @param \Drupal\surface\Validation\ConstraintRunner $constraintRunner
-   *   The constraint runner, which holds an output to its definition.
    * @param \Drupal\surface\Options\SurfaceOptions $options
    *   The options service, asked one question and only when a value has
    *   already been refused: is this value among the ones its key offers?
@@ -114,18 +112,21 @@ final class SurfacePipeline implements SurfacePipelineInterface {
    *   container when it is finally rendered.
    * @param \Drupal\surface\Validation\PortableValidator $validator
    *   The validator that holds the values to the document they are served
-   *   with.
+   *   with, and the outputs to theirs.
+   * @param \Drupal\surface\Contract\ContractEmitter $emitter
+   *   The emitter, whose writer of the outputs' validation document the
+   *   conform verb holds outputs to.
    */
   public function __construct(
-    protected readonly ConstraintRunner $constraintRunner,
     protected readonly SurfaceOptions $options,
     TranslationInterface $string_translation,
     PortableValidator $validator,
+    ContractEmitter $emitter,
   ) {
     $this->stringTranslation = $string_translation;
     $this->accepting = new Accepting($options, $string_translation);
     $this->validating = new Validating($validator, $options, $string_translation, $this->accepting, $this);
-    $this->conforming = new Conforming($constraintRunner, $string_translation);
+    $this->conforming = new Conforming($validator, $emitter->outputsDocument(), $this, $string_translation);
   }
 
   /**

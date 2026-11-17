@@ -22,10 +22,8 @@ use Drupal\Core\TypedData\MapDataDefinition;
  *
  * It walks what the data surface itself holds: its maps of entries, each
  * entry's definition, children's shells, ports, and what refinement
- * holds. A child data surface keeps its own. A port's key is held as its
- * schema (Attachment::$wired), which holds no map, and, for a class
- * outside NodeDefinition::DERIVED, as its definition beside it
- * (Attachment::$wiredDefinitions), which is walked.
+ * holds. A child data surface keeps its own, and a port's key is held as
+ * its schema (Attachment::$wired), which holds no map.
  *
  * Decision: see
  * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
@@ -111,12 +109,6 @@ final class SerializedMaps {
       if ($value instanceof ListDataDefinitionInterface) {
         static::walk($value->getItemDefinition(), $maps, $seen);
       }
-      return;
-    }
-    if ($value instanceof Attachment) {
-      // The definitions it keeps of its ports' keys of a class outside
-      // NodeDefinition::DERIVED; its child keeps its own.
-      static::walk($value->wiredDefinitions, $maps, $seen);
       return;
     }
     if (in_array($value::class, self::WALKED, TRUE) || str_starts_with($value::class, 'Drupal\\surface\\Refinement\\')) {

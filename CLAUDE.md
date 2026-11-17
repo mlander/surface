@@ -639,12 +639,12 @@ the record of the rework that brought the module to the pattern.
   (`surface.constraint_runner`), the one place a typed value is built to
   run a constraint on a definition a data surface holds: `check()`, one
   plugin on one value, alone, for every `drupal:<id>` check the provider
-  answers; `conforms()`, a value against a whole definition with the
-  constraints it implies, for outputs, a watched value and a site's or a
-  route's value. Nothing else takes the typed data manager to validate
-  such a value; host storage validates its own typed config and
-  entities, and host readers build typed objects to read them. Surface's
-  own seven constraint plugins run on the plain value (`VALUE_ONLY`, by
+  answers. A whole value is never held here: outputs, a watched value
+  and a site's or a route's value (`KeyPaths`) are held by the dialect's
+  validator (**Outputs conform**, below). Nothing else takes the typed data
+  manager to validate such a value; host storage validates its own typed
+  config and entities, and host readers build typed objects to read
+  them. Surface's own eight constraint plugins run on the plain value (`VALUE_ONLY`, by
   plugin id the class Surface ships, the plain path taken only while the
   constraint manager names that class; through a plain validator with
   core's `DrupalTranslator` that runs a constraint whatever its groups;
@@ -653,6 +653,28 @@ the record of the rework that brought the module to the pattern.
   role, a list that only shrinks: the lines outside the edges equal
   `OUTSIDE_THE_EDGES`, and the edge files are named in the test
   (`docs/decisions.md#one-adapter-runs-a-constraint-the-typed-data-footprint-is-pinned`).
+- **Outputs conform**: `conformOutput()` (`Pipeline\Conforming`) strips
+  `NotEmitted`, refuses an object (`type`), a key nothing declares at any
+  depth (`unknown_key`) and an absent required output ("@label was not
+  emitted."), then holds the rest by the dialect's validator to the
+  outputs' validation document (`Contract\OutputsDocument`: the writer
+  of a key's output, checks kept, every object that names keys closed, a
+  map that names none `type: object`), in the input path's codes; the
+  served outputs document is that document less its checks and
+  messages. The runner holds every resource's outputs, logs a failure or
+  a throw and serves them as given; the tool door always runs the Tool
+  API's own check and leaves out only what it refuses. A secret output is
+  refused at declaration. The watched-value check
+  (`admits(Schema $schema, $value)`) holds one value the same way, as the
+  one output of `Surface::holding()`, and so does `KeyPaths` for a site's
+  or a route's value, each spelled first as the document spells it (a
+  date and time with its offset). `KeyPaths` hands on the very value it
+  held; only the watched-value check reads a scalar at a string key as
+  its text. A link field's URI is text
+  held to `SurfaceLinkUri` (a scheme, as core's link field takes),
+  since the `uri` format refuses `route:<nolink>`
+  (`docs/decisions.md#outputs-conform-through-the-dialects-validator`,
+  `docs/decisions.md#a-link-is-held-to-what-a-link-field-takes`).
 - **Built node**: what `Contract\DefinitionSchema::of()` answers for
   one definition, a static, pure function of the definition: no service,
   no request, no options resolver, no plugin manager, no rendering
@@ -879,9 +901,9 @@ the record of the rework that brought the module to the pattern.
   stage (`Stageable`, it exists, the account may write into it), the
   context, the access class made decisive and ANDed with the stage's,
   then the build and the storage with the stage, the pipeline's
-  `submit()`, and the outputs, the stage resource's held to the surface
-  (`conformOutput()`; a mismatch logged, never thrown after a commit,
-  `OperationRun::conformed()`), every `NotEmitted` key stripped whether
+  `submit()`, and the outputs, every resource's held to the surface
+  (`conformOutput()`; a mismatch or a throw logged, never thrown after a
+  commit, `OperationRun::conformed()`), every `NotEmitted` key stripped whether
   or not they conform. `gate()` stops
   after the access and builds nothing itself, `run(values: NULL)` after
   the build (a resource with no storage of its own is built with none,
@@ -932,7 +954,7 @@ the record of the rework that brought the module to the pattern.
   refiner prepare; `ResourceOperationToolBase::refusal()` turns a
   refusal into the result; a committed write is never answered as a
   refusal: outputs the Tool API's own check would refuse are left out
-  and logged, and only a refusal of the inputs is rewritten into a
+  and logged, whether or not they conformed, and only a refusal of the inputs is rewritten into a
   document that says nothing was committed), the form's runs of the stage's own
   operations (`stageRun()`) and the examples that ran one by hand for an
   account; an install hook acts for none and calls the pipeline; the
@@ -1628,6 +1650,7 @@ src/Contract/            The served contract's emitter (a Portable Schema
                          walks the frames, PropertySchema writes each key
                          from its projected node,
                          Conditionals the if/then, DocumentHead the top,
+                         OutputsDocument the outputs' validation document,
                          PortableKeywords the dialect's portable-check and
                          x-portable-messages, PortableUi its
                          x-portable-ui, PortableLinks its

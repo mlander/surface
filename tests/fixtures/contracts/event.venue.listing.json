@@ -92,6 +92,7 @@
                         "type": "integer"
                     }
                 },
+                "additionalProperties": false,
                 "required": [
                     "items",
                     "total"

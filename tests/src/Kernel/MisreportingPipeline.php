@@ -29,6 +29,11 @@ final class MisreportingPipeline implements SurfacePipelineInterface {
   public ?\Throwable $throws = NULL;
 
   /**
+   * What conformOutput() throws, when set.
+   */
+  public ?\Throwable $conformThrows = NULL;
+
+  /**
    * What outputs() answers, when set.
    *
    * @var array<string, mixed>|null
@@ -65,6 +70,9 @@ final class MisreportingPipeline implements SurfacePipelineInterface {
    * {@inheritdoc}
    */
   public function conformOutput(SurfaceInterface $surface, array $output): ViolationSet {
+    if ($this->conformThrows !== NULL) {
+      throw $this->conformThrows;
+    }
     return $this->inner->conformOutput($surface, $output);
   }
 

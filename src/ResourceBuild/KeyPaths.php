@@ -10,6 +10,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Computed;
 use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceBuilder;
@@ -17,8 +18,10 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Pipeline\Coercion;
 use Drupal\surface\Pipeline\SurfacePipeline;
+use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\ValueState;
-use Drupal\surface\Validation\ConstraintRunner;
+use Drupal\surface\Refinement\WatchedValueCheck;
+use Drupal\surface\Surface;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -35,8 +38,9 @@ use PortableSchema\Builder\Schema;
  * whole attached structure, a secret or a computed key. A value is read
  * through the coercion table, so text as a form posts it (`40`, `true`, a
  * JSON list or object) and a value already typed (from YAML or PHP) both
- * arrive in the key's type, and held to the key's definition with typed
- * data, its constraints included.
+ * arrive in the key's type, and held to the key's schema by the dialect's
+ * validator, as an output is (SurfacePipelineInterface::conformOutput()),
+ * its checks included.
  *
  * Each refusal names where the value came from, the resource, the key and
  * why: `$where` carries `resource` and `at` (the path its keys sit under
@@ -51,11 +55,11 @@ use PortableSchema\Builder\Schema;
  *
  * A key's facts are read from its node. On the sealed resource that is the
  * entry's node (Entry::schema()), stepped down in step with the
- * definition, which is handed to the constraint runner alone; a key that
- * holds a child frame's too. What the build writes (writeDefaults(),
- * resolve(), setDefault()) is a builder's definitions before sealing,
- * which no entry holds: held() reads such a definition's facts from the
- * definition, and reads no node for it.
+ * definition; a key that holds a child frame's too. What the build writes
+ * (writeDefaults(), resolve(), setDefault()) is a builder's definitions
+ * before sealing, which no entry holds: held() reads such a definition's
+ * facts from the definition, and holds the value to the schema read from
+ * it (DefinitionSchema::of()).
  *
  * Decision: see docs/decisions.md#a-site-sets-a-default-in-configuration.
  * Decision: see
@@ -69,11 +73,11 @@ final class KeyPaths {
   /**
    * Constructs the key paths.
    *
-   * @param \Drupal\surface\Validation\ConstraintRunner $constraintRunner
-   *   The constraint runner, which holds a value to its key's definition.
+   * @param \Drupal\surface\Pipeline\SurfacePipelineInterface $pipeline
+   *   The pipeline, whose conform verb holds a value to its key's schema.
    */
   public function __construct(
-    protected readonly ConstraintRunner $constraintRunner,
+    protected readonly SurfacePipelineInterface $pipeline,
   ) {}
 
   /**
@@ -264,8 +268,9 @@ final class KeyPaths {
    * Reads a value through the coercion table and holds it to its key.
    *
    * The key's facts (a secret, computed, a list or a map, its data type and
-   * whether it holds a date alone) are read from its node; the definition
-   * is handed to the constraint runner.
+   * whether it holds a date alone) are read from its node, or from the
+   * definition where no entry holds one. The value handed back is the value
+   * held (violation()).
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key's definition.
@@ -285,8 +290,9 @@ final class KeyPaths {
    *   The value, in the key's type.
    *
    * @throws \LogicException
-   *   When the key takes no such value: a secret, a computed key, or a
-   *   list or a map fixed.
+   *   When the key takes no such value: a secret, a computed key, a list
+   *   or a map fixed, or a key of the `any` type no document is written
+   *   for.
    * @throws \Drupal\surface\ResourceBuild\ValueNotAcceptedException
    *   When the value does not fit the key.
    */
@@ -305,6 +311,11 @@ final class KeyPaths {
     $complex = $node === NULL ? $definition instanceof ComplexDataDefinitionInterface : DefinitionSchema::isComplex($node);
     if ($fixing && ($list || $complex)) {
       throw $this->refusal('%s: "%s" on %s holds %s, and a fixed value is one value of a key that holds one: fix each key %s.', $where['source'], $where['at'] . $path, $where['resource'], $list ? 'a list' : 'a map', $list ? 'of a key that holds one' : 'inside it by its path');
+    }
+    if (!$list && !$complex && ($node === NULL ? $definition->getDataType() : NodeFacts::dataType($node)) === LeafTypes::ANY && !($node === NULL ? LeafTypes::heldAsAny($definition) : DefinitionSchema::heldAsAny($node)) && ValueState::isConfigured($raw)) {
+      // No document is written for such a key, at inputs or here, so no
+      // value can be held to it; validate() throws for it the same way.
+      throw $this->refusal('%s: "%s" on %s is of the any type, which no JSON Schema type is written for, so no value can be held to it.', $where['source'], $where['at'] . $path, $where['resource']);
     }
     $value = NULL;
     $problem = NULL;
@@ -592,7 +603,7 @@ final class KeyPaths {
    *   The key's node, whose facts are read; NULL for a builder's
    *   definition, whose facts are read from it (held()).
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key's definition, stepped down in step for the constraint runner.
+   *   The key's definition, stepped down in step with the schema.
    * @param mixed $raw
    *   The value as given.
    *
@@ -653,18 +664,27 @@ final class KeyPaths {
   }
 
   /**
-   * Holds a value to its key's definition, as the pipeline would.
+   * Holds a value to its key's schema, as the pipeline holds an output.
+   *
+   * The key's schema is held as the one output of a frame
+   * (Surface::holding()), by the dialect's validator, the value spelled as
+   * the document spells it (WatchedValueCheck::spelled(): a date and time
+   * with its offset), as validate() holds what accept() answered. The
+   * value itself is held: a scalar at a string key is not read as its
+   * text here, so `TRUE` there is refused with `type`. A value that holds
+   * nothing never reaches the validator: it is refused where the key is
+   * required, the module's own rule, and taken otherwise.
    *
    * @param \PortableSchema\Builder\Schema|null $node
-   *   The key's node, whose facts are read; NULL for a builder's
-   *   definition, whose facts are read from it (held()).
+   *   The key's schema; NULL for a builder's definition, whose schema is
+   *   read from it (held()).
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key's definition, which the constraint runner is handed.
+   *   The key's definition.
    * @param mixed $value
    *   The value, coerced.
    *
    * @return string|null
-   *   The first violation's message, or NULL when the value fits.
+   *   The first refusal's message, or NULL when the value fits.
    */
   protected function violation(?Schema $node, DataDefinitionInterface $definition, mixed $value): ?string {
     $properties = static::propertiesOf($node, $definition);
@@ -680,15 +700,16 @@ final class KeyPaths {
       }
       return NULL;
     }
-    if (is_array($value) && ($node === NULL ? $definition->isRequired() : NodeFacts::isRequired($node)) && method_exists($definition, 'setRequired')) {
-      // Required means configured, and the empty list is, as the pipeline
-      // reads it; core's NotNull reads it as null.
-      // Decision: see docs/decisions.md#required-means-must-hold-a-value.
-      $definition = (clone $definition)->setRequired(FALSE);
+    if (!ValueState::isConfigured($value)) {
+      $label = (string) ($definition->getLabel() ?? '');
+      return ($node === NULL ? $definition->isRequired() : NodeFacts::isRequired($node))
+        ? sprintf('%s is required.', $label === '' ? 'A value' : $label)
+        : NULL;
     }
-    foreach ($this->constraintRunner->conforms($definition, $value) as $violation) {
-      $at = (string) $violation->getPropertyPath();
-      return ($at === '' ? '' : $at . ': ') . strip_tags((string) $violation->getMessage());
+    $schema = $node ?? DefinitionSchema::of($definition);
+    foreach ($this->pipeline->conformOutput(Surface::holding($schema), ['value' => WatchedValueCheck::spelled($schema, $value)]) as $violation) {
+      $at = $violation->path;
+      return ($at === '' ? '' : $at . ': ') . strip_tags((string) $violation->message);
     }
     return NULL;
   }

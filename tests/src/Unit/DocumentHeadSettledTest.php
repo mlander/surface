@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Unit;
 
 use Drupal\surface\Contract\DocumentHead;
+use Drupal\surface\Contract\OutputsDocument;
 use Drupal\surface\Contract\PropertySchema;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -70,7 +71,7 @@ final class DocumentHeadSettledTest extends UnitTestCase {
   public function testEmptySubschemaIsKept(string $json, string $expected): void {
     // settled() reads nothing of the property schema.
     $propertySchema = (new \ReflectionClass(PropertySchema::class))->newInstanceWithoutConstructor();
-    $head = new DocumentHead($propertySchema);
+    $head = new DocumentHead($propertySchema, new OutputsDocument($propertySchema));
     $settled = (new \ReflectionMethod($head, 'settled'))->invoke($head, Schema::from(json_decode($json)));
     $this->assertSame($expected, json_encode($settled, JSON_UNESCAPED_SLASHES));
   }

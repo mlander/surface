@@ -483,10 +483,9 @@ final class Attaching {
    * @param array<string, \Drupal\surface\SurfaceInterface|null> $listed
    *   The maps built so far, by key.
    *
-   * @return array<string, array<string, \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface>>
+   * @return array<string, array<string, \PortableSchema\Builder\Schema>>
    *   For each entry, the schema of the sibling's entry each port reads,
-   *   as declared, by port: what a refusal in the entry names; the
-   *   definition of an entry its source gave as one.
+   *   as declared, by port: what a refusal in the entry names.
    *
    * @throws \LogicException
    *   Naming the owner, the port and what is wrong with the wiring.
@@ -513,9 +512,8 @@ final class Attaching {
       }
       $read = $listed[$sibling] ?? NULL;
       foreach (array_keys($wired) as $entry) {
-        $held = $read?->getDefinitions()->entry((string) $entry);
-        $match = $held?->schema();
-        if ($held === NULL || $match === NULL) {
+        $match = $read?->getDefinitions()->entry((string) $entry)?->schema();
+        if ($match === NULL) {
           throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", which has no "%s" entry: %s listed it for one map and not the other.', $definition->id, $port, $id, $key, $sibling, $entry, $each['from']));
         }
         $type = NodeFacts::dataType($match);
@@ -526,10 +524,8 @@ final class Attaching {
           $shape = NodeFacts::shape($match);
           throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", whose "%s" entry is declared with %s, and the port reads the shape %s: the sibling map declares its entries with it, addEach(\'%s\', <shape>::class, from: ..., label: ...).', $definition->id, $port, $id, $key, $sibling, $entry, $shape === NULL ? 'a type alone' : 'the shape ' . $shape, $ports[$port]->shape, $sibling));
         }
-        // Its sealed entry's schema itself: a schema is never written. An
-        // entry of a class outside NodeDefinition::DERIVED is wired by the
-        // definition it holds, which Attachment::withReads() keeps.
-        $wired[$entry][$port] = $held->isNodeFirst() ? $match : $held->definition();
+        // Its sealed entry's schema itself: a schema is never written.
+        $wired[$entry][$port] = $match;
       }
     }
     foreach ($ports as $port) {

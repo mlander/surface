@@ -1,6 +1,6 @@
 {
   "cases": 720,
-  "accepted": 565,
+  "accepted": 573,
   "secrets": "1B=Rr nA=wd .m=wd",
   "sets": {
     "defaults": {
@@ -11,7 +11,7 @@
         "/": [null,"1B=G8 SJ=NA AO=T7 Sn=3s3 Q0=41 s_=N3 Vg=ok W8=l_ tW=Wh Iw=Uk q9=R6 oG=BD eH=yc sQ=4_ F.=UP Qe=i3 lP=jh .K=KD -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","Sn=2k Vg=N. lP=au Eb=e9 -.K",null],
         "/headline": [null,null,"wn=No Zs=No","","","wn=_M Zs=_M","","wn=6N Zs=6N 6P=eAS fk=xP","wn=ka Zs=ka","^wn=gJ Zs=gJ","wn=g_ Zs=g_","wn=gJ Zs=gJ","wn=g_ Zs=g_","wn=gJ Zs=gJ","wn=g_ Zs=g_","wn=Jr Zs=Jr","wn=3s. Zs=3s.","wn=PG Zs=PG","wn=px Zs=px","wn=SN Zs=SN","wn=UR Zs=UR","wn=L_ Zs=L_","wn=ch Zs=ch 6P=_p ty=Vh","","^wn=3N Zs=3N",null,"^NA=Ub 3i=Ub eb=9i N7=ch Gn=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo -iG","^1B=G8 SJ=wN AO=Nq Sn=Ca Q0=Wh k9=TB cF=2. FJ=ka lP=eAS sD=m2 -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^wn=Kr Zs=Kr"],
         "/entity_type": [null,null,null,null,null,"sF=FB hR=FB","","","sF=QH hR=QH","","","sF=No hR=No 6P=E5 n0=_2","","","sF=_M hR=_M n0=5C","","^sF=6N hR=6N 6P=.m q3=xP","sF=ka hR=ka","^sF=gJ hR=gJ 6P=E5 n0=J6","sF=g_ hR=g_ n0=a.4","sF=gJ hR=gJ n0=J6","sF=g_ hR=g_ n0=a.4","sF=gJ hR=gJ n0=J6","sF=g_ hR=g_ n0=a.4","sF=Jr hR=Jr n0=IV","sF=3s. hR=3s. n0=Ze","sF=PG hR=PG n0=kp","sF=px hR=px n0=e0","sF=SN hR=SN n0=E4","sF=UR hR=UR n0=RP","sF=L_ hR=L_ n0=N9","^sF=ch hR=ch 6P=sq UfJ=5VC","","^sF=3N hR=3N 6P=E5 n0=ng",null,"^NA=Sp 3i=Sp bd=VB N7=ch Gn=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo -An","^1B=G8 SJ=wN AO=Nq Sn=4f Q0=Uk k9=TB cF=2. FJ=ka lP=.m rn=m2 -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","1B=Xg SJ=hD AO=ow Sn=GLJ -Q0 -k9 -cF -FJ -lP"],
-        "/bundle": [null,"37=No OI=No 6P=S5 Ln=Ux","","","37=_M OI=_M Ln=Tl","","1B=Xg SJ=hD AO=nl Sn=LO -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","","^37=gJ OI=gJ 6P=S5 Ln=Wq","37=g_ OI=g_ Ln=5U","37=gJ OI=gJ Ln=Wq","37=g_ OI=g_ Ln=5U","37=gJ OI=gJ Ln=Wq","37=g_ OI=g_ Ln=5U","37=Jr OI=Jr Ln=Na","37=3s. OI=3s. Ln=EZ","37=PG OI=PG Ln=.P","37=px OI=px Ln=1a","37=SN OI=SN Ln=.a1","37=UR OI=UR Ln=sj","37=L_ OI=L_ Ln=_Z",null,null,"37=3N OI=3N Ln=k.",null,"^NA=y6 3i=y6 bd=VB eb=9i Gn=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo -CS","^1B=G8 SJ=wN AO=Nq Sn=tJ Q0=R6 k9=TB cF=2. FJ=6N lP=oA nw=1u -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^37=Kr OI=Kr 6P=S5 Ln=ZW"],
+        "/bundle": [null,"37=No OI=No 6P=S5 Ln=Ux","","","37=_M OI=_M Ln=Tl","","^37=6N OI=6N 6P=oA lI=bvq","37=ka OI=ka","^37=gJ OI=gJ 6P=S5 Ln=Wq","37=g_ OI=g_ Ln=5U","37=gJ OI=gJ Ln=Wq","37=g_ OI=g_ Ln=5U","37=gJ OI=gJ Ln=Wq","37=g_ OI=g_ Ln=5U","37=Jr OI=Jr Ln=Na","37=3s. OI=3s. Ln=EZ","37=PG OI=PG Ln=.P","37=px OI=px Ln=1a","37=SN OI=SN Ln=.a1","37=UR OI=UR Ln=sj","37=L_ OI=L_ Ln=_Z",null,null,"37=3N OI=3N Ln=k.",null,"^NA=y6 3i=y6 bd=VB eb=9i Gn=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo -CS","^1B=G8 SJ=wN AO=Nq Sn=tJ Q0=R6 k9=TB cF=2. FJ=6N lP=oA nw=1u -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^37=Kr OI=Kr 6P=S5 Ln=ZW"],
         "/field": [null,"lR=No Nu=No","","","lR=_M Nu=_M","","lR=6N Nu=6N 6P=Hi D8=pz","lR=ka Nu=ka","^lR=gJ Nu=gJ","lR=g_ Nu=g_","lR=gJ Nu=gJ","lR=g_ Nu=g_","lR=gJ Nu=gJ","lR=g_ Nu=g_","lR=Jr Nu=Jr","lR=3s. Nu=3s.","lR=PG Nu=PG","lR=px Nu=px","lR=SN Nu=SN","lR=UR Nu=UR","lR=L_ Nu=L_",null,null,"lR=3N Nu=3N",null,"^NA=0UH 3i=0UH bd=VB eb=9i N7=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo -Dp","^1B=G8 SJ=wN AO=Nq Sn=_4 Q0=BD k9=TB cF=2. FJ=6N lP=Hi 5Y=1u -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^lR=Kr Nu=Kr"],
         "/limit": [null,"Di=r3 3i=VX bd=VB eb=9i N7=ch Gn=ch AN=r3 WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo",null,"^PT=nX mA=nX","","","PT=Oa mA=Oa 6P=va JP=av","PT=_M mA=_M JP=U0E","^PT=jd mA=jd","PT=Cx mA=Cx 6P=Sj Zn=VV","","^PT=jd mA=jd","PT=Cx mA=Cx 6P=Sj Zn=VV","^PT=jd mA=jd","PT=Cx mA=Cx 6P=Sj Zn=VV","^PT=jd mA=jd","PT=Cx mA=Cx 6P=Sj Zn=VV","^PT=3s. mA=3s. 6P=va JP=U0E","PT=PG mA=PG","PT=px mA=px","PT=SN mA=SN","PT=UR mA=UR","PT=L_ mA=L_","^PT=ch mA=ch 6P=fw Up2=sT","","^PT=.ar mA=.ar 6P=Y5 Ci=KVx","^PT=3N mA=3N 6P=va JP=U0E",null,"^NA=nfB 3i=nfB bd=VB eb=9i N7=ch Gn=ch WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo -Di","^1B=G8 SJ=wN AO=Nq Sn=Tp Q0=yc k9=jy cF=2. FJ=ka lP=va GX=lW -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^PT=Kr mA=Kr 6P=va JP=U0E","PT=4L mA=4L","PT=Ghz mA=Ghz","PT=yZ mA=yZ","PT=TA mA=TA","PT=WG mA=WG","PT=9J mA=9J","PT=GLI mA=GLI","PT=0UY mA=0UY","PT=kRw mA=kRw","^PT=454 mA=454 6P=Y5 Ci=KVx","^PT=6W mA=6W 6P=va JP=U0E"],
         "/presentation": [null,null,"1B=G8 SJ=EF AO=F_ Sn=Ln Q0=UP 4v=4_ fi=1T yq=5f 2S=N3 o3=Rw lP=Hb Rk=1h -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","","",null,null,null,"^ET=No cC=No s4=5f 6P=Ns mz=qT","","","ET=_M cC=_M mz=oc","","ET=6N cC=6N 6P=SX PX=xP -mz","ET=ka cC=ka","ET=gJ cC=gJ 6P=Ns mz=QO -PX","ET=g_ cC=g_ mz=6C","ET=gJ cC=gJ mz=QO","ET=g_ cC=g_ mz=6C","ET=gJ cC=gJ mz=QO","ET=g_ cC=g_ mz=6C","ET=Jr cC=Jr mz=CP","ET=3s. cC=3s. mz=55","ET=PG cC=PG mz=4o","ET=px cC=px mz=F6","ET=SN cC=SN mz=DE","ET=UR cC=UR mz=T0","ET=L_ cC=L_ mz=OP","ET=ch cC=ch 6P=1H gx=AH aa=oE -mz","","^ET=3N cC=3N s4=5f 6P=Ns mz=uK",null,"^NA=T. 3i=T. bd=VB eb=9i N7=ch Gn=ch AN=Kz PJ=5f 5L=6N v5=6G Z2=LM fH=Jo -wf_","^1B=G8 SJ=wN AO=Nq Sn=0F Q0=4_ k9=TB cF=2. FJ=ka lP=SX c7=m2 -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^ET=Kr cC=Kr s4=5f 6P=Ns mz=vW"],
@@ -38,7 +38,7 @@
       "cases": {
         "/": [null,"1B=G8 SJ=NA AO=T7 Sn=3s3 Q0=41 s_=N3 Vg=ok W8=l_ tW=Wh Iw=Uk q9=R6 oG=BD eH=yc sQ=4_ F.=UP Qe=i3 lP=jh .K=KD -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","Sn=2k Vg=N. lP=au Eb=e9 -.K",null],
         "/entity_type": [null,"sF=9i hR=9i","","","",null,null,null,"sF=QH hR=QH","","","sF=No hR=No 6P=E5 n0=_2","","","sF=_M hR=_M n0=5C","","^sF=6N hR=6N 6P=.m q3=xP","sF=ka hR=ka","^sF=gJ hR=gJ 6P=E5 n0=J6","sF=g_ hR=g_ n0=a.4","sF=gJ hR=gJ n0=J6","sF=g_ hR=g_ n0=a.4","sF=gJ hR=gJ n0=J6","sF=g_ hR=g_ n0=a.4","sF=Jr hR=Jr n0=IV","sF=3s. hR=3s. n0=Ze","sF=PG hR=PG n0=kp","sF=px hR=px n0=e0","sF=SN hR=SN n0=E4","sF=UR hR=UR n0=RP","sF=L_ hR=L_ n0=N9","^sF=ch hR=ch 6P=sq UfJ=5VC","","^sF=3N hR=3N 6P=E5 n0=ng",null,"^sF=9i NA=Sp 3i=Sp bd=VB N7=ch Gn=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo hR=9i -An","^1B=G8 SJ=wN AO=Nq Sn=4f Q0=Uk k9=TB cF=2. FJ=ka lP=.m rn=m2 -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","1B=Xg SJ=hD AO=ow Sn=GLJ -Q0 -k9 -cF -FJ -lP"],
-        "/bundle": [null,"37=No OI=No 6P=S5 Ln=HS","","","37=_M OI=_M Ln=a3","","1B=Xg SJ=hD AO=nl Sn=LO -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","","^37=gJ OI=gJ 6P=S5 Ln=L9","37=g_ OI=g_ Ln=9S","37=gJ OI=gJ Ln=L9","37=g_ OI=g_ Ln=9S","37=gJ OI=gJ Ln=L9","37=g_ OI=g_ Ln=9S","37=Jr OI=Jr Ln=cl","37=3s. OI=3s. Ln=.E","37=PG OI=PG Ln=rU","37=px OI=px Ln=tG","37=SN OI=SN Ln=Cw","37=UR OI=UR Ln=rY","37=L_ OI=L_ Ln=6V",null,null,"37=3N OI=3N Ln=f_",null,"^NA=y6 3i=y6 bd=VB eb=FB Gn=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo -CS","^1B=G8 SJ=wN AO=Nq Sn=tJ Q0=R6 k9=TB cF=2. FJ=6N lP=oA nw=1u -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^37=Kr OI=Kr 6P=S5 Ln=g0"],
+        "/bundle": [null,"37=No OI=No 6P=S5 Ln=HS","","","37=_M OI=_M Ln=a3","","^37=6N OI=6N 6P=oA lI=Ju","37=ka OI=ka","^37=gJ OI=gJ 6P=S5 Ln=L9","37=g_ OI=g_ Ln=9S","37=gJ OI=gJ Ln=L9","37=g_ OI=g_ Ln=9S","37=gJ OI=gJ Ln=L9","37=g_ OI=g_ Ln=9S","37=Jr OI=Jr Ln=cl","37=3s. OI=3s. Ln=.E","37=PG OI=PG Ln=rU","37=px OI=px Ln=tG","37=SN OI=SN Ln=Cw","37=UR OI=UR Ln=rY","37=L_ OI=L_ Ln=6V",null,null,"37=3N OI=3N Ln=f_",null,"^NA=y6 3i=y6 bd=VB eb=FB Gn=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo -CS","^1B=G8 SJ=wN AO=Nq Sn=tJ Q0=R6 k9=TB cF=2. FJ=6N lP=oA nw=1u -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^37=Kr OI=Kr 6P=S5 Ln=g0"],
         "/field": [null,"lR=No Nu=No","","","lR=_M Nu=_M","","lR=6N Nu=6N 6P=Hi D8=pz","lR=ka Nu=ka","^lR=gJ Nu=gJ","lR=g_ Nu=g_","lR=gJ Nu=gJ","lR=g_ Nu=g_","lR=gJ Nu=gJ","lR=g_ Nu=g_","lR=Jr Nu=Jr","lR=3s. Nu=3s.","lR=PG Nu=PG","lR=px Nu=px","lR=SN Nu=SN","lR=UR Nu=UR","lR=L_ Nu=L_",null,null,"lR=3N Nu=3N",null,"^NA=0UH 3i=0UH bd=VB eb=FB N7=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo -Dp","^1B=G8 SJ=wN AO=Nq Sn=_4 Q0=BD k9=TB cF=2. FJ=6N lP=Hi 5Y=1u -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^lR=Kr Nu=Kr"]
       }
     },
@@ -49,7 +49,7 @@
       "cases": {
         "/": [null,"1B=G8 SJ=NA AO=T7 Sn=3s3 Q0=41 s_=N3 Vg=ok W8=l_ tW=Wh Iw=Uk q9=R6 oG=BD eH=yc sQ=4_ F.=UP Qe=i3 lP=jh .K=KD -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","Sn=2k Vg=N. lP=au Eb=e9 -.K",null],
         "/entity_type": [null,"sF=9i hR=9i","","","","sF=FB hR=FB","","",null,null,null,"sF=No hR=No 6P=E5 n0=_2","","","sF=_M hR=_M n0=5C","","^sF=6N hR=6N 6P=.m q3=xP","sF=ka hR=ka","^sF=gJ hR=gJ 6P=E5 n0=J6","sF=g_ hR=g_ n0=a.4","sF=gJ hR=gJ n0=J6","sF=g_ hR=g_ n0=a.4","sF=gJ hR=gJ n0=J6","sF=g_ hR=g_ n0=a.4","sF=Jr hR=Jr n0=IV","sF=3s. hR=3s. n0=Ze","sF=PG hR=PG n0=kp","sF=px hR=px n0=e0","sF=SN hR=SN n0=E4","sF=UR hR=UR n0=RP","sF=L_ hR=L_ n0=N9","^sF=ch hR=ch 6P=sq UfJ=5VC","","^sF=3N hR=3N 6P=E5 n0=ng",null,"^sF=9i NA=Sp 3i=Sp bd=VB N7=ch Gn=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo hR=9i -An","^1B=G8 SJ=wN AO=Nq Sn=4f Q0=Uk k9=TB cF=2. FJ=ka lP=.m rn=m2 -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","1B=Xg SJ=hD AO=ow Sn=GLJ -Q0 -k9 -cF -FJ -lP"],
-        "/bundle": [null,"37=No OI=No 6P=S5 Ln=uk","","","37=_M OI=_M Ln=k4","","1B=Xg SJ=hD AO=nl Sn=LO -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","","^37=gJ OI=gJ 6P=S5 Ln=bv","37=g_ OI=g_ Ln=Gu","37=gJ OI=gJ Ln=bv","37=g_ OI=g_ Ln=Gu","37=gJ OI=gJ Ln=bv","37=g_ OI=g_ Ln=Gu","37=Jr OI=Jr Ln=qM","37=3s. OI=3s. Ln=tD","37=PG OI=PG Ln=eA2","37=px OI=px Ln=.2","37=SN OI=SN Ln=sM","37=UR OI=UR Ln=Mc","37=L_ OI=L_ Ln=uB",null,null,"37=3N OI=3N Ln=0H",null,"^NA=y6 3i=y6 bd=VB eb=QH Gn=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo -CS","^1B=G8 SJ=wN AO=Nq Sn=tJ Q0=R6 k9=TB cF=2. FJ=6N lP=oA nw=1u -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^37=Kr OI=Kr 6P=S5 Ln=Wc"],
+        "/bundle": [null,"37=No OI=No 6P=S5 Ln=uk","","","37=_M OI=_M Ln=k4","","^37=6N OI=6N 6P=oA lI=zX","37=ka OI=ka","^37=gJ OI=gJ 6P=S5 Ln=bvy","37=g_ OI=g_ Ln=Gu","37=gJ OI=gJ Ln=bvy","37=g_ OI=g_ Ln=Gu","37=gJ OI=gJ Ln=bvy","37=g_ OI=g_ Ln=Gu","37=Jr OI=Jr Ln=qM","37=3s. OI=3s. Ln=tD","37=PG OI=PG Ln=eA2","37=px OI=px Ln=.2","37=SN OI=SN Ln=sM","37=UR OI=UR Ln=Mc","37=L_ OI=L_ Ln=uB",null,null,"37=3N OI=3N Ln=0H",null,"^NA=y6 3i=y6 bd=VB eb=QH Gn=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo -CS","^1B=G8 SJ=wN AO=Nq Sn=tJ Q0=R6 k9=TB cF=2. FJ=6N lP=oA nw=1u -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^37=Kr OI=Kr 6P=S5 Ln=Wc"],
         "/field": [null,"lR=No Nu=No","","","lR=_M Nu=_M","","lR=6N Nu=6N 6P=Hi D8=pz","lR=ka Nu=ka","^lR=gJ Nu=gJ","lR=g_ Nu=g_","lR=gJ Nu=gJ","lR=g_ Nu=g_","lR=gJ Nu=gJ","lR=g_ Nu=g_","lR=Jr Nu=Jr","lR=3s. Nu=3s.","lR=PG Nu=PG","lR=px Nu=px","lR=SN Nu=SN","lR=UR Nu=UR","lR=L_ Nu=L_",null,null,"lR=3N Nu=3N",null,"^NA=0UH 3i=0UH bd=VB eb=QH N7=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo -Dp","^1B=G8 SJ=wN AO=Nq Sn=_4 Q0=BD k9=TB cF=2. FJ=6N lP=Hi 5Y=1u -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^lR=Kr Nu=Kr"]
       }
     },
@@ -59,7 +59,7 @@
       "same as base": {"''":1,"NULL":1,"echoed over an unknown key stored":1,"empty input":1,"omitted":2,"stored":2},
       "cases": {
         "/": [null,"1B=G8 SJ=NA AO=T7 Sn=3s3 Q0=41 s_=N3 Vg=ok W8=l_ tW=Wh Iw=Uk q9=R6 oG=BD eH=yc sQ=4_ F.=UP Qe=i3 lP=jh .K=KD -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","Sn=2k Vg=N. lP=au Eb=e9 -.K",null],
-        "/bundle": [null,"37=No OI=No 6P=S5 Ln=Ux","","","37=_M OI=_M Ln=Tl","","1B=Xg SJ=hD AO=nl Sn=LO -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","","^37=gJ OI=gJ 6P=S5 Ln=Wq","37=g_ OI=g_ Ln=5U","37=gJ OI=gJ Ln=Wq","37=g_ OI=g_ Ln=5U","37=gJ OI=gJ Ln=Wq","37=g_ OI=g_ Ln=5U","37=Jr OI=Jr Ln=Na","37=3s. OI=3s. Ln=EZ","37=PG OI=PG Ln=.P","37=px OI=px Ln=1a","37=SN OI=SN Ln=.a1","37=UR OI=UR Ln=sj","37=L_ OI=L_ Ln=_Z","^37=ch OI=ch","","37=3N OI=3N 6P=S5 Ln=k.",null,"^37=ch NA=y6 3i=y6 bd=VB eb=9i Gn=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo OI=ch -CS","^1B=G8 SJ=wN AO=Nq Sn=tJ Q0=R6 k9=TB cF=2. FJ=6N lP=oA nw=1u -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^37=Kr OI=Kr 6P=S5 Ln=ZW"],
+        "/bundle": [null,"37=No OI=No 6P=S5 Ln=Ux","","","37=_M OI=_M Ln=Tl","","^37=6N OI=6N 6P=oA lI=bvq","37=ka OI=ka","^37=gJ OI=gJ 6P=S5 Ln=Wq","37=g_ OI=g_ Ln=5U","37=gJ OI=gJ Ln=Wq","37=g_ OI=g_ Ln=5U","37=gJ OI=gJ Ln=Wq","37=g_ OI=g_ Ln=5U","37=Jr OI=Jr Ln=Na","37=3s. OI=3s. Ln=EZ","37=PG OI=PG Ln=.P","37=px OI=px Ln=1a","37=SN OI=SN Ln=.a1","37=UR OI=UR Ln=sj","37=L_ OI=L_ Ln=_Z","^37=ch OI=ch","","37=3N OI=3N 6P=S5 Ln=k.",null,"^37=ch NA=y6 3i=y6 bd=VB eb=9i Gn=ch AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo OI=ch -CS","^1B=G8 SJ=wN AO=Nq Sn=tJ Q0=R6 k9=TB cF=2. FJ=6N lP=oA nw=1u -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^37=Kr OI=Kr 6P=S5 Ln=ZW"],
         "/field": [null,"lR=No Nu=No 6P=nL vT=9.","","","lR=_M Nu=_M vT=Yk","","^lR=6N Nu=6N 6P=Hi D8=Lm","lR=ka Nu=ka","^lR=gJ Nu=gJ 6P=nL vT=nfG","lR=g_ Nu=g_ vT=3d","lR=gJ Nu=gJ vT=nfG","lR=g_ Nu=g_ vT=3d","lR=gJ Nu=gJ vT=nfG","lR=g_ Nu=g_ vT=3d","lR=Jr Nu=Jr vT=mj","lR=3s. Nu=3s. vT=uf","lR=PG Nu=PG vT=JI","lR=px Nu=px vT=b4","lR=SN Nu=SN vT=Fx","lR=UR Nu=UR vT=km","lR=L_ Nu=L_ vT=k5",null,null,"lR=3N Nu=3N vT=S6",null,"^NA=0UH 3i=0UH bd=VB eb=9i N7=9i AN=Kz WY=Rw PJ=5f 5L=6N v5=6G Z2=LM fH=Jo -Dp","^1B=G8 SJ=wN AO=Nq Sn=_4 Q0=BD k9=TB cF=2. FJ=6N lP=Hi 5Y=1u -wn -sF -37 -lR -PT -ET -GC -EF -Vt -Lc -3i -BM -Ex -6P","^lR=Kr Nu=Kr 6P=nL vT=qO"]
       }
     },
@@ -169,6 +169,7 @@
     "Lc": "/unmatched",
     "6P": "/validate",
     "Ln": "/validate/bundle  check.drupal:EntityBundleExists",
+    "lI": "/validate/bundle  type",
     "n0": "/validate/entity_type  check.drupal:PluginExists",
     "UfJ": "/validate/entity_type  required",
     "q3": "/validate/entity_type  type",
@@ -320,6 +321,7 @@
     "Jh": "a[\"third_party_settings surface_examples_extras type\"]",
     "Jo": "tstar",
     "Jr": "t-0",
+    "Ju": "t[{'expected':['string','null'],'actual':'boolean'},'This value must be of type string, boolean given. This applies when Entity type is URL alias.','Sentences']",
     "KD": "t[[],'Unknown key nothing_declares_this.','TranslatableMarkup']",
     "KVE": "t[{'value':'on','allowed':['star','flame',null]},'The value you selected is not a valid choice. Choose Star or Flame.','Sentences']",
     "KVx": "t[{'limit':50},'This value should be between <em class=\\'placeholder\\'>1</em> and <em class=\\'placeholder\\'>50</em>.','TranslatableMarkup']",
@@ -327,7 +329,6 @@
     "Kz": "s10",
     "L9": "t[{'bundle':'0','entity_type_id':'path_alias'},'The \\u00270\\u0027 bundle does not exist on the \\u0027path_alias\\u0027 entity type. This applies when Entity type is URL alias.','Sentences']",
     "LM": "a[\"badge\"]",
-    "LO": "tExpected argument of type \"string\", \"bool\" given",
     "L_": "toff",
     "Lm": "t[{'expected':['string','null'],'actual':'boolean'},'This value must be of type string, boolean given. This applies when Entity type is User and Bundle is User.','Sentences']",
     "Ln": "tThe value at presentation_settings is shaped for another variant than \"grid\", which presentation chose: show_summary.",
@@ -410,7 +411,8 @@
     "av": "t[{'expected':['integer'],'actual':'number'},'This value must be of type integer, number given.','TranslatableMarkup']",
     "b4": "t[{'field':'yes','entity_type_id':'user','bundle':'user'},'The \\u0027yes\\u0027 field does not exist on user user. This applies when Entity type is User and Bundle is User.','Sentences']",
     "bf": "tThe value at \"third_party_settings\" must be of type map, int given.",
-    "bv": "t[{'bundle':'0','entity_type_id':'node'},'The \\u00270\\u0027 bundle does not exist on the \\u0027node\\u0027 entity type. This applies when Entity type is Content.','Sentences']",
+    "bvq": "t[{'expected':['string','null'],'actual':'boolean'},'This value must be of type string, boolean given. This applies when Entity type is User.','Sentences']",
+    "bvy": "t[{'bundle':'0','entity_type_id':'node'},'The \\u00270\\u0027 bundle does not exist on the \\u0027node\\u0027 entity type. This applies when Entity type is Content.','Sentences']",
     "cQ": "tUnknown key(s) nothing_declares_this under third_party_settings.surface_examples_extras.",
     "ch": "snull",
     "cl": "t[{'bundle':'-0','entity_type_id':'path_alias'},'The \\u0027-0\\u0027 bundle does not exist on the \\u0027path_alias\\u0027 entity type. This applies when Entity type is URL alias.','Sentences']",
@@ -457,7 +459,6 @@
     "nfB": "a[\"headline\",\"entity_type\",\"bundle\",\"field\",\"presentation\",\"presentation_settings\",\"third_party_settings\"]",
     "nfG": "t[{'field':'0','entity_type_id':'user','bundle':'user'},'The \\u00270\\u0027 field does not exist on user user. This applies when Entity type is User and Bundle is User.','Sentences']",
     "ng": "t[{'plugin_id':'100000000000000000000'},'The \\u0027100000000000000000000\\u0027 plugin does not exist.','TranslatableMarkup']",
-    "nl": "tSymfony\\Component\\Validator\\Exception\\UnexpectedTypeException",
     "nv": "tThe value at \"presentation_settings\" must be of type map, string given.",
     "oA": "a[\"bundle  type\"]",
     "oE": "t[[],'Presentation settings depends on Presentation, which holds no value.','TranslatableMarkup']",
@@ -501,6 +502,7 @@
     "y6": "a[\"headline\",\"entity_type\",\"field\",\"limit\",\"presentation\",\"presentation_settings\",\"third_party_settings\"]",
     "yZ": "t2026-03-04T05:06:07.123456+02:00",
     "yc": "tlimit",
-    "yy": "t[{'expected':['boolean','null'],'actual':'array'},'This value must be of type boolean, array given.','TranslatableMarkup']"
+    "yy": "t[{'expected':['boolean','null'],'actual':'array'},'This value must be of type boolean, array given.','TranslatableMarkup']",
+    "zX": "t[{'expected':['string','null'],'actual':'boolean'},'This value must be of type string, boolean given. This applies when Entity type is Content.','Sentences']"
   }
 }

@@ -12,6 +12,8 @@ use Drupal\surface\Attachment;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Port;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 
@@ -22,9 +24,8 @@ use Drupal\surface\SurfaceInterface;
  * NodeDefinition::DERIVED (the hand corpus's NotAMapDefinition, core's
  * BaseFieldDefinition), or to an integer key; a refiner of the child's `v`
  * watches the port, and the watched-value check is sealed in at both
- * levels. The port's definition is kept beside its schema
- * (Attachment::$wiredDefinitions, Surface::$portDefinitions), since the
- * check takes a definition.
+ * levels. The port's key is held as its schema alone, and the check is
+ * handed that schema; `port` names the class the schema was read from.
  *
  * Decision: see docs/decisions.md#the-document-is-written-from-schemas.
  */
@@ -113,12 +114,12 @@ final class KeptPortCases {
               $refusals[] = $violation->key . ':' . $violation->path;
             }
             $child = $each->refine($accepted)->getDefinitions()->entry('att')->childFor($accepted);
-            $definition = $child->getPortDefinition('p');
+            $schema = $child->getPortSchema('p');
             $answers["$case$form $set"] = [
               'accepted' => $accepted,
               'refusals' => $refusals,
               'withheld' => array_keys($child->refine($child->getDefaultValues())->withheldValues()),
-              'port' => [get_class($definition), (string) $definition->getLabel()],
+              'port' => [DefinitionSchema::classOf($schema), (string) NodeFacts::label($schema)],
             ];
           }
           catch (\Throwable $e) {
@@ -131,7 +132,7 @@ final class KeptPortCases {
             $child = $each->getDefinitions()->entry('att')->attachment->child->withPorts(['p' => $value], ['p' => $key]);
             $answers["$case$form $set bound"] = [
               'withheld' => array_keys($child->refine(['v' => 'abcdef'])->withheldValues()),
-              'port' => get_class($child->getPortDefinition('p')),
+              'port' => DefinitionSchema::classOf($child->getPortSchema('p')),
             ];
           }
           catch (\Throwable $e) {

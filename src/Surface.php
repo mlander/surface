@@ -102,18 +102,14 @@ final class Surface implements SurfaceInterface {
    * @param string[]|null $runtimeAccessOwn
    *   When a runtime answer at the top marked every key, the keys also
    *   marked by an answer of their own; NULL when none at the top did.
-   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $portDefinitions
-   *   For a port whose key's definition is of a class no schema derives a
-   *   definition of (outside NodeDefinition::DERIVED), that definition,
-   *   kept beside its schema, by port: the watched-value check takes a
-   *   definition. This member goes when the check takes a schema.
    *
    * @internal
    *   A data surface is built by the build step, which seals a
    *   SurfaceBuilder. The constructor stays public only because
    *   refine() reconstructs the data surface with narrowed definitions,
    *   and because the engine's own tests assert on data surfaces no build
-   *   step made; nothing else may call it.
+   *   step made, and for holding() and the conform verb's frame of output
+   *   entries (Pipeline\Conforming); nothing else may call it.
    */
   public function __construct(
     protected readonly DefinitionMap $definitions,
@@ -128,7 +124,6 @@ final class Surface implements SurfaceInterface {
     protected readonly int $version = 1,
     protected readonly array $withheld = [],
     protected readonly ?array $runtimeAccessOwn = NULL,
-    protected readonly array $portDefinitions = [],
   ) {
   }
 
@@ -157,6 +152,28 @@ final class Surface implements SurfaceInterface {
       $this->{$name} = $value;
     }
     SerializedMaps::restore($data['maps']);
+  }
+
+  /**
+   * Makes a data surface whose one output is a key of a schema.
+   *
+   * What one value is held to by the conform verb
+   * (SurfacePipelineInterface::conformOutput()): the watched-value check
+   * holds a value to its key's schema this way, through the dialect's
+   * validator.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's built schema.
+   * @param string $name
+   *   The key's name.
+   *
+   * @return static
+   *   The data surface: no inputs, the key as its one output.
+   *
+   * @internal
+   */
+  public static function holding(Schema $schema, string $name = 'value'): static {
+    return new static(new DefinitionMap([]), outputs: new DefinitionMap([Entry::ofSchema($name, $schema)]));
   }
 
   /**
@@ -206,49 +223,15 @@ final class Surface implements SurfaceInterface {
    */
   public function withPorts(array $values, array $definitions = []): static {
     $declared = $this->definitions->ports();
-    $definitions = array_intersect_key($definitions, $declared);
-    // A port's key is held as its schema: one handed as a definition is
-    // read here, once, and one of a class outside NodeDefinition::DERIVED
-    // is kept beside it. An attachment hands the schemas and definitions
-    // it holds, read nothing again (withPortKeys()).
-    $schemas = array_map(static fn (Schema|DataDefinitionInterface $key): Schema => $key instanceof Schema ? $key : DefinitionSchema::of($key), $definitions);
-    $kept = array_filter($definitions, static fn (Schema|DataDefinitionInterface $key): bool => $key instanceof DataDefinitionInterface && !in_array($key::class, NodeDefinition::DERIVED, TRUE));
-    return $this->withPortKeys($values, $schemas, $kept);
-  }
-
-  /**
-   * Returns the same data surface reading its ports, their keys as held.
-   *
-   * What withPorts() does once the keys are read: the attachment that
-   * wires the ports hands the schemas it holds (Attachment::$wired) and
-   * the definitions it keeps of a class outside NodeDefinition::DERIVED
-   * (Attachment::$wiredDefinitions), the same objects on every bind, so
-   * nothing is read. Handed what it holds (the schemas equal by
-   * DefinitionSchema::same(), the kept definitions the very objects), it
-   * binds nothing new.
-   *
-   * @param array<string, mixed> $values
-   *   What each port holds, by port name.
-   * @param array<string, \PortableSchema\Builder\Schema> $schemas
-   *   The schema of the container's key each port reads, by port name.
-   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $definitions
-   *   The definitions kept beside a schema, by port name ($portDefinitions).
-   *
-   * @return static
-   *   The data surface, bound.
-   *
-   * @internal
-   *   Attachment::bound()'s and withPorts()'s.
-   */
-  public function withPortKeys(array $values, array $schemas, array $definitions = []): static {
-    $declared = $this->definitions->ports();
     $values = array_intersect_key($values, $declared);
-    $schemas = array_intersect_key($schemas, $declared);
-    $definitions = array_intersect_key($definitions, $declared);
-    if ($values === $this->ports && $definitions === $this->portDefinitions && DefinitionSchema::same($schemas, $this->portSchemas)) {
+    // A port's key is held as its schema: one handed as a definition is
+    // read here, once. An attachment hands the schemas it holds
+    // (Attachment::$wired), the same objects on every bind.
+    $schemas = array_map(static fn (Schema|DataDefinitionInterface $key): Schema => $key instanceof Schema ? $key : DefinitionSchema::of($key), array_intersect_key($definitions, $declared));
+    if ($values === $this->ports && DefinitionSchema::same($schemas, $this->portSchemas)) {
       return $this;
     }
-    return new self($this->throughPorts($declared, $values), $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $values, $schemas, $this->lockedWhole, $this->changesNothing, $this->version, runtimeAccessOwn: $this->runtimeAccessOwn, portDefinitions: $definitions);
+    return new self($this->throughPorts($declared, $values), $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $values, $schemas, $this->lockedWhole, $this->changesNothing, $this->version, runtimeAccessOwn: $this->runtimeAccessOwn);
   }
 
   /**
@@ -289,7 +272,7 @@ final class Surface implements SurfaceInterface {
    */
   public function getPortDefinition(string $port): ?DataDefinitionInterface {
     $schema = $this->getPortSchema($port);
-    return $schema === NULL ? NULL : $this->portDefinitions[$port] ?? NodeDefinition::of($schema);
+    return $schema === NULL ? NULL : NodeDefinition::of($schema);
   }
 
   /**
@@ -574,7 +557,7 @@ final class Surface implements SurfaceInterface {
    *   A copy that answers withheldValues() with them.
    */
   protected function withWithheld(array $withheld): static {
-    return new self($this->definitions, $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portSchemas, $this->lockedWhole, $this->changesNothing, $this->version, $withheld, $this->runtimeAccessOwn, $this->portDefinitions);
+    return new self($this->definitions, $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portSchemas, $this->lockedWhole, $this->changesNothing, $this->version, $withheld, $this->runtimeAccessOwn);
   }
 
   /**
@@ -683,7 +666,7 @@ final class Surface implements SurfaceInterface {
       $changed = TRUE;
     }
     return $changed
-      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portSchemas, $this->lockedWhole, $this->changesNothing, $this->version, runtimeAccessOwn: $this->runtimeAccessOwn, portDefinitions: $this->portDefinitions)
+      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portSchemas, $this->lockedWhole, $this->changesNothing, $this->version, runtimeAccessOwn: $this->runtimeAccessOwn)
       : $this;
   }
 
@@ -1089,11 +1072,9 @@ final class Surface implements SurfaceInterface {
       if ($port !== NULL) {
         // A port's value, read from the container, held to the type the
         // structure declared it with: a capacity the container holds as
-        // a word reaches no refiner typed for a number. The check takes a
-        // definition: the one kept for a class outside
-        // NodeDefinition::DERIVED, else one derived from the port's schema,
-        // here alone.
-        if ($this->watchedValueCheck !== NULL && !$this->watchedValueCheck->admits($this->portDefinitions[$path] ?? NodeDefinition::of($port), $value)) {
+        // a word reaches no refiner typed for a number. The check takes the
+        // port's schema.
+        if ($this->watchedValueCheck !== NULL && !$this->watchedValueCheck->admits($port, $value)) {
           $refused[] = $path;
         }
         continue;
@@ -1101,22 +1082,17 @@ final class Surface implements SurfaceInterface {
       if ($this->definitions->entry($parents[0])?->isNested() !== FALSE) {
         continue;
       }
-      // The place is found as watchedPlaces() finds it; for a key whose
-      // source gave its node, the check is handed a definition derived for
-      // the key only when it is asked, walked down to the place.
+      // The place is found as watchedPlaces() finds it, and the check is
+      // handed its schema: a place walked by its definition (a key whose
+      // source gave one) is read into its schema, nothing is derived.
       $entry = $refined->getDefinitions()->entry((string) array_shift($parents));
       if ($entry === NULL || $this->watchedValueCheck === NULL) {
         continue;
       }
       $places = static::watchedPlaces($entry, $parents);
-      $definition = end($places);
-      if ($definition instanceof Schema) {
-        $definition = $entry->definition();
-        foreach ($parents as $property) {
-          $definition = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($property) : NULL;
-        }
-      }
-      if ($definition instanceof DataDefinitionInterface && !$this->watchedValueCheck->admits($definition, $value)) {
+      $place = end($places);
+      $schema = $place instanceof DataDefinitionInterface ? DefinitionSchema::of($place) : $place;
+      if ($schema instanceof Schema && !$this->watchedValueCheck->admits($schema, $value)) {
         $refused[] = $path;
       }
     }

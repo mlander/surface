@@ -135,6 +135,58 @@ class KeyPathsCoercionTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests the value handed back is the value held.
+   *
+   * `TRUE` at a string key whose choices hold "1" is refused with `type`,
+   * as validate() refuses it: it is not read as its text and then handed
+   * on as `TRUE`. A date and time is held with its offset and handed back
+   * as accepted, as validate() holds what accept() answered.
+   */
+  public function testTheValueHeldIsTheValueHandedBack(): void {
+    $choice = DataDefinition::create('string')->setLabel('Gate')->addConstraint('Choice', ['choices' => ['1', '2', '3']]);
+    try {
+      $this->held($choice, TRUE);
+      $this->fail('TRUE at a string key is refused.');
+    }
+    catch (ValueNotAcceptedException $e) {
+      $this->assertStringEndsWith('This value must be of type string, boolean given.', $e->getMessage());
+    }
+    $this->assertSame('2', $this->held($choice, '2'));
+    $this->assertSame('2026-11-13T10:00:00', $this->held(DataDefinition::create('datetime_iso8601'), '2026-11-13T10:00:00'));
+  }
+
+  /**
+   * Tests a value that holds nothing is the module's to judge.
+   *
+   * It never reaches the validator: a key that is required refuses it, and
+   * any other key takes it, a key of the `any` type included.
+   */
+  public function testNothingIsRequiredOrTaken(): void {
+    $this->assertNull($this->held(DataDefinition::create('integer')->setLabel('Count'), NULL));
+    $this->assertNull($this->held(DataDefinition::create('any')->setLabel('Anything'), NULL));
+    try {
+      $this->held(DataDefinition::create('string')->setLabel('Name')->setRequired(TRUE), '');
+      $this->fail('A required key refuses nothing.');
+    }
+    catch (ValueNotAcceptedException $e) {
+      $this->assertStringEndsWith('which the key does not accept: Name is required.', $e->getMessage());
+    }
+  }
+
+  /**
+   * Tests a value at a key of the `any` type is refused by where it was.
+   *
+   * No document is written for such a key, so no value can be held to it,
+   * as validate() cannot hold one; the refusal names the source, the key
+   * and the resource.
+   */
+  public function testAnyKeyRefusalNamesTheKey(): void {
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('The route: "value" on test is of the any type, which no JSON Schema type is written for, so no value can be held to it.');
+    $this->held(DataDefinition::create('any')->setLabel('Anything'), 5);
+  }
+
+  /**
    * Reads one value as a site default for a key.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition

@@ -266,6 +266,8 @@ class VenueResourceTest extends SurfaceKernelTestBase {
           'type' => 'integer',
         ],
       ],
+      // What is enforced: no key but these.
+      'additionalProperties' => FALSE,
       'required' => ['items', 'total'],
     ], $outputs);
   }

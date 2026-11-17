@@ -48,32 +48,32 @@
       "gb one": "8ead3e69f3d8"
     },
     "plain | key": {
-      "gate": "e47708c96e9e",
-      "sc": "6fd2d63dc7da",
-      "sc0": "1ea87c2bef8c",
+      "gate": "b1b12fd14ace",
+      "sc": "b74161a3bd13",
+      "sc0": "088d48a82c33",
       "ss": "9c2d99f1959c",
-      "stc": "9e20f2a2812e",
-      "stc0": "3eb1e9d25224",
+      "stc": "8a19cd1c37bf",
+      "stc0": "313fd779eab1",
       "sts": "aea91556381d",
-      "src": "2385ac523e0e",
+      "src": "467a85f7574a",
       "comp0": "29280bb10323",
       "vault": "1ae5cc87526a",
       "coll": "a87853f180b6",
-      "arranged": "98097f1e5db7",
-      "accent": "db651502488e",
-      "tags": "f708d391d2f8",
-      "dep_tags": "e740d8eb372e",
+      "arranged": "9241c04699e1",
+      "accent": "c9a9a2f66028",
+      "tags": "7a13947fb069",
+      "dep_tags": "0c9aa114a3d1",
       "tags2": "4ccdde34512a",
-      "dep_tags2": "7c9fcdcce1b4",
-      "gio": "60e473e58b04",
-      "level": "a064f6f690a4",
+      "dep_tags2": "f38045ee8eda",
+      "gio": "694c2fa4addd",
+      "level": "b270a27c933d",
       "per_level": "7688f2523cec",
-      "flag": "3a348664a816",
+      "flag": "ff5a9b5fbc16",
       "per_flag": "dac7a1ee2bef",
-      "gi": "0c1570e66eb7",
-      "gb": "7da9680304c9",
-      "dep_gi": "4e525bbea9f0",
-      "dep_gb": "cca7dddcac49"
+      "gi": "3d7fab74836a",
+      "gb": "3621660b8f7c",
+      "dep_gi": "6b5b8f80e3b5",
+      "dep_gb": "8d955b2d1a27"
     },
     "plain | path": {
       "nope": "1bf169f7d887",
@@ -94,13 +94,13 @@
       "per_flag.off_note": "a54016b0cd9b",
       "per_flag.on_note": "3c3dd443d7d2",
       "gate": "d700db7069b1",
-      "sc": "f06fa0d10617",
-      "sc0": "d329ce41b02f",
+      "sc": "2807b746d0ba",
+      "sc0": "445913f20c00",
       "ss": "511844d57612",
       "stc": "b4e3ab4a61b8",
       "stc0": "7d3dbb9a2a93",
       "sts": "9f937d990463",
-      "src": "a4ebf254e2da",
+      "src": "68fd032874fc",
       "comp0": "dbef41726268",
       "vault": "4a9a6f31e1b4",
       "vault.0": "7d0590746088",
@@ -108,23 +108,23 @@
       "coll": "b7cf9539862b",
       "coll.0": "07df4235dfc5",
       "coll.0.nope": "408cccd25a0c",
-      "arranged": "ff8fbc79a0d1",
-      "accent": "6e2d1fb61589",
+      "arranged": "ea9b1b26930f",
+      "accent": "d00b20937131",
       "tags": "e194306a6caf",
       "tags.0": "416835392aa9",
-      "dep_tags": "85b6bef35797",
+      "dep_tags": "15b5495e4cb2",
       "tags2": "3a2bfa3b6d1d",
       "tags2.0": "7ba73a4bf76d",
-      "dep_tags2": "cd5da2e25742",
-      "gio": "9a55b8b61f06",
+      "dep_tags2": "ba60295470b1",
+      "gio": "ad3188ed9d56",
       "level": "2679d925a6c0",
       "per_level": "cbd4b51ecced",
-      "flag": "150eae363463",
+      "flag": "224267eb8403",
       "per_flag": "e3d5165a36c0",
       "gi": "56dd41148df9",
       "gb": "0f54d7f75dc6",
-      "dep_gi": "337b6f491d29",
-      "dep_gb": "4dbc98d9cc6c"
+      "dep_gi": "4ce74b6425b8",
+      "dep_gb": "781352521126"
     },
     "plain | nodes": {
       "nope": "85cf5ad1bdc5",
@@ -223,32 +223,32 @@
       "gb one": "8ead3e69f3d8"
     },
     "texts | key": {
-      "gate": "e47708c96e9e",
-      "sc": "6fd2d63dc7da",
-      "sc0": "1ea87c2bef8c",
+      "gate": "b1b12fd14ace",
+      "sc": "b74161a3bd13",
+      "sc0": "088d48a82c33",
       "ss": "9c2d99f1959c",
-      "stc": "9e20f2a2812e",
-      "stc0": "3eb1e9d25224",
+      "stc": "8a19cd1c37bf",
+      "stc0": "313fd779eab1",
       "sts": "aea91556381d",
-      "src": "2385ac523e0e",
+      "src": "467a85f7574a",
       "comp0": "29280bb10323",
       "vault": "1ae5cc87526a",
       "coll": "a87853f180b6",
-      "arranged": "98097f1e5db7",
-      "accent": "db651502488e",
-      "tags": "f708d391d2f8",
-      "dep_tags": "e740d8eb372e",
+      "arranged": "9241c04699e1",
+      "accent": "c9a9a2f66028",
+      "tags": "7a13947fb069",
+      "dep_tags": "0c9aa114a3d1",
       "tags2": "4ccdde34512a",
-      "dep_tags2": "7c9fcdcce1b4",
-      "gio": "60e473e58b04",
-      "level": "a064f6f690a4",
+      "dep_tags2": "f38045ee8eda",
+      "gio": "694c2fa4addd",
+      "level": "b270a27c933d",
       "per_level": "7688f2523cec",
-      "flag": "3a348664a816",
+      "flag": "ff5a9b5fbc16",
       "per_flag": "dac7a1ee2bef",
-      "gi": "0c1570e66eb7",
-      "gb": "7da9680304c9",
-      "dep_gi": "4e525bbea9f0",
-      "dep_gb": "cca7dddcac49"
+      "gi": "3d7fab74836a",
+      "gb": "3621660b8f7c",
+      "dep_gi": "6b5b8f80e3b5",
+      "dep_gb": "8d955b2d1a27"
     },
     "texts | path": {
       "nope": "1bf169f7d887",
@@ -269,13 +269,13 @@
       "per_flag.off_note": "a54016b0cd9b",
       "per_flag.on_note": "3c3dd443d7d2",
       "gate": "d700db7069b1",
-      "sc": "f06fa0d10617",
-      "sc0": "d329ce41b02f",
+      "sc": "2807b746d0ba",
+      "sc0": "445913f20c00",
       "ss": "511844d57612",
       "stc": "b4e3ab4a61b8",
       "stc0": "7d3dbb9a2a93",
       "sts": "9f937d990463",
-      "src": "a4ebf254e2da",
+      "src": "68fd032874fc",
       "comp0": "dbef41726268",
       "vault": "4a9a6f31e1b4",
       "vault.0": "7d0590746088",
@@ -283,23 +283,23 @@
       "coll": "b7cf9539862b",
       "coll.0": "07df4235dfc5",
       "coll.0.nope": "408cccd25a0c",
-      "arranged": "ff8fbc79a0d1",
-      "accent": "6e2d1fb61589",
+      "arranged": "ea9b1b26930f",
+      "accent": "d00b20937131",
       "tags": "e194306a6caf",
       "tags.0": "416835392aa9",
-      "dep_tags": "85b6bef35797",
+      "dep_tags": "15b5495e4cb2",
       "tags2": "3a2bfa3b6d1d",
       "tags2.0": "7ba73a4bf76d",
-      "dep_tags2": "cd5da2e25742",
-      "gio": "9a55b8b61f06",
+      "dep_tags2": "ba60295470b1",
+      "gio": "ad3188ed9d56",
       "level": "2679d925a6c0",
       "per_level": "cbd4b51ecced",
-      "flag": "150eae363463",
+      "flag": "224267eb8403",
       "per_flag": "e3d5165a36c0",
       "gi": "56dd41148df9",
       "gb": "0f54d7f75dc6",
-      "dep_gi": "337b6f491d29",
-      "dep_gb": "4dbc98d9cc6c"
+      "dep_gi": "4ce74b6425b8",
+      "dep_gb": "781352521126"
     },
     "texts | nodes": {
       "nope": "85cf5ad1bdc5",
@@ -2412,11 +2412,11 @@
         }
       ]
     },
-    "plain | key | src": {
+    "plain | key | sc": {
       "fromDefinition": {
         "class": "Drupal\\tool\\TypedData\\InputDefinition",
         "type": "string",
-        "label": "Source",
+        "label": "Stale choice",
         "description": "",
         "required": false,
         "getDefaultValue": null,
@@ -2432,7 +2432,7 @@
             "PrimitiveType": []
           },
           "description": "",
-          "label": "Source",
+          "label": "Stale choice",
           "required": false,
           "type": "string"
         }
@@ -2440,7 +2440,7 @@
       "outputFromDefinition": {
         "class": "Drupal\\tool\\TypedData\\OutputDefinition",
         "type": "string",
-        "label": "Source",
+        "label": "Stale choice",
         "description": "",
         "required": false,
         "getDefaultValue": null,
@@ -2455,7 +2455,7 @@
             "PrimitiveType": []
           },
           "description": "",
-          "label": "Source",
+          "label": "Stale choice",
           "nullable": false,
           "required": false,
           "type": "string"
@@ -2509,21 +2509,21 @@
         [
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.src\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
+            "message": "query given \"q.sc\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
           },
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.src\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
+            "message": "query fixes \"q.sc\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
           }
         ],
         [
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.src\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
+            "message": "query given \"q.sc\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
           },
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.src\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
+            "message": "query fixes \"q.sc\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
           }
         ],
         [
@@ -2535,8 +2535,14 @@
           "1.5"
         ],
         [
-          true,
-          true
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.sc\" on hand to true, which the key does not accept: This value must be of type string, boolean given."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.sc\" on hand to true, which the key does not accept: This value must be of type string, boolean given."
+          }
         ],
         [
           null,
@@ -2549,66 +2555,66 @@
       ],
       "wider": {
         "string 1": {
-          "src": "it may be cleared, which the schema refuses: string is not nullable"
+          "sc": "it may be cleared, which the schema refuses: string is not nullable"
         },
         "string 0": [],
         "string nullable 1": [],
         "string nullable 0": [],
         "integer 1": {
-          "src": "it is a string, which the schema types integer, an integer"
+          "sc": "it is a string, which the schema types integer, an integer"
         },
         "integer 0": {
-          "src": "it is a string, which the schema types integer, an integer"
+          "sc": "it is a string, which the schema types integer, an integer"
         },
         "integer nullable 1": {
-          "src": "it is a string, which the schema types integer, an integer"
+          "sc": "it is a string, which the schema types integer, an integer"
         },
         "integer nullable 0": {
-          "src": "it is a string, which the schema types integer, an integer"
+          "sc": "it is a string, which the schema types integer, an integer"
         },
         "boolean 1": {
-          "src": "it is a string, which the schema types boolean, a boolean"
+          "sc": "it is a string, which the schema types boolean, a boolean"
         },
         "boolean 0": {
-          "src": "it is a string, which the schema types boolean, a boolean"
+          "sc": "it is a string, which the schema types boolean, a boolean"
         },
         "float 1": {
-          "src": "it is a string, which the schema types float, a float"
+          "sc": "it is a string, which the schema types float, a float"
         },
         "float 0": {
-          "src": "it is a string, which the schema types float, a float"
+          "sc": "it is a string, which the schema types float, a float"
         },
         "ignore 1": [],
         "ignore 0": [],
         "mapping 1": {
-          "src": "it is one value, which the schema types mapping, a mapping"
+          "sc": "it is one value, which the schema types mapping, a mapping"
         },
         "mapping 0": {
-          "src": "it is one value, which the schema types mapping, a mapping"
+          "sc": "it is one value, which the schema types mapping, a mapping"
         },
         "sequence string 1": {
-          "src": "it is one value, which the schema types sequence, a sequence"
+          "sc": "it is one value, which the schema types sequence, a sequence"
         },
         "sequence string 0": {
-          "src": "it is one value, which the schema types sequence, a sequence"
+          "sc": "it is one value, which the schema types sequence, a sequence"
         },
         "sequence mapping 1": {
-          "src": "it is one value, which the schema types sequence, a sequence"
+          "sc": "it is one value, which the schema types sequence, a sequence"
         },
         "sequence mapping 0": {
-          "src": "it is one value, which the schema types sequence, a sequence"
+          "sc": "it is one value, which the schema types sequence, a sequence"
         },
         "constrained 1": {
-          "src": "it may be blank, which the schema's NotBlank refuses"
+          "sc": "it may be blank, which the schema's NotBlank refuses"
         },
         "constrained 0": {
-          "src": "it may be blank, which the schema's NotBlank refuses"
+          "sc": "it may be blank, which the schema's NotBlank refuses"
         },
         "loose 1": {
-          "src": "it may be more than 99 characters long, which the schema refuses"
+          "sc": "it may be more than 99 characters long, which the schema refuses"
         },
         "loose 0": {
-          "src": "it may be more than 99 characters long, which the schema refuses"
+          "sc": "it may be more than 99 characters long, which the schema refuses"
         }
       }
     },

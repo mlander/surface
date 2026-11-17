@@ -688,15 +688,15 @@ final class OperationRunner implements OperationRunnerInterface {
   }
 
   /**
-   * Holds the outputs to what the surface declares, where the doors do.
+   * Holds the outputs to what the surface declares, for every resource.
    *
-   * The doors hold the stage's outputs alone today (the HTTP and tool
-   * doors, through this runner); holding every resource's belongs to the
-   * slice that moves the form door onto the runner. A mismatch is a bug
+   * Every door that runs through this runner reads the outputs held here
+   * (the HTTP, tool and drush doors). A mismatch is a bug
    * in the storage, found after the write: it is logged, and the outputs
    * are answered as the storage gave them, so nothing is thrown after a
-   * commit. Every NotEmitted key is left out whether or not they were
-   * held or conform: it says a key is not emitted, which no door answers.
+   * commit; a check that throws is logged the same way. Every NotEmitted
+   * key is left out whether or not they conform: it says a key is not
+   * emitted, which no door answers.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
@@ -712,13 +712,22 @@ final class OperationRunner implements OperationRunnerInterface {
    *   held to the declaration and conform to it.
    */
   private function conformed(ResourceDefinition $definition, OperationDefinition $operation, SurfaceInterface $built, array $outputs): array {
-    if ($definition->id !== StageResource::ID) {
-      return [NotEmitted::strip($outputs), FALSE];
-    }
     if ($outputs === []) {
       return [[], TRUE];
     }
-    $violations = $this->pipeline->conformOutput($built, $outputs);
+    try {
+      $violations = $this->pipeline->conformOutput($built, $outputs);
+    }
+    catch (\Throwable $thrown) {
+      // A check that threw: still nothing is thrown after a write.
+      $this->logger->error('The outputs of the "@operation" operation of @resource could not be held to the surface, answered as the storage gave them: @class: @message', [
+        '@resource' => $definition->id,
+        '@operation' => $operation->id,
+        '@class' => get_class($thrown),
+        '@message' => $thrown->getMessage(),
+      ]);
+      return [NotEmitted::strip($outputs), FALSE];
+    }
     if (!$violations->isEmpty()) {
       $this->logger->error('The storage of @resource answered outputs of its "@operation" operation that the surface does not declare, answered as it gave them: @violations', [
         '@resource' => $definition->id,
