@@ -286,6 +286,11 @@ final class ContractEmitter {
   protected readonly DocumentHead $documentHead;
 
   /**
+   * Writes the document a data surface's outputs are held to.
+   */
+  protected readonly OutputsDocument $outputsDocument;
+
+  /**
    * Constructs a ContractEmitter.
    *
    * @param \Drupal\surface\Options\SurfaceOptions $options
@@ -322,7 +327,24 @@ final class ContractEmitter {
     $this->definitions = $definitions ?? new DefinitionSchema($options, $constraints);
     $this->propertySchema = new PropertySchema($options, $string_translation, $constraints, $widgets, $this->definitions);
     $this->conditionals = new Conditionals($this->propertySchema);
-    $this->documentHead = new DocumentHead($this->propertySchema);
+    $this->outputsDocument = new OutputsDocument($this->propertySchema);
+    $this->documentHead = new DocumentHead($this->propertySchema, $this->outputsDocument);
+  }
+
+  /**
+   * Gets the writer of the document a data surface's outputs are held to.
+   *
+   * The one the served outputs document is written from, so both say the
+   * same of each key.
+   *
+   * @return \Drupal\surface\Contract\OutputsDocument
+   *   The writer.
+   *
+   * @internal
+   *   The pipeline's conform verb's.
+   */
+  public function outputsDocument(): OutputsDocument {
+    return $this->outputsDocument;
   }
 
   /**

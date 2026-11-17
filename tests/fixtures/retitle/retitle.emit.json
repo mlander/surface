@@ -177,6 +177,7 @@
                 }
             }
         },
+        "additionalProperties": false,
         "required": [
             "titles"
         ]

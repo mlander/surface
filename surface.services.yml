@@ -1,7 +1,7 @@
 services:
   surface.pipeline:
     class: Drupal\surface\Pipeline\SurfacePipeline
-    arguments: ['@surface.constraint_runner', '@surface.options', '@string_translation', '@surface.portable_validator']
+    arguments: ['@surface.options', '@string_translation', '@surface.portable_validator', '@surface.contract_emitter']
   # Holds a request's values to the document they are served with, by the
   # dialect's validator over the site's registry; every `drupal:` check the
   # document names runs the constraint of the place it is about.

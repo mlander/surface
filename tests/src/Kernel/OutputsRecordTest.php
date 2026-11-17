@@ -25,19 +25,18 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Every resource and structure of the example and test modules installed
  * here, built in each of its operations (alone where it has none) for no
  * account, and the hand surfaces of OutputCases, each held to every case
- * OutputCases lists, by two checks side by side: the pipeline's
- * (SurfacePipelineInterface::conformOutput(), `today`) and the check
- * through the dialect's validator (OutputsConformance, `next`). Each answer
- * is what was thrown, or each violation's key, path, code, params and
- * message. The record is written to `surface-outputs-record.json` in the
- * system's temporary directory, so slice 34's flip is compared with it.
+ * OutputCases lists, by the pipeline's check
+ * (SurfacePipelineInterface::conformOutput()). Each answer is what was
+ * thrown, or each violation's key, path, code, params and message. The
+ * record is written to `surface-outputs-record.json` in the system's
+ * temporary directory, so a change to the check is compared with the
+ * record taken before it.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class OutputsRecordTest extends SurfaceKernelTestBase {
 
   use ContentEntityFixtureTrait;
-  use OutputsConformanceTrait;
   use StageTestTrait;
   use UserCreationTrait;
 
@@ -98,7 +97,7 @@ class OutputsRecordTest extends SurfaceKernelTestBase {
       if ($outputs->keys() === []) {
         continue;
       }
-      $document = $this->outputsDocument()->of($surface);
+      $document = $this->container->get('surface.contract_emitter')->outputsDocument()->of($surface);
       $row = [
         'validation' => $document === NULL ? NULL : Schemas::arrayed($document),
         'cases' => [],
@@ -106,8 +105,7 @@ class OutputsRecordTest extends SurfaceKernelTestBase {
       foreach (OutputCases::cases($outputs) as $case => $output) {
         $row['cases'][$case] = [
           'value' => self::plain($output),
-          'today' => self::answer(fn (): ViolationSet => $this->pipeline()->conformOutput($surface, $output)),
-          'next' => self::answer(fn (): ViolationSet => $this->outputsConformance()->conformOutput($surface, $output)),
+          'answer' => self::answer(fn (): ViolationSet => $this->pipeline()->conformOutput($surface, $output)),
         ];
       }
       $record[$label] = $row;
@@ -119,12 +117,12 @@ class OutputsRecordTest extends SurfaceKernelTestBase {
     $this->assertArrayHasKey('surface.stage changes', $record);
     foreach ($record as $label => $row) {
       foreach ($row['cases'] as $case => $answers) {
-        // The new check throws for no value.
-        $this->assertIsArray($answers['next'], $label . ' ' . $case);
+        // The check throws for no value.
+        $this->assertIsArray($answers['answer'], $label . ' ' . $case);
       }
-      // A good value conforms to both.
+      // A good value conforms.
       foreach (['good', 'only required'] as $case) {
-        $this->assertSame([[], []], [$row['cases'][$case]['today'], $row['cases'][$case]['next']], $label . ' ' . $case);
+        $this->assertSame([], $row['cases'][$case]['answer'], $label . ' ' . $case);
       }
     }
   }

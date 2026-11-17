@@ -54,7 +54,6 @@ door src/Form/SurfaceFieldTypeTrait.php
 door src/Form/SurfaceFormBuilderInterface.php
 pipeline src/Options/OptionsProvider.php
 constraints src/Options/SurfaceOptions.php
-pipeline src/Pipeline/Conforming.php
 pipeline src/Pipeline/PipelineGuard.php
 storage src/Pipeline/Storage/PluginConfigurationStorage.php
 pipeline src/Pipeline/Validating.php

@@ -22,7 +22,8 @@ use PortableSchema\Builder\Schema;
  * An output key holds plain keys alone (lists, maps and values): no child,
  * no variant, no collection, never a secret.
  *
- * Decision: see design-schema-as-model.md, slice 34, point (1).
+ * Decision: see
+ * docs/decisions.md#outputs-conform-through-the-dialects-validator.
  *
  * @internal
  */
@@ -82,7 +83,7 @@ final class OutputsDocument {
     foreach ($outputs->entries() as $name => $entry) {
       $schema = $entry->schema();
       [$written] = $this->propertySchema->property($schema, NULL, NULL, (string) $name, FALSE, [], $walk);
-      $properties[(string) $name] = self::held($written);
+      $properties[(string) $name] = self::held(self::typed($schema, $written));
       if (NodeFacts::isRequired($schema)) {
         $required[] = (string) $name;
       }
@@ -101,6 +102,51 @@ final class OutputsDocument {
       $this->built[$outputs] = $document ?? FALSE;
     }
     return $document;
+  }
+
+  /**
+   * Says `type: object` for every map that names no keys, at every depth.
+   *
+   * The writer of a key states no type for such a map, so the dialect
+   * would take any value there; an output map is a map whether or not it
+   * names its keys. Read from the built schema in step with the written
+   * one, down `properties` and `items`.
+   *
+   * @param \PortableSchema\Builder\Schema $built
+   *   The key's built schema (Entry::schema()), or one below it.
+   * @param \PortableSchema\Builder\Schema $written
+   *   The same place, as the writer of a key wrote it.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The written schema, each such map typed, NULL kept where it was
+   *   allowed.
+   */
+  private static function typed(Schema $built, Schema $written): Schema {
+    if ($built->isBoolean() || $written->isBoolean()) {
+      return $written;
+    }
+    if (DefinitionSchema::isList($built)) {
+      $item = DefinitionSchema::itemNode($built);
+      $items = $written->get('items');
+      return $item !== NULL && $items instanceof Schema ? $written->with('items', self::typed($item, $items)) : $written;
+    }
+    $properties = NodeFacts::properties($built);
+    if ($properties === []) {
+      if (NodeFacts::dataType($built) === 'map' && !$written->has('type')) {
+        return $written->with('type', NodeFacts::isRequired($built) ? 'object' : ['object', 'null']);
+      }
+      return $written;
+    }
+    $written_properties = $written->get('properties');
+    if (!is_array($written_properties)) {
+      return $written;
+    }
+    foreach ($properties as $name => $property) {
+      if (($written_properties[$name] ?? NULL) instanceof Schema) {
+        $written_properties[$name] = self::typed($property, $written_properties[$name]);
+      }
+    }
+    return $written->with('properties', $written_properties);
   }
 
   /**

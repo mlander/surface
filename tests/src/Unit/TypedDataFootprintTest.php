@@ -157,7 +157,7 @@ class TypedDataFootprintTest extends UnitTestCase {
    * keys from the site from its schema (NodeFacts::each()) and names no
    * Typed Data.
    */
-  public const OUTSIDE_THE_EDGES = 109;
+  public const OUTSIDE_THE_EDGES = 108;
 
   /**
    * Finds the files that use Typed Data.

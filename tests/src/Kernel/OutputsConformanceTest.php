@@ -15,18 +15,16 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests outputs held to their validation document by the dialect's validator.
  *
- * The check is built and not yet the pipeline's: it answers in the input
- * path's codes, an unknown key and an absent output in Surface's own words,
- * an object refused before the validator reads it.
+ * The pipeline's conform verb answers in the input path's codes, an unknown
+ * key and an absent output in Surface's own words, an object refused before
+ * the validator reads it.
  *
- * @see \Drupal\surface\Pipeline\OutputsConformance
+ * @see \Drupal\surface\Pipeline\Conforming
  * @see \Drupal\surface\Contract\OutputsDocument
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class OutputsConformanceTest extends SurfaceKernelTestBase {
-
-  use OutputsConformanceTrait;
 
   /**
    * {@inheritdoc}
@@ -47,7 +45,7 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
    */
   public function testTheValidationDocument(): void {
     $surface = OutputCases::handSurface();
-    $validation = Schemas::arrayed($this->outputsDocument()->of($surface));
+    $validation = Schemas::arrayed($this->container->get('surface.contract_emitter')->outputsDocument()->of($surface));
     $served = Schemas::arrayed($this->container->get('surface.contract_emitter')->emit($surface, [], 'hand')->outputs());
 
     // Closed at the top and at every depth that names keys.
@@ -58,11 +56,8 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
     // A check no keyword states is named, as the served document does not.
     $this->assertArrayHasKey('drupal:SurfaceValidReference', $validation['properties']['user']['portable-check']);
     $this->assertArrayNotHasKey('portable-check', $served['properties']['user']);
-    // Otherwise the served document, less the checks and messages, plus
-    // `additionalProperties` at the top.
-    $stripped = self::withoutChecks($validation);
-    unset($stripped['additionalProperties']);
-    $this->assertSame($served, $stripped);
+    // Otherwise the served document, less the checks and messages.
+    $this->assertSame($served, self::withoutChecks($validation));
   }
 
   /**
@@ -76,7 +71,7 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
     }
     $said = function (array $changes) use ($surface, $good): array {
       $answer = [];
-      foreach ($this->outputsConformance()->conformOutput($surface, array_replace_recursive($good, $changes)) as $violation) {
+      foreach ($this->pipeline()->conformOutput($surface, array_replace_recursive($good, $changes)) as $violation) {
         $answer[] = [$violation->fullPath(), $violation->code, $violation->params, (string) $violation->message];
       }
       return $answer;
@@ -93,7 +88,7 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
         $violation->params,
         (string) $violation->message,
       ],
-      iterator_to_array($this->outputsConformance()->conformOutput($surface, $without)),
+      iterator_to_array($this->pipeline()->conformOutput($surface, $without)),
     ));
     $this->assertSame([['text', 'required', [], 'Text was not emitted.']], $said(['text' => NotEmitted::value()]));
     // NULL is a value: refused where the type takes none.
@@ -146,7 +141,7 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
    */
   protected function answer($surface, array $output): array {
     $answer = [];
-    foreach ($this->outputsConformance()->conformOutput($surface, $output) as $violation) {
+    foreach ($this->pipeline()->conformOutput($surface, $output) as $violation) {
       $answer[] = [$violation->fullPath(), $violation->code];
     }
     return $answer;

@@ -5,22 +5,44 @@ declare(strict_types=1);
 namespace Drupal\surface\Pipeline;
 
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\OutputsDocument;
+use Drupal\surface\Contract\Schemas;
+use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\Validation\ConstraintRunner;
+use Drupal\surface\Validation\PortableValidator;
+use PortableSchema\Builder\Schema;
 
 /**
- * The conform verb of the pipeline: outputs held to their declared shape.
+ * The conform verb of the pipeline: outputs held by the dialect's validator.
  *
- * What SurfacePipelineInterface::conformOutput() does: every key sent
- * as NotEmitted stripped, every key no output declares refused at any
- * depth, every leaf held to its type's PHP type with nothing coerced, and
- * then the constraints, through typed data (ConstraintRunner::conforms()).
+ * What SurfacePipelineInterface::conformOutput() does.
  *
- * Decision: see docs/decisions.md#the-pipeline-is-read-by-verb.
+ * In order: every NotEmitted key is stripped (NotEmitted::strip()); an
+ * object is refused where it stands, with `type`, since an output is a
+ * plain value; a key nothing declares is refused at its own place, at any
+ * depth, `unknown_key`, as accept() refuses an input key; a required output
+ * that is absent is refused, `required`, "@label was not emitted.". Then
+ * the values are held once to the outputs' validation document
+ * (OutputsDocument) by the validator (PortableValidator::held()), each
+ * `drupal:` check answered by the check provider over the output entries,
+ * read as a frame of plain keys: nothing refines an output, so the place
+ * of a check is found as an input key's is (Location::definitionAt()).
+ *
+ * What the validator answers is filed as the input path files it: by key
+ * and dotted path, its code and params as the dialect gives them. A
+ * `required` inside a map is filed at the property it names, in the words
+ * of an absent output. An `unknownProperty` is not said, and nothing at or
+ * below a refused object is.
+ *
+ * Nothing is coerced: an output is held as the producer gave it.
+ *
+ * Decision: see
+ * docs/decisions.md#outputs-conform-through-the-dialects-validator, and
+ * docs/decisions.md#the-pipeline-is-read-by-verb.
  *
  * @internal
  *
@@ -32,20 +54,21 @@ final class Conforming {
   use StringTranslationTrait;
 
   /**
-   * The data types an output is held to the PHP type of.
-   */
-  protected const OUTPUT_TYPES = ['integer', 'float', 'boolean', 'string', 'email', 'uri'];
-
-  /**
    * Constructs the conform verb.
    *
-   * @param \Drupal\surface\Validation\ConstraintRunner $constraintRunner
-   *   The constraint runner, which runs the outputs' constraints.
+   * @param \Drupal\surface\Validation\PortableValidator $validator
+   *   The dialect's validator, as the pipeline holds it.
+   * @param \Drupal\surface\Contract\OutputsDocument $documents
+   *   The writer of the outputs' validation document.
+   * @param \Drupal\surface\Pipeline\SurfacePipelineInterface $pipeline
+   *   The pipeline, which the check provider is handed.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service, for the sentences a refusal says.
    */
   public function __construct(
-    protected readonly ConstraintRunner $constraintRunner,
+    private readonly PortableValidator $validator,
+    private readonly OutputsDocument $documents,
+    private readonly SurfacePipelineInterface $pipeline,
     TranslationInterface $string_translation,
   ) {
     $this->stringTranslation = $string_translation;
@@ -60,206 +83,270 @@ final class Conforming {
    *   The emitted values, keyed by output key, NotEmitted included.
    *
    * @return \Drupal\surface\Pipeline\ViolationSet
-   *   The violations, each carrying its output key, the property path
-   *   within that key and an unrendered message.
+   *   The violations, each with its output key, its dotted path within
+   *   that key and an unrendered message.
    *
-   * @see \Drupal\surface\Pipeline\SurfacePipelineInterface::conformOutput()
+   * @throws \Throwable
+   *   What a check threw, once the validation returned.
    */
   public function conformOutput(SurfaceInterface $surface, array $output): ViolationSet {
-    $definitions = $surface->getOutputDefinitions();
-    // NotEmitted is the producer's way of saying "this key is not emitted"
-    // from inside an array literal, so it is resolved into absence
-    // before anything else looks at the array.
+    $outputs = $surface->getOutputDefinitions();
     $output = NotEmitted::strip($output);
     $errors = [];
-    foreach (array_keys(array_diff_key($output, $definitions->keys())) as $unknown) {
-      $errors[] = new Violation((string) $unknown, '', $this->t('Unknown output key @key.', [
-        '@key' => $unknown,
-      ]), Violation::UNKNOWN_KEY);
-    }
-    foreach ($definitions as $name => $definition) {
+    // The places an object was refused at, by full dotted path.
+    $objects = [];
+    $data = [];
+    $document = $this->documents->of($surface);
+    $arrayed = $document === NULL ? [] : Schemas::arrayed($document);
+    foreach ($output as $name => $value) {
       $name = (string) $name;
-      if (!array_key_exists($name, $output)) {
-        // Absent, which is legal for an output that is not required.
-        // NULL is not this case: NULL is a value and is held to the
-        // definition below like any other.
-        if ($definition->isRequired()) {
-          $errors[] = new Violation($name, '', $this->t('@label was not emitted.', [
-            '@label' => $definition->getLabel() ?? $name,
-          ]), Violation::REQUIRED);
+      $entry = $outputs->entry($name);
+      if ($entry === NULL) {
+        $errors[] = $this->unknown($name, '');
+        continue;
+      }
+      $data[$name] = $this->walked($entry->schema(), $value, $name, '', $arrayed['properties'][$name] ?? NULL, $errors, $objects);
+    }
+    foreach ($outputs->entries() as $name => $entry) {
+      $name = (string) $name;
+      $schema = $entry->schema();
+      if (!array_key_exists($name, $output) && NodeFacts::isRequired($schema)) {
+        // Absent, which only an output that is not required may be. NULL
+        // is a value, held below like any other.
+        $errors[] = new Violation($name, '', $this->notEmitted(NodeFacts::label($schema) ?? $name), Violation::REQUIRED);
+      }
+    }
+    if ($document === NULL || $data === []) {
+      return new ViolationSet($errors);
+    }
+    $provider = $this->validator->provider(new Surface($outputs), $data, $this->pipeline);
+    foreach ($this->validator->held($document, $data, $provider) as $found) {
+      $path = $found->path;
+      if ($found->code === 'unknownProperty' || self::under($path, $objects)) {
+        // Said where the key stands, or about what was refused as an object.
+        continue;
+      }
+      $property = is_string($found->params['property'] ?? NULL) ? $found->params['property'] : NULL;
+      if ($found->code === Violation::REQUIRED && $property !== NULL) {
+        if ($path === '') {
+          // A top-level output, said above.
+          continue;
         }
+        $full = $path . '.' . $property;
+        [$key, $below] = self::split($full);
+        $schema = self::schemaAt($surface, $full);
+        $errors[] = new Violation($key, $below, $this->notEmitted(($schema === NULL ? NULL : NodeFacts::label($schema)) ?? $property), Violation::REQUIRED);
         continue;
       }
-      $holdable = TRUE;
-      $errors = array_merge(
-        $errors,
-        $this->conformStructure($definition, $output[$name], $name, '', $holdable),
-      );
-      if (!$holdable) {
-        // The value is not in a shape the definition can hold at all, so
-        // there is nothing left for typed data to say about it that the
-        // shape refusal has not already said more precisely.
-        continue;
-      }
-      foreach ($this->constraintRunner->conforms($definition, $output[$name], $name) as $violation) {
-        $errors[] = Violation::fromConstraint($name, (string) $violation->getPropertyPath(), $violation);
-      }
+      [$key, $below] = self::split($path);
+      $errors[] = new Violation($key, $below, $found->message, $found->code, params: $found->params);
     }
     return new ViolationSet($errors);
   }
 
   /**
-   * Checks an emitted value's shape and the keys it carries.
+   * Walks one emitted value down its schema, refusing objects and unknown keys.
    *
-   * The part of conformance typed data cannot do. Typed data runs the
-   * constraints at every depth once a value is in the object, but it
-   * will hold an array it was never told about — an extra property in a
-   * map is simply ignored — and it turns a scalar handed to a list into
-   * a one-item list, which is exactly the quiet coercion outputs are not
-   * allowed. Both are found here, addressed by path, before the value is
-   * handed over.
-   *
-   * NULL is left alone at every level: it is a value, and whether it is
-   * acceptable is the definition's business, which typed data asks by
-   * running the required flag as a constraint.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition the value is held to.
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   The value's built schema; NULL below a place no schema describes (a
+   *   map with no properties, `any`), where only objects are looked for.
    * @param mixed $value
-   *   The emitted value, already stripped of omitted keys.
-   * @param string $key
-   *   The top level output key every violation is filed under.
-   * @param string $path
-   *   The property path within that key, dotted; '' at the top.
-   * @param bool $holdable
-   *   Set to FALSE when the value is in a shape the definition cannot
-   *   hold, so the caller knows not to hand it to typed data.
-   *
-   * @return \Drupal\surface\Pipeline\Violation[]
-   *   The violations found.
-   */
-  protected function conformStructure(DataDefinitionInterface $definition, mixed $value, string $key, string $path, bool &$holdable): array {
-    if ($value === NULL) {
-      return [];
-    }
-    if ($definition instanceof ListDataDefinitionInterface) {
-      if (!is_array($value)) {
-        $holdable = FALSE;
-        return [$this->outputShapeViolation($key, $path, 'list', $value)];
-      }
-      $errors = [];
-      foreach ($value as $delta => $item) {
-        $errors = array_merge($errors, $this->conformStructure(
-          $definition->getItemDefinition(),
-          $item,
-          $key,
-          Accepting::joinPath($path, (string) $delta),
-          $holdable,
-        ));
-      }
-      return $errors;
-    }
-    $properties = $definition instanceof ComplexDataDefinitionInterface
-      ? $definition->getPropertyDefinitions()
-      : [];
-    if ($properties === []) {
-      $mismatch = $this->outputTypeMismatch($definition, $value, $key, $path);
-      return $mismatch === NULL ? [] : [$mismatch];
-    }
-    if (!is_array($value)) {
-      $holdable = FALSE;
-      return [$this->outputShapeViolation($key, $path, 'map', $value)];
-    }
-    $errors = [];
-    foreach (array_keys(array_diff_key($value, $properties)) as $unknown) {
-      $unknown_path = Accepting::joinPath($path, (string) $unknown);
-      $errors[] = new Violation($key, $unknown_path, $this->t('Unknown output key @key.', [
-        '@key' => $key . '.' . $unknown_path,
-      ]), Violation::UNKNOWN_KEY);
-    }
-    foreach ($properties as $property => $property_definition) {
-      if (array_key_exists($property, $value)) {
-        $errors = array_merge($errors, $this->conformStructure(
-          $property_definition,
-          $value[$property],
-          $key,
-          Accepting::joinPath($path, (string) $property),
-          $holdable,
-        ));
-      }
-    }
-    return $errors;
-  }
-
-  /**
-   * Refuses a leaf value that is not in its definition's native type.
-   *
-   * Core's own PrimitiveType constraint asks whether a value *could be*
-   * the type — a string of digits passes as an integer, and any scalar
-   * passes as a string — because on the input side that is the right
-   * question: input arrives as text and the coercion table converts it.
-   * An output is produced by code with the declaration in front of it,
-   * nothing converts it, and a consumer reading `integer` in the emitted
-   * schema will be handed whatever the producer put there. So the
-   * question here is the strict one, for the types whose PHP type is
-   * plain; anything else — 'any', a contributed type — is left alone,
-   * because a rule it never defined would be a guess.
-   *
-   * An integer where a float was declared is the one widening allowed:
-   * every integer is that float exactly, so nothing is lost and no
-   * consumer is surprised.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition the value is held to.
-   * @param mixed $value
-   *   The emitted value; never NULL, which is judged by the required
-   *   flag instead.
+   *   The value, stripped of NotEmitted.
    * @param string $key
    *   The output key.
    * @param string $path
-   *   The property path within it.
+   *   The dotted path within it; '' at the key.
+   * @param mixed $written
+   *   The validation document's schema at the place, as an array, for the
+   *   type a refused object is said against.
+   * @param \Drupal\surface\Pipeline\Violation[] $errors
+   *   The violations so far, added to.
+   * @param string[] $objects
+   *   The full dotted paths of the objects refused, added to.
    *
-   * @return \Drupal\surface\Pipeline\Violation|null
-   *   The violation, or NULL when the type is right or unknown here.
+   * @return mixed
+   *   The value as the validator is handed it: an object as NULL, a key
+   *   nothing declares left out.
    */
-  protected function outputTypeMismatch(DataDefinitionInterface $definition, mixed $value, string $key, string $path): ?Violation {
-    $type = $definition->getDataType();
-    if (!in_array($type, self::OUTPUT_TYPES, TRUE)) {
+  private function walked(?Schema $schema, mixed $value, string $key, string $path, mixed $written, array &$errors, array &$objects): mixed {
+    if (is_object($value)) {
+      $objects[] = self::full($key, $path);
+      $expected = is_array($written) ? array_values(array_diff(array_map('strval', (array) ($written['type'] ?? [])), ['null'])) : [];
+      $message = $expected === []
+        ? $this->t('This value must be a plain value, @actual given.', ['@actual' => get_debug_type($value)])
+        : $this->t('This value must be of type @expected, @actual given.', [
+          '@expected' => implode(' or ', $expected),
+          '@actual' => 'object',
+        ]);
+      $params = ['expected' => $expected, 'actual' => 'object'];
+      $errors[] = new Violation($key, $path, $message, Violation::TYPE_MISMATCH, params: $params);
       return NULL;
     }
-    $holds = match ($type) {
-      'integer' => is_int($value),
-      'float' => is_float($value) || is_int($value),
-      'boolean' => is_bool($value),
-      default => is_string($value),
-    };
-    return $holds ? NULL : $this->outputShapeViolation($key, $path, $type, $value);
+    if (!is_array($value)) {
+      return $value;
+    }
+    $written = is_array($written) ? $written : NULL;
+    if ($schema !== NULL && DefinitionSchema::isList($schema)) {
+      if (!array_is_list($value)) {
+        // A map for a list: the validator says so, whole.
+        return $this->plain($value, $key, $path, $errors, $objects);
+      }
+      $item = DefinitionSchema::itemNode($schema);
+      $walked = [];
+      foreach ($value as $delta => $one) {
+        $walked[] = $this->walked($item, $one, $key, Accepting::joinPath($path, (string) $delta), $written['items'] ?? NULL, $errors, $objects);
+      }
+      return $walked;
+    }
+    $properties = $schema === NULL ? [] : NodeFacts::properties($schema);
+    if ($properties === [] || ($value !== [] && array_is_list($value))) {
+      // A value no keys describe, or a list for a map, which the validator
+      // says whole: only objects are looked for inside.
+      return $this->plain($value, $key, $path, $errors, $objects);
+    }
+    $walked = [];
+    foreach ($value as $name => $one) {
+      $name = (string) $name;
+      if (!isset($properties[$name])) {
+        $errors[] = $this->unknown($key, Accepting::joinPath($path, $name));
+        continue;
+      }
+      $walked[$name] = $this->walked($properties[$name], $one, $key, Accepting::joinPath($path, $name), $written['properties'][$name] ?? NULL, $errors, $objects);
+    }
+    return $walked;
   }
 
   /**
-   * Builds the violation for an emitted value of the wrong shape.
+   * Walks a value no schema describes below, refusing each object in it.
    *
-   * The same sentence accept() refuses a misshapen input with, because
-   * it is the same mistake read from the other side, and a caller
-   * reading both reports should not have to learn two wordings.
-   *
+   * @param array $value
+   *   The value.
    * @param string $key
    *   The output key.
    * @param string $path
-   *   The property path within it.
-   * @param string $expected
-   *   The shape the definition can hold.
-   * @param mixed $value
-   *   What arrived instead.
+   *   The dotted path of the value within it.
+   * @param \Drupal\surface\Pipeline\Violation[] $errors
+   *   The violations so far, added to.
+   * @param string[] $objects
+   *   The full dotted paths of the objects refused, added to.
+   *
+   * @return array
+   *   The value, each object in it NULL.
+   */
+  private function plain(array $value, string $key, string $path, array &$errors, array &$objects): array {
+    foreach ($value as $name => $one) {
+      if (is_object($one) || is_array($one)) {
+        $value[$name] = $this->walked(NULL, $one, $key, Accepting::joinPath($path, (string) $name), NULL, $errors, $objects);
+      }
+    }
+    return $value;
+  }
+
+  /**
+   * Refuses a key no output declares.
+   *
+   * @param string $key
+   *   The output key, or the unknown key itself at the top.
+   * @param string $path
+   *   The dotted path of the unknown key within the output key; '' at the
+   *   top.
    *
    * @return \Drupal\surface\Pipeline\Violation
    *   The violation.
    */
-  protected function outputShapeViolation(string $key, string $path, string $expected, mixed $value): Violation {
-    return Violation::typeMismatch($key, $path, $this->t('This value must be of type @expected, @actual given.', [
-      '@expected' => $expected,
-      '@actual' => get_debug_type($value),
-    ]), $expected, get_debug_type($value));
+  private function unknown(string $key, string $path): Violation {
+    return new Violation($key, $path, $this->t('Unknown output key @key.', [
+      '@key' => self::full($key, $path),
+    ]), Violation::UNKNOWN_KEY);
+  }
+
+  /**
+   * Says that a required output was not emitted.
+   *
+   * @param mixed $label
+   *   Its label, or its name.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The sentence.
+   */
+  private function notEmitted(mixed $label): TranslatableMarkup {
+    return $this->t('@label was not emitted.', ['@label' => $label]);
+  }
+
+  /**
+   * Writes the full dotted path of a place below an output key.
+   *
+   * @param string $key
+   *   The output key.
+   * @param string $path
+   *   The dotted path within it; '' at the key.
+   *
+   * @return string
+   *   The path from the top.
+   */
+  private static function full(string $key, string $path): string {
+    return $path === '' ? $key : $key . '.' . $path;
+  }
+
+  /**
+   * Splits a full dotted path into its output key and the path below it.
+   *
+   * @param string $full
+   *   The path, from the top.
+   *
+   * @return array{0: string, 1: string}
+   *   The key ('' for the top) and the dotted path below it.
+   */
+  private static function split(string $full): array {
+    $parts = explode('.', $full, 2);
+    return [$parts[0], $parts[1] ?? ''];
+  }
+
+  /**
+   * Answers whether a dotted path is at or below one of some paths.
+   *
+   * @param string $path
+   *   The path.
+   * @param string[] $paths
+   *   The paths.
+   *
+   * @return bool
+   *   TRUE when it is.
+   */
+  private static function under(string $path, array $paths): bool {
+    foreach ($paths as $one) {
+      if ($path === $one || str_starts_with($path, $one . '.')) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Finds the built schema at a full dotted path into the outputs.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The data surface.
+   * @param string $full
+   *   The path, from the top: the key, then property names and deltas.
+   *
+   * @return \PortableSchema\Builder\Schema|null
+   *   The schema there, or NULL where none describes it.
+   */
+  private static function schemaAt(SurfaceInterface $surface, string $full): ?Schema {
+    $segments = explode('.', $full);
+    $schema = $surface->getOutputDefinitions()->entry((string) array_shift($segments))?->schema();
+    foreach ($segments as $segment) {
+      if ($schema === NULL) {
+        return NULL;
+      }
+      $schema = match (TRUE) {
+        DefinitionSchema::isList($schema) => ctype_digit($segment) ? DefinitionSchema::itemNode($schema) : NULL,
+        DefinitionSchema::isComplex($schema) => DefinitionSchema::propertyNode($schema, $segment),
+        default => NULL,
+      };
+    }
+    return $schema;
   }
 
 }

@@ -50,10 +50,10 @@ class ToolOutputsAfterCommitTest extends SurfaceKernelTestBase {
   public function register(ContainerBuilder $container): void {
     parent::register($container);
     $container->register('surface_test.inner_pipeline', SurfacePipeline::class)->setArguments([
-      new Reference('surface.constraint_runner'),
       new Reference('surface.options'),
       new Reference('string_translation'),
       new Reference('surface.portable_validator'),
+      new Reference('surface.contract_emitter'),
     ]);
     $container->register('surface.pipeline', MisreportingPipeline::class)->setArguments([new Reference('surface_test.inner_pipeline')]);
   }
