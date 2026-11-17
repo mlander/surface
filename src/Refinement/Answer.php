@@ -31,7 +31,7 @@ use PortableSchema\Builder\Schema;
  *   stands; the constraint's other options are the answer's;
  * - `pattern`, or `drupal:Regex`: the pattern, where the key holds none;
  *   the key's stands where it holds one;
- * - `required()`: required; nothing in an answer unrequires;
+ * - `required()`: required; nothing in an answer makes a key optional;
  * - `enum`: the key's list, filtered, in the key's order with the key's
  *   labels;
  * - `options()`, a `oneOf` of `const` and `title`: the list for these
