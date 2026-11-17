@@ -667,11 +667,13 @@ final class SchemaReader {
       $read = KeywordReader::forBuild($inputs->shapesInUse())->read($key, $schema, $required, $what);
       // A key its `readOnly` locks needs a frame to be locked in: any other
       // blueprint refuses it below, as the frame's reading does.
-      if ($read !== NULL && (!$read->locked || $inputs instanceof ResourceBlueprint)) {
+      if ($read !== NULL && !$read->locked) {
         $inputs->declareRead($key, $read->schema);
-        if ($read->locked && $inputs instanceof ResourceBlueprint) {
-          $inputs->lockRead($key);
-        }
+        return $read->notes;
+      }
+      if ($read !== NULL && $inputs instanceof ResourceBlueprint) {
+        $inputs->declareRead($key, $read->schema);
+        $inputs->lockRead($key);
         return $read->notes;
       }
     }

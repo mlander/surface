@@ -89,7 +89,7 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function addEach(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL, string|\Stringable|null $description = NULL): MapDataDefinition {
+  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, mixed $default = NULL, string|\Stringable|null $description = NULL): MapDataDefinition {
     $map = MapDataDefinition::create()->setLabel($label);
     $this->record($key, 'addEach', $map, ['from' => $from]);
     return $map;
@@ -107,14 +107,18 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function reads(string $port, string $type, bool $required = FALSE): static {
+  public function reads(string $port, string|Schema $type, bool $required = FALSE): static {
     return $this;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function compute(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition {
+  public function compute(string $key, string|Schema $type, string|\Stringable|null $label = NULL, array $from = [], string $using = '', string $when = Compute::ON_CREATE): DataDefinition|static {
+    if ($type instanceof Schema) {
+      $this->record($key, 'compute', DataDefinition::create('any'));
+      return $this;
+    }
     $definition = DataDefinition::create($type)->setLabel($label);
     $this->record($key, 'compute', $definition);
     return $definition;

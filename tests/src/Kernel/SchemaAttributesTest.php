@@ -129,7 +129,9 @@ class SchemaAttributesTest extends SurfaceKernelTestBase {
    */
   public function testMixingIsRefusedByName(): void {
     $refused = [
-      SpelledTwice::class => SpelledTwice::class . '::$name carries #[Schema], the Portable Schema package\'s spelling of a key, and #[Input], Surface\'s. A key is spelled one way: with #[Of], #[Schema], #[Check], #[Ui] and #[Required], or with #[Input], #[Constraint], #[Widget], #[Setting] and #[Describe].',
+      // Beside #[Input], #[Schema] says rules alone since part 32.9; its
+      // title is #[Input]'s to say.
+      SpelledTwice::class => SpelledTwice::class . '::$name carries #[Schema] with title beside Surface\'s spelling of the key. Beside #[Input], #[Schema] says the key\'s rules alone, the keywords that check a value (minimum, maxLength, pattern, enum and the like); the attribute that says what the key is says the rest.',
       SchemaAndKind::class => SchemaAndKind::class . '::$email carries #[Of] and #[Port], which each say what it is. A property is one key of one kind: keep one of them.',
       GroupsTwice::class => GroupsTwice::class . ' declares its groups with both #[Group] and #[Ui(groups:)]. A class declares them one way: keep one of the two.',
     ];

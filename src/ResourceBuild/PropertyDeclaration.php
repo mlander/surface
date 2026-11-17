@@ -8,6 +8,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Reader\LeafRules;
@@ -35,7 +36,10 @@ use Drupal\surface\Resource\Attribute\Widget;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\ShapeInterface;
+use Drupal\surface\Contract\ConstraintKeywords;
+use Drupal\surface\Contract\KeywordReader;
 use Drupal\surface\Contract\LeafTypes;
+use Drupal\surface\Contract\ValueSchema;
 use PortableSchema\Builder\Attribute\Check;
 use PortableSchema\Builder\Attribute\Document;
 use PortableSchema\Builder\Attribute\Of;
@@ -131,6 +135,10 @@ final class PropertyDeclaration {
 
   /**
    * Surface's attributes that say what the package's spelling says.
+   *
+   * #[Input] beside the package's #[Of], #[Ui] or #[Required] says the key
+   * twice; beside #[Schema] and #[Check] alone it is Surface's spelling,
+   * those its rules (rules()).
    */
   private const SPELLED_TWICE = [
     Input::class,
@@ -139,6 +147,23 @@ final class PropertyDeclaration {
     Describe::class,
     Setting::class,
   ];
+
+  /**
+   * The package's attributes that say a key's rules beside Surface's.
+   */
+  private const RULES = [
+    SchemaAttribute::class,
+    Check::class,
+  ];
+
+  /**
+   * The keywords #[Schema] says beside Surface's spelling, beside the table's.
+   *
+   * The constraint table's keywords (ConstraintKeywords::keywords()), a
+   * list of values, a check, and the rules of a list's item (`items`) or
+   * of an #[Each]'s entry (`additionalProperties`).
+   */
+  private const RULE_KEYWORDS = ['enum', 'oneOf', 'const', 'portable-check', 'items', 'additionalProperties'];
 
   /**
    * The JSON type each PHP property type stands for, as ClassReader reads it.
@@ -215,7 +240,7 @@ final class PropertyDeclaration {
     $rules = [];
     foreach (self::properties($reflection) as $property) {
       self::assertOneKind($property);
-      if (self::isPortable($property)) {
+      if (self::isPortable($property) && !self::holdsRulesBeside($property)) {
         self::assertOneSpelling($property);
         if ($outputs) {
           continue;
@@ -570,7 +595,7 @@ final class PropertyDeclaration {
       if (in_array($attribute->getName(), self::KINDS, TRUE)) {
         $kinds[] = '#[' . substr($attribute->getName(), strlen(self::NAMESPACE)) . ']';
       }
-      elseif (!$portable && in_array($attribute->getName(), self::PORTABLE, TRUE)) {
+      elseif (!$portable && in_array($attribute->getName(), self::PORTABLE, TRUE) && !self::holdsRulesBeside($property)) {
         // The package's spelling is an input, as #[Input] is: named by
         // its first attribute.
         $portable = TRUE;
@@ -680,10 +705,9 @@ final class PropertyDeclaration {
     foreach ($property->getAttributes() as $attribute) {
       $instance = $attribute->newInstance();
       if ($instance instanceof Constraint) {
+        // Until its uses are converted to #[Schema] and #[Check] (rules()).
         $constrained = $definition;
         if ($instance->item) {
-          // A list's item, or on an #[Each] property each entry: the
-          // definition the map copies for every entry the site lists.
           $constrained = $definition instanceof ListDataDefinition ? $definition->getItemDefinition() : DefinitionMetadata::eachOf($definition);
           if (!$constrained instanceof DataDefinitionInterface) {
             throw new \LogicException(sprintf('%s::$%s puts #[Constraint(\'%s\')] on its item, `item: TRUE`, but the key is no list and no #[Each]. Drop `item:`, or declare a list with #[Input(list:)].', $property->getDeclaringClass()->getName(), $property->getName(), $instance->name));
@@ -695,11 +719,136 @@ final class PropertyDeclaration {
         DefinitionMetadata::setExamples($definition, $instance->values);
       }
       elseif ($instance instanceof Widget && $definition instanceof DataDefinition) {
-        $definition->setSetting('widget', $instance->widget);
+        // `textarea` is a text drawn on several lines, as `ui(widget:
+        // 'textarea')` reads.
+        if ($instance->widget === 'textarea') {
+          $definition->setSetting('multiline', TRUE);
+        }
+        else {
+          $definition->setSetting('widget', $instance->widget);
+        }
       }
       elseif ($instance instanceof Setting && $definition instanceof DataDefinition) {
         $definition->setSetting($instance->name, $instance->value);
       }
+    }
+    self::rules($property, $definition);
+  }
+
+  /**
+   * Answers whether a property holds the package's rules beside Surface's key.
+   *
+   * @param \ReflectionProperty $property
+   *   The property.
+   *
+   * @return bool
+   *   TRUE where it carries #[Input] or #[Each] and, of the package's
+   *   attributes, #[Schema] and #[Check] alone. Beside any other kind the
+   *   package's spelling is a kind of its own (assertOneKind()).
+   */
+  private static function holdsRulesBeside(\ReflectionProperty $property): bool {
+    $kind = FALSE;
+    foreach ($property->getAttributes() as $attribute) {
+      $name = $attribute->getName();
+      if ($name === Input::class || $name === Each::class) {
+        $kind = TRUE;
+      }
+      elseif (in_array($name, self::PORTABLE, TRUE) && !in_array($name, self::RULES, TRUE)) {
+        return FALSE;
+      }
+    }
+    return $kind;
+  }
+
+  /**
+   * Lays the package's rules beside Surface's spelling on the key.
+   *
+   * #[Schema] beside #[Input] or #[Each] says the key's rules: the
+   * keywords that check a value (`minimum`, `maxLength`, `pattern`, `enum`
+   * and the like), its item's under `items` for a list and an #[Each]'s
+   * entry's under `additionalProperties`; each #[Check]
+   * is the constraint it names. Each is read as the authored reader reads
+   * a key's keywords (KeywordReader), and its constraints laid on the
+   * definition. The words of the key are Surface's attributes'.
+   *
+   * Decision: see docs/decisions.md#a-class-may-declare-its-keys-as-properties.
+   *
+   * @param \ReflectionProperty $property
+   *   The property.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition, as its verb returned it.
+   *
+   * @throws \LogicException
+   *   For a keyword that is no rule, and for an item's rules on a key that
+   *   is no list and no #[Each].
+   */
+  private static function rules(\ReflectionProperty $property, DataDefinitionInterface $definition): void {
+    $keywords = [];
+    foreach ($property->getAttributes(SchemaAttribute::class) as $attribute) {
+      foreach ($attribute->newInstance()->keywords as $method => $value) {
+        $keywords[Keywords::keyword((string) $method) ?? (string) $method] = $value;
+      }
+    }
+    $checks = array_map(static fn (\ReflectionAttribute $attribute): Check => $attribute->newInstance(), $property->getAttributes(Check::class));
+    if ($keywords === [] && $checks === []) {
+      return;
+    }
+    $what = sprintf('%s::$%s', $property->getDeclaringClass()->getName(), $property->getName());
+    foreach (['items', 'additionalProperties'] as $inner) {
+      if (!array_key_exists($inner, $keywords)) {
+        continue;
+      }
+      // A list's item, or on an #[Each] property each entry: the
+      // definition the map copies for every entry the site lists.
+      $item = $definition instanceof ListDataDefinition ? $definition->getItemDefinition() : DefinitionMetadata::eachOf($definition);
+      if (!$item instanceof DataDefinitionInterface) {
+        throw new \LogicException(sprintf('%s says #[Schema(%s:)], its item\'s rules, but the key is no list and no #[Each]. Lay the rules on the key itself, or declare a list with #[Input(list:)].', $what, $inner));
+      }
+      $rules = $keywords[$inner];
+      self::lay($what, $item, is_array($rules) ? $rules : [], []);
+      unset($keywords[$inner]);
+    }
+    self::lay($what, $definition, $keywords, $checks);
+  }
+
+  /**
+   * Lays rules, keywords and checks, on one definition.
+   *
+   * @param string $what
+   *   The property, for the messages.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   * @param array<string, mixed> $keywords
+   *   The keywords.
+   * @param \PortableSchema\Builder\Attribute\Check[] $checks
+   *   The checks.
+   *
+   * @throws \LogicException
+   *   For a keyword that is no rule, or a definition no rule is read for.
+   */
+  private static function lay(string $what, DataDefinitionInterface $definition, array $keywords, array $checks): void {
+    if ($keywords === [] && $checks === []) {
+      return;
+    }
+    $said = array_keys(array_diff_key($keywords, ConstraintKeywords::keywords(), array_flip(self::RULE_KEYWORDS)));
+    if ($said !== []) {
+      throw new \LogicException(sprintf('%s carries #[Schema] with %s beside Surface\'s spelling of the key. Beside #[Input], #[Schema] says the key\'s rules alone, the keywords that check a value (minimum, maxLength, pattern, enum and the like); the attribute that says what the key is says the rest.', $what, implode(', ', $said)));
+    }
+    $type = $definition instanceof ListDataDefinitionInterface ? 'array' : (LeafTypes::ROWS[$definition->getDataType()]['type'] ?? NULL);
+    if ($type === NULL) {
+      throw new \LogicException(sprintf('%s carries #[Schema] or #[Check] on a key of the %s type, which holds no rule of its own: lay the rules on its keys.', $what, $definition->getDataType()));
+    }
+    $schema = Schema::from(['type' => $type] + $keywords);
+    foreach ($checks as $check) {
+      $schema = $schema->check($check->name, $check->options);
+    }
+    $read = KeywordReader::forBuild()->read($definition instanceof ListDataDefinitionInterface ? 'items' : 'value', $schema, FALSE, $what);
+    $constraints = $read === NULL ? NULL : (ValueSchema::factsOf($read->schema)['constraints'] ?? []);
+    if (!is_array($constraints)) {
+      throw new \LogicException(sprintf('%s carries rules the reader does not read as one value\'s: say them as #[Schema] keywords of the key, or #[Check].', $what));
+    }
+    foreach ($constraints as $id => $options) {
+      $definition->addConstraint((string) $id, $options);
     }
   }
 
@@ -1011,17 +1160,24 @@ final class PropertyDeclaration {
   }
 
   /**
-   * Answers whether a property lays a constraint on its item.
+   * Answers whether a property lays rules on its item.
    *
    * @param \ReflectionProperty $property
    *   The property.
    *
    * @return bool
-   *   TRUE when a #[Constraint] it carries says `item: TRUE`.
+   *   TRUE when a #[Schema] it carries says `items` or
+   *   `additionalProperties`.
    */
   private static function constrainsItem(\ReflectionProperty $property): bool {
     foreach ($property->getAttributes(Constraint::class) as $attribute) {
       if ($attribute->newInstance()->item) {
+        return TRUE;
+      }
+    }
+    foreach ($property->getAttributes(SchemaAttribute::class) as $attribute) {
+      $keywords = $attribute->newInstance()->keywords;
+      if (array_key_exists('items', $keywords) || array_key_exists('additionalProperties', $keywords)) {
         return TRUE;
       }
     }

@@ -17,6 +17,7 @@ use Drupal\surface\Resource\Compute;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\Variants;
 use Drupal\surface\Reference\References;
+use PortableSchema\Builder\Schema;
 
 /**
  * What addMap() hands its callable first: keys that land in a plain map.
@@ -155,7 +156,7 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
   /**
    * {@inheritdoc}
    */
-  public function addEach(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL, string|\Stringable|null $description = NULL): MapDataDefinition {
+  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, mixed $default = NULL, string|\Stringable|null $description = NULL): MapDataDefinition {
     if ($description !== NULL) {
       return static::stated($this->addEach($key, $type, $from, $label, $default), $description);
     }
@@ -175,14 +176,14 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
   /**
    * {@inheritdoc}
    */
-  public function reads(string $port, string $type, bool $required = FALSE): static {
+  public function reads(string $port, string|Schema $type, bool $required = FALSE): static {
     throw $this->framed(sprintf('reads("%s")', $port));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function compute(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition {
+  public function compute(string $key, string|Schema $type, string|\Stringable|null $label = NULL, array $from = [], string $using = '', string $when = Compute::ON_CREATE): DataDefinition|static {
     throw $this->framed(sprintf('compute("%s")', $key));
   }
 

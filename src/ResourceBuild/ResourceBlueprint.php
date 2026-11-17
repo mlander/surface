@@ -25,7 +25,11 @@ use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\EntrySchemasInterface;
 use Drupal\surface\Resource\ResourceCallable;
 use Drupal\surface\Resource\SiteListInterface;
+use Drupal\surface\Contract\KeywordReader;
 use Drupal\surface\Contract\LeafTypes;
+use Drupal\surface\Contract\NodeDefinition;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\ValueSchema;
 use Drupal\surface\Contract\SchemaReader;
 use PortableSchema\Builder\Schema;
 use Drupal\surface\Variants;
@@ -873,9 +877,15 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    */
-  public function addEach(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL, string|\Stringable|null $description = NULL): MapDataDefinition {
+  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, mixed $default = NULL, string|\Stringable|null $description = NULL): MapDataDefinition {
     if ($description !== NULL) {
       return static::stated($this->addEach($key, $type, $from, $label, $default), $description);
+    }
+    if ($type instanceof Schema) {
+      // What every entry is, as a schema: its default inside it.
+      $schema = $this->schemaOfOne('addEach', $key, $type);
+      $default ??= ValueSchema::factsOf($schema)['default_value'] ?? NULL;
+      $type = NodeDefinition::of($schema);
     }
     $this->assertHoldsNoChild('declares keys from the site', $key);
     if ($type instanceof DataDefinitionInterface) {
@@ -1045,7 +1055,15 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
    */
-  public function reads(string $port, string $type, bool $required = FALSE): static {
+  public function reads(string $port, string|Schema $type, bool $required = FALSE): static {
+    if ($type instanceof Schema) {
+      // The port's type as a schema: required where it is marked, a shape
+      // by its id (Schema::of(Shape::class)).
+      $required = $required || $type->isRequired();
+      $reference = $type->get('$ref');
+      $shape = is_string($reference) ? $this->shapeOf($reference) : NULL;
+      $type = $shape ?? (string) NodeFacts::dataType($this->schemaOfOne('reads', $port, $type));
+    }
     if ($this->outputs) {
       throw new \LogicException(sprintf('reads() was asked to read "%s" into outputs. An output is emitted, never refined, so it has nothing to read.', $port));
     }
@@ -1102,8 +1120,11 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * Decision: see
    * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
    */
-  public function compute(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition {
+  public function compute(string $key, string|Schema $type, string|\Stringable|null $label = NULL, array $from = [], string $using = '', string $when = Compute::ON_CREATE): DataDefinition|static {
     $refuse = fn (string $why): \LogicException => new \LogicException(sprintf('compute("%s") on %s %s', $key, $this->name($this->owner), $why));
+    if (!$type instanceof Schema && $label === NULL) {
+      throw $refuse('names no label: compute() with a type takes its label, or a schema whose title() is it.');
+    }
     if ($this->outputs) {
       throw $refuse('declares a computed output: an output is emitted, never stored, so it has nothing to compute; a computed key is an input the caller does not type.');
     }
@@ -1127,10 +1148,45 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
         throw $refuse(sprintf('is computed from "%s", which is no key declared before it in this blueprint.', $source));
       }
     }
+    $computed = new Computed($from, $using, $when);
+    if ($type instanceof Schema) {
+      // The key as a schema: declared complete, then marked computed.
+      $this->addSchema($key, $type);
+      if (!$this->builder->writeSchema($key, static fn (array $facts): array => ['surface_computed' => $computed] + $facts)) {
+        $definition = $this->builder->getDefinition($key);
+        assert($definition !== NULL);
+        DefinitionMetadata::setComputed($definition, $computed);
+      }
+      return $this;
+    }
     // A map is refused by add(): no row of the type table is one.
     $definition = $this->add($key, $type, $label);
-    DefinitionMetadata::setComputed($definition, new Computed($from, $using, $when));
+    DefinitionMetadata::setComputed($definition, $computed);
     return $definition;
+  }
+
+  /**
+   * Reads the schema of one value, or a list of values, a verb is handed.
+   *
+   * @param string $verb
+   *   The verb, for the messages.
+   * @param string $key
+   *   The key or port.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The key's schema, as the builder holds a key's.
+   *
+   * @throws \LogicException
+   *   For a schema that is no value and no list of values.
+   */
+  protected function schemaOfOne(string $verb, string $key, Schema $schema): Schema {
+    $read = KeywordReader::forBuild($this->shapes)->read($key, $schema, NULL, sprintf('%s("%s")', $verb, $key));
+    if ($read === NULL) {
+      throw new \LogicException(sprintf('%s("%s") takes the schema of one value or a list of values, Schema::string(), Schema::integer() and the like: an object, a collection or a shape\'s def is declared at a key of its own.', $verb, $key));
+    }
+    return $read->schema;
   }
 
   /**

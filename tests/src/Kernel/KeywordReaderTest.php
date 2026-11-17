@@ -5,16 +5,23 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\KeywordReader;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Reference\References;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Resource\Attribute\Input;
+use Drupal\surface\Resource\ComputesValueInterface;
+use Drupal\surface\ResourceBuild\PropertyDeclaration;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
 use Drupal\surface\ResourceBuild\Shapes;
 use Drupal\surface\SurfaceBuilder;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Attribute\Check;
+use PortableSchema\Builder\Attribute\Schema as SchemaAttribute;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -289,6 +296,73 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('this site has no config schema type "no_such_type"');
     KeywordReader::forBuild($shapes)->read('name', Schema::of(KeywordReader::CONFIG_TYPE . 'no_such_type'));
+  }
+
+  /**
+   * Tests #[Schema] and #[Check] beside #[Input] are the key's rules.
+   *
+   * What #[Constraint] said: the same constraints on the key, and on a
+   * list's item under `items`.
+   */
+  public function testRulesBesideInput(): void {
+    $beside = new class {
+
+      /**
+       * A count.
+       */
+      #[Input('Headcount')]
+      #[SchemaAttribute(minimum: 1, maximum: 5000)]
+      public int $headcount;
+
+      /**
+       * A list.
+       */
+      #[Input('Tags', list: 'string')]
+      #[SchemaAttribute(maxItems: 3, items: ['maxLength' => 8])]
+      public array $tags = [];
+
+      /**
+       * A code.
+       */
+      #[Input('Code')]
+      #[Check('drupal:Regex', ['pattern' => '/^a/'])]
+      public ?string $code = NULL;
+
+    };
+    $builder = new SurfaceBuilder();
+    PropertyDeclaration::inputs(get_class($beside), new ResourceBlueprint($builder, $this->container->get('typed_data_manager')));
+    $this->assertSame(['min' => 1, 'max' => 5000], $builder->getDefinition('headcount')?->getConstraint('Range'));
+    $tags = $builder->getDefinition('tags');
+    $this->assertInstanceOf(ListDataDefinitionInterface::class, $tags);
+    $this->assertSame(['max' => 3], $tags->getConstraint('Count'));
+    $this->assertSame(['max' => 8], $tags->getItemDefinition()->getConstraint('Length'));
+    $this->assertSame(['pattern' => '/^a/'], $builder->getDefinition('code')?->getConstraint('Regex'));
+  }
+
+  /**
+   * Tests reads(), compute() and addEach() take a schema (decision 7).
+   */
+  public function testVerbsTakeSchemas(): void {
+    $typed = $this->container->get('typed_data_manager');
+    $builder = new SurfaceBuilder();
+    $blueprint = new ResourceBlueprint($builder, $typed);
+    $blueprint->reads('capacity', Schema::integer()->required());
+    $port = $blueprint->ports()['capacity'];
+    $this->assertSame(['integer', TRUE], [$port->type, $port->required]);
+    $blueprint->add('label', 'string', 'Label');
+    $slug = new class implements ComputesValueInterface {
+
+      /**
+       * {@inheritdoc}
+       */
+      public static function compute(array $from, ?Schema $key = NULL): mixed {
+        return strtolower((string) ($from['label'] ?? ''));
+      }
+
+    };
+    $blueprint->compute('slug', Schema::string()->title('Slug')->maxLength(16), from: ['label'], using: get_class($slug));
+    $this->assertSame(['label'], DefinitionMetadata::computedOf($builder->getDefinition('slug'))?->from);
+    $this->assertSame(['max' => 16], $builder->getDefinition('slug')->getConstraint('Length'));
   }
 
   /**
