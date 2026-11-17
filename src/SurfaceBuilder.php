@@ -1592,16 +1592,38 @@ final class SurfaceBuilder {
    * to the owner, and a declared default, which is a value nobody can
    * ever receive.
    *
+   * A secret is refused too, at any depth: an output is served to whoever
+   * runs the operation, and a secret is never read back. Asked when an
+   * output is added and again at seal, which is the ask that sees a secret
+   * marked on the definition add() returned.
+   *
+   * Decision: see
+   * docs/decisions.md#outputs-conform-through-the-dialects-validator.
+   *
    * @param string $name
    *   The output key.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to check.
    *
    * @throws \InvalidArgumentException
-   *   When the definition declares a default.
+   *   When the definition declares a default, or is or holds a secret.
    */
   protected static function assertOutputDeclarable(string $name, DataDefinitionInterface $definition): void {
     static::assertNoDefault($name, $definition);
+    $secret = static function (string $at, DataDefinitionInterface $definition) use (&$secret): void {
+      if (DefinitionMetadata::isSecret($definition)) {
+        throw new \InvalidArgumentException(sprintf('The "%s" output is a secret. An output is served to whoever runs the operation, and a secret is never read back: a secret is an input alone.', $at));
+      }
+      if ($definition instanceof ListDataDefinitionInterface) {
+        $secret($at . '.*', $definition->getItemDefinition());
+      }
+      elseif ($definition instanceof ComplexDataDefinitionInterface) {
+        foreach ($definition->getPropertyDefinitions() as $property => $property_definition) {
+          $secret($at . '.' . $property, $property_definition);
+        }
+      }
+    };
+    $secret($name, $definition);
   }
 
   /**

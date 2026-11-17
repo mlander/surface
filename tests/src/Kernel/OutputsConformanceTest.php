@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Pipeline\NotEmitted;
 use Drupal\Tests\surface\HandCorpus\OutputCases;
 use Drupal\user\Entity\User;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests outputs held to their validation document by the dialect's validator.
@@ -126,6 +132,43 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
     $this->assertSame([['meta.count', 'required']], $this->answer($surface, array_replace($good, ['meta' => []])));
     $this->assertSame('type', $said(['stamp' => '123'])[0][1]);
     $this->assertSame([], $said(['count' => 3.0]));
+  }
+
+  /**
+   * Tests a secret output is refused, however it is declared.
+   *
+   * Each way one could be declared, refused at seal at the latest: the
+   * builder's own, setSecret() on the definition a blueprint's add()
+   * returns, and addSchema() with `writeOnly`, at the top and in a map.
+   */
+  public function testSecretOutputIsRefused(): void {
+    $typed = $this->container->get('typed_data_manager');
+    $token = static function (): DataDefinition {
+      $definition = DataDefinition::create('string')->setLabel('Token');
+      DefinitionMetadata::setSecret($definition);
+      return $definition;
+    };
+    $ways = [
+      'token' => static fn (SurfaceBuilder $builder) => $builder->setOutputDefinition('token', $token()),
+      'meta.token' => static fn (SurfaceBuilder $builder) => $builder->setOutputDefinition('meta', MapDataDefinition::create()->setPropertyDefinition('token', $token())),
+      'added' => static function (SurfaceBuilder $builder) use ($typed): void {
+        DefinitionMetadata::setSecret((new ResourceBlueprint($builder, $typed, TRUE))->add('added', 'string', 'Token'));
+      },
+      'schema' => static function (SurfaceBuilder $builder) use ($typed): void {
+        (new ResourceBlueprint($builder, $typed, TRUE))->addSchema('schema', Schema::string()->title('Token')->writeOnly(TRUE));
+      },
+    ];
+    foreach ($ways as $at => $declare) {
+      try {
+        $builder = new SurfaceBuilder();
+        $declare($builder);
+        $builder->seal();
+        $this->fail(sprintf('The secret output "%s" was declared.', $at));
+      }
+      catch (\InvalidArgumentException $e) {
+        $this->assertSame(sprintf('The "%s" output is a secret. An output is served to whoever runs the operation, and a secret is never read back: a secret is an input alone.', $at), $e->getMessage());
+      }
+    }
   }
 
   /**

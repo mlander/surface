@@ -548,7 +548,7 @@ class OperationRunnerTest extends SurfaceKernelTestBase {
 
     $run = $this->runner()->run('stage_test.ledger', 'update', ['id' => 'a'], ['title' => 'Bravo']);
     $this->assertTrue($run->result()->committed, $this->said($run->result()));
-    $this->assertFalse($run->conformed(), 'Only the stage\'s outputs are held to the declaration, as at the doors.');
+    $this->assertTrue($run->conformed(), 'Every resource\'s outputs are held to the declaration: the ledger declares none, and answers none.');
     $this->assertSame('Bravo', $this->row('a')['title']);
   }
 

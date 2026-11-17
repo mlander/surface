@@ -416,8 +416,8 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     }
     // The resource's own outputs, beside the shape and never over it: read
     // back once committed, and for an operation that changes nothing or a
-    // dry run, what its prepare answered; the runner's, which holds the
-    // stage's to its declaration.
+    // dry run, what its prepare answered; the runner's, which holds them
+    // to their declaration.
     // Decision: see docs/decisions.md#who-produces-outputs.
     $outputs = array_diff_key($run->outputs(), $answer);
     // Held to the Tool API's own check whether or not they conformed: an
