@@ -24,8 +24,7 @@ final class FlatOwnerClashStructure implements StructureInterface {
       ->title('Kind'));
     $inputs->addSchema('weight', Schema::integer()
       ->title('Weight'));
-    $inputs->attachVariants('gear', by: 'kind', label: 'Gear')
-      ->setSetting(Variants::STORED_AS, Variants::FLAT);
+    $inputs->attachVariants('gear', by: 'kind', label: 'Gear', storedAs: Variants::FLAT);
   }
 
 }

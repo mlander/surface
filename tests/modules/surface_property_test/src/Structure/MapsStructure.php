@@ -22,18 +22,23 @@ final class MapsStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addMap('coordinates', t('Coordinates'), static function (BlueprintInterface $map): void {
-      $map->addSchema('lat', Schema::number()
-        ->title(t('Latitude'))
-        ->minimum(-90)
-        ->maximum(90)
-        ->required());
-      $map->addSchema('lng', Schema::number()
-        ->title(t('Longitude'))
-        ->minimum(-180)
-        ->maximum(180)
-        ->required());
-    })->setDescription(t('Where it is.'));
+    $inputs->addMap(
+      'coordinates',
+      t('Coordinates'),
+      static function (BlueprintInterface $map): void {
+        $map->addSchema('lat', Schema::number()
+          ->title(t('Latitude'))
+          ->minimum(-90)
+          ->maximum(90)
+          ->required());
+        $map->addSchema('lng', Schema::number()
+          ->title(t('Longitude'))
+          ->minimum(-180)
+          ->maximum(180)
+          ->required());
+      },
+      description: t('Where it is.'),
+    );
 
     $inputs->addMap('booking', t('Booking'), static function (BlueprintInterface $map): void {
       $map->addSchema('seats', Schema::integer()

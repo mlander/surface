@@ -431,10 +431,16 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
 
     $this->defineId($inputs, $entity_type_id);
 
-    $inputs->attachVariants(self::FIELDS, by: 'bundle', label: $this->t('Fields'), from: BundleFieldStructures::class, arguments: [$entity_type_id])
-      ->setDescription($this->t("The fields of the @bundle_label chosen, as that @bundle_label's own resource holds them.", [
+    $inputs->attachVariants(
+      self::FIELDS,
+      by: 'bundle',
+      label: $this->t('Fields'),
+      from: BundleFieldStructures::class,
+      arguments: [$entity_type_id],
+      description: $this->t("The fields of the @bundle_label chosen, as that @bundle_label's own resource holds them.", [
         '@bundle_label' => $bundle_label,
-      ]));
+      ]),
+    );
 
     $inputs->addCacheableDependency((new CacheableMetadata())->addCacheTags($this->derivation->listCacheTags()));
   }

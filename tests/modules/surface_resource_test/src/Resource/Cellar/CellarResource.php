@@ -58,8 +58,14 @@ final class CellarResource implements ResourceInterface {
     $inputs->addSchema('size', Schema::enum(['small', 'large'])
       ->title('Size')
       ->default('large'));
-    $inputs->attachList('racks', SpiceRackResource::class, 'Spice racks', min: 1, max: 4)
-      ->setDescription('One rack to four.');
+    $inputs->attachList(
+      'racks',
+      SpiceRackResource::class,
+      'Spice racks',
+      min: 1,
+      max: 4,
+      description: 'One rack to four.',
+    );
     $inputs->attachList('shelves', ShelfStructure::class, 'Shelves', max: 3);
   }
 

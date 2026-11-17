@@ -132,8 +132,13 @@ final class VenueResource implements ResourceInterface {
       ->title(t('Address'))
       ->maxLength(255));
 
-    $inputs->attachList('rooms', VenueRoomStructure::class, t('Rooms'), max: 20)
-      ->setDescription(t('The rooms an event at the venue may be held in.'));
+    $inputs->attachList(
+      'rooms',
+      VenueRoomStructure::class,
+      t('Rooms'),
+      max: 20,
+      description: t('The rooms an event at the venue may be held in.'),
+    );
 
     $inputs->addSchema('weight', Schema::integer()
       ->title(t('Weight'))

@@ -48,8 +48,12 @@ final class ReferenceSettingsResource implements ResourceInterface {
       ->title('Role')
       ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'user_role']));
     $inputs->attach('thing', ContentEntityStructure::class, 'Thing');
-    $inputs->attach('kept_thing', ContentEntityStructure::class, 'Thing kept by id')
-      ->setSetting(References::STORED_AS, References::BY_ID);
+    $inputs->attach(
+      'kept_thing',
+      ContentEntityStructure::class,
+      'Thing kept by id',
+      storedAs: References::BY_ID,
+    );
     $inputs->attach('nested', AuthorStructure::class, 'Nested');
     $inputs->attachList('items', ItemStructure::class, 'Items', max: 5);
 

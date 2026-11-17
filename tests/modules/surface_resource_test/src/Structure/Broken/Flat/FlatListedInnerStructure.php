@@ -24,8 +24,7 @@ final class FlatListedInnerStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addSchema('mode', Schema::string()
       ->title('Mode'));
-    $inputs->attachVariants('inner', by: 'mode', label: 'Inner')
-      ->setSetting(Variants::STORED_AS, Variants::FLAT);
+    $inputs->attachVariants('inner', by: 'mode', label: 'Inner', storedAs: Variants::FLAT);
   }
 
 }

@@ -55,8 +55,12 @@ final class PantryResource implements ResourceInterface {
       ->default('jar'));
     $inputs->attach('shelf', ShelfStructure::class);
     $inputs->attach('label', LabelResource::class);
-    $inputs->attachVariants('kind_settings', by: 'kind', label: 'Kind settings')
-      ->setDescription('What the kind of container needs.');
+    $inputs->attachVariants(
+      'kind_settings',
+      by: 'kind',
+      label: 'Kind settings',
+      description: 'What the kind of container needs.',
+    );
   }
 
 }

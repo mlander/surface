@@ -201,11 +201,20 @@ final class FieldInstanceResource implements ResourceInterface {
       ->default(FALSE));
 
     // Its parts.
-    $inputs->attach('storage', FieldStorageResource::class, t('Field storage'))
-      ->setDescription(t('What every bundle using this field shares.'));
+    $inputs->attach(
+      'storage',
+      FieldStorageResource::class,
+      t('Field storage'),
+      description: t('What every bundle using this field shares.'),
+    );
 
-    $inputs->attachVariants('settings', by: 'field_type', label: t('Field settings'), from: FieldSettingsSchemaVariants::class)
-      ->setDescription(t('Settings for this field on this bundle, described by the field type itself.'));
+    $inputs->attachVariants(
+      'settings',
+      by: 'field_type',
+      label: t('Field settings'),
+      from: FieldSettingsSchemaVariants::class,
+      description: t('Settings for this field on this bundle, described by the field type itself.'),
+    );
   }
 
   /**

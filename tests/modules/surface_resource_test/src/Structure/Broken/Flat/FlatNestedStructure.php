@@ -22,8 +22,7 @@ final class FlatNestedStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addSchema('kind', Schema::string()
       ->title('Kind'));
-    $inputs->attachVariants('gear', by: 'kind', label: 'Gear')
-      ->setSetting(Variants::STORED_AS, Variants::FLAT);
+    $inputs->attachVariants('gear', by: 'kind', label: 'Gear', storedAs: Variants::FLAT);
   }
 
 }

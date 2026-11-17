@@ -22,10 +22,8 @@ final class FlatTwoKeysStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addSchema('kind', Schema::string()
       ->title('Kind'));
-    $inputs->attachVariants('gear', by: 'kind', label: 'Gear')
-      ->setSetting(Variants::STORED_AS, Variants::FLAT);
-    $inputs->attachVariants('spare', by: 'kind', label: 'Spare')
-      ->setSetting(Variants::STORED_AS, Variants::FLAT);
+    $inputs->attachVariants('gear', by: 'kind', label: 'Gear', storedAs: Variants::FLAT);
+    $inputs->attachVariants('spare', by: 'kind', label: 'Spare', storedAs: Variants::FLAT);
   }
 
 }

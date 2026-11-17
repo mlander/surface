@@ -24,8 +24,7 @@ final class FlatMixinClashStructure implements StructureInterface {
     $inputs->addSchema('kind', Schema::string()
       ->title('Kind'));
     $inputs->mixIn(WeightOnlyStructure::class);
-    $inputs->attachVariants('gear', by: 'kind', label: 'Gear')
-      ->setSetting(Variants::STORED_AS, Variants::FLAT);
+    $inputs->attachVariants('gear', by: 'kind', label: 'Gear', storedAs: Variants::FLAT);
   }
 
 }

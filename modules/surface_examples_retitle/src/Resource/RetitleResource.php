@@ -39,9 +39,15 @@ final class RetitleResource implements ResourceInterface, DefinesOutputsInterfac
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->attachList('items', RetitleItemStructure::class, t('Nodes'), min: 1, max: 50)
-      ->setDescription(t('Each node to retitle, one to fifty.'))
-      ->setRequired(TRUE);
+    $inputs->attachList(
+      'items',
+      RetitleItemStructure::class,
+      t('Nodes'),
+      min: 1,
+      max: 50,
+      description: t('Each node to retitle, one to fifty.'),
+      required: TRUE,
+    );
 
     $inputs->addSchema('style', Schema::options(TitleRewriter::styles())->type('string')
       ->title(t('Style'))

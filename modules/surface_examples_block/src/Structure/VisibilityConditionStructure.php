@@ -40,9 +40,14 @@ final class VisibilityConditionStructure implements StructureInterface {
       ->description(t('Whether the block is shown when the condition does not hold, rather than when it does.'))
       ->default(FALSE));
 
-    $inputs->attachVariants('settings', by: 'id', label: t('Settings'), from: ConditionPluginStructures::class)
-      ->setDescription(t('The settings of the condition chosen.'))
-      ->setSetting(Variants::STORED_AS, Variants::FLAT);
+    $inputs->attachVariants(
+      'settings',
+      by: 'id',
+      label: t('Settings'),
+      from: ConditionPluginStructures::class,
+      description: t('The settings of the condition chosen.'),
+      storedAs: Variants::FLAT,
+    );
   }
 
 }

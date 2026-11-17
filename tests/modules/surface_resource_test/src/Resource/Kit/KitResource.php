@@ -48,8 +48,7 @@ final class KitResource implements ResourceInterface {
     $inputs->addSchema('kind', Schema::string()
       ->title(t('Kind'))
       ->required());
-    $inputs->attachVariants('gear', by: 'kind', label: t('Gear'))
-      ->setSetting(Variants::STORED_AS, Variants::FLAT);
+    $inputs->attachVariants('gear', by: 'kind', label: t('Gear'), storedAs: Variants::FLAT);
     $inputs->addSchema('notes', Schema::string()
       ->title(t('Notes')));
   }

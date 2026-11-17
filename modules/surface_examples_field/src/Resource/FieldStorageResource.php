@@ -162,8 +162,13 @@ final class FieldStorageResource implements ResourceInterface {
       ->default(TRUE));
 
     // Its part.
-    $inputs->attachVariants('settings', by: 'field_type', label: t('Storage settings'), from: FieldStorageSettingsSchemaVariants::class)
-      ->setDescription(t('Settings every bundle using this field shares, described by the field type itself.'));
+    $inputs->attachVariants(
+      'settings',
+      by: 'field_type',
+      label: t('Storage settings'),
+      from: FieldStorageSettingsSchemaVariants::class,
+      description: t('Settings every bundle using this field shares, described by the field type itself.'),
+    );
   }
 
 }

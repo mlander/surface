@@ -39,8 +39,13 @@ final class ChildrenStructure implements StructureInterface {
       'anything' => 'pricing',
     ]);
 
-    $inputs->attach('backup', ContactStructure::class, t('Backup contact'), reads: ['anything' => 'pricing'])
-      ->setDescription(t('Asked when the contact is away.'));
+    $inputs->attach(
+      'backup',
+      ContactStructure::class,
+      t('Backup contact'),
+      reads: ['anything' => 'pricing'],
+      description: t('Asked when the contact is away.'),
+    );
 
     $inputs->attachList('rows', EntryStructure::class, t('Rows'), min: 1, max: 3);
 

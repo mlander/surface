@@ -27,8 +27,14 @@ final class FlatListedNestedStructure implements StructureInterface {
     $inputs->addSchema('kind', Schema::string()
       ->title('Kind'));
     $inner = ['a', FlatListedInnerStructure::class];
-    $inputs->attachVariants('gear', by: 'kind', label: 'Gear', from: KitVariants::class, arguments: $inner)
-      ->setSetting(Variants::STORED_AS, Variants::FLAT);
+    $inputs->attachVariants(
+      'gear',
+      by: 'kind',
+      label: 'Gear',
+      from: KitVariants::class,
+      arguments: $inner,
+      storedAs: Variants::FLAT,
+    );
   }
 
 }
