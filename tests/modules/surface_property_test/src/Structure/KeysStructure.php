@@ -11,6 +11,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_property_test\Shape\Code;
+use PortableSchema\Builder\Schema;
 
 /**
  * Keys of one value, declared with calls: the twin of KeysPropertiesStructure.
@@ -74,7 +75,7 @@ final class KeysStructure implements StructureInterface {
 
     $inputs->narrow('code')
       ->when(Condition::absent('email'))
-      ->constrain('Length', ['max' => 4])
+      ->constrain(Schema::any()->maxLength(4))
       ->because(t('Up to 4 letters without an email.'));
 
     $inputs->narrow('day')

@@ -51,7 +51,7 @@ final class SeatingStructure implements StructureInterface {
     // Up to a hundred guests, ten rows at most.
     $inputs->narrow('rows')
       ->when(Condition::atMost('guests', 100))
-      ->constrain('Range', ['max' => 10])
+      ->constrain(Schema::any()->maximum(10))
       ->because(t('Up to 10 rows for up to 100 guests.'));
     // Over two hundred guests, the ushers are said, even if none.
     $inputs->narrow('ushers')

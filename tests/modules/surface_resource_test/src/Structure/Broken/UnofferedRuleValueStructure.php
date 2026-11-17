@@ -8,6 +8,7 @@ use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Declares a rule keeping a value the key's list does not offer.
@@ -23,7 +24,7 @@ final class UnofferedRuleValueStructure implements StructureInterface {
     $inputs->add('kind', 'string', 'Kind')->addConstraint('LabeledChoice', ['choices' => ['a' => 'A', 'b' => 'B']]);
     $inputs->narrow('kind')
       ->when(Condition::equals('flag', TRUE))
-      ->constrain('Choice', ['choices' => ['a', 'z']]);
+      ->constrain(Schema::enum(['a', 'z']));
   }
 
 }

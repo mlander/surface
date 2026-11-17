@@ -14,6 +14,7 @@ use Drupal\surface_resource_test\Storage\JournalStorage;
 use Drupal\surface_resource_test\Structure\Mixin\ArchiveStructure;
 use Drupal\surface_resource_test\Structure\Mixin\OwnershipStructure;
 use Drupal\surface_resource_test\Structure\Mixin\TimestampsStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * A journal: two structures mixed in, flat, and one attached.
@@ -62,7 +63,7 @@ final class JournalResource implements ResourceInterface {
     // they are the journal's own keys now.
     $inputs->narrow('revision')
       ->when(Condition::absent('created'))
-      ->constrain('Range', ['max' => 1])
+      ->constrain(Schema::any()->maximum(1))
       ->because(t('A journal never created is on its first revision.'));
     $inputs->narrow('created')
       ->when(Condition::equals('published', TRUE))

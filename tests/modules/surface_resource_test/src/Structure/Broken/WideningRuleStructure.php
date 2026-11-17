@@ -8,6 +8,7 @@ use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Declares a rule whose maximum is above the key's own.
@@ -23,7 +24,7 @@ final class WideningRuleStructure implements StructureInterface {
     $inputs->add('count', 'integer', 'Count')->addConstraint('Range', ['min' => 1, 'max' => 10]);
     $inputs->narrow('count')
       ->when(Condition::equals('mode', 'many'))
-      ->constrain('Range', ['max' => 20]);
+      ->constrain(Schema::any()->maximum(20));
   }
 
 }

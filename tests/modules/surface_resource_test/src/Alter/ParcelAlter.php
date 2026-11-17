@@ -9,6 +9,7 @@ use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface_resource_test\Resource\Parcel\ParcelResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * Mounts a customs code on the parcel, with declared rules.
@@ -34,7 +35,7 @@ final class ParcelAlter implements AltersInputsInterface {
       ->doesNotApply();
     $inputs->narrow('declared_value')
       ->when(Condition::present('customs'))
-      ->constrain('Range', ['min' => 1]);
+      ->constrain(Schema::any()->minimum(1));
   }
 
 }

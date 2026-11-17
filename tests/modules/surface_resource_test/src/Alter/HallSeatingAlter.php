@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface_resource_test\Resource\Venue\HallResource;
 use Drupal\surface_resource_test\Structure\Seating\SeatingStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * An adapter: the seating structure at this module's mount on the hall.
@@ -33,7 +34,7 @@ final class HallSeatingAlter implements AltersInputsInterface {
     // With no aisle, the overflow seats no more than 300 guests.
     $inputs->narrow('guests')
       ->when(Condition::equals('aisle', 'none'))
-      ->constrain('Range', ['max' => 300]);
+      ->constrain(Schema::any()->maximum(300));
   }
 
 }

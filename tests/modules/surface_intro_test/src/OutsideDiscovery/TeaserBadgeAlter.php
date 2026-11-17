@@ -10,6 +10,7 @@ use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface_intro_test\Structure\TeaserBlockStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * The badge alter, as docs/introduction/13-other-modules.md shows it.
@@ -32,7 +33,7 @@ final class TeaserBadgeAlter implements AltersInputsInterface {
     $inputs->add('badge', 'string', $this->t('Badge'));
     $inputs->narrow('limit')
       ->when(Condition::present('badge'))
-      ->constrain('Range', ['max' => 20]);
+      ->constrain(Schema::any()->maximum(20));
   }
 
 }

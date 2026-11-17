@@ -9,6 +9,7 @@ use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A kiosk: a declared rule's message on each bound it may set.
@@ -38,16 +39,28 @@ final class KioskStructure implements StructureInterface {
 
     $inputs->narrow('capacity')
       ->unless(Condition::equals('licensed', TRUE))
-      ->constrain('Range', ['max' => 100, 'message' => t('From 1 to 100 without a license.')]);
+      ->constrain(Schema::any()->check('drupal:Range', [
+        'max' => 100,
+        'maxMessage' => t('From 1 to 100 without a license.'),
+      ]));
     $inputs->narrow('queue')
       ->unless(Condition::equals('licensed', TRUE))
-      ->constrain('Range', ['max' => 10, 'message' => t('Ten at most without a license.')]);
+      ->constrain(Schema::any()->check('drupal:Range', [
+        'max' => 10,
+        'maxMessage' => t('Ten at most without a license.'),
+      ]));
     $inputs->narrow('code')
       ->when(Condition::equals('licensed', TRUE))
-      ->constrain('Length', ['min' => 4, 'message' => t('A licensed code is four characters or more.')]);
+      ->constrain(Schema::any()->check('drupal:Length', [
+        'min' => 4,
+        'minMessage' => t('A licensed code is four characters or more.'),
+      ]));
     $inputs->narrow('days')
       ->when(Condition::equals('licensed', TRUE))
-      ->constrain('Count', ['min' => 1, 'message' => t('Choose a day while licensed.')]);
+      ->constrain(Schema::any()->check('drupal:Count', [
+        'min' => 1,
+        'minMessage' => t('Choose a day while licensed.'),
+      ]));
   }
 
 }

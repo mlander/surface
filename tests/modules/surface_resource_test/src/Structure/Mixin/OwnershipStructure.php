@@ -38,7 +38,7 @@ final class OwnershipStructure implements StructureInterface {
     $inputs->add('shared', 'boolean', t('Shared with editors'), default: FALSE);
     $inputs->narrow('owner')
       ->when(Condition::equals('audience', 'staff'))
-      ->constrain('Length', ['max' => 32])
+      ->constrain(Schema::any()->maxLength(32))
       ->because(t('Up to 32 characters for a staff audience.'));
   }
 

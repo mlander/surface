@@ -10,6 +10,7 @@ use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface_intro_test\Structure\TeaserBlockStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * The badge alter loosening the teaser's limit, which the build refuses.
@@ -31,7 +32,7 @@ final class LooseningBadgeAlter implements AltersInputsInterface {
     $inputs->add('badge', 'string', $this->t('Badge'));
     $inputs->narrow('limit')
       ->when(Condition::present('badge'))
-      ->constrain('Range', ['max' => 100]);
+      ->constrain(Schema::any()->maximum(100));
   }
 
 }
