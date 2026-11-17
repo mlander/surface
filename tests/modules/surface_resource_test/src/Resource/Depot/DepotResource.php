@@ -36,11 +36,12 @@ final class DepotResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    // The shape's Length is replaced by core's addConstraint(), so the key
-    // restates the maximum it keeps.
-    $inputs->add('sku', Sku::class, t('Stock code'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['min' => 4, 'max' => 12]);
+    // The key's Length is laid over the shape's, both bounds in the
+    // order written.
+    $inputs->addSchema('sku', Schema::of(Sku::class)
+      ->title(t('Stock code'))
+      ->check('drupal:Length', ['min' => 4, 'max' => 12])
+      ->required());
     $inputs->addSchema('spare', Schema::of(Sku::class)
       ->title(t('Spare code'))
       ->description(t('Printed on the back of the shelf.'))

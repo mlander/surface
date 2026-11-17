@@ -15738,6 +15738,10 @@ they served.
   Reading a `drupal:` check as its constraint holds for an author's
   schema alone: a served document publishes its checks with `{}`
   options, which describe and never run.
+- **A bound beside a shape's.** A key of a shape that states a bound
+  the shape holds too is that bound, the key's options in the order the
+  author wrote them and the shape's others after, as `addConstraint()`
+  keeps the options it is handed (decided 2026-11-17).
 - **Shapes and other ids.** `#[Of(SomeShape::class)]`, or the shape's
   class as the property's type, is that shape: a `$ref` to a def of the
   shape's `#[Shape]` id, which the reader reads as the shape. An

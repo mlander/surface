@@ -3602,7 +3602,8 @@ final class SchemaReader {
         static::holdTo($definition, $options['schema']);
         continue;
       }
-      $definition->addConstraint($constraint, in_array($constraint, ['Range', 'Length', 'Count'], TRUE) ? array_replace($held, $options) : $options);
+      // In the author's order, as addConstraint() keeps the options.
+      $definition->addConstraint($constraint, in_array($constraint, ['Range', 'Length', 'Count'], TRUE) ? $options + $held : $options);
     }
     static::holdTo($definition, static::fragment(Schema::from($foreign)));
     $this->settings($definition, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
