@@ -87,14 +87,12 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
   }
 
   /**
-   * Writes an accepted value as the document holds it.
+   * Writes an accepted value as the document holds it, for this check.
    *
    * Each value that is not a list or a map is read through the coercion
    * table, as accept() reads a value a form posts (Coercion::scalar()),
-   * then written as SurfacePipelineInterface::document() writes it: a date
-   * and time with its offset (Coercion::served()), at every depth of a
-   * list or a map. A site's or a route's value is written the same way
-   * before it is held (KeyPaths).
+   * then spelled as the document spells it (spelled()). A scalar at a
+   * string key is read as its text, here alone.
    *
    * @param \PortableSchema\Builder\Schema $schema
    *   The value's built schema.
@@ -103,19 +101,75 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
    *
    * @return mixed
    *   The value, as the document holds it.
+   */
+  protected static function written(Schema $schema, mixed $value): mixed {
+    return static::eachValue($schema, $value, static function (Schema $leaf, mixed $one): mixed {
+      // Read through the coercion table first, as accept() reads what a
+      // form posts: a form's "1" is a boolean's TRUE.
+      $type = NodeFacts::dataType($leaf);
+      $one = Coercion::scalar($type, DefinitionSchema::declares($leaf, 'DateOnly'), $one);
+      if ($type === 'string' && is_scalar($one) && !is_string($one)) {
+        // A scalar at a string key, which the watched-value check has
+        // always handed over, as Typed Data's string takes any scalar; the
+        // value baseline pins it. Open, revisit in slice 35: see
+        // docs/decisions.md#outputs-conform-through-the-dialects-validator.
+        return is_bool($one) ? ($one ? '1' : '0') : (string) $one;
+      }
+      return static::spelled($leaf, $one);
+    });
+  }
+
+  /**
+   * Spells an accepted value as the document spells it.
+   *
+   * What SurfacePipelineInterface::document() does to the values
+   * validate() holds: a date and time gains its offset
+   * (Coercion::served()), at every depth of a list or a map. Nothing else
+   * changes: the value is the same value, spelled as the dialect reads
+   * it. KeyPaths holds a site's or a route's value spelled this way and
+   * hands on the value as accepted, as the pipeline stores what
+   * validate() held.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The value's built schema.
+   * @param mixed $value
+   *   The value, as accepted.
+   *
+   * @return mixed
+   *   The value, as the document spells it.
    *
    * @internal
    */
-  public static function written(Schema $schema, mixed $value): mixed {
+  public static function spelled(Schema $schema, mixed $value): mixed {
+    return static::eachValue($schema, $value, static fn (Schema $leaf, mixed $one): mixed => NodeFacts::dataType($leaf) === 'datetime_iso8601'
+      ? Coercion::served($one, DefinitionSchema::declares($leaf, 'DateOnly'))
+      : $one);
+  }
+
+  /**
+   * Writes each value of a list or a map that is not a list or a map.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The value's built schema.
+   * @param mixed $value
+   *   The value.
+   * @param \Closure $write
+   *   Takes a value's schema and the value that holds something, and
+   *   answers what is written for it.
+   *
+   * @return mixed
+   *   The value, each such value written.
+   */
+  private static function eachValue(Schema $schema, mixed $value, \Closure $write): mixed {
     if (is_array($value)) {
       if (DefinitionSchema::isList($schema)) {
         $item = DefinitionSchema::itemNode($schema);
-        return $item === NULL ? $value : array_map(static fn (mixed $one): mixed => static::written($item, $one), $value);
+        return $item === NULL ? $value : array_map(static fn (mixed $one): mixed => static::eachValue($item, $one, $write), $value);
       }
       $properties = NodeFacts::properties($schema);
       foreach ($value as $name => $one) {
         if (isset($properties[$name])) {
-          $value[$name] = static::written($properties[$name], $one);
+          $value[$name] = static::eachValue($properties[$name], $one, $write);
         }
       }
       return $value;
@@ -123,19 +177,7 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
     if (!ValueState::isConfigured($value) || !DefinitionSchema::isLeaf($schema)) {
       return $value;
     }
-    // Read through the coercion table first, as accept() reads what a
-    // form posts: a form's "1" is a boolean's TRUE.
-    $type = NodeFacts::dataType($schema);
-    $date_only = DefinitionSchema::declares($schema, 'DateOnly');
-    $value = Coercion::scalar($type, $date_only, $value);
-    if ($type === 'string' && is_scalar($value) && !is_string($value)) {
-      // A scalar at a string key, which the watched-value check has always
-      // handed over, as Typed Data's string takes any scalar; the value
-      // baseline pins it. Open: see
-      // docs/decisions.md#outputs-conform-through-the-dialects-validator.
-      return is_bool($value) ? ($value ? '1' : '0') : (string) $value;
-    }
-    return $type === 'datetime_iso8601' ? Coercion::served($value, $date_only) : $value;
+    return $write($schema, $value);
   }
 
 }

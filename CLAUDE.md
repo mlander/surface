@@ -666,8 +666,10 @@ the record of the rework that brought the module to the pattern.
   refused at declaration. The watched-value check
   (`admits(Schema $schema, $value)`) holds one value the same way, as the
   one output of `Surface::holding()`, and so does `KeyPaths` for a site's
-  or a route's value, each written first as the document holds it
-  (`WatchedValueCheck::written()`). A link field's URI is text
+  or a route's value, each spelled first as the document spells it (a
+  date and time with its offset). `KeyPaths` hands on the very value it
+  held; only the watched-value check reads a scalar at a string key as
+  its text. A link field's URI is text
   held to `SurfaceLinkUri` (a scheme, as core's link field takes),
   since the `uri` format refuses `route:<nolink>`
   (`docs/decisions.md#outputs-conform-through-the-dialects-validator`,

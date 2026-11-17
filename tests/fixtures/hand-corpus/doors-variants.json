@@ -34,14 +34,14 @@
       "flat a": "0bf6f187d50a"
     },
     "plain | key": {
-      "kind": "e9062178cf0d",
+      "kind": "453257bdfbca",
       "settings": "3ae8c4141d42",
-      "kind2": "6c8b9c02bc90",
+      "kind2": "6cc2f5cdb237",
       "flat": "982e41d26f52",
-      "kind4": "8c2c6360f36b",
+      "kind4": "a2fdead19b03",
       "labeled": "58e8bf313e9c",
-      "kind3": "1e8e4bf95922",
-      "req_v": "5f2482cb4e5c"
+      "kind3": "8a06594162af",
+      "req_v": "d17ed0dd9549"
     },
     "plain | path": {
       "nope": "1bf169f7d887",
@@ -2029,8 +2029,14 @@
           "0"
         ],
         [
-          null,
-          null
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.req_v\" on hand to \"\", which the key does not accept: Required variants is required."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.req_v\" on hand to \"\", which the key does not accept: Required variants is required."
+          }
         ],
         [
           "2026-01-01",
@@ -2083,8 +2089,14 @@
           true
         ],
         [
-          null,
-          null
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.req_v\" on hand to null, which the key does not accept: Required variants is required."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.req_v\" on hand to null, which the key does not accept: Required variants is required."
+          }
         ],
         [
           "SECRETRAW",

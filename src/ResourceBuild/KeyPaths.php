@@ -10,6 +10,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Computed;
 use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceBuilder;
@@ -267,8 +268,9 @@ final class KeyPaths {
    * Reads a value through the coercion table and holds it to its key.
    *
    * The key's facts (a secret, computed, a list or a map, its data type and
-   * whether it holds a date alone) are read from its node; the definition
-   * is handed to the constraint runner.
+   * whether it holds a date alone) are read from its node, or from the
+   * definition where no entry holds one. The value handed back is the value
+   * held (violation()).
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key's definition.
@@ -288,8 +290,9 @@ final class KeyPaths {
    *   The value, in the key's type.
    *
    * @throws \LogicException
-   *   When the key takes no such value: a secret, a computed key, or a
-   *   list or a map fixed.
+   *   When the key takes no such value: a secret, a computed key, a list
+   *   or a map fixed, or a key of the `any` type no document is written
+   *   for.
    * @throws \Drupal\surface\ResourceBuild\ValueNotAcceptedException
    *   When the value does not fit the key.
    */
@@ -308,6 +311,11 @@ final class KeyPaths {
     $complex = $node === NULL ? $definition instanceof ComplexDataDefinitionInterface : DefinitionSchema::isComplex($node);
     if ($fixing && ($list || $complex)) {
       throw $this->refusal('%s: "%s" on %s holds %s, and a fixed value is one value of a key that holds one: fix each key %s.', $where['source'], $where['at'] . $path, $where['resource'], $list ? 'a list' : 'a map', $list ? 'of a key that holds one' : 'inside it by its path');
+    }
+    if (!$list && !$complex && ($node === NULL ? $definition->getDataType() : NodeFacts::dataType($node)) === LeafTypes::ANY && !($node === NULL ? LeafTypes::heldAsAny($definition) : DefinitionSchema::heldAsAny($node)) && ValueState::isConfigured($raw)) {
+      // No document is written for such a key, at inputs or here, so no
+      // value can be held to it; validate() throws for it the same way.
+      throw $this->refusal('%s: "%s" on %s is of the any type, which no JSON Schema type is written for, so no value can be held to it.', $where['source'], $where['at'] . $path, $where['resource']);
     }
     $value = NULL;
     $problem = NULL;
@@ -595,7 +603,7 @@ final class KeyPaths {
    *   The key's node, whose facts are read; NULL for a builder's
    *   definition, whose facts are read from it (held()).
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key's definition, stepped down in step for the constraint runner.
+   *   The key's definition, stepped down in step with the schema.
    * @param mixed $raw
    *   The value as given.
    *
@@ -659,9 +667,13 @@ final class KeyPaths {
    * Holds a value to its key's schema, as the pipeline holds an output.
    *
    * The key's schema is held as the one output of a frame
-   * (Surface::holding()), by the dialect's validator, the value first
-   * written as the document holds it (WatchedValueCheck::written()), as
-   * a watched value is.
+   * (Surface::holding()), by the dialect's validator, the value spelled as
+   * the document spells it (WatchedValueCheck::spelled(): a date and time
+   * with its offset), as validate() holds what accept() answered. The
+   * value itself is held: a scalar at a string key is not read as its
+   * text here, so `TRUE` there is refused with `type`. A value that holds
+   * nothing never reaches the validator: it is refused where the key is
+   * required, the module's own rule, and taken otherwise.
    *
    * @param \PortableSchema\Builder\Schema|null $node
    *   The key's schema; NULL for a builder's definition, whose schema is
@@ -688,8 +700,14 @@ final class KeyPaths {
       }
       return NULL;
     }
+    if (!ValueState::isConfigured($value)) {
+      $label = (string) ($definition->getLabel() ?? '');
+      return ($node === NULL ? $definition->isRequired() : NodeFacts::isRequired($node))
+        ? sprintf('%s is required.', $label === '' ? 'A value' : $label)
+        : NULL;
+    }
     $schema = $node ?? DefinitionSchema::of($definition);
-    foreach ($this->pipeline->conformOutput(Surface::holding($schema), ['value' => WatchedValueCheck::written($schema, $value)]) as $violation) {
+    foreach ($this->pipeline->conformOutput(Surface::holding($schema), ['value' => WatchedValueCheck::spelled($schema, $value)]) as $violation) {
       $at = $violation->path;
       return ($at === '' ? '' : $at . ': ') . strip_tags((string) $violation->message);
     }

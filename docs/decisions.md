@@ -7088,8 +7088,8 @@ output entries' schemas, in the input path's codes.
   integer. *Open, revisit in slice 35:* a scalar at a string key (`TRUE`)
   is read as its text and handed over, as Typed Data's string took any
   scalar, since the value baseline pins it (`values_test.keys`, gate
-  `TRUE` and `FALSE`); a site's or a route's value is read the same way
-  (next point). A string
+  `TRUE` and `FALSE`). It applies to the watched-value check alone, never
+  to a site's or a route's value (next point). A string
   at a key that holds a list of field items, which Typed Data let
   through, is withheld now; and a value whose check threw Symfony's
   `UnexpectedTypeException` out of `accept()` (`TRUE` at a block's
@@ -7103,32 +7103,36 @@ output entries' schemas, in the input path's codes.
   A port's key is held as its schema alone.
 - **A site's or a route's value, the same way** (built 2026-11-17).
   `KeyPaths::violation()` holds a default or a fixed value to its key's
-  schema as the one output of a frame, written as a watched value is
-  (`WatchedValueCheck::written()`); a builder's definition before sealing
-  is read into its schema first (`DefinitionSchema::of()`). A map is
-  still held key by key. `ConstraintRunner::conforms()` had no other
-  caller and is deleted. What moved in the door corpus (117 rows over
-  nine surfaces, no row of `frames`, and 35 rows of `narrow`, which
-  `DoorCorpusNarrowTest` pins and which are not written yet): Typed
-  Data's sentences become the
-  dialect's ("This value should be of the correct primitive type." and
-  "This value should not be null." become "This value must be of type
-  integer, string given." and "... null given."; "The value you selected
-  is not a valid choice." becomes a `type` sentence where the type
-  refuses first). Refused now: NULL at a key that always holds a value; a
-  list for a map; an empty or all-null map with required keys in a list
-  (`[[]]`); a date and time with no offset (`2026-01-01`, `"0"`); a URI
-  with no scheme; `TRUE` for a float; a float for a datetime. Taken now:
-  a choice met in the key's type (`TRUE` for an integer key whose choices
-  are `"01"` and `"02"`, a boolean whose choices are written as numbers,
-  and `TRUE` at a string key whose choices hold `"1"`, read as its text
-  by the leniency above while the key is handed `TRUE`);
-  NULL for an optional key with NotBlank or a Count minimum; NULL at a
-  required key that holds variants, whose schema states no type. A key of
-  the `any` type that holds no variants and is not held whole has no
-  document, at inputs or here, so holding a value at it throws the
-  `LogicException` the document writer gives
-  (`LeafTypes::unwritten()`), as `validate()` does for such a key.
+  schema as the one output of a frame. The value held is the value
+  `accept()`'s table answered, itself, spelled as the document spells it
+  (`WatchedValueCheck::spelled()`: a date and time with its offset, as
+  `validate()` holds what `accept()` answered), and it is the value handed
+  on: a scalar at a string key is not read as its text here, so `TRUE`
+  there is refused with `type`, as `validate()` refuses it. A value that
+  holds nothing never reaches the validator: a required key refuses it
+  ("@label is required."), any other key takes it, as the check provider
+  leaves a place that holds nothing to the module. A key of the `any`
+  type that holds no variants and is not held whole has no document, at
+  inputs or here, so a value at it is refused with a `LogicException`
+  that names the source, the key and the resource, as `validate()` throws
+  for such a key. A builder's definition before sealing is read into its
+  schema first (`DefinitionSchema::of()`). A map is still held key by
+  key. `ConstraintRunner::conforms()` had no other caller and is
+  deleted. What moved in the door corpus: 316 rows over ten surfaces
+  (written), and 125 rows of `narrow`, which `DoorCorpusNarrowTest` pins
+  and which are not written yet. Typed Data's sentences become the
+  dialect's ("This value should be of the correct primitive type." becomes
+  "This value must be of type integer, string given."; "The value you
+  selected is not a valid choice." becomes a `type` sentence where the
+  type refuses first; "This value should not be null." becomes "@label is
+  required."). Refused now: a scalar other than a string at a string key,
+  in a list too (`[TRUE]`); a list for a map; an empty or all-null map
+  with required keys in a list (`[[]]`); a date and time with no offset
+  (`2026-01-01`, `"0"`); a URI with no scheme; `TRUE` for a float; a
+  float for a datetime. Taken now: a choice met in the key's type (`TRUE`
+  for an integer key whose choices are `"01"` and `"02"`, read as 1; a
+  boolean whose choices are written as numbers); NULL for an optional key
+  with NotBlank or a Count minimum.
 - **The input side of the open map** (a map that names no keys read as
   `type: object` at inputs) is held for slice 35: it moves 20 rows of
   the value baseline (`values_test.hand_built`, `/nested/spare` and
@@ -15230,8 +15234,11 @@ say is run by a check on the server.
   are asked where only that format refuses. `Validation\Nodes` reads the
   document's nodes that apply at each place; where it reads a keyword
   otherwise than the validator does, the run is made again with every
-  check asked. A schema in a branch (`anyOf`, `oneOf`, `then`, `else`)
-  counts for a check it names itself, together with the schemas around
+  check asked; a check is counted for that only where a schema that holds
+  in every case refuses, since a refusal in a branch is not filed where
+  another branch takes the value. A schema in a branch (`anyOf`, `oneOf`,
+  `then`, `else`) counts for a check it names itself, together with the
+  schemas around
   it at the same place: the validator asks the check only where it
   evaluates that branch (built 2026-11-17, slice 34: `TRUE` at a placed
   block's `settings.bundle`, one branch for each plugin, threw Symfony's

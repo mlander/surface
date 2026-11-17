@@ -32,7 +32,7 @@
       "narrow": "fb0fe08822e3"
     },
     "plain | key": {
-      "gate": "e47708c96e9e",
+      "gate": "b1b12fd14ace",
       "node": "935450a3ddb8",
       "node_id": "38e07882015a",
       "user": "a3b5e5afb648",
@@ -41,10 +41,10 @@
       "narrowed": "d1f630dc1146",
       "child": "867d3328db2c",
       "kids": "b299e653db40",
-      "vkind": "fac8d181b80d",
+      "vkind": "94dfc14570f9",
       "vars": "ba7a232d6d13",
-      "entity_type": "9e7caf07f82e",
-      "id": "0bcbe5c1e619",
+      "entity_type": "9b44ca408ec0",
+      "id": "3dc12fc320a5",
       "anyref": "40c44a874d91"
     },
     "plain | path": {
@@ -56,7 +56,7 @@
       "kids.0.page": "98388f541337",
       "vars.vref": "9db1e554336c",
       "anyref.entity_type": "9de63068d838",
-      "anyref.id": "b7fa6a8414ff",
+      "anyref.id": "5324b789cc99",
       "gate": "d700db7069b1",
       "node": "407cd408a636",
       "node_id": "19838b2e0e7e",
@@ -76,7 +76,7 @@
       "vkind": "ff8e214ffcd6",
       "vars": "577f1bc4b2d7",
       "entity_type": "6c9477120cc5",
-      "id": "1105ec28dfa8",
+      "id": "d8e6d51458aa",
       "anyref": "bde8add8a33d",
       "anyref.nope": "f867a9b500c2"
     },
@@ -177,53 +177,106 @@
         }
       ]
     },
-    "plain | key | id": {
+    "plain | key | vars": {
       "fromDefinition": {
         "class": "Drupal\\tool\\TypedData\\InputDefinition",
-        "type": "string",
-        "label": "ID",
+        "type": "any",
+        "label": "Vars",
         "description": "",
         "required": false,
         "getDefaultValue": null,
         "isLocked": false,
         "getExamples": [],
         "isMultiple": false,
-        "constraints": {
-          "PrimitiveType": []
-        },
+        "constraints": [],
         "settings": [],
         "array": {
-          "constraints": {
-            "PrimitiveType": []
-          },
           "description": "",
-          "label": "ID",
-          "required": false,
-          "type": "string"
+          "label": "Vars",
+          "required": false
         }
       },
       "outputFromDefinition": {
         "class": "Drupal\\tool\\TypedData\\OutputDefinition",
-        "type": "string",
-        "label": "ID",
+        "type": "any",
+        "label": "Vars",
         "description": "",
         "required": false,
         "getDefaultValue": null,
         "getExamples": [],
         "isMultiple": false,
-        "constraints": {
-          "PrimitiveType": []
-        },
+        "constraints": [],
         "settings": [],
         "array": {
-          "constraints": {
-            "PrimitiveType": []
-          },
           "description": "",
-          "label": "ID",
+          "label": "Vars",
           "nullable": false,
+          "required": false
+        }
+      },
+      "fromVariants": {
+        "class": "Drupal\\tool\\TypedData\\MapInputDefinition",
+        "type": "map",
+        "label": "Vars",
+        "description": {
+          "@text": "Its keys depend on vkind. a: vref."
+        },
+        "required": false,
+        "getDefaultValue": null,
+        "isLocked": false,
+        "getExamples": [],
+        "isMultiple": false,
+        "constraints": [],
+        "settings": [],
+        "array": {
+          "description": {
+            "@text": "Its keys depend on vkind. a: vref."
+          },
+          "label": "Vars",
           "required": false,
-          "type": "string"
+          "type": "map"
+        },
+        "properties": {
+          "vref": {
+            "class": "Drupal\\tool\\TypedData\\InputDefinition",
+            "type": "integer",
+            "label": "Ref node",
+            "description": {
+              "@text": "Only when vkind is a."
+            },
+            "required": false,
+            "getDefaultValue": null,
+            "isLocked": false,
+            "getExamples": [],
+            "isMultiple": false,
+            "constraints": {
+              "SurfaceValidReference": {
+                "entityTypeId": "node",
+                "bundles": [
+                  "page"
+                ]
+              },
+              "PrimitiveType": []
+            },
+            "settings": [],
+            "array": {
+              "constraints": {
+                "SurfaceValidReference": {
+                  "entityTypeId": "node",
+                  "bundles": [
+                    "page"
+                  ]
+                },
+                "PrimitiveType": []
+              },
+              "description": {
+                "@text": "Only when vkind is a."
+              },
+              "label": "Ref node",
+              "required": false,
+              "type": "integer"
+            }
+          }
         }
       },
       "held builder": [
@@ -272,32 +325,30 @@
           "{\"a\":1}"
         ],
         [
+          [
+            "a",
+            "b"
+          ],
+          [
+            "a",
+            "b"
+          ]
+        ],
+        [
           {
-            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.id\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
+            "a": 1
           },
           {
-            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.id\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
+            "a": 1
           }
         ],
         [
-          {
-            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.id\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
-          },
-          {
-            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.id\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
-          }
+          5,
+          5
         ],
         [
-          "5",
-          "5"
-        ],
-        [
-          "1.5",
-          "1.5"
+          1.5,
+          1.5
         ],
         [
           true,
@@ -314,66 +365,72 @@
       ],
       "wider": {
         "string 1": {
-          "id": "it may be cleared, which the schema refuses: string is not nullable"
+          "vars": "it is a group of keys, which the schema types string"
         },
-        "string 0": [],
-        "string nullable 1": [],
-        "string nullable 0": [],
+        "string 0": {
+          "vars": "it is a group of keys, which the schema types string"
+        },
+        "string nullable 1": {
+          "vars": "it is a group of keys, which the schema types string"
+        },
+        "string nullable 0": {
+          "vars": "it is a group of keys, which the schema types string"
+        },
         "integer 1": {
-          "id": "it is a string, which the schema types integer, an integer"
+          "vars": "it is a group of keys, which the schema types integer"
         },
         "integer 0": {
-          "id": "it is a string, which the schema types integer, an integer"
+          "vars": "it is a group of keys, which the schema types integer"
         },
         "integer nullable 1": {
-          "id": "it is a string, which the schema types integer, an integer"
+          "vars": "it is a group of keys, which the schema types integer"
         },
         "integer nullable 0": {
-          "id": "it is a string, which the schema types integer, an integer"
+          "vars": "it is a group of keys, which the schema types integer"
         },
         "boolean 1": {
-          "id": "it is a string, which the schema types boolean, a boolean"
+          "vars": "it is a group of keys, which the schema types boolean"
         },
         "boolean 0": {
-          "id": "it is a string, which the schema types boolean, a boolean"
+          "vars": "it is a group of keys, which the schema types boolean"
         },
         "float 1": {
-          "id": "it is a string, which the schema types float, a float"
+          "vars": "it is a group of keys, which the schema types float"
         },
         "float 0": {
-          "id": "it is a string, which the schema types float, a float"
+          "vars": "it is a group of keys, which the schema types float"
         },
         "ignore 1": [],
         "ignore 0": [],
         "mapping 1": {
-          "id": "it is one value, which the schema types mapping, a mapping"
+          "vars.vref": "the schema does not describe it"
         },
         "mapping 0": {
-          "id": "it is one value, which the schema types mapping, a mapping"
+          "vars.vref": "the schema does not describe it"
         },
         "sequence string 1": {
-          "id": "it is one value, which the schema types sequence, a sequence"
+          "vars": "it is a group of keys, which the schema types sequence"
         },
         "sequence string 0": {
-          "id": "it is one value, which the schema types sequence, a sequence"
+          "vars": "it is a group of keys, which the schema types sequence"
         },
         "sequence mapping 1": {
-          "id": "it is one value, which the schema types sequence, a sequence"
+          "vars": "it is a group of keys, which the schema types sequence"
         },
         "sequence mapping 0": {
-          "id": "it is one value, which the schema types sequence, a sequence"
+          "vars": "it is a group of keys, which the schema types sequence"
         },
         "constrained 1": {
-          "id": "it may be blank, which the schema's NotBlank refuses"
+          "vars": "it is a group of keys, which the schema types string"
         },
         "constrained 0": {
-          "id": "it may be blank, which the schema's NotBlank refuses"
+          "vars": "it is a group of keys, which the schema types string"
         },
         "loose 1": {
-          "id": "it may be more than 99 characters long, which the schema refuses"
+          "vars": "it is a group of keys, which the schema types string"
         },
         "loose 0": {
-          "id": "it may be more than 99 characters long, which the schema refuses"
+          "vars": "it is a group of keys, which the schema types string"
         }
       }
     },
