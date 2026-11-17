@@ -22,7 +22,9 @@ Lanes:
              phpstan and cspell on the files changed since HEAD (tracked
              and untracked). phpstan covers the whole module when no PHP
              file changed or a .neon or phpstan-*.php file did. For
-             iterating; it does not replace the full lane.
+             iterating; it does not replace the full lane. It leaves out
+             the classes named in FULL_LANE_ONLY in this script: the value
+             baselines and other slow checks that only the full lane runs.
 
 Each lane prints the wall time of every gate and ends with a PASS line
 only when no test errored or failed and every gate passed.
@@ -55,6 +57,14 @@ for value in "$CONCURRENCY" "$BROWSER_CONCURRENCY"; do
     ''|*[!0-9]*|0) echo "SURFACE_CHECK_CONCURRENCY and SURFACE_CHECK_BROWSER_CONCURRENCY are positive integers, not '$value'" >&2; exit 2 ;;
   esac
 done
+
+# Classes only the full lane runs. They are the slowest checks and a faster
+# class catches the same faults while iterating: the four value baselines
+# (the 51,000 recorded cases of tests/fixtures/values), the narrow hand
+# corpus, the two comparisons with the classic tools, and the build timing
+# bound. The fast lane drops them from its class list; the full lane runs
+# every class run-tests.sh finds, so it runs them. One basename per word.
+FULL_LANE_ONLY="ValueBaselinePlacementTest ValueBaselinePlacementSlotsTest ValueBaselineBlocksTest ValueBaselineOthersTest HandCorpusNarrowTest NodeTypeToolComparisonTest FieldToolsComparisonTest BuildBenchmarkTest"
 
 MODULE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WEB="$(cd "$MODULE/../../.." && pwd)"
@@ -103,7 +113,7 @@ changed_files() {
 
 CHANGED=""
 if [ "$FAST" = "1" ]; then
-  echo "FAST LANE: unit and kernel tests, then phpcs, phpstan and cspell on the files changed since HEAD."
+  echo "FAST LANE: unit and kernel tests (not the full-lane-only classes), then phpcs, phpstan and cspell on the files changed since HEAD."
   echo "The full lane (scripts/check.sh without --fast) is required before handing back."
   echo
 fi
@@ -119,13 +129,15 @@ if [ "$FAST" = "1" ]; then
   # processes write one file. Within a class the tests that failed last
   # time run first (--order-by=defects); across classes, a class that had
   # a defect last time first, then the slowest last time, so no long class
-  # starts last. A class with no cache yet counts as the slowest.
+  # starts last. A class with no cache yet counts as the slowest. The
+  # classes in FULL_LANE_ONLY are left out of the list.
   echo "Unit and kernel test classes, $CONCURRENCY at a time; a class's output is printed only when it has a problem."
-  { echo "SHARDS=$CONCURRENCY"; cat <<'SH'; } | in_container > "$WORK/phpunit.txt" 2>&1
+  { echo "SHARDS=$CONCURRENCY"; echo "FULL_LANE_ONLY='$FULL_LANE_ONLY'"; cat <<'SH'; } | in_container > "$WORK/phpunit.txt" 2>&1
 cd /var/www/html/web || exit 1
 CACHE=/tmp/surface-phpunit-cache
 OUT="$(mktemp -d)"
-find modules/custom/surface -path '*/node_modules' -prune -o \( -path '*/tests/src/Unit/*' -o -path '*/tests/src/Kernel/*' \) -name '*Test.php' -print | php -r '
+find modules/custom/surface -path '*/node_modules' -prune -o \( -path '*/tests/src/Unit/*' -o -path '*/tests/src/Kernel/*' \) -name '*Test.php' -print \
+  | grep -v -E "/($(echo $FULL_LANE_ONLY | tr ' ' '|'))\.php\$" | php -r '
   $rows = [];
   while (($file = fgets(STDIN)) !== FALSE) {
     $file = trim($file);

@@ -1171,6 +1171,10 @@ test errored or failed and every gate passed.
 
 - **The fast lane**, `scripts/check.sh --fast` (or
   `SURFACE_CHECK_FAST=1`): unit and kernel tests through phpunit,
+  except the eight classes named in `FULL_LANE_ONLY` in the script (the
+  four `ValueBaseline*Test` classes, `HandCorpusNarrowTest`,
+  `NodeTypeToolComparisonTest`, `FieldToolsComparisonTest` and
+  `BuildBenchmarkTest`), which only the full lane runs;
   one process per class, `SURFACE_CHECK_CONCURRENCY` at once (one
   process for all of them takes 15 minutes, since every kernel test
   installs its modules), the base module's and those of `surface_http`
@@ -1183,7 +1187,8 @@ test errored or failed and every gate passed.
   PHP file changed or a `.neon` or `phpstan-*.php` file did. **Iterate
   on the fast lane.** It runs no functional or browser test, so it is
   never the last run.
-- **The full lane**, `scripts/check.sh`: every class through core's
+- **The full lane**, `scripts/check.sh`: every class, the eight the fast lane
+  leaves out included, through core's
   `run-tests.sh`, each in its own phpunit process with its own database
   prefix and site directory. Unit, kernel and functional classes run
   `SURFACE_CHECK_CONCURRENCY` at a time (default 8), then the
