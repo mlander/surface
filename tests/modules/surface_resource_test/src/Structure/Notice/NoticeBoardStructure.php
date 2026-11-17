@@ -30,10 +30,12 @@ final class NoticeBoardStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', 'Title')
-      ->setRequired(TRUE);
-    $inputs->add('pinned', 'string', 'Pinned notice')
-      ->setRequired(TRUE);
+    $inputs->addSchema('title', Schema::string()
+      ->title('Title')
+      ->required());
+    $inputs->addSchema('pinned', Schema::string()
+      ->title('Pinned notice')
+      ->required());
   }
 
   /**

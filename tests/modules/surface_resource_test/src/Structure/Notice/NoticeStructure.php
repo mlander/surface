@@ -26,11 +26,14 @@ final class NoticeStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('channel', 'string', 'Channel', default: 'post')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['post', 'email']]);
-    $inputs->add('cadence', 'string', 'Cadence', default: 'daily')
-      ->setRequired(TRUE);
+    $inputs->addSchema('channel', Schema::enum(['post', 'email'])
+      ->title('Channel')
+      ->default('post')
+      ->required());
+    $inputs->addSchema('cadence', Schema::string()
+      ->title('Cadence')
+      ->default('daily')
+      ->required());
     $inputs->attach('address', NoticeAddressStructure::class, 'Address');
     $inputs->attachVariants('schedule', by: 'cadence', label: 'Schedule');
   }

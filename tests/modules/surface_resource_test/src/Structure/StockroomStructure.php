@@ -74,12 +74,12 @@ final class StockroomStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('aisle', 'string', 'Aisle')
-      ->addConstraint('LabeledChoice', ['choices' => ['north' => 'North', 'south' => 'South']]);
-    $inputs->add('shelf', 'string', 'Shelf')
-      ->addConstraint('LabeledChoice', ['choices' => array_merge(...array_values(self::SHELVES))]);
-    $inputs->add('tag', 'string', 'Tag')
-      ->addConstraint('LabeledChoice', ['choices' => self::TAGS]);
+    $inputs->addSchema('aisle', Schema::options(['north' => 'North', 'south' => 'South'])
+      ->title('Aisle'));
+    $inputs->addSchema('shelf', Schema::options(array_merge(...array_values(self::SHELVES)))->type('string')
+      ->title('Shelf'));
+    $inputs->addSchema('tag', Schema::options(self::TAGS)->type('string')
+      ->title('Tag'));
   }
 
   /**

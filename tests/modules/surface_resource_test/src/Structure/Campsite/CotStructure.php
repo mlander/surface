@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A cot: the pitch's gear for "cot", as long as its sleeper.
@@ -21,8 +22,9 @@ final class CotStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('length', 'integer', t('Length'))
-      ->addConstraint('Range', ['min' => 0]);
+    $inputs->addSchema('length', Schema::integer()
+      ->title(t('Length'))
+      ->minimum(0));
   }
 
 }

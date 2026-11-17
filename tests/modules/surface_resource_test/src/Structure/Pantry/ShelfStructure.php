@@ -25,10 +25,14 @@ final class ShelfStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('unit', 'string', 'Unit', default: 'cm')
-      ->addConstraint('Choice', ['choices' => array_keys(self::MAX)]);
-    $inputs->add('height', 'integer', 'Height', default: 30)
-      ->addConstraint('Range', ['min' => 1]);
+    $inputs->addSchema('unit', Schema::string()
+      ->title('Unit')
+      ->default('cm')
+      ->check('drupal:Choice', ['choices' => array_keys(self::MAX)]));
+    $inputs->addSchema('height', Schema::integer()
+      ->title('Height')
+      ->default(30)
+      ->minimum(1));
   }
 
   /**

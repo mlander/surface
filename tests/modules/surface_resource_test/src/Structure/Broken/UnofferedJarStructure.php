@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The variant of UnofferedVariantStructure's settings for `jar`.
@@ -20,7 +21,8 @@ final class UnofferedJarStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('size', 'integer', 'Size');
+    $inputs->addSchema('size', Schema::integer()
+      ->title('Size'));
   }
 
 }

@@ -11,6 +11,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\PackStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A backpack: the variant its carry chooses at its load, children inside.
@@ -39,12 +40,15 @@ final class PackResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Title'))
-      ->setRequired(TRUE);
-    $inputs->add('carry', 'string', t('Carry'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('title', Schema::string()
+      ->title(t('Title'))
+      ->required());
+    $inputs->addSchema('carry', Schema::string()
+      ->title(t('Carry'))
+      ->required());
     $inputs->attachVariants('load', by: 'carry', label: t('Load'));
-    $inputs->add('notes', 'string', t('Notes'));
+    $inputs->addSchema('notes', Schema::string()
+      ->title(t('Notes')));
   }
 
 }

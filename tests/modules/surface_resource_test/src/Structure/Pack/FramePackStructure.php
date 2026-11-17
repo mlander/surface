@@ -11,6 +11,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Access\FramePackAccess;
 use Drupal\surface_resource_test\Resource\Pack\PackResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * A frame pack: the pack's load for "frame", holding two children.
@@ -27,8 +28,9 @@ final class FramePackStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('capacity', 'integer', t('Capacity'))
-      ->addConstraint('Range', ['min' => 10]);
+    $inputs->addSchema('capacity', Schema::integer()
+      ->title(t('Capacity'))
+      ->minimum(10));
 
     $inputs->attach('belt', BeltStructure::class, t('Hip belt'));
 

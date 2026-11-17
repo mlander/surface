@@ -24,8 +24,10 @@ final class MountWatcherAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('kind', 'string', 'Kind');
-    $inputs->add('detail', 'string', 'Detail');
+    $inputs->addSchema('kind', Schema::string()
+      ->title('Kind'));
+    $inputs->addSchema('detail', Schema::string()
+      ->title('Detail'));
   }
 
   /**

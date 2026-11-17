@@ -34,11 +34,14 @@ final class StickyNoteBlock extends TypedBlockBase implements StructureInterface
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('color', 'string', t('Color'), default: 'yellow')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['yellow', 'pink']]);
-    $inputs->add('note', 'string', t('Note'), default: 'Sticky')
-      ->addConstraint('Length', ['max' => 40]);
+    $inputs->addSchema('color', Schema::enum(['yellow', 'pink'])
+      ->title(t('Color'))
+      ->default('yellow')
+      ->required());
+    $inputs->addSchema('note', Schema::string()
+      ->title(t('Note'))
+      ->default('Sticky')
+      ->maxLength(40));
   }
 
   /**

@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure\Broken;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Attaches a child that watches one of this structure's keys.
@@ -18,7 +19,8 @@ final class NosyParentStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('pantry', 'string', 'Pantry');
+    $inputs->addSchema('pantry', Schema::string()
+      ->title('Pantry'));
     $inputs->attach('nosy', NosyChildStructure::class);
   }
 

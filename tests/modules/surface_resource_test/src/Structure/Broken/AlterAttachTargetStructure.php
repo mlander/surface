@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure\Broken;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * What OwnerLevelAttachAlter tries to attach to at the owner's level.
@@ -18,8 +19,8 @@ final class AlterAttachTargetStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('layout', 'string', 'Layout')
-      ->addConstraint('Choice', ['choices' => ['theatre', 'banquet', 'standing']]);
+    $inputs->addSchema('layout', Schema::enum(['theatre', 'banquet', 'standing'])
+      ->title('Layout'));
   }
 
 }

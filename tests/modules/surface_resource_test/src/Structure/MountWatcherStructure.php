@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A structure whose alters watch keys an alter mounted.
@@ -25,7 +26,8 @@ final class MountWatcherStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('size', 'integer', 'Size');
+    $inputs->addSchema('size', Schema::integer()
+      ->title('Size'));
   }
 
 }

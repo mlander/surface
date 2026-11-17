@@ -24,7 +24,8 @@ final class WatchesListStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('note', 'string', 'Note');
+    $inputs->addSchema('note', Schema::string()
+      ->title('Note'));
     $inputs->attachList('racks', SpiceRackResource::class);
   }
 

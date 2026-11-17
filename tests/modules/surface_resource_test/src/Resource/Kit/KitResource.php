@@ -12,6 +12,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface\Variants;
 use Drupal\surface_resource_test\Storage\KitStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A camping kit: the variant its kind chooses, at its gear, stored flat.
@@ -41,13 +42,16 @@ final class KitResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Title'))
-      ->setRequired(TRUE);
-    $inputs->add('kind', 'string', t('Kind'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('title', Schema::string()
+      ->title(t('Title'))
+      ->required());
+    $inputs->addSchema('kind', Schema::string()
+      ->title(t('Kind'))
+      ->required());
     $inputs->attachVariants('gear', by: 'kind', label: t('Gear'))
       ->setSetting(Variants::STORED_AS, Variants::FLAT);
-    $inputs->add('notes', 'string', t('Notes'));
+    $inputs->addSchema('notes', Schema::string()
+      ->title(t('Notes')));
   }
 
 }

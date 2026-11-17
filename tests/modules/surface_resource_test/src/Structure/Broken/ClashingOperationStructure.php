@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Has two providers of one operation id: the class and a method.
@@ -29,7 +30,8 @@ final class ClashingOperationStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', 'Name');
+    $inputs->addSchema('name', Schema::string()
+      ->title('Name'));
   }
 
 }

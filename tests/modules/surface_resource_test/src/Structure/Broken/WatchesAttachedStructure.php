@@ -21,7 +21,8 @@ final class WatchesAttachedStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('note', 'string', 'Note');
+    $inputs->addSchema('note', Schema::string()
+      ->title('Note'));
     $inputs->attach('shelf', ShelfStructure::class);
   }
 

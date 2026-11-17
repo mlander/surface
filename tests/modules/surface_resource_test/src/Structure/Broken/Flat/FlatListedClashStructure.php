@@ -10,6 +10,7 @@ use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface\Variants;
 use Drupal\surface_resource_test\Structure\Broken\Kit\WeightOnlyStructure;
 use Drupal\surface_resource_test\Variants\KitVariants;
+use PortableSchema\Builder\Schema;
 
 /**
  * Declares "weight" itself, then stores flat a listed variant declaring it.
@@ -24,8 +25,10 @@ final class FlatListedClashStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('kind', 'string', 'Kind');
-    $inputs->add('weight', 'integer', 'Weight');
+    $inputs->addSchema('kind', Schema::string()
+      ->title('Kind'));
+    $inputs->addSchema('weight', Schema::integer()
+      ->title('Weight'));
     $weight = ['a', WeightOnlyStructure::class];
     $inputs->attachVariants('gear', by: 'kind', label: 'Gear', from: KitVariants::class, arguments: $weight)
       ->setSetting(Variants::STORED_AS, Variants::FLAT);

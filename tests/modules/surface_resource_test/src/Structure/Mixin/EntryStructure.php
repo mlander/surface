@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure\Mixin;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * An entry: a line, with the record mixed in, which mixes the timestamps in.
@@ -18,7 +19,8 @@ final class EntryStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('line', 'string', t('Line'));
+    $inputs->addSchema('line', Schema::string()
+      ->title(t('Line')));
     $inputs->mixIn(RecordStructure::class);
   }
 

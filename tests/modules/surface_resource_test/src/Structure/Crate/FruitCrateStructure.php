@@ -30,10 +30,14 @@ final class FruitCrateStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('fruit', 'string', 'Fruit')
-      ->addConstraint('Choice', ['choices' => array_keys(self::LAYERS)]);
-    $inputs->add('layers', 'integer', 'Layers', default: 1)
-      ->addConstraint('Range', ['min' => 1, 'max' => 10]);
+    $inputs->addSchema('fruit', Schema::string()
+      ->title('Fruit')
+      ->check('drupal:Choice', ['choices' => array_keys(self::LAYERS)]));
+    $inputs->addSchema('layers', Schema::integer()
+      ->title('Layers')
+      ->default(1)
+      ->minimum(1)
+      ->maximum(10));
   }
 
   /**

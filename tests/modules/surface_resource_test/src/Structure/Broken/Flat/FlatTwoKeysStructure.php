@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface\Variants;
+use PortableSchema\Builder\Schema;
 
 /**
  * Stores the variants at two keys flat, at one level.
@@ -19,7 +20,8 @@ final class FlatTwoKeysStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('kind', 'string', 'Kind');
+    $inputs->addSchema('kind', Schema::string()
+      ->title('Kind'));
     $inputs->attachVariants('gear', by: 'kind', label: 'Gear')
       ->setSetting(Variants::STORED_AS, Variants::FLAT);
     $inputs->attachVariants('spare', by: 'kind', label: 'Spare')

@@ -8,6 +8,7 @@ use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface_resource_test\Structure\Broken\MountingMixinStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Mounts a key on a structure, which some owner then mixes in.
@@ -19,7 +20,8 @@ final class MountingMixinAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('color', 'string', 'Color');
+    $inputs->addSchema('color', Schema::string()
+      ->title('Color'));
   }
 
 }

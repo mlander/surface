@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure\Broken;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A structure whose alter watches its own mounted key without taking NULL.
@@ -20,7 +21,8 @@ final class StrictMountWatcherStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('size', 'integer', 'Size');
+    $inputs->addSchema('size', Schema::integer()
+      ->title('Size'));
   }
 
 }

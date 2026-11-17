@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure\Broken;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Lists a deciding value no variant is for.
@@ -22,7 +23,8 @@ final class UnofferedVariantStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('kind', 'string', 'Kind')->addConstraint('Choice', ['choices' => ['jar', 'pot']]);
+    $inputs->addSchema('kind', Schema::enum(['jar', 'pot'])
+      ->title('Kind'));
     $inputs->attachVariants('settings', by: 'kind');
   }
 

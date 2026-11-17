@@ -11,6 +11,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\HallStorage;
 use Drupal\surface_resource_test\Structure\Seating\SeatingStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * A hall: the same seating structure, reused under another name.
@@ -39,15 +40,20 @@ final class HallResource implements ResourceInterface {
       'banquet' => t('Banquet'),
       'standing' => t('Standing'),
     ];
-    $inputs->add('arrangement', 'string', t('Arrangement'), default: 'banquet')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => $layouts]);
-    $inputs->add('style', 'string', t('Overflow style'), default: 'theatre')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => $layouts]);
-    $inputs->add('guests', 'integer', t('Guests'), default: 200)
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 2000]);
+    $inputs->addSchema('arrangement', Schema::options($layouts)->type('string')
+      ->title(t('Arrangement'))
+      ->default('banquet')
+      ->required());
+    $inputs->addSchema('style', Schema::options($layouts)->type('string')
+      ->title(t('Overflow style'))
+      ->default('theatre')
+      ->required());
+    $inputs->addSchema('guests', Schema::integer()
+      ->title(t('Guests'))
+      ->default(200)
+      ->minimum(1)
+      ->maximum(2000)
+      ->required());
     $inputs->attach('chairs', SeatingStructure::class, t('Chairs'), reads: ['layout' => 'arrangement']);
   }
 

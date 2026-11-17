@@ -25,7 +25,8 @@ final class StrictMountWatcherAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('kind', 'string', 'Kind');
+    $inputs->addSchema('kind', Schema::string()
+      ->title('Kind'));
   }
 
   /**

@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A hammock: the pitch's gear for "hammock", slung by its straps.
@@ -21,9 +22,11 @@ final class HammockStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('straps', 'integer', t('Straps'), default: 2)
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1]);
+    $inputs->addSchema('straps', Schema::integer()
+      ->title(t('Straps'))
+      ->default(2)
+      ->minimum(1)
+      ->required());
   }
 
 }

@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Shape\Sku;
+use PortableSchema\Builder\Schema;
 
 /**
  * A planter: a pot its kind chooses, the soil in it, and a stock code.
@@ -28,9 +29,12 @@ final class PlanterStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('code', Sku::class, t('Stock code'));
+    $inputs->addSchema('code', Schema::of(Sku::class)
+      ->title(t('Stock code')));
 
-    $inputs->add('kind', 'string', t('Kind'), default: 'clay');
+    $inputs->addSchema('kind', Schema::string()
+      ->title(t('Kind'))
+      ->default('clay'));
 
     $inputs->attachVariants('pot', by: 'kind', label: t('Pot'));
 

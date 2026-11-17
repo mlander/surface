@@ -35,23 +35,21 @@ final class BulletinResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('frequency', 'string', t('Frequency'), default: 'weekly')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'weekly' => t('Weekly'),
-          'monthly' => t('Monthly'),
-        ],
-      ]);
-    $inputs->add('send_day', 'string', t('Send day'), default: 'monday')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'monday' => t('Monday'),
-          'wednesday' => t('Wednesday'),
-          'friday' => t('Friday'),
-        ],
-      ]);
+    $inputs->addSchema('frequency', Schema::options([
+      'weekly' => t('Weekly'),
+      'monthly' => t('Monthly'),
+    ])
+      ->title(t('Frequency'))
+      ->default('weekly')
+      ->required());
+    $inputs->addSchema('send_day', Schema::options([
+      'monday' => t('Monday'),
+      'wednesday' => t('Wednesday'),
+      'friday' => t('Friday'),
+    ])
+      ->title(t('Send day'))
+      ->default('monday')
+      ->required());
   }
 
   /**

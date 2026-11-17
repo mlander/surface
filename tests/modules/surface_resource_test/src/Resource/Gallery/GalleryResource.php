@@ -14,6 +14,7 @@ use Drupal\surface_resource_test\Storage\GalleryStorage;
 use Drupal\surface_resource_test\Structure\Gallery\PlaqueStructure;
 use Drupal\surface_resource_test\Structure\Gallery\RoomStructure;
 use Drupal\surface_resource_test\Structure\Gallery\WallStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * A gallery: access answered by alters, in every frame a thing is built in.
@@ -50,13 +51,16 @@ final class GalleryResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', t('Name'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('name', Schema::string()
+      ->title(t('Name'))
+      ->required());
     $inputs->mixIn(PlaqueStructure::class);
     $inputs->attach('north', WallStructure::class, t('North wall'));
     $inputs->attach('south', WallStructure::class, t('South wall'));
-    $inputs->add('medium', 'string', t('Medium'), default: 'oil')
-      ->setRequired(TRUE);
+    $inputs->addSchema('medium', Schema::string()
+      ->title(t('Medium'))
+      ->default('oil')
+      ->required());
     $inputs->attachVariants('finish', by: 'medium', label: t('Finish'));
     $inputs->attachEach('rooms', RoomStructure::class, from: GalleryRooms::class, label: t('Rooms'));
   }

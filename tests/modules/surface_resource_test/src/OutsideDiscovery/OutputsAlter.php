@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\OutsideDiscovery;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface_resource_test\Resource\RecipeResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * Broken: an alter that adds outputs, which an alter no longer may.
@@ -18,7 +19,8 @@ final class OutputsAlter {
    * Adds an output to every recipe.
    */
   public function alterOutputs(BlueprintAdditionsInterface $outputs): void {
-    $outputs->add('plated', 'boolean', 'Plated');
+    $outputs->addSchema('plated', Schema::bool()
+      ->title('Plated'));
   }
 
 }

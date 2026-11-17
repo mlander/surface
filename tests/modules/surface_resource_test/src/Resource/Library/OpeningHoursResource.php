@@ -12,6 +12,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\OpeningHoursStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A library's opening hours: the common settings recipes, each a key.
@@ -40,19 +41,24 @@ final class OpeningHoursResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('opens', 'string', t('Opens at'), default: '09:00')
-      ->setRequired(TRUE)
-      ->setDescription(t('HH:MM, on a 24-hour clock.'))
-      ->setSetting('widget', 'time')
-      ->addConstraint('Regex', [
+    $inputs->addSchema('opens', Schema::string()
+      ->title(t('Opens at'))
+      ->description(t('HH:MM, on a 24-hour clock.'))
+      ->default('09:00')
+      ->check('drupal:Regex', [
         'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
         'message' => t('Write the time as HH:MM, such as 09:00.'),
-      ]);
+      ])
+      ->ui(widget: 'time')
+      ->required());
 
-    $inputs->add('closes', 'integer', t('Closes at, in minutes after midnight'), default: 1020)
-      ->setRequired(TRUE)
-      ->setDescription(t('Later than noon: 1020 is 17:00.'))
-      ->addConstraint('Range', ['min' => 721, 'max' => 1439]);
+    $inputs->addSchema('closes', Schema::integer()
+      ->title(t('Closes at, in minutes after midnight'))
+      ->description(t('Later than noon: 1020 is 17:00.'))
+      ->default(1020)
+      ->minimum(721)
+      ->maximum(1439)
+      ->required());
 
     $day = DataDefinition::create('string')
       ->addConstraint('LabeledChoice', [
@@ -70,13 +76,18 @@ final class OpeningHoursResource implements ResourceInterface {
       ->setRequired(TRUE)
       ->addConstraint('UniqueItems', []);
 
-    $inputs->add('notes', 'string', t('Notes'))
-      ->setSetting('multiline', TRUE);
+    $inputs->addSchema('notes', Schema::string()
+      ->title(t('Notes'))
+      ->ui(widget: 'textarea'));
 
-    $inputs->add('after_hours', 'boolean', t('After-hours access'), default: FALSE);
-    $inputs->add('door_code', 'string', t('Door code'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['min' => 4, 'max' => 12]);
+    $inputs->addSchema('after_hours', Schema::bool()
+      ->title(t('After-hours access'))
+      ->default(FALSE));
+    $inputs->addSchema('door_code', Schema::string()
+      ->title(t('Door code'))
+      ->minLength(4)
+      ->maxLength(12)
+      ->required());
     $inputs->narrow('door_code')
       ->unless(Condition::equals('after_hours', TRUE))
       ->doesNotApply();
@@ -91,16 +102,17 @@ final class OpeningHoursResource implements ResourceInterface {
       ->unless(Condition::equals('after_hours', TRUE))
       ->doesNotApply();
 
-    $inputs->addList('keywords', 'string', t('Keywords'), default: []);
+    $inputs->addSchema('keywords', Schema::list(Schema::string())
+      ->title(t('Keywords'))
+      ->default([]));
 
-    $inputs->add('holidays', 'string', t('On public holidays'), default: 'closed')
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'closed' => t('Closed'),
-          'reduced' => t('Reduced hours'),
-          'open' => t('Open as usual'),
-        ],
-      ]);
+    $inputs->addSchema('holidays', Schema::options([
+      'closed' => t('Closed'),
+      'reduced' => t('Reduced hours'),
+      'open' => t('Open as usual'),
+    ])
+      ->title(t('On public holidays'))
+      ->default('closed'));
   }
 
 }

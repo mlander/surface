@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface_resource_test\Compute\VaultToken;
 use Drupal\surface_resource_test\Resource\Relay\PlainRelayResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * Stands in for the relay's token with a vault entry of the north vault.
@@ -23,7 +24,8 @@ final class NorthVaultAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('vault_id', 'string', 'Vault entry');
+    $inputs->addSchema('vault_id', Schema::string()
+      ->title('Vault entry'));
     $inputs->resolve('token', from: ['vault_id'], using: VaultToken::class);
   }
 

@@ -21,7 +21,8 @@ final class RefinesPortStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('layout', 'string');
-    $inputs->add('note', 'string', 'Note');
+    $inputs->addSchema('note', Schema::string()
+      ->title('Note'));
   }
 
   /**

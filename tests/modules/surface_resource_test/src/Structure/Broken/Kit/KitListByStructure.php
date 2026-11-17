@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Variants\KitVariants;
+use PortableSchema\Builder\Schema;
 
 /**
  * Attaches variants chosen by a list.
@@ -19,7 +20,8 @@ final class KitListByStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addList('kind', 'string', 'Kinds');
+    $inputs->addSchema('kind', Schema::list(Schema::string())
+      ->title('Kinds'));
     $weight = ['a', WeightOnlyStructure::class];
     $inputs->attachVariants('gear', by: 'kind', label: 'Gear', from: KitVariants::class, arguments: $weight);
   }

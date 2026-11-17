@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface_resource_test\Structure\Pantry\ShelfStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Alters the shelf alone, wherever it is attached.
@@ -19,7 +20,9 @@ final class ShelfAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('sturdy', 'boolean', 'Sturdy', default: TRUE);
+    $inputs->addSchema('sturdy', Schema::bool()
+      ->title('Sturdy')
+      ->default(TRUE));
     $inputs->describe('height', description: 'Measured inside.');
   }
 

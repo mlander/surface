@@ -25,19 +25,24 @@ final class ThresholdStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('mode', 'string', t('Comparison'), default: 'at_least')
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'at_least' => t('At least'),
-          'at_most' => t('At most'),
-        ],
-      ]);
-    $inputs->add('threshold', 'integer', t('Threshold'), default: 10)
-      ->setDescription(t('The number the reading is compared against.'))
-      ->addConstraint('Range', ['min' => 0, 'max' => 100]);
-    $inputs->add('reading', 'integer', t('Reading'), default: 0)
-      ->setDescription(t('The number the plugin tests.'))
-      ->addConstraint('Range', ['min' => 0, 'max' => 100]);
+    $inputs->addSchema('mode', Schema::options([
+      'at_least' => t('At least'),
+      'at_most' => t('At most'),
+    ])
+      ->title(t('Comparison'))
+      ->default('at_least'));
+    $inputs->addSchema('threshold', Schema::integer()
+      ->title(t('Threshold'))
+      ->description(t('The number the reading is compared against.'))
+      ->default(10)
+      ->minimum(0)
+      ->maximum(100));
+    $inputs->addSchema('reading', Schema::integer()
+      ->title(t('Reading'))
+      ->description(t('The number the plugin tests.'))
+      ->default(0)
+      ->minimum(0)
+      ->maximum(100));
   }
 
   /**

@@ -22,7 +22,9 @@ final class RecipeAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('garnish', 'string', 'Garnish', default: 'parsley');
+    $inputs->addSchema('garnish', Schema::string()
+      ->title('Garnish')
+      ->default('parsley'));
   }
 
   /**

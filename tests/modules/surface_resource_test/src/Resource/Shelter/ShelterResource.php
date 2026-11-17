@@ -11,6 +11,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\ShelterStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A shelter: the variant its kind chooses at its shelter, variants inside.
@@ -37,12 +38,15 @@ final class ShelterResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Title'))
-      ->setRequired(TRUE);
-    $inputs->add('kind', 'string', t('Kind'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('title', Schema::string()
+      ->title(t('Title'))
+      ->required());
+    $inputs->addSchema('kind', Schema::string()
+      ->title(t('Kind'))
+      ->required());
     $inputs->attachVariants('shelter', by: 'kind', label: t('Shelter'));
-    $inputs->add('notes', 'string', t('Notes'));
+    $inputs->addSchema('notes', Schema::string()
+      ->title(t('Notes')));
   }
 
 }

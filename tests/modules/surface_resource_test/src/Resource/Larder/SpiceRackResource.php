@@ -10,6 +10,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Access\SpiceRackAccess;
+use PortableSchema\Builder\Schema;
 
 /**
  * A spice rack: a child with four operations and an access class.
@@ -70,10 +71,17 @@ final class SpiceRackResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('shelf', 'string', 'Shelf', default: 'middle');
-    $inputs->add('spices', 'integer', 'Spices', default: 3)
-      ->addConstraint('Range', ['min' => 0, 'max' => 40]);
-    $inputs->add('label', 'string', 'Label', default: 'Spices');
+    $inputs->addSchema('shelf', Schema::string()
+      ->title('Shelf')
+      ->default('middle'));
+    $inputs->addSchema('spices', Schema::integer()
+      ->title('Spices')
+      ->default(3)
+      ->minimum(0)
+      ->maximum(40));
+    $inputs->addSchema('label', Schema::string()
+      ->title('Label')
+      ->default('Spices'));
   }
 
 }

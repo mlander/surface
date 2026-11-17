@@ -21,14 +21,16 @@ final class RefinesOutputStructure implements StructureInterface, DefinesOutputs
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('count', 'integer', 'Count');
+    $inputs->addSchema('count', Schema::integer()
+      ->title('Count'));
   }
 
   /**
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $outputs->add('total', 'integer', 'Total');
+    $outputs->addSchema('total', Schema::integer()
+      ->title('Total'));
   }
 
   /**

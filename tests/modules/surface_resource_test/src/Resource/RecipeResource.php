@@ -68,22 +68,35 @@ final class RecipeResource implements ResourceInterface, DefinesOutputsInterface
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('kitchen', 'string', 'Kitchen')->setRequired(TRUE);
-    $inputs->add('name', 'string', 'Name')->setRequired(TRUE);
-    $inputs->add('course', 'string', 'Course', default: 'main')
-      ->addConstraint('Choice', ['choices' => array_keys(self::DISHES)]);
-    $inputs->add('dish', 'string', 'Dish')
-      ->addConstraint('Choice', ['choices' => array_merge(...array_values(self::DISHES))]);
-    $inputs->add('servings', 'integer', 'Servings', default: 2)
-      ->addConstraint('Range', ['min' => 1, 'max' => 12]);
-    $inputs->add('vegetarian', 'boolean', 'Vegetarian', default: FALSE);
+    $inputs->addSchema('kitchen', Schema::string()
+      ->title('Kitchen')
+      ->required());
+    $inputs->addSchema('name', Schema::string()
+      ->title('Name')
+      ->required());
+    $inputs->addSchema('course', Schema::string()
+      ->title('Course')
+      ->default('main')
+      ->check('drupal:Choice', ['choices' => array_keys(self::DISHES)]));
+    $inputs->addSchema('dish', Schema::string()
+      ->title('Dish')
+      ->check('drupal:Choice', ['choices' => array_merge(...array_values(self::DISHES))]));
+    $inputs->addSchema('servings', Schema::integer()
+      ->title('Servings')
+      ->default(2)
+      ->minimum(1)
+      ->maximum(12));
+    $inputs->addSchema('vegetarian', Schema::bool()
+      ->title('Vegetarian')
+      ->default(FALSE));
   }
 
   /**
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $outputs->add('id', 'string', 'Recipe id');
+    $outputs->addSchema('id', Schema::string()
+      ->title('Recipe id'));
   }
 
   /**

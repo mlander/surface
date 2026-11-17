@@ -6,6 +6,7 @@ namespace Drupal\surface_resource_test\OutsideDiscovery;
 
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Carries #[Structure] with an instance defineInputs().
@@ -26,7 +27,8 @@ final class InstanceDefineInputsStructure {
    *   The input blueprint to fill.
    */
   public function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', 'Name');
+    $inputs->addSchema('name', Schema::string()
+      ->title('Name'));
   }
 
 }

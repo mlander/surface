@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure\Broken;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Attaches a structure whose access answer is not what it says it is.
@@ -18,7 +19,8 @@ final class StateReadingParentStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', 'Title');
+    $inputs->addSchema('title', Schema::string()
+      ->title('Title'));
     $inputs->attach('child', StateReadingStructure::class);
   }
 

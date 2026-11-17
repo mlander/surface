@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\OutsideDiscovery\Labels;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The soil in a planter, which says neither what it is called nor for.
@@ -20,7 +21,9 @@ final class SoilStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('depth', 'integer', t('Depth'), default: 20);
+    $inputs->addSchema('depth', Schema::integer()
+      ->title(t('Depth'))
+      ->default(20));
   }
 
 }

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Resource\Relay;
 
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\RelayStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A relay with no resolve: a pasted token and the name of a vault entry.
@@ -25,11 +25,13 @@ final class PlainRelayResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $token = $inputs->add('token', 'string', t('Token'))
-      ->setDescription(t('The token each call is made with, pasted here.'));
-    DefinitionMetadata::setSecret($token);
+    $inputs->addSchema('token', Schema::string()
+      ->title(t('Token'))
+      ->description(t('The token each call is made with, pasted here.'))
+      ->writeOnly(TRUE));
 
-    $inputs->add('vault_id', 'string', t('Vault entry'));
+    $inputs->addSchema('vault_id', Schema::string()
+      ->title(t('Vault entry')));
   }
 
 }

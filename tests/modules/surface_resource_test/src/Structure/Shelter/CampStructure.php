@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Variants\KitVariants;
+use PortableSchema\Builder\Schema;
 
 /**
  * A camp: a second owner of the hut, its covering's variants too.
@@ -23,8 +24,9 @@ final class CampStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('site', 'string', t('Site'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('site', Schema::string()
+      ->title(t('Site'))
+      ->required());
     $inputs->attachVariants('camp', by: 'site', label: t('Camp'), from: KitVariants::class, arguments: [
       'hut',
       HutStructure::class,

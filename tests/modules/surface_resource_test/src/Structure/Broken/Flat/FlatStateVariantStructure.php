@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Resource\Broken\FlatStateResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * The flat state resource's variant for "a".
@@ -21,7 +22,8 @@ final class FlatStateVariantStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('size', 'integer', 'Size');
+    $inputs->addSchema('size', Schema::integer()
+      ->title('Size'));
   }
 
 }

@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A jar's settings: one of the pantry's variants, stored by the pantry.
@@ -21,11 +22,15 @@ final class JarStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('lid', 'string', 'Lid', default: 'screw')
-      ->setDescription('How the jar closes.')
-      ->addConstraint('Choice', ['choices' => ['screw', 'clip']]);
-    $inputs->add('volume', 'integer', 'Volume', default: 500)
-      ->addConstraint('Range', ['min' => 1, 'max' => 5000]);
+    $inputs->addSchema('lid', Schema::enum(['screw', 'clip'])
+      ->title('Lid')
+      ->description('How the jar closes.')
+      ->default('screw'));
+    $inputs->addSchema('volume', Schema::integer()
+      ->title('Volume')
+      ->default(500)
+      ->minimum(1)
+      ->maximum(5000));
   }
 
 }

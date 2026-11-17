@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure\Broken;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Reads a port under the name of a key it declares.
@@ -18,7 +19,8 @@ final class PortClashStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('layout', 'string', 'Layout');
+    $inputs->addSchema('layout', Schema::string()
+      ->title('Layout'));
     $inputs->reads('layout', 'string');
   }
 

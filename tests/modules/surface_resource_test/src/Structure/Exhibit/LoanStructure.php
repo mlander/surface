@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Access\ExhibitAccess;
+use PortableSchema\Builder\Schema;
 
 /**
  * Who an exhibit is lent by: attached at the exhibit's loan key.
@@ -22,8 +23,10 @@ final class LoanStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('lender', 'string', t('Lender'));
-    $inputs->add('until', 'integer', t('Until'));
+    $inputs->addSchema('lender', Schema::string()
+      ->title(t('Lender')));
+    $inputs->addSchema('until', Schema::integer()
+      ->title(t('Until')));
     $inputs->attach('insurance', InsuranceStructure::class, t('Insurance'));
   }
 

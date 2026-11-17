@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Broken: an operation handed an object, where a value names its subject.
@@ -31,7 +32,8 @@ final class ObjectParameterStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('jar', 'string', 'Jar');
+    $inputs->addSchema('jar', Schema::string()
+      ->title('Jar'));
   }
 
 }

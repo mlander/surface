@@ -12,6 +12,7 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Shape\Sku;
 use Drupal\surface_resource_test\Storage\DepotStorage;
 use Drupal\surface_resource_test\Structure\Depot\ShelfTagStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * A depot: one shape at two keys, each narrowing it its own way.
@@ -40,9 +41,11 @@ final class DepotResource implements ResourceInterface {
     $inputs->add('sku', Sku::class, t('Stock code'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['min' => 4, 'max' => 12]);
-    $inputs->add('spare', Sku::class, t('Spare code'), default: 'ZZ9')
-      ->setDescription(t('Printed on the back of the shelf.'))
-      ->addConstraint('Length', ['max' => 6]);
+    $inputs->addSchema('spare', Schema::of(Sku::class)
+      ->title(t('Spare code'))
+      ->description(t('Printed on the back of the shelf.'))
+      ->default('ZZ9')
+      ->check('drupal:Length', ['max' => 6]));
     $inputs->attach('tag', ShelfTagStructure::class, t('Shelf tag'), reads: ['code' => 'sku']);
   }
 

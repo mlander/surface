@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure\Crate;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A crate: variants, one of which refines one of its keys by another.
@@ -21,8 +22,10 @@ final class CrateStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('contents', 'string', 'Contents', default: 'fruit')
-      ->setRequired(TRUE);
+    $inputs->addSchema('contents', Schema::string()
+      ->title('Contents')
+      ->default('fruit')
+      ->required());
     $inputs->attachVariants('contents_settings', by: 'contents', label: 'Contents settings');
   }
 

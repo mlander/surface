@@ -9,6 +9,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface\Variants;
 use Drupal\surface_resource_test\Structure\Broken\Kit\WeightOnlyStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Mixes in a "weight", then stores flat a variant that declares it.
@@ -20,7 +21,8 @@ final class FlatMixinClashStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('kind', 'string', 'Kind');
+    $inputs->addSchema('kind', Schema::string()
+      ->title('Kind'));
     $inputs->mixIn(WeightOnlyStructure::class);
     $inputs->attachVariants('gear', by: 'kind', label: 'Gear')
       ->setSetting(Variants::STORED_AS, Variants::FLAT);

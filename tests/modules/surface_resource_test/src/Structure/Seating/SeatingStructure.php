@@ -34,20 +34,24 @@ final class SeatingStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('layout', 'string', required: TRUE);
     $inputs->reads('guests', 'integer');
-    $inputs->add('rows', 'integer', t('Rows'), default: 5)
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 40]);
-    $inputs->add('aisle', 'string', t('Aisle'))
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'centre' => t('Centre'),
-          'side' => t('Side'),
-          'none' => t('None'),
-        ],
-      ]);
-    $inputs->add('ushers', 'integer', t('Ushers'), default: 0)
-      ->addConstraint('Range', ['min' => 0, 'max' => 20]);
+    $inputs->addSchema('rows', Schema::integer()
+      ->title(t('Rows'))
+      ->default(5)
+      ->minimum(1)
+      ->maximum(40)
+      ->required());
+    $inputs->addSchema('aisle', Schema::options([
+      'centre' => t('Centre'),
+      'side' => t('Side'),
+      'none' => t('None'),
+    ])
+      ->title(t('Aisle'))
+      ->required());
+    $inputs->addSchema('ushers', Schema::integer()
+      ->title(t('Ushers'))
+      ->default(0)
+      ->minimum(0)
+      ->maximum(20));
     // Up to a hundred guests, ten rows at most.
     $inputs->narrow('rows')
       ->when(Condition::atMost('guests', 100))

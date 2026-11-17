@@ -28,12 +28,17 @@ final class TentKitStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('weight', 'integer', t('Weight'))
-      ->addConstraint('Range', ['min' => 0]);
-    $inputs->add('poles', 'integer', t('Poles'), default: 2)
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1]);
-    $inputs->add('fly', 'boolean', t('Rain fly'), default: FALSE);
+    $inputs->addSchema('weight', Schema::integer()
+      ->title(t('Weight'))
+      ->minimum(0));
+    $inputs->addSchema('poles', Schema::integer()
+      ->title(t('Poles'))
+      ->default(2)
+      ->minimum(1)
+      ->required());
+    $inputs->addSchema('fly', Schema::bool()
+      ->title(t('Rain fly'))
+      ->default(FALSE));
     $inputs->narrow('poles')
       ->when(Condition::equals('fly', TRUE))
       ->constrain(Schema::any()->minimum(2))

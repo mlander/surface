@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Variants\AccountLayouts;
+use PortableSchema\Builder\Schema;
 
 /**
  * Asks for variants from a provider that varies by the account.
@@ -19,7 +20,8 @@ final class AccountVariantsStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('kind', 'string', 'Kind');
+    $inputs->addSchema('kind', Schema::string()
+      ->title('Kind'));
     $inputs->attachVariants('detail', by: 'kind', from: AccountLayouts::class);
   }
 

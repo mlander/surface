@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\PantryTinStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A tin's settings: one of the pantry's variants, stored apart.
@@ -21,8 +22,13 @@ final class TinResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('opener', 'boolean', 'Needs an opener', default: FALSE);
-    $inputs->add('volume', 'integer', 'Volume', default: 400)->setRequired(TRUE);
+    $inputs->addSchema('opener', Schema::bool()
+      ->title('Needs an opener')
+      ->default(FALSE));
+    $inputs->addSchema('volume', Schema::integer()
+      ->title('Volume')
+      ->default(400)
+      ->required());
   }
 
 }

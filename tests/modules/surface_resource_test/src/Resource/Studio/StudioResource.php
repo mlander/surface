@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Resource\Studio;
 
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\StudioStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A studio's settings, arranged: two groups, weights, and input texts.
@@ -30,21 +30,27 @@ final class StudioResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', t('Studio name'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 60]);
+    $inputs->addSchema('name', Schema::string()
+      ->title(t('Studio name'))
+      ->maxLength(60)
+      ->required());
 
     $hours = ArrangementGroup::fieldset('hours', t('Opening hours'));
-    $inputs->add('opens', 'string', t('Opens at'), default: '09:00');
+    $inputs->addSchema('opens', Schema::string()
+      ->title(t('Opens at'))
+      ->default('09:00'));
     $inputs->describe('opens', group: $hours, weight: 2);
-    $inputs->add('closes', 'string', t('Closes at'), default: '17:00');
+    $inputs->addSchema('closes', Schema::string()
+      ->title(t('Closes at'))
+      ->default('17:00'));
     $inputs->describe('closes', group: $hours, weight: 1);
 
     $pricing = ArrangementGroup::details('pricing', t('Pricing'), collapsed: TRUE);
-    $rate = $inputs->add('rate', 'integer', t('Hourly rate'))
-      ->setDescription(t('What an hour in the studio costs.'))
-      ->addConstraint('Range', ['min' => 0]);
-    DefinitionMetadata::setExamples($rate, [40]);
+    $inputs->addSchema('rate', Schema::integer()
+      ->title(t('Hourly rate'))
+      ->description(t('What an hour in the studio costs.'))
+      ->minimum(0)
+      ->examples([40]));
     $inputs->describe('rate',
       group: $pricing,
       placeholder: t('For example, 40'),
@@ -52,11 +58,14 @@ final class StudioResource implements ResourceInterface {
       suffix: t('per hour'),
       help: t('Whole dollars.'),
     );
-    $inputs->add('deposit', 'boolean', t('Deposit asked'), default: FALSE);
+    $inputs->addSchema('deposit', Schema::bool()
+      ->title(t('Deposit asked'))
+      ->default(FALSE));
     $inputs->describe('deposit', group: $pricing);
 
-    $inputs->add('notes', 'string', t('Notes'))
-      ->setSetting('multiline', TRUE);
+    $inputs->addSchema('notes', Schema::string()
+      ->title(t('Notes'))
+      ->ui(widget: 'textarea'));
     $inputs->describe('notes', weight: -10);
   }
 

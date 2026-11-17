@@ -11,6 +11,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Access\StoveAccess;
 use Drupal\surface_resource_test\Resource\Kit\KitResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * A stove: the kit's variant for "stove", at its gear.
@@ -27,16 +28,16 @@ final class StoveKitStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('weight', 'integer', t('Weight'))
-      ->addConstraint('Range', ['min' => 0]);
-    $inputs->add('fuel', 'string', t('Fuel'), default: 'gas')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'gas' => t('Gas'),
-          'spirit' => t('Spirit'),
-        ],
-      ]);
+    $inputs->addSchema('weight', Schema::integer()
+      ->title(t('Weight'))
+      ->minimum(0));
+    $inputs->addSchema('fuel', Schema::options([
+      'gas' => t('Gas'),
+      'spirit' => t('Spirit'),
+    ])
+      ->title(t('Fuel'))
+      ->default('gas')
+      ->required());
   }
 
 }

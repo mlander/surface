@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Shape\Broken\MountedShape;
+use PortableSchema\Builder\Schema;
 
 /**
  * Uses the shape an alter tries to mount a key on.
@@ -19,7 +20,8 @@ final class MountedShapeStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('code', MountedShape::class, 'Code');
+    $inputs->addSchema('code', Schema::of(MountedShape::class)
+      ->title('Code'));
   }
 
 }

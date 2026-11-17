@@ -12,6 +12,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\CampsiteStorage;
 use Drupal\surface_resource_test\Structure\Campsite\PitchStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * A campsite: a list of pitches, each with gear its kind chooses, flat.
@@ -37,8 +38,9 @@ final class CampsiteResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Title'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('title', Schema::string()
+      ->title(t('Title'))
+      ->required());
     $inputs->attachList('pitches', PitchStructure::class, t('Pitches'));
   }
 

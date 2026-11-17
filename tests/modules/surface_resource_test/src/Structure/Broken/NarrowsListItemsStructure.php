@@ -25,7 +25,8 @@ final class NarrowsListItemsStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('size', 'string', 'Size');
+    $inputs->addSchema('size', Schema::string()
+      ->title('Size'));
     $inputs->attachList('racks', SpiceRackResource::class);
   }
 

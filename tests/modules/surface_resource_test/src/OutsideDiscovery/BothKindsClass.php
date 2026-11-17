@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Carries both #[Resource] and #[Structure], which discovery refuses.
@@ -23,7 +24,8 @@ final class BothKindsClass implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', 'Name');
+    $inputs->addSchema('name', Schema::string()
+      ->title('Name'));
   }
 
 }

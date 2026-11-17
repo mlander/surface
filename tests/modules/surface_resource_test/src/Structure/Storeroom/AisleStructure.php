@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Structure\Pantry\ShelfStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * An aisle of the storeroom, with a list of shelves of its own.
@@ -19,7 +20,9 @@ final class AisleStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('label', 'string', 'Label', default: 'Aisle');
+    $inputs->addSchema('label', Schema::string()
+      ->title('Label')
+      ->default('Aisle'));
     $inputs->attachList('shelves', ShelfStructure::class, 'Shelves', max: 2);
   }
 
