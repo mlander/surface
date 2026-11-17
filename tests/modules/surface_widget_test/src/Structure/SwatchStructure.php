@@ -28,10 +28,11 @@ final class SwatchStructure implements StructureInterface {
       ->title(t('Accent'))
       ->default('#336699')
       ->annotation('x-surface-settings', ['format' => 'color']));
-    $inputs->add('trim', 'string', t('Trim'), default: '#000000')
-      ->setSetting('format', 'color')
-      ->setSetting('widget', 'radios')
-      ->addConstraint('LabeledChoice', ['choices' => ['#000000' => t('Black'), '#ffffff' => t('White')]]);
+    $inputs->addSchema('trim', Schema::options(['#000000' => t('Black'), '#ffffff' => t('White')])
+      ->title(t('Trim'))
+      ->default('#000000')
+      ->annotation('x-surface-settings', ['format' => 'color'])
+      ->ui(widget: 'radios'));
     $inputs->addSchema('caption', Schema::string()
       ->title(t('Caption')));
   }

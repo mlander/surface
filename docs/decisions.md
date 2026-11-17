@@ -15742,6 +15742,10 @@ they served.
   the shape holds too is that bound, the key's options in the order the
   author wrote them and the shape's others after, as `addConstraint()`
   keeps the options it is handed (decided 2026-11-17).
+- **Settings in the author's order.** A key's settings under
+  `x-surface-settings` and those its `x-portable-ui` says are held in
+  the order the two keywords are written, as `setSetting()` calls hold
+  them (decided 2026-11-17).
 - **Shapes and other ids.** `#[Of(SomeShape::class)]`, or the shape's
   class as the property's type, is that shape: a `$ref` to a def of the
   shape's `#[Shape]` id, which the reader reads as the shape. An

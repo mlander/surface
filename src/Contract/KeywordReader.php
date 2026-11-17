@@ -514,8 +514,7 @@ final class KeywordReader {
         $list['constraints'][$constraint] = $options;
       }
       $list = static::holdTo($list, $this->withDefs($foreign));
-      $list = $this->settings($list, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
-      $list = $this->ownSettings($list, $property, $pointer);
+      $list = $this->allSettings($list, $property, $pointer);
       $list = static::examples($list, $property);
       return [$list, $item, $default, $read];
     }
@@ -559,8 +558,7 @@ final class KeywordReader {
       $facts = static::holdTo($facts, static::fragment(Schema::from($extra)));
     }
     $facts = static::holdTo($facts, $this->withDefs($foreign));
-    $facts = $this->settings($facts, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
-    $facts = $this->ownSettings($facts, $property, $pointer);
+    $facts = $this->allSettings($facts, $property, $pointer);
     $facts = static::examples($facts, $property);
     return [$facts, NULL, $default, $read];
   }
@@ -760,6 +758,33 @@ final class KeywordReader {
   }
 
   /**
+   * Reads a key's settings, its widget's and its own, in the author's order.
+   *
+   * What `x-portable-ui` says (settings()) and what SETTINGS says
+   * (ownSettings()), the one the author wrote first first, as the verbs
+   * write settings in the order they are set.
+   *
+   * @param array $facts
+   *   The facts.
+   * @param \PortableSchema\Builder\Schema $property
+   *   The key's schema.
+   * @param string $pointer
+   *   The key's pointer.
+   *
+   * @return array
+   *   The facts.
+   */
+  protected function allSettings(array $facts, Schema $property, string $pointer): array {
+    $keywords = array_flip(array_map('strval', array_keys($property->all())));
+    if (($keywords[self::SETTINGS] ?? PHP_INT_MAX) < ($keywords[PortableKeywords::UI] ?? PHP_INT_MAX)) {
+      $facts = $this->ownSettings($facts, $property, $pointer);
+      return $this->settings($facts, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
+    }
+    $facts = $this->settings($facts, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
+    return $this->ownSettings($facts, $property, $pointer);
+  }
+
+  /**
    * Reads the settings an author says under SETTINGS.
    *
    * Each by its name, as the key's definition holds it. A setting a
@@ -867,8 +892,7 @@ final class KeywordReader {
       $facts['constraints'][$constraint] = in_array($constraint, ['Range', 'Length', 'Count'], TRUE) && is_array($held) ? array_replace($held, $options) : $options;
     }
     $facts = static::holdTo($facts, $this->withDefs($foreign));
-    $facts = $this->settings($facts, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
-    $facts = $this->ownSettings($facts, $property, $pointer);
+    $facts = $this->allSettings($facts, $property, $pointer);
     $facts = static::examples($facts, $property);
     $facts = $this->finished($facts, FALSE, $property, $required, in_array('null', $types, TRUE));
     $default = $property->get('default');
