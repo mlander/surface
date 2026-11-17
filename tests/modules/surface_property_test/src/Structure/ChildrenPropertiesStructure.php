@@ -8,13 +8,13 @@ use Drupal\surface\Resource\Attribute\Attach;
 use Drupal\surface\Resource\Attribute\AttachEach;
 use Drupal\surface\Resource\Attribute\AttachList;
 use Drupal\surface\Resource\Attribute\AttachVariants;
-use Drupal\surface\Resource\Attribute\Constraint;
 use Drupal\surface\Resource\Attribute\Each;
 use Drupal\surface\Resource\Attribute\Input;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\DeclaresByProperties;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_property_test\Keys\Letters;
+use PortableSchema\Builder\Attribute\Schema;
 
 /**
  * Children of every kind, as properties: ChildrenStructure's twin.
@@ -49,7 +49,7 @@ final class ChildrenPropertiesStructure implements StructureInterface {
   public array $limits;
 
   #[Each('string', from: Letters::class, label: 'Roles')]
-  #[Constraint('SurfaceValidReference', ['entityTypeId' => 'user_role'], item: TRUE)]
+  #[Schema(additionalProperties: ['portable-check' => ['drupal:SurfaceValidReference' => ['entityTypeId' => 'user_role']]])]
   public array $roles;
 
 }

@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\OutsideDiscovery;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
 /**
  * Says a link, which the reader notes and does not read.
  */
-#[Shape('resource_test.broken.linked')]
+#[Document('resource_test.broken.linked')]
 final class LinkedShape implements ShapeInterface {
 
   /**

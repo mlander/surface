@@ -10,6 +10,8 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\ValueSchema;
+use PortableSchema\Builder\Schema;
 
 /**
  * Hands Symfony a constraint message's source string.
@@ -59,6 +61,41 @@ final class ConstraintMessages {
     if ($definition instanceof ListDataDefinition) {
       self::sources($definition->getItemDefinition());
     }
+  }
+
+  /**
+   * Hands the validator a source string, in a value's or a list's schema.
+   *
+   * What sources() does to a definition, on a schema ValueSchema writes:
+   * its declared constraints, and its item's, unwrapped; the schema is
+   * written again from its facts where one changed.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema of one value or a list of values (ValueSchema::writes()).
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The schema, the same one where nothing changed.
+   */
+  public static function sourcesOf(Schema $schema): Schema {
+    $facts = ValueSchema::factsOf($schema);
+    $declared = is_array($facts['constraints'] ?? NULL) ? $facts['constraints'] : [];
+    $unwrapped = self::unwrapped($declared);
+    $item = $schema->get('items');
+    if (($facts['type'] ?? NULL) === 'list' && $item instanceof Schema) {
+      $sourced = self::sourcesOf($item);
+      if ($sourced === $item && $unwrapped === $declared) {
+        return $schema;
+      }
+      if ($unwrapped !== $declared) {
+        $facts['constraints'] = $unwrapped;
+      }
+      return ValueSchema::list($facts, ValueSchema::factsOf($sourced));
+    }
+    if ($unwrapped === $declared) {
+      return $schema;
+    }
+    $facts['constraints'] = $unwrapped;
+    return ValueSchema::value($facts);
   }
 
   /**

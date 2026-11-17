@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\surface_values_test\Shape;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
 /**
  * A code of capitals, used by a key the value baseline casts.
  */
-#[Shape('values_test.code')]
+#[Document('values_test.code')]
 final class ValuesCode implements ShapeInterface {
 
   /**

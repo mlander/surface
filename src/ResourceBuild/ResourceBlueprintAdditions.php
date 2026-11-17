@@ -11,6 +11,7 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\ArrangementGroup;
+use Drupal\surface\Reference\References;
 
 /**
  * An alter's blueprint: keys are mounted under the alter's module.
@@ -181,7 +182,10 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    *
    * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
+    if ($description !== NULL || $required || $storedAs !== NULL) {
+      return static::stated($this->attach($key, $structure, $label, $reads), $description, $required, $storedAs, References::STORED_AS);
+    }
     static::assertNoShape('attach', $key, $structure);
     $this->assertWithinMixin('attaches ' . $structure, NULL);
     static::assertReads($key, $reads);
@@ -212,7 +216,10 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): ListDataDefinition {
+    if ($description !== NULL || $required) {
+      return static::stated($this->attachList($key, $structure, $label, $min, $max), $description, $required);
+    }
     throw new \LogicException(sprintf(
       'The %s alter cannot attach a collection of %s at "%s" yet: an alter attaches a structure at its own mount, third_party_settings.%s, and a collection under the mount is not built.',
       $this->provider,

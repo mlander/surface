@@ -151,20 +151,24 @@ class AddSchemaTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the dialect's rule for required, and what overrides it.
+   * Tests a key is required where its schema is marked, and only there.
+   *
+   * Until part 32.9 this pinned the dialect's rule (required where the
+   * schema has no default and allows no null) and the `required:`
+   * argument that overrode it; both went with decision 4.
    */
-  public function testRequiredByTheDialectsRule(): void {
+  public function testRequiredByTheMarkAlone(): void {
     $blueprint = $this->blueprint();
     $blueprint->addSchema('plain', Schema::string());
     $blueprint->addSchema('defaulted', Schema::string()->default('x'));
     $blueprint->addSchema('nullable', Schema::any()->with('type', ['string', 'null']));
     $blueprint->addSchema('nullable_ref', Schema::any()->with('anyOf', [Schema::of('portable:email'), Schema::null()]));
     $blueprint->addSchema('marked', Schema::string()->default('x')->required());
-    $blueprint->addSchema('asked', Schema::string()->default('x'), required: TRUE);
-    $blueprint->addSchema('left', Schema::string(), required: FALSE);
+    $blueprint->addSchema('asked', Schema::string()->default('x')->required());
+    $blueprint->addSchema('left', Schema::string());
     $required = array_map(static fn ($definition): bool => $definition->isRequired(), $blueprint->definitions());
     $this->assertSame([
-      'plain' => TRUE,
+      'plain' => FALSE,
       'defaulted' => FALSE,
       'nullable' => FALSE,
       'nullable_ref' => FALSE,
@@ -408,7 +412,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
     $blueprint->addSchema('pick', Schema::options(['a' => new TranslatableMarkup('A')])->type('string')->title(new TranslatableMarkup('Pick')));
     $this->assertInstanceOf(TranslatableMarkup::class, $blueprint->definitionOf('x')?->getLabel());
     $this->assertInstanceOf(TranslatableMarkup::class, $blueprint->definitionOf('x')->getDescription());
-    $this->assertInstanceOf(TranslatableMarkup::class, $blueprint->definitionOf('pick')?->getConstraint('LabeledChoice')['labels']['a'], 'An option\'s label too.');
+    $this->assertInstanceOf(TranslatableMarkup::class, $blueprint->definitionOf('pick')?->getConstraint('LabeledChoice')['choices']['a'], 'An option\'s label too.');
     $this->assertInstanceOf(TranslatableMarkup::class, $this->built()->getDefinition('name')->getLabel(), 'Through the build.');
   }
 
@@ -560,7 +564,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
       $builder = new SurfaceBuilder();
       $blueprint = new ResourceBlueprint($builder, $this->container->get('typed_data_manager'));
       // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
-      $blueprint->addSchema('code', Schema::string()->title('Code')->pattern('^[a-z]+$')->message('pattern', new TranslatableMarkup($source)), FALSE);
+      $blueprint->addSchema('code', Schema::string()->title('Code')->pattern('^[a-z]+$')->message('pattern', new TranslatableMarkup($source)));
       $this->assertInstanceOf(TranslatableMarkup::class, $blueprint->definitionOf('code')?->getConstraints()['Regex']['message'], $case);
       $surface = $builder->seal();
       $definition = $surface->getDefinition('code');

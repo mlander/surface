@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\surface_property_test\Structure;
 
-use Drupal\surface\Resource\Attribute\Constraint;
 use Drupal\surface\Resource\Attribute\Input;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\DeclaresByProperties;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Attribute\Check;
+use PortableSchema\Builder\Attribute\Schema as SchemaAttribute;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -24,11 +25,11 @@ final class RefinedPropertiesStructure implements StructureInterface {
   use DeclaresByProperties;
 
   #[Input('Size')]
-  #[Constraint('Choice', ['choices' => ['small', 'large']])]
+  #[Check('drupal:Choice', ['choices' => ['small', 'large']])]
   public string $size = 'small';
 
   #[Input('Limit')]
-  #[Constraint('Range', ['min' => 1, 'max' => 100])]
+  #[SchemaAttribute(minimum: 1, maximum: 100)]
   public int $limit = 5;
 
   /**

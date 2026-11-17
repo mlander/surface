@@ -104,10 +104,14 @@ class DefinitionReadCallersTest extends UnitTestCase {
   protected const CALLERS = [
     'src/Attachment.php' => ['of' => 1],
     'src/Contract/ContractEmitter.php' => ['of' => 1],
+    // A config schema type's own definition, read at the edge (part 32.9).
+    'src/Contract/KeywordReader.php' => ['of' => 1],
     'src/Entry.php' => ['around' => 4, 'of' => 4],
     'src/Options/SurfaceOptions.php' => ['of' => 1],
     'src/ResourceBuild/Binding.php' => ['of' => 1],
     'src/Surface.php' => ['around' => 2, 'of' => 1],
+    // A key the builder holds as a definition, asked for as a schema.
+    'src/SurfaceBuilder.php' => ['of' => 1],
     'src/Tool/InputDefinitions.php' => ['of' => 2],
     'src/Variants.php' => ['shell' => 2],
   ];

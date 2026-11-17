@@ -117,6 +117,9 @@ interface BlueprintAdditionsInterface {
    * @param callable(\Drupal\surface\Resource\BlueprintInterface): void $define
    *   Declares the map's keys, called at once, and again each time the
    *   build fills a map that needs a frame.
+   * @param string|\Stringable|null $description
+   *   The key's description, as setDescription() on the definition
+   *   returned would write it; NULL for none.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map, already part of the blueprint.
@@ -130,7 +133,7 @@ interface BlueprintAdditionsInterface {
    * @see docs/declaring-a-resource.md#an-anonymous-map
    * @see docs/decisions.md#an-anonymous-map
    */
-  public function addMap(string $key, string|\Stringable $label, callable $define): MapDataDefinition;
+  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): MapDataDefinition;
 
   /**
    * Adds a list of values: name, item, label.
@@ -230,11 +233,8 @@ interface BlueprintAdditionsInterface {
    *   The key.
    * @param \PortableSchema\Builder\Schema $schema
    *   What it holds.
-   * @param bool|null $required
-   *   TRUE to require a value, a key with a default included; FALSE to
-   *   leave it optional; NULL for the dialect's rule: required where the
-   *   schema has no `default` and allows no null, or is marked
-   *   `required()`.
+   *   A key is required where the schema is marked `required()`, and
+   *   only there.
    *
    * @return $this
    *
@@ -246,7 +246,7 @@ interface BlueprintAdditionsInterface {
    *
    * @see docs/decisions.md#authoring-takes-a-schema
    */
-  public function addSchema(string $key, Schema $schema, ?bool $required = NULL): static;
+  public function addSchema(string $key, Schema $schema): static;
 
   /**
    * Rewords or arranges a key anyone declared.
@@ -366,6 +366,15 @@ interface BlueprintAdditionsInterface {
    * @param array<string, string> $reads
    *   The child's ports, each mapped to the container's key it reads: an
    *   owner's key by its name.
+   * @param string|\Stringable|null $description
+   *   The key's description, as setDescription() on the definition
+   *   returned would write it; NULL for none.
+   * @param bool $required
+   *   TRUE to require the key, as setRequired(TRUE) on the definition
+   *   returned would.
+   * @param string|null $storedAs
+   *   How a reference the child holds is stored, the value of
+   *   References::STORED_AS (References::BY_ID); NULL to say nothing.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key, already part of the blueprint.
@@ -376,7 +385,7 @@ interface BlueprintAdditionsInterface {
    *   wiring is checked when the parent is built: see
    *   docs/resources.md#ports.
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition;
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition;
 
   /**
    * A collection at a key: a list whose every item is the child.
@@ -409,6 +418,12 @@ interface BlueprintAdditionsInterface {
    *   The fewest items, or NULL for no bound.
    * @param int|null $max
    *   The most items, or NULL for unlimited.
+   * @param string|\Stringable|null $description
+   *   The key's description, as setDescription() on the definition
+   *   returned would write it; NULL for none.
+   * @param bool $required
+   *   TRUE to require the key, as setRequired(TRUE) on the definition
+   *   returned would.
    *
    * @return \Drupal\Core\TypedData\ListDataDefinition
    *   The list at the key, already part of the blueprint.
@@ -420,7 +435,7 @@ interface BlueprintAdditionsInterface {
    * @throws \InvalidArgumentException
    *   When a bound is negative, or $min is above $max.
    */
-  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL): ListDataDefinition;
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): ListDataDefinition;
 
   /**
    * Offers more values on a key someone else declared, as an alter.

@@ -761,19 +761,25 @@ final class Declaring {
       return;
     }
     $key = (string) array_values($definition->identity)[0];
-    $target = $build->builder->getDefinition($key);
-    if ($target === NULL || array_key_exists($key, $context->known) || !in_array($key, $build->inputKeys, TRUE)) {
+    if (!$build->builder->has($key) || array_key_exists($key, $context->known) || !in_array($key, $build->inputKeys, TRUE)) {
       return;
     }
     $storage = $this->instance($definition->storage, ResourceStorageInterface::class);
     assert($storage instanceof DeletableStorageInterface);
     $thing = $storage->singularLabel();
-    $target->addConstraint('SurfaceUnique', [
+    $options = [
       'storage' => $definition->storage,
       'key' => $key,
       'thing' => $thing,
       'reason' => UniqueConstraint::reason($thing),
-    ]);
+    ];
+    // On the key's schema where the builder holds one, else its definition.
+    if (!$build->builder->writeSchema($key, static function (array $facts) use ($options): array {
+      $facts['constraints']['SurfaceUnique'] = $options;
+      return $facts;
+    })) {
+      $build->builder->getDefinition($key)?->addConstraint('SurfaceUnique', $options);
+    }
   }
 
   /**
@@ -944,7 +950,7 @@ final class Declaring {
   public function settleReferences(string $who, array $blueprints): void {
     $references = $this->references();
     foreach ($blueprints as $prefix => $blueprint) {
-      foreach ($blueprint->definitions() as $key => $declared) {
+      foreach ($blueprint->referenceDefinitions() as $key => $declared) {
         $references->settle($who, $prefix . $key, $declared);
       }
       if (!$blueprint instanceof ResourceBlueprint) {

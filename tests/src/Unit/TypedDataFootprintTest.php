@@ -158,9 +158,11 @@ class TypedDataFootprintTest extends UnitTestCase {
    * Typed Data. Lowered on 2026-11-16 to 96: a refiner answers with a
    * schema, so SurfaceRefinerInterface, RuntimeRefiner and eleven example
    * files whose #[RefinesInput] methods were their one use name no Typed
-   * Data.
+   * Data. Raised on 2026-11-17 to 97: Contract/KeywordReader.php, the
+   * reader of a key's keywords, reads a config schema type it is handed
+   * (`drupal:config/<type>`) through typed config.
    */
-  public const OUTSIDE_THE_EDGES = 96;
+  public const OUTSIDE_THE_EDGES = 97;
 
   /**
    * Finds the files that use Typed Data.

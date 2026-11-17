@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\OutsideDiscovery;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
 /**
  * Refers to an object def, which the blueprint it is read in refuses.
  */
-#[Shape('resource_test.broken.object_def')]
+#[Document('resource_test.broken.object_def')]
 final class ObjectDefShape implements ShapeInterface {
 
   /**

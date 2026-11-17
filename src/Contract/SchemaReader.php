@@ -22,6 +22,7 @@ use Drupal\surface\Contract\Keywords\ReadBack;
 use Drupal\surface\Reference\References;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\ResourceBuild\BlueprintAdapterBase;
 use Drupal\surface\ResourceBuild\MapBlueprint;
 use Drupal\surface\ResourceBuild\NeedsFrame;
 use Drupal\surface\Refinement\Condition;
@@ -33,6 +34,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceCallable;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface\ResourceBuild\Shapes;
 use PortableSchema\Builder\Keywords;
 use PortableSchema\Builder\Schema;
 use PortableSchema\Registry;
@@ -636,9 +638,8 @@ final class SchemaReader {
    * @param \PortableSchema\Builder\Schema $schema
    *   What it holds.
    * @param bool|null $required
-   *   TRUE to require it, FALSE to leave it optional; NULL for the
-   *   dialect's rule: required where the schema has no `default` and
-   *   allows no null, or where it was marked `required()`.
+   *   TRUE to require it, FALSE to leave it optional; NULL to require it
+   *   where its schema is marked `required()`, and only there.
    * @param string|null $what
    *   Who was handed the schema, for the messages; NULL for
    *   `addSchema("<key>")`.
@@ -656,11 +657,32 @@ final class SchemaReader {
    */
   public static function authored(BlueprintAdditionsInterface $inputs, string $key, Schema $schema, ?bool $required = NULL, ?string $what = NULL): array {
     $what ??= sprintf('addSchema("%s")', $key);
+    if (!$schema->isBoolean()) {
+      $schema = static::shapeReferences($schema, $inputs);
+    }
+    // A value key, or a list of values: read by its keywords, with no
+    // document, and declared as its schema.
+    // Decision: see docs/decisions.md#authoring-takes-a-schema.
+    if ($inputs instanceof BlueprintAdapterBase) {
+      $read = KeywordReader::forBuild($inputs->shapesInUse())->read($key, $schema, $required, $what);
+      // A key its `readOnly` locks needs a frame to be locked in: any other
+      // blueprint refuses it below, as the frame's reading does.
+      if ($read !== NULL && !$read->locked) {
+        $inputs->declareRead($key, $read->schema);
+        return $read->notes;
+      }
+      if ($read !== NULL && $inputs instanceof ResourceBlueprint) {
+        $inputs->declareRead($key, $read->schema);
+        $inputs->lockRead($key);
+        return $read->notes;
+      }
+    }
     if ($schema->isBoolean()) {
       throw new \InvalidArgumentException(sprintf('%s was handed the boolean schema %s, which says only whether a value is allowed: a key is the schema of what it holds, Schema::string(), Schema::integer(), Schema::of(\'portable:email\') and the like.', $what, $schema->toDocument() === TRUE ? 'true' : 'false'));
     }
     static::assertNamed($schema, $what, '/properties/' . str_replace(['~', '/'], ['~0', '~1'], $key));
-    $required ??= $schema->isRequired() || (!$schema->has('default') && !static::allowsNull($schema));
+    // Required where the schema is marked so, and only there.
+    $required ??= $schema->isRequired();
     $frame = Schema::any()
       ->with('type', 'object')
       ->with('properties', [$key => $schema->without('$defs')]);
@@ -700,6 +722,55 @@ final class SchemaReader {
     $reader->frame($read, '', $inputs, $read);
     $reader->refuseUnread($what);
     return $reader->notes;
+  }
+
+  /**
+   * Reads a `$ref` to a shape's id as a reference to the shape's def.
+   *
+   * `Schema::of(Shape::class)` refers to the shape by the id its
+   * `#[Document]` carries, a `$ref` that is no pointer into the document,
+   * no id of the library and no config schema type. Where the blueprint
+   * knows a shape of that id, the reference is the shape's def, as the
+   * reader reads a shape (a def of the shape's JSON type, `$ref` to it), at
+   * the key and in an `anyOf` of it and null.
+   *
+   * Decision: see docs/decisions.md#authoring-takes-a-schema.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
+   *   The blueprint, which knows the site's shapes.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The schema, each such reference to a def it holds.
+   */
+  protected static function shapeReferences(Schema $schema, BlueprintAdditionsInterface $inputs): Schema {
+    if (!$inputs instanceof ResourceBlueprint) {
+      return $schema;
+    }
+    $defs = [];
+    $refer = static function (Schema $member) use ($inputs, &$defs): Schema {
+      $id = $member->get('$ref');
+      if (!is_string($id) || $id === '' || str_starts_with($id, '#') || str_contains($id, ':')) {
+        return $member;
+      }
+      $class = $inputs->shapeOf($id);
+      if ($class === NULL) {
+        return $member;
+      }
+      $defs[$id] = Schema::any()->with('type', LeafTypes::ROWS[Shapes::dataType($class)]['type'] ?? 'string');
+      return $member->with('$ref', '#/$defs/' . $id);
+    };
+    $schema = $refer($schema);
+    $any = $schema->get('anyOf');
+    if (is_array($any)) {
+      $schema = $schema->with('anyOf', array_map(static fn (mixed $member): mixed => $member instanceof Schema && !$member->isBoolean() ? $refer($member) : $member, $any));
+    }
+    if ($defs === []) {
+      return $schema;
+    }
+    $held = $schema->get('$defs');
+    return $schema->with('$defs', (is_array($held) ? $held : []) + $defs);
   }
 
   /**
@@ -997,36 +1068,6 @@ final class SchemaReader {
     if ($this->authored) {
       $this->accepted[$pointer === '' ? '/' : $pointer] = TRUE;
     }
-  }
-
-  /**
-   * Answers whether a schema allows null, by its type or a member.
-   *
-   * @param \PortableSchema\Builder\Schema $schema
-   *   The schema.
-   *
-   * @return bool
-   *   TRUE where its `type` names null, an `anyOf` or `oneOf` member is
-   *   null alone (`{"type": "null"}`, `{"const": null}`), or it says
-   *   nothing of what a value is (`mixed`, Schema::any()).
-   */
-  protected static function allowsNull(Schema $schema): bool {
-    if (in_array('null', (array) ($schema->get('type') ?? []), TRUE)) {
-      return TRUE;
-    }
-    $restricting = ['type', 'enum', 'const', '$ref', 'anyOf', 'oneOf', 'allOf', 'not'];
-    if (array_intersect_key($schema->all(), array_flip($restricting)) === []) {
-      return TRUE;
-    }
-    foreach (['anyOf', 'oneOf'] as $keyword) {
-      $members = $schema->get($keyword);
-      foreach (is_array($members) ? $members : [] as $member) {
-        if (Schemas::isObjectSchema($member) && ($member->get('type') === 'null' || ($member->has('const') && $member->get('const') === NULL))) {
-          return TRUE;
-        }
-      }
-    }
-    return FALSE;
   }
 
   /**

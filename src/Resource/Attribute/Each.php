@@ -16,12 +16,12 @@ namespace Drupal\surface\Resource\Attribute;
  * @endcode
  *
  * An entry that refers to an entity names the id's type, and carries the
- * reference constraint on each entry, `item: TRUE`, since an attribute
- * argument is a constant expression and no definition:
+ * reference check on each entry, under `additionalProperties`, since an
+ * attribute argument is a constant expression and no definition:
  *
  * @code
  * #[Each('integer', from: Slots::class, label: 'Pages')]
- * #[Constraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['page']], item: TRUE)]
+ * #[Schema(additionalProperties: ['portable-check' => ['drupal:SurfaceValidReference' => ['entityTypeId' => 'node', 'bundles' => ['page']]]])]
  * public array $pages;
  * @endcode
  *

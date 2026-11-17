@@ -128,7 +128,6 @@ refused.
 | `ConfigEntityStorage` | `use Drupal\surface\Storage\ConfigEntityStorage;` |
 | `ConfigObjectStorage` | `use Drupal\surface\Storage\ConfigObjectStorage;` |
 | `ConfigSchemaGenerator` | `use Drupal\surface\Storage\ConfigSchemaGenerator;` |
-| `Constraint` | `use Drupal\surface\Resource\Attribute\Constraint;` |
 | `DeclaresByProperties` | `use Drupal\surface\Resource\DeclaresByProperties;` |
 | `DefinesOutputsInterface` | `use Drupal\surface\Resource\DefinesOutputsInterface;` |
 | `DefinitionMetadata` | `use Drupal\surface\DefinitionMetadata;` |
@@ -172,7 +171,6 @@ refused.
 | `SchemaViolations` | `use Drupal\surface\Storage\SchemaViolations;` |
 | `SchemaWidgetInterface` | `use Drupal\surface\Contract\SchemaWidgetInterface;` |
 | `Setting` | `use Drupal\surface\Resource\Attribute\Setting;` |
-| `Shape` | `use Drupal\surface\Resource\Attribute\Shape;` |
 | `ShapeInterface` | `use Drupal\surface\Resource\ShapeInterface;` |
 | `SiteList` | `use Drupal\surface\Resource\SiteList;` |
 | `SiteListInterface` | `use Drupal\surface\Resource\SiteListInterface;` |

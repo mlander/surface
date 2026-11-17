@@ -11,10 +11,15 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeDefinition;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\ValueSchema;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
 use Drupal\surface\Storage\StorageLayoutInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The mutable stage a data surface passes through before it is sealed.
@@ -240,8 +245,9 @@ final class SurfaceBuilder {
   /**
    * Constructs a SurfaceBuilder.
    *
-   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $definitions
-   *   The owner's own definitions, keyed by definition key.
+   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface|\PortableSchema\Builder\Schema> $definitions
+   *   The owner's own keys, keyed by definition key: a definition, or the
+   *   key's schema (setSchema()).
    * @param array<string, string[]> $refinements
    *   Refinement dependencies: target => dependency names.
    * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $outputs
@@ -265,7 +271,109 @@ final class SurfaceBuilder {
    *   The definition, or NULL when the builder holds no such key.
    */
   public function getDefinition(string $name): ?DataDefinitionInterface {
-    return $this->definitions[$name] ?? NULL;
+    $held = $this->definitions[$name] ?? NULL;
+    if ($held instanceof Schema) {
+      // A key held as its schema is asked for a definition by a caller
+      // that has not moved to schemas: derived once, and held from then
+      // on, so what the caller writes to it is the key's.
+      $held = $this->definitions[$name] = NodeDefinition::of($held);
+    }
+    return $held;
+  }
+
+  /**
+   * Gets the schema of a key.
+   *
+   * @param string $name
+   *   The definition key.
+   *
+   * @return \PortableSchema\Builder\Schema|null
+   *   The schema held (setSchema()), or the schema of the definition held,
+   *   read afresh; NULL for no such key.
+   */
+  public function getSchema(string $name): ?Schema {
+    $held = $this->definitions[$name] ?? NULL;
+    return $held instanceof DataDefinitionInterface ? DefinitionSchema::of($held) : $held;
+  }
+
+  /**
+   * Gets the schema of a key the builder holds as its schema.
+   *
+   * @param string $name
+   *   The definition key.
+   *
+   * @return \PortableSchema\Builder\Schema|null
+   *   The schema; NULL for a key held as a definition, or none.
+   */
+  public function heldSchema(string $name): ?Schema {
+    $held = $this->definitions[$name] ?? NULL;
+    return $held instanceof Schema ? $held : NULL;
+  }
+
+  /**
+   * Answers whether the builder holds a key.
+   *
+   * @param string $name
+   *   The definition key.
+   *
+   * @return bool
+   *   TRUE where a definition or a schema is held for it.
+   */
+  public function has(string $name): bool {
+    return isset($this->definitions[$name]);
+  }
+
+  /**
+   * Writes facts of a key held as its schema, if it is one.
+   *
+   * What a writer after a verb does to a key (describe(), a lock's
+   * constraint, the identity held once, a key always held) on the key's
+   * schema, through its facts (ValueSchema::with()), where the key is held
+   * as one; a key held as a definition is the caller's to write as before.
+   *
+   * @param string $name
+   *   The definition key.
+   * @param \Closure(array): array $change
+   *   Takes the facts and gives them changed.
+   *
+   * @return bool
+   *   TRUE where the key is held as its schema and was written.
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed.
+   */
+  public function writeSchema(string $name, \Closure $change): bool {
+    $held = $this->definitions[$name] ?? NULL;
+    if (!$held instanceof Schema) {
+      return FALSE;
+    }
+    $this->assertMutable();
+    $this->definitions[$name] = ValueSchema::with($held, $change);
+    return TRUE;
+  }
+
+  /**
+   * Sets the schema of a key: what the key is, complete.
+   *
+   * A schema is held as it is given and is the key's source at the seal;
+   * a caller that asks for the key's definition afterwards gets one
+   * derived from it (getDefinition()).
+   *
+   * @param string $name
+   *   The definition key.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   Its schema, one ValueSchema writes (one value or a list of values).
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed.
+   */
+  public function setSchema(string $name, Schema $schema): static {
+    $this->assertMutable();
+    assert(ValueSchema::writes($schema), sprintf('The schema of "%s" is one value or a list of values.', $name));
+    $this->definitions[$name] = $schema;
+    return $this;
   }
 
   /**
@@ -322,6 +430,11 @@ final class SurfaceBuilder {
    */
   public function setDefault(string $name, mixed $value): static {
     $this->assertMutable();
+    $held = $this->definitions[$name] ?? NULL;
+    if ($held instanceof Schema) {
+      $this->definitions[$name] = ValueSchema::with($held, static fn (array $facts): array => ['default_value' => $value] + $facts);
+      return $this;
+    }
     DefinitionMetadata::setDefaultValue($this->named($name), $value);
     return $this;
   }
@@ -387,7 +500,7 @@ final class SurfaceBuilder {
    */
   public function omit(string $name): static {
     $this->assertMutable();
-    $shell = $this->definitions[$name] ?? NULL;
+    $shell = $this->getDefinition($name);
     if (!static::isEmptyShell($shell)) {
       throw new \LogicException(sprintf('The "%s" key cannot be omitted: only a key reserved for an attached structure or a collection can be, and only before its child is attached.', $name));
     }
@@ -961,7 +1074,7 @@ final class SurfaceBuilder {
   public function attachList(string $key, Collection $list): static {
     $this->assertMutable();
     $this->assertNotNested($key);
-    $existing = $this->definitions[$key] ?? NULL;
+    $existing = $this->getDefinition($key);
     if ($existing === NULL) {
       $existing = new ListDataDefinition([], MapDataDefinition::create());
     }
@@ -1093,7 +1206,12 @@ final class SurfaceBuilder {
     }
     $this->reserveThirdPartyMount($provider);
     foreach ($attachment->child->getDefinitions()->entries() as $name => $entry) {
-      $this->thirdParty[$provider][(string) $name] = Surface::deepClone($entry->definition());
+      // A definition of its own, derived from the entry's schema: the
+      // alter writes the mounted keys by path. A key of a class no schema
+      // derives keeps a copy of its own definition, as the entry does.
+      $this->thirdParty[$provider][(string) $name] = DefinitionMap::derivedClasses($entry->schema())
+        ? NodeDefinition::of($entry->schema())
+        : Surface::deepClone($entry->definition());
     }
     $this->mounted[$provider] = $attachment;
     $this->cacheability->addCacheableDependency($attachment->child);
@@ -1367,8 +1485,13 @@ final class SurfaceBuilder {
     }
     // A message written with t() is handed to Symfony as its source, which
     // core's validator translator translates when a violation is made.
-    foreach ($definitions as $definition) {
-      ConstraintMessages::sources($definition);
+    foreach ($definitions as $name => $definition) {
+      if ($definition instanceof Schema) {
+        $definitions[$name] = ConstraintMessages::sourcesOf($definition);
+      }
+      else {
+        ConstraintMessages::sources($definition);
+      }
     }
     static::assertGroupsAgree($definitions);
     // Locked whole: every key not fixed already holds what is stored. After
@@ -1484,7 +1607,7 @@ final class SurfaceBuilder {
    *   When the key already holds anything but an empty map.
    */
   protected function shellFor(string $key): MapDataDefinition {
-    $existing = $this->definitions[$key] ?? NULL;
+    $existing = $this->getDefinition($key);
     if ($existing === NULL) {
       return MapDataDefinition::create();
     }
@@ -1511,7 +1634,7 @@ final class SurfaceBuilder {
    *   When something replaced the shell or gave it properties.
    */
   protected function assertShell(string $key): MapDataDefinition {
-    $shell = $this->definitions[$key] ?? NULL;
+    $shell = $this->getDefinition($key);
     if (!$shell instanceof MapDataDefinition || $shell->getPropertyDefinitions() !== []) {
       throw new \LogicException(sprintf(
         'The "%s" key holds an attached structure, so what it holds is its child\'s to say: its definition was replaced or given properties of its own after it was attached.',
@@ -1539,7 +1662,7 @@ final class SurfaceBuilder {
    *   When something replaced the shell or filled its item.
    */
   protected function assertListShell(string $key): ListDataDefinition {
-    $shell = $this->definitions[$key] ?? NULL;
+    $shell = $this->getDefinition($key);
     if (!$shell instanceof ListDataDefinition || !static::isEmptyShell($shell)) {
       throw new \LogicException(sprintf(
         'The "%s" key is a collection, so what each item holds is its child\'s to say: its definition was replaced, or its item given properties, after it was attached.',
@@ -1682,7 +1805,7 @@ final class SurfaceBuilder {
    *
    * Decision: see docs/decisions.md#arrangement-is-declared-once.
    *
-   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $definitions
+   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface|\PortableSchema\Builder\Schema> $definitions
    *   The frame's keys.
    * @param string $frame
    *   Where the frame is, for the message: empty for the top.
@@ -1694,7 +1817,7 @@ final class SurfaceBuilder {
     $groups = [];
     foreach ($definitions as $name => $definition) {
       $name = (string) $name;
-      $group = DefinitionMetadata::arrangementOf($definition)?->group;
+      $group = ($definition instanceof Schema ? NodeFacts::arrangement($definition) : DefinitionMetadata::arrangementOf($definition))?->group;
       if ($group !== NULL) {
         if (isset($groups[$group->id]) && !$groups[$group->id][1]->sameAs($group)) {
           throw new \LogicException(sprintf(
@@ -1834,7 +1957,7 @@ final class SurfaceBuilder {
    *   When the builder holds no such key.
    */
   protected function named(string $name): DataDefinitionInterface {
-    return $this->definitions[$name]
+    return $this->getDefinition($name)
       ?? throw new \InvalidArgumentException(sprintf('Unknown data surface definition "%s".', $name));
   }
 

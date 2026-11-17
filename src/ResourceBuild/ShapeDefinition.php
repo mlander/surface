@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface\ResourceBuild;
 
 /**
- * One #[Shape] class, as discovery read it, with the alters naming it.
+ * One #[Document] class, as discovery read it, with the alters naming it.
  *
  * @internal
  */
@@ -17,7 +17,7 @@ final class ShapeDefinition {
    * @param class-string<\Drupal\surface\Resource\ShapeInterface> $class
    *   The shape's class.
    * @param string $id
-   *   Its id, from #[Shape].
+   *   Its id, from #[Document].
    * @param string $module
    *   The module it is in.
    * @param \Drupal\surface\ResourceBuild\AlterDefinition[] $alters

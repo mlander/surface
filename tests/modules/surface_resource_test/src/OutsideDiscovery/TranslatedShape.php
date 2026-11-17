@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\OutsideDiscovery;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
 /**
  * Says its pattern's message with t(), read in the language it is said in.
  */
-#[Shape('resource_test.translated')]
+#[Document('resource_test.translated')]
 final class TranslatedShape implements ShapeInterface {
 
   /**

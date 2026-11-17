@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples\Shape;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
@@ -15,7 +15,7 @@ use PortableSchema\Builder\Schema;
  * each with this pattern, its message and its example; both documents
  * write it once, as the def `event.phone`.
  */
-#[Shape('event.phone')]
+#[Document('event.phone')]
 final class PhoneNumber implements ShapeInterface {
 
   /**

@@ -42,8 +42,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * The twins cover: #[Input] required by inference, by `required:` with a
  * default, optional and nullable, `type:` for `email` and
- * `machine_name`, a shape as the property's type, `list:` with an item
- * constraint; #[Constraint] repeated, #[Examples], #[Widget],
+ * `machine_name`, a shape as the property's type, `list:` with its item's
+ * rules under #[Schema(items:)]; #[Schema] keywords and #[Check] checks
+ * beside #[Input] and #[Computed], two on one key, #[Examples], #[Widget],
  * #[Setting], #[Describe] with a #[Group] fieldset and a details group,
  * weight, placeholder, prefix, suffix and help; #[Rule] of each condition
  * (`whenEquals:`, `whenPresent:`, `whenAbsent:`, `whenIn:`, two at once)
@@ -53,9 +54,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * `reads:`; #[AttachList] with a minimum and a maximum; #[AttachVariants] with
  * two #[Variant] children; #[Each] and #[AttachEach] from a
  * SiteListInterface provider, wired with `reads:`, and #[Each] of a
- * reference, its constraint on each entry, `item: TRUE`; #[Port] typed and of
- * `any`, required and not; #[Computed] with `when:`, never required by
- * inference; #[MixIn] with `reads:`; #[Output] of a value and of a list
+ * reference, its check on each entry under `additionalProperties`;
+ * #[Port] typed and of `any`, required and not; #[Computed] with
+ * `when:`, never required by inference; #[MixIn] with `reads:`; #[Output] of a value and of a list
  * whose item is a plain class; a #[RefinesInput] method beside the
  * properties; a block that is its own structure, #[UsesStructure]
  * with no argument; and keys spelled with the Portable Schema package's
@@ -165,7 +166,9 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
     }
     $this->assertSame([
       ['add', ['seats', 'integer', 'Seats', 1]],
-      ['attach', ['row', EntryPropertiesStructure::class, 'Row', []]],
+      // A mock is handed every argument: since part 32.9 attach() takes
+      // description:, required: and storedAs: besides.
+      ['attach', ['row', EntryPropertiesStructure::class, 'Row', [], NULL, FALSE, NULL]],
     ], $readings[1]);
     $this->assertSame($readings[1], $readings[2]);
   }
@@ -233,7 +236,7 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
       NoKeyType::class => NoKeyType::class . '::$tags is typed array, which is no key type and no shape. Type it string, int, float, bool or a shape\'s class, or say the key type on its attribute with type:; a list is #[Input(list:)].',
       AttachNamesNoClass::class => AttachNamesNoClass::class . '::$contact carries #[Attach] and names no class. Type the property with the class, or name it on the attribute with structure:.',
       MapNamesNoClass::class => MapNamesNoClass::class . '::$where carries #[Map] and names no class. Type the property with the class, or name it on the attribute with of:.',
-      ItemConstraintOnValue::class => ItemConstraintOnValue::class . '::$name puts #[Constraint(\'Length\')] on its item, `item: TRUE`, but the key is no list and no #[Each]. Drop `item:`, or declare a list with #[Input(list:)].',
+      ItemConstraintOnValue::class => ItemConstraintOnValue::class . '::$name says #[Schema(items:)], its item\'s rules, but the key is no list and no #[Each]. Lay the rules on the key itself, or declare a list with #[Input(list:)].',
       OutputWithoutInterface::class => OutputWithoutInterface::class . ' marks the property $total #[Output], but the class does not implement Drupal\surface\Resource\DefinesOutputsInterface, so nothing reads its outputs. Implement it: the trait answers defineOutputs().',
     ];
     foreach ($refused as $class => $message) {

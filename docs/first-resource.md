@@ -182,11 +182,13 @@ final class NewsletterResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addSchema(self::SENDER_NAME, Schema::string()
       ->title(t('Sender name'))
-      ->maxLength(64));
+      ->maxLength(64)
+      ->required());
 
     $inputs->addSchema(self::SENDER_EMAIL, Schema::string()
       ->title(t('Sender email'))
-      ->format('email'));
+      ->format('email')
+      ->required());
 
     $inputs->addSchema(self::FREQUENCY, Schema::options([
       'weekly' => t('Weekly'),
@@ -194,7 +196,8 @@ final class NewsletterResource implements ResourceInterface {
     ])
       ->type('string')
       ->title(t('Frequency'))
-      ->default('weekly'), required: TRUE);
+      ->default('weekly')
+      ->required());
 
     $inputs->addSchema(self::MAX_RECIPIENTS, Schema::integer()
       ->title(t('Maximum recipients per send'))

@@ -20,7 +20,7 @@ namespace Drupal\surface\Resource\Attribute;
  *
  * @code
  * #[Input('Capacity', description: 'How many people the venue holds.')]
- * #[Constraint('Range', ['min' => 1, 'max' => 100000])]
+ * #[Schema(minimum: 1, maximum: 100000)]
  * public int $capacity;
  *
  * #[Input('Frequency', required: TRUE)]
@@ -51,7 +51,7 @@ class Input {
    * @param string|null $list
    *   What every item of a list is: a type add() takes, a shape's class,
    *   or a plain class of #[Input] properties, for a list of maps. NULL
-   *   for one value. A #[Constraint] with `item: TRUE` constrains the item.
+   *   for one value. #[Schema(items:)] beside it holds the item's rules.
    */
   public function __construct(
     public readonly string|\Stringable $label,

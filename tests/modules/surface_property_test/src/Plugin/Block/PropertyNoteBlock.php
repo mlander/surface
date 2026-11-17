@@ -7,12 +7,13 @@ namespace Drupal\surface_property_test\Plugin\Block;
 use Drupal\Core\Block\Attribute\Block;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Plugin\Block\TypedBlockBase;
-use Drupal\surface\Resource\Attribute\Constraint;
 use Drupal\surface\Resource\Attribute\Input;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\UsesStructure;
 use Drupal\surface\Resource\DeclaresByProperties;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Attribute\Check;
+use PortableSchema\Builder\Attribute\Schema;
 
 /**
  * A block that is its own structure, as properties: MethodNoteBlock's twin.
@@ -33,11 +34,11 @@ final class PropertyNoteBlock extends TypedBlockBase implements StructureInterfa
   use DeclaresByProperties;
 
   #[Input('Color', required: TRUE)]
-  #[Constraint('Choice', ['choices' => ['yellow', 'pink']])]
+  #[Check('drupal:Choice', ['choices' => ['yellow', 'pink']])]
   public string $color = 'yellow';
 
   #[Input('Note')]
-  #[Constraint('Length', ['max' => 40])]
+  #[Schema(maxLength: 40)]
   public string $note = 'Sticky';
 
   /**

@@ -8,6 +8,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Reader\LeafRules;
@@ -19,7 +20,6 @@ use Drupal\surface\Resource\Attribute\AttachEach;
 use Drupal\surface\Resource\Attribute\AttachList;
 use Drupal\surface\Resource\Attribute\AttachVariants;
 use Drupal\surface\Resource\Attribute\Computed;
-use Drupal\surface\Resource\Attribute\Constraint;
 use Drupal\surface\Resource\Attribute\Describe;
 use Drupal\surface\Resource\Attribute\Each;
 use Drupal\surface\Resource\Attribute\Examples;
@@ -32,11 +32,13 @@ use Drupal\surface\Resource\Attribute\Port;
 use Drupal\surface\Resource\Attribute\Rule;
 use Drupal\surface\Resource\Attribute\Setting;
 use Drupal\surface\Resource\Attribute\Widget;
-use Drupal\surface\Resource\Attribute\Shape;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\ShapeInterface;
+use Drupal\surface\Contract\ConstraintKeywords;
+use Drupal\surface\Contract\KeywordReader;
 use Drupal\surface\Contract\LeafTypes;
+use Drupal\surface\Contract\ValueSchema;
 use PortableSchema\Builder\Attribute\Check;
 use PortableSchema\Builder\Attribute\Document;
 use PortableSchema\Builder\Attribute\Of;
@@ -56,7 +58,7 @@ use PortableSchema\Builder\Schema;
  * they that run. This class refuses only what the verbs cannot know: a
  * property with no attribute saying what it is, or with two, a group no
  * #[Group] declares, a property type that is no key type, a child or map
- * that names no class, an item constraint on a key that is no list, and
+ * that names no class, an item's rules on a key that is no list, and
  * an output on a class that declares none.
  *
  * It is pure. Nothing instantiates the class or reads a property's
@@ -87,8 +89,10 @@ use PortableSchema\Builder\Schema;
  * #[Input], so they combine with what #[Input] combines with and no more:
  * #[Examples] and #[Rule]; another kind (#[Output], #[Port], #[Computed],
  * #[Attach] and the rest) is refused as it is beside #[Input]. #[Input],
- * #[Constraint], #[Widget], #[Describe] and #[Setting] say what the
- * package's spelling says, and are refused beside it. A Surface shape's
+ * #[Widget], #[Describe] and #[Setting] say what the package's spelling
+ * says, and are refused beside it. #[Schema] and #[Check] alone beside
+ * #[Input], #[Each] or #[Computed] are not that spelling: they are the
+ * key's rules (rules()). A Surface shape's
  * class, as the type or in #[Of], is that shape. On the class, a #[Ui]
  * declares groups as #[Group] does, one of the two per class.
  *
@@ -132,14 +136,34 @@ final class PropertyDeclaration {
 
   /**
    * Surface's attributes that say what the package's spelling says.
+   *
+   * #[Input] beside the package's #[Of], #[Ui] or #[Required] says the key
+   * twice; beside #[Schema] and #[Check] alone it is Surface's spelling,
+   * those its rules (rules()).
    */
   private const SPELLED_TWICE = [
     Input::class,
-    Constraint::class,
     Widget::class,
     Describe::class,
     Setting::class,
   ];
+
+  /**
+   * The package's attributes that say a key's rules beside Surface's.
+   */
+  private const RULES = [
+    SchemaAttribute::class,
+    Check::class,
+  ];
+
+  /**
+   * The keywords #[Schema] says beside Surface's spelling, beside the table's.
+   *
+   * The constraint table's keywords (ConstraintKeywords::keywords()), a
+   * list of values, a check, and the rules of a list's item (`items`) or
+   * of an #[Each]'s entry (`additionalProperties`).
+   */
+  private const RULE_KEYWORDS = ['enum', 'oneOf', 'const', 'portable-check', 'items', 'additionalProperties'];
 
   /**
    * The JSON type each PHP property type stands for, as ClassReader reads it.
@@ -216,7 +240,7 @@ final class PropertyDeclaration {
     $rules = [];
     foreach (self::properties($reflection) as $property) {
       self::assertOneKind($property);
-      if (self::isPortable($property)) {
+      if (self::isPortable($property) && !self::holdsRulesBeside($property)) {
         self::assertOneSpelling($property);
         if ($outputs) {
           continue;
@@ -334,7 +358,7 @@ final class PropertyDeclaration {
     foreach ($property->getAttributes() as $attribute) {
       $name = $attribute->getName();
       if (in_array($name, self::SPELLED_TWICE, TRUE)) {
-        throw new \LogicException(sprintf('%s::$%s carries %s, the Portable Schema package\'s spelling of a key, and #[%s], Surface\'s. A key is spelled one way: with #[Of], #[Schema], #[Check], #[Ui] and #[Required], or with #[Input], #[Constraint], #[Widget], #[Setting] and #[Describe].', $property->getDeclaringClass()->getName(), $property->getName(), $portable, substr($name, strlen(self::NAMESPACE))));
+        throw new \LogicException(sprintf('%s::$%s carries %s, the Portable Schema package\'s spelling of a key, and #[%s], Surface\'s. A key is spelled one way: with #[Of], #[Schema], #[Check], #[Ui] and #[Required], or with #[Input], #[Widget], #[Setting] and #[Describe].', $property->getDeclaringClass()->getName(), $property->getName(), $portable, substr($name, strlen(self::NAMESPACE))));
       }
     }
   }
@@ -343,8 +367,9 @@ final class PropertyDeclaration {
    * Declares a property spelled with the package's attributes.
    *
    * Its schema, as ClassReader builds a property's (schema()), declared
-   * with addSchema(), required where it carries #[Required] and else by
-   * the rule addSchema() holds (no default and no null); the group its
+   * with addSchema(), marked required where it carries #[Required], or has
+   * no initializer and a type that refuses null, as ClassReader marks a
+   * property; the group its
    * #[Ui] names is the class's, laid on with describe() as #[Describe]
    * lays one. What addSchema() refuses is refused naming the property.
    *
@@ -359,8 +384,14 @@ final class PropertyDeclaration {
     $key = $property->getName();
     $ui = self::attribute($property, Ui::class);
     $schema = self::schema($property);
+    // Required as the package's ClassReader marks a property: #[Required],
+    // or no initializer and a type that refuses null.
+    $type = $property->getType();
+    if (self::attribute($property, Required::class) !== NULL || (!$property->hasDefaultValue() && !($type?->allowsNull() ?? TRUE))) {
+      $schema = $schema->required();
+    }
     try {
-      $blueprint->addSchema($key, $schema, self::attribute($property, Required::class) !== NULL ? TRUE : NULL);
+      $blueprint->addSchema($key, $schema);
     }
     catch (\InvalidArgumentException $refused) {
       throw new \InvalidArgumentException(sprintf('%s::$%s: %s', $property->getDeclaringClass()->getName(), $key, $refused->getMessage()), 0, $refused);
@@ -419,7 +450,7 @@ final class PropertyDeclaration {
     elseif ($of !== NULL) {
       $id = class_exists($of->ref) ? self::documentId($of->ref) : $of->ref;
       if ($id === NULL) {
-        throw new \LogicException(sprintf('%s::$%s carries #[Of(%s::class)], a class that is no shape and has no #[Document] id to refer to. Give the class #[Document] with an id, mark it a shape with #[Shape], or name a type of the library, #[Of(\'portable:email\')].', $property->getDeclaringClass()->getName(), $property->getName(), $of->ref));
+        throw new \LogicException(sprintf('%s::$%s carries #[Of(%s::class)], a class that is no shape and has no #[Document] id to refer to. Give the class #[Document] with an id, make it a shape (implement ShapeInterface and carry #[Document]), or name a type of the library, #[Of(\'portable:email\')].', $property->getDeclaringClass()->getName(), $property->getName(), $of->ref));
       }
       $schema = Schema::of($id);
       if ($nullable && $type !== NULL) {
@@ -536,12 +567,12 @@ final class PropertyDeclaration {
     if ($class === NULL || !class_exists($class) || !is_subclass_of($class, ShapeInterface::class)) {
       return NULL;
     }
-    $attribute = (new \ReflectionClass($class))->getAttributes(Shape::class)[0] ?? NULL;
-    if ($attribute === NULL) {
-      throw new \LogicException(sprintf('%s is named as a shape and carries no #[Shape] id, by which a schema refers to it.', $class));
+    $id = ((new \ReflectionClass($class))->getAttributes(Document::class)[0] ?? NULL)?->newInstance()->id;
+    if ($id === NULL) {
+      throw new \LogicException(sprintf('%s is named as a shape and carries no #[Document] id, by which a schema refers to it.', $class));
     }
     $type = Shapes::dataType($class);
-    return [$attribute->newInstance()->id, LeafTypes::ROWS[$type]['type'] ?? 'string'];
+    return [$id, LeafTypes::ROWS[$type]['type'] ?? 'string'];
   }
 
   /**
@@ -564,7 +595,7 @@ final class PropertyDeclaration {
       if (in_array($attribute->getName(), self::KINDS, TRUE)) {
         $kinds[] = '#[' . substr($attribute->getName(), strlen(self::NAMESPACE)) . ']';
       }
-      elseif (!$portable && in_array($attribute->getName(), self::PORTABLE, TRUE)) {
+      elseif (!$portable && in_array($attribute->getName(), self::PORTABLE, TRUE) && !self::holdsRulesBeside($property)) {
         // The package's spelling is an input, as #[Input] is: named by
         // its first attribute.
         $portable = TRUE;
@@ -624,8 +655,8 @@ final class PropertyDeclaration {
       return $definition;
     }
     if ($each = self::attribute($property, Each::class)) {
-      // An entry a constraint is laid on, `item: TRUE`, is a definition,
-      // which decorate() reaches through the map.
+      // An entry #[Schema(additionalProperties:)] lays rules on is a
+      // definition, which decorate() reaches through the map.
       $entry = self::constrainsItem($property) ? DataDefinition::create($each->type) : $each->type;
       $definition = $blueprint->addEach($key, $entry, $each->from, self::label($each->label), $each->default);
       self::word($definition, $each->description);
@@ -663,7 +694,7 @@ final class PropertyDeclaration {
   }
 
   /**
-   * Adds the constraints, examples, widget and settings, in attribute order.
+   * Adds the examples, widget and settings in attribute order, then the rules.
    *
    * @param \ReflectionProperty $property
    *   The property.
@@ -673,27 +704,140 @@ final class PropertyDeclaration {
   private static function decorate(\ReflectionProperty $property, DataDefinitionInterface $definition): void {
     foreach ($property->getAttributes() as $attribute) {
       $instance = $attribute->newInstance();
-      if ($instance instanceof Constraint) {
-        $constrained = $definition;
-        if ($instance->item) {
-          // A list's item, or on an #[Each] property each entry: the
-          // definition the map copies for every entry the site lists.
-          $constrained = $definition instanceof ListDataDefinition ? $definition->getItemDefinition() : DefinitionMetadata::eachOf($definition);
-          if (!$constrained instanceof DataDefinitionInterface) {
-            throw new \LogicException(sprintf('%s::$%s puts #[Constraint(\'%s\')] on its item, `item: TRUE`, but the key is no list and no #[Each]. Drop `item:`, or declare a list with #[Input(list:)].', $property->getDeclaringClass()->getName(), $property->getName(), $instance->name));
-          }
-        }
-        $constrained->addConstraint($instance->name, $instance->options);
-      }
-      elseif ($instance instanceof Examples) {
+      if ($instance instanceof Examples) {
         DefinitionMetadata::setExamples($definition, $instance->values);
       }
       elseif ($instance instanceof Widget && $definition instanceof DataDefinition) {
-        $definition->setSetting('widget', $instance->widget);
+        // `textarea` is a text drawn on several lines, as `ui(widget:
+        // 'textarea')` reads.
+        if ($instance->widget === 'textarea') {
+          $definition->setSetting('multiline', TRUE);
+        }
+        else {
+          $definition->setSetting('widget', $instance->widget);
+        }
       }
       elseif ($instance instanceof Setting && $definition instanceof DataDefinition) {
         $definition->setSetting($instance->name, $instance->value);
       }
+    }
+    self::rules($property, $definition);
+  }
+
+  /**
+   * Answers whether a property holds the package's rules beside Surface's key.
+   *
+   * @param \ReflectionProperty $property
+   *   The property.
+   *
+   * @return bool
+   *   TRUE where it carries #[Input], #[Each] or #[Computed] and, of the
+   *   package's attributes, #[Schema] and #[Check] alone. Beside any other
+   *   kind the package's spelling is a kind of its own (assertOneKind()).
+   */
+  private static function holdsRulesBeside(\ReflectionProperty $property): bool {
+    $kind = FALSE;
+    foreach ($property->getAttributes() as $attribute) {
+      $name = $attribute->getName();
+      if ($name === Input::class || $name === Each::class || $name === Computed::class) {
+        $kind = TRUE;
+      }
+      elseif (in_array($name, self::PORTABLE, TRUE) && !in_array($name, self::RULES, TRUE)) {
+        return FALSE;
+      }
+    }
+    return $kind;
+  }
+
+  /**
+   * Lays the package's rules beside Surface's spelling on the key.
+   *
+   * #[Schema] beside #[Input] or #[Each] says the key's rules: the
+   * keywords that check a value (`minimum`, `maxLength`, `pattern`, `enum`
+   * and the like), its item's under `items` for a list and an #[Each]'s
+   * entry's under `additionalProperties`; each #[Check]
+   * is the constraint it names. Each is read as the authored reader reads
+   * a key's keywords (KeywordReader), and its constraints laid on the
+   * definition. The words of the key are Surface's attributes'.
+   *
+   * Decision: see docs/decisions.md#a-class-may-declare-its-keys-as-properties.
+   *
+   * @param \ReflectionProperty $property
+   *   The property.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition, as its verb returned it.
+   *
+   * @throws \LogicException
+   *   For a keyword that is no rule, and for an item's rules on a key that
+   *   is no list and no #[Each].
+   */
+  private static function rules(\ReflectionProperty $property, DataDefinitionInterface $definition): void {
+    $keywords = [];
+    foreach ($property->getAttributes(SchemaAttribute::class) as $attribute) {
+      foreach ($attribute->newInstance()->keywords as $method => $value) {
+        $keywords[Keywords::keyword((string) $method) ?? (string) $method] = $value;
+      }
+    }
+    $checks = array_map(static fn (\ReflectionAttribute $attribute): Check => $attribute->newInstance(), $property->getAttributes(Check::class));
+    if ($keywords === [] && $checks === []) {
+      return;
+    }
+    $what = sprintf('%s::$%s', $property->getDeclaringClass()->getName(), $property->getName());
+    foreach (['items', 'additionalProperties'] as $inner) {
+      if (!array_key_exists($inner, $keywords)) {
+        continue;
+      }
+      // A list's item, or on an #[Each] property each entry: the
+      // definition the map copies for every entry the site lists.
+      $item = $definition instanceof ListDataDefinition ? $definition->getItemDefinition() : DefinitionMetadata::eachOf($definition);
+      if (!$item instanceof DataDefinitionInterface) {
+        throw new \LogicException(sprintf('%s says #[Schema(%s:)], its item\'s rules, but the key is no list and no #[Each]. Lay the rules on the key itself, or declare a list with #[Input(list:)].', $what, $inner));
+      }
+      $rules = $keywords[$inner];
+      self::lay($what, $item, is_array($rules) ? $rules : [], []);
+      unset($keywords[$inner]);
+    }
+    self::lay($what, $definition, $keywords, $checks);
+  }
+
+  /**
+   * Lays rules, keywords and checks, on one definition.
+   *
+   * @param string $what
+   *   The property, for the messages.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   * @param array<string, mixed> $keywords
+   *   The keywords.
+   * @param \PortableSchema\Builder\Attribute\Check[] $checks
+   *   The checks.
+   *
+   * @throws \LogicException
+   *   For a keyword that is no rule, or a definition no rule is read for.
+   */
+  private static function lay(string $what, DataDefinitionInterface $definition, array $keywords, array $checks): void {
+    if ($keywords === [] && $checks === []) {
+      return;
+    }
+    $said = array_keys(array_diff_key($keywords, ConstraintKeywords::keywords(), array_flip(self::RULE_KEYWORDS)));
+    if ($said !== []) {
+      throw new \LogicException(sprintf('%s carries #[Schema] with %s beside Surface\'s spelling of the key. Beside #[Input], #[Schema] says the key\'s rules alone, the keywords that check a value (minimum, maxLength, pattern, enum and the like); the attribute that says what the key is says the rest.', $what, implode(', ', $said)));
+    }
+    $type = $definition instanceof ListDataDefinitionInterface ? 'array' : (LeafTypes::ROWS[$definition->getDataType()]['type'] ?? NULL);
+    if ($type === NULL) {
+      throw new \LogicException(sprintf('%s carries #[Schema] or #[Check] on a key of the %s type, which holds no rule of its own: lay the rules on its keys.', $what, $definition->getDataType()));
+    }
+    $schema = Schema::from(['type' => $type] + $keywords);
+    foreach ($checks as $check) {
+      $schema = $schema->check($check->name, $check->options);
+    }
+    $read = KeywordReader::forBuild()->read($definition instanceof ListDataDefinitionInterface ? 'items' : 'value', $schema, FALSE, $what);
+    $constraints = $read === NULL ? NULL : (ValueSchema::factsOf($read->schema)['constraints'] ?? []);
+    if (!is_array($constraints)) {
+      throw new \LogicException(sprintf('%s carries rules the reader does not read as one value\'s: say them as #[Schema] keywords of the key, or #[Check].', $what));
+    }
+    foreach ($constraints as $id => $options) {
+      $definition->addConstraint((string) $id, $options);
     }
   }
 
@@ -1005,17 +1149,19 @@ final class PropertyDeclaration {
   }
 
   /**
-   * Answers whether a property lays a constraint on its item.
+   * Answers whether a property lays rules on its item.
    *
    * @param \ReflectionProperty $property
    *   The property.
    *
    * @return bool
-   *   TRUE when a #[Constraint] it carries says `item: TRUE`.
+   *   TRUE when a #[Schema] it carries says `items` or
+   *   `additionalProperties`.
    */
   private static function constrainsItem(\ReflectionProperty $property): bool {
-    foreach ($property->getAttributes(Constraint::class) as $attribute) {
-      if ($attribute->newInstance()->item) {
+    foreach ($property->getAttributes(SchemaAttribute::class) as $attribute) {
+      $keywords = $attribute->newInstance()->keywords;
+      if (array_key_exists('items', $keywords) || array_key_exists('additionalProperties', $keywords)) {
         return TRUE;
       }
     }

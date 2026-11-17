@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface_property_test\Structure;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\surface\Resource\Attribute\Constraint;
 use Drupal\surface\Resource\Attribute\Describe;
 use Drupal\surface\Resource\Attribute\Examples;
 use Drupal\surface\Resource\Attribute\Group;
@@ -17,6 +16,8 @@ use Drupal\surface\Resource\Attribute\Widget;
 use Drupal\surface\Resource\DeclaresByProperties;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_property_test\Shape\Code;
+use PortableSchema\Builder\Attribute\Check;
+use PortableSchema\Builder\Attribute\Schema;
 
 /**
  * Keys of one value, declared as properties: the twin of KeysStructure.
@@ -29,14 +30,14 @@ final class KeysPropertiesStructure implements StructureInterface {
   use DeclaresByProperties;
 
   #[Input('Name', description: 'As printed on the badge.')]
-  #[Constraint('Length', ['max' => 64])]
-  #[Constraint('Regex', ['pattern' => '/^\S/', 'message' => new TranslatableMarkup('Start the name with a letter.')])]
+  #[Schema(maxLength: 64)]
+  #[Check('drupal:Regex', ['pattern' => '/^\S/', 'message' => new TranslatableMarkup('Start the name with a letter.')])]
   #[Examples('Ada Lovelace')]
   #[Describe(group: 'about', weight: 1, placeholder: 'Full name', help: 'Shown under the photo.')]
   public string $name;
 
   #[Input('Frequency', required: TRUE)]
-  #[Constraint('LabeledChoice', [
+  #[Check('drupal:LabeledChoice', [
     'choices' => ['weekly' => new TranslatableMarkup('Weekly'), 'monthly' => new TranslatableMarkup('Monthly')],
   ])]
   #[Describe(group: 'about', weight: 2)]
@@ -65,12 +66,11 @@ final class KeysPropertiesStructure implements StructureInterface {
   public ?string $day = NULL;
 
   #[Input('Tags', list: 'string')]
-  #[Constraint('Count', ['max' => 5])]
-  #[Constraint('Length', ['max' => 10], item: TRUE)]
+  #[Schema(maxItems: 5, items: ['maxLength' => 10])]
   public array $tags = [];
 
   #[Input('Count')]
-  #[Constraint('Range', ['min' => 1, 'max' => 10])]
+  #[Schema(minimum: 1, maximum: 10)]
   public int $count = 3;
 
 }

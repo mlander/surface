@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\OutsideDiscovery\Texts;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
 /**
  * Says a bound in a draft's spelling, which preparing rewrites.
  */
-#[Shape('resource_test.texts.draft')]
+#[Document('resource_test.texts.draft')]
 final class DraftTextsShape implements ShapeInterface {
 
   /**

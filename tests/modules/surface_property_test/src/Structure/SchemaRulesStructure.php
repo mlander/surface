@@ -23,12 +23,12 @@ final class SchemaRulesStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addSchema('length', Schema::string()->maxLength(5)->check('drupal:Length', ['min' => 2]), required: FALSE);
-    $inputs->addSchema('strict', Schema::string()->maxLength(5)->check('drupal:Length', ['max' => 9]), required: FALSE);
-    $inputs->addSchema('range', Schema::integer()->minimum(1)->check('drupal:Range', ['max' => 9]), required: FALSE);
-    $inputs->addSchema('regex', Schema::string()->pattern('^a')->check('drupal:Regex', ['pattern' => '/b$/']), required: FALSE);
+    $inputs->addSchema('length', Schema::string()->maxLength(5)->check('drupal:Length', ['min' => 2]));
+    $inputs->addSchema('strict', Schema::string()->maxLength(5)->check('drupal:Length', ['max' => 9]));
+    $inputs->addSchema('range', Schema::integer()->minimum(1)->check('drupal:Range', ['max' => 9]));
+    $inputs->addSchema('regex', Schema::string()->pattern('^a')->check('drupal:Regex', ['pattern' => '/b$/']));
     $choice = Schema::any()->with('enum', ['a', 'b'])->type('string')->check('drupal:Choice', ['choices' => ['a', 'c']]);
-    $inputs->addSchema('choice', $choice, required: FALSE);
+    $inputs->addSchema('choice', $choice);
     $inputs->addSchema('size', Schema::any()->with('anyOf', [
       Schema::any()->with('enum', [1, 2]),
       Schema::null(),
@@ -42,10 +42,10 @@ final class SchemaRulesStructure implements StructureInterface {
       Schema::null(),
       Schema::of('portable:link'),
     ])->title(t('Link')));
-    $inputs->addSchema('extras', Schema::object()->with('additionalProperties', Schema::integer()), required: FALSE);
-    $inputs->addSchema('words', Schema::map(Schema::string()), required: FALSE);
-    $inputs->addSchema('level', Schema::any()->with('enum', [1, 2, 3]), required: FALSE);
-    $inputs->addSchema('ratio', Schema::any()->with('enum', [1.5, 2.5]), required: FALSE);
+    $inputs->addSchema('extras', Schema::object()->with('additionalProperties', Schema::integer()));
+    $inputs->addSchema('words', Schema::map(Schema::string()));
+    $inputs->addSchema('level', Schema::any()->with('enum', [1, 2, 3]));
+    $inputs->addSchema('ratio', Schema::any()->with('enum', [1.5, 2.5]));
   }
 
 }

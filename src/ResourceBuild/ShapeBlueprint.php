@@ -73,7 +73,7 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function addMap(string $key, string|\Stringable $label, callable $define): MapDataDefinition {
+  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): MapDataDefinition {
     throw $this->refused(sprintf('addMap("%s")', $key));
   }
 
@@ -94,21 +94,21 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function addSchema(string $key, Schema $schema, ?bool $required = NULL): static {
+  public function addSchema(string $key, Schema $schema): static {
     throw $this->refused(sprintf('addSchema("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
     throw $this->refused(sprintf('attach("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): ListDataDefinition {
     throw $this->refused(sprintf('attachList("%s")', $key));
   }
 

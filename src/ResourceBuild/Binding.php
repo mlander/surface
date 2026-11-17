@@ -12,6 +12,7 @@ use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\Condition;
@@ -106,6 +107,15 @@ final class Binding {
       return;
     }
     foreach ($keys as $key) {
+      $schema = $builder->heldSchema($key);
+      if ($schema !== NULL) {
+        // A key held as its schema, one value or a list: its own required
+        // flag and its secrecy read from the schema, the mark written on it.
+        if (empty(DefinitionSchema::model($schema)['required']) && !Secrets::marked($schema) && $held['storage']->mayClear($held['context'], $held['prefix'] . $key) === FALSE) {
+          $builder->writeSchema($key, static fn (array $facts): array => ['surface_always_held' => TRUE] + $facts);
+        }
+        continue;
+      }
       $definition = $builder->getDefinition($key);
       if ($definition === NULL || $definition->isRequired() || $definition instanceof ComplexDataDefinitionInterface || DefinitionMetadata::isSecret($definition)) {
         continue;

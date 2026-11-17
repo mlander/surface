@@ -151,7 +151,7 @@ class FirstResourceTest extends SurfaceKernelTestBase {
       $this->assertInstanceOf(TranslatableMarkup::class, $built->getDefinition($name)->getLabel(), $name);
     }
     $this->assertInstanceOf(TranslatableMarkup::class, $built->getDefinition(NewsletterResource::MAX_RECIPIENTS)->getDescription());
-    $labels = $built->getDefinition(NewsletterResource::FREQUENCY)->getConstraint('LabeledChoice')['labels'];
+    $labels = $built->getDefinition(NewsletterResource::FREQUENCY)->getConstraint('LabeledChoice')['choices'];
     $this->assertSame(['weekly', 'monthly'], array_keys($labels));
     $this->assertContainsOnlyInstancesOf(TranslatableMarkup::class, $labels);
   }

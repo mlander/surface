@@ -27,6 +27,7 @@ emitter src/Contract/Conditionals.php
 emitter src/Contract/ConfigSchemaDocument.php
 emitter src/Contract/ContractEmitter.php
 edge src/Contract/DefinitionSchema.php
+reader src/Contract/KeywordReader.php
 emitter src/Contract/LeafTypes.php
 edge src/Contract/NodeDefinition.php
 emitter src/Contract/PropertySchema.php

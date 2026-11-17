@@ -506,7 +506,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
       ->title('Line')
       ->with('additionalProperties', FALSE)
       ->check('drupal:Callback', ['callback' => [static::class, 'refuseSeven']]);
-    $inputs->addSchema('k', Schema::list($item)->title('Lines'));
+    $inputs->addSchema('k', Schema::list($item)->title('Lines')->required());
   }
 
   /**

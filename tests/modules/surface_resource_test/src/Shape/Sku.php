@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Shape;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
@@ -14,7 +14,7 @@ use PortableSchema\Builder\Schema;
  * The depot uses it at two keys that narrow it differently, and the shelf
  * tag reads it through a port; SkuAlter tightens it everywhere.
  */
-#[Shape('resource_test.sku')]
+#[Document('resource_test.sku')]
 final class Sku implements ShapeInterface {
 
   /**

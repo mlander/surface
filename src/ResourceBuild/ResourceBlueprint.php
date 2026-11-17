@@ -25,8 +25,15 @@ use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\EntrySchemasInterface;
 use Drupal\surface\Resource\ResourceCallable;
 use Drupal\surface\Resource\SiteListInterface;
+use Drupal\surface\Contract\KeywordReader;
 use Drupal\surface\Contract\LeafTypes;
+use Drupal\surface\Contract\NodeDefinition;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\ValueSchema;
 use Drupal\surface\Contract\SchemaReader;
+use PortableSchema\Builder\Schema;
+use Drupal\surface\Variants;
+use Drupal\surface\Reference\References;
 
 /**
  * The owner's blueprint: keys land at the top of the data surface.
@@ -415,8 +422,50 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
 
   /**
    * {@inheritdoc}
+   *
+   * The members of a structure mixed in too, as definitions() lists them.
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
+  public function referenceDefinitions(): array {
+    $definitions = parent::referenceDefinitions();
+    foreach ($this->mixins as $mixin) {
+      $definitions += $mixin['blueprint']->referenceDefinitions();
+    }
+    return $definitions;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The inputs: the builder holds each key's schema (SurfaceBuilder::
+   * setSchema()). An output is declared as its definition.
+   */
+  protected function holdsSchemas(): bool {
+    return !$this->outputs;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * In order at every level, as declare() records a key, and held by the
+   * builder as the schema.
+   */
+  protected function declareSchema(string $key, Schema $schema): void {
+    for ($level = $this; $level !== NULL; $level = $level->into) {
+      $level->order[] = $key;
+    }
+    if ($this->into !== NULL) {
+      $this->root()->origins[$key] ??= (string) $this->owner;
+    }
+    $this->builder->setSchema($key, $schema);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
+    if ($description !== NULL || $required || $storedAs !== NULL) {
+      return static::stated($this->attach($key, $structure, $label, $reads), $description, $required, $storedAs, References::STORED_AS);
+    }
     $this->assertUnwiredInMixin($structure, $key, $reads);
     return parent::attach($key, $structure, $label, $reads);
   }
@@ -434,7 +483,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#an-anonymous-map.
    */
-  public function addMap(string $key, string|\Stringable $label, callable $define): MapDataDefinition {
+  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): MapDataDefinition {
+    if ($description !== NULL) {
+      return static::stated($this->addMap($key, $label, $define), $description);
+    }
     if ($this->capture !== NULL) {
       $shell = $this->reserveChild('addMap', $key);
       $shell->setLabel($label);
@@ -519,7 +571,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    */
-  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = []): MapDataDefinition {
+  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
+    if ($description !== NULL || $required || $storedAs !== NULL) {
+      return static::stated($this->attachVariants($key, $by, $label, $from, $arguments), $description, $required, $storedAs, Variants::STORED_AS);
+    }
     $this->assertHoldsNoChild('attaches variants', $key);
     if ($from !== NULL && !is_subclass_of($from, SiteListInterface::class)) {
       throw new \LogicException(sprintf('attachVariants("%s") names %s as where its variants come from, which does not implement %s: a provider lists the site\'s variants, each with its schema or structure, with list().', $key, $from, SiteListInterface::class));
@@ -822,7 +877,16 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    */
-  public function addEach(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition {
+  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, mixed $default = NULL, string|\Stringable|null $description = NULL): MapDataDefinition {
+    if ($description !== NULL) {
+      return static::stated($this->addEach($key, $type, $from, $label, $default), $description);
+    }
+    if ($type instanceof Schema) {
+      // What every entry is, as a schema: its default inside it.
+      $schema = $this->schemaOfOne('addEach', $key, $type);
+      $default ??= ValueSchema::factsOf($schema)['default_value'] ?? NULL;
+      $type = NodeDefinition::of($schema);
+    }
     $this->assertHoldsNoChild('declares keys from the site', $key);
     if ($type instanceof DataDefinitionInterface) {
       if (!LeafTypes::isLeaf($type)) {
@@ -853,7 +917,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    */
-  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
+  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL): MapDataDefinition {
+    if ($description !== NULL) {
+      return static::stated($this->attachEach($key, $structure, $from, $label, $reads), $description);
+    }
     $this->assertHoldsNoChild('attaches a child per thing the site has', $key);
     static::assertNoShape('attachEach', $key, $structure);
     return static::labeled($this->reserveEach('attachEach', $key, $structure, $from, NULL, TRUE, $reads), $label);
@@ -988,7 +1055,15 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
    */
-  public function reads(string $port, string $type, bool $required = FALSE): static {
+  public function reads(string $port, string|Schema $type, bool $required = FALSE): static {
+    if ($type instanceof Schema) {
+      // The port's type as a schema: required where it is marked, a shape
+      // by its id (Schema::of(Shape::class)).
+      $required = $required || $type->isRequired();
+      $reference = $type->get('$ref');
+      $shape = is_string($reference) ? $this->shapeOf($reference) : NULL;
+      $type = $shape ?? (string) NodeFacts::dataType($this->schemaOfOne('reads', $port, $type));
+    }
     if ($this->outputs) {
       throw new \LogicException(sprintf('reads() was asked to read "%s" into outputs. An output is emitted, never refined, so it has nothing to read.', $port));
     }
@@ -1045,8 +1120,11 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * Decision: see
    * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
    */
-  public function compute(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition {
+  public function compute(string $key, string|Schema $type, string|\Stringable|null $label = NULL, array $from = [], string $using = '', string $when = Compute::ON_CREATE): DataDefinition|static {
     $refuse = fn (string $why): \LogicException => new \LogicException(sprintf('compute("%s") on %s %s', $key, $this->name($this->owner), $why));
+    if (!$type instanceof Schema && $label === NULL) {
+      throw $refuse('names no label: compute() with a type takes its label, or a schema whose title() is it.');
+    }
     if ($this->outputs) {
       throw $refuse('declares a computed output: an output is emitted, never stored, so it has nothing to compute; a computed key is an input the caller does not type.');
     }
@@ -1070,10 +1148,45 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
         throw $refuse(sprintf('is computed from "%s", which is no key declared before it in this blueprint.', $source));
       }
     }
+    $computed = new Computed($from, $using, $when);
+    if ($type instanceof Schema) {
+      // The key as a schema: declared complete, then marked computed.
+      $this->addSchema($key, $type);
+      if (!$this->builder->writeSchema($key, static fn (array $facts): array => ['surface_computed' => $computed] + $facts)) {
+        $definition = $this->builder->getDefinition($key);
+        assert($definition !== NULL);
+        DefinitionMetadata::setComputed($definition, $computed);
+      }
+      return $this;
+    }
     // A map is refused by add(): no row of the type table is one.
     $definition = $this->add($key, $type, $label);
-    DefinitionMetadata::setComputed($definition, new Computed($from, $using, $when));
+    DefinitionMetadata::setComputed($definition, $computed);
     return $definition;
+  }
+
+  /**
+   * Reads the schema of one value, or a list of values, a verb is handed.
+   *
+   * @param string $verb
+   *   The verb, for the messages.
+   * @param string $key
+   *   The key or port.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The key's schema, as the builder holds a key's.
+   *
+   * @throws \LogicException
+   *   For a schema that is no value and no list of values.
+   */
+  protected function schemaOfOne(string $verb, string $key, Schema $schema): Schema {
+    $read = KeywordReader::forBuild($this->shapes)->read($key, $schema, NULL, sprintf('%s("%s")', $verb, $key));
+    if ($read === NULL) {
+      throw new \LogicException(sprintf('%s("%s") takes the schema of one value or a list of values, Schema::string(), Schema::integer() and the like: an object, a collection or a shape\'s def is declared at a key of its own.', $verb, $key));
+    }
+    return $read->schema;
   }
 
   /**

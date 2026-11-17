@@ -11,11 +11,13 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\ConstraintMessages;
+use Drupal\surface\Contract\KeywordReader;
+use Drupal\surface\Contract\NodeDefinition;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Surface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\AltersInputsInterface;
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use Drupal\surface\SurfaceBuilder;
 use PortableSchema\Builder\Schema;
@@ -233,14 +235,14 @@ final class Shapes {
    *   The id.
    *
    * @throws \LogicException
-   *   When the class carries no #[Shape].
+   *   When the class carries no #[Document].
    */
   public static function idOf(string $shape): string {
-    $attribute = (new \ReflectionClass($shape))->getAttributes(Shape::class)[0] ?? NULL;
-    if ($attribute === NULL) {
-      throw new \LogicException(sprintf('%s implements %s but carries no #[Shape]: a shape is named by its attribute, #[Shape(\'<id>\')].', $shape, ShapeInterface::class));
+    $id = ((new \ReflectionClass($shape))->getAttributes(Document::class)[0] ?? NULL)?->newInstance()->id;
+    if ($id === NULL) {
+      throw new \LogicException(sprintf('%s implements %s but carries no #[Document]: a shape is named by its attribute, #[Document(\'<id>\')].', $shape, ShapeInterface::class));
     }
-    return $attribute->newInstance()->id;
+    return $id;
   }
 
   /**
@@ -418,6 +420,28 @@ final class Shapes {
    */
   protected static function read(string $shape, Schema $schema, ?string $id = NULL, ?array &$held = NULL): DataDefinition {
     $what = $shape . '::schema()';
+    // A shape of one value is read by its keywords into its schema: what
+    // the reading leaves besides it is a lock alone.
+    // Decision: see docs/decisions.md#authoring-takes-a-schema.
+    try {
+      $read = KeywordReader::forBuild()->read(self::KEY, $schema, FALSE, $what);
+    }
+    catch (\InvalidArgumentException | \LogicException $refused) {
+      if (str_contains($refused->getMessage(), $what)) {
+        throw $refused;
+      }
+      throw new \LogicException(sprintf('The shape %s (%s) cannot be read from %s: %s', $id ?? static::idOf($shape), $shape, $what, $refused->getMessage()), 0, $refused);
+    }
+    if ($read !== NULL) {
+      $definition = NodeDefinition::of($read->schema);
+      assert($definition instanceof DataDefinition);
+      $held = [
+        'notes' => $read->notes,
+        'default' => DefinitionMetadata::hasDefaultValue($definition),
+        'besides' => $read->locked ? ['locked'] : [],
+      ];
+      return static::written($definition, $schema);
+    }
     $typedDataManager = \Drupal::service('typed_data_manager');
     $scratch = new ResourceBlueprint($builder = new SurfaceBuilder(), $typedDataManager);
     try {
@@ -443,11 +467,25 @@ final class Shapes {
         ...static::besidesIn($builder, $handed),
       ])),
     ];
+    return static::written($definition, $schema);
+  }
+
+  /**
+   * Writes a shape's definition in the order one is written by hand.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinition $definition
+   *   The definition read.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   What its schema() returned.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   Its type, label and description first; a shape with no title has no
+   *   label. A definition of another class as it is.
+   */
+  protected static function written(DataDefinition $definition, Schema $schema): DataDefinition {
     if ($definition::class !== DataDefinition::class) {
       return $definition;
     }
-    // Said in the order a definition is written by hand: its type, label
-    // and description first. A shape with no title has no label.
     $said = $definition->toArray();
     if ($schema->isBoolean() || !$schema->has('title')) {
       unset($said['label']);

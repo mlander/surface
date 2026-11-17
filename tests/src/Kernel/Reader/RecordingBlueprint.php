@@ -80,7 +80,7 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = []): MapDataDefinition {
+  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
     $map = self::labeled(MapDataDefinition::create(), $label);
     $this->record($key, 'attachVariants', $map, ['by' => $by, 'from' => $from, 'arguments' => $arguments]);
     return $map;
@@ -89,7 +89,7 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function addEach(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition {
+  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, mixed $default = NULL, string|\Stringable|null $description = NULL): MapDataDefinition {
     $map = MapDataDefinition::create()->setLabel($label);
     $this->record($key, 'addEach', $map, ['from' => $from]);
     return $map;
@@ -98,7 +98,7 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
+  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL): MapDataDefinition {
     $map = self::labeled(MapDataDefinition::create(), $label);
     $this->record($key, 'attachEach', $map, ['child' => $structure, 'from' => $from]);
     return $map;
@@ -107,14 +107,18 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function reads(string $port, string $type, bool $required = FALSE): static {
+  public function reads(string $port, string|Schema $type, bool $required = FALSE): static {
     return $this;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function compute(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition {
+  public function compute(string $key, string|Schema $type, string|\Stringable|null $label = NULL, array $from = [], string $using = '', string $when = Compute::ON_CREATE): DataDefinition|static {
+    if ($type instanceof Schema) {
+      $this->record($key, 'compute', DataDefinition::create('any'));
+      return $this;
+    }
     $definition = DataDefinition::create($type)->setLabel($label);
     $this->record($key, 'compute', $definition);
     return $definition;
@@ -139,7 +143,7 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function addMap(string $key, string|\Stringable $label, callable $define): MapDataDefinition {
+  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): MapDataDefinition {
     $map = MapDataDefinition::create()->setLabel($label);
     $inner = new self();
     $define($inner);
@@ -170,8 +174,8 @@ final class RecordingBlueprint implements BlueprintInterface {
    * Read into this blueprint, so the verbs the schema stands for are
    * written down.
    */
-  public function addSchema(string $key, Schema $schema, ?bool $required = NULL): static {
-    SchemaReader::authored($this, $key, $schema, $required);
+  public function addSchema(string $key, Schema $schema): static {
+    SchemaReader::authored($this, $key, $schema);
     return $this;
   }
 
@@ -185,7 +189,7 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
     $map = self::labeled(MapDataDefinition::create(), $label);
     $this->record($key, 'attach', $map, ['child' => $structure]);
     return $map;
@@ -194,7 +198,7 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): ListDataDefinition {
     $list = self::labeled(new ListDataDefinition([], MapDataDefinition::create()), $label);
     $this->record($key, 'attachList', $list, ['child' => $structure]);
     return $list;

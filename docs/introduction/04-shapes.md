@@ -14,12 +14,12 @@ shows how one module tightens another's).
 Your module keeps two colors, one for links and one for the background,
 in a second config object, `my_module.colors`. Both are written the
 same way: `#` and six hexadecimal digits. The shape says so once. It is
-a class in your module's `src/Shape/` directory, with `#[Shape]` and
-its id, and its static `schema()` returns the value's schema, built with
+a class in your module's `src/Shape/` directory, with the Portable Schema
+package's `#[Document]` and its id, and its static `schema()` returns the value's schema, built with
 Portable Schema's `Schema`:
 
 ```php
-#[Shape('my_module.hex_color')]
+#[Document('my_module.hex_color')]
 final class HexColor implements ShapeInterface {
 
   public static function schema(): Schema {

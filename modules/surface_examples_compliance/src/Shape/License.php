@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples_compliance\Shape;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
@@ -14,7 +14,7 @@ use PortableSchema\Builder\Schema;
  * A shape, so every key that asks for a license asks for the same thing,
  * in the same words, and the served contract writes it once.
  */
-#[Shape('event.license')]
+#[Document('event.license')]
 final class License implements ShapeInterface {
 
   /**

@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\surface_schema_test\Shape;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
 /**
  * What the alias cleaner does with one punctuation mark.
  */
-#[Shape('schema_test.mark_action')]
+#[Document('schema_test.mark_action')]
 final class MarkAction implements ShapeInterface {
 
   /**

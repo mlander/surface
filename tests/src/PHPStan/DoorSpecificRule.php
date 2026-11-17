@@ -36,7 +36,7 @@ use PHPStan\Rules\RuleErrorBuilder;
  *   (a storage, an access class, an alter answering access, a provider of
  *   keys or variants from the site, a deriver of variants or resources, an
  *   options resolver, a computed key's class), carries #[Resource],
- *   #[Structure], #[Shape] or #[Alters], or declares a #[RefinesInput]
+ *   #[Structure], #[Document] or #[Alters], or declares a #[RefinesInput]
  *   method;
  * - a call to \Drupal::request(), ::routeMatch(), ::currentUser(),
  *   ::formBuilder() or ::theme(), or ::service() or ::hasService() naming
@@ -125,7 +125,7 @@ final class DoorSpecificRule implements Rule {
   public const ATTRIBUTES = [
     'Drupal\surface\Resource\Attribute\Resource' => 'resource',
     'Drupal\surface\Resource\Attribute\Structure' => 'structure',
-    'Drupal\surface\Resource\Attribute\Shape' => 'shape',
+    'PortableSchema\Builder\Attribute\Document' => 'shape',
     'Drupal\surface\Resource\Attribute\Alters' => 'alter',
   ];
 

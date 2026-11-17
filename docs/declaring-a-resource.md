@@ -409,11 +409,11 @@ final class CateringResource implements ResourceInterface {
   public bool $public = FALSE;
 
   #[Input('Headcount', description: 'How many people to cater for.')]
-  #[Constraint('Range', ['min' => 1, 'max' => 5000])]
+  #[Schema(minimum: 1, maximum: 5000)]
   public int $headcount;
 
   #[Input('Budget')]
-  #[Constraint('Range', ['min' => 0])]
+  #[Schema(minimum: 0)]
   #[Describe(group: 'details', suffix: 'EUR')]
   public ?float $budget = NULL;
 
@@ -429,7 +429,9 @@ final class CateringResource implements ResourceInterface {
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces); the
-attributes are in `Drupal\surface\Resource\Attribute`.
+attributes are in `Drupal\surface\Resource\Attribute`, but `#[Schema]` and
+`#[Check]`, which are the Portable Schema package's, in
+`PortableSchema\Builder\Attribute`.
 
 PHP says the key's name (the property's), its type (`string`, `int`,
 `float`, `bool` or a shape's class), its default (the initializer) and
@@ -444,18 +446,18 @@ whether it must be given. The attributes say the rest:
 | `'email'`, `'machine_name'`, any type the property cannot say | `#[Input('Email', type: 'email')]` |
 | a shape | the property typed with the shape's class, `public ?PhoneNumber $phone = NULL;` |
 | `->setDescription(t(...))` | `description:` on the attribute |
-| `->addConstraint('Length', [...])` | `#[Constraint('Length', [...])]`, repeatable, in the order written |
+| `->addConstraint('Length', ['max' => 64])` | the keyword the constraint is written from, `#[Schema(maxLength: 64)]`; a constraint with no keyword is a check named after its plugin, `#[Check('drupal:Regex', [...])]`, repeatable, in the order written |
 | `->setSetting('widget', 'time')` | `#[Widget('time')]`; any other setting `#[Setting('multiline', TRUE)]` |
 | `DefinitionMetadata::setExamples()` | `#[Examples('Harbour Kitchen')]` |
 | `describe('key', group:, weight:, placeholder:, prefix:, suffix:, help:)` | `#[Describe(...)]`, `group:` naming a `#[Group]` on the class |
 | `ArrangementGroup::fieldset()`, `::details()` | `#[Group('id', 'Label')]`, `details: TRUE` for a details element |
-| `addList('days', 'string', ...)` | `#[Input('Days', list: 'string')] public array $days = [];`, an item constraint `#[Constraint(..., item: TRUE)]` |
+| `addList('days', 'string', ...)` | `#[Input('Days', list: 'string')] public array $days = [];`, the item's rules `#[Schema(items: ['maxLength' => 10])]`, a check among them under `portable-check` |
 | `addList()` of maps | `list:` naming a plain class of `#[Input]` properties |
 | `addMap('coordinates', ..., fn)` | `#[Map('Coordinates')] public Coordinates $coordinates;`, a plain class of `#[Input]` properties |
 | `attach('contact', PersonStructure::class, t('Caterer contact'), reads: [...])` | `#[Attach(label: 'Caterer contact', reads: [...])] public PersonStructure $contact;`, or the class on the attribute |
 | `attachList('rooms', VenueRoomStructure::class, t('Rooms'), max: 20)` | `#[AttachList(VenueRoomStructure::class, label: 'Rooms', max: 20)] public array $rooms;` |
 | `attachVariants('ticket', by: 'pricing', label: t('Ticket'))` | `#[AttachVariants(by: 'pricing', label: 'Ticket')] public array $ticket;`; each variant still carries `#[Variant(of:, at:)]` |
-| `addEach('on_sale', 'boolean', from:, label:)`, `attachEach()` | `#[Each('boolean', from:, label:)]`, a constraint on each entry `#[Constraint(..., item: TRUE)]`; `#[AttachEach(Structure::class, from:, label:)]` on an array property |
+| `addEach('on_sale', 'boolean', from:, label:)`, `attachEach()` | `#[Each('boolean', from:, label:)]`, each entry's rules `#[Schema(additionalProperties: [...])]`; `#[AttachEach(Structure::class, from:, label:)]` on an array property |
 | `reads('listed', 'boolean')` | `#[Port] public bool $listed;`, `type: 'any'` for any type |
 | `compute('slug', ..., from:, using:, when:)` | `#[Computed('Slug', from:, using:, when:)] public string $slug;` |
 | `narrow('items')->when(Condition::equals('frequency', 'weekly'))->constrain(...)` | `#[Rule(whenEquals: ['frequency', 'weekly'], constrain: ['Range', ['max' => 5]])]` on `$items` |
@@ -481,7 +483,7 @@ a composition restates the verb (`Attach`, `AttachList`, `AttachEach`,
   suffix, a help text, a group's title, a rule's reason, a `#[Variant]`'s
   label) are written as bare strings, which it wraps in
   `TranslatableMarkup`. A text inside a
-  constraint's options (a message, a choice's label) is handed to core
+  check's options (a message, a choice's label) is handed to core
   as it is, and is written `new TranslatableMarkup('...')`. The
   trade-off: a bare string is translated where a translation exists, but
   string extraction does not find it; `new TranslatableMarkup('...')` is
@@ -507,8 +509,8 @@ a composition restates the verb (`Attach`, `AttachList`, `AttachEach`,
 - **What it refuses.** Beside what the verbs refuse: a public property
   with no attribute saying what it is, a `#[Describe(group:)]` naming no
   `#[Group]`, a property type that is no key type and no shape with no
-  `type:`, an `#[Attach]` or `#[Map]` naming no class, an item constraint
-  on a key that is no list, and an `#[Output]` on a class that does not
+  `type:`, an `#[Attach]` or `#[Map]` naming no class, an item's rules
+  on a key that is no list, a `#[Schema]` keyword that is no rule, and an `#[Output]` on a class that does not
   implement `DefinesOutputsInterface`. Each message names the class, the
   property and the fix. A static or protected property with no attribute
   is left alone, so a plugin that is its own structure keeps its own.
@@ -598,9 +600,10 @@ for a widget, a weight and the group on the class, `#[Required]` for a
 key with a default that must hold a value. They are a spelling of
 `#[Input]`, so they combine with what `#[Input]` combines with,
 `#[Examples]` and `#[Rule]`, and are refused beside another kind, as
-`#[Input]` is. A property is spelled one way: `#[Input]`,
-`#[Constraint]`, `#[Widget]`, `#[Describe]` and `#[Setting]` beside them
-are refused. A test module's structure, shortened:
+`#[Input]` is. A property is spelled one way: `#[Input]`, `#[Widget]`,
+`#[Describe]` and `#[Setting]` beside them are refused. `#[Schema]` and
+`#[Check]` alone beside `#[Input]`, `#[Each]` or `#[Computed]` are no
+second spelling: they are that key's rules. A test module's structure, shortened:
 
 ```php
 #[Structure('property_test.portable.properties')]

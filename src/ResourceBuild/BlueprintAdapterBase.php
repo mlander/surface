@@ -12,8 +12,12 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\LeafTypes;
+use Drupal\surface\Contract\NodeDefinition;
 use Drupal\surface\Contract\SchemaReader;
+use Drupal\surface\Contract\ValueSchema;
+use Drupal\surface\Reference\References;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\Resolve;
@@ -86,7 +90,10 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * The definitions of the plain keys added through this blueprint, by key.
    *
-   * @var array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
+   * NULL for a key declared as its schema (declareRead()), which the
+   * builder holds.
+   *
+   * @var array<string, \Drupal\Core\TypedData\DataDefinitionInterface|null>
    */
   protected array $definitions = [];
 
@@ -124,6 +131,19 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   public function useShapes(?Shapes $shapes): static {
     $this->shapes = $shapes;
     return $this;
+  }
+
+  /**
+   * Gets what resolves shapes and config schema types for this blueprint.
+   *
+   * @return \Drupal\surface\ResourceBuild\Shapes|null
+   *   The resolver; NULL for none.
+   *
+   * @internal
+   *   For SchemaReader, which reads a config schema type a key names.
+   */
+  public function shapesInUse(): ?Shapes {
+    return $this->shapes;
   }
 
   /**
@@ -250,7 +270,10 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *
    * Decision: see docs/decisions.md#an-anonymous-map.
    */
-  public function addMap(string $key, string|\Stringable $label, callable $define): MapDataDefinition {
+  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): MapDataDefinition {
+    if ($description !== NULL) {
+      return static::stated($this->addMap($key, $label, $define), $description);
+    }
     $map = MapDataDefinition::create();
     $map->setLabel($label);
     $inner = $this->mapBlueprint($map, $key)
@@ -319,7 +342,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     if (!Shapes::isShape($type)) {
       throw new \LogicException(is_subclass_of($type, DefinesInputsInterface::class)
         ? sprintf('%s("%s") was handed %s, a resource or structure, as a type: a group of keys is attached at the key, attach(\'%s\', ...), or mixed in, mixIn().', $verb, $key, $type, $key)
-        : sprintf('%s("%s") was handed %s, which is no typed data type and no shape: a shape implements %s and carries #[Shape].', $verb, $key, $type, 'Drupal\surface\Resource\ShapeInterface'));
+        : sprintf('%s("%s") was handed %s, which is no typed data type and no shape: a shape implements %s and carries #[Document].', $verb, $key, $type, 'Drupal\surface\Resource\ShapeInterface'));
     }
     return $this->shapes?->forKey($type) ?? Shapes::unaltered($type);
   }
@@ -381,8 +404,8 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * Read by the schema reader, which declares the key through this
    * blueprint's own verbs: what they refuse is refused the same way.
    */
-  public function addSchema(string $key, Schema $schema, ?bool $required = NULL): static {
-    SchemaReader::authored($this, $key, $schema, $required);
+  public function addSchema(string $key, Schema $schema): static {
+    SchemaReader::authored($this, $key, $schema);
     return $this;
   }
 
@@ -418,6 +441,64 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     // Decision: see
     // docs/decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader.
     LeafTypes::assertHeld(sprintf('%s("%s")', $verb, $key), $definition);
+    $this->assertNewKey($key);
+    $this->declare($key, $definition, $default);
+    $this->keys[] = $key;
+    $this->definitions[$key] = $definition;
+    return $definition;
+  }
+
+  /**
+   * Lays what a verb that attaches is told by name on the map it returns.
+   *
+   * The arguments `description:`, `required:` and `storedAs:` of attach(),
+   * attachList(), attachVariants(), attachEach(), addEach() and addMap():
+   * what an author chained on the returned definition before.
+   *
+   * Decision: see docs/decisions.md#authoring-takes-a-schema.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $shell
+   *   What the verb returned.
+   * @param string|\Stringable|null $description
+   *   The key's description; NULL for none.
+   * @param bool $required
+   *   Whether the key is required.
+   * @param string|null $storedAs
+   *   How it is stored (the value of $setting); NULL to say nothing.
+   * @param string|null $setting
+   *   The setting $storedAs is written to.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The same definition.
+   *
+   * @template T of \Drupal\Core\TypedData\DataDefinitionInterface
+   * @phpstan-param T $shell
+   * @phpstan-return T
+   */
+  protected static function stated(DataDefinitionInterface $shell, string|\Stringable|null $description, bool $required = FALSE, ?string $storedAs = NULL, ?string $setting = NULL): DataDefinitionInterface {
+    assert($shell instanceof DataDefinition);
+    if ($description !== NULL) {
+      $shell->setDescription($description);
+    }
+    if ($required) {
+      $shell->setRequired(TRUE);
+    }
+    if ($storedAs !== NULL && $setting !== NULL) {
+      $shell->setSetting($setting, $storedAs);
+    }
+    return $shell;
+  }
+
+  /**
+   * Refuses a key declared already, or a port's name.
+   *
+   * @param string $key
+   *   The key.
+   *
+   * @throws \LogicException
+   *   When the key is declared already, or names a port.
+   */
+  protected function assertNewKey(string $key): void {
     $this->assertNoPort($key);
     if (in_array($key, $this->declared(), TRUE) || $this->isDeclared($key)) {
       throw new \LogicException(sprintf(
@@ -426,10 +507,64 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
         $key,
       ));
     }
-    $this->declare($key, $definition, $default);
+  }
+
+  /**
+   * Declares a key the keyword reader read: its schema, complete.
+   *
+   * What SchemaReader::authored() declares for a value key it reads by
+   * its keywords (KeywordReader). A blueprint whose builder holds its keys
+   * as schemas (the inputs of a resource or a structure) holds the schema
+   * itself; any other declares the definition derived from it, as the
+   * key's verb would. Refused as addKey() refuses a key.
+   *
+   * @param string $key
+   *   The key.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   Its schema (KeywordRead::$schema).
+   *
+   * @throws \LogicException
+   *   When the key is declared already, or names a port.
+   *
+   * @internal
+   *   For SchemaReader.
+   */
+  public function declareRead(string $key, Schema $schema): void {
+    if (!$this->holdsSchemas()) {
+      $this->addKey($key, NodeDefinition::of($schema), ValueSchema::factsOf($schema)['default_value'] ?? NULL);
+      return;
+    }
+    $this->assertNewKey($key);
+    $this->declareSchema($key, $schema);
     $this->keys[] = $key;
-    $this->definitions[$key] = $definition;
-    return $definition;
+    $this->definitions[$key] = NULL;
+  }
+
+  /**
+   * Answers whether this blueprint's builder holds its keys as schemas.
+   *
+   * @return bool
+   *   FALSE here; a resource's or a structure's input blueprint answers
+   *   TRUE.
+   */
+  protected function holdsSchemas(): bool {
+    return FALSE;
+  }
+
+  /**
+   * Puts a key's schema where this blueprint's keys live.
+   *
+   * @param string $key
+   *   The key.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   Its schema.
+   *
+   * @throws \LogicException
+   *   Here: only a blueprint that holds schemas (holdsSchemas()) declares
+   *   one.
+   */
+  protected function declareSchema(string $key, Schema $schema): void {
+    throw new \LogicException(sprintf('%s holds no schema of "%s": only a blueprint whose builder holds schemas does.', static::class, $key));
   }
 
   /**
@@ -440,16 +575,56 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * constraint (References::settle()).
    *
    * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
-   *   Each definition, by key, in declaration order.
+   *   Each definition, by key, in declaration order; a key declared as its
+   *   schema by the definition derived from it, which the builder holds
+   *   from then on.
    */
   public function definitions(): array {
-    return $this->definitions;
+    $definitions = [];
+    foreach ($this->definitions as $key => $definition) {
+      $definition ??= $this->builder->getDefinition((string) $key);
+      if ($definition !== NULL) {
+        $definitions[$key] = $definition;
+      }
+    }
+    return $definitions;
+  }
+
+  /**
+   * Gets the definitions References::settle() writes, as definitions() does.
+   *
+   * A key declared as its schema is in it only where its schema, or its
+   * item's, declares the reference constraint: settle() writes nothing to
+   * any other, so its schema stays the builder's.
+   *
+   * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
+   *   Each definition, by key, in declaration order.
+   */
+  public function referenceDefinitions(): array {
+    $definitions = [];
+    foreach ($this->definitions as $key => $definition) {
+      if ($definition === NULL) {
+        $schema = $this->builder->heldSchema((string) $key);
+        $item = $schema === NULL ? NULL : DefinitionSchema::itemNode($schema);
+        if ($schema !== NULL && !DefinitionSchema::declares($item ?? $schema, References::CONSTRAINT)) {
+          continue;
+        }
+        $definition = $this->builder->getDefinition((string) $key);
+      }
+      if ($definition !== NULL) {
+        $definitions[$key] = $definition;
+      }
+    }
+    return $definitions;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
+    if ($description !== NULL || $required || $storedAs !== NULL) {
+      return static::stated($this->attach($key, $structure, $label, $reads), $description, $required, $storedAs, References::STORED_AS);
+    }
     static::assertNoShape('attach', $key, $structure);
     static::assertReads($key, $reads);
     $shell = $this->reserveChild('attach', $key);
@@ -505,7 +680,10 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): ListDataDefinition {
+    if ($description !== NULL || $required) {
+      return static::stated($this->attachList($key, $structure, $label, $min, $max), $description, $required);
+    }
     static::assertNoShape('attachList', $key, $structure);
     if (($min !== NULL && $min < 0) || ($max !== NULL && $max < 0) || ($min !== NULL && $max !== NULL && $min > $max)) {
       throw new \InvalidArgumentException(sprintf(
@@ -646,6 +824,24 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * {@inheritdoc}
    */
   public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?ArrangementGroup $group = NULL, ?int $weight = NULL, string|\Stringable|null $placeholder = NULL, string|\Stringable|null $prefix = NULL, string|\Stringable|null $suffix = NULL, string|\Stringable|null $help = NULL): static {
+    if (!$this->outputs && $after === NULL && $this->builder->heldSchema($key) !== NULL) {
+      // A key held as its schema is described on its schema.
+      $arrangement = static::arrangement($group, $weight, $placeholder, $prefix, $suffix, $help);
+      $this->builder->writeSchema($key, static function (array $facts) use ($label, $description, $arrangement): array {
+        if ($label !== NULL) {
+          $facts['label'] = $label;
+        }
+        if ($description !== NULL) {
+          $facts['description'] = $description;
+        }
+        if ($arrangement !== NULL) {
+          $under = $facts['surface_arrangement'] ?? NULL;
+          $facts['surface_arrangement'] = $arrangement->over($under instanceof Arrangement ? $under : NULL);
+        }
+        return $facts;
+      });
+      return $this;
+    }
     $definition = $this->find($key);
     if ($definition === NULL) {
       throw new \LogicException(sprintf(

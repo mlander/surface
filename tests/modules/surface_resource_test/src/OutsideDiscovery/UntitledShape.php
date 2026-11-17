@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\OutsideDiscovery;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
 /**
  * Gives no title, so its definition has no label.
  */
-#[Shape('resource_test.broken.untitled')]
+#[Document('resource_test.broken.untitled')]
 final class UntitledShape implements ShapeInterface {
 
   /**
