@@ -1173,8 +1173,8 @@ the field's name, so the paths name the `value` key inside each
 after the operation has built its context, and applies them to it:
 
 - **`_surface_fixed`** narrows each key to its value:
-  `withConstraint($path, 'Choice', ['choices' => [$value],
-  'surface_fixed' => TRUE])`, the last option saying the Choice
+  `withConstraint($path, Schema::any()->check('drupal:Choice',
+  ['choices' => [$value], 'surface_fixed' => TRUE]))`, the last option saying the Choice
   fixes the key, which the build reads and takes off. A fixed key holds
   its value: it starts from the value whatever default it declares, is
   made required where it was optional, and is drawn as that value, an

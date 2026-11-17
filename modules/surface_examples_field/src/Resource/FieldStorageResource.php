@@ -102,8 +102,8 @@ final class FieldStorageResource implements ResourceInterface {
     }
     $cardinality = $storage->getCardinality();
     return $cardinality === FieldStorageConfigInterface::CARDINALITY_UNLIMITED
-      ? $context->withConstraint('cardinality', 'Choice', ['choices' => [FieldStorageConfigInterface::CARDINALITY_UNLIMITED]])
-      : $context->withConstraint('cardinality', 'Range', ['min' => $cardinality]);
+      ? $context->withConstraint('cardinality', Schema::enum([FieldStorageConfigInterface::CARDINALITY_UNLIMITED]))
+      : $context->withConstraint('cardinality', Schema::any()->minimum($cardinality));
   }
 
   /**

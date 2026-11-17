@@ -624,7 +624,7 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
     return (new OperationContext('create', creates: TRUE, known: [
       'entity_type' => $entity_type_id,
       ContentEntityStorage::FIELDS_AT => self::FIELDS,
-    ] + ($named ? [] : ['id' => NULL])))->withConstraint('bundle', 'SurfaceCreatableBundle', ['entityTypeId' => $entity_type_id]);
+    ] + ($named ? [] : ['id' => NULL])))->withConstraint('bundle', Schema::any()->check('drupal:SurfaceCreatableBundle', ['entityTypeId' => $entity_type_id]));
   }
 
   /**
@@ -733,7 +733,7 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
       'id' => $id_type === 'integer' ? (int) $entity->id() : (string) $entity->id(),
       'bundle' => $entity->bundle(),
       ContentEntityStorage::FIELDS_AT => self::FIELDS,
-    ]))->withConstraint('bundle', 'Choice', ['choices' => [$entity->bundle()], 'surface_fixed' => TRUE]);
+    ]))->withConstraint('bundle', Schema::any()->check('drupal:Choice', ['choices' => [$entity->bundle()], 'surface_fixed' => TRUE]));
   }
 
 }

@@ -1562,8 +1562,9 @@ context the operation built ([forms](forms.md#a-route-that-fixes-or-fills-keys))
   a check or a report run; until the maintainer decides, the rule holds,
   and `_surface_query` starts such a key from a link.
 - **Fixing narrows the contract, so at a route it is true on that page
-  only.** A fixed value is `withConstraint($path, 'Choice', ['choices' =>
-  [$value], 'surface_fixed' => TRUE])`, nothing new in either
+  only.** A fixed value is `withConstraint($path,
+  Schema::any()->check('drupal:Choice', ['choices' => [$value],
+  'surface_fixed' => TRUE]))`, nothing new in either
   document's vocabulary: a key fixed so is drawn as that value and
   stated `const` with `x-surface.fixed`, as a deciding key with one
   variant is, and starts from it (a fixed key holds its value, below).
@@ -15745,6 +15746,12 @@ they served.
   the shape holds too is that bound, the key's options in the order the
   author wrote them and the shape's others after, as `addConstraint()`
   keeps the options it is handed (decided 2026-11-17).
+- **A context narrows by a schema.** `OperationContext::withConstraint()`
+  takes a `Schema`, as `Rule::constrain()` does: a bound, a `pattern`,
+  `enum` (the values to keep), or a `drupal:` check with its options as
+  given, so a fixed key is `Schema::any()->check('drupal:Choice',
+  ['choices' => [$value], 'surface_fixed' => TRUE])`. One spelling: the
+  constraint and its options is gone (decided 2026-11-17).
 - **The widget of an attached child.** `attach()` takes `widget:` by
   name beside `description:`, `required:` and `storedAs:`, the word of
   the widget that draws the child at this key (`widget: 'fieldset'`),

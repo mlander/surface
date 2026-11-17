@@ -20,6 +20,7 @@ use Drupal\surface\Staging\Stageable;
 use Drupal\surface\SurfaceAccess;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Route;
+use PortableSchema\Builder\Schema;
 
 /**
  * A route served by one operation of one resource, read off the route.
@@ -1177,7 +1178,7 @@ final class OperationRoute {
    */
   protected static function seeded(OperationContext $context, array $seeds): OperationContext {
     foreach ($seeds[self::FIXED] as $path => $value) {
-      $context = $context->withConstraint((string) $path, 'Choice', ['choices' => [$value], Declaring::FIXED => TRUE]);
+      $context = $context->withConstraint((string) $path, Schema::any()->check('drupal:Choice', ['choices' => [$value], Declaring::FIXED => TRUE]));
     }
     return $seeds[self::DEFAULTS] === [] ? $context : $context->withDefaults($seeds[self::DEFAULTS]);
   }
