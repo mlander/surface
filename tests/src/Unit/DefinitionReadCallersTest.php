@@ -84,6 +84,9 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *   the node of the definition it was handed, where its caller holds
    *   no node, read when a resolver is about to be called (since
    *   2026-11-15).
+   * - src/ResourceBuild/KeyPaths.php, of(): violation() reads a
+   *   builder's definition before sealing, which no entry holds, into the
+   *   schema a site's or a route's value is held to (since slice 34).
    * - src/Resolve.php reads none since 2026-11-16: a resolved key's class
    *   is handed its entry's schema, and a key a mount holds the schema its
    *   mount's schema holds.
@@ -106,6 +109,7 @@ class DefinitionReadCallersTest extends UnitTestCase {
     'src/Contract/ContractEmitter.php' => ['of' => 1],
     'src/Entry.php' => ['around' => 4, 'of' => 4],
     'src/Options/SurfaceOptions.php' => ['of' => 1],
+    'src/ResourceBuild/KeyPaths.php' => ['of' => 1],
     'src/Surface.php' => ['around' => 2, 'of' => 2],
     'src/Tool/InputDefinitions.php' => ['of' => 2],
     'src/Variants.php' => ['shell' => 2],

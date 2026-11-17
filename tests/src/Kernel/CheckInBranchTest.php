@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\surface\Pipeline\Violation;
 use Drupal\surface_examples_block\Resource\BlockPlacementResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -39,6 +38,7 @@ class CheckInBranchTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
     'surface_examples',
     'surface_examples_component_block',
     'surface_examples_block',
@@ -69,12 +69,11 @@ class CheckInBranchTest extends SurfaceKernelTestBase {
       'region' => 'content',
       'settings' => ['bundle' => TRUE],
     ];
-    $values = $this->pipeline()->accept($surface, $input, [], TRUE);
+    $values = $this->pipeline()->accept($surface, $input);
     $this->assertTrue($values['settings']['bundle']);
 
     $found = [];
-    foreach ($this->pipeline()->validate($surface, $values, [], TRUE) as $violation) {
-      assert($violation instanceof Violation);
+    foreach ($this->pipeline()->validate($surface, $values) as $violation) {
       $found[] = [$violation->fullPath(), $violation->code];
     }
     $this->assertContains(['settings.bundle', 'type'], $found);

@@ -638,10 +638,9 @@ the record of the rework that brought the module to the pattern.
   (`surface.constraint_runner`), the one place a typed value is built to
   run a constraint on a definition a data surface holds: `check()`, one
   plugin on one value, alone, for every `drupal:<id>` check the provider
-  answers; `conforms()`, a value against a whole definition with the
-  constraints it implies, for a site's or a route's value (`KeyPaths`).
-  Outputs and a watched value are held by the dialect's validator
-  instead (**Outputs conform**, below). Nothing else takes the typed data
+  answers. A whole value is never held here: outputs, a watched value
+  and a site's or a route's value (`KeyPaths`) are held by the dialect's
+  validator (**Outputs conform**, below). Nothing else takes the typed data
   manager to validate such a value; host storage validates its own typed
   config and entities, and host readers build typed objects to read
   them. Surface's own eight constraint plugins run on the plain value (`VALUE_ONLY`, by
@@ -666,7 +665,9 @@ the record of the rework that brought the module to the pattern.
   API's own check and leaves out only what it refuses. A secret output is
   refused at declaration. The watched-value check
   (`admits(Schema $schema, $value)`) holds one value the same way, as the
-  one output of `Surface::holding()`. A link field's URI is text
+  one output of `Surface::holding()`, and so does `KeyPaths` for a site's
+  or a route's value, each written first as the document holds it
+  (`WatchedValueCheck::written()`). A link field's URI is text
   held to `SurfaceLinkUri` (a scheme, as core's link field takes),
   since the `uri` format refuses `route:<nolink>`
   (`docs/decisions.md#outputs-conform-through-the-dialects-validator`,

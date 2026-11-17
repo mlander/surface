@@ -6,10 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataInterface;
-use Drupal\Core\Validation\Plugin\Validation\Constraint\NotNullConstraint;
-use Drupal\Core\Validation\Plugin\Validation\Constraint\PrimitiveTypeConstraint;
 use Drupal\Core\Validation\Plugin\Validation\Constraint\RangeConstraint;
 use Drupal\Core\Plugin\DefaultPluginManager;
 use Drupal\KernelTests\KernelTestBase;
@@ -27,11 +24,6 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
  * The runner's check() runs one plugin on one value and nothing else, a
  * core plugin and one of Surface's alike, its violations at the value
  * itself.
- * conforms() holds a value to a whole definition with the constraints it
- * implies: a value of another primitive type and a null where the value
- * is required are refused; a key a map does not declare is not, since
- * Typed Data holds only the keys it declares (KeyPaths refuses such a key
- * itself, before it asks).
  *
  * @see docs/decisions.md#one-adapter-runs-a-constraint-the-typed-data-footprint-is-pinned
  */
@@ -103,40 +95,6 @@ class ConstraintRunnerTest extends KernelTestBase {
     $this->assertSame([], static::rows($this->runner()->check('UniqueItems', [], ['a', 'b'], $tags)), 'Distinct items pass.');
     $refused = [[UniqueItemsConstraint::class, Unique::IS_NOT_UNIQUE, '']];
     $this->assertSame($refused, static::rows($this->runner()->check('UniqueItems', [], ['a', 'a'], $tags)), 'A repeated item is refused, at the list.');
-  }
-
-  /**
-   * Tests conforms() refuses a value of another primitive type.
-   */
-  public function testConformsRefusesAnotherPrimitiveType(): void {
-    $integer = DataDefinition::create('integer');
-    $this->assertSame([], static::rows($this->runner()->conforms($integer, 3)));
-    $rows = static::rows($this->runner()->conforms($integer, 'three'));
-    $this->assertSame([PrimitiveTypeConstraint::class, ''], [$rows[0][0] ?? NULL, $rows[0][2] ?? NULL], 'The constraint the data type implies refuses it.');
-    $this->assertCount(1, $rows);
-  }
-
-  /**
-   * Tests conforms() refuses a null where the value is required.
-   */
-  public function testConformsRefusesNullWhereRequired(): void {
-    $required = DataDefinition::create('string')->setRequired(TRUE);
-    $this->assertSame([], static::rows($this->runner()->conforms(DataDefinition::create('string'), NULL)), 'Not required: a null passes.');
-    $rows = static::rows($this->runner()->conforms($required, NULL));
-    $this->assertSame([NotNullConstraint::class, ''], [$rows[0][0] ?? NULL, $rows[0][2] ?? NULL], 'Required: NotNull refuses it.');
-    $this->assertCount(1, $rows);
-  }
-
-  /**
-   * Tests conforms() holds a map's declared keys alone.
-   */
-  public function testConformsHoldsTheMapsOwnKeys(): void {
-    $map = MapDataDefinition::create();
-    $map->setPropertyDefinition('count', DataDefinition::create('integer'));
-    $this->assertSame([], static::rows($this->runner()->conforms($map, ['count' => 2, 'stranger' => 'x'])), 'A key the map does not declare is left to the caller.');
-    $rows = static::rows($this->runner()->conforms($map, ['count' => 'two'], 'output'));
-    $this->assertSame([PrimitiveTypeConstraint::class, 'count'], [$rows[0][0] ?? NULL, $rows[0][2] ?? NULL], 'A declared key is held, its path below the root, whatever the root is named.');
-    $this->assertCount(1, $rows);
   }
 
   /**

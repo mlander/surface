@@ -39,7 +39,7 @@
     "plain | key": {
       "gate": "e47708c96e9e",
       "fs": "bd427ce67e42",
-      "fh": "1e43fd1dddf9"
+      "fh": "03b744ee5ff9"
     },
     "plain | path": {
       "nope": "1bf169f7d887",
@@ -90,7 +90,7 @@
       "fb true": "91077d1ba64f"
     },
     "booleans | key": {
-      "fb": "3427e025921b"
+      "fb": "e65c434962c1"
     },
     "booleans | path": {
       "nope": "1bf169f7d887",
@@ -295,31 +295,31 @@
         [
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.fb\" on hand to \"abc\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query given \"q.fb\" on hand to \"abc\", which the key does not accept: This value must be of type boolean, string given."
           },
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.fb\" on hand to \"abc\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query fixes \"q.fb\" on hand to \"abc\", which the key does not accept: This value must be of type boolean, string given."
           }
         ],
         [
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.fb\" on hand to \"5\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query given \"q.fb\" on hand to \"5\", which the key does not accept: This value must be of type boolean, string given."
           },
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.fb\" on hand to \"5\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query fixes \"q.fb\" on hand to \"5\", which the key does not accept: This value must be of type boolean, string given."
           }
         ],
         [
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.fb\" on hand to \"1.5\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query given \"q.fb\" on hand to \"1.5\", which the key does not accept: This value must be of type boolean, string given."
           },
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.fb\" on hand to \"1.5\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query fixes \"q.fb\" on hand to \"1.5\", which the key does not accept: This value must be of type boolean, string given."
           }
         ],
         [
@@ -337,51 +337,51 @@
         [
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.fb\" on hand to \"2026-01-01\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query given \"q.fb\" on hand to \"2026-01-01\", which the key does not accept: This value must be of type boolean, string given."
           },
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.fb\" on hand to \"2026-01-01\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query fixes \"q.fb\" on hand to \"2026-01-01\", which the key does not accept: This value must be of type boolean, string given."
           }
         ],
         [
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.fb\" on hand to \"2026-01-01T10:00:00\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query given \"q.fb\" on hand to \"2026-01-01T10:00:00\", which the key does not accept: This value must be of type boolean, string given."
           },
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.fb\" on hand to \"2026-01-01T10:00:00\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query fixes \"q.fb\" on hand to \"2026-01-01T10:00:00\", which the key does not accept: This value must be of type boolean, string given."
           }
         ],
         [
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.fb\" on hand to \"2026-01-01T10:00:00+02:00\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query given \"q.fb\" on hand to \"2026-01-01T10:00:00+02:00\", which the key does not accept: This value must be of type boolean, string given."
           },
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.fb\" on hand to \"2026-01-01T10:00:00+02:00\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query fixes \"q.fb\" on hand to \"2026-01-01T10:00:00+02:00\", which the key does not accept: This value must be of type boolean, string given."
           }
         ],
         [
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.fb\" on hand to \"[\\\"a\\\",\\\"b\\\"]\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query given \"q.fb\" on hand to \"[\\\"a\\\",\\\"b\\\"]\", which the key does not accept: This value must be of type boolean, string given."
           },
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.fb\" on hand to \"[\\\"a\\\",\\\"b\\\"]\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query fixes \"q.fb\" on hand to \"[\\\"a\\\",\\\"b\\\"]\", which the key does not accept: This value must be of type boolean, string given."
           }
         ],
         [
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.fb\" on hand to \"{\\\"a\\\":1}\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query given \"q.fb\" on hand to \"{\\\"a\\\":1}\", which the key does not accept: This value must be of type boolean, string given."
           },
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.fb\" on hand to \"{\\\"a\\\":1}\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query fixes \"q.fb\" on hand to \"{\\\"a\\\":1}\", which the key does not accept: This value must be of type boolean, string given."
           }
         ],
         [
@@ -407,21 +407,21 @@
         [
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.fb\" on hand to 5, which the key does not accept: The value you selected is not a valid choice."
+            "message": "query given \"q.fb\" on hand to 5, which the key does not accept: This value must be of type boolean, integer given."
           },
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.fb\" on hand to 5, which the key does not accept: The value you selected is not a valid choice."
+            "message": "query fixes \"q.fb\" on hand to 5, which the key does not accept: This value must be of type boolean, integer given."
           }
         ],
         [
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.fb\" on hand to 1.5, which the key does not accept: The value you selected is not a valid choice."
+            "message": "query given \"q.fb\" on hand to 1.5, which the key does not accept: This value must be of type boolean, number given."
           },
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.fb\" on hand to 1.5, which the key does not accept: The value you selected is not a valid choice."
+            "message": "query fixes \"q.fb\" on hand to 1.5, which the key does not accept: This value must be of type boolean, number given."
           }
         ],
         [
@@ -435,11 +435,11 @@
         [
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.fb\" on hand to \"SECRETRAW\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query given \"q.fb\" on hand to \"SECRETRAW\", which the key does not accept: This value must be of type boolean, string given."
           },
           {
             "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.fb\" on hand to \"SECRETRAW\", which the key does not accept: The value you selected is not a valid choice."
+            "message": "query fixes \"q.fb\" on hand to \"SECRETRAW\", which the key does not accept: This value must be of type boolean, string given."
           }
         ]
       ],

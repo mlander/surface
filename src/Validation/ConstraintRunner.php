@@ -39,7 +39,7 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  * constraints every definition implies (PrimitiveType, NotNull,
  * ComplexData) read it always.
  *
- * Two questions, one method each:
+ * One question:
  * - check(): one constraint plugin, with its options, on one value, and
  *   nothing else: never the constraints of the value's own definition or
  *   of its properties. Surface's own plugins (VALUE_ONLY) run on the
@@ -53,10 +53,9 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  *   `drupal:<id>` check a document names. typed() is public for one
  *   reader, ValueOnlyConstraintsTest, which holds the two paths to the
  *   same violations.
- * - conforms(): a value against a whole definition, every constraint at
- *   every depth, the implied ones included. A default or fixed value from
- *   a site or a route (KeyPaths) asks this; outputs and a watched value are
- *   held to their schema by the dialect's validator (Pipeline\Conforming).
+ * A whole value is never held here: inputs, outputs, a watched value and
+ * a site's or a route's value (KeyPaths) are held to their schema by the
+ * dialect's validator, which asks check() for each `drupal:` check.
  *
  * Surface's own eight constraint plugins read the value alone, which
  * ValueOnlyConstraintsTest shows, so they run without a typed value.
@@ -220,27 +219,6 @@ final class ConstraintRunner {
     $constraint = $this->typedDataManager->getValidationConstraintManager()->create($id, $options);
     $this->plain ??= (new BasicRecursiveValidatorFactory($this->classResolver))->createValidator();
     return $this->plain->validate($value, $constraint, $constraint->groups);
-  }
-
-  /**
-   * Validates a value against a whole definition.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition, as refined for the values being judged.
-   * @param mixed $value
-   *   The value.
-   * @param string|null $name
-   *   The root's name, if it has one; a violation's property path starts
-   *   below the root either way.
-   *
-   * @return \Symfony\Component\Validator\ConstraintViolationListInterface
-   *   What the definition's constraints refused, at every depth.
-   *
-   * @throws \InvalidArgumentException
-   *   When Typed Data cannot hold the value at all, a string for a map.
-   */
-  public function conforms(DataDefinitionInterface $definition, mixed $value, ?string $name = NULL): ConstraintViolationListInterface {
-    return DefinitionTypedData::create($this->typedDataManager, $definition, $value, $name)->validate();
   }
 
 }

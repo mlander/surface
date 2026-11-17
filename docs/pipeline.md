@@ -271,6 +271,11 @@ Nothing is cast. Input arrives from people and payloads, so `accept()`
 coerces it; an output is produced by code that had the declaration in
 front of it, so a wrong type is a violation rather than a notation.
 
+The watched-value check and the key paths (a site's default, a route's
+value) hold one value with it too, as the one output of
+`Surface::holding()`, after reading the value through the coercion
+table.
+
 It is not part of `submit()`. Emitting is the host's own act, not a
 pipeline stage, and the pipeline has no way to run it; what the pipeline
 offers is the check, so a host, or a generated test, can hold the

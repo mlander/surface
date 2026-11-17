@@ -93,7 +93,8 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
    * table, as accept() reads a value a form posts (Coercion::scalar()),
    * then written as SurfacePipelineInterface::document() writes it: a date
    * and time with its offset (Coercion::served()), at every depth of a
-   * list or a map.
+   * list or a map. A site's or a route's value is written the same way
+   * before it is held (KeyPaths).
    *
    * @param \PortableSchema\Builder\Schema $schema
    *   The value's built schema.
@@ -102,8 +103,10 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
    *
    * @return mixed
    *   The value, as the document holds it.
+   *
+   * @internal
    */
-  protected static function written(Schema $schema, mixed $value): mixed {
+  public static function written(Schema $schema, mixed $value): mixed {
     if (is_array($value)) {
       if (DefinitionSchema::isList($schema)) {
         $item = DefinitionSchema::itemNode($schema);

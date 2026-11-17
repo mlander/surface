@@ -17,8 +17,10 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Pipeline\Coercion;
 use Drupal\surface\Pipeline\SurfacePipeline;
+use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\ValueState;
-use Drupal\surface\Validation\ConstraintRunner;
+use Drupal\surface\Refinement\WatchedValueCheck;
+use Drupal\surface\Surface;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -35,8 +37,9 @@ use PortableSchema\Builder\Schema;
  * whole attached structure, a secret or a computed key. A value is read
  * through the coercion table, so text as a form posts it (`40`, `true`, a
  * JSON list or object) and a value already typed (from YAML or PHP) both
- * arrive in the key's type, and held to the key's definition with typed
- * data, its constraints included.
+ * arrive in the key's type, and held to the key's schema by the dialect's
+ * validator, as an output is (SurfacePipelineInterface::conformOutput()),
+ * its checks included.
  *
  * Each refusal names where the value came from, the resource, the key and
  * why: `$where` carries `resource` and `at` (the path its keys sit under
@@ -51,11 +54,11 @@ use PortableSchema\Builder\Schema;
  *
  * A key's facts are read from its node. On the sealed resource that is the
  * entry's node (Entry::schema()), stepped down in step with the
- * definition, which is handed to the constraint runner alone; a key that
- * holds a child frame's too. What the build writes (writeDefaults(),
- * resolve(), setDefault()) is a builder's definitions before sealing,
- * which no entry holds: held() reads such a definition's facts from the
- * definition, and reads no node for it.
+ * definition; a key that holds a child frame's too. What the build writes
+ * (writeDefaults(), resolve(), setDefault()) is a builder's definitions
+ * before sealing, which no entry holds: held() reads such a definition's
+ * facts from the definition, and holds the value to the schema read from
+ * it (DefinitionSchema::of()).
  *
  * Decision: see docs/decisions.md#a-site-sets-a-default-in-configuration.
  * Decision: see
@@ -69,11 +72,11 @@ final class KeyPaths {
   /**
    * Constructs the key paths.
    *
-   * @param \Drupal\surface\Validation\ConstraintRunner $constraintRunner
-   *   The constraint runner, which holds a value to its key's definition.
+   * @param \Drupal\surface\Pipeline\SurfacePipelineInterface $pipeline
+   *   The pipeline, whose conform verb holds a value to its key's schema.
    */
   public function __construct(
-    protected readonly ConstraintRunner $constraintRunner,
+    protected readonly SurfacePipelineInterface $pipeline,
   ) {}
 
   /**
@@ -653,18 +656,23 @@ final class KeyPaths {
   }
 
   /**
-   * Holds a value to its key's definition, as the pipeline would.
+   * Holds a value to its key's schema, as the pipeline holds an output.
+   *
+   * The key's schema is held as the one output of a frame
+   * (Surface::holding()), by the dialect's validator, the value first
+   * written as the document holds it (WatchedValueCheck::written()), as
+   * a watched value is.
    *
    * @param \PortableSchema\Builder\Schema|null $node
-   *   The key's node, whose facts are read; NULL for a builder's
-   *   definition, whose facts are read from it (held()).
+   *   The key's schema; NULL for a builder's definition, whose schema is
+   *   read from it (held()).
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key's definition, which the constraint runner is handed.
+   *   The key's definition.
    * @param mixed $value
    *   The value, coerced.
    *
    * @return string|null
-   *   The first violation's message, or NULL when the value fits.
+   *   The first refusal's message, or NULL when the value fits.
    */
   protected function violation(?Schema $node, DataDefinitionInterface $definition, mixed $value): ?string {
     $properties = static::propertiesOf($node, $definition);
@@ -680,15 +688,10 @@ final class KeyPaths {
       }
       return NULL;
     }
-    if (is_array($value) && ($node === NULL ? $definition->isRequired() : NodeFacts::isRequired($node)) && method_exists($definition, 'setRequired')) {
-      // Required means configured, and the empty list is, as the pipeline
-      // reads it; core's NotNull reads it as null.
-      // Decision: see docs/decisions.md#required-means-must-hold-a-value.
-      $definition = (clone $definition)->setRequired(FALSE);
-    }
-    foreach ($this->constraintRunner->conforms($definition, $value) as $violation) {
-      $at = (string) $violation->getPropertyPath();
-      return ($at === '' ? '' : $at . ': ') . strip_tags((string) $violation->getMessage());
+    $schema = $node ?? DefinitionSchema::of($definition);
+    foreach ($this->pipeline->conformOutput(Surface::holding($schema), ['value' => WatchedValueCheck::written($schema, $value)]) as $violation) {
+      $at = $violation->path;
+      return ($at === '' ? '' : $at . ': ') . strip_tags((string) $violation->message);
     }
     return NULL;
   }

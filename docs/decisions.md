@@ -2443,6 +2443,8 @@ document, refusal or stored value changed.
   outputs and a watched value are held to their schema by the dialect's
   validator instead
   ([Outputs conform through the dialect's validator](#outputs-conform-through-the-dialects-validator)).
+  *Changed 2026-11-17 (slice 34):* a site's or a route's value is too,
+  and `conforms()` is deleted; the runner answers `check()` alone.
   Nothing else takes the typed data manager to validate such a value:
   `PortableValidator`, `DrupalCheckProvider` and the build step's
   declaring phase hold the runner,
@@ -4127,7 +4129,9 @@ the two faults below, fixed on purpose.
   `held()`, which reads the type and the DateOnly flag from it and walks
   a list's item and a map's properties in step (`accepted()`,
   `violation()`; the definition goes to `ConstraintRunner::conforms()`
-  alone). `pathsOf()` reads a map's properties from its node, and reads
+  alone; since slice 34 the value is held to the key's schema by the
+  dialect's validator and the runner is not asked).
+  `pathsOf()` reads a map's properties from its node, and reads
   no node for a value that is no array, which it names whole. What a
   build writes (`writeDefaults()`, `resolve()`, `setDefault()`, and a
   context's fixed value in `Declaring`) is a builder's definitions before
@@ -4331,7 +4335,9 @@ the two faults below, fixed on purpose.
   `SchemaWidgetInterface::drawsSchema()` and `WidgetChoice::forSchema()`:
   [A widget is chosen by the key's schema](#a-widget-is-chosen-by-the-keys-schema).)
 - *`ConstraintRunner`* (`conforms()`, `check()`, `typed()`), and
-  `KeyPaths::violation()`'s copy that is not required.
+  `KeyPaths::violation()`'s copy that is not required. (Slice 34:
+  `conforms()` and that copy are gone; `KeyPaths` holds a value to its
+  key's schema by the dialect's validator.)
 - *Ports* (`SurfaceInterface::getPortDefinition()`), read in
   `Validating::placeAt()`.
 - *The builders and readers that make definitions*: `SurfaceBuilder`,
@@ -7079,9 +7085,11 @@ output entries' schemas, in the input path's codes.
   `accept()` reads what a form posts (a form's `"1"` is `TRUE`) and
   written as the document holds it (a date and time with its offset); a
   float the table leaves a float is not handed to a refiner typed for an
-  integer. *Open:* a scalar at a string key (`TRUE`) is read as its text
-  and handed over, as Typed Data's string took any scalar, since the value
-  baseline pins it (`values_test.keys`, gate `TRUE` and `FALSE`). A string
+  integer. *Open, revisit in slice 35:* a scalar at a string key (`TRUE`)
+  is read as its text and handed over, as Typed Data's string took any
+  scalar, since the value baseline pins it (`values_test.keys`, gate
+  `TRUE` and `FALSE`); a site's or a route's value is read the same way
+  (next point). A string
   at a key that holds a list of field items, which Typed Data let
   through, is withheld now; and a value whose check threw Symfony's
   `UnexpectedTypeException` out of `accept()` (`TRUE` at a block's
@@ -7091,13 +7099,40 @@ output entries' schemas, in the input path's codes.
   the value and `validate()` refuses it with `type`, beside `enum`; the
   input's own check threw the same exception there until the check in a
   branch was left unasked, see
-  [Validation runs through the dialect's validator](#validation-runs-through-the-dialects-validator)). A port's key is held as its schema alone. *Open:* a site's or a route's value (`KeyPaths::violation()`)
-  is still held through `ConstraintRunner::conforms()`: moving it changes
-  the refusals the door corpus pins (316 rows over ten surfaces: Typed
-  Data's sentences become the dialect's, "This value should be of the
-  correct primitive type." becomes "This value must be of type integer,
-  string given.", and an empty or all-null map with required keys is now
-  refused), which waits for the owner's word.
+  [Validation runs through the dialect's validator](#validation-runs-through-the-dialects-validator)).
+  A port's key is held as its schema alone.
+- **A site's or a route's value, the same way** (built 2026-11-17).
+  `KeyPaths::violation()` holds a default or a fixed value to its key's
+  schema as the one output of a frame, written as a watched value is
+  (`WatchedValueCheck::written()`); a builder's definition before sealing
+  is read into its schema first (`DefinitionSchema::of()`). A map is
+  still held key by key. `ConstraintRunner::conforms()` had no other
+  caller and is deleted. What moved in the door corpus (117 rows over
+  nine surfaces, no row of `frames`, and 35 rows of `narrow`, which
+  `DoorCorpusNarrowTest` pins and which are not written yet): Typed
+  Data's sentences become the
+  dialect's ("This value should be of the correct primitive type." and
+  "This value should not be null." become "This value must be of type
+  integer, string given." and "... null given."; "The value you selected
+  is not a valid choice." becomes a `type` sentence where the type
+  refuses first). Refused now: NULL at a key that always holds a value; a
+  list for a map; an empty or all-null map with required keys in a list
+  (`[[]]`); a date and time with no offset (`2026-01-01`, `"0"`); a URI
+  with no scheme; `TRUE` for a float; a float for a datetime. Taken now:
+  a choice met in the key's type (`TRUE` for an integer key whose choices
+  are `"01"` and `"02"`, a boolean whose choices are written as numbers,
+  and `TRUE` at a string key whose choices hold `"1"`, read as its text
+  by the leniency above while the key is handed `TRUE`);
+  NULL for an optional key with NotBlank or a Count minimum; NULL at a
+  required key that holds variants, whose schema states no type. A key of
+  the `any` type that holds no variants and is not held whole has no
+  document, at inputs or here, so holding a value at it throws the
+  `LogicException` the document writer gives
+  (`LeafTypes::unwritten()`), as `validate()` does for such a key.
+- **The input side of the open map** (a map that names no keys read as
+  `type: object` at inputs) is held for slice 35: it moves 20 rows of
+  the value baseline (`values_test.hand_built`, `/nested/spare` and
+  `/loose`).
 
 Why: the outputs were Surface's own walk and then Typed Data, read from
 definitions, in Symfony's codes, held for the stage alone; the inputs
@@ -7107,7 +7142,7 @@ against the served document gets the server's answer.
 
 (`OutputsDocument`, `Conforming`, `OperationRunner`,
 `ResourceOperationTool`, `WatchedValueCheck`, `KeyPaths`,
-`OutputsConformanceTest`, `OutputsRecordTest`)
+`OutputsConformanceTest`, `OutputsRecordTest`, `DoorCorpusTest`)
 
 ### A link is held to what a link field takes
 

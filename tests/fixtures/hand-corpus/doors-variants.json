@@ -41,7 +41,7 @@
       "kind4": "8c2c6360f36b",
       "labeled": "58e8bf313e9c",
       "kind3": "1e8e4bf95922",
-      "req_v": "fb0ccb87b14b"
+      "req_v": "5f2482cb4e5c"
     },
     "plain | path": {
       "nope": "1bf169f7d887",
@@ -2029,14 +2029,8 @@
           "0"
         ],
         [
-          {
-            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.req_v\" on hand to \"\", which the key does not accept: This value should not be null."
-          },
-          {
-            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.req_v\" on hand to \"\", which the key does not accept: This value should not be null."
-          }
+          null,
+          null
         ],
         [
           "2026-01-01",
@@ -2089,14 +2083,8 @@
           true
         ],
         [
-          {
-            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query given \"q.req_v\" on hand to null, which the key does not accept: This value should not be null."
-          },
-          {
-            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
-            "message": "query fixes \"q.req_v\" on hand to null, which the key does not accept: This value should not be null."
-          }
+          null,
+          null
         ],
         [
           "SECRETRAW",

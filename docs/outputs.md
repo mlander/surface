@@ -161,6 +161,13 @@ gave them, since nothing is refused after a write.
 A secret output is refused when it is declared: an output is served to
 whoever runs the operation, and a secret is never read back.
 
+Two callers hold one value this way, as the one output of a frame
+(`Surface::holding()`): the watched-value check, before a refiner is
+handed a value, and the key paths (`KeyPaths`), for a default the site
+sets or a value a route gives or fixes. Each reads the value through the
+coercion table first, as `accept()` does, so the rule above that nothing
+is coerced is about what a host emits.
+
 This is what makes generated conformance tests possible: a loop over
 some fixtures, one `conformOutput()` per emitted array, and a host that
 said what it emits is held to it by a test that knows nothing else about

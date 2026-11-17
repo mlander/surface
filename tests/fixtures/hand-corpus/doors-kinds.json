@@ -37,28 +37,28 @@
     "plain | key": {
       "gate": "a2c115ded816",
       "l_blank": "487435d21590",
-      "lr_blank": "0bf980198c9e",
+      "lr_blank": "b359dec8cf36",
       "lm_blank": "c847cfe9c853",
       "ll_blank": "6740438187af",
       "lc_blank": "9fbb87ba4c5b",
       "l_zero": "8557c7889bc4",
-      "lr_zero": "3efe0c10befe",
+      "lr_zero": "597abe76e3ce",
       "lm_zero": "4fffa3ecb874",
       "ll_zero": "1bfc0eb493d4",
       "lc_zero": "3c511b44f292",
       "l_none": "96e3d9ea2665",
-      "lr_none": "1e2e05a2a494",
+      "lr_none": "cac4193bcdae",
       "lm_none": "3a0eea4ab2a7",
       "ll_none": "952ebbbba807",
       "lc_none": "1b6b8a947d4c",
       "l_mk": "467b60c752d5",
-      "lr_mk": "cc8b1340086a",
+      "lr_mk": "e0e2f0bcde17",
       "lm_mk": "b59ff596ada4",
       "ll_mk": "e3ad76a65605",
       "lc_mk": "db990695711c",
-      "req": "cb1dcdc4945e",
-      "held": "aea5392572a2",
-      "held_bool": "a47b5b1307b0",
+      "req": "714e78d1654c",
+      "held": "7daa78e82462",
+      "held_bool": "81f932949f50",
       "sec": "e06301ef4ef6",
       "sec_d": "4c16020b5dac",
       "sec_held": "dba963ae339a",
@@ -68,32 +68,32 @@
       "lk": "948f9802ffae",
       "fixed": "bda5e938d44e",
       "d_null": "b4f166b6fe2b",
-      "d_int": "428ffa5ebdbf",
-      "d_bool": "b3738e7ed4fa",
+      "d_int": "69c98190895b",
+      "d_bool": "8d14a3ac29de",
       "d_map": "ac2308c36194",
       "d_mapnull": "30e9f2593510",
-      "rd": "54b729cf848f",
-      "empty_map": "227e9a733d37",
+      "rd": "27bf7000cddf",
+      "empty_map": "b0c96f7a0089",
       "reworded": "92d67aaa886d",
       "d_list": "ab239b50fb25",
-      "mm": "b338cf4d2492",
-      "lom": "d9c5e87d07c3",
-      "lol": "c2a59ac925a9",
+      "mm": "a036df31ee4e",
+      "lom": "c761f655bd37",
+      "lol": "3e37e6a355a3",
       "c_str": "09a473fb63c3",
-      "c_int": "ee543256250a",
-      "c_flt": "f079d17a8f6b",
-      "c_bool": "d2bae9a0b7da",
-      "lc_bool": "1715d95d8ec7",
-      "lc_num": "baed8b7e1590",
-      "ts": "d9c7023229f9",
-      "dt": "51bf3324c637",
-      "do": "8c7f729885d3",
-      "bool": "2bae2a57fb20",
-      "flt": "26d59276a6f5",
-      "email": "118f76c012de",
-      "uri": "59f43a1f74ef",
-      "cons": "0dcd185b02de",
-      "any": "b029aafa18f0",
+      "c_int": "09adace619c5",
+      "c_flt": "f224df3e9ab0",
+      "c_bool": "429f47a48e76",
+      "lc_bool": "0462143b2a4e",
+      "lc_num": "726276ad0e67",
+      "ts": "80fab9b67dd5",
+      "dt": "7c40b93ff7c5",
+      "do": "ccea183f2cfe",
+      "bool": "36b625191766",
+      "flt": "19efc4dab927",
+      "email": "9baffbccf418",
+      "uri": "3fe89c6eaeb8",
+      "cons": "e9c67d37aaf4",
+      "any": "122247391f18",
       "narrowed": "69b018082c47",
       "sec_stale": "a5e7b793f37e",
       "sec_len": "3e9a9f177c96",
@@ -101,7 +101,7 @@
       "sec_email": "2884a7ce6db5",
       "lsec": "e1ac00e1e4c4",
       "ruled": "d82951db9a27",
-      "each": "37ec58fadc6d",
+      "each": "771ec2cb4c33",
       "third_party_settings": "4304a9cc67f9"
     },
     "plain | path": {
@@ -163,7 +163,7 @@
       "d_mapnull.a": "2dc152f90d2a",
       "d_mapnull.nope": "ab5c6fbf1ec5",
       "rd": "0f2a21512871",
-      "empty_map": "11f8fcccf509",
+      "empty_map": "c3f15602e938",
       "empty_map.nope": "9981c39f64fd",
       "reworded": "6a7ddb22fbdd",
       "d_list": "a32712143e95",
@@ -188,17 +188,17 @@
       "c_int": "8f204bb4219f",
       "c_flt": "dc5f48274043",
       "c_bool": "9857ef68131a",
-      "lc_bool": "0f28eb98914d",
+      "lc_bool": "b3cae5a1f3c1",
       "lc_num": "a3ca8711f546",
       "ts": "fd4bb3712bbe",
-      "dt": "9b235b57d7d4",
+      "dt": "9a528cbff4e2",
       "do": "b05ed0a3c8ce",
       "bool": "124820295771",
-      "flt": "cd85cd6359b7",
+      "flt": "292ddf362d72",
       "email": "25df4a896d00",
-      "uri": "040ae6dae9bb",
+      "uri": "dbb0940f260b",
       "cons": "535b37ad1daf",
-      "any": "ac3718725dfe",
+      "any": "00a0776e9589",
       "narrowed": "6e4bd8cf8120",
       "sec_stale": "a73185787c8b",
       "sec_len": "082a2ba8b052",
@@ -5064,41 +5064,53 @@
         }
       ]
     },
-    "plain | key | any": {
+    "plain | key | lk": {
       "fromDefinition": {
         "class": "Drupal\\tool\\TypedData\\InputDefinition",
-        "type": "any",
-        "label": "Any",
+        "type": "string",
+        "label": "Locked",
         "description": "",
         "required": false,
-        "getDefaultValue": null,
+        "getDefaultValue": "fixed",
         "isLocked": false,
         "getExamples": [],
         "isMultiple": false,
-        "constraints": [],
+        "constraints": {
+          "PrimitiveType": []
+        },
         "settings": [],
         "array": {
+          "constraints": {
+            "PrimitiveType": []
+          },
           "description": "",
-          "label": "Any",
-          "required": false
+          "label": "Locked",
+          "required": false,
+          "type": "string"
         }
       },
       "outputFromDefinition": {
         "class": "Drupal\\tool\\TypedData\\OutputDefinition",
-        "type": "any",
-        "label": "Any",
+        "type": "string",
+        "label": "Locked",
         "description": "",
         "required": false,
         "getDefaultValue": null,
         "getExamples": [],
         "isMultiple": false,
-        "constraints": [],
+        "constraints": {
+          "PrimitiveType": []
+        },
         "settings": [],
         "array": {
+          "constraints": {
+            "PrimitiveType": []
+          },
           "description": "",
-          "label": "Any",
+          "label": "Locked",
           "nullable": false,
-          "required": false
+          "required": false,
+          "type": "string"
         }
       },
       "held builder": [
@@ -5147,30 +5159,32 @@
           "{\"a\":1}"
         ],
         [
-          [
-            "a",
-            "b"
-          ],
-          [
-            "a",
-            "b"
-          ]
-        ],
-        [
           {
-            "a": 1
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.lk\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
           },
           {
-            "a": 1
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.lk\" on hand to [\"a\",\"b\"], which the key does not accept: it holds one string, not a list or a map."
           }
         ],
         [
-          5,
-          5
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query given \"q.lk\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
+          },
+          {
+            "thrown": "Drupal\\surface\\ResourceBuild\\ValueNotAcceptedException",
+            "message": "query fixes \"q.lk\" on hand to {\"a\":1}, which the key does not accept: it holds one string, not a list or a map."
+          }
         ],
         [
-          1.5,
-          1.5
+          "5",
+          "5"
+        ],
+        [
+          "1.5",
+          "1.5"
         ],
         [
           true,
@@ -5186,30 +5200,68 @@
         ]
       ],
       "wider": {
-        "string 1": [],
+        "string 1": {
+          "lk": "it may be cleared, which the schema refuses: string is not nullable"
+        },
         "string 0": [],
         "string nullable 1": [],
         "string nullable 0": [],
-        "integer 1": [],
-        "integer 0": [],
-        "integer nullable 1": [],
-        "integer nullable 0": [],
-        "boolean 1": [],
-        "boolean 0": [],
-        "float 1": [],
-        "float 0": [],
+        "integer 1": {
+          "lk": "it is a string, which the schema types integer, an integer"
+        },
+        "integer 0": {
+          "lk": "it is a string, which the schema types integer, an integer"
+        },
+        "integer nullable 1": {
+          "lk": "it is a string, which the schema types integer, an integer"
+        },
+        "integer nullable 0": {
+          "lk": "it is a string, which the schema types integer, an integer"
+        },
+        "boolean 1": {
+          "lk": "it is a string, which the schema types boolean, a boolean"
+        },
+        "boolean 0": {
+          "lk": "it is a string, which the schema types boolean, a boolean"
+        },
+        "float 1": {
+          "lk": "it is a string, which the schema types float, a float"
+        },
+        "float 0": {
+          "lk": "it is a string, which the schema types float, a float"
+        },
         "ignore 1": [],
         "ignore 0": [],
-        "mapping 1": [],
-        "mapping 0": [],
-        "sequence string 1": [],
-        "sequence string 0": [],
-        "sequence mapping 1": [],
-        "sequence mapping 0": [],
-        "constrained 1": [],
-        "constrained 0": [],
-        "loose 1": [],
-        "loose 0": []
+        "mapping 1": {
+          "lk": "it is one value, which the schema types mapping, a mapping"
+        },
+        "mapping 0": {
+          "lk": "it is one value, which the schema types mapping, a mapping"
+        },
+        "sequence string 1": {
+          "lk": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence string 0": {
+          "lk": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence mapping 1": {
+          "lk": "it is one value, which the schema types sequence, a sequence"
+        },
+        "sequence mapping 0": {
+          "lk": "it is one value, which the schema types sequence, a sequence"
+        },
+        "constrained 1": {
+          "lk": "it may be blank, which the schema's NotBlank refuses"
+        },
+        "constrained 0": {
+          "lk": "it may be blank, which the schema's NotBlank refuses"
+        },
+        "loose 1": {
+          "lk": "it may be more than 99 characters long, which the schema refuses"
+        },
+        "loose 0": {
+          "lk": "it may be more than 99 characters long, which the schema refuses"
+        }
       }
     },
     "plain | path | lk": {
