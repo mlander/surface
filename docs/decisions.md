@@ -7091,7 +7091,10 @@ output entries' schemas, in the input path's codes.
 - **A watched value, the same way.** The watched-value check
   (`WatchedValueCheckInterface::admits(Schema $schema, $value)`) holds a
   value to its key's schema as the one output of a frame
-  (`Surface::holding()`), the value read through the coercion table as
+  (`Surface::holding()`; what it computes is kept for the request, see
+  [A watched value is asked once per
+  request](#a-watched-value-is-asked-once-per-request)), the value read
+  through the coercion table as
   `accept()` reads what a form posts (a form's `"1"` is `TRUE`) and
   written as the document holds it (a date and time with its offset); a
   float the table leaves a float is not handed to a refiner typed for an
@@ -15412,6 +15415,54 @@ as before otherwise.
 
 (`PortableValidator::reachesOutside()`, `PortableValidator::compiled()`,
 `CompiledAloneParityTest`, `CompiledAloneTest`)
+
+### A watched value is asked once per request
+
+Decided 2026-11-17. One submit asked the watched-value check the same
+few questions many times (`registration.step3:configure`: 128 checks,
+7 schemas, 14 pairs of a schema and a value), and each repeat rebuilt
+the holding data surface's outputs document and ran the validator
+again. `WatchedValueAnswers` now keeps two results of that computation
+for the request, by a hash of the schema as written and whether it is
+required:
+
+- **The holding data surface**, so its outputs document is built once.
+  Not kept when the document's cacheability names a cache context or a
+  maximum age: an option list read live or for one account may change
+  inside the request.
+- **The answer**, by the hash of the value as the check writes it
+  (`WatchedValueCheck::written()`), when every check the schema and its
+  document name is `drupal:Choice` or `drupal:LabeledChoice` with no
+  `callback`. Those read only the value and their own options.
+- **Never kept:** the answer for a schema that names any other check
+  (an entity that must exist, an extension that must be installed, a
+  storage's `Unique`), since its answer may change with the site; for a
+  schema or a value that holds an object (other than a plain object or
+  a markup in the schema); for a check that threw.
+- **For how long:** until the end of the request, or the next
+  invalidation of any cache tag (`ResourceRegistryInvalidator`, where
+  `PortableValidator::forget()` is called). At most 64 holding data
+  surfaces and 1,024 answers, the oldest let go first.
+- **Nothing decides a value here.** A kept answer is what the validator
+  answered for the same schema and the same written value; nothing
+  reads the keywords a second way.
+- **The saving.** Host CLI, SQLite, a new request each run, medians:
+  the watched-value checks of a dry-run submit of the defaults from
+  16.9 to 4.0 ms (`registration.step3:configure`, whole submit 27.9 to
+  14.8), 6.1 to 1.0 (`event.sales`, 10.6 to 5.2), 6.0 to 1.1
+  (`event.spotlight`, 30.8 to 26.1), 5.1 to 2.0
+  (`block.placement:create`, 40.4 to 37.5). A repeated check from about
+  0.1 ms to 0.003. About 39 KB is kept for the largest.
+- **Proof.** `WatchedValueAnswersParityTest` asks every watched-value
+  check of every example and test surface, for their value sets and for
+  values their schemas refuse, both as kept and with nothing kept: the
+  same answers (60 surfaces, 605 value sets, 26,757 checks, 19,746 from
+  kept answers, 672 of them refusals). `WatchedValueAnswersTest` pins
+  the drop on invalidation, and that a check reading the site is asked
+  again.
+
+(`WatchedValueAnswers`, `WatchedValueCheck::admits()`,
+`WatchedValueAnswersParityTest`, `WatchedValueAnswersTest`)
 
 ### The form is drawn from the document
 

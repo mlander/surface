@@ -160,7 +160,8 @@ final class Surface implements SurfaceInterface {
    * What one value is held to by the conform verb
    * (SurfacePipelineInterface::conformOutput()): the watched-value check
    * holds a value to its key's schema this way, through the dialect's
-   * validator.
+   * validator, and keeps the one made for a schema for the request
+   * (WatchedValueAnswers).
    *
    * @param \PortableSchema\Builder\Schema $schema
    *   The key's built schema.
