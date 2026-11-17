@@ -10,6 +10,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_door_test\Access\Broken\RouteReadingAccess;
 use Drupal\surface_door_test\Storage\DoorNoteStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * Answered by an access class that reads the route.
@@ -22,7 +23,9 @@ final class RouteReadingAccessResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('note', 'string', t('Note'), default: 'Open');
+    $inputs->addSchema('note', Schema::string()
+      ->title(t('Note'))
+      ->default('Open'));
   }
 
 }

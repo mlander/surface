@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_route_test\Resource\CardResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * What plain paper takes: its weight.
@@ -21,7 +22,9 @@ final class PlainPaperStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('weight', 'integer', 'Weight', default: 120);
+    $inputs->addSchema('weight', Schema::integer()
+      ->title('Weight')
+      ->default(120));
   }
 
 }

@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Broken: a gate, "gate_test.note:rename", naming what the site does not have.
@@ -22,7 +23,8 @@ final class MissingOperationGateStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('jam', 'string', 'Jam');
+    $inputs->addSchema('jam', Schema::string()
+      ->title('Jam'));
   }
 
 }

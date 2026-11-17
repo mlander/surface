@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_door_test\Storage\Broken\RequestReadingStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * Stored by a storage that reads the request.
@@ -21,7 +22,9 @@ final class RequestReadingStorageResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('note', 'string', t('Note'), default: 'Open');
+    $inputs->addSchema('note', Schema::string()
+      ->title(t('Note'))
+      ->default('Open'));
   }
 
 }

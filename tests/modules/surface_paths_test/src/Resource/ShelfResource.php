@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Shelves: things with identity, each kind under its standard id.
@@ -51,7 +52,9 @@ final class ShelfResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('id', 'string', 'Machine name')->setRequired(TRUE);
+    $inputs->addSchema('id', Schema::string()
+      ->title('Machine name')
+      ->required());
   }
 
 }

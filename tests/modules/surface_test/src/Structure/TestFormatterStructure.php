@@ -23,19 +23,20 @@ final class TestFormatterStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('prefix', 'string', t('Prefix'))
-      ->setDescription(t('Text placed before each value.'))
-      ->addConstraint('Length', ['max' => 10]);
-    $inputs->add('casing', 'string', t('Casing'), default: 'none')
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'none' => t('As written'),
-          'uppercase' => t('Upper case'),
-          'lowercase' => t('Lower case'),
-        ],
-      ]);
-    $inputs->add('variant', 'string', t('Variant'))
-      ->setDescription(t('Pick a casing other than none to see its variants.'));
+    $inputs->addSchema('prefix', Schema::string()
+      ->title(t('Prefix'))
+      ->description(t('Text placed before each value.'))
+      ->maxLength(10));
+    $inputs->addSchema('casing', Schema::options([
+      'none' => t('As written'),
+      'uppercase' => t('Upper case'),
+      'lowercase' => t('Lower case'),
+    ])
+      ->title(t('Casing'))
+      ->default('none'));
+    $inputs->addSchema('variant', Schema::string()
+      ->title(t('Variant'))
+      ->description(t('Pick a casing other than none to see its variants.')));
   }
 
   /**

@@ -8,6 +8,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Alters every content entity resource at once, by the deriver's base id.
@@ -21,7 +22,8 @@ final class EntityContentAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('reviewer_note', 'string', $this->t('Reviewer note'));
+    $inputs->addSchema('reviewer_note', Schema::string()
+      ->title($this->t('Reviewer note')));
   }
 
 }

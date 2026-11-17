@@ -11,6 +11,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\my_module\Shape\HexColor;
 use Drupal\my_module\Storage\MyColorsStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * My module's colors: one shape, used at two keys.
@@ -34,11 +35,15 @@ final class MyColorsResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('link_color', HexColor::class, t('Link color'), default: '#0969DA')
-      ->setRequired(TRUE);
+    $inputs->addSchema('link_color', Schema::of(HexColor::class)
+      ->title(t('Link color'))
+      ->default('#0969DA')
+      ->required());
 
-    $inputs->add('background_color', HexColor::class, t('Background color'), default: '#FFFFFF')
-      ->setRequired(TRUE);
+    $inputs->addSchema('background_color', Schema::of(HexColor::class)
+      ->title(t('Background color'))
+      ->default('#FFFFFF')
+      ->required());
   }
 
 }

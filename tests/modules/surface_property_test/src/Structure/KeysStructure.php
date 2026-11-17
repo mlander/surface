@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_property_test\Structure;
 
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\Attribute\Structure;
@@ -31,38 +30,48 @@ final class KeysStructure implements StructureInterface {
     $about = ArrangementGroup::fieldset('about', t('About'));
     $more = ArrangementGroup::details('more', t('More'), collapsed: TRUE, weight: 5, description: t('Rarely needed.'));
 
-    $name = $inputs->add('name', 'string', t('Name'))
-      ->setDescription(t('As printed on the badge.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 64])
-      ->addConstraint('Regex', ['pattern' => '/^\S/', 'message' => t('Start the name with a letter.')]);
-    DefinitionMetadata::setExamples($name, ['Ada Lovelace']);
+    $inputs->addSchema('name', Schema::string()
+      ->title(t('Name'))
+      ->description(t('As printed on the badge.'))
+      ->maxLength(64)
+      ->check('drupal:Regex', ['pattern' => '/^\S/', 'message' => t('Start the name with a letter.')])
+      ->examples(['Ada Lovelace'])
+      ->required());
     $inputs->describe('name', group: $about, weight: 1, placeholder: t('Full name'), help: t('Shown under the photo.'));
 
-    $inputs->add('frequency', 'string', t('Frequency'), default: 'weekly')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => ['weekly' => t('Weekly'), 'monthly' => t('Monthly')]]);
+    $inputs->addSchema('frequency', Schema::options(['weekly' => t('Weekly'), 'monthly' => t('Monthly')])
+      ->title(t('Frequency'))
+      ->default('weekly')
+      ->required());
     $inputs->describe('frequency', group: $about, weight: 2);
 
-    $inputs->add('email', 'email', t('Email'));
+    $inputs->addSchema('email', Schema::string()->format('email')
+      ->title(t('Email')));
 
-    $inputs->add('id', 'machine_name', t('Handle'));
+    $inputs->addSchema('id', Schema::of('drupal:config/machine_name')
+      ->title(t('Handle')));
 
-    $inputs->add('code', Code::class, t('Code'));
+    $inputs->addSchema('code', Schema::of(Code::class)
+      ->title(t('Code')));
 
-    $inputs->add('note', 'string', t('Note'))
-      ->setSetting('multiline', TRUE);
+    $inputs->addSchema('note', Schema::string()
+      ->title(t('Note'))
+      ->ui(widget: 'textarea'));
     $inputs->describe('note', group: $more, prefix: t('Note:'), suffix: t('(optional)'));
 
-    $inputs->add('day', 'string', t('Day'))
-      ->setSetting('widget', 'date');
+    $inputs->addSchema('day', Schema::string()
+      ->title(t('Day'))
+      ->ui(widget: 'date'));
 
     $tags = $inputs->addList('tags', 'string', t('Tags'), default: [])
       ->addConstraint('Count', ['max' => 5]);
     $tags->getItemDefinition()->addConstraint('Length', ['max' => 10]);
 
-    $inputs->add('count', 'integer', t('Count'), default: 3)
-      ->addConstraint('Range', ['min' => 1, 'max' => 10]);
+    $inputs->addSchema('count', Schema::integer()
+      ->title(t('Count'))
+      ->default(3)
+      ->minimum(1)
+      ->maximum(10));
 
     $inputs->narrow('email')
       ->when(Condition::equals('frequency', 'monthly'))

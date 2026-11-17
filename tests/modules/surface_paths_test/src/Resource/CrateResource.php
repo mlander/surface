@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Crates: things with identity, two updates on a crate, one `configure`.
@@ -39,8 +40,11 @@ final class CrateResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('id', 'string', 'Machine name')->setRequired(TRUE);
-    $inputs->add('label', 'string', 'Label');
+    $inputs->addSchema('id', Schema::string()
+      ->title('Machine name')
+      ->required());
+    $inputs->addSchema('label', Schema::string()
+      ->title('Label'));
   }
 
 }

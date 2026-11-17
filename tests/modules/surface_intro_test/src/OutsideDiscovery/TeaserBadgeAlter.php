@@ -30,7 +30,8 @@ final class TeaserBadgeAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('badge', 'string', $this->t('Badge'));
+    $inputs->addSchema('badge', Schema::string()
+      ->title($this->t('Badge')));
     $inputs->narrow('limit')
       ->when(Condition::present('badge'))
       ->constrain(Schema::any()->maximum(20));

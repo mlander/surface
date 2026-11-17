@@ -13,6 +13,7 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface\Staging\StagedStorage;
 use Drupal\surface\Storage\StageStorage;
 use Drupal\surface_reserved_test\Storage\ReservedKeysStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A resource whose operations know a key the stage reserves.
@@ -45,7 +46,9 @@ final class ReservedKeysResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', t('Name'), default: '');
+    $inputs->addSchema('name', Schema::string()
+      ->title(t('Name'))
+      ->default(''));
   }
 
 }

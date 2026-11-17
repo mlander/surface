@@ -14,6 +14,7 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_stage_test\LedgerSlug;
 use Drupal\surface_stage_test\Storage\LedgerStorage;
 use Drupal\surface_stage_test\Structure\LedgerTouchStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * A ledger row, by an id its caller names, kept in a key-value collection.
@@ -71,15 +72,19 @@ final class LedgerResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('id', 'string', t('Id'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('id', Schema::string()
+      ->title(t('Id'))
+      ->required());
 
-    $inputs->add('title', 'string', t('Title'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('title', Schema::string()
+      ->title(t('Title'))
+      ->required());
 
-    $inputs->add('note', 'string', t('Note'));
+    $inputs->addSchema('note', Schema::string()
+      ->title(t('Note')));
 
-    $inputs->addList('tags', 'string', t('Tags'));
+    $inputs->addSchema('tags', Schema::list(Schema::string())
+      ->title(t('Tags')));
 
     $inputs->compute('slug', 'string', t('Slug'), from: ['title'], using: LedgerSlug::class, when: Compute::ON_CHANGE);
 

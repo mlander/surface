@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The paid ticket, with calls: a variant of ChildrenStructure's ticket.
@@ -21,9 +22,10 @@ final class PaidTicketStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('price', 'float', t('Price'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 0]);
+    $inputs->addSchema('price', Schema::number()
+      ->title(t('Price'))
+      ->minimum(0)
+      ->required());
   }
 
 }

@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_schema_test\Storage\NarrowedStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A resource wider than the config schema it is stored to, written by hand.
@@ -27,15 +28,22 @@ final class NarrowedResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('code', 'string', t('Code'), default: 'main');
-    $inputs->add('limit', 'integer', t('Limit'), default: 5)
-      ->addConstraint('Range', ['min' => 1, 'max' => 100]);
-    $inputs->add('mode', 'string', t('Mode'), default: 'quiet')
-      ->addConstraint('LabeledChoice', [
-        'choices' => ['quiet' => t('Quiet'), 'loud' => t('Loud'), 'silent' => t('Silent')],
-      ]);
-    $inputs->add('size', 'integer', t('Size'), default: 3);
-    $inputs->add('note', 'string', t('Note'));
+    $inputs->addSchema('code', Schema::string()
+      ->title(t('Code'))
+      ->default('main'));
+    $inputs->addSchema('limit', Schema::integer()
+      ->title(t('Limit'))
+      ->default(5)
+      ->minimum(1)
+      ->maximum(100));
+    $inputs->addSchema('mode', Schema::options(['quiet' => t('Quiet'), 'loud' => t('Loud'), 'silent' => t('Silent')])
+      ->title(t('Mode'))
+      ->default('quiet'));
+    $inputs->addSchema('size', Schema::integer()
+      ->title(t('Size'))
+      ->default(3));
+    $inputs->addSchema('note', Schema::string()
+      ->title(t('Note')));
   }
 
 }

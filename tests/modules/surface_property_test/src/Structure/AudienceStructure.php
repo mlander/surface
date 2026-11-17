@@ -8,6 +8,7 @@ use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A reviewer, mixed into both MixIn twins, reading who it is for.
@@ -21,7 +22,8 @@ final class AudienceStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('audience', 'string');
 
-    $inputs->add('reviewer', 'string', t('Reviewer'));
+    $inputs->addSchema('reviewer', Schema::string()
+      ->title(t('Reviewer')));
 
     $inputs->narrow('reviewer')
       ->when(Condition::equals('audience', 'private'))

@@ -7,6 +7,7 @@ namespace Drupal\surface_route_test\Structure;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * An envelope: a required color of two, and a number of stamps.
@@ -18,12 +19,16 @@ final class EnvelopeStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('color', 'string', 'Color', default: 'white')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['white', 'cream']]);
+    $inputs->addSchema('color', Schema::enum(['white', 'cream'])
+      ->title('Color')
+      ->default('white')
+      ->required());
 
-    $inputs->add('stamps', 'integer', 'Stamps', default: 1)
-      ->addConstraint('Range', ['min' => 1, 'max' => 5]);
+    $inputs->addSchema('stamps', Schema::integer()
+      ->title('Stamps')
+      ->default(1)
+      ->minimum(1)
+      ->maximum(5));
   }
 
 }

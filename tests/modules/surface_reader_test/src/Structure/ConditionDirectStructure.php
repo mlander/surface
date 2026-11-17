@@ -8,6 +8,7 @@ use Drupal\surface\Variants\ConfigSchemaTypes;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Three conditions' settings, straight from config schema.
@@ -21,8 +22,8 @@ final class ConditionDirectStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('id', 'string', t('Plugin'))
-      ->addConstraint('Choice', ['choices' => ['request_path', 'response_status', 'user_role']]);
+    $inputs->addSchema('id', Schema::enum(['request_path', 'response_status', 'user_role'])
+      ->title(t('Plugin')));
 
     $inputs->attachVariants('settings', by: 'id', label: t('Settings'), from: ConfigSchemaTypes::class, arguments: [
       'type' => 'block.block.*',

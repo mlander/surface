@@ -27,7 +27,9 @@ final class UserReadingRefinerResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('note', 'string', t('Note'), default: 'Open');
+    $inputs->addSchema('note', Schema::string()
+      ->title(t('Note'))
+      ->default('Open'));
   }
 
   /**

@@ -8,6 +8,7 @@ use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A contact reading two ports, with calls: ContactPropertiesStructure's twin.
@@ -25,10 +26,12 @@ final class ContactStructure implements StructureInterface {
 
     $inputs->reads('anything', 'any', required: TRUE);
 
-    $inputs->add('name', 'string', t('Name'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('name', Schema::string()
+      ->title(t('Name'))
+      ->required());
 
-    $inputs->add('email', 'email', t('Email'));
+    $inputs->addSchema('email', Schema::string()->format('email')
+      ->title(t('Email')));
 
     $inputs->narrow('email')
       ->when(Condition::equals('listed', TRUE))

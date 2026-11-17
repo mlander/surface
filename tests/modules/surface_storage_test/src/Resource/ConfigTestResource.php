@@ -11,6 +11,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_storage_test\Storage\ConfigTestStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A config_test entity, added, edited and removed by its id.
@@ -57,16 +58,24 @@ final class ConfigTestResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('id', 'string', 'Id')->setRequired(TRUE);
+    $inputs->addSchema('id', Schema::string()
+      ->title('Id')
+      ->required());
     // What the entity's schema states, said here too, so no door offers
     // what storage refuses.
-    $inputs->add('label', 'string', 'Label')
-      ->setRequired(TRUE)
-      ->addConstraint('Regex', ['pattern' => '/([^\PC])/u', 'match' => FALSE]);
-    $inputs->add('weight', 'integer', 'Weight', default: 0)
-      ->addConstraint('Range', ['min' => -2147483648, 'max' => 2147483647]);
-    $inputs->add('style', 'string', 'Style');
-    $inputs->add('protected_property', 'string', 'Protected property');
+    $inputs->addSchema('label', Schema::string()
+      ->title('Label')
+      ->check('drupal:Regex', ['pattern' => '/([^\PC])/u', 'match' => FALSE])
+      ->required());
+    $inputs->addSchema('weight', Schema::integer()
+      ->title('Weight')
+      ->default(0)
+      ->minimum(-2147483648)
+      ->maximum(2147483647));
+    $inputs->addSchema('style', Schema::string()
+      ->title('Style'));
+    $inputs->addSchema('protected_property', Schema::string()
+      ->title('Protected property'));
   }
 
 }

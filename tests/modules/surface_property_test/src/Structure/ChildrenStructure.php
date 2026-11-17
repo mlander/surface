@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_property_test\Keys\Letters;
+use PortableSchema\Builder\Schema;
 
 /**
  * Children of every kind, with calls: ChildrenPropertiesStructure's twin.
@@ -24,10 +25,14 @@ final class ChildrenStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('public', 'boolean', t('Public'), default: FALSE);
+    $inputs->addSchema('public', Schema::bool()
+      ->title(t('Public'))
+      ->default(FALSE));
 
-    $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
-      ->setRequired(TRUE);
+    $inputs->addSchema('pricing', Schema::string()
+      ->title(t('Pricing'))
+      ->default('free')
+      ->required());
 
     $inputs->attach('contact', ContactStructure::class, t('Contact'), reads: [
       'listed' => 'public',
