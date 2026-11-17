@@ -32,8 +32,8 @@ final class SeatingStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->reads('layout', 'string', required: TRUE);
-    $inputs->reads('guests', 'integer');
+    $inputs->reads('layout', Schema::string()->required());
+    $inputs->reads('guests', Schema::integer());
     $inputs->addSchema('rows', Schema::integer()
       ->title(t('Rows'))
       ->default(5)

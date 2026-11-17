@@ -21,7 +21,7 @@ final class PortClashStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addSchema('layout', Schema::string()
       ->title('Layout'));
-    $inputs->reads('layout', 'string');
+    $inputs->reads('layout', Schema::string());
   }
 
 }

@@ -32,7 +32,7 @@ final class OwnershipStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->reads('audience', 'string', required: TRUE);
+    $inputs->reads('audience', Schema::string()->required());
     $inputs->addSchema('owner', Schema::string()
       ->title(t('Owner'))
       ->required());

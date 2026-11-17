@@ -20,7 +20,7 @@ final class AudienceStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->reads('audience', 'string');
+    $inputs->reads('audience', Schema::string());
 
     $inputs->addSchema('reviewer', Schema::string()
       ->title(t('Reviewer')));

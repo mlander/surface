@@ -20,7 +20,7 @@ final class EntryStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->reads('selling', 'boolean');
+    $inputs->reads('selling', Schema::bool());
 
     $inputs->addSchema('max', Schema::integer()
       ->title(t('Most'))

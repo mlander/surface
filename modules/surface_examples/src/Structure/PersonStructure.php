@@ -27,7 +27,7 @@ final class PersonStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->reads('listed', 'boolean');
+    $inputs->reads('listed', Schema::bool());
 
     $inputs->addSchema('name', Schema::string()
       ->title(t('Name'))

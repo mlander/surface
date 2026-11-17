@@ -24,7 +24,7 @@ final class ShelfTagStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->reads('code', Sku::class, required: TRUE);
+    $inputs->reads('code', Schema::of(Sku::class)->required());
     $inputs->addSchema('label', Schema::string()
       ->title(t('Label'))
       ->maxLength(20));

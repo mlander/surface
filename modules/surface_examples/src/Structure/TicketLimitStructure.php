@@ -34,7 +34,7 @@ final class TicketLimitStructure implements StructureInterface {
       ->title(t('Waiting list when sold out'))
       ->default(FALSE));
 
-    $inputs->reads('selling', 'boolean');
+    $inputs->reads('selling', Schema::bool());
 
     $inputs->narrow('per_order')->when(Condition::equals('selling', FALSE))->doesNotApply();
 
