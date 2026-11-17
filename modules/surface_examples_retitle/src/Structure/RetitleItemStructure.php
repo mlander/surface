@@ -7,6 +7,7 @@ namespace Drupal\surface_examples_retitle\Structure;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 17: one node to retitle, an item of the retitle's list.
@@ -26,9 +27,10 @@ final class RetitleItemStructure implements StructureInterface {
       ->setDescription(t('The node to retitle.'))
       ->setRequired(TRUE);
 
-    $inputs->add('new_title', 'string', t('New title'))
-      ->setDescription(t("Written as sent; left out, the node's title is rewritten in the style chosen."))
-      ->addConstraint('Length', ['max' => 255]);
+    $inputs->addSchema('new_title', Schema::string()
+      ->title(t('New title'))
+      ->description(t("Written as sent; left out, the node's title is rewritten in the style chosen."))
+      ->maxLength(255));
   }
 
 }

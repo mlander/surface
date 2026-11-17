@@ -11,6 +11,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\StoreroomStorage;
 use Drupal\surface_resource_test\Structure\Storeroom\AisleStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * A storeroom: a collection whose items hold a collection of their own.
@@ -33,7 +34,9 @@ final class StoreroomResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', 'Name', default: 'Storeroom');
+    $inputs->addSchema('name', Schema::string()
+      ->title('Name')
+      ->default('Storeroom'));
     $inputs->attachList('aisles', AisleStructure::class, 'Aisles', max: 3);
   }
 

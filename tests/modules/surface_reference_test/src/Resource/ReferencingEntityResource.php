@@ -11,6 +11,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_reference_test\Storage\ReferencingEntityStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A config_test entity that refers to a node and to a role.
@@ -43,14 +44,19 @@ final class ReferencingEntityResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('id', 'string', 'Id')->setRequired(TRUE);
-    $inputs->add('label', 'string', 'Label')
-      ->setRequired(TRUE)
-      ->addConstraint('Regex', ['pattern' => '/([^\PC])/u', 'match' => FALSE]);
-    $inputs->add('page', 'integer', 'Page')
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node']);
-    $inputs->add('role', 'string', 'Role')
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user_role']);
+    $inputs->addSchema('id', Schema::string()
+      ->title('Id')
+      ->required());
+    $inputs->addSchema('label', Schema::string()
+      ->title('Label')
+      ->check('drupal:Regex', ['pattern' => '/([^\PC])/u', 'match' => FALSE])
+      ->required());
+    $inputs->addSchema('page', Schema::integer()
+      ->title('Page')
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node']));
+    $inputs->addSchema('role', Schema::string()
+      ->title('Role')
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'user_role']));
   }
 
 }

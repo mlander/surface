@@ -10,6 +10,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\DigestStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A digest whose schedule has variants, two of which have no keys.
@@ -33,8 +34,10 @@ final class DigestResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('frequency', 'string', 'Frequency', default: 'weekly')
-      ->setRequired(TRUE);
+    $inputs->addSchema('frequency', Schema::string()
+      ->title('Frequency')
+      ->default('weekly')
+      ->required());
     $inputs->attachVariants('schedule', by: 'frequency', label: 'Schedule');
   }
 

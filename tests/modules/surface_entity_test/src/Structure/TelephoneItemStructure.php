@@ -21,12 +21,13 @@ final class TelephoneItemStructure implements FieldItemStructureInterface {
    * {@inheritdoc}
    */
   public static function defineItem(BlueprintInterface $inputs, FieldDefinitionInterface $field): void {
-    $inputs->add('value', 'string', $field->getLabel())
-      ->setDescription(t('Digits, spaces and a leading plus.'))
-      ->addConstraint('Regex', [
+    $inputs->addSchema('value', Schema::string()
+      ->title($field->getLabel())
+      ->description(t('Digits, spaces and a leading plus.'))
+      ->check('drupal:Regex', [
         'pattern' => '/^\+?[0-9 ]+$/D',
         'message' => t('Use digits, spaces and a leading plus.'),
-      ]);
+      ]));
   }
 
   /**

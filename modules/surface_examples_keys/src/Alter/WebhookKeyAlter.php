@@ -12,6 +12,7 @@ use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface_examples\Resource\WebhookResource;
 use Drupal\surface_examples_keys\Compute\ManagedKeyValue;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 14, the alter's way: a managed key, on a resource that has none.
@@ -46,9 +47,10 @@ final class WebhookKeyAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('key_id', 'string', $this->t('Key'))
-      ->setDescription($this->t('A key the site manages, used in place of a pasted one.'))
-      ->addConstraint('ManagedKey');
+    $inputs->addSchema('key_id', Schema::string()
+      ->title($this->t('Key'))
+      ->description($this->t('A key the site manages, used in place of a pasted one.'))
+      ->check('drupal:ManagedKey'));
     $inputs->describe('third_party_settings.surface_examples_keys', label: $this->t('Managed key'), after: 'api_key');
     // A managed key chosen: a pasted one means nothing beside it.
     $inputs->narrow('api_key')

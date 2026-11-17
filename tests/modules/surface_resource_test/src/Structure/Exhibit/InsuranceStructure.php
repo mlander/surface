@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Access\InsuranceAccess;
+use PortableSchema\Builder\Schema;
 
 /**
  * A loan's insurance, whose access waits for the thing to be known.
@@ -19,7 +20,8 @@ final class InsuranceStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('policy', 'string', t('Policy'));
+    $inputs->addSchema('policy', Schema::string()
+      ->title(t('Policy')));
   }
 
 }

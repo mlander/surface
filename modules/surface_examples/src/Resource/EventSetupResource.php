@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Storage\EventSetupStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 19: the event's setup, which a flow draws over two steps.
@@ -30,29 +31,41 @@ final class EventSetupResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', t('Event name'), default: 'Autumn meetup')
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 128]);
+    $inputs->addSchema('name', Schema::string()
+      ->title(t('Event name'))
+      ->default('Autumn meetup')
+      ->maxLength(128)
+      ->required());
 
-    $inputs->add('date', 'string', t('Date'), default: '2026-10-17')
-      ->setDescription(t('YYYY-MM-DD.'))
-      ->setSetting('widget', 'date')
-      ->addConstraint('Regex', [
+    $inputs->addSchema('date', Schema::string()
+      ->title(t('Date'))
+      ->description(t('YYYY-MM-DD.'))
+      ->default('2026-10-17')
+      ->check('drupal:Regex', [
         'pattern' => '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D',
         'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-17.'),
-      ]);
+      ])
+      ->ui(widget: 'date'));
 
-    $inputs->add('capacity', 'integer', t('Capacity'), default: 100)
-      ->addConstraint('Range', ['min' => 1, 'max' => 5000]);
+    $inputs->addSchema('capacity', Schema::integer()
+      ->title(t('Capacity'))
+      ->default(100)
+      ->minimum(1)
+      ->maximum(5000));
 
-    $inputs->add('price', 'float', t('Ticket price'), default: 25.0)
-      ->addConstraint('Range', ['min' => 0]);
+    $inputs->addSchema('price', Schema::number()
+      ->title(t('Ticket price'))
+      ->default(25.0)
+      ->minimum(0));
     $inputs->describe('price', suffix: t('EUR'));
 
-    $inputs->add('sales_open', 'boolean', t('Ticket sales open'), default: FALSE);
+    $inputs->addSchema('sales_open', Schema::bool()
+      ->title(t('Ticket sales open'))
+      ->default(FALSE));
 
-    $inputs->add('note', 'string', t('Note for buyers'))
-      ->setSetting('multiline', TRUE);
+    $inputs->addSchema('note', Schema::string()
+      ->title(t('Note for buyers'))
+      ->ui(widget: 'textarea'));
   }
 
 }

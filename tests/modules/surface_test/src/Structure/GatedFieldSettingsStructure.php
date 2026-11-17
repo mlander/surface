@@ -10,6 +10,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_test\Access\GatedFieldSettingsAccess;
 use Drupal\surface_examples_field\Resource\FieldInstanceResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * The gated test field type's settings: one note, and a gate.
@@ -37,8 +38,9 @@ final class GatedFieldSettingsStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('note', 'string', t('Note'))
-      ->setDescription(t('A note stored with this field instance.'));
+    $inputs->addSchema('note', Schema::string()
+      ->title(t('Note'))
+      ->description(t('A note stored with this field instance.')));
   }
 
 }

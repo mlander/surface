@@ -10,6 +10,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\LarderStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A larder with two spice racks: children invoked through operations.
@@ -80,8 +81,11 @@ final class LarderResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('larder', 'string', 'Larder')->setRequired(TRUE);
-    $inputs->add('note', 'string', 'Note');
+    $inputs->addSchema('larder', Schema::string()
+      ->title('Larder')
+      ->required());
+    $inputs->addSchema('note', Schema::string()
+      ->title('Note'));
     $inputs->attach('rack', SpiceRackResource::class, 'Spice rack');
     $inputs->attach('spare_rack', SpiceRackResource::class, 'Spare spice rack');
   }

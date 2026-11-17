@@ -20,8 +20,10 @@ final class UnofferedRuleValueStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('flag', 'boolean', 'Flag');
-    $inputs->add('kind', 'string', 'Kind')->addConstraint('LabeledChoice', ['choices' => ['a' => 'A', 'b' => 'B']]);
+    $inputs->addSchema('flag', Schema::bool()
+      ->title('Flag'));
+    $inputs->addSchema('kind', Schema::options(['a' => 'A', 'b' => 'B'])
+      ->title('Kind'));
     $inputs->narrow('kind')
       ->when(Condition::equals('flag', TRUE))
       ->constrain(Schema::enum(['a', 'z']));

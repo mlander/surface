@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\surface_test\Structure;
 
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The secret-bearing test field type's settings: one secret, one not.
@@ -27,11 +27,15 @@ final class SecretFieldSettingsStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('endpoint', 'string', t('Endpoint'), default: '')
-      ->setDescription(t('Where this field sends its values.'));
-    $token = $inputs->add('token', 'string', t('API key'), default: '')
-      ->setDescription(t('The key this field authenticates with.'));
-    DefinitionMetadata::setSecret($token);
+    $inputs->addSchema('endpoint', Schema::string()
+      ->title(t('Endpoint'))
+      ->description(t('Where this field sends its values.'))
+      ->default(''));
+    $inputs->addSchema('token', Schema::string()
+      ->title(t('API key'))
+      ->description(t('The key this field authenticates with.'))
+      ->default('')
+      ->writeOnly(TRUE));
   }
 
 }

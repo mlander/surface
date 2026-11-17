@@ -10,6 +10,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_tool_test\Access\CabinetAccess;
 use Drupal\surface_tool_test\Storage\CabinetStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A cabinet whose access may lock it whole, and one of whose locks too.
@@ -37,11 +38,17 @@ final class CabinetResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('label', 'string', t('Label'), default: 'Cabinet');
-    $inputs->add('drawers', 'integer', t('Drawers'), default: 4)
-      ->addConstraint('Range', ['min' => 1, 'max' => 12]);
-    $inputs->add('lock', 'string', t('Lock'), default: 'key')
-      ->addConstraint('Choice', ['choices' => ['key', 'code']]);
+    $inputs->addSchema('label', Schema::string()
+      ->title(t('Label'))
+      ->default('Cabinet'));
+    $inputs->addSchema('drawers', Schema::integer()
+      ->title(t('Drawers'))
+      ->default(4)
+      ->minimum(1)
+      ->maximum(12));
+    $inputs->addSchema('lock', Schema::enum(['key', 'code'])
+      ->title(t('Lock'))
+      ->default('key'));
     $inputs->attachVariants('lock_settings', by: 'lock', label: t('Lock settings'));
   }
 

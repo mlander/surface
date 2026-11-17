@@ -11,6 +11,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Storage\MailerStorage;
 use Drupal\surface_examples\Variants\CredentialSources;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 14, the owner's way: a credential pasted, or a key the site manages.
@@ -33,14 +34,20 @@ final class MailerResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('sender', 'email', t('Sender'), default: 'tickets@example.com')
-      ->setRequired(TRUE);
+    $inputs->addSchema('sender', Schema::string()->format('email')
+      ->title(t('Sender'))
+      ->default('tickets@example.com')
+      ->required());
 
-    $inputs->add('endpoint', 'uri', t('Mail service'), default: 'https://mail.example.com/v1/send')
-      ->setRequired(TRUE);
+    $inputs->addSchema('endpoint', Schema::string()->format('uri')
+      ->title(t('Mail service'))
+      ->default('https://mail.example.com/v1/send')
+      ->required());
 
-    $inputs->add('source', 'string', t('Credential source'), default: 'pasted')
-      ->setRequired(TRUE);
+    $inputs->addSchema('source', Schema::string()
+      ->title(t('Credential source'))
+      ->default('pasted')
+      ->required());
 
     $inputs->attachVariants('credential', by: 'source', label: t('Credential'), from: CredentialSources::class);
   }

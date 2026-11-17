@@ -12,6 +12,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * What listing a stage's writes takes, nothing, and what it answers.
@@ -52,9 +53,10 @@ final class StageChangesStructure implements StructureInterface, DefinesOutputsI
     $outputs->addList('items', $item, t('Staged writes'))
       ->setDescription(t('Every write the stage holds, in the order apply will make them; empty when it holds none.'));
 
-    $outputs->add('total', 'integer', t('Total'))
-      ->setDescription(t('How many writes the stage holds.'))
-      ->setRequired(TRUE);
+    $outputs->addSchema('total', Schema::integer()
+      ->title(t('Total'))
+      ->description(t('How many writes the stage holds.'))
+      ->required());
   }
 
   /**

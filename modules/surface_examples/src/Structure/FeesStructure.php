@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_examples\Access\FeesAccess;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 10: the program's fees, whose access class answers for them.
@@ -19,11 +20,15 @@ final class FeesStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('standard', 'float', t('Standard fee'), default: 20.0)
-      ->addConstraint('Range', ['min' => 0]);
+    $inputs->addSchema('standard', Schema::number()
+      ->title(t('Standard fee'))
+      ->default(20.0)
+      ->minimum(0));
 
-    $inputs->add('concession', 'float', t('Concession fee'), default: 10.0)
-      ->addConstraint('Range', ['min' => 0]);
+    $inputs->addSchema('concession', Schema::number()
+      ->title(t('Concession fee'))
+      ->default(10.0)
+      ->minimum(0));
   }
 
 }

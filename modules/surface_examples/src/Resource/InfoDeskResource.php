@@ -12,6 +12,7 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Shape\PhoneNumber;
 use Drupal\surface_examples\Storage\InfoDeskStorage;
 use Drupal\surface_examples\Structure\PersonStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 8: the information desk, the other resource reusing a person.
@@ -34,17 +35,26 @@ final class InfoDeskResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('phone', PhoneNumber::class, t('Desk phone'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('phone', Schema::of(PhoneNumber::class)
+      ->title(t('Desk phone'))
+      ->required());
 
-    $inputs->add('in_program', 'boolean', t('Listed in the printed program'), default: FALSE);
+    $inputs->addSchema('in_program', Schema::bool()
+      ->title(t('Listed in the printed program'))
+      ->default(FALSE));
 
     // A pair only the desk holds: an anonymous map, written inline.
     $inputs->addMap('location', t('Where the desk stands'), static function (BlueprintInterface $location): void {
-      $location->add('lat', 'float', t('Latitude'), default: 43.6532)
-        ->addConstraint('Range', ['min' => -90, 'max' => 90]);
-      $location->add('lng', 'float', t('Longitude'), default: -79.3832)
-        ->addConstraint('Range', ['min' => -180, 'max' => 180]);
+      $location->addSchema('lat', Schema::number()
+        ->title(t('Latitude'))
+        ->default(43.6532)
+        ->minimum(-90)
+        ->maximum(90));
+      $location->addSchema('lng', Schema::number()
+        ->title(t('Longitude'))
+        ->default(-79.3832)
+        ->minimum(-180)
+        ->maximum(180));
     });
 
     $inputs->attach('lead', PersonStructure::class, t('Desk lead'), reads: ['listed' => 'in_program']);

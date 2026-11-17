@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Resource\Broken;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Names an identity key its shape never declares.
@@ -18,7 +19,8 @@ final class UndeclaredIdentityResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', 'Name');
+    $inputs->addSchema('name', Schema::string()
+      ->title('Name'));
   }
 
 }

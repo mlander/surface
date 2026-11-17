@@ -10,6 +10,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_gate_test\Storage\GateNoteStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A relay of the note: borrows the note's update whole.
@@ -24,10 +25,12 @@ final class GatedRelayResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('node', 'integer', 'Node')
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node'])
-      ->setRequired(TRUE);
-    $inputs->add('note', 'string', 'Note');
+    $inputs->addSchema('node', Schema::integer()
+      ->title('Node')
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node'])
+      ->required());
+    $inputs->addSchema('note', Schema::string()
+      ->title('Note'));
   }
 
   /**

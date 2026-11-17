@@ -95,56 +95,77 @@ final class BlockPlacementResource implements ResourceInterface {
    * so no door offers what the block's schema refuses.
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('label', 'string', t('Title'))
-      ->setDescription(t('The title of the block as shown to the user.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 255])
-      ->addConstraint('Regex', [
+    $inputs->addSchema('label', Schema::string()
+      ->title(t('Title'))
+      ->description(t('The title of the block as shown to the user.'))
+      ->maxLength(255)
+      ->check('drupal:Regex', [
         'pattern' => '/([^\PC])/u',
         'match' => FALSE,
         'message' => t('The title may not span lines or hold control characters.'),
-      ]);
+      ])
+      ->required());
 
-    $inputs->add('id', 'string', t('Machine name'))
-      ->setDescription(t('A unique name for the placed block: lowercase letters, numbers, underscores and periods, not starting with a period.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 166])
-      ->addConstraint('Regex', [
+    $inputs->addSchema('id', Schema::string()
+      ->title(t('Machine name'))
+      ->description(t('A unique name for the placed block: lowercase letters, numbers, underscores and periods, not starting with a period.'))
+      ->maxLength(166)
+      ->check('drupal:Regex', [
         'pattern' => '/^(?!\.)[a-z0-9_.]+$/D',
         'message' => t('The machine name may hold only lowercase letters, numbers, underscores and periods, and may not start with a period.'),
-      ]);
+      ])
+      ->required());
 
-    $inputs->add('label_display', 'boolean', t('Display title'), default: TRUE)
-      ->setDescription(t('Whether the title is shown above the block.'));
+    $inputs->addSchema('label_display', Schema::bool()
+      ->title(t('Display title'))
+      ->description(t('Whether the title is shown above the block.'))
+      ->default(TRUE));
 
-    $inputs->add('plugin', 'string', t('Block'))
-      ->setDescription(t('What the block shows: a block plugin the block layout offers. A block that reads a context, such as the node of the page, is not offered yet.'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('plugin', Schema::string()
+      ->title(t('Block'))
+      ->description(t('What the block shows: a block plugin the block layout offers. A block that reads a context, such as the node of the page, is not offered yet.'))
+      ->required());
 
-    $inputs->attachVariants('settings', by: 'plugin', label: t('Settings'), from: BlockPluginStructures::class)
-      ->setDescription(t('The settings of the block chosen, as its plugin declares them.'));
+    $inputs->attachVariants(
+      'settings',
+      by: 'plugin',
+      label: t('Settings'),
+      from: BlockPluginStructures::class,
+      description: t('The settings of the block chosen, as its plugin declares them.'),
+    );
 
-    $inputs->add('theme', 'string', t('Theme'))
-      ->setDescription(t('The theme the block is placed in.'))
-      ->setRequired(TRUE)
-      ->addConstraint('ExtensionExists', ['type' => 'theme']);
+    $inputs->addSchema('theme', Schema::string()
+      ->title(t('Theme'))
+      ->description(t('The theme the block is placed in.'))
+      ->check('drupal:ExtensionExists', ['type' => 'theme'])
+      ->required());
 
     // A region of any installed theme, until the theme narrows it to its
     // own: every door offers a list before a theme is chosen.
-    $inputs->add('region', 'string', t('Region'))
-      ->setDescription(t('The region of the theme the block is shown in.'))
-      ->setRequired(TRUE)
-      ->addConstraint('SurfaceAnyThemeRegion');
+    $inputs->addSchema('region', Schema::string()
+      ->title(t('Region'))
+      ->description(t('The region of the theme the block is shown in.'))
+      ->check('drupal:SurfaceAnyThemeRegion')
+      ->required());
 
-    $inputs->add('weight', 'integer', t('Weight'), default: 0)
-      ->setDescription(t('The order of the block in its region: lighter blocks are shown first.'))
-      ->addConstraint('Range', ['min' => -2147483648, 'max' => 2147483647]);
+    $inputs->addSchema('weight', Schema::integer()
+      ->title(t('Weight'))
+      ->description(t('The order of the block in its region: lighter blocks are shown first.'))
+      ->default(0)
+      ->minimum(-2147483648)
+      ->maximum(2147483647));
 
-    $inputs->add('status', 'boolean', t('Enabled'), default: TRUE)
-      ->setDescription(t('Whether the block is shown at all.'));
+    $inputs->addSchema('status', Schema::bool()
+      ->title(t('Enabled'))
+      ->description(t('Whether the block is shown at all.'))
+      ->default(TRUE));
 
-    $inputs->attachList('visibility', VisibilityConditionStructure::class, t('Visibility'))
-      ->setDescription(t('The conditions the block is shown under, each at most once; with none, it is shown on every page.'));
+    $inputs->attachList(
+      'visibility',
+      VisibilityConditionStructure::class,
+      t('Visibility'),
+      description: t('The conditions the block is shown under, each at most once; with none, it is shown on every page.'),
+    );
   }
 
   /**

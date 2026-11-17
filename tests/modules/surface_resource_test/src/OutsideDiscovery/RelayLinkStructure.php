@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\OutsideDiscovery;
 
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Compute\VaultToken;
+use PortableSchema\Builder\Schema;
 
 /**
  * A link of a relay hub: a pasted token, resolved from a vault entry.
@@ -24,10 +24,12 @@ final class RelayLinkStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $token = $inputs->add('token', 'string', t('Token'));
-    DefinitionMetadata::setSecret($token);
+    $inputs->addSchema('token', Schema::string()
+      ->title(t('Token'))
+      ->writeOnly(TRUE));
 
-    $inputs->add('vault_id', 'string', t('Vault entry'));
+    $inputs->addSchema('vault_id', Schema::string()
+      ->title(t('Vault entry')));
 
     $inputs->resolve('token', from: ['vault_id'], using: VaultToken::class);
   }

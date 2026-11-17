@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface\Variants;
+use PortableSchema\Builder\Schema;
 
 /**
  * The flat listed nested owner's variant for "a", listed by the site.
@@ -21,9 +22,9 @@ final class FlatListedInnerStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('mode', 'string', 'Mode');
-    $inputs->attachVariants('inner', by: 'mode', label: 'Inner')
-      ->setSetting(Variants::STORED_AS, Variants::FLAT);
+    $inputs->addSchema('mode', Schema::string()
+      ->title('Mode'));
+    $inputs->attachVariants('inner', by: 'mode', label: 'Inner', storedAs: Variants::FLAT);
   }
 
 }

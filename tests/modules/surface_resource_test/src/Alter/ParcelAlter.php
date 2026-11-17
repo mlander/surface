@@ -26,7 +26,8 @@ final class ParcelAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('customs', 'string', 'Customs code');
+    $inputs->addSchema('customs', Schema::string()
+      ->title('Customs code'));
     $inputs->narrow('customs')
       ->when(Condition::equals('service', 'freight'))
       ->require();

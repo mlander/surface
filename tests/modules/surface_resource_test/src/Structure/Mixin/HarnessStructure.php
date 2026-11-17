@@ -9,6 +9,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Structure\Pack\BeltStructure;
 use Drupal\surface_resource_test\Structure\Pack\PocketStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * A harness, mixed in: its straps, and three children of the owner's.
@@ -24,14 +25,17 @@ final class HarnessStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('straps', 'integer', t('Straps'), default: 2);
+    $inputs->addSchema('straps', Schema::integer()
+      ->title(t('Straps'))
+      ->default(2));
 
     $inputs->attach('belt', BeltStructure::class, t('Hip belt'));
 
     $inputs->attachList('pockets', PocketStructure::class, t('Pockets'), max: 2);
 
     $inputs->addMap('cover', t('Rain cover'), static function (BlueprintInterface $cover): void {
-      $cover->add('color', 'string', t('Color'));
+      $cover->addSchema('color', Schema::string()
+        ->title(t('Color')));
       $cover->attach('pouch', PocketStructure::class, t('Pouch'));
     });
   }

@@ -7,6 +7,7 @@ namespace Drupal\surface_property_test\Structure;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Mixed in after the keys, with calls: MixInPropertiesStructure's twin.
@@ -18,11 +19,13 @@ final class MixInStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('visibility', 'string', t('Visibility'), default: 'public')
-      ->addConstraint('Choice', ['choices' => ['public', 'private']]);
+    $inputs->addSchema('visibility', Schema::enum(['public', 'private'])
+      ->title(t('Visibility'))
+      ->default('public'));
 
-    $inputs->add('title', 'string', t('Title'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('title', Schema::string()
+      ->title(t('Title'))
+      ->required());
 
     $inputs->mixIn(AudienceStructure::class, reads: ['audience' => 'visibility']);
   }

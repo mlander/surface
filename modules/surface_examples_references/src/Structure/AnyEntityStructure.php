@@ -53,9 +53,10 @@ abstract class AnyEntityStructure implements StructureInterface {
         'targets' => $targets,
       ]));
 
-    $inputs->add('id', 'string', t('ID'))
-      ->setDescription(t('The id of an entity of the entity type chosen.'))
-      ->setSetting(References::TARGETS, $targets);
+    $inputs->addSchema('id', Schema::string()
+      ->title(t('ID'))
+      ->description(t('The id of an entity of the entity type chosen.'))
+      ->annotation('x-surface-settings', [References::TARGETS => $targets]));
 
     // An id means nothing without its entity type, and an entity type
     // chosen names one.

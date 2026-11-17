@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Structure\Workshop\BenchStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Broken: an anonymous map whose callable declares other keys each run.
@@ -29,7 +30,8 @@ final class ChangingMapStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addMap('kit', 'Kit', static function (BlueprintInterface $kit): void {
-      $kit->add(self::$runs++ === 0 ? 'tent' : 'awning', 'boolean', 'Cover');
+      $kit->addSchema(self::$runs++ === 0 ? 'tent' : 'awning', Schema::bool()
+        ->title('Cover'));
       $kit->attach('bench', BenchStructure::class);
     });
   }

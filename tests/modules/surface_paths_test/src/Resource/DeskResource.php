@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_paths_test\Storage\NoteStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * The desk: a singleton with both `update` and `configure`.
@@ -26,7 +27,8 @@ final class DeskResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('note', 'string', 'Note');
+    $inputs->addSchema('note', Schema::string()
+      ->title('Note'));
   }
 
 }

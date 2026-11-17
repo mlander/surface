@@ -8,6 +8,7 @@ use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A stall's awning: an anonymous map framed by a rule alone.
@@ -24,8 +25,10 @@ final class AwningStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addMap('shade', t('Shade'), static function (BlueprintInterface $shade): void {
-      $shade->add('kind', 'string', t('Kind'));
-      $shade->add('width', 'integer', t('Width'));
+      $shade->addSchema('kind', Schema::string()
+        ->title(t('Kind')));
+      $shade->addSchema('width', Schema::integer()
+        ->title(t('Width')));
       $shade->narrow('width')
         ->when(Condition::equals('kind', 'wide'))
         ->require();

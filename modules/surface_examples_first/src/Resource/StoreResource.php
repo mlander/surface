@@ -34,20 +34,18 @@ final class StoreResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add(self::COUNTRY, 'string', t('Country'), default: 'CA')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'CA' => t('Canada'),
-          'US' => t('United States'),
-        ],
-      ]);
+    $inputs->addSchema(self::COUNTRY, Schema::options([
+      'CA' => t('Canada'),
+      'US' => t('United States'),
+    ])
+      ->title(t('Country'))
+      ->default('CA')
+      ->required());
 
-    $inputs->add(self::REGION, 'string', t('Region'), default: 'CA-ON')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => self::regions('CA') + self::regions('US'),
-      ]);
+    $inputs->addSchema(self::REGION, Schema::options(self::regions('CA') + self::regions('US'))->type('string')
+      ->title(t('Region'))
+      ->default('CA-ON')
+      ->required());
   }
 
   /**

@@ -7,7 +7,6 @@ namespace Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter;
 use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Pipeline\NotEmitted;
 use Drupal\surface\Plugin\Field\FieldFormatter\TypedFormatterBase;
 use Drupal\surface\Refinement\ChoiceSet;
@@ -59,36 +58,38 @@ final class ExampleFormatter extends TypedFormatterBase implements StructureInte
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('prefix', 'string', t('Prefix'))
-      ->setDescription(t('Text placed before each value.'))
-      ->addConstraint('Length', ['max' => 10]);
+    $inputs->addSchema('prefix', Schema::string()
+      ->title(t('Prefix'))
+      ->description(t('Text placed before each value.'))
+      ->maxLength(10));
 
-    $inputs->add('casing', 'string', t('Casing'), default: 'none')
-      ->setDescription(t('How the value text is cased.'))
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'none' => t('As written'),
-          'uppercase' => t('Upper case'),
-          'lowercase' => t('Lower case'),
-        ],
-      ]);
+    $inputs->addSchema('casing', Schema::options([
+      'none' => t('As written'),
+      'uppercase' => t('Upper case'),
+      'lowercase' => t('Lower case'),
+    ])
+      ->title(t('Casing'))
+      ->description(t('How the value text is cased.'))
+      ->default('none')
+      ->required());
 
-    $inputs->add('variant', 'string', t('Variant'))
-      ->setDescription(t('The variants the chosen casing offers.'))
-      ->addConstraint('LabeledChoice', ['choices' => ExampleVariant::choices()]);
+    $inputs->addSchema('variant', Schema::options(ExampleVariant::choices())->type('string')
+      ->title(t('Variant'))
+      ->description(t('The variants the chosen casing offers.')));
   }
 
   /**
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $outputs->add('text', 'string', t('Text'))
-      ->setDescription(t('The field value, prefixed and cased as the settings ask.'))
-      ->setRequired(TRUE);
+    $outputs->addSchema('text', Schema::string()
+      ->title(t('Text'))
+      ->description(t('The field value, prefixed and cased as the settings ask.'))
+      ->required());
 
-    $outputs->addList('classes', DataDefinition::create('string')->setLabel(t('Class')), t('Classes'))
-      ->setDescription(t('The classes the chosen variant puts on the wrapper. Absent when no variant is chosen.'));
+    $outputs->addSchema('classes', Schema::list(Schema::string()->title(t('Class')))
+      ->title(t('Classes'))
+      ->description(t('The classes the chosen variant puts on the wrapper. Absent when no variant is chosen.')));
   }
 
   /**

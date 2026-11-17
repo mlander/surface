@@ -8,6 +8,7 @@ use Drupal\surface_reader_test\Variants\ConditionPluginJsonStructures;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Three conditions' settings, through the JSON Schema route.
@@ -19,8 +20,8 @@ final class ConditionJsonStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('id', 'string', t('Plugin'))
-      ->addConstraint('Choice', ['choices' => ['request_path', 'response_status', 'user_role']]);
+    $inputs->addSchema('id', Schema::enum(['request_path', 'response_status', 'user_role'])
+      ->title(t('Plugin')));
 
     $inputs->attachVariants('settings', by: 'id', label: t('Settings'), from: ConditionPluginJsonStructures::class);
   }

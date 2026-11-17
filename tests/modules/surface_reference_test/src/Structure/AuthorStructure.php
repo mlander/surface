@@ -7,6 +7,7 @@ namespace Drupal\surface_reference_test\Structure;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * An author, attached at a key: a reference inside a child.
@@ -18,8 +19,9 @@ final class AuthorStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('author', 'integer', 'Author')
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user']);
+    $inputs->addSchema('author', Schema::integer()
+      ->title('Author')
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'user']));
   }
 
 }

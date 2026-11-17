@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure\Notice;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Where a notice sent by post goes.
@@ -18,8 +19,9 @@ final class NoticeAddressStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('street', 'string', 'Street')
-      ->setRequired(TRUE);
+    $inputs->addSchema('street', Schema::string()
+      ->title('Street')
+      ->required());
   }
 
 }

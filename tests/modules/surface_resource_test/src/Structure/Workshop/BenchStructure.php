@@ -8,6 +8,7 @@ use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * One bench of the workshop: whether it is in use, and for how long.
@@ -22,9 +23,14 @@ final class BenchStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('enabled', 'boolean', t('In use'), default: TRUE);
-    $inputs->add('hours', 'integer', t('Hours a day'), default: 1)
-      ->addConstraint('Range', ['min' => 1, 'max' => 12]);
+    $inputs->addSchema('enabled', Schema::bool()
+      ->title(t('In use'))
+      ->default(TRUE));
+    $inputs->addSchema('hours', Schema::integer()
+      ->title(t('Hours a day'))
+      ->default(1)
+      ->minimum(1)
+      ->maximum(12));
     $inputs->narrow('hours')
       ->when(Condition::equals('enabled', FALSE))
       ->doesNotApply();

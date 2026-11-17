@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_tool_test\Storage\LogbookStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A logbook asked for in five ways, each stating how it behaves.
@@ -60,11 +61,15 @@ final class LogbookResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('entry', 'string', t('Entry'));
-    $inputs->add('shelf', 'string', t('Shelf'))
-      ->addConstraint('Choice', ['choices' => self::SHELVES]);
-    $inputs->add('pages', 'integer', t('Pages'))
-      ->addConstraint('Range', ['min' => 1, 'max' => 500]);
+    $inputs->addSchema('entry', Schema::string()
+      ->title(t('Entry')));
+    $inputs->addSchema('shelf', Schema::string()
+      ->title(t('Shelf'))
+      ->check('drupal:Choice', ['choices' => self::SHELVES]));
+    $inputs->addSchema('pages', Schema::integer()
+      ->title(t('Pages'))
+      ->minimum(1)
+      ->maximum(500));
   }
 
 }

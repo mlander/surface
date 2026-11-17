@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure\Gallery;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * An annex: a second container of the wall, so its alters answer here too.
@@ -18,7 +19,8 @@ final class AnnexStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('opening', 'string', t('Opening'));
+    $inputs->addSchema('opening', Schema::string()
+      ->title(t('Opening')));
     $inputs->attach('wall', WallStructure::class, t('Wall'));
   }
 

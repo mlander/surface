@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Structure\Mixin\OwnershipStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Mixes the ownership in without wiring the audience it reads.
@@ -19,7 +20,8 @@ final class MixinUnwiredStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('visibility', 'string', 'Visibility');
+    $inputs->addSchema('visibility', Schema::string()
+      ->title('Visibility'));
     $inputs->mixIn(OwnershipStructure::class);
   }
 

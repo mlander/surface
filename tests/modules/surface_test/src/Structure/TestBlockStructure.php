@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_test\Structure;
 
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
@@ -48,24 +47,31 @@ final class TestBlockStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $headline = $inputs->add('headline', 'string', t('Headline'), default: 'Featured')
-      ->setDescription(t('Shown above the items.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 20]);
-    DefinitionMetadata::setExamples($headline, ['Quarterly report']);
-    $inputs->add('limit', 'integer', t('Number of items'), default: 10)
-      ->addConstraint('Range', ['min' => 1, 'max' => 50]);
-    $inputs->add('show_summary', 'boolean', t('Show summaries'), default: TRUE);
-    $inputs->add('casing', 'string', t('Casing'), default: 'none')
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'none' => t('As written'),
-          'uppercase' => t('Upper case'),
-          'lowercase' => t('Lower case'),
-        ],
-      ]);
-    $inputs->add('variant', 'string', t('Variant'))
-      ->setDescription(t('Pick a casing other than none to see its variants.'));
+    $inputs->addSchema('headline', Schema::string()
+      ->title(t('Headline'))
+      ->description(t('Shown above the items.'))
+      ->default('Featured')
+      ->maxLength(20)
+      ->examples(['Quarterly report'])
+      ->required());
+    $inputs->addSchema('limit', Schema::integer()
+      ->title(t('Number of items'))
+      ->default(10)
+      ->minimum(1)
+      ->maximum(50));
+    $inputs->addSchema('show_summary', Schema::bool()
+      ->title(t('Show summaries'))
+      ->default(TRUE));
+    $inputs->addSchema('casing', Schema::options([
+      'none' => t('As written'),
+      'uppercase' => t('Upper case'),
+      'lowercase' => t('Lower case'),
+    ])
+      ->title(t('Casing'))
+      ->default('none'));
+    $inputs->addSchema('variant', Schema::string()
+      ->title(t('Variant'))
+      ->description(t('Pick a casing other than none to see its variants.')));
   }
 
   /**

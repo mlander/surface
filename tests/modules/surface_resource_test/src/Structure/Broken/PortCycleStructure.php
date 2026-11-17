@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure\Broken;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The owner PortCycleAlter adapts into a cycle through a port.
@@ -18,10 +19,13 @@ final class PortCycleStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('layout', 'string', 'Layout')
-      ->addConstraint('Choice', ['choices' => ['theatre', 'banquet', 'standing']]);
-    $inputs->add('size', 'integer', 'Size', default: 50)
-      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
+    $inputs->addSchema('layout', Schema::enum(['theatre', 'banquet', 'standing'])
+      ->title('Layout'));
+    $inputs->addSchema('size', Schema::integer()
+      ->title('Size')
+      ->default(50)
+      ->minimum(1)
+      ->maximum(1000));
   }
 
 }

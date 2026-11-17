@@ -65,12 +65,16 @@ final class AddressFieldSettingsResource implements ResourceInterface {
       ->setDescription(t('Ensures entered addresses are always formatted in the same language.'))
       ->addConstraint('LanguageExists', []);
 
-    $overrides = $inputs->addMap('field_overrides', t('Field overrides'), static function (BlueprintInterface $overrides): void {
-      foreach (self::fieldOverrideDefinitions() as $field_name => $definition) {
-        $overrides->addDefinition($field_name, $definition);
-      }
-    })
-      ->setDescription(t('Override the country-specific address format, forcing properties to always be hidden, optional, or required.'));
+    $overrides = $inputs->addMap(
+      'field_overrides',
+      t('Field overrides'),
+      static function (BlueprintInterface $overrides): void {
+        foreach (self::fieldOverrideDefinitions() as $field_name => $definition) {
+          $overrides->addDefinition($field_name, $definition);
+        }
+      },
+      description: t('Override the country-specific address format, forcing properties to always be hidden, optional, or required.'),
+    );
     // No override is an empty map, as the address module's own default
     // settings say; no key inside starts from a value of its own.
     DefinitionMetadata::setDefaultValue($overrides, []);

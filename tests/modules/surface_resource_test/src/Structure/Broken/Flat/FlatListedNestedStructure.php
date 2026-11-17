@@ -9,6 +9,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface\Variants;
 use Drupal\surface_resource_test\Variants\KitVariants;
+use PortableSchema\Builder\Schema;
 
 /**
  * Stores flat a listed variant that stores variants flat of its own.
@@ -23,10 +24,17 @@ final class FlatListedNestedStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('kind', 'string', 'Kind');
+    $inputs->addSchema('kind', Schema::string()
+      ->title('Kind'));
     $inner = ['a', FlatListedInnerStructure::class];
-    $inputs->attachVariants('gear', by: 'kind', label: 'Gear', from: KitVariants::class, arguments: $inner)
-      ->setSetting(Variants::STORED_AS, Variants::FLAT);
+    $inputs->attachVariants(
+      'gear',
+      by: 'kind',
+      label: 'Gear',
+      from: KitVariants::class,
+      arguments: $inner,
+      storedAs: Variants::FLAT,
+    );
   }
 
 }

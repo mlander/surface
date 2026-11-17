@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Resource\Poster\PosterResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * The banner's panels, declared by a class: it wins over the provider's.
@@ -22,8 +23,9 @@ final class BannerPanelsStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('headline', 'string', t('Headline'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('headline', Schema::string()
+      ->title(t('Headline'))
+      ->required());
   }
 
 }

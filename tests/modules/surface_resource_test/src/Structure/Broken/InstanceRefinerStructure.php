@@ -20,8 +20,10 @@ final class InstanceRefinerStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('kind', 'string', 'Kind');
-    $inputs->add('name', 'string', 'Name');
+    $inputs->addSchema('kind', Schema::string()
+      ->title('Kind'));
+    $inputs->addSchema('name', Schema::string()
+      ->title('Name'));
   }
 
   /**

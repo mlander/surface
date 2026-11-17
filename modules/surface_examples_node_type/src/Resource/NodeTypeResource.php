@@ -17,6 +17,7 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_node_type\Access\NodeTypeAccess;
 use Drupal\surface_examples_node_type\Storage\NodeTypeStorage;
 use Drupal\node\NodePreviewMode;
+use PortableSchema\Builder\Schema;
 
 /**
  * A content type: what core's content type form asks for, as a resource.
@@ -106,72 +107,95 @@ final class NodeTypeResource implements ResourceInterface {
     $display = ArrangementGroup::details('display', t('Display settings'), collapsed: TRUE);
 
     // The content type.
-    $inputs->add('name', 'string', t('Name'))
-      ->setDescription(t('The human readable name for this content type.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 255])
-      ->addConstraint('Regex', [
+    $inputs->addSchema('name', Schema::string()
+      ->title(t('Name'))
+      ->description(t('The human readable name for this content type.'))
+      ->maxLength(255)
+      ->check('drupal:Regex', [
         'pattern' => '/([^\PC])/u',
         'match' => FALSE,
         'message' => t('The name may not span lines or hold control characters.'),
-      ]);
+      ])
+      ->required());
 
-    $inputs->compute('type', 'machine_name', t('Machine name'),
-      from: ['name'], using: MachineName::class, when: Compute::UNLESS_SENT)
-      ->setDescription(t('Unique machine readable name: lowercase letters, numbers, and underscores only.'))
-      ->addConstraint('Length', ['max' => EntityTypeInterface::BUNDLE_MAX_LENGTH]);
+    $inputs->compute(
+      'type',
+      Schema::of('drupal:config/machine_name')
+        ->title(t('Machine name'))
+        ->description(t('Unique machine readable name: lowercase letters, numbers, and underscores only.'))
+        ->check('drupal:Length', ['max' => EntityTypeInterface::BUNDLE_MAX_LENGTH]),
+      from: ['name'],
+      using: MachineName::class,
+      when: Compute::UNLESS_SENT,
+    );
 
-    $inputs->add('description', 'string', t('Description'))
-      ->setDescription(t('Displays on the Content types page.'))
-      ->setSetting('multiline', TRUE)
-      ->addConstraint('Regex', [
+    $inputs->addSchema('description', Schema::string()
+      ->title(t('Description'))
+      ->description(t('Displays on the Content types page.'))
+      ->check('drupal:Regex', [
         'pattern' => '/([^\PC\x09\x0a\x0d])/u',
         'match' => FALSE,
         'message' => t('The description may not hold control characters other than line breaks and tabs.'),
-      ]);
+      ])
+      ->ui(widget: 'textarea'));
 
     // Submission form.
-    $inputs->add('title_label', 'string', t('Title field label'), default: 'Title')
-      ->setDescription(t('The label shown for the title field on the content form.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 255]);
+    $inputs->addSchema('title_label', Schema::string()
+      ->title(t('Title field label'))
+      ->description(t('The label shown for the title field on the content form.'))
+      ->default('Title')
+      ->maxLength(255)
+      ->required());
     $inputs->describe('title_label', group: $submission);
 
-    $inputs->add('preview_mode', 'integer', t('Preview before submitting'), default: NodePreviewMode::Optional->value)
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['labels' => NodePreviewMode::asOptions()]);
+    $inputs->addSchema('preview_mode', Schema::integer()
+      ->title(t('Preview before submitting'))
+      ->default(NodePreviewMode::Optional->value)
+      ->check('drupal:LabeledChoice', ['labels' => NodePreviewMode::asOptions()])
+      ->required());
     $inputs->describe('preview_mode', group: $submission);
 
-    $inputs->add('help', 'string', t('Explanation or submission guidelines'))
-      ->setDescription(t('Displayed at the top of the page when creating or editing content of this type.'))
-      ->setSetting('multiline', TRUE)
-      ->addConstraint('Regex', [
+    $inputs->addSchema('help', Schema::string()
+      ->title(t('Explanation or submission guidelines'))
+      ->description(t('Displayed at the top of the page when creating or editing content of this type.'))
+      ->check('drupal:Regex', [
         'pattern' => '/([^\PC\x09\x0a\x0d])/u',
         'match' => FALSE,
         'message' => t('The help may not hold control characters other than line breaks and tabs.'),
-      ]);
+      ])
+      ->ui(widget: 'textarea'));
     $inputs->describe('help', group: $submission);
 
     // Defaults of new content, kept on the node base fields.
-    $inputs->add('status', 'boolean', t('Published'), default: TRUE)
-      ->setDescription(t('Whether new content of this type is published by default.'));
+    $inputs->addSchema('status', Schema::bool()
+      ->title(t('Published'))
+      ->description(t('Whether new content of this type is published by default.'))
+      ->default(TRUE));
     $inputs->describe('status', group: $workflow);
 
-    $inputs->add('promote', 'boolean', t('Promoted to front page'), default: FALSE)
-      ->setDescription(t('Whether new content of this type is promoted by default.'));
+    $inputs->addSchema('promote', Schema::bool()
+      ->title(t('Promoted to front page'))
+      ->description(t('Whether new content of this type is promoted by default.'))
+      ->default(FALSE));
     $inputs->describe('promote', group: $workflow);
 
-    $inputs->add('sticky', 'boolean', t('Sticky at top of lists'), default: FALSE)
-      ->setDescription(t('Whether new content of this type is sticky by default.'));
+    $inputs->addSchema('sticky', Schema::bool()
+      ->title(t('Sticky at top of lists'))
+      ->description(t('Whether new content of this type is sticky by default.'))
+      ->default(FALSE));
     $inputs->describe('sticky', group: $workflow);
 
-    $inputs->add('new_revision', 'boolean', t('Create new revision'), default: TRUE)
-      ->setDescription(t('Whether edits create a new revision by default.'));
+    $inputs->addSchema('new_revision', Schema::bool()
+      ->title(t('Create new revision'))
+      ->description(t('Whether edits create a new revision by default.'))
+      ->default(TRUE));
     $inputs->describe('new_revision', group: $workflow);
 
     // Display.
-    $inputs->add('display_submitted', 'boolean', t('Display author and date information'), default: TRUE)
-      ->setDescription(t('Author username and publish date will be displayed.'));
+    $inputs->addSchema('display_submitted', Schema::bool()
+      ->title(t('Display author and date information'))
+      ->description(t('Author username and publish date will be displayed.'))
+      ->default(TRUE));
     $inputs->describe('display_submitted', group: $display);
   }
 

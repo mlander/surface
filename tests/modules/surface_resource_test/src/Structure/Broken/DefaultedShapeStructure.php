@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Shape\Broken\DefaultedShape;
+use PortableSchema\Builder\Schema;
 
 /**
  * Uses a shape that declares a default.
@@ -19,7 +20,8 @@ final class DefaultedShapeStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('code', DefaultedShape::class, 'Code');
+    $inputs->addSchema('code', Schema::of(DefaultedShape::class)
+      ->title('Code'));
   }
 
 }

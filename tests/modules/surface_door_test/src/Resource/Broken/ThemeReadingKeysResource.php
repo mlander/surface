@@ -10,6 +10,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_door_test\Keys\Broken\ThemeReadingKeys;
 use Drupal\surface_door_test\Storage\DoorNoteStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A key per thing a provider lists from the theme a page renders in.
@@ -22,7 +23,12 @@ final class ThemeReadingKeysResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('shown', 'boolean', from: ThemeReadingKeys::class, label: t('Shown'), default: FALSE);
+    $inputs->addEach(
+      'shown',
+      Schema::bool()->default(FALSE),
+      from: ThemeReadingKeys::class,
+      label: t('Shown'),
+    );
   }
 
 }

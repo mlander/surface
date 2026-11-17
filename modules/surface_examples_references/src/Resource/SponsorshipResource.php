@@ -13,6 +13,7 @@ use Drupal\surface_examples_references\Storage\SponsorshipStorage;
 use Drupal\surface_examples_references\Structure\CreditStructure;
 use Drupal\surface_examples_references\Structure\SettingStructure;
 use Drupal\surface_examples_references\Structure\ThingStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 16: a key that refers to an entity, three ways.
@@ -43,23 +44,36 @@ final class SponsorshipResource implements ResourceInterface {
       ->setDescription(t("Where the sponsor's stand is."))
       ->setRequired(TRUE);
 
-    $inputs->add('contact', 'integer', t('Contact'))
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user'])
-      ->setDescription(t('Who answers for the sponsor.'));
+    $inputs->addSchema('contact', Schema::integer()
+      ->title(t('Contact'))
+      ->description(t('Who answers for the sponsor.'))
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'user']));
 
     $inputs->add('page', 'integer', t('Announcement'))
       ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']])
       ->setDescription(t('The article that announces the sponsor.'));
 
     // Of any type: an entity type, then an id of it.
-    $inputs->attach('thing', ThingStructure::class, t('Featured beside'))
-      ->setDescription(t('Any content the sponsor is featured beside.'));
+    $inputs->attach(
+      'thing',
+      ThingStructure::class,
+      t('Featured beside'),
+      description: t('Any content the sponsor is featured beside.'),
+    );
 
-    $inputs->attach('setting', SettingStructure::class, t('Linked to'))
-      ->setDescription(t('A venue or a role the sponsorship is linked to.'));
+    $inputs->attach(
+      'setting',
+      SettingStructure::class,
+      t('Linked to'),
+      description: t('A venue or a role the sponsorship is linked to.'),
+    );
 
-    $inputs->attach('credit', CreditStructure::class, t('Credited on'))
-      ->setDescription(t('An article or a user the sponsor is credited on.'));
+    $inputs->attach(
+      'credit',
+      CreditStructure::class,
+      t('Credited on'),
+      description: t('An article or a user the sponsor is credited on.'),
+    );
   }
 
 }

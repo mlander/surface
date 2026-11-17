@@ -11,6 +11,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\PantryStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A pantry: every kind of part, in one resource.
@@ -46,13 +47,20 @@ final class PantryResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('pantry', 'string', 'Pantry')->setRequired(TRUE);
-    $inputs->add('kind', 'string', 'Kind', default: 'jar')
-      ->addConstraint('Choice', ['choices' => ['jar', 'tin']]);
+    $inputs->addSchema('pantry', Schema::string()
+      ->title('Pantry')
+      ->required());
+    $inputs->addSchema('kind', Schema::enum(['jar', 'tin'])
+      ->title('Kind')
+      ->default('jar'));
     $inputs->attach('shelf', ShelfStructure::class);
     $inputs->attach('label', LabelResource::class);
-    $inputs->attachVariants('kind_settings', by: 'kind', label: 'Kind settings')
-      ->setDescription('What the kind of container needs.');
+    $inputs->attachVariants(
+      'kind_settings',
+      by: 'kind',
+      label: 'Kind settings',
+      description: 'What the kind of container needs.',
+    );
   }
 
 }

@@ -21,9 +21,10 @@ final class UndeclaredDoesNotApplyStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('frequency', 'string', 'Frequency')
-      ->addConstraint('Choice', ['choices' => ['weekly', 'monthly']]);
-    $inputs->add('send_day', 'string', 'Send day');
+    $inputs->addSchema('frequency', Schema::enum(['weekly', 'monthly'])
+      ->title('Frequency'));
+    $inputs->addSchema('send_day', Schema::string()
+      ->title('Send day'));
   }
 
   /**

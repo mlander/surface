@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Access\ArchiveAccess;
+use PortableSchema\Builder\Schema;
 
 /**
  * Where a journal is archived: attached, mixing the ownership in.
@@ -25,16 +26,16 @@ final class ArchiveStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('shelf', 'string', t('Shelf'))
-      ->setRequired(TRUE);
-    $inputs->add('circle', 'string', t('Circle'), default: 'staff')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'public' => t('Public'),
-          'staff' => t('Staff'),
-        ],
-      ]);
+    $inputs->addSchema('shelf', Schema::string()
+      ->title(t('Shelf'))
+      ->required());
+    $inputs->addSchema('circle', Schema::options([
+      'public' => t('Public'),
+      'staff' => t('Staff'),
+    ])
+      ->title(t('Circle'))
+      ->default('staff')
+      ->required());
     $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'circle']);
     $inputs->attach('stamps', TimestampsStructure::class, t('Archive stamps'));
   }

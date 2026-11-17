@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A stone pot: its #[Variant] label is the choice's word, over its own.
@@ -25,7 +26,8 @@ final class StonePotStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('weight', 'integer', t('Weight'));
+    $inputs->addSchema('weight', Schema::integer()
+      ->title(t('Weight')));
   }
 
 }

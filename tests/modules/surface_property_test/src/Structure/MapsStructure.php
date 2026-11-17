@@ -7,6 +7,7 @@ namespace Drupal\surface_property_test\Structure;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Two anonymous maps, with calls: MapsPropertiesStructure's twin.
@@ -21,17 +22,28 @@ final class MapsStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addMap('coordinates', t('Coordinates'), static function (BlueprintInterface $map): void {
-      $map->add('lat', 'float', t('Latitude'))
-        ->setRequired(TRUE)
-        ->addConstraint('Range', ['min' => -90, 'max' => 90]);
-      $map->add('lng', 'float', t('Longitude'))
-        ->setRequired(TRUE)
-        ->addConstraint('Range', ['min' => -180, 'max' => 180]);
-    })->setDescription(t('Where it is.'));
+    $inputs->addMap(
+      'coordinates',
+      t('Coordinates'),
+      static function (BlueprintInterface $map): void {
+        $map->addSchema('lat', Schema::number()
+          ->title(t('Latitude'))
+          ->minimum(-90)
+          ->maximum(90)
+          ->required());
+        $map->addSchema('lng', Schema::number()
+          ->title(t('Longitude'))
+          ->minimum(-180)
+          ->maximum(180)
+          ->required());
+      },
+      description: t('Where it is.'),
+    );
 
     $inputs->addMap('booking', t('Booking'), static function (BlueprintInterface $map): void {
-      $map->add('seats', 'integer', t('Seats'), default: 1);
+      $map->addSchema('seats', Schema::integer()
+        ->title(t('Seats'))
+        ->default(1));
       $map->attach('row', EntryStructure::class, t('Row'));
     });
   }

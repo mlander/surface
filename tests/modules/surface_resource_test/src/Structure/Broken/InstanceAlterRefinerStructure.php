@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure\Broken;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A structure whose alter refines with an instance method not runtime.
@@ -20,8 +21,10 @@ final class InstanceAlterRefinerStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('kind', 'string', 'Kind');
-    $inputs->add('name', 'string', 'Name');
+    $inputs->addSchema('kind', Schema::string()
+      ->title('Kind'));
+    $inputs->addSchema('name', Schema::string()
+      ->title('Name'));
   }
 
 }

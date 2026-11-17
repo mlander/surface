@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Broken: a field gate, "field:node.title:delete", asking for an operation.
@@ -22,7 +23,8 @@ final class FieldDeleteGateStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('jam', 'string', 'Jam');
+    $inputs->addSchema('jam', Schema::string()
+      ->title('Jam'));
   }
 
 }

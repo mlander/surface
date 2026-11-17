@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Resource\Digest\DigestResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * A weekly digest's schedule: the day it is sent.
@@ -21,9 +22,10 @@ final class WeeklyScheduleStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('send_day', 'string', 'Send day', default: 'monday')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['monday', 'friday']]);
+    $inputs->addSchema('send_day', Schema::enum(['monday', 'friday'])
+      ->title('Send day')
+      ->default('monday')
+      ->required());
   }
 
 }

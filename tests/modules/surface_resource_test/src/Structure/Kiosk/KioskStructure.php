@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Kiosk;
 
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
@@ -26,16 +25,22 @@ final class KioskStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('licensed', 'boolean', 'Licensed', default: FALSE);
-    $inputs->add('capacity', 'integer', 'Capacity')
-      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
-    $inputs->add('queue', 'integer', 'Queue')
-      ->addConstraint('Range', ['max' => 10, 'maxMessage' => 'A queue holds ten at most.']);
-    $inputs->add('code', 'string', 'Code')
-      ->addConstraint('Length', ['max' => 12]);
-    $day = DataDefinition::create('string')
-      ->addConstraint('Choice', ['choices' => ['mon', 'tue']]);
-    $inputs->addList('days', $day, 'Days', default: []);
+    $inputs->addSchema('licensed', Schema::bool()
+      ->title('Licensed')
+      ->default(FALSE));
+    $inputs->addSchema('capacity', Schema::integer()
+      ->title('Capacity')
+      ->minimum(1)
+      ->maximum(1000));
+    $inputs->addSchema('queue', Schema::integer()
+      ->title('Queue')
+      ->check('drupal:Range', ['max' => 10, 'maxMessage' => 'A queue holds ten at most.']));
+    $inputs->addSchema('code', Schema::string()
+      ->title('Code')
+      ->maxLength(12));
+    $inputs->addSchema('days', Schema::list(Schema::enum(['mon', 'tue']))
+      ->title('Days')
+      ->default([]));
 
     $inputs->narrow('capacity')
       ->unless(Condition::equals('licensed', TRUE))

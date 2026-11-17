@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Resource\Parcel;
 
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -42,47 +41,52 @@ final class ParcelResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('service', 'string', t('Service'), default: 'standard')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'standard' => t('Standard'),
-          'express' => t('Express'),
-          'freight' => t('Freight'),
-        ],
-      ]);
-    $inputs->add('weight', 'integer', t('Weight in kilograms'), default: 1)
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
-    $inputs->add('insured', 'boolean', t('Insured'), default: FALSE);
-    $inputs->add('declared_value', 'integer', t('Declared value'))
-      ->addConstraint('Range', ['min' => 0, 'max' => 100000]);
-    $inputs->add('reference', 'string', t('Reference'))
-      ->addConstraint('Length', ['max' => 32]);
-    $inputs->add('signature', 'string', t('Signed for by'))
-      ->addConstraint('Length', ['max' => 64]);
-    $inputs->add('tracking', 'string', t('Tracking code'));
-    $inputs->add('handling', 'string', t('Handling'))
-      ->setSetting('widget', 'radios')
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'fragile' => t('Fragile'),
-          'upright' => t('This way up'),
-          'cold' => t('Keep cold'),
-        ],
-      ]);
-    $label = DataDefinition::create('string')
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'dry' => t('Keep dry'),
-          'heavy' => t('Heavy'),
-          'perishable' => t('Perishable'),
-        ],
-      ]);
-    $inputs->addList('labels', $label, t('Labels'))
-      ->addConstraint('Count', ['max' => 3]);
-    $inputs->add('note', 'string', t('Note for the driver'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('service', Schema::options([
+      'standard' => t('Standard'),
+      'express' => t('Express'),
+      'freight' => t('Freight'),
+    ])
+      ->title(t('Service'))
+      ->default('standard')
+      ->required());
+    $inputs->addSchema('weight', Schema::integer()
+      ->title(t('Weight in kilograms'))
+      ->default(1)
+      ->minimum(1)
+      ->maximum(1000)
+      ->required());
+    $inputs->addSchema('insured', Schema::bool()
+      ->title(t('Insured'))
+      ->default(FALSE));
+    $inputs->addSchema('declared_value', Schema::integer()
+      ->title(t('Declared value'))
+      ->minimum(0)
+      ->maximum(100000));
+    $inputs->addSchema('reference', Schema::string()
+      ->title(t('Reference'))
+      ->maxLength(32));
+    $inputs->addSchema('signature', Schema::string()
+      ->title(t('Signed for by'))
+      ->maxLength(64));
+    $inputs->addSchema('tracking', Schema::string()
+      ->title(t('Tracking code')));
+    $inputs->addSchema('handling', Schema::options([
+      'fragile' => t('Fragile'),
+      'upright' => t('This way up'),
+      'cold' => t('Keep cold'),
+    ])
+      ->title(t('Handling'))
+      ->ui(widget: 'radios'));
+    $inputs->addSchema('labels', Schema::list(Schema::options([
+      'dry' => t('Keep dry'),
+      'heavy' => t('Heavy'),
+      'perishable' => t('Perishable'),
+    ]))
+      ->title(t('Labels'))
+      ->maxItems(3));
+    $inputs->addSchema('note', Schema::string()
+      ->title(t('Note for the driver'))
+      ->required());
 
     // An insured parcel is signed for, by someone named.
     $inputs->narrow('signature')

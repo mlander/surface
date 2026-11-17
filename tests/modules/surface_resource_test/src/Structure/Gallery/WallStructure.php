@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Access\WallAccess;
+use PortableSchema\Builder\Schema;
 
 /**
  * A wall, attached at the gallery's north and south and at the annex's.
@@ -22,8 +23,10 @@ final class WallStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('artwork', 'string', t('Artwork'));
-    $inputs->add('height', 'integer', t('Height'));
+    $inputs->addSchema('artwork', Schema::string()
+      ->title(t('Artwork')));
+    $inputs->addSchema('height', Schema::integer()
+      ->title(t('Height')));
   }
 
 }

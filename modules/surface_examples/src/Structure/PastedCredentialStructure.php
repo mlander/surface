@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Drupal\surface_examples\Structure;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 14: the credential pasted, a secret.
@@ -26,10 +26,11 @@ final class PastedCredentialStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $api_key = $inputs->add('api_key', 'string', t('API key'))
-      ->setDescription(t('The key the mail service issued, pasted here.'))
-      ->setRequired(TRUE);
-    DefinitionMetadata::setSecret($api_key);
+    $inputs->addSchema('api_key', Schema::string()
+      ->title(t('API key'))
+      ->description(t('The key the mail service issued, pasted here.'))
+      ->writeOnly(TRUE)
+      ->required());
   }
 
 }

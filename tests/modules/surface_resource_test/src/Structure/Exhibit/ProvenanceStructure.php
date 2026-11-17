@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Access\ExhibitAccess;
+use PortableSchema\Builder\Schema;
 
 /**
  * Where an exhibit came from: mixed into the exhibit, its keys the exhibit's.
@@ -21,9 +22,11 @@ final class ProvenanceStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('source', 'string', t('Source'));
-    $inputs->add('acquired', 'integer', t('Acquired'))
-      ->addConstraint('Range', ['min' => 1800]);
+    $inputs->addSchema('source', Schema::string()
+      ->title(t('Source')));
+    $inputs->addSchema('acquired', Schema::integer()
+      ->title(t('Acquired'))
+      ->minimum(1800));
   }
 
 }

@@ -20,7 +20,8 @@ final class WatchesUndeclaredStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', 'Name');
+    $inputs->addSchema('name', Schema::string()
+      ->title('Name'));
   }
 
   /**

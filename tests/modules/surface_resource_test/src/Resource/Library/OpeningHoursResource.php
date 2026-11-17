@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Resource\Library;
 
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -12,6 +11,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\OpeningHoursStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A library's opening hours: the common settings recipes, each a key.
@@ -40,67 +40,79 @@ final class OpeningHoursResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('opens', 'string', t('Opens at'), default: '09:00')
-      ->setRequired(TRUE)
-      ->setDescription(t('HH:MM, on a 24-hour clock.'))
-      ->setSetting('widget', 'time')
-      ->addConstraint('Regex', [
+    $inputs->addSchema('opens', Schema::string()
+      ->title(t('Opens at'))
+      ->description(t('HH:MM, on a 24-hour clock.'))
+      ->default('09:00')
+      ->check('drupal:Regex', [
         'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
         'message' => t('Write the time as HH:MM, such as 09:00.'),
-      ]);
+      ])
+      ->ui(widget: 'time')
+      ->required());
 
-    $inputs->add('closes', 'integer', t('Closes at, in minutes after midnight'), default: 1020)
-      ->setRequired(TRUE)
-      ->setDescription(t('Later than noon: 1020 is 17:00.'))
-      ->addConstraint('Range', ['min' => 721, 'max' => 1439]);
+    $inputs->addSchema('closes', Schema::integer()
+      ->title(t('Closes at, in minutes after midnight'))
+      ->description(t('Later than noon: 1020 is 17:00.'))
+      ->default(1020)
+      ->minimum(721)
+      ->maximum(1439)
+      ->required());
 
-    $day = DataDefinition::create('string')
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'mon' => t('Monday'),
-          'tue' => t('Tuesday'),
-          'wed' => t('Wednesday'),
-          'thu' => t('Thursday'),
-          'fri' => t('Friday'),
-          'sat' => t('Saturday'),
-          'sun' => t('Sunday'),
-        ],
-      ]);
-    $inputs->addList('days', $day, t('Days open'), default: ['mon', 'tue', 'wed', 'thu', 'fri'])
-      ->setRequired(TRUE)
-      ->addConstraint('UniqueItems', []);
+    $day = Schema::options([
+      'mon' => t('Monday'),
+      'tue' => t('Tuesday'),
+      'wed' => t('Wednesday'),
+      'thu' => t('Thursday'),
+      'fri' => t('Friday'),
+      'sat' => t('Saturday'),
+      'sun' => t('Sunday'),
+    ]);
+    $inputs->addSchema('days', Schema::list($day)
+      ->title(t('Days open'))
+      ->default(['mon', 'tue', 'wed', 'thu', 'fri'])
+      ->uniqueItems(TRUE)
+      ->required());
 
-    $inputs->add('notes', 'string', t('Notes'))
-      ->setSetting('multiline', TRUE);
+    $inputs->addSchema('notes', Schema::string()
+      ->title(t('Notes'))
+      ->ui(widget: 'textarea'));
 
-    $inputs->add('after_hours', 'boolean', t('After-hours access'), default: FALSE);
-    $inputs->add('door_code', 'string', t('Door code'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['min' => 4, 'max' => 12]);
+    $inputs->addSchema('after_hours', Schema::bool()
+      ->title(t('After-hours access'))
+      ->default(FALSE));
+    $inputs->addSchema('door_code', Schema::string()
+      ->title(t('Door code'))
+      ->minLength(4)
+      ->maxLength(12)
+      ->required());
     $inputs->narrow('door_code')
       ->unless(Condition::equals('after_hours', TRUE))
       ->doesNotApply();
 
-    $inputs->addList('late_days', $day, t('After-hours days'), default: [])
-      ->setRequired(TRUE)
-      ->addConstraint('Count', [
+    $inputs->addSchema('late_days', Schema::list($day)
+      ->title(t('After-hours days'))
+      ->default([])
+      ->check('drupal:Count', [
         'min' => 1,
         'minMessage' => t('Choose at least one day for after-hours access.'),
-      ]);
+      ])
+      ->required());
     $inputs->narrow('late_days')
       ->unless(Condition::equals('after_hours', TRUE))
       ->doesNotApply();
 
-    $inputs->addList('keywords', 'string', t('Keywords'), default: []);
+    $inputs->addSchema('keywords', Schema::list(Schema::string())
+      ->title(t('Keywords'))
+      ->default([]));
 
-    $inputs->add('holidays', 'string', t('On public holidays'), default: 'closed')
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'closed' => t('Closed'),
-          'reduced' => t('Reduced hours'),
-          'open' => t('Open as usual'),
-        ],
-      ]);
+    $inputs->addSchema('holidays', Schema::options([
+      'closed' => t('Closed'),
+      'reduced' => t('Reduced hours'),
+      'open' => t('Open as usual'),
+    ])
+      ->title(t('On public holidays'))
+      ->default('closed'));
   }
 
 }

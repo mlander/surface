@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Structure\Mixin\OwnershipStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Attaches the ownership, its port wired to a circle of its own.
@@ -19,7 +20,8 @@ final class WiredOwnershipStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('circle', 'string', 'Circle');
+    $inputs->addSchema('circle', Schema::string()
+      ->title('Circle'));
     $inputs->attach('owned', OwnershipStructure::class, reads: ['audience' => 'circle']);
   }
 

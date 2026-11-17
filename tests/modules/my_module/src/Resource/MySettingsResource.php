@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\my_module\Storage\MySettingsStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * My module's settings: one key of each basic type.
@@ -34,26 +35,34 @@ final class MySettingsResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Title'), default: 'Latest content')
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 64]);
+    $inputs->addSchema('title', Schema::string()
+      ->title(t('Title'))
+      ->default('Latest content')
+      ->maxLength(64)
+      ->required());
 
-    $inputs->add('items_per_page', 'integer', t('Items per page'), default: 10)
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 50]);
+    $inputs->addSchema('items_per_page', Schema::integer()
+      ->title(t('Items per page'))
+      ->default(10)
+      ->minimum(1)
+      ->maximum(50)
+      ->required());
 
-    $inputs->add('show_author', 'boolean', t('Show the author'), default: TRUE);
+    $inputs->addSchema('show_author', Schema::bool()
+      ->title(t('Show the author'))
+      ->default(TRUE));
 
-    $inputs->add('notify_email', 'email', t('Email for notices'), default: 'admin@example.com');
+    $inputs->addSchema('notify_email', Schema::string()->format('email')
+      ->title(t('Email for notices'))
+      ->default('admin@example.com'));
 
-    $inputs->add('layout', 'string', t('Layout'), default: 'list')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'list' => t('List'),
-          'grid' => t('Grid'),
-        ],
-      ]);
+    $inputs->addSchema('layout', Schema::options([
+      'list' => t('List'),
+      'grid' => t('Grid'),
+    ])
+      ->title(t('Layout'))
+      ->default('list')
+      ->required());
   }
 
 }

@@ -10,6 +10,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_tool_test\Access\CodeLockAccess;
 use Drupal\surface_tool_test\Resource\CabinetResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * A code lock's settings: offered locked unless the account sets codes.
@@ -22,8 +23,11 @@ final class CodeLockStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('digits', 'integer', t('Digits'), default: 4)
-      ->addConstraint('Range', ['min' => 3, 'max' => 8]);
+    $inputs->addSchema('digits', Schema::integer()
+      ->title(t('Digits'))
+      ->default(4)
+      ->minimum(3)
+      ->maximum(8));
   }
 
 }

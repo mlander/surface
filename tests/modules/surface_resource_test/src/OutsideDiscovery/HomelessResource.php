@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\OutsideDiscovery;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface\Resource\BlueprintInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A #[Resource] naming no storage, no identity and no host.
@@ -22,7 +23,8 @@ final class HomelessResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', 'Name');
+    $inputs->addSchema('name', Schema::string()
+      ->title('Name'));
   }
 
 }

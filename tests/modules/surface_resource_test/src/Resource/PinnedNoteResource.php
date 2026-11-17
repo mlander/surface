@@ -10,6 +10,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\PinnedNoteStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A resource with storage and an operation that a plugin also uses.
@@ -33,7 +34,10 @@ final class PinnedNoteResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('note', 'string', t('Note'), default: 'Pinned')->setRequired(TRUE);
+    $inputs->addSchema('note', Schema::string()
+      ->title(t('Note'))
+      ->default('Pinned')
+      ->required());
   }
 
 }

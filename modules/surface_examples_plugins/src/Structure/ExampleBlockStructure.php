@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface_examples_plugins\Structure;
 
 use Drupal\Core\Entity\ContentEntityInterface;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
@@ -49,42 +48,57 @@ final class ExampleBlockStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $source = ArrangementGroup::fieldset('source', t('What to feature'));
 
-    $headline = $inputs->add('headline', 'string', t('Headline'), default: 'Featured content')
-      ->setDescription(t('Shown above the featured content.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 50]);
-    DefinitionMetadata::setExamples($headline, ['Quarterly report']);
+    $inputs->addSchema('headline', Schema::string()
+      ->title(t('Headline'))
+      ->description(t('Shown above the featured content.'))
+      ->default('Featured content')
+      ->maxLength(50)
+      ->examples(['Quarterly report'])
+      ->required());
     $inputs->describe('headline', placeholder: t('For example, Quarterly report'));
 
-    $inputs->add('entity_type', 'string', t('Entity type'), default: 'user')
-      ->setDescription(t('The type of content to feature.'))
-      ->setRequired(TRUE)
-      ->addConstraint('PluginExists', [
+    $inputs->addSchema('entity_type', Schema::string()
+      ->title(t('Entity type'))
+      ->description(t('The type of content to feature.'))
+      ->default('user')
+      ->check('drupal:PluginExists', [
         'manager' => 'entity_type.manager',
         'interface' => ContentEntityInterface::class,
-      ]);
+      ])
+      ->required());
     $inputs->describe('entity_type', group: $source);
 
-    $inputs->add('bundle', 'string', t('Bundle'))
-      ->setDescription(t('Choose an entity type to see its bundles.'));
+    $inputs->addSchema('bundle', Schema::string()
+      ->title(t('Bundle'))
+      ->description(t('Choose an entity type to see its bundles.')));
     $inputs->describe('bundle', group: $source);
 
-    $inputs->add('field', 'string', t('Highlight field'))
-      ->setDescription(t('Choose a bundle to pick from its fields.'));
+    $inputs->addSchema('field', Schema::string()
+      ->title(t('Highlight field'))
+      ->description(t('Choose a bundle to pick from its fields.')));
     $inputs->describe('field', group: $source);
 
-    $inputs->add('limit', 'integer', t('Number of items'), default: 10)
-      ->setDescription(t('How many items to feature.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 50]);
+    $inputs->addSchema('limit', Schema::integer()
+      ->title(t('Number of items'))
+      ->description(t('How many items to feature.'))
+      ->default(10)
+      ->minimum(1)
+      ->maximum(50)
+      ->required());
     $inputs->describe('limit', weight: 10, suffix: t('items'));
 
-    $inputs->add('presentation', 'string', t('Presentation'), default: 'list')
-      ->setDescription(t('How the items are laid out.'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('presentation', Schema::string()
+      ->title(t('Presentation'))
+      ->description(t('How the items are laid out.'))
+      ->default('list')
+      ->required());
 
-    $inputs->attachVariants('presentation_settings', by: 'presentation', label: t('Presentation settings'))
-      ->setDescription(t('What the chosen presentation needs.'));
+    $inputs->attachVariants(
+      'presentation_settings',
+      by: 'presentation',
+      label: t('Presentation settings'),
+      description: t('What the chosen presentation needs.'),
+    );
   }
 
   /**

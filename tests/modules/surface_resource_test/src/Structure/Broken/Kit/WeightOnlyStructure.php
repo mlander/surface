@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure\Broken\Kit;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A weight alone, which the refusals list as a variant and mix in.
@@ -18,7 +19,8 @@ final class WeightOnlyStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('weight', 'integer', 'Weight');
+    $inputs->addSchema('weight', Schema::integer()
+      ->title('Weight'));
   }
 
 }

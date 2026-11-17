@@ -43,21 +43,25 @@ final class JournalResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Title'))
-      ->setRequired(TRUE);
-    $inputs->add('visibility', 'string', t('Visibility'), default: 'staff')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'public' => t('Public'),
-          'staff' => t('Staff'),
-        ],
-      ]);
+    $inputs->addSchema('title', Schema::string()
+      ->title(t('Title'))
+      ->required());
+    $inputs->addSchema('visibility', Schema::options([
+      'public' => t('Public'),
+      'staff' => t('Staff'),
+    ])
+      ->title(t('Visibility'))
+      ->default('staff')
+      ->required());
     $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'visibility']);
     $inputs->mixIn(TimestampsStructure::class);
-    $inputs->add('revision', 'integer', t('Revision'), default: 1)
-      ->addConstraint('Range', ['min' => 1]);
-    $inputs->add('published', 'boolean', t('Published'), default: FALSE);
+    $inputs->addSchema('revision', Schema::integer()
+      ->title(t('Revision'))
+      ->default(1)
+      ->minimum(1));
+    $inputs->addSchema('published', Schema::bool()
+      ->title(t('Published'))
+      ->default(FALSE));
     $inputs->attach('archive', ArchiveStructure::class, t('Archive'));
     // The owner's rules read and narrow members the timestamps brought:
     // they are the journal's own keys now.

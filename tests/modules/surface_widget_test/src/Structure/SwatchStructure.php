@@ -7,6 +7,7 @@ namespace Drupal\surface_widget_test\Structure;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Three keys: two colors and a caption.
@@ -23,13 +24,16 @@ final class SwatchStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('accent', 'string', t('Accent'), default: '#336699')
-      ->setSetting('format', 'color');
+    $inputs->addSchema('accent', Schema::string()
+      ->title(t('Accent'))
+      ->default('#336699')
+      ->annotation('x-surface-settings', ['format' => 'color']));
     $inputs->add('trim', 'string', t('Trim'), default: '#000000')
       ->setSetting('format', 'color')
       ->setSetting('widget', 'radios')
       ->addConstraint('LabeledChoice', ['choices' => ['#000000' => t('Black'), '#ffffff' => t('White')]]);
-    $inputs->add('caption', 'string', t('Caption'));
+    $inputs->addSchema('caption', Schema::string()
+      ->title(t('Caption')));
   }
 
 }

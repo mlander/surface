@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface_resource_test\Resource\RecipeResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * Adds a revision note, only where a recipe is edited.
@@ -19,7 +20,8 @@ final class EditOnlyRecipeAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('revision_note', 'string', 'Revision note');
+    $inputs->addSchema('revision_note', Schema::string()
+      ->title('Revision note'));
   }
 
 }

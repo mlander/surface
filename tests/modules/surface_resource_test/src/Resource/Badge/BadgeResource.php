@@ -13,6 +13,7 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Compute\BadgeCode;
 use Drupal\surface_resource_test\Compute\BadgeHandle;
 use Drupal\surface_resource_test\Storage\BadgeStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A badge: three keys computed from a name, once, on change, unless sent.
@@ -31,15 +32,40 @@ final class BadgeResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('first', 'string', t('First name'))->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 10]);
-    $inputs->add('last', 'string', t('Last name'));
-    $inputs->compute('code', 'string', t('Code'), from: ['first'], using: BadgeCode::class);
-    $inputs->compute('handle', 'string', t('Handle'), from: ['first', 'last'], using: BadgeHandle::class, when: Compute::ON_CHANGE)
-      ->addConstraint('Length', ['max' => 12]);
-    $inputs->compute('tag', 'machine_name', t('Tag'), from: ['last'], using: MachineName::class, when: Compute::UNLESS_SENT)
-      ->addConstraint('Length', ['max' => 8]);
-    $inputs->add('color', 'string', t('Color'), default: 'blue');
+    $inputs->addSchema('first', Schema::string()
+      ->title(t('First name'))
+      ->maxLength(10)
+      ->required());
+    $inputs->addSchema('last', Schema::string()
+      ->title(t('Last name')));
+    $inputs->compute(
+      'code',
+      Schema::string()
+        ->title(t('Code')),
+      from: ['first'],
+      using: BadgeCode::class,
+    );
+    $inputs->compute(
+      'handle',
+      Schema::string()
+        ->title(t('Handle'))
+        ->maxLength(12),
+      from: ['first', 'last'],
+      using: BadgeHandle::class,
+      when: Compute::ON_CHANGE,
+    );
+    $inputs->compute(
+      'tag',
+      Schema::of('drupal:config/machine_name')
+        ->title(t('Tag'))
+        ->check('drupal:Length', ['max' => 8]),
+      from: ['last'],
+      using: MachineName::class,
+      when: Compute::UNLESS_SENT,
+    );
+    $inputs->addSchema('color', Schema::string()
+      ->title(t('Color'))
+      ->default('blue'));
   }
 
 }

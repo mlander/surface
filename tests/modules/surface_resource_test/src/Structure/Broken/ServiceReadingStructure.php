@@ -31,10 +31,14 @@ final class ServiceReadingStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('kind', 'string', 'Kind')->addConstraint('Choice', ['choices' => ['short', 'long']]);
-    $inputs->add('shelf', 'string', 'Shelf');
-    $inputs->add('name', 'string', 'Name');
-    $inputs->add('size', 'integer', 'Size');
+    $inputs->addSchema('kind', Schema::enum(['short', 'long'])
+      ->title('Kind'));
+    $inputs->addSchema('shelf', Schema::string()
+      ->title('Shelf'));
+    $inputs->addSchema('name', Schema::string()
+      ->title('Name'));
+    $inputs->addSchema('size', Schema::integer()
+      ->title('Size'));
   }
 
   /**

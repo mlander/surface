@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Outputs, a value and a list, with calls: OutputsPropertiesStructure's twin.
@@ -21,16 +22,18 @@ final class OutputsStructure implements StructureInterface, DefinesOutputsInterf
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('query', 'string', t('Query'));
+    $inputs->addSchema('query', Schema::string()
+      ->title(t('Query')));
   }
 
   /**
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $outputs->add('total', 'integer', t('Total'))
-      ->setDescription(t('How many matched.'))
-      ->setRequired(TRUE);
+    $outputs->addSchema('total', Schema::integer()
+      ->title(t('Total'))
+      ->description(t('How many matched.'))
+      ->required());
 
     $item = MapDataDefinition::create()
       ->setPropertyDefinition('id', DataDefinition::create('string')->setLabel(t('Id'))->setRequired(TRUE))

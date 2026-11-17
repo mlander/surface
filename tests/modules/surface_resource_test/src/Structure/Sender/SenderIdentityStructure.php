@@ -8,6 +8,7 @@ use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Who a message is from: a name, required once an email is set.
@@ -25,10 +26,13 @@ final class SenderIdentityStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', t('Name'))
-      ->addConstraint('Length', ['max' => 64]);
-    $inputs->add('email', 'email', t('Email'));
-    $inputs->add('signature', 'string', t('Signature'));
+    $inputs->addSchema('name', Schema::string()
+      ->title(t('Name'))
+      ->maxLength(64));
+    $inputs->addSchema('email', Schema::string()->format('email')
+      ->title(t('Email')));
+    $inputs->addSchema('signature', Schema::string()
+      ->title(t('Signature')));
     $inputs->narrow('name')
       ->when(Condition::present('email'))
       ->require()

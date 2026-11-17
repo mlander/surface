@@ -11,6 +11,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\PosterStorage;
 use Drupal\surface_resource_test\Variants\PosterLayouts;
+use PortableSchema\Builder\Schema;
 
 /**
  * A poster: variants from the site, one per layout a provider lists.
@@ -35,8 +36,10 @@ final class PosterResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('layout', 'string', t('Layout'), default: 'grid')
-      ->setRequired(TRUE);
+    $inputs->addSchema('layout', Schema::string()
+      ->title(t('Layout'))
+      ->default('grid')
+      ->required());
     $inputs->attachVariants('panels', by: 'layout', label: t('Panels'), from: PosterLayouts::class);
   }
 

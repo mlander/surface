@@ -8,6 +8,7 @@ use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface_resource_test\Resource\Relay\PlainRelayResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * Rewords the relay's token, and words its own mount twice.
@@ -25,7 +26,8 @@ final class NorthWordingAlter implements AltersInputsInterface {
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->describe('token', label: 'North token', help: 'Issued by the north desk.');
 
-    $inputs->add('reviewed', 'boolean', 'Reviewed');
+    $inputs->addSchema('reviewed', Schema::bool()
+      ->title('Reviewed'));
 
     $inputs->describe('third_party_settings.north_wording', label: 'North');
     $inputs->describe('third_party_settings.north_wording', label: 'North desk');

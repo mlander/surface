@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Structure\Mixin\TimestampsStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Rules a member of the timestamps out, which is the timestamps' to say.
@@ -20,8 +21,8 @@ final class MixinRulesOutStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('kind', 'string', 'Kind')
-      ->addConstraint('Choice', ['choices' => ['draft', 'final']]);
+    $inputs->addSchema('kind', Schema::enum(['draft', 'final'])
+      ->title('Kind'));
     $inputs->mixIn(TimestampsStructure::class);
     $inputs->narrow('changed')
       ->when(Condition::equals('kind', 'draft'))

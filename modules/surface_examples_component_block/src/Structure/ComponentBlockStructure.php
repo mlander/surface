@@ -9,6 +9,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface\Variants\ComponentProps;
 use Drupal\surface\Variants\ComponentSlots;
+use PortableSchema\Builder\Schema;
 
 /**
  * What the component block is configured with: a component, props, slots.
@@ -37,7 +38,8 @@ final class ComponentBlockStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('component', 'string', t('Component'));
+    $inputs->addSchema('component', Schema::string()
+      ->title(t('Component')));
 
     $inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
 

@@ -8,6 +8,7 @@ use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 8: who reviewed a page and when, members a resource mixes in.
@@ -23,15 +24,17 @@ final class ReviewStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('reviewed_on', 'string', t('Reviewed on'))
-      ->setDescription(t('YYYY-MM-DD.'))
-      ->setSetting('widget', 'date')
-      ->addConstraint('Regex', [
+    $inputs->addSchema('reviewed_on', Schema::string()
+      ->title(t('Reviewed on'))
+      ->description(t('YYYY-MM-DD.'))
+      ->check('drupal:Regex', [
         'pattern' => '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D',
         'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-19.'),
-      ]);
+      ])
+      ->ui(widget: 'date'));
 
-    $inputs->add('reviewed_by', 'string', t('Reviewed by'));
+    $inputs->addSchema('reviewed_by', Schema::string()
+      ->title(t('Reviewed by')));
 
     $inputs->narrow('reviewed_by')
       ->when(Condition::present('reviewed_on'))

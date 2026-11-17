@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_paths_test\Storage\NoteStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * The board: a singleton whose update carries the standard id.
@@ -24,7 +25,8 @@ final class BoardResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('note', 'string', 'Note');
+    $inputs->addSchema('note', Schema::string()
+      ->title('Note'));
   }
 
 }

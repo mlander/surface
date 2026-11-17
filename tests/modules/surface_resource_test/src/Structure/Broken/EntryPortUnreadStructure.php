@@ -9,6 +9,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Keys\WorkshopBenches;
 use Drupal\surface_resource_test\Structure\Workshop\BenchStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Wires a port the bench, at every entry, does not read.
@@ -20,7 +21,12 @@ final class EntryPortUnreadStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('lights', 'boolean', from: WorkshopBenches::class, label: t('Lights'));
+    $inputs->addEach(
+      'lights',
+      Schema::bool(),
+      from: WorkshopBenches::class,
+      label: t('Lights'),
+    );
     $inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class, reads: ['lit' => 'lights']);
   }
 

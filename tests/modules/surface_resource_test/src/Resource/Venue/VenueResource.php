@@ -11,6 +11,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\VenueStorage;
 use Drupal\surface_resource_test\Structure\Seating\SeatingStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * A venue, seated: the seating structure attached under one name.
@@ -33,18 +34,20 @@ final class VenueResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('layout', 'string', t('Layout'), default: 'theatre')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'theatre' => t('Theatre'),
-          'banquet' => t('Banquet'),
-          'standing' => t('Standing'),
-        ],
-      ]);
-    $inputs->add('capacity', 'integer', t('Capacity'), default: 80)
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
+    $inputs->addSchema('layout', Schema::options([
+      'theatre' => t('Theatre'),
+      'banquet' => t('Banquet'),
+      'standing' => t('Standing'),
+    ])
+      ->title(t('Layout'))
+      ->default('theatre')
+      ->required());
+    $inputs->addSchema('capacity', Schema::integer()
+      ->title(t('Capacity'))
+      ->default(80)
+      ->minimum(1)
+      ->maximum(1000)
+      ->required());
     $inputs->attach('seating', SeatingStructure::class, t('Seating'), reads: [
       'layout' => 'layout',
       'guests' => 'capacity',

@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_tool_test\Resource\CabinetResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * A key lock's settings: open to whoever may edit the cabinet.
@@ -21,8 +22,11 @@ final class KeyLockStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('keys', 'integer', t('Keys'), default: 2)
-      ->addConstraint('Range', ['min' => 1, 'max' => 5]);
+    $inputs->addSchema('keys', Schema::integer()
+      ->title(t('Keys'))
+      ->default(2)
+      ->minimum(1)
+      ->maximum(5));
   }
 
 }

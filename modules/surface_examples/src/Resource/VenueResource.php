@@ -18,6 +18,7 @@ use Drupal\surface_examples\Storage\VenueStorage;
 use Drupal\surface_examples\Structure\VenueListingStructure;
 use Drupal\surface_examples\Structure\VenueReorderStructure;
 use Drupal\surface_examples\Structure\VenueRoomStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 15: a venue, a config entity this module declares, from the start.
@@ -102,40 +103,66 @@ final class VenueResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('label', 'string', t('Name'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 128]);
+    $inputs->addSchema('label', Schema::string()
+      ->title(t('Name'))
+      ->maxLength(128)
+      ->required());
 
-    $inputs->compute('id', 'machine_name', t('Machine name'),
-      from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
-      ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
-      ->addConstraint('Length', ['max' => 32]);
+    $inputs->compute(
+      'id',
+      Schema::of('drupal:config/machine_name')
+        ->title(t('Machine name'))
+        ->description(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
+        ->check('drupal:Length', ['max' => 32]),
+      from: ['label'],
+      using: MachineName::class,
+      when: Compute::UNLESS_SENT,
+    );
 
-    $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
-      ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
-      ->addConstraint('Regex', [
-        'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
-        'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
-      ])
-      ->addConstraint('Length', ['max' => 128]);
+    $inputs->compute(
+      'slug',
+      Schema::string()
+        ->title(t('Slug'))
+        ->description(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
+        ->check('drupal:Regex', [
+          'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
+          'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
+        ])
+        ->maxLength(128),
+      from: ['label'],
+      using: Slugify::class,
+    );
 
-    $inputs->add('capacity', 'integer', t('Capacity'))
-      ->setDescription(t('How many people the venue holds.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 100000]);
+    $inputs->addSchema('capacity', Schema::integer()
+      ->title(t('Capacity'))
+      ->description(t('How many people the venue holds.'))
+      ->minimum(1)
+      ->maximum(100000)
+      ->required());
 
-    $inputs->add('address', 'string', t('Address'))
-      ->addConstraint('Length', ['max' => 255]);
+    $inputs->addSchema('address', Schema::string()
+      ->title(t('Address'))
+      ->maxLength(255));
 
-    $inputs->attachList('rooms', VenueRoomStructure::class, t('Rooms'), max: 20)
-      ->setDescription(t('The rooms an event at the venue may be held in.'));
+    $inputs->attachList(
+      'rooms',
+      VenueRoomStructure::class,
+      t('Rooms'),
+      max: 20,
+      description: t('The rooms an event at the venue may be held in.'),
+    );
 
-    $inputs->add('weight', 'integer', t('Weight'), default: 0)
-      ->setDescription(t('Its place among the venues: lighter first.'))
-      ->addConstraint('Range', ['min' => -1000, 'max' => 1000]);
+    $inputs->addSchema('weight', Schema::integer()
+      ->title(t('Weight'))
+      ->description(t('Its place among the venues: lighter first.'))
+      ->default(0)
+      ->minimum(-1000)
+      ->maximum(1000));
 
-    $inputs->add('status', 'boolean', t('Enabled'), default: TRUE)
-      ->setDescription(t('Whether events may be held there; a disabled venue is listed only for an account that administers the venues.'));
+    $inputs->addSchema('status', Schema::bool()
+      ->title(t('Enabled'))
+      ->description(t('Whether events may be held there; a disabled venue is listed only for an account that administers the venues.'))
+      ->default(TRUE));
   }
 
 }

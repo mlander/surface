@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface_route_test\Resource;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
@@ -13,6 +12,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_route_test\Storage\CardStorage;
 use Drupal\surface_route_test\Structure\EnvelopeStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * A greeting card: every kind of key a route may fix or fill, or not.
@@ -75,24 +75,32 @@ final class CardResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('card', 'string', 'Card')->setRequired(TRUE);
+    $inputs->addSchema('card', Schema::string()
+      ->title('Card')
+      ->required());
 
-    $inputs->add('title', 'string', 'Title', default: 'Hello')
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 40]);
+    $inputs->addSchema('title', Schema::string()
+      ->title('Title')
+      ->default('Hello')
+      ->maxLength(40)
+      ->required());
 
-    $inputs->add('copies', 'integer', 'Copies', default: 1)
-      ->addConstraint('Range', ['min' => 1, 'max' => 10]);
+    $inputs->addSchema('copies', Schema::integer()
+      ->title('Copies')
+      ->default(1)
+      ->minimum(1)
+      ->maximum(10));
 
-    $inputs->add('occasion', 'string', 'Occasion')
-      ->addConstraint('Choice', ['choices' => ['birthday', 'wedding', 'thanks']]);
+    $inputs->addSchema('occasion', Schema::enum(['birthday', 'wedding', 'thanks'])
+      ->title('Occasion'));
 
     $format = DataDefinition::create('string')
       ->setLabel('Format')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['plain', 'html']]);
     $inputs->addMap('greeting', 'Greeting', static function (BlueprintInterface $greeting) use ($format): void {
-      $greeting->add('value', 'string', 'Text');
+      $greeting->addSchema('value', Schema::string()
+        ->title('Text'));
       $greeting->addDefinition('format', $format, default: 'plain');
     });
 
@@ -100,12 +108,15 @@ final class CardResource implements ResourceInterface {
 
     $inputs->attachList('inserts', EnvelopeStructure::class, 'Inserts');
 
-    $inputs->add('paper', 'string', 'Paper', default: 'plain');
+    $inputs->addSchema('paper', Schema::string()
+      ->title('Paper')
+      ->default('plain'));
 
     $inputs->attachVariants('paper_settings', by: 'paper', label: 'Paper settings');
 
-    $code = $inputs->add('code', 'string', 'Code');
-    DefinitionMetadata::setSecret($code);
+    $inputs->addSchema('code', Schema::string()
+      ->title('Code')
+      ->writeOnly(TRUE));
   }
 
 }

@@ -20,8 +20,12 @@ final class WideningRuleStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('mode', 'string', 'Mode');
-    $inputs->add('count', 'integer', 'Count')->addConstraint('Range', ['min' => 1, 'max' => 10]);
+    $inputs->addSchema('mode', Schema::string()
+      ->title('Mode'));
+    $inputs->addSchema('count', Schema::integer()
+      ->title('Count')
+      ->minimum(1)
+      ->maximum(10));
     $inputs->narrow('count')
       ->when(Condition::equals('mode', 'many'))
       ->constrain(Schema::any()->maximum(20));

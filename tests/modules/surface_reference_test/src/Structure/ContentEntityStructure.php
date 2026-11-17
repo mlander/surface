@@ -29,11 +29,13 @@ final class ContentEntityStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('entity_type', 'string', 'Entity type')
-      ->addConstraint(References::TYPE_CONSTRAINT, ['interface' => ContentEntityInterface::class]);
-    $inputs->add('id', 'string', 'ID')
-      ->setDescription('The id of an entity of the entity type chosen.')
-      ->setSetting(References::TARGETS, []);
+    $inputs->addSchema('entity_type', Schema::string()
+      ->title('Entity type')
+      ->check('drupal:' . References::TYPE_CONSTRAINT, ['interface' => ContentEntityInterface::class]));
+    $inputs->addSchema('id', Schema::string()
+      ->title('ID')
+      ->description('The id of an entity of the entity type chosen.')
+      ->annotation('x-surface-settings', [References::TARGETS => []]));
     $inputs->narrow('id')
       ->when(Condition::absent('entity_type'))
       ->doesNotApply();

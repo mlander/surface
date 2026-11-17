@@ -92,23 +92,30 @@ final class ItineraryResource implements ResourceInterface {
     $when = ArrangementGroup::fieldset('when', t('When'));
     $who = ArrangementGroup::fieldset('who', t('Who'));
 
-    $inputs->add('id', 'string', t('Id'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('id', Schema::string()
+      ->title(t('Id'))
+      ->required());
 
-    $inputs->add('region', 'string', t('Region'), default: 'north')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => array_keys(self::GUIDES)]);
+    $inputs->addSchema('region', Schema::string()
+      ->title(t('Region'))
+      ->default('north')
+      ->check('drupal:Choice', ['choices' => array_keys(self::GUIDES)])
+      ->required());
     $inputs->describe('region', group: $where);
 
-    $inputs->add('day', 'string', t('Day'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('day', Schema::string()
+      ->title(t('Day'))
+      ->required());
     $inputs->describe('day', group: $when);
 
-    $inputs->add('nights', 'integer', t('Nights'), default: 1);
+    $inputs->addSchema('nights', Schema::integer()
+      ->title(t('Nights'))
+      ->default(1));
     $inputs->describe('nights', group: $when);
 
-    $inputs->add('guide', 'string', t('Guide'))
-      ->addConstraint('Choice', ['choices' => array_merge(...array_values(self::GUIDES))]);
+    $inputs->addSchema('guide', Schema::string()
+      ->title(t('Guide'))
+      ->check('drupal:Choice', ['choices' => array_merge(...array_values(self::GUIDES))]));
     $inputs->describe('guide', group: $who);
   }
 

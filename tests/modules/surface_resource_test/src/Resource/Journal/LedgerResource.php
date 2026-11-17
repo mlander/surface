@@ -11,6 +11,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\LedgerStorage;
 use Drupal\surface_resource_test\Structure\Mixin\TimestampsStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * A ledger: the timestamps structure nested, where the journal mixes it in.
@@ -34,8 +35,9 @@ final class LedgerResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', t('Name'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('name', Schema::string()
+      ->title(t('Name'))
+      ->required());
     $inputs->attach('stamps', TimestampsStructure::class, t('Stamps'));
   }
 

@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Resource\Pack\PackResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * A daypack: the pack's load for "day", holding a map with a child.
@@ -26,12 +27,14 @@ final class DaypackStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('capacity', 'integer', t('Volume'))
-      ->setDescription(t('In liters.'))
-      ->addConstraint('Range', ['min' => 10]);
+    $inputs->addSchema('capacity', Schema::integer()
+      ->title(t('Volume'))
+      ->description(t('In liters.'))
+      ->minimum(10));
 
     $inputs->addMap('cover', t('Rain cover'), static function (BlueprintInterface $cover): void {
-      $cover->add('color', 'string', t('Color'));
+      $cover->addSchema('color', Schema::string()
+        ->title(t('Color')));
       $cover->attach('pouch', PocketStructure::class, t('Pouch'));
     });
   }

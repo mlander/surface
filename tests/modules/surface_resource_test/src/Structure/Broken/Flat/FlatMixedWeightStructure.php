@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The flat mixin clash's variant for "a": a weight, which its mixin brings.
@@ -20,7 +21,8 @@ final class FlatMixedWeightStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('weight', 'integer', 'Weight');
+    $inputs->addSchema('weight', Schema::integer()
+      ->title('Weight'));
   }
 
 }

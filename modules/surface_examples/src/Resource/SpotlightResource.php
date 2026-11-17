@@ -12,6 +12,7 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Storage\SpotlightStorage;
 use Drupal\surface\Variants\ComponentProps;
 use Drupal\surface\Variants\ComponentSlots;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 12: a component the site has, the props it takes, its slots.
@@ -35,8 +36,10 @@ final class SpotlightResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('component', 'string', t('Component'), default: 'surface_examples:card')
-      ->setRequired(TRUE);
+    $inputs->addSchema('component', Schema::string()
+      ->title(t('Component'))
+      ->default('surface_examples:card')
+      ->required());
 
     $inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
 

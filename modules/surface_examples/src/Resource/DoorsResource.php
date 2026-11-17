@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Drupal\surface_examples\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Storage\DoorsStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 11: the stock widgets, and what nothing sent for a key means.
@@ -32,32 +32,41 @@ final class DoorsResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('opens', 'string', t('Doors open at'), default: '18:30')
-      ->setRequired(TRUE)
-      ->setDescription(t('HH:MM, on a 24-hour clock.'))
-      ->setSetting('widget', 'time')
-      ->addConstraint('Regex', [
+    $inputs->addSchema('opens', Schema::string()
+      ->title(t('Doors open at'))
+      ->description(t('HH:MM, on a 24-hour clock.'))
+      ->default('18:30')
+      ->check('drupal:Regex', [
         'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
         'message' => t('Write the time as HH:MM, such as 18:30.'),
-      ]);
+      ])
+      ->ui(widget: 'time')
+      ->required());
+    $inputs->addSchema('days', Schema::list(Schema::options([
+      'fri' => t('Friday'),
+      'sat' => t('Saturday'),
+      'sun' => t('Sunday'),
+    ]))
+      ->title(t('Days'))
+      ->default(['fri', 'sat'])
+      ->required());
 
-    $day = DataDefinition::create('string')
-      ->addConstraint('LabeledChoice', [
-        'choices' => ['fri' => t('Friday'), 'sat' => t('Saturday'), 'sun' => t('Sunday')],
-      ]);
-    $inputs->addList('days', $day, t('Days'), default: ['fri', 'sat'])
-      ->setRequired(TRUE);
+    $inputs->addSchema('badges', Schema::options([
+      'printed' => t('Printed at the door'),
+      'digital' => t('On the phone'),
+      'none' => t('No badges'),
+    ])
+      ->title(t('Badges'))
+      ->default('printed')
+      ->ui(widget: 'radios'));
 
-    $inputs->add('badges', 'string', t('Badges'), default: 'printed')
-      ->setSetting('widget', 'radios')
-      ->addConstraint('LabeledChoice', [
-        'choices' => ['printed' => t('Printed at the door'), 'digital' => t('On the phone'), 'none' => t('No badges')],
-      ]);
+    $inputs->addSchema('notes', Schema::string()
+      ->title(t('Notes for the door team'))
+      ->ui(widget: 'textarea'));
 
-    $inputs->add('notes', 'string', t('Notes for the door team'))
-      ->setSetting('multiline', TRUE);
-
-    $inputs->addList('greeters', 'string', t('Greeters'), default: []);
+    $inputs->addSchema('greeters', Schema::list(Schema::string())
+      ->title(t('Greeters'))
+      ->default([]));
   }
 
 }

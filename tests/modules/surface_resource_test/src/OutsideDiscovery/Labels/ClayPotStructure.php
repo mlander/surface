@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A clay pot: its #[Variant] gives no label, so its own is offered.
@@ -26,7 +27,9 @@ final class ClayPotStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('glazed', 'boolean', t('Glazed'), default: FALSE);
+    $inputs->addSchema('glazed', Schema::bool()
+      ->title(t('Glazed'))
+      ->default(FALSE));
   }
 
 }

@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Slate: the hut's covering for the "slate" roof, its tiles required.
@@ -21,9 +22,10 @@ final class SlateStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('tiles', 'integer', t('Tiles'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1]);
+    $inputs->addSchema('tiles', Schema::integer()
+      ->title(t('Tiles'))
+      ->minimum(1)
+      ->required());
   }
 
 }

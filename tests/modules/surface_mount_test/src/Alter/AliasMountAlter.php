@@ -11,6 +11,7 @@ use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Storage\StorageLayoutInterface;
 use Drupal\surface_mount_test\Storage\MinutesLayout;
 use Drupal\surface_schema_test\Resource\AliasSettingsResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * Mounts a reviewer and a delay on the alias settings.
@@ -25,10 +26,12 @@ final class AliasMountAlter implements AltersInputsInterface, AltersStorageLayou
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('reviewer', 'integer', 'Reviewer')
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user']);
+    $inputs->addSchema('reviewer', Schema::integer()
+      ->title('Reviewer')
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'user']));
 
-    $inputs->add('delay', 'integer', 'Delay in minutes');
+    $inputs->addSchema('delay', Schema::integer()
+      ->title('Delay in minutes'));
   }
 
   /**

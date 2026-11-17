@@ -14,6 +14,7 @@ use Drupal\surface_resource_test\Keys\WorkshopBenches;
 use Drupal\surface_resource_test\Shape\Sku;
 use Drupal\surface_resource_test\Storage\WorkshopStorage;
 use Drupal\surface_resource_test\Structure\Workshop\BenchStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * A workshop: keys that come from the site, one per bench it lists.
@@ -38,10 +39,17 @@ final class WorkshopResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('closed', 'boolean', t('Closed'), default: FALSE);
+    $inputs->addSchema('closed', Schema::bool()
+      ->title(t('Closed'))
+      ->default(FALSE));
     $inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class, label: t('Benches'));
-    $inputs->addEach('lights', 'boolean', from: WorkshopBenches::class, label: t('Lights'), default: FALSE)
-      ->setDescription(t('Which benches have their lamp on.'));
+    $inputs->addEach(
+      'lights',
+      Schema::bool()->default(FALSE),
+      from: WorkshopBenches::class,
+      label: t('Lights'),
+      description: t('Which benches have their lamp on.'),
+    );
     $inputs->addEach('codes', Sku::class, from: WorkshopBenches::class, label: t('Bench codes'));
     $inputs->narrow('lights')
       ->when(Condition::equals('closed', TRUE))

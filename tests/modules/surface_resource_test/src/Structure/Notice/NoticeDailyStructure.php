@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A daily notice's schedule: the hour it goes out.
@@ -20,9 +21,12 @@ final class NoticeDailyStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('hour', 'integer', 'Hour', default: 8)
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 0, 'max' => 23]);
+    $inputs->addSchema('hour', Schema::integer()
+      ->title('Hour')
+      ->default(8)
+      ->minimum(0)
+      ->maximum(23)
+      ->required());
   }
 
 }

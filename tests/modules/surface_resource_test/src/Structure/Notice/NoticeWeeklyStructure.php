@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A weekly notice's schedule: the day it goes out.
@@ -20,9 +21,10 @@ final class NoticeWeeklyStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('day', 'string', 'Day', default: 'monday')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['monday', 'friday']]);
+    $inputs->addSchema('day', Schema::enum(['monday', 'friday'])
+      ->title('Day')
+      ->default('monday')
+      ->required());
   }
 
 }

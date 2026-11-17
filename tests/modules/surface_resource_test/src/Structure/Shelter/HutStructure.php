@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Resource\Shelter\ShelterResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * A hut: the shelter's variant for "hut", holding variants of its own.
@@ -26,8 +27,9 @@ final class HutStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('roof', 'string', t('Roof'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('roof', Schema::string()
+      ->title(t('Roof'))
+      ->required());
 
     $inputs->attachVariants('covering', by: 'roof', label: t('Covering'));
   }

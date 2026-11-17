@@ -11,6 +11,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\UsesStructure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A block that is its own structure, with calls: PropertyNoteBlock's twin.
@@ -27,12 +28,15 @@ final class MethodNoteBlock extends TypedBlockBase implements StructureInterface
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('color', 'string', t('Color'), default: 'yellow')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['yellow', 'pink']]);
+    $inputs->addSchema('color', Schema::enum(['yellow', 'pink'])
+      ->title(t('Color'))
+      ->default('yellow')
+      ->required());
 
-    $inputs->add('note', 'string', t('Note'), default: 'Sticky')
-      ->addConstraint('Length', ['max' => 40]);
+    $inputs->addSchema('note', Schema::string()
+      ->title(t('Note'))
+      ->default('Sticky')
+      ->maxLength(40));
   }
 
   /**

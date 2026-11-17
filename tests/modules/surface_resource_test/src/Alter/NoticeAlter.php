@@ -25,9 +25,13 @@ final class NoticeAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('signature', 'string', 'Signature', default: 'The team')
-      ->setRequired(TRUE);
-    $inputs->add('footer', 'string', 'Footer', default: 'Sent by the notice board');
+    $inputs->addSchema('signature', Schema::string()
+      ->title('Signature')
+      ->default('The team')
+      ->required());
+    $inputs->addSchema('footer', Schema::string()
+      ->title('Footer')
+      ->default('Sent by the notice board'));
   }
 
   /**

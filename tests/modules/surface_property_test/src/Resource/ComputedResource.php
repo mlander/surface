@@ -10,6 +10,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\Compute;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_property_test\Compute\Initials;
+use PortableSchema\Builder\Schema;
 
 /**
  * Two computed keys, with calls: ComputedPropertiesResource's twin.
@@ -21,15 +22,29 @@ final class ComputedResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('label', 'string', t('Name'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 64]);
+    $inputs->addSchema('label', Schema::string()
+      ->title(t('Name'))
+      ->maxLength(64)
+      ->required());
 
-    $inputs->compute('id', 'machine_name', t('Machine name'), from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
-      ->setDescription(t('Computed from the name unless one is given.'))
-      ->addConstraint('Length', ['max' => 32]);
+    $inputs->compute(
+      'id',
+      Schema::of('drupal:config/machine_name')
+        ->title(t('Machine name'))
+        ->description(t('Computed from the name unless one is given.'))
+        ->check('drupal:Length', ['max' => 32]),
+      from: ['label'],
+      using: MachineName::class,
+      when: Compute::UNLESS_SENT,
+    );
 
-    $inputs->compute('initials', 'string', t('Initials'), from: ['label'], using: Initials::class);
+    $inputs->compute(
+      'initials',
+      Schema::string()
+        ->title(t('Initials')),
+      from: ['label'],
+      using: Initials::class,
+    );
   }
 
 }

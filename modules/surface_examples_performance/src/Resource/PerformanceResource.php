@@ -13,6 +13,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_performance\Storage\PerformanceStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * The settings core's performance form edits, declared once.
@@ -59,18 +60,24 @@ final class PerformanceResource implements ResourceInterface {
     }
     $bandwidth = ArrangementGroup::details('bandwidth_optimization', t('Bandwidth optimization'), description: t('External resources can be optimized automatically, which can reduce both the size and number of requests made to your website.'));
 
-    $inputs->add(self::MAX_AGE, 'integer', t('Browser and proxy cache maximum age'), default: 0)
-      ->setDescription(t('This is used as the value for max-age in Cache-Control headers.'))
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['labels' => $periods]);
+    $inputs->addSchema(self::MAX_AGE, Schema::integer()
+      ->title(t('Browser and proxy cache maximum age'))
+      ->description(t('This is used as the value for max-age in Cache-Control headers.'))
+      ->default(0)
+      ->check('drupal:LabeledChoice', ['labels' => $periods])
+      ->required());
     $inputs->describe(self::MAX_AGE, group: ArrangementGroup::details('caching', t('Caching')));
 
-    $inputs->add(self::CSS_PREPROCESS, 'boolean', t('Aggregate CSS files'), default: TRUE)
-      ->setRequired(TRUE);
+    $inputs->addSchema(self::CSS_PREPROCESS, Schema::bool()
+      ->title(t('Aggregate CSS files'))
+      ->default(TRUE)
+      ->required());
     $inputs->describe(self::CSS_PREPROCESS, group: $bandwidth);
 
-    $inputs->add(self::JS_PREPROCESS, 'boolean', t('Aggregate JavaScript files'), default: TRUE)
-      ->setRequired(TRUE);
+    $inputs->addSchema(self::JS_PREPROCESS, Schema::bool()
+      ->title(t('Aggregate JavaScript files'))
+      ->default(TRUE)
+      ->required());
     $inputs->describe(self::JS_PREPROCESS, group: $bandwidth);
   }
 

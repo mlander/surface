@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A structure whose operations leave their id and creating to the attribute.
@@ -43,8 +44,10 @@ final class StampedStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('jam', 'string', 'Jam');
-    $inputs->add('label', 'string', 'Label');
+    $inputs->addSchema('jam', Schema::string()
+      ->title('Jam'));
+    $inputs->addSchema('label', Schema::string()
+      ->title('Label'));
   }
 
 }

@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * What the example block needs to know when it renders a list.
@@ -30,8 +31,10 @@ final class ListPresentationStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('show_summary', 'boolean', t('Show summaries'), default: TRUE)
-      ->setDescription(t('Whether item summaries render.'));
+    $inputs->addSchema('show_summary', Schema::bool()
+      ->title(t('Show summaries'))
+      ->description(t('Whether item summaries render.'))
+      ->default(TRUE));
   }
 
 }

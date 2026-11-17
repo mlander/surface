@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Resource\Gallery\GalleryResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * The finish of an oil painting: a variant OilFinishAlter answers for.
@@ -22,7 +23,8 @@ final class OilFinishStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('varnish', 'string', t('Varnish'));
+    $inputs->addSchema('varnish', Schema::string()
+      ->title(t('Varnish')));
   }
 
 }
