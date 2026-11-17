@@ -6300,6 +6300,9 @@ journal is the first case. Each choice, and why:
   child at a fixed key or in a collection is the owner's child at that
   key); a resource, which stores itself; one with outputs, which are not
   merged. A structure may mix another in.
+  A member declared with `addSchema()` is held as one declared with
+  `add()`: the clash is refused with the same message, and the key is
+  one of the owner's (decided 2026-11-17).
 - **Emitted as a composition, so the def stays reusable.** The frame is
   `allOf` of a reference to each structure's def and its own
   `properties`, closed with `unevaluatedProperties: false`. Each member

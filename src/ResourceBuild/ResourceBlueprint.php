@@ -389,6 +389,39 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * refused naming both who declared it.
    */
   protected function addKey(string $key, DataDefinitionInterface $definition, mixed $default = NULL, string $verb = 'addDefinition'): DataDefinitionInterface {
+    $this->assertNoMixinClash($key);
+    parent::addKey($key, $definition, $default, $verb);
+    if ($this->into !== NULL) {
+      $this->into->adopt($key, (string) $this->owner);
+    }
+    return $definition;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A key read from an author's schema is held as addKey() holds one: the
+   * mixin clash is refused first, and a key a structure mixed in declares
+   * is the owner's.
+   */
+  public function declareRead(string $key, Schema $schema): void {
+    $this->assertNoMixinClash($key);
+    parent::declareRead($key, $schema);
+    if ($this->into !== NULL && $this->holdsSchemas()) {
+      $this->into->adopt($key, (string) $this->owner);
+    }
+  }
+
+  /**
+   * Refuses a key the owner and a structure mixed in both declare.
+   *
+   * @param string $key
+   *   The key.
+   *
+   * @throws \LogicException
+   *   When the key is declared already among the owner's and its mixins'.
+   */
+  protected function assertNoMixinClash(string $key): void {
     $root = $this->root();
     if (!$this->outputs && ($this->into !== NULL || isset($root->origins[$key])) && $root->isDeclared($key)) {
       $before = $root->origins[$key] ?? NULL;
@@ -399,11 +432,6 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
         default => sprintf('%s, mixed into %s, declares "%s", which %s, also mixed in, declares too. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once.', $this->name($this->owner), $owner, $key, $this->name($before)),
       });
     }
-    parent::addKey($key, $definition, $default, $verb);
-    if ($this->into !== NULL) {
-      $this->into->adopt($key, (string) $this->owner);
-    }
-    return $definition;
   }
 
   /**
