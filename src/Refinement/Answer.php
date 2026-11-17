@@ -320,7 +320,7 @@ final class Answer {
     if (!$answer instanceof Schema || static::isNothing($answer)) {
       return $key;
     }
-    $node = $key;
+    $current = $key;
     $texts = [];
     $read = [];
     $checks = [];
@@ -349,11 +349,11 @@ final class Answer {
           break;
 
         case $keyword === 'properties' && $inside && is_array($value):
-          $node = static::insideProperties($node, $value, $name, $who);
+          $current = static::insideProperties($current, $value, $name, $who);
           break;
 
         case $keyword === 'items' && $inside && $value instanceof Schema:
-          $node = static::insideItems($node, $value, $name, $who);
+          $current = static::insideItems($current, $value, $name, $who);
           break;
 
         // Written by Schema::properties() from what each property requires,
@@ -362,7 +362,7 @@ final class Answer {
           break;
 
         case $keyword === 'type':
-          $from = NodeFacts::dataType($node);
+          $from = NodeFacts::dataType($current);
           $to = static::dataTypeOf($value);
           if ($to !== NULL && $to !== $from) {
             throw new \DomainException(sprintf('the data type changed from %s to %s', $from, $to));
@@ -373,14 +373,14 @@ final class Answer {
           throw new \LogicException(sprintf(self::UNREAD, $name, $who, '`' . $keyword . '`'));
       }
     }
-    $members = DefinitionSchema::model($node);
-    $merged = NodeFacts::constraints($node);
+    $members = DefinitionSchema::model($current);
+    $merged = NodeFacts::constraints($current);
     $declared = is_array($members['declared'] ?? NULL) ? $members['declared'] : [];
     $before = $declared;
     // The bounds the keywords state come first, then each check in the
     // answer's order, each written where the key declares it or after
     // what it declares.
-    $said = static::boundsRead($node, $read, $name, $who);
+    $said = static::boundsRead($current, $read, $name, $who);
     foreach ($checks as $id => $options) {
       $id = (string) $id;
       if (!str_starts_with($id, PortableKeywords::PROVIDER)) {
@@ -422,22 +422,22 @@ final class Answer {
       $set = static::listed($merged, $list);
       $declared[$set->constraint] = static::optionsOf($set);
     }
-    $require = $answer->isRequired() && !NodeFacts::isRequired($node);
+    $require = $answer->isRequired() && !NodeFacts::isRequired($current);
     foreach ($texts as $text => $value) {
-      if ($node->get($text) === $value) {
+      if ($current->get($text) === $value) {
         unset($texts[$text]);
       }
     }
     if ($declared === $before && !$require && $texts === []) {
-      return $node;
+      return $current;
     }
-    return static::rewritten($node, $declared === $before && !array_key_exists('declared', $members) ? NULL : $declared, $texts, $require);
+    return static::rewritten($current, $declared === $before && !array_key_exists('declared', $members) ? NULL : $declared, $texts, $require);
   }
 
   /**
    * Applies an answer's properties, each at its property.
    *
-   * @param \PortableSchema\Builder\Schema $node
+   * @param \PortableSchema\Builder\Schema $current
    *   The key's schema.
    * @param array $properties
    *   The answer for each property, by name.
@@ -449,15 +449,15 @@ final class Answer {
    * @return \PortableSchema\Builder\Schema
    *   The schema, each property refined and the map's `required` with it.
    */
-  protected static function insideProperties(Schema $node, array $properties, string $name, string $who): Schema {
-    $held = $node->get('properties');
-    if (!is_array($held) || !DefinitionSchema::nodeIsMap($node)) {
+  protected static function insideProperties(Schema $current, array $properties, string $name, string $who): Schema {
+    $held = $current->get('properties');
+    if (!is_array($held) || !DefinitionSchema::nodeIsMap($current)) {
       throw new \LogicException(sprintf(self::UNREAD, $name, $who, '`properties` for a key that holds none'));
     }
     $changed = FALSE;
     foreach ($properties as $property => $answer) {
       $property = (string) $property;
-      $schema = DefinitionSchema::propertyNode($node, $property);
+      $schema = DefinitionSchema::propertyNode($current, $property);
       if ($schema === NULL) {
         throw new \DomainException(sprintf('the map gained the property %s', $property));
       }
@@ -472,13 +472,13 @@ final class Answer {
         $changed = TRUE;
       }
     }
-    return $changed ? DefinitionSchema::withProperties($node, $held) : $node;
+    return $changed ? DefinitionSchema::withProperties($current, $held) : $current;
   }
 
   /**
    * Applies an answer's items at a list's item.
    *
-   * @param \PortableSchema\Builder\Schema $node
+   * @param \PortableSchema\Builder\Schema $current
    *   The key's schema.
    * @param \PortableSchema\Builder\Schema $answer
    *   The answer for its item.
@@ -490,8 +490,8 @@ final class Answer {
    * @return \PortableSchema\Builder\Schema
    *   The schema, its item refined.
    */
-  protected static function insideItems(Schema $node, Schema $answer, string $name, string $who): Schema {
-    $item = DefinitionSchema::isList($node) ? DefinitionSchema::itemNode($node) : NULL;
+  protected static function insideItems(Schema $current, Schema $answer, string $name, string $who): Schema {
+    $item = DefinitionSchema::isList($current) ? DefinitionSchema::itemNode($current) : NULL;
     if ($item === NULL) {
       throw new \LogicException(sprintf(self::UNREAD, $name, $who, '`items` for a key that is no list'));
     }
@@ -501,13 +501,13 @@ final class Answer {
     catch (\DomainException $widening) {
       throw new \DomainException(sprintf('inside the list items, %s', $widening->getMessage()), 0, $widening);
     }
-    return $refined === $item ? $node : $node->with('items', $refined);
+    return $refined === $item ? $current : $current->with('items', $refined);
   }
 
   /**
    * Reads an answer's bound and pattern keywords as constraints.
    *
-   * @param \PortableSchema\Builder\Schema $node
+   * @param \PortableSchema\Builder\Schema $current
    *   The key's schema, whose types the keywords are read for.
    * @param array $read
    *   The answer's bound and pattern keywords, and its messages.
@@ -519,11 +519,11 @@ final class Answer {
    * @return array<string, array>
    *   The options of each constraint they state, by plugin id.
    */
-  protected static function boundsRead(Schema $node, array $read, string $name, string $who): array {
+  protected static function boundsRead(Schema $current, array $read, string $name, string $who): array {
     if (array_diff_key($read, [PortableKeywords::MESSAGES => TRUE]) === []) {
       return [];
     }
-    $types = array_values(array_diff((array) ($node->get('type') ?? []), ['null']));
+    $types = array_values(array_diff((array) ($current->get('type') ?? []), ['null']));
     $bounds = [];
     foreach (ConstraintKeywords::read($read, $types) as $back) {
       if ($back->constraint === NULL || $back->kept !== []) {
@@ -666,7 +666,7 @@ final class Answer {
    * each in the place the read writes it. What does not change (the key's
    * type, its properties or item, its default) is the schema's own.
    *
-   * @param \PortableSchema\Builder\Schema $node
+   * @param \PortableSchema\Builder\Schema $current
    *   The key's schema.
    * @param array|null $declared
    *   The constraints the key declares of its own now; NULL where it still
@@ -679,8 +679,8 @@ final class Answer {
    * @return \PortableSchema\Builder\Schema
    *   The schema.
    */
-  protected static function rewritten(Schema $node, ?array $declared, array $texts, bool $require): Schema {
-    $old = DefinitionSchema::model($node);
+  protected static function rewritten(Schema $current, ?array $declared, array $texts, bool $require): Schema {
+    $old = DefinitionSchema::model($current);
     $members = $old;
     unset($members['constraints']);
     if ($declared !== NULL) {
@@ -704,14 +704,14 @@ final class Answer {
       $members['constraints'] = $merged;
     }
     $members = array_merge(array_intersect_key(array_fill_keys(DefinitionSchema::MEMBERS, NULL), $members), $members);
-    $held = $node->all();
+    $held = $current->all();
     $type = $held['type'] ?? NULL;
     if ($require && is_array($type) && count($type) === 2 && ($type[1] ?? NULL) === 'null') {
       // A key that must hold a value is not cleared with null
       // (DefinitionSchema::nullable()).
       $held['type'] = $type[0];
     }
-    $model = $node->with(DefinitionSchema::MODEL, $members);
+    $model = $current->with(DefinitionSchema::MODEL, $members);
     $schema = Schema::any();
     foreach (['title', 'description'] as $text) {
       $value = array_key_exists($text, $texts) ? $texts[$text] : ($held[$text] ?? NULL);
@@ -745,7 +745,7 @@ final class Answer {
       $schema = $schema->with((string) $keyword, $value);
     }
     $schema = $schema->with(DefinitionSchema::MODEL, $members);
-    return $node->isRequired() ? $schema->required() : $schema;
+    return $current->isRequired() ? $schema->required() : $schema;
   }
 
   /**
