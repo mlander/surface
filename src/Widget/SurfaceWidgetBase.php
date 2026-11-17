@@ -15,10 +15,10 @@ use PortableSchema\Builder\Schema;
 /**
  * Common ground for data surface widgets.
  *
- * Reading a node: its title, description and type, its hints under
+ * Reading a schema: its title, description and type, its hints under
  * `x-portable-ui`, Surface's markers under `x-surface`, and the values a
  * choice offers under `oneOf`. Extraction is shared and deliberately
- * dumb: it hands back the raw submitted value in the node's shape.
+ * dumb: it hands back the raw submitted value in the schema's shape.
  * Coercion belongs to the pipeline's accept(), which the form path calls
  * once the whole tree is collected, so a generated form and a JSON
  * payload are coerced by the same code. A widget overrides
@@ -31,7 +31,7 @@ abstract class SurfaceWidgetBase extends PluginBase implements SurfaceWidgetInte
    * Render key marking an element that stands for a stale stored value.
    *
    * A select whose stored value is no longer among the options comes up
-   * on its empty option, and its node says so (`x-surface.stale`, and the
+   * on its empty option, and its schema says so (`x-surface.stale`, and the
    * envelope lists its pointer in `stale`); the value itself is not in the
    * document. The widget marks the element TRUE, and the host, which holds
    * the value, puts it here (SurfaceFormBuilder::buildSurfaceForm()).
@@ -43,22 +43,22 @@ abstract class SurfaceWidgetBase extends PluginBase implements SurfaceWidgetInte
   public const STALE_KEY = '#surface_stale';
 
   /**
-   * Builds the properties every element derives from its node.
+   * Builds the properties every element derives from its schema.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    * @param \Drupal\surface\Widget\WidgetContext $context
    *   Where it is drawn: its owner's `required` says whether it is.
    *
    * @return array
    *   The common element properties.
    */
-  protected function baseElement(Schema $node, WidgetContext $context): array {
+  protected function baseElement(Schema $schema, WidgetContext $context): array {
     $element = [
-      '#title' => static::text($node->get('title')),
+      '#title' => static::text($schema->get('title')),
       '#required' => $context->required,
     ];
-    $description = static::text($node->get('description'));
+    $description = static::text($schema->get('description'));
     if ($description !== NULL) {
       $element['#description'] = $description;
     }
@@ -71,16 +71,16 @@ abstract class SurfaceWidgetBase extends PluginBase implements SurfaceWidgetInte
    * A placeholder, so extraction reads nothing from it and the key keeps
    * what it holds; the other doors set it.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    *
    * @return array
    *   The item.
    */
-  public static function notDrawn(Schema $node): array {
+  public static function notDrawn(Schema $schema): array {
     return [
       '#type' => 'item',
-      '#title' => static::text($node->get('title')),
+      '#title' => static::text($schema->get('title')),
       '#markup' => (string) t('This is not drawn on this form; what it holds is kept. Set it through the tool, over HTTP or on the React page.'),
       SurfaceFormBuilderInterface::PLACEHOLDER_KEY => TRUE,
     ];
@@ -89,12 +89,12 @@ abstract class SurfaceWidgetBase extends PluginBase implements SurfaceWidgetInte
   /**
    * {@inheritdoc}
    */
-  public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed {
+  public function extractValue(array $element, FormStateInterface $form_state, Schema $schema): mixed {
     return static::checked($element, $this->rawValue($element, $form_state));
   }
 
   /**
-   * Names the words a node's hint and a definition's setting name it by.
+   * Names the words a schema's hint and a definition's setting name it by.
    *
    * The words `x-portable-ui.widget` and a definition's `widget` setting
    * may name this widget by. The first is the word the widget is named by
@@ -191,69 +191,69 @@ abstract class SurfaceWidgetBase extends PluginBase implements SurfaceWidgetInte
   }
 
   /**
-   * Reads a node's hints, `x-portable-ui`.
+   * Reads a schema's hints, `x-portable-ui`.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return array
    *   The members, by name; empty where it has none.
    */
-  public static function ui(Schema $node): array {
-    return Schemas::data($node->get(PortableKeywords::UI)) ?? [];
+  public static function ui(Schema $schema): array {
+    return Schemas::data($schema->get(PortableKeywords::UI)) ?? [];
   }
 
   /**
-   * Reads a node's widget options, `x-portable-ui.options`.
+   * Reads a schema's widget options, `x-portable-ui.options`.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return array
    *   The options, by name; empty where it has none.
    */
-  public static function options(Schema $node): array {
-    return Schemas::data(static::ui($node)['options'] ?? NULL) ?? [];
+  public static function options(Schema $schema): array {
+    return Schemas::data(static::ui($schema)['options'] ?? NULL) ?? [];
   }
 
   /**
-   * Reads a node's Surface markers, `x-surface`.
+   * Reads a schema's Surface markers, `x-surface`.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return array
    *   The markers, by name; empty where it has none.
    */
-  public static function extension(Schema $node): array {
-    return Schemas::data($node->get('x-surface')) ?? [];
+  public static function extension(Schema $schema): array {
+    return Schemas::data($schema->get('x-surface')) ?? [];
   }
 
   /**
-   * Reads the JSON types a node allows, null aside.
+   * Reads the JSON types a schema allows, null aside.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return string[]
    *   The types, in the order stated.
    */
-  public static function types(Schema $node): array {
-    $type = $node->get('type');
+  public static function types(Schema $schema): array {
+    $type = $schema->get('type');
     return array_values(array_diff(is_array($type) ? $type : ($type === NULL ? [] : [$type]), ['null']));
   }
 
   /**
-   * Reads the JSON type a node is, null aside.
+   * Reads the JSON type a schema is, null aside.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return string|null
    *   The first type stated other than null.
    */
-  public static function type(Schema $node): ?string {
-    return static::types($node)[0] ?? NULL;
+  public static function type(Schema $schema): ?string {
+    return static::types($schema)[0] ?? NULL;
   }
 
   /**
@@ -261,46 +261,46 @@ abstract class SurfaceWidgetBase extends PluginBase implements SurfaceWidgetInte
    *
    * A key of any type read from a schema keeps that schema in its
    * `drupal:JsonSchema` check, whose options are the schema; the types
-   * its `type` names are what the value may be. A node stating `type`
+   * its `type` names are what the value may be. A schema stating `type`
    * itself says so there.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return string[]
    *   The types, null among them where stated, in the order stated.
    */
-  public static function statedTypes(Schema $node): array {
-    $type = $node->get('type');
+  public static function statedTypes(Schema $schema): array {
+    $type = $schema->get('type');
     if ($type === NULL) {
-      $checks = Schemas::data($node->get(PortableKeywords::CHECK)) ?? [];
-      $schema = Schemas::data(Schemas::data($checks['drupal:JsonSchema'] ?? NULL)['schema'] ?? NULL) ?? [];
-      $type = $schema['type'] ?? NULL;
+      $checks = Schemas::data($schema->get(PortableKeywords::CHECK)) ?? [];
+      $json_schema = Schemas::data(Schemas::data($checks['drupal:JsonSchema'] ?? NULL)['schema'] ?? NULL) ?? [];
+      $type = $json_schema['type'] ?? NULL;
     }
     return array_values(array_filter(is_array($type) ? $type : [$type], 'is_string'));
   }
 
   /**
-   * Answers whether a node allows null: a key its storage may leave empty.
+   * Answers whether a schema allows null: a key its storage may leave empty.
    *
-   * Read as the React app reads it: `null` among the node's types, or an
+   * Read as the React app reads it: `null` among the schema's types, or an
    * untitled `null` among its choices. A key whose type leaves null out is
    * one its storage always holds.
    *
    * Decision: see docs/decisions.md#a-key-its-storage-always-holds.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return bool
    *   TRUE when null is one of its values.
    */
-  public static function allowsNull(Schema $node): bool {
-    $type = $node->get('type');
+  public static function allowsNull(Schema $schema): bool {
+    $type = $schema->get('type');
     if (in_array('null', is_array($type) ? $type : [$type], TRUE)) {
       return TRUE;
     }
-    foreach ((array) ($node->get('oneOf') ?? []) as $choice) {
+    foreach ((array) ($schema->get('oneOf') ?? []) as $choice) {
       if ($choice instanceof Schema && !$choice->isBoolean() && $choice->has('const') && $choice->get('const') === NULL && !$choice->has('title')) {
         return TRUE;
       }
@@ -314,20 +314,20 @@ abstract class SurfaceWidgetBase extends PluginBase implements SurfaceWidgetInte
    * Every `oneOf` entry with a `const`, but the untitled null, which says
    * only that the key may be cleared. React's `choices()`.
    *
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The node, or a list's `items`.
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   The schema, or a list's `items`.
    *
    * @return array{0: array<int|string, string>, 1: array<int|string, string>}
    *   The labels and the descriptions, each by value, in the order
    *   offered.
    */
-  public static function choices(?Schema $node): array {
+  public static function choices(?Schema $schema): array {
     $labels = [];
     $descriptions = [];
-    if ($node === NULL || $node->isBoolean()) {
+    if ($schema === NULL || $schema->isBoolean()) {
       return [$labels, $descriptions];
     }
-    foreach ((array) ($node->get('oneOf') ?? []) as $choice) {
+    foreach ((array) ($schema->get('oneOf') ?? []) as $choice) {
       if (!$choice instanceof Schema || $choice->isBoolean() || !$choice->has('const')) {
         continue;
       }
@@ -348,20 +348,20 @@ abstract class SurfaceWidgetBase extends PluginBase implements SurfaceWidgetInte
   }
 
   /**
-   * Answers whether a node offers a list of values to choose from.
+   * Answers whether a schema offers a list of values to choose from.
    *
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The node, or a list's `items`.
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   The schema, or a list's `items`.
    *
    * @return bool
    *   TRUE when it states `oneOf`, empty or not.
    */
-  public static function offers(?Schema $node): bool {
-    return $node !== NULL && !$node->isBoolean() && is_array($node->get('oneOf'));
+  public static function offers(?Schema $schema): bool {
+    return $schema !== NULL && !$schema->isBoolean() && is_array($schema->get('oneOf'));
   }
 
   /**
-   * Reads a text a node carries, as the plain string the document holds.
+   * Reads a text a schema carries, as the plain string the document holds.
    *
    * @param mixed $text
    *   The keyword's value.

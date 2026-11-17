@@ -273,7 +273,7 @@ class FlowFormTest extends SurfaceKernelTestBase {
    * CompiledFlow::refusal() over a create built by hand: a required key
    * with no default drawn at step 2 is refused, unless the build computes
    * it from other keys, which no step takes as input. Whether a key is
-   * computed is read off its node.
+   * computed is read off its schema.
    */
   public function testComputedKeyIsNoInputOfTheFirstStep(): void {
     $registry = $this->container->get('surface.resource_registry');
@@ -301,7 +301,7 @@ class FlowFormTest extends SurfaceKernelTestBase {
     $this->assertSame($refused, $refusal(['title', 'slug'], ['note']));
 
     // A required collection with no default is such a key too: its own
-    // flag is read from its node, composed of its item's keys.
+    // flag is read from its schema, composed of its item's keys.
     $stop = (new SurfaceBuilder())->setDefinition('place', DataDefinition::create('string')->setLabel('Place'))->seal();
     $built = (new SurfaceBuilder())
       ->setDefinition('title', DataDefinition::create('string')->setLabel('Title')->setRequired(TRUE))

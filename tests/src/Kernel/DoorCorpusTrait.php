@@ -14,7 +14,7 @@ use Drupal\Tests\surface\HandCorpus\HeldToSchemaProbe;
  * Each surface's file, tests/fixtures/hand-corpus/doors-<surface>.json,
  * holds the number of rows, a digest of every row's record by the row's
  * name (grouped by the row's form and kind: `door`, `values`, `key`,
- * `path`, `nodes`; DoorCorpusRecorder says what each holds), and the
+ * `path`, `schemas`; DoorCorpusRecorder says what each holds), and the
  * whole record of one row of each kind, the shortest that is neither
  * empty nor a throw, for a reader to see what a digest stands for.
  * Written again with SURFACE_HAND_CORPUS_WRITE=1, indented by two spaces.

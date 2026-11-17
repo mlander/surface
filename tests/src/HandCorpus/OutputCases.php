@@ -9,7 +9,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Pipeline\NotEmitted;
@@ -53,7 +53,7 @@ final class OutputCases {
     foreach ($outputs->entries() as $name => $entry) {
       $schema = $entry->schema();
       $good[(string) $name] = self::good($schema);
-      if (NodeFacts::isRequired($schema)) {
+      if (SchemaFacts::isRequired($schema)) {
         $minimal[(string) $name] = $good[(string) $name];
       }
     }
@@ -86,13 +86,13 @@ final class OutputCases {
    *   The value.
    */
   public static function good(Schema $schema): mixed {
-    $constraints = NodeFacts::constraints($schema);
+    $constraints = SchemaFacts::constraints($schema);
     if (DefinitionSchema::isList($schema)) {
-      $item = DefinitionSchema::itemNode($schema);
+      $item = DefinitionSchema::itemOf($schema);
       $count = max(1, (int) ($constraints['Count']['min'] ?? 1));
       return $item === NULL ? [] : array_fill(0, $count, self::good($item));
     }
-    $properties = NodeFacts::properties($schema);
+    $properties = SchemaFacts::properties($schema);
     if ($properties !== []) {
       return array_map(self::good(...), $properties);
     }
@@ -104,7 +104,7 @@ final class OutputCases {
       $first = reset($choices);
       return is_array($first) ? array_key_first($choices) : $first;
     }
-    $type = NodeFacts::dataType($schema);
+    $type = SchemaFacts::dataType($schema);
     return match ($type) {
       'email' => 'a@example.com',
       'uri' => 'https://example.com/a',
@@ -130,14 +130,14 @@ final class OutputCases {
    */
   public static function mutations(Schema $schema): array {
     $good = self::good($schema);
-    $constraints = NodeFacts::constraints($schema);
+    $constraints = SchemaFacts::constraints($schema);
     $changes = [
       ': NULL' => NULL,
       ': object' => new \stdClass(),
       ': markup' => new TranslatableMarkup('Markup'),
     ];
     if (DefinitionSchema::isList($schema)) {
-      $item = DefinitionSchema::itemNode($schema);
+      $item = DefinitionSchema::itemOf($schema);
       $changes += [
         ': string for a list' => 'nope',
         ': empty list' => [],
@@ -155,7 +155,7 @@ final class OutputCases {
       }
       return $changes;
     }
-    $properties = NodeFacts::properties($schema);
+    $properties = SchemaFacts::properties($schema);
     if ($properties !== []) {
       $changes += [
         ': string for a map' => 'nope',
@@ -181,7 +181,7 @@ final class OutputCases {
         ': object inside an open map' => ['a' => new \stdClass()],
       ];
     }
-    $type = NodeFacts::dataType($schema);
+    $type = SchemaFacts::dataType($schema);
     $changes += match ($type) {
       'string', 'email', 'uri', 'datetime_iso8601' => [
         ': integer' => 42,

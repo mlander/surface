@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * A port's key is held as its schema, and the watched-value check is
  * handed that schema, whatever class its definition was of
- * (NodeDefinition::DERIVED or another). The cases (KeptPortCases): a
+ * (DefinitionFromSchema::DERIVED or another). The cases (KeptPortCases): a
  * NotAMapDefinition port, a BaseFieldDefinition port and an integer port,
  * each with the check sealed in, a value of the key's type and one of
  * another, through the container and bound directly, fresh and woken (the

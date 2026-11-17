@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\HandCorpus;
 
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\ChoiceSet;
@@ -112,13 +112,13 @@ final class HandRefiner implements SurfaceRefinerInterface {
     }
     $property = (string) array_shift($path);
     if (DefinitionSchema::isList($schema)) {
-      $item = DefinitionSchema::itemNode($schema);
+      $item = DefinitionSchema::itemOf($schema);
       if ($item === NULL) {
         throw new \LogicException('The hand corpus steps only into maps and lists.');
       }
       return Schema::any()->with('items', static::at($item, $path, $operation, $argument));
     }
-    $inner = DefinitionSchema::propertyNode($schema, $property);
+    $inner = DefinitionSchema::propertyOf($schema, $property);
     if ($inner === NULL) {
       throw new \LogicException('The hand corpus steps only into maps and lists.');
     }
@@ -143,16 +143,16 @@ final class HandRefiner implements SurfaceRefinerInterface {
   protected static function widened(Schema $schema, array $path, string $operation, mixed $argument): ?string {
     if ($path === []) {
       $constraint = ['len' => 'Length', 'count' => 'Count'][$operation] ?? NULL;
-      $held = $constraint === NULL ? NULL : NodeFacts::constraints($schema)[$constraint] ?? NULL;
+      $held = $constraint === NULL ? NULL : SchemaFacts::constraints($schema)[$constraint] ?? NULL;
       return $held === NULL ? NULL : Narrowing::constraintWidened($constraint, (array) $held, ['max' => $argument]);
     }
     $property = (string) array_shift($path);
     if (DefinitionSchema::isList($schema)) {
-      $item = DefinitionSchema::itemNode($schema);
+      $item = DefinitionSchema::itemOf($schema);
       $widened = $item === NULL ? NULL : static::widened($item, $path, $operation, $argument);
       return $widened === NULL ? NULL : 'inside the list items, ' . $widened;
     }
-    $inner = DefinitionSchema::propertyNode($schema, $property);
+    $inner = DefinitionSchema::propertyOf($schema, $property);
     $widened = $inner === NULL ? NULL : static::widened($inner, $path, $operation, $argument);
     return $widened === NULL ? NULL : sprintf('inside the %s property, %s', $property, $widened);
   }

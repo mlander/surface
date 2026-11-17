@@ -19,8 +19,8 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Compute\MachineName;
 use Drupal\surface\Computed;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeDefinition;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\DefinitionFromSchema;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\DefinitionTypedData;
 use Drupal\surface\Plugin\SurfaceWidget\StringWidget;
@@ -38,16 +38,16 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PortableSchema\Builder\Schema;
 
 /**
- * Tests a definition read into a node and derived back is the definition.
+ * Tests a definition read into a schema and derived back is the definition.
  *
  * The rule: for a definition `$d` of the three classes the inverse
- * derives, NodeDefinition::of(DefinitionSchema::of($d)) equals `$d` by
+ * derives, DefinitionFromSchema::of(DefinitionSchema::of($d)) equals `$d` by
  * DefinitionEqualityTrait's rules (class, toArray() as a map, the getters,
  * properties, item, every DefinitionMetadata getter; objects by
- * identity), it is a new object at every depth, and the node read from it
- * equals the node it was derived from; at every depth the node's merged
- * constraint list (NodeFacts::constraints(): the `constraints` member
- * where the node holds one, else derived) is getConstraints(). A node
+ * identity), it is a new object at every depth, and the schema read from it
+ * equals the schema it was derived from; at every depth the schema's merged
+ * constraint list (SchemaFacts::constraints(): the `constraints` member
+ * where the schema holds one, else derived) is getConstraints(). A schema
  * serialized and unserialized derives a definition equal to `$d` with
  * objects equal by class and content. A definition of any other class,
  * or of a type core's typed data manager does not define as it was read,
@@ -65,7 +65,7 @@ use PortableSchema\Builder\Schema;
  * examples do not state.
  *
  * Decision: see
- * docs/decisions.md#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it.
+ * docs/decisions.md#a-schema-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -109,16 +109,16 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    * distinct definitions reachable at every depth. A sealed key that
    * holds a child frame derives its definition with copies of its child's
    * definitions, which are not reached a second time (reach()). Since
-   * the seal makes every entry node-first (2026-11-15) one more object is
+   * the seal makes every entry schema-first (2026-11-15) one more object is
    * reached than the 1,097 before: example 3's compliance mount's license
    * key, held by a refined copy of the mount's derived definition beside
    * the structure's own entry. It is the same key. Since a refinement
-   * composes a refined attachment's or chosen variants' node and the
-   * entry is node-first (2026-11-16, part 32.8), 101 fewer are reached,
+   * composes a refined attachment's or chosen variants' schema and the
+   * entry is schema-first (2026-11-16, part 32.8), 101 fewer are reached,
    * 997: the definitions of the keys a refined child refined, which only
    * the refined shell's definition held before; the shell's definition is
-   * now derived from its node, with copies, which reach() does not walk,
-   * as for any node-first shell. Every definition compared is compared
+   * now derived from its schema, with copies, which reach() does not walk,
+   * as for any schema-first shell. Every definition compared is compared
    * still. Since the document is written from schemas (2026-11-16), 2
    * more are compared and 10 more reached, 795 and 1,007: the value sets
    * are read from served documents, whose emitter derived a definition
@@ -170,11 +170,11 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
   ];
 
   /**
-   * How often each member is on a node reached, at every depth.
+   * How often each member is on a schema reached, at every depth.
    *
    * `constraints` is 1 (1,105 before part 32.5): the merged list is derived
-   * wherever the node's other members say it (NodeFacts::derived()), and
-   * the one node that holds it is HandBuiltSurfaces' `decimal`, a type
+   * wherever the schema's other members say it (SchemaFacts::derived()), and
+   * the one schema that holds it is HandBuiltSurfaces' `decimal`, a type
    * with no row in LeafTypes::DEFAULT_CONSTRAINTS. Until the document was
    * written from schemas (2026-11-16, the 10 more of COUNTS): type 1,625,
    * required 409, declared 579, grouping 30, placedAfter 15, shape 44.
@@ -326,7 +326,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    *
    * Then what is no fact: two definitions whose arrays differ only in the
    * order of their keys, and one with no `type` key beside one whose
-   * `type` key holds its data type, read into equal nodes.
+   * `type` key holds its data type, read into equal schemas.
    */
   public function testHandCases(): void {
     $members = array_fill_keys(DefinitionSchema::MEMBERS, 0);
@@ -335,7 +335,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
       $this->assertSame([], $differ, $case);
       $model = DefinitionSchema::model(DefinitionSchema::of($definition));
       foreach ($stated as $member) {
-        $this->assertArrayHasKey($member, $model, "$case: the node holds $member.");
+        $this->assertArrayHasKey($member, $model, "$case: the schema holds $member.");
       }
     }
     foreach (DefinitionSchema::MEMBERS as $member) {
@@ -352,12 +352,12 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
       ],
     ];
     foreach ($pairs as $case => [$one, $other]) {
-      $this->assertSame([], static::nodeDifferences(DefinitionSchema::of($one), DefinitionSchema::of($other), $case), "$case: the two read into equal nodes.");
+      $this->assertSame([], static::schemaDifferences(DefinitionSchema::of($one), DefinitionSchema::of($other), $case), "$case: the two read into equal schemas.");
     }
   }
 
   /**
-   * Tests what no node can derive.
+   * Tests what no schema can derive.
    *
    * A definition of any class but the three is refused with a
    * LogicException that names its class: a reference whose target was
@@ -384,7 +384,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
       $this->assertRefused($definition, get_class($definition), $case);
     }
     // As the typed config manager builds them for a config object's key:
-    // a `label`, and a `text` that states constraints of its own, as a node
+    // a `label`, and a `text` that states constraints of its own, as a schema
     // type's description does, so the text type's own come from the typed
     // config manager.
     $typed = $this->container->get('config.typed');
@@ -402,19 +402,19 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Asserts the inverse refuses the node of a definition.
+   * Asserts the inverse refuses the schema of a definition.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition, read into its node.
+   *   The definition, read into its schema.
    * @param string $named
    *   What the refusal names: the class or the type.
    * @param string $case
    *   The case, for the message.
    */
   protected function assertRefused(DataDefinitionInterface $definition, string $named, string $case): void {
-    $node = DefinitionSchema::of($definition);
+    $schema = DefinitionSchema::of($definition);
     try {
-      NodeDefinition::of($node);
+      DefinitionFromSchema::of($schema);
       $this->fail("$case: refused.");
     }
     catch (\LogicException $refusal) {
@@ -424,16 +424,16 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a derived definition holds the objects the node holds.
+   * Tests a derived definition holds the objects the schema holds.
    *
-   * The inverse makes a new definition wherever the node holds a node;
-   * every other value is the object the node holds, which is the object
+   * The inverse makes a new definition wherever the schema holds a schema;
+   * every other value is the object the schema holds, which is the object
    * the definition read holds, so nothing is cloned: a Computed, an object
    * in a setting and a definition in a setting are each the same object in
-   * the definition, the node and the derived definition, and a write
+   * the definition, the schema and the derived definition, and a write
    * through the derived definition's setting is a write to the original's.
    */
-  public function testDerivedDefinitionsHoldTheNodesObjects(): void {
+  public function testDerivedDefinitionsHoldTheSchemasObjects(): void {
     $computed = new Computed(['name'], MachineName::class);
     $object = new \ArrayObject(['kept' => TRUE]);
     $inside = DataDefinition::create('string')->setLabel('Held in a setting');
@@ -441,15 +441,15 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
       ->setSetting('object', $object)
       ->setSetting('definition', $inside);
     DefinitionMetadata::setComputed($definition, $computed);
-    $node = DefinitionSchema::of($definition);
-    $model = DefinitionSchema::model($node);
-    $derived = NodeDefinition::of($node);
+    $schema = DefinitionSchema::of($definition);
+    $model = DefinitionSchema::model($schema);
+    $derived = DefinitionFromSchema::of($schema);
     $this->assertInstanceOf(DataDefinition::class, $derived);
     $this->assertNotSame($definition, $derived);
     $this->assertSame($computed, $model['compute']);
     $this->assertSame($computed, Computed::of($derived));
     foreach (['object' => $object, 'definition' => $inside] as $setting => $held) {
-      $this->assertSame($held, $model['settings'][$setting], "The node holds the $setting in the setting.");
+      $this->assertSame($held, $model['settings'][$setting], "The schema holds the $setting in the setting.");
       $this->assertSame($held, $derived->getSetting($setting), "The derived definition holds the $setting in the setting.");
     }
     $through = $derived->getSetting('definition');
@@ -459,66 +459,66 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Checks one definition: the round trip, serialized, and its node again.
+   * Checks one definition: the round trip, serialized, and its schema again.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    * @param string $at
    *   Where, for the message.
    * @param array<string, int> $members
-   *   How often each member is stated; gains this definition's nodes.
+   *   How often each member is stated; gains this definition's schemas.
    *
    * @return list<string>
    *   Each difference.
    */
   protected function roundTrip(DataDefinitionInterface $definition, string $at, array &$members): array {
-    $node = DefinitionSchema::of($definition);
-    static::countMembers($node, $members);
-    $differ = static::constraintsDifferences($definition, $node, $at);
+    $schema = DefinitionSchema::of($definition);
+    static::countMembers($schema, $members);
+    $differ = static::constraintsDifferences($definition, $schema, $at);
     try {
-      $derived = NodeDefinition::of($node);
+      $derived = DefinitionFromSchema::of($schema);
     }
     catch (\LogicException $refusal) {
       return [...$differ, "$at: not derived: " . $refusal->getMessage()];
     }
     array_push($differ, ...static::definitionDifferences($definition, $derived, $at));
-    array_push($differ, ...static::nodeDifferences($node, DefinitionSchema::of($derived), "$at, read again"));
+    array_push($differ, ...static::schemaDifferences($schema, DefinitionSchema::of($derived), "$at, read again"));
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
-    $copy = unserialize(serialize($node));
+    $copy = unserialize(serialize($schema));
     $this->assertInstanceOf(Schema::class, $copy);
-    array_push($differ, ...static::definitionDifferences($definition, NodeDefinition::of($copy), "$at, serialized", FALSE));
+    array_push($differ, ...static::definitionDifferences($definition, DefinitionFromSchema::of($copy), "$at, serialized", FALSE));
     return $differ;
   }
 
   /**
-   * Lists where a node's merged constraint list is not getConstraints().
+   * Lists where a schema's merged constraint list is not getConstraints().
    *
    * At every depth: the item, each property, and the definitions a shape,
-   * a config type and `each` hold, beside the nodes their members hold.
+   * a config type and `each` hold, beside the schemas their members hold.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition read.
-   * @param \PortableSchema\Builder\Schema $node
-   *   Its node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   Its schema.
    * @param string $at
    *   Where, for the message.
    *
    * @return list<string>
-   *   Each place where NodeFacts::constraints() is not identical to
+   *   Each place where SchemaFacts::constraints() is not identical to
    *   getConstraints().
    */
-  protected static function constraintsDifferences(DataDefinitionInterface $definition, Schema $node, string $at): array {
-    $model = DefinitionSchema::model($node);
+  protected static function constraintsDifferences(DataDefinitionInterface $definition, Schema $schema, string $at): array {
+    $model = DefinitionSchema::model($schema);
     $differ = [];
-    if (NodeFacts::constraints($node) !== $definition->getConstraints()) {
+    if (SchemaFacts::constraints($schema) !== $definition->getConstraints()) {
       $differ[] = "$at: the merged constraint list is not getConstraints()";
     }
     $pairs = [];
     if ($definition instanceof ListDataDefinitionInterface) {
-      $pairs['/items'] = [$definition->getItemDefinition(), $node->get('items')];
+      $pairs['/items'] = [$definition->getItemDefinition(), $schema->get('items')];
     }
     elseif ($definition instanceof ComplexDataDefinitionInterface) {
-      $properties = $node->get('properties');
+      $properties = $schema->get('properties');
       foreach ($definition->getPropertyDefinitions() as $name => $property) {
         $pairs["/properties/$name"] = [$property, is_array($properties) ? ($properties[$name] ?? NULL) : NULL];
       }
@@ -552,7 +552,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    * @param \SplObjectStorage<\Drupal\Core\TypedData\DataDefinitionInterface, string> $tops
    *   The definitions entries hold, each with where it was first found.
    * @param \SplObjectStorage<\Drupal\Core\TypedData\DataDefinitionInterface, true> $derivedShells
-   *   The definitions a node-first key that holds an attached child, a
+   *   The definitions a schema-first key that holds an attached child, a
    *   chosen variant or a collection derived: each holds its own copies of
    *   the child's definitions, which the child's own entries hold too.
    *
@@ -571,7 +571,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
         if (!$tops->contains($entry->definition())) {
           $tops->attach($entry->definition(), $here);
         }
-        if ($entry->isNodeFirst() && $entry->isShell() && $entry->mounted === []) {
+        if ($entry->isSchemaFirst() && $entry->isShell() && $entry->mounted === []) {
           $derivedShells->attach($entry->definition(), TRUE);
         }
         $children = [];
@@ -608,7 +608,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    * @param \SplObjectStorage<\Drupal\Core\TypedData\DataDefinitionInterface, null> $reachable
    *   The definitions so far.
    * @param bool $shell
-   *   Whether it is the definition a node-first key that holds a child
+   *   Whether it is the definition a schema-first key that holds a child
    *   frame derived (not a mount): its own map, or its list and the list's
    *   item map, is reached, and not the child's keys in it. Those are the
    *   child's entries' keys, reached from the child's own entries; the
@@ -645,21 +645,21 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Counts the members a node and every node inside it state.
+   * Counts the members a schema and every schema inside it state.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    * @param array<string, int> $members
    *   The counts, by member.
    */
-  protected static function countMembers(Schema $node, array &$members): void {
-    $model = DefinitionSchema::model($node);
+  protected static function countMembers(Schema $schema, array &$members): void {
+    $model = DefinitionSchema::model($schema);
     foreach (array_keys($model) as $member) {
       $members[$member] = ($members[$member] ?? 0) + 1;
     }
     $inside = [
-      $node->get('items'),
-      ...array_values(is_array($node->get('properties')) ? $node->get('properties') : []),
+      $schema->get('items'),
+      ...array_values(is_array($schema->get('properties')) ? $schema->get('properties') : []),
       $model['shape']['node'] ?? NULL,
       $model['configType']['node'] ?? NULL,
       $model['each'] ?? NULL,
@@ -675,7 +675,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    * Builds one definition for each fact the examples do not state.
    *
    * @return array<string, array{0: \Drupal\Core\TypedData\DataDefinitionInterface, 1: list<string>}>
-   *   Each case: the definition, and the members its node states.
+   *   Each case: the definition, and the members its schema states.
    */
   protected function handCases(): array {
     $cases = [];

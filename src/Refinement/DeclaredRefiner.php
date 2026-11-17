@@ -6,7 +6,7 @@ namespace Drupal\surface\Refinement;
 
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\SurfaceRefinerInterface;
 use Drupal\surface\ResourceBuild\RefinesInputRefiner;
 use PortableSchema\Builder\Schema;
@@ -79,16 +79,16 @@ final class DeclaredRefiner implements SurfaceRefinerInterface, ApplicabilityInt
       return $this->answersAt(explode('.', $this->at), $key, $rules, $values, $name);
     }
     if ($name === RefinesInputRefiner::MOUNT && $this->module !== NULL) {
-      $own = DefinitionSchema::propertyNode($key, $this->module);
+      $own = DefinitionSchema::propertyOf($key, $this->module);
       if ($own === NULL || !is_a(DefinitionSchema::classOf($own), MapDataDefinition::class, TRUE)) {
         return [];
       }
       $answers = [];
       $schema = $key;
       foreach ($rules as $rule) {
-        $own = DefinitionSchema::propertyNode($schema, $this->module);
-        $inner = $own === NULL ? NULL : DefinitionSchema::propertyNode($own, $rule->key);
-        if ($inner !== NULL && !NodeFacts::doesNotApply($inner) && $this->holds($rule, $values)) {
+        $own = DefinitionSchema::propertyOf($schema, $this->module);
+        $inner = $own === NULL ? NULL : DefinitionSchema::propertyOf($own, $rule->key);
+        if ($inner !== NULL && !SchemaFacts::doesNotApply($inner) && $this->holds($rule, $values)) {
           $answer = static::placed([$this->module, $rule->key], $rule->answer($inner));
           $answers[] = $answer;
           $schema = static::applied($schema, $answer, $name);
@@ -125,9 +125,9 @@ final class DeclaredRefiner implements SurfaceRefinerInterface, ApplicabilityInt
       $inner = $schema;
       foreach ($parents as $parent) {
         // A path inside a map, each step a map, as the rule is bound.
-        $inner = $inner !== NULL && is_a(DefinitionSchema::classOf($inner), MapDataDefinition::class, TRUE) ? DefinitionSchema::propertyNode($inner, (string) $parent) : NULL;
+        $inner = $inner !== NULL && is_a(DefinitionSchema::classOf($inner), MapDataDefinition::class, TRUE) ? DefinitionSchema::propertyOf($inner, (string) $parent) : NULL;
       }
-      if ($inner === NULL || NodeFacts::doesNotApply($inner)) {
+      if ($inner === NULL || SchemaFacts::doesNotApply($inner)) {
         if ($parents === []) {
           break;
         }

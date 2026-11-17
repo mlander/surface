@@ -6,7 +6,7 @@ namespace Drupal\surface;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeDefinition;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -195,17 +195,17 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * @param array<int, array> $frameConstraints
    *   What the frame as a whole is held to beyond its keys, each a JSON
    *   Schema (frameConstraints()).
-   * @param bool $nodeFirst
-   *   Whether every entry is made node-first, as the seal makes it
-   *   (Entry::sealed()): each key's node read from its definition, a key
+   * @param bool $schemaFirst
+   *   Whether every entry is made schema-first, as the seal makes it
+   *   (Entry::sealed()): each key's schema read from its definition, a key
    *   that holds a child frame composed of its own facts around its
-   *   child's entries' nodes, the definition dropped. A definition of a
-   *   class other than the three NodeDefinition derives, or whose node
-   *   holds a node of another class at any depth, stays definition-first,
+   *   child's entries' schemas, the definition dropped. A definition of a
+   *   class other than the three DefinitionFromSchema derives, or whose schema
+   *   holds a schema of another class at any depth, stays definition-first,
    *   made whole (Entry::whole()). FALSE makes every entry from its
    *   definition, definition-first, as any caller but the seal does.
    * @param array<string, string> $chosen
-   *   With $nodeFirst, the variant chosen at each key whose variants'
+   *   With $schemaFirst, the variant chosen at each key whose variants'
    *   deciding key is locked, by key: the key is handed the variants'
    *   empty map and holds that variant's keys.
    *
@@ -234,12 +234,12 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     array $runtimeAccess = [],
     array $lockReasons = [],
     array $frameConstraints = [],
-    bool $nodeFirst = FALSE,
+    bool $schemaFirst = FALSE,
     array $chosen = [],
   ): static {
     // The seal alone passes these, and as it uses them: a chosen variant
-    // only for node-first entries, and only at a key with variants.
-    assert($chosen === [] || $nodeFirst, 'A chosen variant is passed only with nodeFirst: the seal hands such a key its own facts alone.');
+    // only for schema-first entries, and only at a key with variants.
+    assert($chosen === [] || $schemaFirst, 'A chosen variant is passed only with schemaFirst: the seal hands such a key its own facts alone.');
     assert(array_diff_key($chosen, $variants) === [], sprintf('A chosen variant is passed only at a key with variants, not at %s.', implode(', ', array_keys(array_diff_key($chosen, $variants)))));
     foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($variants), array_keys($lists), array_keys($mounted)) as $key) {
       if (!isset($definitions[$key])) {
@@ -274,11 +274,11 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     $entries = [];
     foreach ($definitions as $name => $definition) {
       if ($definition instanceof Schema) {
-        // A key the builder holds as its schema: node-first from the
+        // A key the builder holds as its schema: schema-first from the
         // start, as the seal makes a key of one value.
         $entries[] = Entry::ofSchema(
           name: (string) $name,
-          node: $definition,
+          schema: $definition,
           contributor: $contributor,
           locked: in_array($name, $locked, TRUE),
           dependencies: $dependencies[$name] ?? [],
@@ -316,7 +316,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         runtimeAccess: in_array($name, $runtimeAccess, TRUE),
         lockedBecause: in_array($name, $locked, TRUE) ? ($lockReasons[$name] ?? NULL) : NULL,
       );
-      if ($nodeFirst) {
+      if ($schemaFirst) {
         $entries[] = static::sealed(array_pop($entries), $definition, $chosen[$name] ?? NULL);
       }
     }
@@ -326,7 +326,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   }
 
   /**
-   * Makes an entry node-first, as the seal makes it.
+   * Makes an entry schema-first, as the seal makes it.
    *
    * @param \Drupal\surface\Entry $entry
    *   The entry, as made from its definition.
@@ -337,12 +337,12 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *   The variant chosen at the key, if its deciding key is locked.
    *
    * @return \Drupal\surface\Entry
-   *   The entry, node-first (Entry::sealed()); definition-first and made
+   *   The entry, schema-first (Entry::sealed()); definition-first and made
    *   whole (Entry::whole()) for a definition of a class the inverse does
-   *   not derive, at any depth its node holds a node.
+   *   not derive, at any depth its schema holds a schema.
    */
   private static function sealed(Entry $entry, DataDefinitionInterface $definition, ?string $chosen): Entry {
-    if (in_array($definition::class, NodeDefinition::DERIVED, TRUE)) {
+    if (in_array($definition::class, DefinitionFromSchema::DERIVED, TRUE)) {
       $sealed = $entry->sealed($chosen);
       if (static::derivedClasses($sealed->schema())) {
         return $sealed;
@@ -352,34 +352,34 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   }
 
   /**
-   * Answers whether every node a node holds was read from a derived class.
+   * Answers whether every schema a schema holds was read from a derived class.
    *
-   * The node, its properties, its item, and the nodes a shape, a config
-   * type and `each` hold, at every depth: what NodeDefinition::of()
+   * The schema, its properties, its item, and the schemas a shape, a config
+   * type and `each` hold, at every depth: what DefinitionFromSchema::of()
    * derives a definition from, and refuses for any other class. The one
-   * test of whether an entry may be node-first: at the seal (sealed())
+   * test of whether an entry may be schema-first: at the seal (sealed())
    * and for a shell a refinement composes (Surface::refineNested(),
    * refineMounted()).
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
-   *   TRUE when each is of one of NodeDefinition::DERIVED.
+   *   TRUE when each is of one of DefinitionFromSchema::DERIVED.
    *
    * @internal
    */
-  public static function derivedClasses(Schema $node): bool {
-    if (!in_array(DefinitionSchema::classOf($node), NodeDefinition::DERIVED, TRUE)) {
+  public static function derivedClasses(Schema $schema): bool {
+    if (!in_array(DefinitionSchema::classOf($schema), DefinitionFromSchema::DERIVED, TRUE)) {
       return FALSE;
     }
-    $model = DefinitionSchema::model($node);
-    $properties = $node->get('properties');
+    $model = DefinitionSchema::model($schema);
+    $properties = $schema->get('properties');
     $below = [
       ...(is_array($properties) ? array_values($properties) : []),
-      $node->get('items'),
-      $model['shape']['node'] ?? NULL,
-      $model['configType']['node'] ?? NULL,
+      $schema->get('items'),
+      $model['shape']['schema'] ?? NULL,
+      $model['configType']['schema'] ?? NULL,
       $model['each'] ?? NULL,
     ];
     foreach ($below as $child) {
@@ -467,7 +467,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *
    * For the callers that hand the keys to an array function that reads
    * keys alone: array_intersect_key() against stored values, above all.
-   * It asks no entry for its definition or its node.
+   * It asks no entry for its definition or its schema.
    *
    * Decision: see
    * docs/decisions.md#nothing-asks-for-a-definition-it-does-not-need.

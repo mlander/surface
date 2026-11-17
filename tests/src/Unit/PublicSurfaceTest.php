@@ -126,7 +126,7 @@ use PHPUnit\Framework\Attributes\Group;
  * Changed on 2026-11-12, no count moved: ShapeInterface declares
  * `schema(): Schema` in place of `define(): DataDefinition`, a shape
  * stated as the schema of its one value and read by the schema reader
- * (docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-node).
+ * (docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-schema).
  * The shape's contract is pinned by method and return type from this
  * date.
  *

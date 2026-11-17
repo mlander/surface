@@ -235,21 +235,21 @@ class ReferenceStoredByUuidTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the layout stores and loads a node-first resource from nodes.
+   * Tests the layout stores and loads a schema-first resource from nodes.
    *
    * Every fact the layout reads (stored by uuid, the entity type, a bare
-   * key's parts, the data type) is read from each key's node, so a
-   * node-first build is stored, loaded, kept and named in its config
+   * key's parts, the data type) is read from each key's schema, so a
+   * schema-first build is stored, loaded, kept and named in its config
    * dependencies with no definition derived that the build did not
-   * derive; the config schema check reads its nodes too.
+   * derive; the config schema check reads its schemas too.
    */
-  public function testNodeFirstResourceIsStoredWithNoDefinitionDerived(): void {
+  public function testSchemaFirstResourceIsStoredWithNoDefinitionDerived(): void {
     $resources = $this->container->get('surface.resources');
     $built = $resources->build(SponsorshipResource::class, $resources->operation(SponsorshipResource::class, 'configure'));
     $derived = new \ReflectionProperty(Entry::class, 'definition');
     $unread = [];
     foreach ($built->getDefinitions()->entries() as $name => $entry) {
-      $this->assertTrue($entry->isNodeFirst());
+      $this->assertTrue($entry->isSchemaFirst());
       $children = $entry->attachment === NULL ? [] : $entry->attachment->child->getDefinitions()->entries();
       foreach (['' => $entry] + $children as $below => $one) {
         if ($derived->getValue($one) === NULL) {

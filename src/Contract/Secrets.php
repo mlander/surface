@@ -9,7 +9,7 @@ use PortableSchema\Builder\Schema;
 use PortableSchema\Registry;
 
 /**
- * Answers what is secret, from a schema node or a document.
+ * Answers what is secret, from a schema or a document.
  *
  * A value is secret where a schema that applies to it says
  * `writeOnly: true`. That is the one meaning of the keyword: a secret is
@@ -35,10 +35,10 @@ use PortableSchema\Registry;
  * A served document holds only what it states: a variant it does not
  * carry (deferred, or left out of a document narrowed to the chosen one)
  * is not in it, so code that needs every variant's secrets reads built
- * nodes, never a served document.
+ * schemas, never a served document.
  *
  * Decision: see
- * docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-node.
+ * docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-schema.
  */
 final class Secrets {
 
@@ -80,16 +80,16 @@ final class Secrets {
   private static ?Registry $library = NULL;
 
   /**
-   * Answers whether a node itself says its value is secret.
+   * Answers whether a schema itself says its value is secret.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return bool
    *   TRUE where it says `writeOnly: true`.
    */
-  public static function marked(Schema $node): bool {
-    return !$node->isBoolean() && $node->get('writeOnly') === TRUE;
+  public static function marked(Schema $schema): bool {
+    return !$schema->isBoolean() && $schema->get('writeOnly') === TRUE;
   }
 
   /**

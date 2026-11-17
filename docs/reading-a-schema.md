@@ -193,7 +193,7 @@ these keywords through it:
 A document contract 4 wrote said both under `x-surface`: its
 `checkedOnServer`, a list of `{constraint, message, schema}`, is read as
 `portable-check`, and its `patternMessage` as `x-portable-messages`
-under the code of the node's `pattern` or `not`
+under the code of the schema's `pattern` or `not`
 (`SchemaReader::respelled()`), so the document is checked as it was.
 A document served before 2026-11-10 said the widget hints under
 `x-surface` (`widget`, `multiple`, `arrangement` with the whole group on

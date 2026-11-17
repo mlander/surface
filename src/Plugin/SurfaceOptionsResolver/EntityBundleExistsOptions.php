@@ -70,7 +70,7 @@ final class EntityBundleExistsOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, Schema $node): OptionSet {
+  public function resolve(Constraint $constraint, Schema $schema): OptionSet {
     assert($constraint instanceof EntityBundleExistsConstraint);
     $options = [];
     foreach ($this->bundleInfo->getBundleInfo($constraint->entityTypeId) as $bundle => $info) {

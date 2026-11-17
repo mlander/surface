@@ -9,7 +9,7 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Attachment;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
@@ -24,20 +24,20 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PortableSchema\Builder\Schema;
 
 /**
- * Tests a refined shell, composed of nodes, and what reads it.
+ * Tests a refined shell, composed of schemas, and what reads it.
  *
- * A refinement composes the node of a key that holds a child frame (an
+ * A refinement composes the schema of a key that holds a child frame (an
  * attachment, chosen variants, a structure at a mount) of the key's own
- * node and the refined child's entries' nodes
- * (DefinitionSchema::withProperties()), node-first; it keeps the
- * definition built as before, handed with that node, where the node holds
- * a class no node derives a definition of, where a deciding key is locked,
+ * schema and the refined child's entries' schemas
+ * (DefinitionSchema::withProperties()), schema-first; it keeps the
+ * definition built as before, handed with that schema, where the schema holds
+ * a class no schema derives a definition of, where a deciding key is locked,
  * and where a mount's own refiners refined it too. The narrowing check of
  * the whole shell goes where it cannot fire: each of the child's keys is
  * held to it when the child refines it, and a widening there is refused
  * with the child's own message.
  *
- * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-nodes.
+ * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-schemas.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -144,17 +144,17 @@ class RefinedShellTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the composer places a child's keys in a shell's node.
+   * Tests the composer places a child's keys in a shell's schema.
    */
   public function testTheComposer(): void {
     $shell = MapDataDefinition::create()->setLabel('Shell')->setDescription('Its own.')->setSetting('widget', 'fieldset')->setRequired(TRUE)->addConstraint('Count', ['max' => 3]);
     $shell->setPropertyDefinition('a', DataDefinition::create('string')->setLabel('A'));
-    $node = DefinitionSchema::of($shell);
+    $schema = DefinitionSchema::of($shell);
     $required = DefinitionSchema::of(DataDefinition::create('string')->setLabel('B')->setRequired(TRUE));
     $optional = DefinitionSchema::of(DataDefinition::create('integer')->setLabel('C'));
-    $composed = DefinitionSchema::withProperties($node, ['b' => $required, 'c' => $optional]);
+    $composed = DefinitionSchema::withProperties($schema, ['b' => $required, 'c' => $optional]);
     $this->assertSame(['b', 'c'], array_keys((array) $composed->get('properties')), 'The properties given, in their order, the one the shell held gone.');
-    $this->assertSame($required, DefinitionSchema::propertyNode($composed, 'b'), 'The very node given.');
+    $this->assertSame($required, DefinitionSchema::propertyOf($composed, 'b'), 'The very schema given.');
     $this->assertSame(['b'], $composed->get('required'), 'The required one in `required`, the optional one not.');
     $read = MapDataDefinition::create()->setLabel('Shell')->setDescription('Its own.')->setSetting('widget', 'fieldset')->setRequired(TRUE)->addConstraint('Count', ['max' => 3]);
     $read->setPropertyDefinition('b', DataDefinition::create('string')->setLabel('B')->setRequired(TRUE));
@@ -162,17 +162,17 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $this->assertTrue(DefinitionSchema::same(DefinitionSchema::of($read), $composed), 'The shell\'s own facts kept: its label, description, setting, required flag and check on the map.');
     $none = DefinitionSchema::withProperties($composed, ['c' => $optional]);
     $this->assertFalse($none->has('required'), 'No required property, no `required`.');
-    $first = DefinitionSchema::withProperties($node, ['c' => $optional]);
+    $first = DefinitionSchema::withProperties($schema, ['c' => $optional]);
     $placed = DefinitionSchema::withProperties($first, ['c' => $optional, 'b' => $required]);
     $back = MapDataDefinition::create()->setLabel('Shell')->setDescription('Its own.')->setSetting('widget', 'fieldset')->setRequired(TRUE)->addConstraint('Count', ['max' => 3]);
     $back->setPropertyDefinition('c', DataDefinition::create('integer')->setLabel('C'));
     $back->setPropertyDefinition('b', DataDefinition::create('string')->setLabel('B')->setRequired(TRUE));
-    $this->assertTrue(DefinitionSchema::same(DefinitionSchema::of($back), $placed), '`required` placed where the read places it, where the node held none.');
+    $this->assertTrue(DefinitionSchema::same(DefinitionSchema::of($back), $placed), '`required` placed where the read places it, where the schema held none.');
     $default = MapDataDefinition::create()->setLabel('Default');
     $default->setPropertyDefinition('a', DataDefinition::create('string'));
     DefinitionMetadata::setDefaultValue($default, ['a' => 'x']);
     $kept = DefinitionSchema::withProperties(DefinitionSchema::of($default), ['a' => DefinitionSchema::of(DataDefinition::create('string')->setLabel('A'))]);
-    $this->assertSame(['a' => 'x'], NodeFacts::defaultOf($kept), 'The shell\'s own default kept.');
+    $this->assertSame(['a' => 'x'], SchemaFacts::defaultOf($kept), 'The shell\'s own default kept.');
     $variants = MapDataDefinition::create()->setLabel('Variants shell')->setRequired(TRUE);
     $own = DefinitionSchema::shell($variants);
     $this->assertSame([], $own->get('properties'), 'A shell of variants is read as a map that holds nothing yet.');
@@ -182,7 +182,7 @@ class RefinedShellTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests every refined shell is composed of nodes, node-first.
+   * Tests every refined shell is composed of schemas, schema-first.
    */
   public function testEachShellIsComposed(): void {
     $surface = static::shells(static::child());
@@ -191,25 +191,25 @@ class RefinedShellTest extends SurfaceKernelTestBase {
       foreach (['att', 'pick', 'deep', 'third_party_settings'] as $key) {
         $entry = $refined->getDefinitions()->entry($key);
         $this->assertNotNull($entry);
-        $this->assertTrue($entry->isNodeFirst(), "$key ($mode) is node-first.");
+        $this->assertTrue($entry->isSchemaFirst(), "$key ($mode) is schema-first.");
         $this->assertFalse($entry->sameSource($surface->getDefinitions()->entry($key)), "$key ($mode) has a source of its own, even where its child changed nothing.");
-        $this->assertTrue(DefinitionSchema::same($entry->schema(), DefinitionSchema::of($entry->definition())), "$key ($mode): its node is what its definition reads.");
+        $this->assertTrue(DefinitionSchema::same($entry->schema(), DefinitionSchema::of($entry->definition())), "$key ($mode): its schema is what its definition reads.");
       }
       $fixed = $refined->getDefinitions()->entry('fixed');
-      $this->assertFalse($fixed->isNodeFirst(), "fixed ($mode): a locked deciding key keeps its definition and its narrowing check.");
+      $this->assertFalse($fixed->isSchemaFirst(), "fixed ($mode): a locked deciding key keeps its definition and its narrowing check.");
       $this->assertTrue(DefinitionSchema::same($fixed->schema(), DefinitionSchema::of($fixed->definition())));
     }
     $out = $surface->refine(static::at('out'));
-    $this->assertTrue(NodeFacts::doesNotApply(DefinitionSchema::propertyNode($out->getDefinitions()->entry('att')->schema(), 'code')), 'A key the child ruled out is marked in the shell\'s node.');
-    $this->assertSame(['inner.code'], NodeFacts::ruledOutInside($out->getDefinitions()->entry('deep')->schema()), 'And in a shell inside a shell.');
-    $this->assertSame(['surface.code'], NodeFacts::ruledOutInside($out->getDefinitions()->entry('third_party_settings')->schema()), 'And at a mount.');
+    $this->assertTrue(SchemaFacts::doesNotApply(DefinitionSchema::propertyOf($out->getDefinitions()->entry('att')->schema(), 'code')), 'A key the child ruled out is marked in the shell\'s schema.');
+    $this->assertSame(['inner.code'], SchemaFacts::ruledOutInside($out->getDefinitions()->entry('deep')->schema()), 'And in a shell inside a shell.');
+    $this->assertSame(['surface.code'], SchemaFacts::ruledOutInside($out->getDefinitions()->entry('third_party_settings')->schema()), 'And at a mount.');
   }
 
   /**
-   * Tests a shell whose node holds a class no node derives keeps a definition.
+   * Tests a shell holding a class no schema derives keeps a definition.
    *
    * Before refiners answered with schemas, the child's refiner handed back
-   * a definition of a class no node derives, and the shells built from
+   * a definition of a class no schema derives, and the shells built from
    * the refined child were held to that. A refiner's answer names no
    * class, so the class is the advertised key's here: the child's `code`
    * is of a class outside the three, and narrowing it keeps the shells
@@ -223,12 +223,12 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     foreach (['att', 'pick', 'fixed', 'deep', 'third_party_settings'] as $key) {
       $entry = $refined->getDefinitions()->entry($key);
       $this->assertNotNull($entry);
-      $this->assertFalse($entry->isNodeFirst(), "$key: definition-first.");
-      $this->assertFalse(DefinitionMap::derivedClasses($entry->schema()), "$key: its node holds a class no node derives.");
-      $this->assertTrue(DefinitionSchema::same($entry->schema(), DefinitionSchema::of($entry->definition())), "$key: its node, composed, is what its definition, built as before, reads.");
+      $this->assertFalse($entry->isSchemaFirst(), "$key: definition-first.");
+      $this->assertFalse(DefinitionMap::derivedClasses($entry->schema()), "$key: its schema holds a class no schema derives.");
+      $this->assertTrue(DefinitionSchema::same($entry->schema(), DefinitionSchema::of($entry->definition())), "$key: its schema, composed, is what its definition, built as before, reads.");
     }
     $plain = static::shells(static::child())->refine(static::at('narrow'));
-    $this->assertTrue($plain->getDefinitions()->entry('att')->isNodeFirst(), 'The same shell is node-first where the child\'s keys are of the derived classes.');
+    $this->assertTrue($plain->getDefinitions()->entry('att')->isSchemaFirst(), 'The same shell is schema-first where the child\'s keys are of the derived classes.');
   }
 
   /**
@@ -303,12 +303,12 @@ class RefinedShellTest extends SurfaceKernelTestBase {
         }
       }
       $same = $again->refine($first);
-      $this->assertSame(4, DefinitionSchema::propertyNode($same->getDefinitions()->entry('att')->schema(), 'code')?->get('maxLength'), "The same narrowing again answers ($how).");
+      $this->assertSame(4, DefinitionSchema::propertyOf($same->getDefinitions()->entry('att')->schema(), 'code')?->get('maxLength'), "The same narrowing again answers ($how).");
       $narrower = $again->refine(static::at('narrower'));
       foreach (['att', 'pick', 'deep', 'third_party_settings'] as $key) {
         $this->assertTrue($narrower->getDefinitions()->entry($key)->madeByRefinement(), "$key ($how): refined again, made by the refinement.");
       }
-      $this->assertSame(2, DefinitionSchema::propertyNode($narrower->getDefinitions()->entry('att')->schema(), 'code')?->get('maxLength'), "A narrower one answers ($how).");
+      $this->assertSame(2, DefinitionSchema::propertyOf($narrower->getDefinitions()->entry('att')->schema(), 'code')?->get('maxLength'), "A narrower one answers ($how).");
     }
     $this->assertFalse($surface->getDefinitions()->entry('att')->madeByRefinement(), 'A sealed entry is not made by a refinement.');
     $this->assertTrue($refined->getDefinitions()->entry('att')->madeByRefinement(), 'A composed one is.');
@@ -318,9 +318,9 @@ class RefinedShellTest extends SurfaceKernelTestBase {
   /**
    * Tests a watched key the refiner's answer holds is walked by it.
    *
-   * A key of a class no node derives a definition of, whose definition
+   * A key of a class no schema derives a definition of, whose definition
    * answers for a property its properties do not list: the watched value
-   * there is judged by that definition, as before, not by the node.
+   * there is judged by that definition, as before, not by the schema.
    */
   public function testWatchedKeyOfGivenDefinitionIsWalkedByIt(): void {
     $cfg = new class(['type' => 'map']) extends MapDataDefinition {
@@ -342,13 +342,13 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $builder->addRefiner('target', new HandRefiner([]));
     $builder->setWatchedValueCheck($this->container->get('surface.watched_value_check'));
     $surface = $builder->seal();
-    $this->assertFalse($surface->getDefinitions()->entry('cfg')->isNodeFirst());
+    $this->assertFalse($surface->getDefinitions()->entry('cfg')->isSchemaFirst());
     $this->assertSame(['cfg.x' => 'word'], $surface->refine(['cfg' => ['x' => 'word']])->withheldValues());
     $this->assertSame([], $surface->refine(['cfg' => ['x' => 3]])->withheldValues());
   }
 
   /**
-   * Builds a frame whose watched key is a definition its node does not say.
+   * Builds a frame whose watched key is a definition its schema does not say.
    *
    * Before refiners answered with schemas, the refiner of `cfg` handed
    * back a copy of a definition that answers for `x`, a property its
@@ -357,7 +357,7 @@ class RefinedShellTest extends SurfaceKernelTestBase {
    * it out by its answer.
    *
    * @return \Drupal\surface\SurfaceInterface
-   *   `cfg`, a map of a class no node derives a definition of, holding `x`
+   *   `cfg`, a map of a class no schema derives a definition of, holding `x`
    *   (one of a and b) and `y`, `x` ruled out once `mode` is `out`;
    *   `target` (Length 9), narrowed to 3 by `cfg.x` holding `a`.
    */
@@ -402,14 +402,14 @@ class RefinedShellTest extends SurfaceKernelTestBase {
    */
   public function testRuledOutPlaceOfGivenDefinitionIsWithheld(): void {
     $frame = $this->definitionWatchedFrame();
-    $this->assertFalse($frame->getDefinitions()->entry('cfg')->isNodeFirst());
+    $this->assertFalse($frame->getDefinitions()->entry('cfg')->isSchemaFirst());
     $max = static fn (SurfaceInterface $refined): mixed => $refined->getDefinitions()->entry('target')->schema()->get('maxLength');
     $this->assertSame(9, $max($frame->refine(['cfg' => ['x' => 'a'], 'mode' => 'out'])), 'Ruled out: the watcher stays at its bound.');
     $this->assertSame(3, $max($frame->refine(['cfg' => ['x' => 'a']])), 'Not ruled out: the watcher narrows.');
     $holder = new SurfaceBuilder(['att' => MapDataDefinition::create()->setLabel('Att')]);
     $holder->attach('att', new Attachment($frame));
     $surface = $holder->seal();
-    $inside = static fn (array $values): mixed => DefinitionSchema::propertyNode($surface->refine(['att' => $values])->getDefinitions()->entry('att')->schema(), 'target')?->get('maxLength');
+    $inside = static fn (array $values): mixed => DefinitionSchema::propertyOf($surface->refine(['att' => $values])->getDefinitions()->entry('att')->schema(), 'target')?->get('maxLength');
     $this->assertSame(9, $inside(['cfg' => ['x' => 'a'], 'mode' => 'out']), 'Inside an attachment\'s child, too.');
     $this->assertSame(3, $inside(['cfg' => ['x' => 'a']]));
   }
@@ -476,9 +476,9 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $builder->mountStructure('surface', new Attachment(static::child()));
     $builder->mountStructure('user', new Attachment(static::child()));
     $surface = $builder->seal();
-    $code = static fn (SurfaceInterface $refined, string $at): mixed => DefinitionSchema::propertyNode(DefinitionSchema::propertyNode($refined->getDefinitions()->entry('third_party_settings')->schema(), $at) ?? Schema::boolean(FALSE), 'code')?->get('maxLength');
+    $code = static fn (SurfaceInterface $refined, string $at): mixed => DefinitionSchema::propertyOf(DefinitionSchema::propertyOf($refined->getDefinitions()->entry('third_party_settings')->schema(), $at) ?? Schema::boolean(FALSE), 'code')?->get('maxLength');
     $one = $surface->refine(['third_party_settings' => ['user' => ['mode' => 'narrow']]]);
-    $this->assertTrue($one->getDefinitions()->entry('third_party_settings')->isNodeFirst());
+    $this->assertTrue($one->getDefinitions()->entry('third_party_settings')->isSchemaFirst());
     $this->assertSame(4, $code($one, 'user'), 'The second structure refined, at its own path.');
     $this->assertSame(8, $code($one, 'surface'), 'The first left as sealed.');
     $mounts = ['surface' => ['mode' => 'narrower'], 'user' => ['mode' => 'narrow']];
@@ -490,22 +490,22 @@ class RefinedShellTest extends SurfaceKernelTestBase {
   /**
    * Tests the walk of what is ruled out gives what the definition walk gave.
    *
-   * For a list, a value and a boolean node: nothing; for a map with a key
+   * For a list, a value and a boolean schema: nothing; for a map with a key
    * ruled out at two depths: those keys.
    */
   public function testTheRuledOutWalk(): void {
     $item = MapDataDefinition::create()->setPropertyDefinition('a', DoesNotApply::marked(DataDefinition::create('string')));
     $list = new ListDataDefinition([], $item);
-    $this->assertSame([], NodeFacts::ruledOutInside(DefinitionSchema::of($list)), 'A list: nothing, its item\'s keys included.');
-    $this->assertSame([], NodeFacts::ruledOutInside(DefinitionSchema::of(DoesNotApply::marked(DataDefinition::create('string')))), 'A value: nothing.');
-    $this->assertSame([], NodeFacts::ruledOutInside(Schema::boolean(TRUE)), 'A boolean node: nothing.');
+    $this->assertSame([], SchemaFacts::ruledOutInside(DefinitionSchema::of($list)), 'A list: nothing, its item\'s keys included.');
+    $this->assertSame([], SchemaFacts::ruledOutInside(DefinitionSchema::of(DoesNotApply::marked(DataDefinition::create('string')))), 'A value: nothing.');
+    $this->assertSame([], SchemaFacts::ruledOutInside(Schema::boolean(TRUE)), 'A boolean schema: nothing.');
     $map = MapDataDefinition::create()
       ->setPropertyDefinition('out', DoesNotApply::marked(DataDefinition::create('string')))
       ->setPropertyDefinition('in', MapDataDefinition::create()
         ->setPropertyDefinition('deep', DoesNotApply::marked(MapDataDefinition::create()->setPropertyDefinition('z', DoesNotApply::marked(DataDefinition::create('string')))))
         ->setPropertyDefinition('kept', DataDefinition::create('string')))
       ->setPropertyDefinition('list', $list);
-    $this->assertSame(['out', 'in.deep'], NodeFacts::ruledOutInside(DefinitionSchema::of($map)), 'A map: its ruled-out keys, a ruled-out key not walked into, a list not walked into.');
+    $this->assertSame(['out', 'in.deep'], SchemaFacts::ruledOutInside(DefinitionSchema::of($map)), 'A map: its ruled-out keys, a ruled-out key not walked into, a list not walked into.');
   }
 
   /**
@@ -570,12 +570,12 @@ class RefinedShellTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a watched key inside a refined map is judged by its refined node.
+   * Tests a watched key inside a refined map is judged by its refined schema.
    *
    * A mounted key a refiner watches holds a value its mount's own refiner
    * no longer allows: the refinement withholds it from the watching
    * refiner (Surface::refusedWatchedValues(), a walk of the refined
-   * mount's node); while the mount allows it, it is handed on.
+   * mount's schema); while the mount allows it, it is handed on.
    */
   public function testWatchedKeyInsideRefinedMapIsWithheld(): void {
     $surface = $this->narrowedMount();
@@ -587,8 +587,8 @@ class RefinedShellTest extends SurfaceKernelTestBase {
   /**
    * Tests a stored choice a refined map no longer offers is orphaned.
    *
-   * The form's extraction reads the mounted key's node in the refined
-   * mount (Extracting::nodeAt()) and asks the options service whether it
+   * The form's extraction reads the mounted key's schema in the refined
+   * mount (Extracting::schemaAt()) and asks the options service whether it
    * still offers the stored value (isOrphaned()), and whether the input
    * still stands (stillStands()).
    */
@@ -607,9 +607,9 @@ class RefinedShellTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a woken refined shell holds its child's very nodes.
+   * Tests a woken refined shell holds its child's very schemas.
    */
-  public function testWokenShellHoldsTheNodesOfItsChild(): void {
+  public function testWokenShellHoldsTheSchemasOfItsChild(): void {
     $child = static::child();
     $surface = static::shells($child);
     $refined = $surface->refine(static::at('narrow'));
@@ -617,11 +617,11 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $woken = unserialize(serialize($refined));
     $entry = $woken->getDefinitions()->entry('att');
     $this->assertInstanceOf(Entry::class, $entry);
-    $this->assertTrue($entry->isNodeFirst());
+    $this->assertTrue($entry->isSchemaFirst());
     $sealed = $entry->attachment->child->getDefinitions();
-    $this->assertSame($sealed->entry('note')?->schema(), DefinitionSchema::propertyNode($entry->schema(), 'note'), 'A key the child left as it was: the woken child\'s very node.');
-    $this->assertNotSame($sealed->entry('code')?->schema(), DefinitionSchema::propertyNode($entry->schema(), 'code'), 'A key the child refined: the shell\'s own.');
-    $this->assertSame(4, DefinitionSchema::propertyNode($entry->schema(), 'code')?->get('maxLength'));
+    $this->assertSame($sealed->entry('note')?->schema(), DefinitionSchema::propertyOf($entry->schema(), 'note'), 'A key the child left as it was: the woken child\'s very schema.');
+    $this->assertNotSame($sealed->entry('code')?->schema(), DefinitionSchema::propertyOf($entry->schema(), 'code'), 'A key the child refined: the shell\'s own.');
+    $this->assertSame(4, DefinitionSchema::propertyOf($entry->schema(), 'code')?->get('maxLength'));
   }
 
 }

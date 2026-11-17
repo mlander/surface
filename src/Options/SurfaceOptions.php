@@ -9,7 +9,7 @@ use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Pipeline\PipelineGuard;
 use PortableSchema\Builder\Schema;
 use Psr\Log\LoggerInterface;
@@ -40,28 +40,28 @@ final class SurfaceOptions {
   protected array $resolvers;
 
   /**
-   * Resolved answers, keyed by the key asked: its node or its definition.
+   * Resolved answers, keyed by the key asked: its schema or its definition.
    *
    * An identity memo and nothing more. Resolving a list can mean reading
    * entity types, bundles, languages or countries, and a generated form
    * asks the same key at least twice: once to pick the widget, once to
    * build the element. Narrowing needs no invalidation: a refined key is
-   * another object than the declared key, its definition and its node
+   * another object than the declared key, its definition and its schema
    * alike. A refined entry holds the refined definition and reads its
-   * node from it, or composes the node around the refined child it was
-   * built from, so its node is never the declared entry's node, and
+   * schema from it, or composes the schema around the refined child it was
+   * built from, so its schema is never the declared entry's schema, and
    * narrowing is never served a stale list. An answer is read from the
-   * node alone (its constraints, and what a resolver reads of it) and the
-   * site, and a node is never written once it is built (Schema::with()
-   * makes a new one), so two places that hold one node object are served
-   * one right answer: a key that holds a child frame composes its node of
-   * the very nodes its child's entries hold (Entry::schema()), so the
+   * schema alone (its constraints, and what a resolver reads of it) and the
+   * site, and a schema is never written once it is built (Schema::with()
+   * makes a new one), so two places that hold one schema object are served
+   * one right answer: a key that holds a child frame composes its schema of
+   * the very schemas its child's entries hold (Entry::schema()), so the
    * shell's property and the child's key are one key with one list.
    * invalidateTags() forgets an answer read from the site, whichever kind
    * of key it is under.
    *
    * Weak, so an entry lives exactly as long as its key. Every refine makes
-   * new definitions and nodes, and a worker that outlives a request (an
+   * new definitions and schemas, and a worker that outlives a request (an
    * MCP stdio server, a queue, a Drush batch) would otherwise keep every
    * one it ever resolved. FALSE stands for no list: no constraint on the
    * key names one.
@@ -128,23 +128,23 @@ final class SurfaceOptions {
    * Validation still sees the same constraint and refuses on its own
    * terms.
    *
-   * The key is its node or, for a caller that holds no node, its
-   * definition. Handed a node, the constraints are the node's
-   * (NodeFacts::constraints()) and each resolver is handed that node.
+   * The key is its schema or, for a caller that holds no schema, its
+   * definition. Handed a schema, the constraints are the schema's
+   * (SchemaFacts::constraints()) and each resolver is handed that schema.
    * Handed a definition (core's options provider, the form's
    * extraction), the constraints are the definition's, and the
-   * node each resolver is handed is read from the definition when a
+   * schema each resolver is handed is read from the definition when a
    * resolver is first about to be called (DefinitionSchema::of()): a
    * definition no resolver answers for costs no read, and the memo above
    * makes the read once per definition.
    *
    * Decision: see
-   * docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node.
+   * docs/decisions.md#a-fact-is-read-from-the-schema-and-the-options-service-takes-a-schema.
    *
    * @param \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface $key
-   *   The key's node: its entry's (Entry::schema()), or the node its
-   *   entry's node holds for a property or an item. Or the key's
-   *   definition, where the caller holds no node.
+   *   The key's schema: its entry's (Entry::schema()), or the schema its
+   *   entry's schema holds for a property or an item. Or the key's
+   *   definition, where the caller holds no schema.
    *
    * @return \Drupal\surface\Options\OptionSet|null
    *   The allowed values, or NULL when no constraint names a list.
@@ -154,8 +154,8 @@ final class SurfaceOptions {
       return $this->resolved[$key] ?: NULL;
     }
     $resolved = NULL;
-    $node = NULL;
-    foreach ($key instanceof Schema ? NodeFacts::constraints($key) : $key->getConstraints() as $name => $options) {
+    $schema = NULL;
+    foreach ($key instanceof Schema ? SchemaFacts::constraints($key) : $key->getConstraints() as $name => $options) {
       try {
         $constraint = $this->constraintManager->create($name, $options);
       }
@@ -164,8 +164,8 @@ final class SurfaceOptions {
         continue;
       }
       foreach ($this->readers($constraint) as $resolver) {
-        $node ??= $key instanceof Schema ? $key : DefinitionSchema::of($key);
-        $set = PipelineGuard::onBehalf(PipelineGuard::OPTIONS, get_class($resolver), 'resolve', static fn (): OptionSet => $resolver->resolve($constraint, $node));
+        $schema ??= $key instanceof Schema ? $key : DefinitionSchema::of($key);
+        $set = PipelineGuard::onBehalf(PipelineGuard::OPTIONS, get_class($resolver), 'resolve', static fn (): OptionSet => $resolver->resolve($constraint, $schema));
         $resolved = $resolved === NULL ? $set : $resolved->intersect($set);
       }
     }
@@ -201,7 +201,7 @@ final class SurfaceOptions {
    *
    * A list read from the site (a module's config entities, say) is
    * answered with its cacheability; a key kept for the rest of the
-   * request, by its node or its definition, is asked again once a tag
+   * request, by its schema or its definition, is asked again once a tag
    * that list named is invalidated, so
    * a venue added by one call is offered by the next in the same worker.
    *

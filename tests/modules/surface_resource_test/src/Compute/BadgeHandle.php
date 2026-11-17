@@ -13,15 +13,15 @@ use PortableSchema\Builder\Schema;
 final class BadgeHandle implements ComputesValueInterface {
 
   /**
-   * The node the last call was handed, for the test that reads it.
+   * The schema the last call was handed, for the test that reads it.
    */
   public static ?Schema $handed = NULL;
 
   /**
-   * Gets the node the last call was handed.
+   * Gets the schema the last call was handed.
    *
    * @return \PortableSchema\Builder\Schema|null
-   *   The node, or NULL when no call was handed one.
+   *   The schema, or NULL when no call was handed one.
    */
   public static function handed(): ?Schema {
     return static::$handed;

@@ -9,7 +9,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceAccess;
 use Drupal\surface\SurfaceInterface;
@@ -171,8 +171,8 @@ final class SurfacePipeline implements SurfacePipelineInterface {
   /**
    * Writes one value of an accepted document with every map an object.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The value's node: its entry's (Entry::schema()), or one below it.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The value's schema: its entry's (Entry::schema()), or one below it.
    * @param mixed $value
    *   The value.
    *
@@ -181,22 +181,22 @@ final class SurfacePipeline implements SurfacePipelineInterface {
    *   datetime with its offset.
    *
    * @throws \LogicException
-   *   When a list's node holds no node for its item.
+   *   When a list's schema holds no schema for its item.
    */
-  protected static function documentValue(Schema $node, mixed $value): mixed {
+  protected static function documentValue(Schema $schema, mixed $value): mixed {
     if (!is_array($value)) {
       // A datetime with its offset, as it is served.
-      return NodeFacts::dataType($node) === 'datetime_iso8601' ? Coercion::served($value, DefinitionSchema::declares($node, 'DateOnly')) : $value;
+      return SchemaFacts::dataType($schema) === 'datetime_iso8601' ? Coercion::served($value, DefinitionSchema::declares($schema, 'DateOnly')) : $value;
     }
-    if (DefinitionSchema::isList($node)) {
-      $item_node = DefinitionSchema::itemNode($node) ?? throw new \LogicException('A list\'s node holds no node for its item: a built node holds one.');
-      return array_map(static fn (mixed $item): mixed => static::documentValue($item_node, $item), array_values($value));
+    if (DefinitionSchema::isList($schema)) {
+      $item_schema = DefinitionSchema::itemOf($schema) ?? throw new \LogicException('A list\'s schema holds no schema for its item: a built schema holds one.');
+      return array_map(static fn (mixed $item): mixed => static::documentValue($item_schema, $item), array_values($value));
     }
-    if (DefinitionSchema::isLeaf($node)) {
+    if (DefinitionSchema::isLeaf($schema)) {
       return $value;
     }
     $map = new \stdClass();
-    $properties = NodeFacts::properties($node);
+    $properties = SchemaFacts::properties($schema);
     foreach ($value as $key => $item) {
       $map->{$key} = isset($properties[$key]) ? static::documentValue($properties[$key], $item) : $item;
     }
@@ -265,11 +265,11 @@ final class SurfacePipeline implements SurfacePipelineInterface {
   /**
    * Puts back what storage holds under a map's properties left out.
    *
-   * The map's node says what it holds, its properties' nodes too, which
+   * The map's schema says what it holds, its properties' schemas too, which
    * heldAlike() hands the accept.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The map's node, as declared.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The map's schema, as declared.
    * @param array $value
    *   The accepted map.
    * @param array $stored
@@ -280,13 +280,13 @@ final class SurfacePipeline implements SurfacePipelineInterface {
    * @return array
    *   The map to write.
    */
-  protected function keptInMap(Schema $node, array $value, array $stored, ?array $input = NULL): array {
-    if (DefinitionSchema::isLeaf($node) || DefinitionSchema::isList($node)) {
+  protected function keptInMap(Schema $schema, array $value, array $stored, ?array $input = NULL): array {
+    if (DefinitionSchema::isLeaf($schema) || DefinitionSchema::isList($schema)) {
       return $value;
     }
     $kept = [];
     $unwritten = [];
-    foreach (NodeFacts::properties($node) as $property => $property_node) {
+    foreach (SchemaFacts::properties($schema) as $property => $property_schema) {
       if (!array_key_exists($property, $value)) {
         if (array_key_exists($property, $stored)) {
           $kept[$property] = $stored[$property];
@@ -294,16 +294,16 @@ final class SurfacePipeline implements SurfacePipelineInterface {
         continue;
       }
       $sent = $input !== NULL && array_key_exists($property, $input);
-      if ($input !== NULL && !array_key_exists($property, $stored) && static::isDefault($value[$property], NodeFacts::defaultOf($property_node))) {
+      if ($input !== NULL && !array_key_exists($property, $stored) && static::isDefault($value[$property], SchemaFacts::defaultOf($property_schema))) {
         $unwritten[$property] = TRUE;
         continue;
       }
-      if ($sent && !is_array($value[$property]) && array_key_exists($property, $stored) && $this->heldAlike($property_node, $value[$property], $stored[$property])) {
+      if ($sent && !is_array($value[$property]) && array_key_exists($property, $stored) && $this->heldAlike($property_schema, $value[$property], $stored[$property])) {
         $kept[$property] = $stored[$property];
         continue;
       }
       $kept[$property] = is_array($value[$property]) && is_array($stored[$property] ?? NULL)
-        ? $this->keptInMap($property_node, $value[$property], $stored[$property], $input === NULL ? NULL : (is_array($input[$property] ?? NULL) ? $input[$property] : []))
+        ? $this->keptInMap($property_schema, $value[$property], $stored[$property], $input === NULL ? NULL : (is_array($input[$property] ?? NULL) ? $input[$property] : []))
         : $value[$property];
     }
     return array_diff_key($kept + $value, $unwritten);
@@ -345,8 +345,8 @@ final class SurfacePipeline implements SurfacePipelineInterface {
    *
    * Decision: see docs/decisions.md#absent-keeps-null-clears.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's or the property's node, which the accept reads, the
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's or the property's schema, which the accept reads, the
    *   key's choices included (Accepting::acceptValue()).
    * @param mixed $accepted
    *   The accepted value, not an array.
@@ -356,12 +356,12 @@ final class SurfacePipeline implements SurfacePipelineInterface {
    * @return bool
    *   TRUE when the two are one value.
    */
-  protected function heldAlike(Schema $node, mixed $accepted, mixed $stored): bool {
-    if (Secrets::marked($node) || DefinitionSchema::isList($node) || is_array($stored)) {
+  protected function heldAlike(Schema $schema, mixed $accepted, mixed $stored): bool {
+    if (Secrets::marked($schema) || DefinitionSchema::isList($schema) || is_array($stored)) {
       return FALSE;
     }
     try {
-      return Accepting::sameValue($accepted, $this->accepting->acceptValue($node, $stored, $stored, ''));
+      return Accepting::sameValue($accepted, $this->accepting->acceptValue($schema, $stored, $stored, ''));
     }
     catch (\InvalidArgumentException) {
       return FALSE;

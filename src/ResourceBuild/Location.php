@@ -13,7 +13,7 @@ use Drupal\surface\SurfaceInterface;
 use PortableSchema\Builder\Schema;
 
 /**
- * What a place in a resource's values is: its definition, node and value.
+ * What a place in a resource's values is: its definition, schema and value.
  *
  * DefinitionAt() reads a JSON Pointer into the values the way validate()
  * walks them: each level refined against its own values, a key holding a
@@ -24,12 +24,12 @@ use PortableSchema\Builder\Schema;
  * level of keys: the top, a child, an item), and for a frame reached at a
  * key, also that key's definition.
  *
- * The node is the built node of the entry that holds the key
- * (Entry::schema()), and below a plain key that node walked down: a
- * property's node under `properties`, an item's under `items`
- * (DefinitionSchema::propertyNode(), itemNode()). Nothing here reads a
- * definition into a node, and only the entry of the place itself is asked
- * for its node, never a level it passes through. The definition at the
+ * The schema is the built schema of the entry that holds the key
+ * (Entry::schema()), and below a plain key that schema walked down: a
+ * property's schema under `properties`, an item's under `items`
+ * (DefinitionSchema::propertyOf(), itemOf()). Nothing here reads a
+ * definition into a schema, and only the entry of the place itself is asked
+ * for its schema, never a level it passes through. The definition at the
  * place is derived only when it is asked (definition()): the entry's,
  * walked down the same properties and items.
  *
@@ -50,19 +50,19 @@ final class Location {
    *   place that is not a frame.
    * @param mixed $value
    *   The value at the place, as accepted.
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The built node at the place: a key's entry's node, or that node
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   The built schema at the place: a key's entry's schema, or that schema
    *   walked down to the property or item; for a frame reached at a key,
    *   that key's; NULL for the top and for an item's frame.
    * @param \Drupal\surface\Entry|null $holder
-   *   The entry whose key the place is or is below; NULL where $node is.
+   *   The entry whose key the place is or is below; NULL where $schema is.
    * @param string[] $below
    *   The property names and deltas from the holder's key to the place.
    */
   public function __construct(
     public readonly ?SurfaceInterface $frame,
     public readonly mixed $value,
-    public readonly ?Schema $node = NULL,
+    public readonly ?Schema $schema = NULL,
     private readonly ?Entry $holder = NULL,
     private readonly array $below = [],
   ) {
@@ -72,17 +72,17 @@ final class Location {
    * Gets the definition at the place, derived when it is asked.
    *
    * The holder's definition (Entry::definition()), walked down its
-   * property and item definitions as the node was walked: for the one
+   * property and item definitions as the schema was walked: for the one
    * reader that hands a check a definition (ConstraintRunner, through the
    * check provider).
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The definition at the place: a key's or a property's; for a frame
-   *   reached at a key, that key's; NULL where the node is NULL.
+   *   reached at a key, that key's; NULL where the schema is NULL.
    *
    * @throws \LogicException
-   *   When the holder's definition holds no definition where its node
-   *   holds a node.
+   *   When the holder's definition holds no definition where its schema
+   *   holds a schema.
    */
   public function definition(): ?DataDefinitionInterface {
     $definition = $this->holder?->definition();
@@ -90,9 +90,9 @@ final class Location {
       $definition = static::step($definition, (string) $segment);
       if ($definition === NULL) {
         assert($this->holder !== NULL);
-        // A place with a node and no definition: the node was read from
+        // A place with a schema and no definition: the schema was read from
         // another definition than the one its entry holds.
-        throw new \LogicException(sprintf('The definition of the "%s" key holds no definition at "%s" where its node holds one: a built node holds one for every property and item of its definition.', $this->holder->name, $segment));
+        throw new \LogicException(sprintf('The definition of the "%s" key holds no definition at "%s" where its schema holds one: a built schema holds one for every property and item of its definition.', $this->holder->name, $segment));
       }
     }
     return $definition;
@@ -208,8 +208,8 @@ final class Location {
     $schema = $entry->schema();
     foreach ($segments as $segment) {
       $schema = match (TRUE) {
-        DefinitionSchema::isList($schema) => ctype_digit($segment) ? DefinitionSchema::itemNode($schema) : NULL,
-        DefinitionSchema::isComplex($schema) => DefinitionSchema::propertyNode($schema, $segment),
+        DefinitionSchema::isList($schema) => ctype_digit($segment) ? DefinitionSchema::itemOf($schema) : NULL,
+        DefinitionSchema::isComplex($schema) => DefinitionSchema::propertyOf($schema, $segment),
         default => NULL,
       };
       if ($schema === NULL) {

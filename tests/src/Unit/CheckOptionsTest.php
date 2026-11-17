@@ -16,7 +16,7 @@ use PHPUnit\Framework\Attributes\Group;
  * bundles?}`; JsonSchema the schema it holds a value to, `{schema}`; every
  * other plugin `{}`, whatever options its definition holds.
  *
- * @see docs/decisions.md#a-definition-is-read-once-into-a-built-node
+ * @see docs/decisions.md#a-definition-is-read-once-into-a-built-schema
  */
 #[Group('surface')]
 class CheckOptionsTest extends UnitTestCase {

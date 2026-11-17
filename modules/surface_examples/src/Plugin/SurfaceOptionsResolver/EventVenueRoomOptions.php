@@ -70,7 +70,7 @@ final class EventVenueRoomOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, Schema $node): OptionSet {
+  public function resolve(Constraint $constraint, Schema $schema): OptionSet {
     assert($constraint instanceof EventVenueRoomConstraint);
     return new OptionSet($this->choices->rooms($constraint->venue), [], $this->choices->cacheability());
   }

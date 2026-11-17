@@ -20,7 +20,7 @@ final class ItemStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addSchema('node', Schema::integer()
-      ->title('Node')
+      ->title('Schema')
       ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node'])
       ->required());
   }

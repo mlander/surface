@@ -24,7 +24,7 @@ use Drupal\Core\TypedData\Type\IntegerInterface;
 use Drupal\Core\TypedData\Type\StringInterface;
 use Drupal\surface\Contract\ContractBaselines;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMap;
@@ -667,7 +667,7 @@ final class ConfigSchemaGenerator {
    * @param array $existing
    *   The entries the files already hold, by name.
    * @param \PortableSchema\Builder\Schema|null $deciding
-   *   The deciding key's node, for a key with variants.
+   *   The deciding key's schema, for a key with variants.
    * @param array|null $installed
    *   What the object is installed with at the key's map, or NULL.
    * @param string $at
@@ -679,12 +679,12 @@ final class ConfigSchemaGenerator {
   protected function entry(Entry $entry, string $path, ResourceDefinition $owner, array &$entries, array $existing, ?Schema $deciding = NULL, ?array $installed = NULL, string $at = ''): array {
     $held = $installed === NULL ? NULL : ($installed[$entry->name] ?? NULL);
     $definition = $entry->definition();
-    // A key's facts are read from its node, a key that holds a child
-    // frame's too: its node is composed of the child's entries' nodes.
-    $node = $entry->schema();
-    $label = static::label(NodeFacts::ownLabel($node), $entry->name);
+    // A key's facts are read from its schema, a key that holds a child
+    // frame's too: its schema is composed of the child's entries' schemas.
+    $schema = $entry->schema();
+    $label = static::label(SchemaFacts::ownLabel($schema), $entry->name);
     if ($at !== '' && isset($this->translated[$at])) {
-      return $this->translated($this->translated[$at], $node, $label, $at, $installed !== NULL && $held === NULL);
+      return $this->translated($this->translated[$at], $schema, $label, $at, $installed !== NULL && $held === NULL);
     }
     $from = $entry->variants === NULL ? NULL : DefinitionMetadata::variantsFrom($entry->variants->shell);
     if ($from !== NULL && !is_subclass_of($from, ClosedSiteListInterface::class)) {
@@ -704,7 +704,7 @@ final class ConfigSchemaGenerator {
       return [
         'type' => 'sequence',
         'label' => $label,
-      ] + ($this->clearable($node, $at) ? ['nullable' => TRUE] : []) + static::constraints($node) + [
+      ] + ($this->clearable($schema, $at) ? ['nullable' => TRUE] : []) + static::constraints($schema) + [
         'sequence' => $this->ownKeyed($entry->list->child()->getDefinitions(), $path, $label, $owner, $entries, $existing, $at . '.') ?? [
           'type' => 'mapping',
           'label' => $label,
@@ -713,7 +713,7 @@ final class ConfigSchemaGenerator {
       ];
     }
     if ($entry->attachment !== NULL) {
-      $each = NodeFacts::each($node);
+      $each = SchemaFacts::each($schema);
       if (is_string($each)) {
         $child = $this->resources->declaration($each, $this->context($owner));
         return [
@@ -734,8 +734,8 @@ final class ConfigSchemaGenerator {
         // Each entry is a key of its own, which may hold nothing as one
         // would, and is stored as the storage says under `*`. What every
         // entry is was set on the key's definition, and no entry holds it
-        // (the site's entries are keys of the child): its node is the one
-        // the key's node holds, and its definition is handed on for the
+        // (the site's entries are keys of the child): its schema is the one
+        // the key's schema holds, and its definition is handed on for the
         // PHP class its data type maps to.
         return [
           'type' => 'sequence',
@@ -752,9 +752,9 @@ final class ConfigSchemaGenerator {
       ];
     }
     // Of the keys that hold a child frame only a mount gets here (the
-    // others are written above), and a mount is a plain map whose node is
+    // others are written above), and a mount is a plain map whose schema is
     // its own tree.
-    return $this->definition($node, $definition, $label, installedEmpty: $installed !== NULL && $held === NULL, at: $at);
+    return $this->definition($schema, $definition, $label, installedEmpty: $installed !== NULL && $held === NULL, at: $at);
   }
 
   /**
@@ -818,7 +818,7 @@ final class ConfigSchemaGenerator {
    * @param array $existing
    *   The entries the files already hold, by name.
    * @param \PortableSchema\Builder\Schema|null $deciding
-   *   The deciding key's node, whose labels name the variants.
+   *   The deciding key's schema, whose labels name the variants.
    * @param mixed $held
    *   What the object is installed with at the chosen variant's keys.
    * @param mixed $decided
@@ -834,7 +834,7 @@ final class ConfigSchemaGenerator {
    */
   protected function variantEntries(Entry $entry, string $base, ResourceDefinition $owner, array &$entries, array $existing, ?Schema $deciding, mixed $held, mixed $decided, string $at, ?string $extends = NULL, bool $absent = FALSE): void {
     $labels = [];
-    foreach ($deciding === NULL ? [] : (ChoiceSet::fromConstraints(NodeFacts::constraints($deciding))->labels ?? []) as $value => $choice) {
+    foreach ($deciding === NULL ? [] : (ChoiceSet::fromConstraints(SchemaFacts::constraints($deciding))->labels ?? []) as $value => $choice) {
       $labels[(string) $value] = $choice instanceof TranslatableMarkup ? strtr($choice->getUntranslatedString(), array_map('strval', $choice->getArguments())) : (string) $choice;
     }
     $variants = $this->variantMaps($entry, $owner);
@@ -1012,11 +1012,11 @@ final class ConfigSchemaGenerator {
         }
         // setSecret() refuses a map and a list, so a key that holds a child
         // frame is a secret only where its definition was marked some other
-        // way; its node says so as any key's does.
-        $node = $entry->schema();
-        if (Secrets::marked($node)) {
-          $label = NodeFacts::ownLabel($node);
-          $kept[$name] = $this->definition($node, $entry->definition(), static::label($label, $name)) + ['requiredKey' => FALSE];
+        // way; its schema says so as any key's does.
+        $schema = $entry->schema();
+        if (Secrets::marked($schema)) {
+          $label = SchemaFacts::ownLabel($schema);
+          $kept[$name] = $this->definition($schema, $entry->definition(), static::label($label, $name)) + ['requiredKey' => FALSE];
         }
       }
     }
@@ -1080,8 +1080,8 @@ final class ConfigSchemaGenerator {
   /**
    * Writes the mapping of a map definition no entry describes.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The map's node, whose facts are read.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The map's schema, whose facts are read.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The map, stepped down in step for the class a value's type maps to.
    * @param bool $mounted
@@ -1093,16 +1093,16 @@ final class ConfigSchemaGenerator {
    * @return array
    *   The mapping.
    */
-  protected function plainMapping(Schema $node, DataDefinitionInterface $definition, bool $mounted = FALSE, ?string $at = NULL): array {
+  protected function plainMapping(Schema $schema, DataDefinitionInterface $definition, bool $mounted = FALSE, ?string $at = NULL): array {
     $mapping = [];
     if ($definition instanceof ComplexDataDefinitionInterface) {
       foreach ($definition->getPropertyDefinitions() as $name => $property) {
-        $property_node = static::propertyOf($node, (string) $name);
+        $property_schema = static::propertyOf($schema, (string) $name);
         $where = $at === NULL ? NULL : $at . '.' . $name;
-        $label = static::label(NodeFacts::ownLabel($property_node), (string) $name);
+        $label = static::label(SchemaFacts::ownLabel($property_schema), (string) $name);
         $written = $where !== NULL && isset($this->translated[$where])
-          ? $this->translated($this->translated[$where], $property_node, $label, $where)
-          : $this->definition($property_node, $property, $label);
+          ? $this->translated($this->translated[$where], $property_schema, $label, $where)
+          : $this->definition($property_schema, $property, $label);
         $mapping[(string) $name] = $mounted ? static::after($written, 'nullable', ['requiredKey' => FALSE]) : $written;
       }
     }
@@ -1112,14 +1112,14 @@ final class ConfigSchemaGenerator {
   /**
    * Writes one definition: a single value, a list or a map.
    *
-   * Its facts are read from its node; the definition is stepped down in
+   * Its facts are read from its schema; the definition is stepped down in
    * step for the PHP class a value's data type maps to (type()), which no
-   * node holds.
+   * schema holds.
    *
-   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+   * Decision: see docs/decisions.md#the-remaining-readers-read-schemas.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   Its node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   Its schema.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    * @param string $label
@@ -1135,34 +1135,34 @@ final class ConfigSchemaGenerator {
    * @return array
    *   Its schema.
    */
-  protected function definition(Schema $node, DataDefinitionInterface $definition, string $label, bool $item = FALSE, bool $installedEmpty = FALSE, ?string $at = NULL): array {
-    if (DefinitionSchema::isList($node)) {
+  protected function definition(Schema $schema, DataDefinitionInterface $definition, string $label, bool $item = FALSE, bool $installedEmpty = FALSE, ?string $at = NULL): array {
+    if (DefinitionSchema::isList($schema)) {
       assert($definition instanceof ListDataDefinitionInterface);
-      $items = DefinitionSchema::itemNode($node) ?? throw new \LogicException('A list\'s node holds no node of its item: a built node holds one.');
-      return ['type' => 'sequence', 'label' => $label] + (!$item && $this->clearable($node, $at) ? ['nullable' => TRUE] : []) + static::constraints($node) + [
-        'sequence' => $this->definition($items, $definition->getItemDefinition(), static::label(NodeFacts::ownLabel($items), $label), TRUE),
+      $items = DefinitionSchema::itemOf($schema) ?? throw new \LogicException('A list\'s schema holds no schema of its item: a built schema holds one.');
+      return ['type' => 'sequence', 'label' => $label] + (!$item && $this->clearable($schema, $at) ? ['nullable' => TRUE] : []) + static::constraints($schema) + [
+        'sequence' => $this->definition($items, $definition->getItemDefinition(), static::label(SchemaFacts::ownLabel($items), $label), TRUE),
       ];
     }
-    if (DefinitionSchema::isComplex($node)) {
-      return ['type' => 'mapping', 'label' => $label, 'mapping' => $this->plainMapping($node, $definition)];
+    if (DefinitionSchema::isComplex($schema)) {
+      return ['type' => 'mapping', 'label' => $label, 'mapping' => $this->plainMapping($schema, $definition)];
     }
-    if (NodeFacts::dataType($node) === 'any') {
+    if (SchemaFacts::dataType($schema) === 'any') {
       return ['type' => 'ignore', 'label' => $label];
     }
     // A key declared with a config schema data type is written as that
     // type, with what it narrows of it.
     // Decision: see docs/decisions.md#a-machine-name-is-a-computed-identity.
-    $named = NodeFacts::configType($node);
-    $schema = ['type' => $named ?? static::type($node, $definition), 'label' => $label];
+    $named = SchemaFacts::configType($schema);
+    $config_schema = ['type' => $named ?? static::type($schema, $definition), 'label' => $label];
     // Null clears an optional key, unless its storage always holds it; a
     // required key holds nothing only where the object is installed with
     // nothing for it.
     // Decision: see
     // docs/decisions.md#a-config-object-is-described-by-its-resource.
-    if (!$item && (($installedEmpty && !NodeFacts::hasDefault($node)) || $this->clearable($node, $at))) {
-      $schema['nullable'] = TRUE;
+    if (!$item && (($installedEmpty && !SchemaFacts::hasDefault($schema)) || $this->clearable($schema, $at))) {
+      $config_schema['nullable'] = TRUE;
     }
-    return $schema + static::constraints($node, $named === NULL ? NULL : NodeFacts::configTypeNode($node));
+    return $config_schema + static::constraints($schema, $named === NULL ? NULL : SchemaFacts::configTypeOf($schema));
   }
 
   /**
@@ -1180,7 +1180,7 @@ final class ConfigSchemaGenerator {
    * @param array $stored
    *   The schema as stored.
    * @param \PortableSchema\Builder\Schema $key
-   *   The key's node.
+   *   The key's schema.
    * @param string $label
    *   Its label.
    * @param string $at
@@ -1205,8 +1205,8 @@ final class ConfigSchemaGenerator {
    * An optional key, unless it is a secret, which null leaves as it is,
    * or one its storage always holds (the storage class's ALWAYS_HELD).
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    * @param string|null $at
    *   Where it is stored in the object; NULL where the storage cannot
    *   name it.
@@ -1214,27 +1214,27 @@ final class ConfigSchemaGenerator {
    * @return bool
    *   TRUE when its schema says `nullable: true`.
    */
-  protected function clearable(Schema $node, ?string $at): bool {
-    return !NodeFacts::isRequired($node)
-      && !Secrets::marked($node)
+  protected function clearable(Schema $schema, ?string $at): bool {
+    return !SchemaFacts::isRequired($schema)
+      && !Secrets::marked($schema)
       && ($at === NULL || !in_array($at, $this->alwaysHeld, TRUE));
   }
 
   /**
    * Gives the config schema type a single value is written as.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The value's node, whose data type is read.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The value's schema, whose data type is read.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   Its definition, for the PHP class its data type maps to, which the
-   *   typed data manager answers and no node holds.
+   *   typed data manager answers and no schema holds.
    *
    * @return string
    *   Its own type when core's config schema has it, or the primitive
    *   its typed data class holds.
    */
-  protected static function type(Schema $node, DataDefinitionInterface $definition): string {
-    $type = NodeFacts::dataType($node);
+  protected static function type(Schema $schema, DataDefinitionInterface $definition): string {
+    $type = SchemaFacts::dataType($schema);
     if (in_array($type, self::TYPES, TRUE)) {
       return $type;
     }
@@ -1251,17 +1251,17 @@ final class ConfigSchemaGenerator {
   /**
    * Writes the constraints of a definition a schema can carry.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The definition's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The definition's schema.
    * @param \PortableSchema\Builder\Schema|null $type
-   *   The node of the config schema data type it was declared with, whose
+   *   The schema of the config schema data type it was declared with, whose
    *   own constraints the schema's type states already; NULL for none.
    *
    * @return array
    *   `['constraints' => ...]`, or nothing when it has none to carry.
    */
-  protected static function constraints(Schema $node, ?Schema $type = NULL): array {
-    $carried = static::carried($node);
+  protected static function constraints(Schema $schema, ?Schema $type = NULL): array {
+    $carried = static::carried($schema);
     if ($type !== NULL) {
       $stated = static::carried($type);
       $carried = array_filter($carried, static fn (?array $options, string $name): bool => !array_key_exists($name, $stated) || $stated[$name] !== $options, ARRAY_FILTER_USE_BOTH);
@@ -1272,15 +1272,15 @@ final class ConfigSchemaGenerator {
   /**
    * Reads the constraints of a definition a schema can carry, as carried.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The definition's node: the constraints it declares of its own.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The definition's schema: the constraints it declares of its own.
    *
    * @return array<string, array|null>
    *   Each constraint's carried options, by name.
    */
-  protected static function carried(Schema $node): array {
+  protected static function carried(Schema $schema): array {
     $carried = [];
-    foreach (NodeFacts::declaredConstraints($node) as $name => $options) {
+    foreach (SchemaFacts::declaredConstraints($schema) as $name => $options) {
       $name = (string) $name;
       if (!isset(self::CARRIED[$name])) {
         continue;
@@ -1353,12 +1353,12 @@ final class ConfigSchemaGenerator {
         continue;
       }
       $held = array_key_exists($name, $existing) ? $existing[$name] : NULL;
-      $node = $entry->schema();
+      $schema = $entry->schema();
       if ($entry->variants !== NULL) {
         $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? $surface->getDefault($entry->variants->by));
         $values[$name] = $chosen === NULL ? $held : $this->installMap($entry->variants->variant($chosen)->child->getDefinitions(), $entry->variants->variant($chosen)->child, is_array($held) ? $held : [], $at . $name . '.');
       }
-      elseif ($entry->attachment !== NULL && NodeFacts::each($node) === NULL) {
+      elseif ($entry->attachment !== NULL && SchemaFacts::each($schema) === NULL) {
         $values[$name] = $this->installMap($entry->attachment->child->getDefinitions(), $entry->attachment->child, is_array($held) ? $held : [], $at . $name . '.');
       }
       elseif (array_key_exists($name, $existing)) {
@@ -1366,10 +1366,10 @@ final class ConfigSchemaGenerator {
         // where nothing is stored: the file says the first.
         $values[$name] = $held;
       }
-      elseif (NodeFacts::hasDefault($node)) {
-        $values[$name] = NodeFacts::default($node);
+      elseif (SchemaFacts::hasDefault($schema)) {
+        $values[$name] = SchemaFacts::default($schema);
       }
-      elseif (DefinitionSchema::isList($node) || NodeFacts::each($node) !== NULL) {
+      elseif (DefinitionSchema::isList($schema) || SchemaFacts::each($schema) !== NULL) {
         $values[$name] = [];
       }
       else {
@@ -1641,22 +1641,22 @@ final class ConfigSchemaGenerator {
   }
 
   /**
-   * Gets a property's node, in step with its definition.
+   * Gets a property's schema, in step with its definition.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The map's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The map's schema.
    * @param string $name
    *   A property its definition holds.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The property's node.
+   *   The property's schema.
    *
    * @throws \LogicException
-   *   Where the node holds none: a built map's node holds one for every
+   *   Where the schema holds none: a built map's schema holds one for every
    *   property.
    */
-  protected static function propertyOf(Schema $node, string $name): Schema {
-    return DefinitionSchema::propertyNode($node, $name) ?? throw new \LogicException(sprintf('The node holds no property "%s" where its definition holds one: a built node holds one for every property.', $name));
+  protected static function propertyOf(Schema $schema, string $name): Schema {
+    return DefinitionSchema::propertyOf($schema, $name) ?? throw new \LogicException(sprintf('The schema holds no property "%s" where its definition holds one: a built schema holds one for every property.', $name));
   }
 
   /**

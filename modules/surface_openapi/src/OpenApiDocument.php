@@ -15,7 +15,7 @@ use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Session\SessionConfigurationInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Choices;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\SurfaceInterface;
@@ -745,13 +745,13 @@ final class OpenApiDocument {
       if ($child !== NULL) {
         $inside = static::references($child, $at);
         $id = $child->getDefinitions()->entry('id');
-        if ($id !== NULL && in_array($at . '/id', $inside, TRUE) && NodeFacts::setting($id->schema(), References::TARGETS) !== NULL) {
+        if ($id !== NULL && in_array($at . '/id', $inside, TRUE) && SchemaFacts::setting($id->schema(), References::TARGETS) !== NULL) {
           $found[] = $at;
         }
         array_push($found, ...$inside);
         continue;
       }
-      $refers = References::targetIn($entry->schema()) !== NULL || NodeFacts::setting($entry->schema(), References::TARGETS) !== NULL;
+      $refers = References::targetIn($entry->schema()) !== NULL || SchemaFacts::setting($entry->schema(), References::TARGETS) !== NULL;
       if ($refers) {
         $found[] = $at;
       }

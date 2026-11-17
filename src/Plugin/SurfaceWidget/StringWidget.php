@@ -6,7 +6,7 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Contract\WidgetChoice;
@@ -22,7 +22,7 @@ use PortableSchema\Builder\Schema;
  * input; a string of `format: uri` is a URL input. Its size and rows are
  * the hints `x-portable-ui.options.size` and `rows`, presentation alone.
  *
- * A node marked `writeOnly` is a secret, and renders as a password
+ * A schema marked `writeOnly` is a secret, and renders as a password
  * element instead: secretElement() says what that element deliberately
  * does not carry.
  */
@@ -45,7 +45,7 @@ final class StringWidget extends SurfaceWidgetBase implements SchemaWidgetInterf
    * {@inheritdoc}
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    return in_array(NodeFacts::dataType($schema), ['string', 'email', 'uri', 'duration_iso8601'], TRUE);
+    return in_array(SchemaFacts::dataType($schema), ['string', 'email', 'uri', 'duration_iso8601'], TRUE);
   }
 
   /**
@@ -53,33 +53,33 @@ final class StringWidget extends SurfaceWidgetBase implements SchemaWidgetInterf
    *
    * A string, but a date and time, which the date and time widget draws.
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return static::types($node) === ['string'] && $node->get('format') !== 'date-time';
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    return static::types($schema) === ['string'] && $schema->get('format') !== 'date-time';
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    if (Secrets::marked($node)) {
-      return $this->secretElement($node, $context);
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    if (Secrets::marked($schema)) {
+      return $this->secretElement($schema, $context);
     }
-    $word = static::ui($node)['widget'] ?? NULL;
-    $element = $this->baseElement($node, $context) + [
+    $word = static::ui($schema)['widget'] ?? NULL;
+    $element = $this->baseElement($schema, $context) + [
       '#type' => match (TRUE) {
         $word === 'textarea' => 'textarea',
-        $word === 'email', $node->get('format') === 'email' => 'email',
-        $node->get('format') === 'uri' => 'url',
+        $word === 'email', $schema->get('format') === 'email' => 'email',
+        $schema->get('format') === 'uri' => 'url',
         default => 'textfield',
       },
       '#default_value' => $value,
     ];
     if ($element['#type'] !== 'textarea') {
-      $element = $this->lengthHint($element, $node);
+      $element = $this->lengthHint($element, $schema);
     }
     // How big the input is drawn: presentation alone, which a form
     // display's component hands over (FieldItemDerivation).
-    $options = static::options($node);
+    $options = static::options($schema);
     $size = $options['size'] ?? NULL;
     if ($element['#type'] !== 'textarea' && is_int($size) && $size > 0) {
       $element['#size'] = $size;
@@ -115,24 +115,24 @@ final class StringWidget extends SurfaceWidgetBase implements SchemaWidgetInterf
    * The description says what the empty box means, whether or not a
    * secret is stored, because nothing here knows.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The secret's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The secret's schema.
    * @param \Drupal\surface\Widget\WidgetContext $context
    *   Where it is drawn.
    *
    * @return array
    *   The password element.
    */
-  protected function secretElement(Schema $node, WidgetContext $context): array {
-    $element = $this->baseElement($node, $context) + ['#type' => 'password'];
+  protected function secretElement(Schema $schema, WidgetContext $context): array {
+    $element = $this->baseElement($schema, $context) + ['#type' => 'password'];
     $element['#required'] = FALSE;
     $note = (string) $this->t('Leave blank to keep the current value.');
     $element['#description'] = isset($element['#description']) ? $element['#description'] . ' ' . $note : $note;
-    return $this->lengthHint($element, $node);
+    return $this->lengthHint($element, $schema);
   }
 
   /**
-   * Puts the node's `maxLength` on the element as a hint for the browser.
+   * Puts the schema's `maxLength` on the element as a hint for the browser.
    *
    * The `maxlength` attribute stops a browser at the maximum, and
    * `#maxlength` is cleared: core checks it before any form level
@@ -144,15 +144,15 @@ final class StringWidget extends SurfaceWidgetBase implements SchemaWidgetInterf
    *
    * @param array $element
    *   The element.
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node it draws.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema it draws.
    *
    * @return array
    *   The element, with the hint.
    */
-  protected function lengthHint(array $element, Schema $node): array {
+  protected function lengthHint(array $element, Schema $schema): array {
     $element['#maxlength'] = NULL;
-    $max = $node->get('maxLength');
+    $max = $schema->get('maxLength');
     if (is_int($max)) {
       $element['#attributes']['maxlength'] = $max;
     }

@@ -351,7 +351,7 @@ final class Choices {
       $list = $entry->variants;
       $values = $entry->variants->variantIds();
     }
-    elseif ($entry->attachment !== NULL && NodeFacts::each($entry->schema()) !== NULL) {
+    elseif ($entry->attachment !== NULL && SchemaFacts::each($entry->schema()) !== NULL) {
       $list = $entry->attachment->child;
       $values = array_map('strval', $list->getDefinitions()->names());
     }

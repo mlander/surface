@@ -195,9 +195,9 @@ final class SchemasTest extends UnitTestCase {
     ]);
     foreach ([TRUE, FALSE] as $bottomUp) {
       $seen = [];
-      $mapped = Schemas::map($schema, static function (Schema $node) use (&$seen): Schema {
-        $seen[] = $node->get('title');
-        return $node->with('title', $node->get('title') . '!');
+      $mapped = Schemas::map($schema, static function (Schema $subschema) use (&$seen): Schema {
+        $seen[] = $subschema->get('title');
+        return $subschema->with('title', $subschema->get('title') . '!');
       }, $bottomUp);
       $expected = ['map', 'single', 'list', 'shape'];
       $this->assertSame($bottomUp ? [...$expected, 'root'] : ['root', ...$expected], $seen, $bottomUp ? 'Bottom up.' : 'Top down.');
@@ -210,7 +210,7 @@ final class SchemasTest extends UnitTestCase {
       $this->assertSame(array_keys($schema->all()), array_keys($mapped->all()), 'Every keyword keeps its place.');
     }
     $false = Schema::boolean(FALSE);
-    $this->assertSame($false, Schemas::map($false, static fn (Schema $node): Schema => Schema::any()), 'A boolean schema is left as it is.');
+    $this->assertSame($false, Schemas::map($false, static fn (Schema $subschema): Schema => Schema::any()), 'A boolean schema is left as it is.');
   }
 
   /**

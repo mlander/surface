@@ -32,19 +32,19 @@ use PortableSchema\Builder\Schema;
  * thing that changes an entry, and it changes exactly one of those
  * seven things.
  *
- * An entry holds its definition's built node: read on the first
+ * An entry holds its definition's built schema: read on the first
  * schema() call, the same object after, handed on to an entry with the
  * same definition, never serialized, and refused at schema(), never at
  * construction, for a definition that holds itself.
  *
- * A node-first entry (Entry::ofSchema()) holds the node its source gave
+ * A schema-first entry (Entry::ofSchema()) holds the schema its source gave
  * and derives its definition on the first definition() call: the same
  * object after, kept or dropped by the copies as their source says, only
- * the node serialized, refused at definition() with the key's name for a
- * node no definition derives from, and asserted not stale either way.
+ * the schema serialized, refused at definition() with the key's name for a
+ * schema no definition derives from, and asserted not stale either way.
  *
  * @see \Drupal\surface\Entry
- * @see docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone
+ * @see docs/decisions.md#an-entry-holds-its-schema-the-memo-is-gone
  * @see docs/decisions.md#an-entry-holds-the-form-its-source-gave
  */
 #[Group('surface')]
@@ -133,7 +133,7 @@ class EntryTest extends UnitTestCase {
     // defaults: none here.
     $typed = $this->createMock(TypedDataManagerInterface::class);
     $typed->method('getDefaultConstraints')->willReturn([]);
-    // A node-first entry derives its definition (NodeDefinition::of()),
+    // A schema-first entry derives its definition (DefinitionFromSchema::of()),
     // which asks whether the type is defined, and a derived definition is
     // compared by its class, which asks the type's definition.
     $typed->method('hasDefinition')->willReturnCallback(static fn (string $type): bool => $type !== 'not_a_type');
@@ -156,63 +156,63 @@ class EntryTest extends UnitTestCase {
   }
 
   /**
-   * Writes a node as JSON, MODEL included.
+   * Writes a schema as JSON, MODEL included.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return string
    *   Its JSON.
    */
-  protected static function json(Schema $node): string {
-    return (string) json_encode(Schemas::arrayed($node), JSON_PARTIAL_OUTPUT_ON_ERROR);
+  protected static function json(Schema $schema): string {
+    return (string) json_encode(Schemas::arrayed($schema), JSON_PARTIAL_OUTPUT_ON_ERROR);
   }
 
   /**
    * Tests schema() is the read of the definition, read once.
    */
-  public function testSchemaIsTheDefinitionsNode(): void {
+  public function testSchemaIsTheDefinitionsSchema(): void {
     $definition = static::map();
     $entry = new Entry('where', $definition);
-    $node = $entry->schema();
-    $this->assertSame(static::json(DefinitionSchema::of($definition)), static::json($node), 'The node is the read of the definition.');
-    $this->assertSame($node, $entry->schema(), 'A second call returns the same object.');
-    $this->assertSame(['city', 'rooms'], array_keys($node->get('properties')), 'Every property is on it.');
+    $schema = $entry->schema();
+    $this->assertSame(static::json(DefinitionSchema::of($definition)), static::json($schema), 'The schema is the read of the definition.');
+    $this->assertSame($schema, $entry->schema(), 'A second call returns the same object.');
+    $this->assertSame(['city', 'rooms'], array_keys($schema->get('properties')), 'Every property is on it.');
   }
 
   /**
-   * Tests a key that holds a child frame composes its node of the child's.
+   * Tests a key that holds a child frame composes its schema of the child's.
    */
-  public function testShellComposesItsNode(): void {
+  public function testShellComposesItsSchema(): void {
     $children = static::children('City');
     $child = $this->createMock(SurfaceInterface::class);
     $child->method('getDefinitions')->willReturn($children);
     $definition = Attachment::mapOf(MapDataDefinition::create()->setLabel('Where'), $child);
     $entry = new Entry('where', $definition, attachment: new Attachment($child));
-    $node = $entry->schema();
-    $this->assertSame(static::json(DefinitionSchema::of($definition)), static::json($node), 'The composed node is the read of the definition.');
-    $this->assertSame($node, $entry->schema(), 'A second ask returns the same object.');
+    $schema = $entry->schema();
+    $this->assertSame(static::json(DefinitionSchema::of($definition)), static::json($schema), 'The composed schema is the read of the definition.');
+    $this->assertSame($schema, $entry->schema(), 'A second ask returns the same object.');
     foreach (['city', 'rooms'] as $name) {
-      $this->assertSame($children->entry($name)?->schema(), DefinitionSchema::propertyNode($node, $name), "A child entry's node is the very object under properties.");
+      $this->assertSame($children->entry($name)?->schema(), DefinitionSchema::propertyOf($schema, $name), "A child entry's schema is the very object under properties.");
     }
 
-    // A refinement composes the refined shell of the shell's own node and
-    // the refined child's entries' nodes (Surface::refineNested()).
+    // A refinement composes the refined shell of the shell's own schema and
+    // the refined child's entries' schemas (Surface::refineNested()).
     $refined_children = static::children('Town');
     $refined = $this->createMock(SurfaceInterface::class);
     $refined->method('getDefinitions')->willReturn($refined_children);
-    $narrowed = $entry->withSchema(DefinitionSchema::withProperties($node, static::nodes($refined_children)));
-    $this->assertTrue($narrowed->isNodeFirst(), 'The refined shell is node-first.');
-    $this->assertSame('Town', DefinitionSchema::propertyNode($narrowed->schema(), 'city')?->get('title'));
-    $this->assertSame($refined_children->entry('city')?->schema(), DefinitionSchema::propertyNode($narrowed->schema(), 'city'), "The refined child's entry's node is the one under properties.");
+    $narrowed = $entry->withSchema(DefinitionSchema::withProperties($schema, static::schemas($refined_children)));
+    $this->assertTrue($narrowed->isSchemaFirst(), 'The refined shell is schema-first.');
+    $this->assertSame('Town', DefinitionSchema::propertyOf($narrowed->schema(), 'city')?->get('title'));
+    $this->assertSame($refined_children->entry('city')?->schema(), DefinitionSchema::propertyOf($narrowed->schema(), 'city'), "The refined child's entry's schema is the one under properties.");
     $this->assertSame(static::json(DefinitionSchema::of(Attachment::mapOf($definition, $refined))), static::json($narrowed->schema()), 'And it is the read of the definition the refinement built before.');
   }
 
   /**
-   * Tests a refined shell keeps the nodes it was composed of, and only them.
+   * Tests a refined shell keeps the schemas it was composed of, and only them.
    *
    * A copy bound to its container's values (readingFrom()) holds the
-   * composed node; a refined mount no refined structure stands for reads
+   * composed schema; a refined mount no refined structure stands for reads
    * its keys, and takes nothing by name from the sealed structure.
    */
   public function testRefinedShellKeepsItsChild(): void {
@@ -225,10 +225,10 @@ class EntryTest extends UnitTestCase {
     $refined_children = static::children('Town');
     $refined = $this->createMock(SurfaceInterface::class);
     $refined->method('getDefinitions')->willReturn($refined_children);
-    $composed = $entry->withSchema(DefinitionSchema::withProperties($entry->schema(), static::nodes($refined_children)));
+    $composed = $entry->withSchema(DefinitionSchema::withProperties($entry->schema(), static::schemas($refined_children)));
     $bound = $composed->readingFrom(['venue' => 'hall']);
     $this->assertNotNull($bound);
-    $this->assertSame($refined_children->entry('city')?->schema(), DefinitionSchema::propertyNode($bound->schema(), 'city'), 'A bound copy holds the composed node, the refined child\'s very node in it.');
+    $this->assertSame($refined_children->entry('city')?->schema(), DefinitionSchema::propertyOf($bound->schema(), 'city'), 'A bound copy holds the composed schema, the refined child\'s very schema in it.');
     $this->assertTrue($bound->sameSource($composed), 'It has the refined shell\'s source.');
     $this->assertFalse($bound->sameSource($entry), 'Not the sealed one\'s.');
 
@@ -241,9 +241,9 @@ class EntryTest extends UnitTestCase {
     $mount = MapDataDefinition::create()->setLabel('Mounts')->setPropertyDefinition('module', $module);
     $sealed = new Entry('third_party_settings', $mount, mounted: ['module' => new Attachment($child)]);
     $city = $children->entry('city')?->schema();
-    $this->assertSame($city, DefinitionSchema::propertyNode(DefinitionSchema::propertyNode($sealed->schema(), 'module') ?? $mount, 'city') ?? NULL, 'A sealed mount takes the structure\'s keys by name.');
+    $this->assertSame($city, DefinitionSchema::propertyOf(DefinitionSchema::propertyOf($sealed->schema(), 'module') ?? $mount, 'city') ?? NULL, 'A sealed mount takes the structure\'s keys by name.');
     $copy = $sealed->withDefinition(Surface::deepClone($mount));
-    $read = DefinitionSchema::propertyNode(DefinitionSchema::propertyNode($copy->schema(), 'module') ?? $mount, 'city');
+    $read = DefinitionSchema::propertyOf(DefinitionSchema::propertyOf($copy->schema(), 'module') ?? $mount, 'city');
     $this->assertNotSame($city, $read, 'A refined mount no refined structure stands for reads its keys.');
     $this->assertSame(static::json(DefinitionSchema::of($copy->definition())), static::json($copy->schema()), 'And it is the read of its definition.');
   }
@@ -255,11 +255,11 @@ class EntryTest extends UnitTestCase {
    * tells a key a refinement moved by (ContractEmitter::frame()).
    */
   public function testTheSameSource(): void {
-    $node = DefinitionSchema::of(static::map());
+    $schema = DefinitionSchema::of(static::map());
     $child = $this->createMock(SurfaceInterface::class);
     $child->method('getDefinitions')->willReturn(static::children('City'));
     $child->method('withPorts')->willReturnSelf();
-    $sealed = Entry::ofSchema('where', $node, attachment: new Attachment($child, reads: ['venue' => 'venue']));
+    $sealed = Entry::ofSchema('where', $schema, attachment: new Attachment($child, reads: ['venue' => 'venue']));
     $this->assertTrue($sealed->sameSource($sealed), 'An entry and itself.');
     $copy = $sealed->readingFrom(['venue' => 'hall']);
     $this->assertNotNull($copy);
@@ -267,14 +267,14 @@ class EntryTest extends UnitTestCase {
     $this->assertTrue($sealed->sameSource($copy), 'Its original and the port copy.');
     $copy->definition();
     $this->assertTrue($sealed->sameSource($copy), 'Whatever either derived since.');
-    $mount = Entry::ofSchema('third_party_settings', $node, mounted: ['module' => new Attachment($child, reads: ['venue' => 'venue'])]);
+    $mount = Entry::ofSchema('third_party_settings', $schema, mounted: ['module' => new Attachment($child, reads: ['venue' => 'venue'])]);
     $mounted = $mount->readingFrom(['venue' => 'hall']);
     $this->assertNotNull($mounted);
     $this->assertNotSame($mount, $mounted);
     $this->assertTrue($mounted->sameSource($mount), 'A port copy of a mount and its original.');
-    $refined = $sealed->withSchema(DefinitionSchema::withProperties($node, static::nodes(static::children('City'))));
+    $refined = $sealed->withSchema(DefinitionSchema::withProperties($schema, static::schemas(static::children('City'))));
     $this->assertFalse($refined->sameSource($sealed), 'A refined shell and its sealed entry, even where the child changed nothing.');
-    $this->assertTrue(DefinitionSchema::same($refined->schema(), DefinitionSchema::withProperties($node, static::nodes(static::children('City')))));
+    $this->assertTrue(DefinitionSchema::same($refined->schema(), DefinitionSchema::withProperties($schema, static::schemas(static::children('City')))));
     $answer = Surface::deepClone($sealed->definition());
     $made = $sealed->withDefinition($answer);
     $this->assertFalse($made->sameSource($sealed), 'A refiner\'s answer and the sealed entry.');
@@ -284,21 +284,21 @@ class EntryTest extends UnitTestCase {
     $two = new Entry('where', $definition);
     $this->assertTrue($one->sameSource($two), 'Two definition-first entries of one definition object.');
     $this->assertFalse($one->sameSource(new Entry('where', static::map())), 'Not of an equal one.');
-    $nodeFirst = Entry::ofSchema('where', $one->schema());
-    $this->assertFalse($one->sameSource($nodeFirst), 'A definition-first entry and a node-first one of its node.');
-    $this->assertFalse($nodeFirst->sameSource($one), 'Either way round.');
+    $schemaFirst = Entry::ofSchema('where', $one->schema());
+    $this->assertFalse($one->sameSource($schemaFirst), 'A definition-first entry and a schema-first one of its schema.');
+    $this->assertFalse($schemaFirst->sameSource($one), 'Either way round.');
   }
 
   /**
    * Tests a port copy carries the mark that a refinement made its source.
    */
   public function testPortCopyCarriesTheRefinementMark(): void {
-    $node = DefinitionSchema::of(static::map());
+    $schema = DefinitionSchema::of(static::map());
     $child = $this->createMock(SurfaceInterface::class);
     $child->method('getDefinitions')->willReturn(static::children('City'));
-    $sealed = Entry::ofSchema('where', $node, attachment: new Attachment($child, reads: ['venue' => 'venue']));
+    $sealed = Entry::ofSchema('where', $schema, attachment: new Attachment($child, reads: ['venue' => 'venue']));
     $this->assertFalse($sealed->readingFrom(['venue' => 'hall'])?->madeByRefinement(), 'A copy of a sealed entry: no mark.');
-    $composed = $sealed->withSchema(DefinitionSchema::withProperties($node, static::nodes(static::children('Town'))), TRUE);
+    $composed = $sealed->withSchema(DefinitionSchema::withProperties($schema, static::schemas(static::children('Town'))), TRUE);
     $this->assertTrue($composed->madeByRefinement());
     $this->assertTrue($composed->readingFrom(['venue' => 'hall'])?->madeByRefinement(), 'A copy of a shell a refinement composed carries it.');
     $answer = $sealed->withDefinition(Surface::deepClone($sealed->definition()));
@@ -306,20 +306,20 @@ class EntryTest extends UnitTestCase {
   }
 
   /**
-   * Gets a child's entries' nodes, by name.
+   * Gets a child's entries' schemas, by name.
    *
    * @param \Drupal\surface\DefinitionMap $entries
    *   The entries.
    *
    * @return array<string, \PortableSchema\Builder\Schema>
-   *   Each entry's node.
+   *   Each entry's schema.
    */
-  protected static function nodes(DefinitionMap $entries): array {
-    $nodes = [];
+  protected static function schemas(DefinitionMap $entries): array {
+    $schemas = [];
     foreach ($entries->entries() as $name => $entry) {
-      $nodes[(string) $name] = $entry->schema();
+      $schemas[(string) $name] = $entry->schema();
     }
-    return $nodes;
+    return $schemas;
   }
 
   /**
@@ -339,20 +339,20 @@ class EntryTest extends UnitTestCase {
   }
 
   /**
-   * Tests an entry made with the same definition keeps the node.
+   * Tests an entry made with the same definition keeps the schema.
    */
-  public function testTheNodeTravelsWithTheDefinition(): void {
+  public function testTheSchemaTravelsWithTheDefinition(): void {
     $definition = static::map();
     $entry = new Entry('where', $definition);
-    $node = $entry->schema();
+    $schema = $entry->schema();
 
     $other = static::map()->setLabel('Elsewhere');
     $narrowed = $entry->withDefinition($other);
-    $this->assertNotSame($node, $narrowed->schema(), 'Another definition starts unread.');
+    $this->assertNotSame($schema, $narrowed->schema(), 'Another definition starts unread.');
     $this->assertSame(static::json(DefinitionSchema::of($other)), static::json($narrowed->schema()), 'It reads that definition.');
     $this->assertSame('Elsewhere', $narrowed->schema()->get('title'));
 
-    $this->assertSame($node, $entry->withDefinition($definition)->schema(), 'The same definition keeps the node.');
+    $this->assertSame($schema, $entry->withDefinition($definition)->schema(), 'The same definition keeps the schema.');
 
     $child = $this->createMock(SurfaceInterface::class);
     $child->method('getDefinitions')->willReturn(new DefinitionMap([]));
@@ -362,28 +362,28 @@ class EntryTest extends UnitTestCase {
     $this->assertNotNull($bound);
     $this->assertNotSame($wired, $bound);
     $this->assertSame(['venue' => 'hall'], $bound->attachment?->ports);
-    $this->assertSame($read, $bound->schema(), 'readingFrom() hands the node on.');
+    $this->assertSame($read, $bound->schema(), 'readingFrom() hands the schema on.');
   }
 
   /**
-   * Tests the node never enters a serialized entry.
+   * Tests the schema never enters a serialized entry.
    */
-  public function testTheNodeIsNotSerialized(): void {
+  public function testTheSchemaIsNotSerialized(): void {
     $unread = new Entry('where', static::map());
     $read = new Entry('where', static::map());
-    $node = $read->schema();
-    $this->assertSame(serialize($unread), serialize($read), 'An entry whose node was read serializes as one never read.');
+    $schema = $read->schema();
+    $this->assertSame(serialize($unread), serialize($read), 'An entry whose schema was read serializes as one never read.');
     $this->assertStringNotContainsString(DefinitionSchema::MODEL, serialize($read));
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
     $woken = unserialize(serialize($read));
     $this->assertInstanceOf(Entry::class, $woken);
     $again = $woken->schema();
-    $this->assertNotSame($node, $again, 'An unserialized entry reads its node again.');
+    $this->assertNotSame($schema, $again, 'An unserialized entry reads its schema again.');
     $this->assertSame(['title' => 'Where'], array_intersect_key(Schemas::arrayed($again), ['title' => TRUE]));
   }
 
   /**
-   * Tests a definition written after its node was read fails the assertion.
+   * Tests a definition written after its schema was read fails the assertion.
    */
   public function testWrittenDefinitionFailsTheAssertion(): void {
     if ((int) ini_get('zend.assertions') !== 1) {
@@ -412,7 +412,7 @@ class EntryTest extends UnitTestCase {
         $this->fail("$what written after the read is not seen.");
       }
       catch (\AssertionError $error) {
-        $this->assertStringContainsString('was written after its node was read', $error->getMessage(), $what);
+        $this->assertStringContainsString('was written after its schema was read', $error->getMessage(), $what);
       }
     }
   }
@@ -429,7 +429,7 @@ class EntryTest extends UnitTestCase {
    */
   public function testLocationIsReadFromTheSchemaAlone(): void {
     // A map that answers for a property it does not list: the read never
-    // sees it, so the node holds none for it.
+    // sees it, so the schema holds none for it.
     $map = new class(['type' => 'map']) extends MapDataDefinition {
 
       /**
@@ -445,7 +445,7 @@ class EntryTest extends UnitTestCase {
     $below = new \ReflectionMethod(Location::class, 'below');
     $found = $below->invoke(NULL, $entry, ['city' => 'Ghent'], ['city']);
     $this->assertInstanceOf(Location::class, $found);
-    $this->assertSame($entry->schema()->get('properties')['city'], $found->node, 'The node at a place is the one its parent node holds.');
+    $this->assertSame($entry->schema()->get('properties')['city'], $found->schema, 'The schema at a place is the one its parent schema holds.');
     $this->assertNull($below->invoke(NULL, $entry, [], ['nothing']), 'A place nothing declares is none.');
     $this->assertNull($below->invoke(NULL, $entry, [], ['ghost']), 'A place only the class answers for is none: its schema declares nothing there.');
     // Below a list, a delta names its item and any other segment nothing.
@@ -453,7 +453,7 @@ class EntryTest extends UnitTestCase {
     $listed = new Entry('listed', $tags);
     $item = $below->invoke(NULL, $listed, ['tags' => ['a']], ['tags', '0']);
     $this->assertInstanceOf(Location::class, $item);
-    $this->assertSame($listed->schema()->get('properties')['tags']->get('items'), $item->node, 'A delta below a list is its item.');
+    $this->assertSame($listed->schema()->get('properties')['tags']->get('items'), $item->schema, 'A delta below a list is its item.');
     $this->assertSame('a', $item->value);
     $this->assertNull($below->invoke(NULL, $listed, ['tags' => ['a']], ['tags', 'x']), 'A name below a list is no place.');
   }
@@ -472,17 +472,17 @@ class EntryTest extends UnitTestCase {
   }
 
   /**
-   * Tests a node-first entry answers with its node and a derived definition.
+   * Tests a schema-first entry answers its schema and a derived definition.
    */
-  public function testNodeFirstEntryDerivesItsDefinition(): void {
+  public function testSchemaFirstEntryDerivesItsDefinition(): void {
     $definition = static::map();
-    $node = DefinitionSchema::of($definition);
+    $schema = DefinitionSchema::of($definition);
     $refiner = static::refiner();
-    $entry = Entry::ofSchema('where', $node, contributor: 'other_module', locked: TRUE, dependencies: ['venue'], refiners: [SurfaceInterface::OWNER => [$refiner]]);
-    $this->assertSame($node, $entry->schema(), 'schema() is the node given.');
-    $this->assertSame($node, $entry->schema(), 'And the same on a second ask.');
+    $entry = Entry::ofSchema('where', $schema, contributor: 'other_module', locked: TRUE, dependencies: ['venue'], refiners: [SurfaceInterface::OWNER => [$refiner]]);
+    $this->assertSame($schema, $entry->schema(), 'schema() is the schema given.');
+    $this->assertSame($schema, $entry->schema(), 'And the same on a second ask.');
     $derived = $entry->definition();
-    $this->assertSame([], static::definitionDifferences($definition, $derived, 'where'), 'The derived definition equals the one the node was read from.');
+    $this->assertSame([], static::definitionDifferences($definition, $derived, 'where'), 'The derived definition equals the one the schema was read from.');
     $this->assertSame($derived, $entry->definition(), 'A second ask returns the same object.');
     $this->assertSame('other_module', $entry->contributor, 'The other members are the ones handed.');
     $this->assertTrue($entry->locked);
@@ -494,32 +494,32 @@ class EntryTest extends UnitTestCase {
    * Tests the copies keep the source, and the other form when it is the same.
    */
   public function testCopiesKeepTheSource(): void {
-    $node = DefinitionSchema::of(static::map());
+    $schema = DefinitionSchema::of(static::map());
     $child = $this->createMock(SurfaceInterface::class);
     $child->method('getDefinitions')->willReturn(new DefinitionMap([]));
-    $entry = Entry::ofSchema('where', $node, attachment: new Attachment($child, reads: ['venue' => 'venue']));
+    $entry = Entry::ofSchema('where', $schema, attachment: new Attachment($child, reads: ['venue' => 'venue']));
     $derived = $entry->definition();
 
     $bound = $entry->readingFrom(['venue' => 'hall']);
     $this->assertNotNull($bound);
-    $this->assertSame($node, $bound->schema(), 'readingFrom() keeps the node given.');
+    $this->assertSame($schema, $bound->schema(), 'readingFrom() keeps the schema given.');
     $this->assertSame($derived, $bound->definition(), 'And the definition derived from it.');
-    $this->assertSame(serialize(Entry::ofSchema('where', $node, attachment: $bound->attachment)), serialize($bound), 'And it stays node-first.');
+    $this->assertSame(serialize(Entry::ofSchema('where', $schema, attachment: $bound->attachment)), serialize($bound), 'And it stays schema-first.');
 
     $same = $entry->withDefinition($derived);
-    $this->assertSame([$node, $derived], [$same->schema(), $same->definition()], 'withDefinition() handed the derived definition keeps both.');
+    $this->assertSame([$schema, $derived], [$same->schema(), $same->definition()], 'withDefinition() handed the derived definition keeps both.');
 
     $other = static::map()->setLabel('Elsewhere');
     $narrowed = $entry->withDefinition($other);
     $this->assertSame($other, $narrowed->definition(), 'withDefinition() handed another definition is definition-first.');
-    $this->assertNotSame($node, $narrowed->schema(), 'It starts unread.');
+    $this->assertNotSame($schema, $narrowed->schema(), 'It starts unread.');
     $this->assertSame('Elsewhere', $narrowed->schema()->get('title'));
 
-    $again = $entry->withSchema($node);
-    $this->assertSame([$node, $derived], [$again->schema(), $again->definition()], 'withSchema() handed the node it holds keeps the derived definition.');
+    $again = $entry->withSchema($schema);
+    $this->assertSame([$schema, $derived], [$again->schema(), $again->definition()], 'withSchema() handed the schema it holds keeps the derived definition.');
     $next = DefinitionSchema::of($other);
     $moved = $entry->withSchema($next);
-    $this->assertSame($next, $moved->schema(), 'withSchema() handed another node holds it.');
+    $this->assertSame($next, $moved->schema(), 'withSchema() handed another schema holds it.');
     $this->assertNotSame($derived, $moved->definition(), 'And derives its definition anew.');
     $this->assertSame('Elsewhere', $moved->definition()->getLabel());
 
@@ -527,7 +527,7 @@ class EntryTest extends UnitTestCase {
     $read = new Entry('where', $given);
     $its = $read->schema();
     $turned = $read->withSchema($its);
-    $this->assertSame([$its, $given], [$turned->schema(), $turned->definition()], 'A definition-first entry handed its own node keeps the definition, which reads as it.');
+    $this->assertSame([$its, $given], [$turned->schema(), $turned->definition()], 'A definition-first entry handed its own schema keeps the definition, which reads as it.');
   }
 
   /**
@@ -535,42 +535,42 @@ class EntryTest extends UnitTestCase {
    */
   public function testEachKindSerializesTheFormGiven(): void {
     $definition = static::map();
-    $node = DefinitionSchema::of($definition);
-    $entry = Entry::ofSchema('where', $node);
+    $schema = DefinitionSchema::of($definition);
+    $entry = Entry::ofSchema('where', $schema);
     $unread = serialize($entry);
     $entry->definition();
-    $this->assertSame($unread, serialize($entry), 'A node-first entry serializes the same whether or not its definition was derived.');
-    $this->assertStringContainsString(DefinitionSchema::MODEL, $unread, 'It serializes its node.');
+    $this->assertSame($unread, serialize($entry), 'A schema-first entry serializes the same whether or not its definition was derived.');
+    $this->assertStringContainsString(DefinitionSchema::MODEL, $unread, 'It serializes its schema.');
     $this->assertStringNotContainsString('MapDataDefinition', $unread, 'And no definition.');
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
     $woken = unserialize($unread);
     $this->assertInstanceOf(Entry::class, $woken);
-    $this->assertSame(static::json($node), static::json($woken->schema()), 'Unserialized, it answers schema() with an equal node.');
+    $this->assertSame(static::json($schema), static::json($woken->schema()), 'Unserialized, it answers schema() with an equal schema.');
     $this->assertSame([], static::definitionDifferences($definition, $woken->definition(), 'where', FALSE), 'And definition() with an equal definition.');
     $this->assertSame($woken->definition(), $woken->definition());
 
     $first = new Entry('where', static::map());
     $first->schema();
     $kept = serialize($first);
-    $this->assertStringNotContainsString(DefinitionSchema::MODEL, $kept, 'A definition-first entry serializes no node.');
+    $this->assertStringNotContainsString(DefinitionSchema::MODEL, $kept, 'A definition-first entry serializes no schema.');
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
     $back = unserialize($kept);
     $this->assertInstanceOf(Entry::class, $back);
     // Core drops a map's properties when it serializes the map, which a
     // data surface keeps beside itself (SerializedMaps); an entry alone
-    // does not. A node keeps them.
+    // does not. A schema keeps them.
     $this->assertSame('{"title":"Where","x-surface-model":{"type":"map","definitionClass":"Drupal\\\\Core\\\\TypedData\\\\MapDataDefinition"}}', static::json($back->schema()), 'Unserialized alone, a definition-first map reads with no properties.');
   }
 
   /**
-   * Tests a node no definition derives from is refused at definition().
+   * Tests a schema no definition derives from is refused at definition().
    */
-  public function testNodeNoDefinitionDerivesFromIsRefused(): void {
-    $node = DefinitionSchema::of(DataDefinition::create('not_a_type')->setLabel('Odd'));
-    $entry = Entry::ofSchema('odd', $node);
-    $this->assertSame($node, $entry->schema(), 'Made, with nothing derived.');
+  public function testSchemaNoDefinitionDerivesFromIsRefused(): void {
+    $schema = DefinitionSchema::of(DataDefinition::create('not_a_type')->setLabel('Odd'));
+    $entry = Entry::ofSchema('odd', $schema);
+    $this->assertSame($schema, $entry->schema(), 'Made, with nothing derived.');
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('The "odd" key\'s source gave a node, and no definition derives from it: No definition of the not_a_type type is derived');
+    $this->expectExceptionMessage('The "odd" key\'s source gave a schema, and no definition derives from it: No definition of the not_a_type type is derived');
     $entry->definition();
   }
 
@@ -581,8 +581,8 @@ class EntryTest extends UnitTestCase {
     if ((int) ini_get('zend.assertions') !== 1) {
       $this->markTestSkipped('Assertions are off.');
     }
-    $node = DefinitionSchema::of(static::map());
-    $entry = Entry::ofSchema('where', $node);
+    $schema = DefinitionSchema::of(static::map());
+    $entry = Entry::ofSchema('where', $schema);
     $derived = $entry->definition();
     $this->assertSame($derived, $entry->definition(), 'Nothing written: the later ask passes.');
     $this->assertInstanceOf(MapDataDefinition::class, $derived);
@@ -592,7 +592,7 @@ class EntryTest extends UnitTestCase {
       $this->fail('A derived definition written after it was derived is not seen.');
     }
     catch (\AssertionError $error) {
-      $this->assertStringContainsString('derived from the node its source gave, was written after it was derived', $error->getMessage());
+      $this->assertStringContainsString('derived from the schema its source gave, was written after it was derived', $error->getMessage());
     }
 
     $definition = static::map();
@@ -601,10 +601,10 @@ class EntryTest extends UnitTestCase {
     $definition->setLabel('Written');
     try {
       $first->schema();
-      $this->fail('A definition written after its node was read is not seen.');
+      $this->fail('A definition written after its schema was read is not seen.');
     }
     catch (\AssertionError $error) {
-      $this->assertStringContainsString('its source, was written after its node was read', $error->getMessage());
+      $this->assertStringContainsString('its source, was written after its schema was read', $error->getMessage());
     }
   }
 

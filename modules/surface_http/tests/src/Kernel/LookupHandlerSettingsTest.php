@@ -24,7 +24,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * handler and its settings off the key's node and finds only that role's
  * account; the default handler with no settings would find every account.
  *
- * @see docs/decisions.md#the-remaining-readers-read-nodes
+ * @see docs/decisions.md#the-remaining-readers-read-schemas
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]

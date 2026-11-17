@@ -259,18 +259,18 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a resolver is handed the key's node, which it may read.
+   * Tests a resolver is handed the key's schema, which it may read.
    *
-   * Handed the definition alone, the service hands each resolver the node
+   * Handed the definition alone, the service hands each resolver the schema
    * it reads from the definition: the title and the keywords the key
-   * declares. Handed the key's node, it hands that very node on, and the
-   * constraints it reads are the node's.
+   * declares. Handed the key's schema, it hands that very schema on, and the
+   * constraints it reads are the schema's.
    */
-  public function testTheResolverIsHandedTheKeysNode(): void {
+  public function testTheResolverIsHandedTheKeysSchema(): void {
     $recorder = new class () implements SurfaceOptionsResolverInterface {
 
       /**
-       * The nodes handed, in order.
+       * The schemas handed, in order.
        *
        * @var \PortableSchema\Builder\Schema[]
        */
@@ -286,9 +286,9 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
       /**
        * {@inheritdoc}
        */
-      public function resolve(Constraint $constraint, Schema $node): OptionSet {
+      public function resolve(Constraint $constraint, Schema $schema): OptionSet {
         assert($constraint instanceof Choice);
-        $this->handed[] = $node;
+        $this->handed[] = $schema;
         return new OptionSet(array_combine($constraint->choices, $constraint->choices));
       }
 
@@ -302,44 +302,44 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
 
     $this->assertSame(['east' => 'east', 'west' => 'west'], $options->resolve($definition)->options);
     $this->assertCount(1, $recorder->handed);
-    $node = $recorder->handed[0];
-    $this->assertSame('Room', (string) $node->get('title'));
-    $this->assertSame(4, $node->get('maxLength'));
-    $this->assertSame(['string', 'null'], $node->get('type'), 'Not required, so it may be NULL.');
-    $this->assertTrue(DefinitionSchema::same(DefinitionSchema::of($definition), $node), 'Read, it is the definition\'s node.');
+    $schema = $recorder->handed[0];
+    $this->assertSame('Room', (string) $schema->get('title'));
+    $this->assertSame(4, $schema->get('maxLength'));
+    $this->assertSame(['string', 'null'], $schema->get('type'), 'Not required, so it may be NULL.');
+    $this->assertTrue(DefinitionSchema::same(DefinitionSchema::of($definition), $schema), 'Read, it is the definition\'s schema.');
 
-    foreach ([FALSE, TRUE] as $node_first) {
+    foreach ([FALSE, TRUE] as $schema_first) {
       $derived = new \ReflectionProperty(Entry::class, 'definition');
-      $entry = DefinitionMap::fromArrays(['room' => (clone $definition)->setLabel('Hall')], nodeFirst: $node_first)->entry('room');
+      $entry = DefinitionMap::fromArrays(['room' => (clone $definition)->setLabel('Hall')], schemaFirst: $schema_first)->entry('room');
       $recorder->handed = [];
       $this->assertSame(['east' => 'east', 'west' => 'west'], $options->resolve($entry->schema())->options);
-      $this->assertSame([$entry->schema()], $recorder->handed, 'Handed the key\'s node, the service hands that very node on.');
-      $this->assertSame('Hall', (string) $entry->schema()->get('title'), 'The entry\'s own node, its own title.');
-      if ($node_first) {
-        $this->assertNull($derived->getValue($entry), 'Handed a node, the service derives no definition.');
+      $this->assertSame([$entry->schema()], $recorder->handed, 'Handed the key\'s schema, the service hands that very schema on.');
+      $this->assertSame('Hall', (string) $entry->schema()->get('title'), 'The entry\'s own schema, its own title.');
+      if ($schema_first) {
+        $this->assertNull($derived->getValue($entry), 'Handed a schema, the service derives no definition.');
       }
     }
 
-    // The constraints read are the node's: a node that holds a list no
+    // The constraints read are the schema's: a schema that holds a list no
     // definition stands beside answers with that list.
-    $node = DefinitionSchema::of(DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['north']]));
-    $this->assertSame(['north' => 'north'], $options->resolve($node)->options);
+    $schema = DefinitionSchema::of(DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['north']]));
+    $this->assertSame(['north' => 'north'], $options->resolve($schema)->options);
   }
 
   /**
    * Tests a refined key and its declared key resolve apart.
    *
-   * A refined entry holds the refined definition and reads its node from
-   * it, so its node is another object than the declared entry's: the memo
-   * keyed by the node serves each its own list, in either order and with
+   * A refined entry holds the refined definition and reads its schema from
+   * it, so its schema is another object than the declared entry's: the memo
+   * keyed by the schema serves each its own list, in either order and with
    * the declared entry in either form, and narrowing is never served a
    * stale list.
    */
   public function testRefinedAndDeclaredKeysResolveApart(): void {
     $options = $this->options();
-    foreach ([FALSE, TRUE] as $node_first) {
+    foreach ([FALSE, TRUE] as $schema_first) {
       $room = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['east', 'west', 'north']]);
-      $declared = DefinitionMap::fromArrays(['room' => $room], nodeFirst: $node_first)->entry('room');
+      $declared = DefinitionMap::fromArrays(['room' => $room], schemaFirst: $schema_first)->entry('room');
       // What refinement makes of a key: a copy, narrowed, and an entry of it.
       $refined = $declared->withDefinition((clone $declared->definition())->addConstraint('Choice', ['choices' => ['east']]));
       $this->assertNotSame($declared->schema(), $refined->schema());
@@ -352,7 +352,7 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
     // narrowed to the rooms of the venue chosen.
     $this->enableModules(['serialization', 'tool', 'surface_http', 'surface_examples']);
     $this->installConfig(['surface_examples']);
-    // A built resource's entries are node-first (the seal makes them so).
+    // A built resource's entries are schema-first (the seal makes them so).
     $resources = $this->container->get('surface.resources');
     $surface = $resources->build(RegistrationStep3Resource::class, $resources->operation(RegistrationStep3Resource::class, 'configure'));
     $options = $this->options();
@@ -369,13 +369,13 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests invalidateTags() forgets an answer kept under a node.
+   * Tests invalidateTags() forgets an answer kept under a schema.
    *
    * A list read from the site carries the tags it was read under; once one
    * of them is invalidated, the key is resolved again, whether it was
-   * asked by its node or by its definition.
+   * asked by its schema or by its definition.
    */
-  public function testInvalidatingForgetsNodeKeyedAnswer(): void {
+  public function testInvalidatingForgetsSchemaKeyedAnswer(): void {
     $tagged = new class () implements SurfaceOptionsResolverInterface {
 
       /**
@@ -393,7 +393,7 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
       /**
        * {@inheritdoc}
        */
-      public function resolve(Constraint $constraint, Schema $node): OptionSet {
+      public function resolve(Constraint $constraint, Schema $schema): OptionSet {
         assert($constraint instanceof Choice);
         $this->calls++;
         return new OptionSet(array_combine($constraint->choices, $constraint->choices), [], (new CacheableMetadata())->addCacheTags(['surface_test_rooms']));
@@ -403,19 +403,19 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
     $options = $this->options();
     (new \ReflectionProperty($options, 'resolvers'))->setValue($options, ['tagged' => $tagged]);
     $definition = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['east']]);
-    $node = DefinitionSchema::of($definition);
+    $schema = DefinitionSchema::of($definition);
 
-    $options->resolve($node);
-    $options->resolve($node);
+    $options->resolve($schema);
+    $options->resolve($schema);
     $options->resolve($definition);
-    $this->assertSame(2, $tagged->calls, 'Each key is resolved once: the node and the definition are two keys.');
+    $this->assertSame(2, $tagged->calls, 'Each key is resolved once: the schema and the definition are two keys.');
     $options->invalidateTags(['some_other_tag']);
-    $options->resolve($node);
+    $options->resolve($schema);
     $this->assertSame(2, $tagged->calls, 'A tag the list did not name forgets nothing.');
     $options->invalidateTags(['surface_test_rooms']);
-    $options->resolve($node);
+    $options->resolve($schema);
     $options->resolve($definition);
-    $this->assertSame(4, $tagged->calls, 'The tag forgets the answer under the node and under the definition.');
+    $this->assertSame(4, $tagged->calls, 'The tag forgets the answer under the schema and under the definition.');
   }
 
 }

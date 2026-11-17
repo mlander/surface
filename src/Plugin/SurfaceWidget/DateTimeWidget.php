@@ -7,7 +7,7 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Attribute\SurfaceWidget;
@@ -35,20 +35,20 @@ final class DateTimeWidget extends SurfaceWidgetBase implements SchemaWidgetInte
    * {@inheritdoc}
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    return NodeFacts::dataType($schema) === 'datetime_iso8601';
+    return SchemaFacts::dataType($schema) === 'datetime_iso8601';
   }
 
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return static::types($node) === ['string'] && $node->get('format') === 'date-time';
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    return static::types($schema) === ['string'] && $schema->get('format') === 'date-time';
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
     $date = NULL;
     if (is_string($value) && $value !== '') {
       try {
@@ -59,7 +59,7 @@ final class DateTimeWidget extends SurfaceWidgetBase implements SchemaWidgetInte
         $date = NULL;
       }
     }
-    return $this->baseElement($node, $context) + [
+    return $this->baseElement($schema, $context) + [
       '#type' => 'datetime',
       '#default_value' => $date,
     ];
@@ -73,7 +73,7 @@ final class DateTimeWidget extends SurfaceWidgetBase implements SchemaWidgetInte
    * string it spells. Nothing typed sent nothing, and what spells no date
    * is passed on as typed, for the key's constraints to refuse.
    */
-  public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed {
+  public function extractValue(array $element, FormStateInterface $form_state, Schema $schema): mixed {
     $raw = $this->rawValue($element, $form_state);
     if (is_array($raw)) {
       $raw = ($raw['object'] ?? NULL) instanceof \DateTimeInterface || ($raw['object'] ?? NULL) instanceof DrupalDateTime

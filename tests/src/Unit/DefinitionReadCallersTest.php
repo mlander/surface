@@ -8,13 +8,13 @@ use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Tests which code reads a definition into a node, by file and count.
+ * Tests which code reads a definition into a schema, by file and count.
  *
- * An entry holds its key's node (Entry::schema()), and a reader that
- * walks down from an entry walks the entry's node in step. What is left
+ * An entry holds its key's schema (Entry::schema()), and a reader that
+ * walks down from an entry walks the entry's schema in step. What is left
  * calling DefinitionSchema::of(), head(), around() or shell() holds a
  * definition no entry holds. The list is pinned (CALLERS): a new caller
- * changes it, and so does a caller that moves to an entry's node. Each is
+ * changes it, and so does a caller that moves to an entry's schema. Each is
  * a reader a later slice moves. Comments are not read. What the scan
  * cannot see: a call from inside DefinitionSchema itself (a new public
  * method there that wraps of()), and a call through a callable string.
@@ -22,7 +22,7 @@ use PHPUnit\Framework\Attributes\Group;
  * Entry::schema() asks no service: Entry's own code names no `Drupal::`
  * and no container.
  *
- * Decision: see docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone.
+ * Decision: see docs/decisions.md#an-entry-holds-its-schema-the-memo-is-gone.
  */
 #[Group('surface')]
 class DefinitionReadCallersTest extends UnitTestCase {
@@ -37,15 +37,15 @@ class DefinitionReadCallersTest extends UnitTestCase {
    * - src/Entry.php, of(): a definition-first entry reads its own
    *   definition, once (schema()), and once more per later ask inside an
    *   assertion; a shell reads its definition inside an assertion on its
-   *   first ask too, against the node it composed; a node-first entry
+   *   first ask too, against the schema it composed; a schema-first entry
    *   reads its derived definition per later ask of definition() inside
    *   an assertion.
    * - src/Entry.php, around(): a key that holds a child frame composes its
-   *   node of its own facts around its child's entries' nodes (composed()
+   *   schema of its own facts around its child's entries' schemas (composed()
    *   for a collection, around a collection's item and a mount's, and
    *   framed() for a map of a child's keys). The seal makes each entry
-   *   node-first (Entry::sealed(), from DefinitionMap::fromArrays() with
-   *   nodeFirst): a shell is handed its own facts alone and composed by
+   *   schema-first (Entry::sealed(), from DefinitionMap::fromArrays() with
+   *   schemaFirst): a shell is handed its own facts alone and composed by
    *   the same calls, its child's keys placed by name (since 2026-11-15);
    *   fromArrays() reads nothing itself.
    * - src/Contract/Conditionals.php reads none since 2026-11-16: a
@@ -60,19 +60,19 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *   2026-11-16; with none handed it reads the entry's schema).
    * - src/Contract/PropertySchema.php reads none since 2026-11-16:
    *   property() describes a shape from the schema its key's own holds,
-   *   and listNode() gives a collection's own keywords from the list's
+   *   and listSchema() gives a collection's own keywords from the list's
    *   schema, without its items; it reads no definition.
    * - src/Tool/InputDefinitions.php, of(): the public converters,
-   *   fromDefinition() and outputFromDefinition(), read the node of a
-   *   definition a caller hands with no node; every caller in the module
-   *   hands the entry's node with it.
+   *   fromDefinition() and outputFromDefinition(), read the schema of a
+   *   definition a caller hands with no schema; every caller in the module
+   *   hands the entry's schema with it.
    * - src/Storage/ConfigSchemaGenerator.php reads none since 2026-11-14:
    *   a collection's declared constraints, and what every entry of a map
-   *   of entries from the site is, are read from the key's own node,
-   *   which is composed of its child's entries' nodes (Entry::schema()).
+   *   of entries from the site is, are read from the key's own schema,
+   *   which is composed of its child's entries' schemas (Entry::schema()).
    * - src/Pipeline/Validating.php reads none since 2026-11-16: a port's
    *   key is held as its schema (SurfaceInterface::getPortSchema()), and
-   *   nodeAt() hands it on, to the options service too.
+   *   schemaAt() hands it on, to the options service too.
    * - src/Surface.php, of(): withPorts() reads a port's key handed as a
    *   definition into its schema, once, at the door (since 2026-11-16);
    *   refusedWatchedValues() reads the place of a watched key its source
@@ -85,8 +85,8 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *   entry's own schema, which is held as it is.
    *
    * - src/Options/SurfaceOptions.php, of(): resolve() hands a resolver
-   *   the node of the definition it was handed, where its caller holds
-   *   no node, read when a resolver is about to be called (since
+   *   the schema of the definition it was handed, where its caller holds
+   *   no schema, read when a resolver is about to be called (since
    *   2026-11-15).
    * - src/ResourceBuild/KeyPaths.php, of(): violation() reads a
    *   builder's definition before sealing, which no entry holds, into the
@@ -96,15 +96,15 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *   mount's schema holds.
    * - src/Surface.php, around(): a mount its own refiners refined, with a
    *   structure refined in it too, keeps the definition built as before
-   *   (refineMounted()), and its node is composed of the refiners'
-   *   answer's own facts and the refined structures' entries' nodes, so
+   *   (refineMounted()), and its schema is composed of the refiners'
+   *   answer's own facts and the refined structures' entries' schemas, so
    *   no key of a structure is read again (since 2026-11-16).
    * - src/Variants.php, shell(): the shell of variants, which every chosen
-   *   variant wears, is read once into the node a chosen variant's node is
-   *   composed of (shellNode()), and once more per later ask inside an
+   *   variant wears, is read once into the schema a chosen variant's schema is
+   *   composed of (shellSchema()), and once more per later ask inside an
    *   assertion (since 2026-11-16).
-   * property() takes its node from its caller and reads nothing, so a
-   * caller that stops handing an entry's node on has to call of() itself,
+   * property() takes its schema from its caller and reads nothing, so a
+   * caller that stops handing an entry's schema on has to call of() itself,
    * which this list then shows.
    */
   protected const CALLERS = [
@@ -153,7 +153,7 @@ class DefinitionReadCallersTest extends UnitTestCase {
       ksort($found[$relative]);
     }
     ksort($found);
-    $this->assertSame(self::CALLERS, $found, 'The code that reads a definition into a node, by file and count.');
+    $this->assertSame(self::CALLERS, $found, 'The code that reads a definition into a schema, by file and count.');
   }
 
   /**

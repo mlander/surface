@@ -38,7 +38,7 @@ final class SponsorshipResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    // A venue keeps its id as a string, a user and a node as an integer.
+    // A venue keeps its id as a string, a user and a schema as an integer.
     $inputs->add('venue', 'string', t('Venue'), default: 'riverside')
       ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue'])
       ->setDescription(t("Where the sponsor's stand is."))

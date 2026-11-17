@@ -50,7 +50,7 @@ final class ChoiceOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, Schema $node): OptionSet {
+  public function resolve(Constraint $constraint, Schema $schema): OptionSet {
     assert($constraint instanceof Choice);
     $options = [];
     foreach ($constraint->choices ?? [] as $choice) {

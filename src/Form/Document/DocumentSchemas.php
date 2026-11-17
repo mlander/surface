@@ -12,7 +12,7 @@ use Drupal\surface\Widget\WidgetHostInterface;
 use PortableSchema\Builder\Schema;
 
 /**
- * The nodes of one envelope, found by the JSON Pointer of their value.
+ * The schemas of one envelope, found by the JSON Pointer of their value.
  *
  * The envelope's schema read inline once (SchemaResolver::inline()), and
  * the values it was emitted for. A pointer is walked from the root as the
@@ -20,8 +20,8 @@ use PortableSchema\Builder\Schema;
  * collection's item its items' object narrowed for that item's values
  * (DocumentDrawer::narrowedFor()); and a key with variants by the variant
  * its frame's conditionals choose for the deciding key's value
- * (DocumentDrawer::resolveVariants()). So the node at an element's
- * pointer is the node the element was drawn from, and extraction reads
+ * (DocumentDrawer::resolveVariants()). So the schema at an element's
+ * pointer is the schema the element was drawn from, and extraction reads
  * it here rather than off the element.
  *
  * A key the envelope leaves deferred with no conditional for the value
@@ -38,17 +38,17 @@ use PortableSchema\Builder\Schema;
  *
  * @internal
  */
-final class DocumentNodes {
+final class DocumentSchemas {
 
   /**
    * The documents the host gave for deferred keys, by pointer and value.
    *
-   * @var array<string, \Drupal\surface\Form\Document\DocumentNodes|null>
+   * @var array<string, \Drupal\surface\Form\Document\DocumentSchemas|null>
    */
   protected array $chosen = [];
 
   /**
-   * Constructs a DocumentNodes.
+   * Constructs a DocumentSchemas.
    *
    * @param \PortableSchema\Builder\Schema $root
    *   The envelope's schema, inline.
@@ -64,7 +64,7 @@ final class DocumentNodes {
   ) {}
 
   /**
-   * Reads an envelope's nodes.
+   * Reads an envelope's schemas.
    *
    * @param \Drupal\surface\Contract\ServedContract $contract
    *   The envelope.
@@ -72,7 +72,7 @@ final class DocumentNodes {
    *   What resolves a deferred key, or NULL where nothing does.
    *
    * @return static
-   *   Its nodes.
+   *   Its schemas.
    */
   public static function of(ServedContract $contract, ?WidgetHostInterface $host = NULL): static {
     $values = $contract->document['values'] ?? NULL;
@@ -80,46 +80,46 @@ final class DocumentNodes {
   }
 
   /**
-   * Finds the node of the value at a JSON Pointer.
+   * Finds the schema of the value at a JSON Pointer.
    *
    * @param string $pointer
    *   The pointer, '' for the root.
    *
    * @return \PortableSchema\Builder\Schema|null
-   *   The node, or NULL where the document draws nothing there: no such
+   *   The schema, or NULL where the document draws nothing there: no such
    *   key, or variants nothing chose.
    */
   public function at(string $pointer): ?Schema {
-    $node = $this->root;
+    $schema = $this->root;
     $values = $this->values;
     $at = '';
     $narrows = FALSE;
     foreach (WidgetContext::parentsOf($pointer) as $step) {
-      if ($node->isBoolean()) {
+      if ($schema->isBoolean()) {
         return NULL;
       }
-      if ($narrows && SurfaceWidgetBase::type($node) !== 'array') {
-        $node = DocumentDrawer::narrowedFor($node, is_array($values) ? $values : [], TRUE);
+      if ($narrows && SurfaceWidgetBase::type($schema) !== 'array') {
+        $schema = DocumentDrawer::narrowedFor($schema, is_array($values) ? $values : [], TRUE);
       }
       $here = $at . '/' . WidgetContext::escape($step);
       $held = is_array($values) ? ($values[$step] ?? NULL) : NULL;
-      if (SurfaceWidgetBase::type($node) === 'array') {
-        $items = $node->get('items');
+      if (SurfaceWidgetBase::type($schema) === 'array') {
+        $items = $schema->get('items');
         if (!$items instanceof Schema) {
           return NULL;
         }
-        $node = $items->isBoolean() ? $items : DocumentDrawer::narrowedFor($items, is_array($held) ? $held : [], $narrows);
+        $schema = $items->isBoolean() ? $items : DocumentDrawer::narrowedFor($items, is_array($held) ? $held : [], $narrows);
       }
       else {
-        $child = ((array) ($node->get('properties') ?? []))[$step] ?? NULL;
+        $child = ((array) ($schema->get('properties') ?? []))[$step] ?? NULL;
         if (!$child instanceof Schema || $child->isBoolean()) {
           return NULL;
         }
         if (static::isVariants($child)) {
           $frame_values = is_array($values) ? $values : [];
-          $found = DocumentDrawer::resolveVariants($node, $step, $frame_values);
+          $found = DocumentDrawer::resolveVariants($schema, $step, $frame_values);
           if ($found === NULL) {
-            $found = $this->chosenVariant($node, $step, $here, $frame_values);
+            $found = $this->chosenVariant($schema, $step, $here, $frame_values);
             $narrows = $narrows || $found !== NULL;
           }
           $child = $found;
@@ -127,12 +127,12 @@ final class DocumentNodes {
         if ($child === NULL) {
           return NULL;
         }
-        $node = $child;
+        $schema = $child;
       }
       $values = $held;
       $at = $here;
     }
-    return $node;
+    return $schema;
   }
 
   /**
@@ -154,7 +154,7 @@ final class DocumentNodes {
    *   What the object holds.
    *
    * @return \PortableSchema\Builder\Schema|null
-   *   The variant's node, or NULL when nothing is chosen.
+   *   The variant's schema, or NULL when nothing is chosen.
    */
   public function chosenVariant(Schema $frame, string $name, string $pointer, array $frame_values): ?Schema {
     if ($this->host === NULL) {
@@ -182,26 +182,26 @@ final class DocumentNodes {
    * @param string|int|float|bool $value
    *   Its deciding key's value.
    *
-   * @return \Drupal\surface\Form\Document\DocumentNodes|null
-   *   That document's nodes, walked for the same values with no host, or
+   * @return \Drupal\surface\Form\Document\DocumentSchemas|null
+   *   That document's schemas, walked for the same values with no host, or
    *   NULL where the host has none.
    */
-  protected function chosenFor(string $pointer, string|int|float|bool $value): ?DocumentNodes {
+  protected function chosenFor(string $pointer, string|int|float|bool $value): ?DocumentSchemas {
     $contract = $this->host?->chosen($pointer, $value);
     return $contract === NULL ? NULL : new static(SchemaResolver::inline($contract->schema()), $this->values);
   }
 
   /**
-   * Answers whether a key's node is a key with variants.
+   * Answers whether a key's schema is a key with variants.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    *
    * @return bool
    *   TRUE for the `variants` word or an `x-surface.by`.
    */
-  public static function isVariants(Schema $node): bool {
-    return (SurfaceWidgetBase::ui($node)['widget'] ?? NULL) === 'variants' || isset(SurfaceWidgetBase::extension($node)['by']);
+  public static function isVariants(Schema $schema): bool {
+    return (SurfaceWidgetBase::ui($schema)['widget'] ?? NULL) === 'variants' || isset(SurfaceWidgetBase::extension($schema)['by']);
   }
 
 }

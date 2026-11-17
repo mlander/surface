@@ -116,9 +116,9 @@ final class LeafTypes {
    * of the type that is not required and has no `class` key, in core's
    * order: `PrimitiveType` where the type's class is primitive, then the
    * constraints the type's plugin declares. One row for each type ROWS
-   * has a row for, and for `map`, `list` and `any`. Static, so a node's
+   * has a row for, and for `map`, `list` and `any`. Static, so a schema's
    * merged constraint list is derived with no service
-   * (NodeFacts::constraints()); DefaultConstraintsTest holds each row to
+   * (SchemaFacts::constraints()); DefaultConstraintsTest holds each row to
    * the typed data manager, so a module that changes a type's defaults
    * fails that test with the type's name.
    *

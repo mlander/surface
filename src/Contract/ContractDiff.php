@@ -169,12 +169,12 @@ final class ContractDiff {
       return [new ContractChange($surface, $surface, $prefix, sprintf('contract version %d to %d', $was, $is), self::CONTRACT, ContractChange::CONTRACT)];
     }
     $this->kind = self::kindOf($current) ?? self::kindOf($baseline);
-    $found = $this->node($baseline['schema'] ?? TRUE, $current['schema'] ?? TRUE, $prefix, $surface, FALSE);
+    $found = $this->subschema($baseline['schema'] ?? TRUE, $current['schema'] ?? TRUE, $prefix, $surface, FALSE);
     if (isset($baseline['outputs']) && !isset($current['outputs'])) {
       $found[] = [$surface, $prefix . 'outputs', 'outputs no longer declared', self::BREAKS, TRUE];
     }
     elseif (isset($baseline['outputs'], $current['outputs'])) {
-      array_push($found, ...$this->node($baseline['outputs'], $current['outputs'], $prefix . 'outputs', $surface, TRUE));
+      array_push($found, ...$this->subschema($baseline['outputs'], $current['outputs'], $prefix . 'outputs', $surface, TRUE));
     }
     elseif (isset($current['outputs'])) {
       $found[] = [$surface, $prefix . 'outputs', 'outputs declared', self::NOTE, TRUE];
@@ -306,7 +306,7 @@ final class ContractDiff {
    * @return list<array{0: string, 1: string, 2: string, 3: string, 4: bool}>
    *   Each difference: owner, path, change, effect, reading.
    */
-  protected function node(mixed $old, mixed $new, string $path, string $owner, bool $reading): array {
+  protected function subschema(mixed $old, mixed $new, string $path, string $owner, bool $reading): array {
     if ($old === $new) {
       return [];
     }
@@ -405,8 +405,8 @@ final class ContractDiff {
       'oneOf', 'anyOf' => $this->alternatives((array) $a, (array) $b, $path, $owner, $reading),
       'properties' => $this->properties((array) $a, (array) $b, (array) ($new['required'] ?? []), $path, $owner, $reading),
       'required' => $this->required((array) $a, (array) $b, (array) ($old['properties'] ?? []), (array) ($new['properties'] ?? []), $path, $owner, $reading),
-      'additionalProperties', 'unevaluatedProperties' => $this->node($in_old ? $a : TRUE, $in_new ? $b : TRUE, $path, $owner, $reading),
-      'items', 'then', 'else' => $this->node($in_old ? $a : TRUE, $in_new ? $b : TRUE, $path, $owner, $reading),
+      'additionalProperties', 'unevaluatedProperties' => $this->subschema($in_old ? $a : TRUE, $in_new ? $b : TRUE, $path, $owner, $reading),
+      'items', 'then', 'else' => $this->subschema($in_old ? $a : TRUE, $in_new ? $b : TRUE, $path, $owner, $reading),
       'allOf' => $this->allOf((array) $a, (array) $b, $old, $new, $path, $owner, $reading),
       '$ref' => $one(sprintf('refers to %s where it referred to %s', $b ?? 'nothing', $a ?? 'nothing'), self::BREAKS),
       default => $one($keyword . ' changed, which the lint does not read', self::BREAKS),
@@ -448,7 +448,7 @@ final class ContractDiff {
         $found[] = [$owner, $at, 'def added', self::NOTE, $reading];
       }
       else {
-        array_push($found, ...$this->node($old[$key], $new[$key], $at, $owner, $reading));
+        array_push($found, ...$this->subschema($old[$key], $new[$key], $at, $owner, $reading));
       }
     }
     return $found;
@@ -543,7 +543,7 @@ final class ContractDiff {
    * @param bool $reading
    *   Whether it describes what a client reads.
    * @param mixed $was
-   *   The baseline node's `format`.
+   *   The baseline schema's `format`.
    * @param mixed $is
    *   Today's.
    *
@@ -626,7 +626,7 @@ final class ContractDiff {
     }
     $found = [];
     foreach ($old as $i => $alternative) {
-      array_push($found, ...$this->node($alternative, $new[$i], $path . '/' . $i, $owner, $reading));
+      array_push($found, ...$this->subschema($alternative, $new[$i], $path . '/' . $i, $owner, $reading));
     }
     return $found;
   }
@@ -753,7 +753,7 @@ final class ContractDiff {
         $found[] = [$owner, $at, $change, $effect, $reading];
       }
       else {
-        array_push($found, ...$this->node($old[$key], $new[$key], $at, $owner, $reading));
+        array_push($found, ...$this->subschema($old[$key], $new[$key], $at, $owner, $reading));
       }
     }
     return $found;
@@ -841,7 +841,7 @@ final class ContractDiff {
     }
     foreach ($new as $key => [$i, $entry]) {
       if (isset($old[$key])) {
-        array_push($found, ...$this->node($old[$key][1], $entry, $path . '/' . $i, $owner, $reading));
+        array_push($found, ...$this->subschema($old[$key][1], $entry, $path . '/' . $i, $owner, $reading));
       }
       elseif (str_starts_with($key, 'ref:')) {
         $found[] = [$owner, $path . '/' . $i, 'composition added', self::NOTE, $reading];

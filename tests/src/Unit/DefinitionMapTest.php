@@ -49,11 +49,11 @@ class DefinitionMapTest extends UnitTestCase {
   }
 
   /**
-   * Tests the keys reader answers a node-first map without a definition.
+   * Tests the keys reader answers a schema-first map without a definition.
    *
    * A caller that reads the keys alone asks keys(): no entry of a
-   * node-first map derives its definition (NodeDefinition::of()) for it,
-   * and the keys come in declaration order, each TRUE.
+   * schema-first map derives its definition (DefinitionFromSchema::of()) for
+   * it, and the keys come in declaration order, each TRUE.
    */
   public function testKeysDeriveNoDefinition(): void {
     $map = new DefinitionMap([
@@ -65,7 +65,7 @@ class DefinitionMapTest extends UnitTestCase {
     $this->assertSame(['moose' => 2], array_diff_key(['zebra' => 1, 'moose' => 2], $map->keys()), 'It serves array_diff_key() as the definitions did.');
     $derived = new \ReflectionProperty(Entry::class, 'definition');
     foreach ($map->entries() as $name => $entry) {
-      $this->assertTrue($entry->isNodeFirst());
+      $this->assertTrue($entry->isSchemaFirst());
       $this->assertNull($derived->getValue($entry), sprintf('The "%s" entry derived no definition.', $name));
     }
     $this->assertSame([], (new DefinitionMap([]))->keys());
@@ -273,11 +273,11 @@ class DefinitionMapTest extends UnitTestCase {
   }
 
   /**
-   * Tests a chosen variant without nodeFirst is refused, with assertions on.
+   * Tests a chosen variant without schemaFirst is refused, with assertions on.
    */
-  public function testChosenWithoutNodeFirstIsRefused(): void {
+  public function testChosenWithoutSchemaFirstIsRefused(): void {
     $this->expectException(\AssertionError::class);
-    $this->expectExceptionMessage('A chosen variant is passed only with nodeFirst');
+    $this->expectExceptionMessage('A chosen variant is passed only with schemaFirst');
     DefinitionMap::fromArrays(['pick' => MapDataDefinition::create()], chosen: ['pick' => 'x']);
   }
 
@@ -287,7 +287,7 @@ class DefinitionMapTest extends UnitTestCase {
   public function testChosenAtKeyWithoutVariantsIsRefused(): void {
     $this->expectException(\AssertionError::class);
     $this->expectExceptionMessage('A chosen variant is passed only at a key with variants, not at pick.');
-    DefinitionMap::fromArrays(['pick' => MapDataDefinition::create()], nodeFirst: TRUE, chosen: ['pick' => 'x']);
+    DefinitionMap::fromArrays(['pick' => MapDataDefinition::create()], schemaFirst: TRUE, chosen: ['pick' => 'x']);
   }
 
 }

@@ -21,7 +21,7 @@ use PortableSchema\Builder\Schema;
  * for (DEFAULT_CONSTRAINTS), and a ListDataDefinition of such items: the
  * classes KeywordReader reads an author's value key into. The merged
  * constraint list of either is derived from the facts
- * (NodeFacts::derived()), so the schema holds no `constraints` member, as
+ * (SchemaFacts::derived()), so the schema holds no `constraints` member, as
  * of() writes none for these classes.
  *
  * Mirrors DefinitionSchema::build() for those two classes, step for step,
@@ -80,7 +80,7 @@ final class ValueSchema {
    * Reads back the facts a value's or a list's schema was written from.
    *
    * What a definition of the schema would hold in its array, as
-   * NodeDefinition::of() derives it: each fact from its member, else from
+   * DefinitionFromSchema::of() derives it: each fact from its member, else from
    * the keyword that holds it. A member that holds a schema (`shape`,
    * `configType`, `each`) is kept as it is held.
    *
@@ -233,7 +233,7 @@ final class ValueSchema {
     if ($type === 'string' && (($facts['settings'] ?? [])['widget'] ?? NULL) === 'date') {
       return ['type' => 'string', 'format' => 'date'];
     }
-    if ($type === 'datetime_iso8601' && array_key_exists('DateOnly', NodeFacts::derived($members) ?? [])) {
+    if ($type === 'datetime_iso8601' && array_key_exists('DateOnly', SchemaFacts::derived($members) ?? [])) {
       return LeafTypes::DATE_ONLY;
     }
     if (isset(LeafTypes::ROWS[$type])) {
@@ -267,7 +267,7 @@ final class ValueSchema {
    *   The members.
    *
    * @return \PortableSchema\Builder\Schema
-   *   A schema NodeFacts::constraints() reads them from.
+   *   A schema SchemaFacts::constraints() reads them from.
    */
   private static function provisional(array $members): Schema {
     return Schema::any()->with(DefinitionSchema::MODEL, $members);

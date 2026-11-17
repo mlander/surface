@@ -7,7 +7,7 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Options\OptionSet;
@@ -23,7 +23,7 @@ use PortableSchema\Builder\Schema;
  * options widget) above that, where a column of checkboxes stops being
  * something a person scans. The definition overrides the count with its
  * `widget` setting: `checkboxes` at any length, `select` at any length.
- * The document names the choice `checkboxes`, and the node's `items`
+ * The document names the choice `checkboxes`, and the schema's `items`
  * offer the values.
  *
  * Checkboxes post every option, each with its value or 0; the base class
@@ -70,7 +70,7 @@ final class CheckboxesWidget extends ChoiceWidgetBase implements SchemaWidgetInt
     if (!DefinitionSchema::isList($schema)) {
       return FALSE;
     }
-    $asked = NodeFacts::setting($schema, 'widget');
+    $asked = SchemaFacts::setting($schema, 'widget');
     return $asked === 'checkboxes' || ($asked === NULL && count($set->options) <= self::MAXIMUM_OPTIONS);
   }
 
@@ -85,16 +85,16 @@ final class CheckboxesWidget extends ChoiceWidgetBase implements SchemaWidgetInt
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return static::type($node) === 'array' && static::offers(static::offering($node));
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    return static::type($schema) === 'array' && static::offers(static::offering($schema));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    [$options, $descriptions] = static::choices(static::offering($node));
-    $element = $this->baseElement($node, $context) + [
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    [$options, $descriptions] = static::choices(static::offering($schema));
+    $element = $this->baseElement($schema, $context) + [
       '#type' => 'checkboxes',
       '#options' => $options,
       '#default_value' => array_values(array_filter(is_array($value) ? $value : [], 'is_scalar')),

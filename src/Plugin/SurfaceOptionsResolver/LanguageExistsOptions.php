@@ -81,7 +81,7 @@ final class LanguageExistsOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, Schema $node): OptionSet {
+  public function resolve(Constraint $constraint, Schema $schema): OptionSet {
     assert($constraint instanceof LanguageExistsConstraint);
     $options = [];
     foreach ($this->languageManager->getLanguages($constraint->languageStates()) as $langcode => $language) {

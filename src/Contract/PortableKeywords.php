@@ -30,9 +30,9 @@ use PortableSchema\Builder\Schema;
  *   out: a reference key's candidates, a deferred list's entry
  *   (PortableLinks writes it).
  *
- * On a node they come after the standard keywords, in that order, and
+ * On a schema they come after the standard keywords, in that order, and
  * before `x-surface` (before()). They are keywords of the dialect: they
- * stay on their node where `x-surface` moves to `within`
+ * stay on their schema where `x-surface` moves to `within`
  * (DocumentHead::owning()).
  *
  * Decision: see
@@ -74,7 +74,7 @@ final class PortableKeywords {
   public const CHECK_CODE = 'check.';
 
   /**
-   * The four keywords, in the order a node carries them.
+   * The four keywords, in the order a schema carries them.
    */
   public const KEYWORDS = [self::CHECK, self::MESSAGES, self::UI, self::LINKS];
 
@@ -90,7 +90,7 @@ final class PortableKeywords {
    *   it checks, and for JsonSchema the schema; for one whose options the
    *   document states, those options.
    * @param array<string, string> $messages
-   *   Messages for the node's own keywords, by error code (`pattern`,
+   *   Messages for the schema's own keywords, by error code (`pattern`,
    *   `not`), written before the checks' messages.
    *
    * @return array
@@ -122,29 +122,29 @@ final class PortableKeywords {
   }
 
   /**
-   * Places the dialect's keywords on a node: after its standard keywords.
+   * Places the dialect's keywords on a schema: after its standard keywords.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    * @param array $keywords
    *   What write() answered, or `x-portable-ui` (PortableUi::set()).
    *
    * @return \PortableSchema\Builder\Schema
-   *   The node, its dialect's keywords in their order right before its
+   *   The schema, its dialect's keywords in their order right before its
    *   `x-surface`, or last where it has none; one it carries and
    *   $keywords does not name stays.
    *
    * @throws \InvalidArgumentException
    *   For a boolean schema, which holds no keywords.
    */
-  public static function before(Schema $node, array $keywords): Schema {
+  public static function before(Schema $schema, array $keywords): Schema {
     if ($keywords === []) {
-      return $node;
+      return $schema;
     }
-    if ($node->isBoolean()) {
+    if ($schema->isBoolean()) {
       throw new \InvalidArgumentException('PortableKeywords::before() places keywords on an object schema, not a boolean one.');
     }
-    $all = $node->all();
+    $all = $schema->all();
     $extension = array_key_exists(ContractEmitter::EXTENSION, $all) ? [ContractEmitter::EXTENSION => $all[ContractEmitter::EXTENSION]] : [];
     $said = [];
     foreach (self::KEYWORDS as $keyword) {
@@ -156,24 +156,24 @@ final class PortableKeywords {
       }
     }
     unset($all[ContractEmitter::EXTENSION], $all[self::CHECK], $all[self::MESSAGES], $all[self::UI], $all[self::LINKS]);
-    // from() keeps a keyword outside the vocabulary the node carries.
+    // from() keeps a keyword outside the vocabulary the schema carries.
     return Schema::from($all + $said + $extension);
   }
 
   /**
-   * Reads the constraints a node names only the server checks.
+   * Reads the constraints a schema names only the server checks.
    *
-   * @param array $node
-   *   The node.
+   * @param array $schema
+   *   The schema.
    *
    * @return list<array{id: string, constraint: string, options: array, message: string|\Stringable|null}>
    *   Each check: its name as written, the constraint's plugin id (the
    *   name without `drupal:`), its options, and its message. A message an
    *   author made with t() is that object, as message() answers it.
    */
-  public static function checks(array $node): array {
-    $checks = is_array($node[self::CHECK] ?? NULL) ? $node[self::CHECK] : [];
-    $messages = is_array($node[self::MESSAGES] ?? NULL) ? $node[self::MESSAGES] : [];
+  public static function checks(array $schema): array {
+    $checks = is_array($schema[self::CHECK] ?? NULL) ? $schema[self::CHECK] : [];
+    $messages = is_array($schema[self::MESSAGES] ?? NULL) ? $schema[self::MESSAGES] : [];
     $read = [];
     foreach ($checks as $id => $options) {
       $id = (string) $id;
@@ -188,10 +188,10 @@ final class PortableKeywords {
   }
 
   /**
-   * Reads the message a node gives for one of its own keywords.
+   * Reads the message a schema gives for one of its own keywords.
    *
-   * @param array $node
-   *   The node.
+   * @param array $schema
+   *   The schema.
    * @param string $code
    *   The keyword's error code: `pattern`, `not`.
    *
@@ -199,8 +199,8 @@ final class PortableKeywords {
    *   The message, or NULL. A message an author made with t() is that
    *   object, translated where it is said.
    */
-  public static function message(array $node, string $code): string|\Stringable|null {
-    $message = $node[self::MESSAGES][$code] ?? NULL;
+  public static function message(array $schema, string $code): string|\Stringable|null {
+    $message = $schema[self::MESSAGES][$code] ?? NULL;
     return is_string($message) || $message instanceof \Stringable ? $message : NULL;
   }
 

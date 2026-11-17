@@ -6,7 +6,7 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Widget\SurfaceWidgetBase;
@@ -27,21 +27,21 @@ final class BooleanWidget extends SurfaceWidgetBase implements SchemaWidgetInter
    * {@inheritdoc}
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    return NodeFacts::dataType($schema) === 'boolean';
+    return SchemaFacts::dataType($schema) === 'boolean';
   }
 
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return static::types($node) === ['boolean'];
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    return static::types($schema) === ['boolean'];
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    $element = $this->baseElement($node, $context) + [
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    $element = $this->baseElement($schema, $context) + [
       '#type' => 'checkbox',
       '#default_value' => (bool) $value,
     ];

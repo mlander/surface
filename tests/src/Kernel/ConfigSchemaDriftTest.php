@@ -96,8 +96,8 @@ class ConfigSchemaDriftTest extends SurfaceKernelTestBase {
    *
    * A collection with no default starts as an empty list in a new object's
    * install file, and an attached key an alter reworded is labeled with
-   * its owner's label: both read from the key's node, composed of the
-   * child's entries' nodes.
+   * its owner's label: both read from the key's schema, composed of the
+   * child's entries' schemas.
    */
   public function testShellsInTheSchemaAndTheInstallFile(): void {
     $person = (new SurfaceBuilder())->setDefinition('name', DataDefinition::create('string')->setLabel('Name'))->seal();

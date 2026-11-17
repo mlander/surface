@@ -9,12 +9,12 @@ use PortableSchema\Formats;
 use PortableSchema\Json;
 
 /**
- * The nodes of a document that apply at each place in its data.
+ * The schemas of a document that apply at each place in its data.
  *
- * A walk of the document beside the data: a property's node at the
+ * A walk of the document beside the data: a property's schema at the
  * property's value, an item's at each item, a local `$ref` read where it
- * stands, each `allOf` member at the same place. Those nodes apply
- * whatever else holds, and are certain. A node under `anyOf`, `oneOf`,
+ * stands, each `allOf` member at the same place. Those schemas apply
+ * whatever else holds, and are certain. A schema under `anyOf`, `oneOf`,
  * `then` or `else` applies only if its branch is the one that holds, and
  * is uncertain. Nothing is evaluated but what refusedByKeyword() and
  * refusedByComposite() ask.
@@ -24,7 +24,7 @@ use PortableSchema\Json;
  *
  * @internal
  */
-final class Nodes {
+final class ApplicableSchemas {
 
   /**
    * How deep a walk goes, references followed at one place included.
@@ -39,7 +39,7 @@ final class Nodes {
   public const BEFORE_CHECKS = ['type', 'pattern', 'maxLength', 'minLength'];
 
   /**
-   * The nodes at each place, by its JSON Pointer.
+   * The schemas at each place, by its JSON Pointer.
    *
    * Each with whether it is certain and the branch it stands in: the
    * branches around it from the top, each numbered as visit() reaches
@@ -55,7 +55,7 @@ final class Nodes {
   private int $branches = 0;
 
   /**
-   * Constructs a Nodes.
+   * Constructs a Schemas.
    *
    * @param array $root
    *   The document, decoded as arrays.
@@ -67,7 +67,7 @@ final class Nodes {
   }
 
   /**
-   * Answers whether a certain node at a place is read only.
+   * Answers whether a certain schema at a place is read only.
    *
    * A locked key: its value is not the request's, so nothing the request
    * sent can be wrong there.
@@ -76,11 +76,11 @@ final class Nodes {
    *   The place.
    *
    * @return bool
-   *   TRUE when a certain node there writes `readOnly: true`.
+   *   TRUE when a certain schema there writes `readOnly: true`.
    */
   public function readOnly(string $location): bool {
-    foreach ($this->at[$location] ?? [] as [$node, $certain]) {
-      if ($certain && ($node['readOnly'] ?? FALSE) === TRUE) {
+    foreach ($this->at[$location] ?? [] as [$schema, $certain]) {
+      if ($certain && ($schema['readOnly'] ?? FALSE) === TRUE) {
         return TRUE;
       }
     }
@@ -118,11 +118,11 @@ final class Nodes {
    */
   public function refusedByKeyword(string $location, mixed $value, bool $formats = TRUE, ?string $check = NULL): bool {
     $naming = [];
-    foreach ($this->at[$location] ?? [] as [$node, $certain, $branch]) {
-      if ($certain && self::refuses($node, $value, $formats)) {
+    foreach ($this->at[$location] ?? [] as [$schema, $certain, $branch]) {
+      if ($certain && self::refuses($schema, $value, $formats)) {
         return TRUE;
       }
-      if ($check !== NULL && is_array($node['portable-check'] ?? NULL) && array_key_exists($check, $node['portable-check'])) {
+      if ($check !== NULL && is_array($schema['portable-check'] ?? NULL) && array_key_exists($check, $schema['portable-check'])) {
         $naming[] = $branch;
       }
     }
@@ -157,8 +157,8 @@ final class Nodes {
    *   TRUE when one refuses it.
    */
   private function refusedWithin(string $location, mixed $value, bool $formats, string $branch): bool {
-    foreach ($this->at[$location] ?? [] as [$node, , $around]) {
-      if (($around === '' || $around === $branch || str_starts_with($branch, $around . '/')) && self::refuses($node, $value, $formats)) {
+    foreach ($this->at[$location] ?? [] as [$schema, , $around]) {
+      if (($around === '' || $around === $branch || str_starts_with($branch, $around . '/')) && self::refuses($schema, $value, $formats)) {
         return TRUE;
       }
     }
@@ -169,30 +169,30 @@ final class Nodes {
    * Answers whether the `allOf` or `anyOf` a composite check wrote refuses.
    *
    * A composite (Sequentially, AtLeastOneOf) is written as its parts
-   * under one keyword and named under `portable-check` at the same node:
+   * under one keyword and named under `portable-check` at the same schema:
    * where those parts refuse the value, by the keywords refusedByKeyword()
    * reads, the check is not asked. An `allOf` refuses where one part
    * refuses; an `anyOf` where every part does. A refusal by any other
-   * node at the place does not count.
+   * schema at the place does not count.
    *
    * @param string $location
    *   The place.
    * @param mixed $value
    *   Its value.
    * @param string $check
-   *   The check's name, as the node names it.
+   *   The check's name, as the schema names it.
    * @param string $keyword
    *   `allOf` or `anyOf`: the keyword the composite is written as.
    *
    * @return bool
-   *   TRUE when a certain node naming the check refuses the value by it.
+   *   TRUE when a certain schema naming the check refuses the value by it.
    */
   public function refusedByComposite(string $location, mixed $value, string $check, string $keyword): bool {
-    foreach ($this->at[$location] ?? [] as [$node, $certain]) {
-      if (!$certain || !is_array($node['portable-check'] ?? NULL) || !array_key_exists($check, $node['portable-check']) || !is_array($node[$keyword] ?? NULL)) {
+    foreach ($this->at[$location] ?? [] as [$schema, $certain]) {
+      if (!$certain || !is_array($schema['portable-check'] ?? NULL) || !array_key_exists($check, $schema['portable-check']) || !is_array($schema[$keyword] ?? NULL)) {
         continue;
       }
-      if (self::refusesBy($keyword, $node[$keyword], $value)) {
+      if (self::refusesBy($keyword, $schema[$keyword], $value)) {
         return TRUE;
       }
     }
@@ -200,10 +200,10 @@ final class Nodes {
   }
 
   /**
-   * Answers whether one node refuses a value by the keywords read here.
+   * Answers whether one schema refuses a value by the keywords read here.
    *
-   * @param mixed $node
-   *   The node.
+   * @param mixed $schema
+   *   The schema.
    * @param mixed $value
    *   The value.
    * @param bool $formats
@@ -212,24 +212,24 @@ final class Nodes {
    * @return bool
    *   TRUE when one refuses it.
    */
-  private static function refuses(mixed $node, mixed $value, bool $formats = TRUE): bool {
-    if (!is_array($node)) {
-      return $node === FALSE;
+  private static function refuses(mixed $schema, mixed $value, bool $formats = TRUE): bool {
+    if (!is_array($schema)) {
+      return $schema === FALSE;
     }
-    if (isset($node['type']) && !self::typed($value, (array) $node['type'])) {
+    if (isset($schema['type']) && !self::typed($value, (array) $schema['type'])) {
       return TRUE;
     }
     if (!is_string($value)) {
       return FALSE;
     }
     $length = mb_strlen($value);
-    if ((is_int($node['maxLength'] ?? NULL) && $length > $node['maxLength']) || (is_int($node['minLength'] ?? NULL) && $length < $node['minLength'])) {
+    if ((is_int($schema['maxLength'] ?? NULL) && $length > $schema['maxLength']) || (is_int($schema['minLength'] ?? NULL) && $length < $schema['minLength'])) {
       return TRUE;
     }
-    if (is_string($node['pattern'] ?? NULL) && @preg_match('~' . str_replace('~', '\~', $node['pattern']) . '~uD', $value) === 0) {
+    if (is_string($schema['pattern'] ?? NULL) && @preg_match('~' . str_replace('~', '\~', $schema['pattern']) . '~uD', $value) === 0) {
       return TRUE;
     }
-    return $formats && is_string($node['format'] ?? NULL) && in_array($node['format'], Formats::NAMES, TRUE) && !Formats::check($node['format'], $value);
+    return $formats && is_string($schema['format'] ?? NULL) && in_array($schema['format'], Formats::NAMES, TRUE) && !Formats::check($schema['format'], $value);
   }
 
   /**
@@ -265,10 +265,10 @@ final class Nodes {
   }
 
   /**
-   * Walks one node at one place.
+   * Walks one schema at one place.
    *
-   * @param mixed $node
-   *   The node.
+   * @param mixed $schema
+   *   The schema.
    * @param mixed $data
    *   The value at the place.
    * @param string $location
@@ -279,59 +279,59 @@ final class Nodes {
    * @param int $depth
    *   How deep the walk is.
    */
-  private function visit(mixed $node, mixed $data, string $location, string $branch, int $depth): void {
-    if (!is_array($node) || $depth > self::DEPTH) {
+  private function visit(mixed $schema, mixed $data, string $location, string $branch, int $depth): void {
+    if (!is_array($schema) || $depth > self::DEPTH) {
       return;
     }
-    $this->at[$location][] = [$node, $branch === '', $branch];
-    $ref = $node['$ref'] ?? NULL;
+    $this->at[$location][] = [$schema, $branch === '', $branch];
+    $ref = $schema['$ref'] ?? NULL;
     if (is_string($ref) && str_starts_with($ref, '#')) {
       $this->visit($this->resolve(substr($ref, 1)), $data, $location, $branch, $depth + 1);
     }
-    foreach (is_array($node['allOf'] ?? NULL) ? $node['allOf'] : [] as $member) {
+    foreach (is_array($schema['allOf'] ?? NULL) ? $schema['allOf'] : [] as $member) {
       $this->visit($member, $data, $location, $branch, $depth + 1);
     }
     foreach (['anyOf', 'oneOf'] as $keyword) {
-      foreach (is_array($node[$keyword] ?? NULL) ? $node[$keyword] : [] as $member) {
+      foreach (is_array($schema[$keyword] ?? NULL) ? $schema[$keyword] : [] as $member) {
         $this->visit($member, $data, $location, $branch . '/' . ++$this->branches, $depth + 1);
       }
     }
     foreach (['then', 'else'] as $keyword) {
-      $this->visit($node[$keyword] ?? NULL, $data, $location, $branch . '/' . ++$this->branches, $depth + 1);
+      $this->visit($schema[$keyword] ?? NULL, $data, $location, $branch . '/' . ++$this->branches, $depth + 1);
     }
-    if (is_array($node['properties'] ?? NULL) && ($data instanceof \stdClass || (is_array($data) && !array_is_list($data)))) {
+    if (is_array($schema['properties'] ?? NULL) && ($data instanceof \stdClass || (is_array($data) && !array_is_list($data)))) {
       $held = (array) $data;
-      foreach ($node['properties'] as $name => $property) {
+      foreach ($schema['properties'] as $name => $property) {
         if (array_key_exists((string) $name, $held)) {
           $this->visit($property, $held[(string) $name], Location::append($location, (string) $name), $branch, $depth + 1);
         }
       }
     }
-    if (is_array($node['items'] ?? NULL) && is_array($data) && array_is_list($data)) {
+    if (is_array($schema['items'] ?? NULL) && is_array($data) && array_is_list($data)) {
       foreach ($data as $delta => $item) {
-        $this->visit($node['items'], $item, Location::append($location, $delta), $branch, $depth + 1);
+        $this->visit($schema['items'], $item, Location::append($location, $delta), $branch, $depth + 1);
       }
     }
   }
 
   /**
-   * Reads a node of the document at a JSON Pointer.
+   * Reads a schema of the document at a JSON Pointer.
    *
    * @param string $pointer
    *   The pointer, `/$defs/event.person`.
    *
    * @return mixed
-   *   The node, or NULL where there is none.
+   *   The schema, or NULL where there is none.
    */
   private function resolve(string $pointer): mixed {
-    $node = $this->root;
+    $schema = $this->root;
     foreach (Location::segments($pointer) as $segment) {
-      if (!is_array($node) || !array_key_exists($segment, $node)) {
+      if (!is_array($schema) || !array_key_exists($segment, $schema)) {
         return NULL;
       }
-      $node = $node[$segment];
+      $schema = $schema[$segment];
     }
-    return $node;
+    return $schema;
   }
 
   /**

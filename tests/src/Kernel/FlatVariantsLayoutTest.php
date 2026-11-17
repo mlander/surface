@@ -728,14 +728,14 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the layout reads a node-first resource from its nodes.
+   * Tests the layout reads a schema-first resource from its schemas.
    *
-   * The walk reads one fact of a key, `each`, from its node, so a
-   * node-first build is laid out with no definition derived that the build
+   * The walk reads one fact of a key, `each`, from its schema, so a
+   * schema-first build is laid out with no definition derived that the build
    * did not derive: the kit stored flat, the campsite's pitches, and the
    * pantry's attached keys, which the walk steps into.
    */
-  public function testNodeFirstResourceIsLaidOutWithNoDefinitionDerived(): void {
+  public function testSchemaFirstResourceIsLaidOutWithNoDefinitionDerived(): void {
     $resources = $this->container->get('surface.resources');
     $built = [
       'kit' => $this->kit(),
@@ -746,7 +746,7 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
     $unread = [];
     foreach ($built as $id => $surface) {
       foreach ($surface->getDefinitions()->entries() as $name => $entry) {
-        $this->assertTrue($entry->isNodeFirst());
+        $this->assertTrue($entry->isSchemaFirst());
         if ($derived->getValue($entry) === NULL) {
           $unread[$id . '.' . $name] = $entry;
         }

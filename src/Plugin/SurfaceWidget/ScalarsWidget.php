@@ -7,7 +7,7 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Contract\SchemaReader;
@@ -59,7 +59,7 @@ final class ScalarsWidget extends SurfaceWidgetBase implements SchemaWidgetInter
    *   types and nothing else but null; NULL for any other key.
    */
   public static function stated(Schema $schema): ?array {
-    if (NodeFacts::dataType($schema) !== 'any' || NodeFacts::variantsBy($schema) !== NULL) {
+    if (SchemaFacts::dataType($schema) !== 'any' || SchemaFacts::variantsBy($schema) !== NULL) {
       return NULL;
     }
     $stated = array_diff(SchemaReader::statedTypes($schema), ['null']);
@@ -79,25 +79,25 @@ final class ScalarsWidget extends SurfaceWidgetBase implements SchemaWidgetInter
   /**
    * {@inheritdoc}
    *
-   * A node whose `type`, or the schema its JsonSchema check holds it to,
+   * A schema whose `type`, or the schema its JsonSchema check holds it to,
    * names two or more scalar types and nothing else but null.
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return static::scalars($node) !== NULL;
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    return static::scalars($schema) !== NULL;
   }
 
   /**
-   * Reads the scalar types a node holds, when it is a union of them.
+   * Reads the scalar types a schema holds, when it is a union of them.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return string[]|null
-   *   The types other than null, in ORDER; NULL for a node of fewer than
+   *   The types other than null, in ORDER; NULL for a schema of fewer than
    *   two types or of one that is no scalar.
    */
-  public static function scalars(Schema $node): ?array {
-    $stated = array_values(array_diff(static::statedTypes($node), ['null']));
+  public static function scalars(Schema $schema): ?array {
+    $stated = array_values(array_diff(static::statedTypes($schema), ['null']));
     if (count($stated) < 2 || array_diff($stated, self::ORDER) !== []) {
       return NULL;
     }
@@ -107,8 +107,8 @@ final class ScalarsWidget extends SurfaceWidgetBase implements SchemaWidgetInter
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    $element = $this->baseElement($node, $context) + [
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    $element = $this->baseElement($schema, $context) + [
       '#type' => 'textfield',
       '#default_value' => match (TRUE) {
         $value === NULL => '',
@@ -119,7 +119,7 @@ final class ScalarsWidget extends SurfaceWidgetBase implements SchemaWidgetInter
         default => (string) json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
       },
     ];
-    $said = (string) $this->said(static::scalars($node) ?? []);
+    $said = (string) $this->said(static::scalars($schema) ?? []);
     $element['#description'] = isset($element['#description']) ? $element['#description'] . ' ' . $said : $said;
     return $element;
   }
@@ -132,7 +132,7 @@ final class ScalarsWidget extends SurfaceWidgetBase implements SchemaWidgetInter
    * the key's constraint to refuse. A value that is not text (a payload's)
    * passes.
    */
-  public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed {
+  public function extractValue(array $element, FormStateInterface $form_state, Schema $schema): mixed {
     $raw = $this->rawValue($element, $form_state);
     if (!is_string($raw)) {
       return $raw;
@@ -141,7 +141,7 @@ final class ScalarsWidget extends SurfaceWidgetBase implements SchemaWidgetInter
     if ($typed === '') {
       return NULL;
     }
-    foreach (static::scalars($node) ?? [] as $type) {
+    foreach (static::scalars($schema) ?? [] as $type) {
       $read = match ($type) {
         'integer' => filter_var($typed, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE),
         'number' => is_numeric($typed) ? $typed + 0 : NULL,

@@ -35,7 +35,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * `minItems`, and the list is drawn with at least its minimum.
  *
  * Rows rather than a text area of one item per line: each item is an
- * element of its own, so what the item's node says (a `maxLength`, a
+ * element of its own, so what the item's schema says (a `maxLength`, a
  * `pattern`) reaches it as it reaches any key, a refusal of one
  * item is shown on its row (`keywords.2`), an item may hold a comma or a
  * line break, and the form draws what the contract says, a list, as the
@@ -104,7 +104,7 @@ final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPlug
     if (!DefinitionSchema::isList($schema)) {
       return FALSE;
     }
-    $item = DefinitionSchema::itemNode($schema);
+    $item = DefinitionSchema::itemOf($schema);
     if ($item === NULL || DefinitionSchema::isComplex($item) || DefinitionSchema::isList($item) || $choice->optionSet($item) !== NULL) {
       return FALSE;
     }
@@ -123,9 +123,9 @@ final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPlug
    * A list whose items are one value of a single type, offering no list:
    * a string, a number or a boolean.
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    $items = $node->get('items');
-    return static::type($node) === 'array'
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    $items = $schema->get('items');
+    return static::type($schema) === 'array'
       && $items instanceof Schema
       && !$items->isBoolean()
       && !static::offers($items)
@@ -136,27 +136,27 @@ final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPlug
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    $items = $node->get('items');
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    $items = $schema->get('items');
     $items = $items instanceof Schema ? $items : Schema::from([]);
     $rows = static::rows($value);
-    $min = is_int($node->get('minItems')) ? $node->get('minItems') : 0;
-    $max = is_int($node->get('maxItems')) ? $node->get('maxItems') : NULL;
+    $min = is_int($schema->get('minItems')) ? $schema->get('minItems') : 0;
+    $max = is_int($schema->get('maxItems')) ? $schema->get('maxItems') : NULL;
     while (count($rows) < $min) {
       $rows[] = '';
     }
-    $label = static::text($node->get('title')) ?? '';
+    $label = static::text($schema->get('title')) ?? '';
     $element = [
       '#type' => 'fieldset',
       '#title' => $label,
       SurfaceFormBuilderInterface::ROWS_KEY => TRUE,
     ];
-    $description = static::text($node->get('description'));
+    $description = static::text($schema->get('description'));
     if ($description !== NULL) {
       $element['#description'] = $description;
     }
     foreach ($rows as $delta => $held) {
-      $row = $context->at($delta)->node($items, $held);
+      $row = $context->at($delta)->draw($items, $held);
       $row['#title'] = $this->t('@label @number', ['@label' => $label, '@number' => $delta + 1]);
       $row['#title_display'] = 'invisible';
       $row['#prefix'] = '<div class="surface-row container-inline">' . ($row['#prefix'] ?? '');
@@ -183,11 +183,11 @@ final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPlug
    * each item kept was drawn at is remembered for the request, so a
    * refusal of an item is shown on its row.
    */
-  public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed {
+  public function extractValue(array $element, FormStateInterface $form_state, Schema $schema): mixed {
     if (empty($element[SurfaceFormBuilderInterface::ROWS_KEY])) {
-      return parent::extractValue($element, $form_state, $node);
+      return parent::extractValue($element, $form_state, $schema);
     }
-    $items = $node->get('items');
+    $items = $schema->get('items');
     $items = $items instanceof Schema ? $items : Schema::from([]);
     $values = [];
     $deltas = [];

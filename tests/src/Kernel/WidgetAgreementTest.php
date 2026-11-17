@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\surface\Contract\SchemaResolver;
-use Drupal\surface\Form\Document\DocumentNodes;
+use Drupal\surface\Form\Document\DocumentSchemas;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\SurfaceWidgetManager;
 use Drupal\surface\Widget\WidgetContext;
@@ -21,8 +21,8 @@ use PortableSchema\Builder\Schema;
  *
  * The producer and the consumer of `x-portable-ui.widget`: the emitter
  * chooses a widget from each definition (WidgetChoice) and writes its
- * word; the drawer draws the node with the widget that word names
- * (SurfaceWidgetManager::widgetFor()), which must say it draws the node.
+ * word; the drawer draws the schema with the widget that word names
+ * (SurfaceWidgetManager::widgetFor()), which must say it draws the schema.
  * Held for every key, at every depth, of every operation the examples,
  * the first module and the blocks declare, in the document each serves
  * for its defaults: a collection is named by a word the table holds and
@@ -122,25 +122,25 @@ class WidgetAgreementTest extends SurfaceKernelTestBase {
         }
         $surface = $resources->build($name, $resources->operation($name, $operation->id));
         $root = SchemaResolver::inline($emitter->emit($surface, $surface->getDefaultValues(), $definition->id, $operation->id, widgets: TRUE)->schema());
-        foreach (static::nodes($root, '') as $pointer => $node) {
-          $word = SurfaceWidgetBase::ui($node)['widget'] ?? NULL;
-          if (!empty(SurfaceWidgetBase::extension($node)['collection'])) {
+        foreach (static::schemas($root, '') as $pointer => $schema) {
+          $word = SurfaceWidgetBase::ui($schema)['widget'] ?? NULL;
+          if (!empty(SurfaceWidgetBase::extension($schema)['collection'])) {
             $counted['collection']++;
             if (is_string($word) && !isset($words[$word])) {
               $disagreed[] = sprintf('%s %s %s: a collection named "%s", which no widget answers to', $definition->id, $operation->id, $pointer, $word);
             }
             continue;
           }
-          if (DocumentNodes::isVariants($node)) {
+          if (DocumentSchemas::isVariants($schema)) {
             // Drawn by the drawer: the variant its frame chooses.
             $counted['variants']++;
             continue;
           }
           if (!is_string($word)) {
             $counted['wordless']++;
-            $stock = SurfaceWidgetManager::stockWord($node);
-            $drawn = $widgets->widgetFor($node, new WidgetContext($pointer))->getPluginId();
-            if ($stock !== NULL && $widgets->widget($words[$stock])->isApplicable($node, new WidgetContext($pointer)) && $words[$stock] !== $drawn) {
+            $stock = SurfaceWidgetManager::stockWord($schema);
+            $drawn = $widgets->widgetFor($schema, new WidgetContext($pointer))->getPluginId();
+            if ($stock !== NULL && $widgets->widget($words[$stock])->isApplicable($schema, new WidgetContext($pointer)) && $words[$stock] !== $drawn) {
               $disagreed[] = sprintf('%s %s %s: no word, its shape names "%s" (%s), the drawer drew %s', $definition->id, $operation->id, $pointer, $stock, $words[$stock], $drawn);
             }
             continue;
@@ -149,7 +149,7 @@ class WidgetAgreementTest extends SurfaceKernelTestBase {
             continue;
           }
           $checked++;
-          $drawn = $widgets->widgetFor($node, new WidgetContext($pointer))->getPluginId();
+          $drawn = $widgets->widgetFor($schema, new WidgetContext($pointer))->getPluginId();
           if (($words[$word] ?? NULL) !== $drawn) {
             $disagreed[] = sprintf('%s %s %s: the emitter wrote "%s" (%s), the drawer drew %s', $definition->id, $operation->id, $pointer, $word, $words[$word] ?? 'no widget', $drawn);
           }
@@ -164,12 +164,12 @@ class WidgetAgreementTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a node with no word is drawn in the order of React's stock rule.
+   * Tests a schema with no word is drawn in the order of React's stock rule.
    *
    * A list of choices a multiple select, any other list rows, choices a
    * select (never radios, which weigh less), an object a fieldset, a
    * boolean a checkbox, an integer or a number a number input, an address
-   * an email input, any other string a text input; a node stating no one
+   * an email input, any other string a text input; a schema stating no one
    * type is drawn by the module's own widgets in weight order.
    */
   public function testTheStockOrderIsReacts(): void {
@@ -186,10 +186,10 @@ class WidgetAgreementTest extends SurfaceKernelTestBase {
       'an address' => [['type' => 'string', 'format' => 'email'], 'email', 'string'],
       'a string' => [['type' => 'string'], 'text', 'string'],
     ];
-    foreach ($shapes as $shape => [$node, $word, $plugin]) {
-      $node = Schema::from($node);
-      $this->assertSame($word, SurfaceWidgetManager::stockWord($node), $shape);
-      $this->assertSame($plugin, $widgets->widgetFor($node, new WidgetContext('/key'))->getPluginId(), $shape);
+    foreach ($shapes as $shape => [$schema, $word, $plugin]) {
+      $schema = Schema::from($schema);
+      $this->assertSame($word, SurfaceWidgetManager::stockWord($schema), $shape);
+      $this->assertSame($plugin, $widgets->widgetFor($schema, new WidgetContext('/key'))->getPluginId(), $shape);
     }
     $any = Schema::from(['portable-check' => ['drupal:JsonSchema' => ['schema' => ['type' => ['string', 'integer']]]]]);
     $this->assertNull(SurfaceWidgetManager::stockWord($any), 'No one type: no stock word.');
@@ -232,36 +232,36 @@ class WidgetAgreementTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Lists every key's node inside a node, with its pointer.
+   * Lists every key's schema inside a schema, with its pointer.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node, inline.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema, inline.
    * @param string $pointer
    *   Its pointer.
    *
    * @return iterable<string, \PortableSchema\Builder\Schema>
-   *   The nodes, by pointer: properties, items and every variant.
+   *   The schemas, by pointer: properties, items and every variant.
    */
-  protected static function nodes(Schema $node, string $pointer): iterable {
-    if ($node->isBoolean()) {
+  protected static function schemas(Schema $schema, string $pointer): iterable {
+    if ($schema->isBoolean()) {
       return;
     }
-    foreach ((array) ($node->get('properties') ?? []) as $name => $property) {
+    foreach ((array) ($schema->get('properties') ?? []) as $name => $property) {
       if ($property instanceof Schema && !$property->isBoolean()) {
         $at = $pointer . '/' . WidgetContext::escape((string) $name);
         yield $at => $property;
-        yield from static::nodes($property, $at);
+        yield from static::schemas($property, $at);
       }
     }
-    $items = $node->get('items');
+    $items = $schema->get('items');
     if ($items instanceof Schema && !$items->isBoolean()) {
       yield $pointer . '/0' => $items;
-      yield from static::nodes($items, $pointer . '/0');
+      yield from static::schemas($items, $pointer . '/0');
     }
-    foreach ((array) ($node->get('allOf') ?? []) as $index => $condition) {
+    foreach ((array) ($schema->get('allOf') ?? []) as $index => $condition) {
       $then = $condition instanceof Schema && !$condition->isBoolean() ? $condition->get('then') : NULL;
       if ($then instanceof Schema) {
-        yield from static::nodes($then, $pointer . '/allOf/' . $index);
+        yield from static::schemas($then, $pointer . '/allOf/' . $index);
       }
     }
   }

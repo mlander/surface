@@ -91,7 +91,7 @@ final class ReferenceOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, Schema $node): OptionSet {
+  public function resolve(Constraint $constraint, Schema $schema): OptionSet {
     assert($constraint instanceof ValidReferenceConstraint);
     return new OptionSet(
       $this->references->candidates($constraint->entityTypeId, $constraint->bundles, handler: $constraint->handler, settings: $constraint->handlerSettings),

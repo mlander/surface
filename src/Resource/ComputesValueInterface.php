@@ -45,11 +45,11 @@ interface ComputesValueInterface {
    *   The value of each key `from:` names, by key, in the order it names
    *   them: as accepted, so each in its declared type or NULL.
    * @param \PortableSchema\Builder\Schema|null $key
-   *   The computed key's own node, for a class that fits its value to what
+   *   The computed key's own schema, for a class that fits its value to what
    *   the key allows (MachineName cuts to its `maxLength`); NULL when it is
    *   called on its own. What it promises is the standard keywords, read
    *   through get(): its title, its type, its bounds. What Surface keeps
-   *   on a node beyond them is not promised and may change.
+   *   on a schema beyond them is not promised and may change.
    *
    * @return mixed
    *   The value, in the key's type, or NULL for none.

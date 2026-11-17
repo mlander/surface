@@ -32,7 +32,7 @@ final class LabeledChoiceOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, Schema $node): OptionSet {
+  public function resolve(Constraint $constraint, Schema $schema): OptionSet {
     assert($constraint instanceof LabeledChoiceConstraint);
     $options = [];
     foreach ($constraint->choices ?? [] as $choice) {

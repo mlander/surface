@@ -150,7 +150,6 @@ refused.
 | `MachineName` | `use Drupal\surface\Compute\MachineName;` |
 | `Map` | `use Drupal\surface\Resource\Attribute\Map;` |
 | `MixIn` | `use Drupal\surface\Resource\Attribute\MixIn;` |
-| `NodeFacts` | `use Drupal\surface\Contract\NodeFacts;` |
 | `NotEmitted` | `use Drupal\surface\Pipeline\NotEmitted;` |
 | `Operation` | `use Drupal\surface\Resource\Attribute\Operation;` |
 | `OperationAccessInterface` | `use Drupal\surface\Resource\OperationAccessInterface;` |
@@ -167,6 +166,7 @@ refused.
 | `ResourceInterface` | `use Drupal\surface\Resource\ResourceInterface;` |
 | `ResourceStorageInterface` | `use Drupal\surface\Resource\ResourceStorageInterface;` |
 | `Rule` | `use Drupal\surface\Resource\Attribute\Rule;` |
+| `SchemaFacts` | `use Drupal\surface\Contract\SchemaFacts;` |
 | `SchemaReader` | `use Drupal\surface\Contract\SchemaReader;` |
 | `SchemaViolations` | `use Drupal\surface\Storage\SchemaViolations;` |
 | `SchemaWidgetInterface` | `use Drupal\surface\Contract\SchemaWidgetInterface;` |

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface\Refinement;
 
 use Drupal\surface\Contract\ConstraintKeywords;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\PortableKeywords;
 use PortableSchema\Builder\Schema;
 use Drupal\Core\TypedData\DataDefinition;
@@ -465,7 +465,7 @@ final class Rule {
     if ($this->rulesOut) {
       return DoesNotApply::here();
     }
-    $merged = NodeFacts::constraints($key);
+    $merged = SchemaFacts::constraints($key);
     $answer = Schema::any();
     $checks = [];
     foreach ($this->constraints as $name => $options) {
@@ -504,7 +504,7 @@ final class Rule {
       // The rule says why only where it did something: a bound the key
       // already held at or inside the rule's leaves the key's own words.
       $tightened = $this->constraints === [] || $this->requires
-        || serialize(NodeFacts::constraints(Answer::apply($key, $answer, $this->key, 'the rule'))) !== serialize($merged);
+        || serialize(SchemaFacts::constraints(Answer::apply($key, $answer, $this->key, 'the rule'))) !== serialize($merged);
       if ($tightened) {
         $answer = $answer->with('description', $this->description);
       }

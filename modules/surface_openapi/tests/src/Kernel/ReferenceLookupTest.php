@@ -26,7 +26,7 @@ use Symfony\Component\HttpFoundation\Request;
  * refers to an entity: a plain key by its reference constraint or its
  * targets, and the structure an id of any entity type is in.
  *
- * @see docs/decisions.md#the-remaining-readers-read-nodes
+ * @see docs/decisions.md#the-remaining-readers-read-schemas
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]

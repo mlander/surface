@@ -7,7 +7,7 @@ namespace Drupal\surface\Refinement;
 use Drupal\surface\Contract\ConstraintKeywords;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\LeafTypes;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\PortableKeywords;
 use PortableSchema\Builder\Schema;
 
@@ -189,7 +189,7 @@ final class Answer {
     if (!$answer instanceof Schema || $answer->isBoolean()) {
       return NULL;
     }
-    $merged = NodeFacts::constraints($key);
+    $merged = SchemaFacts::constraints($key);
     $read = array_intersect_key($answer->all(), array_flip([...self::BOUNDS, PortableKeywords::MESSAGES]));
     $said = static::boundsRead($key, $read, $name, $who);
     $checks = $answer->get(PortableKeywords::CHECK);
@@ -290,8 +290,8 @@ final class Answer {
    *   When the items were narrowed.
    */
   public static function assertItemsUntouched(string $name, Schema $key, Schema $refined): void {
-    $before = DefinitionSchema::isList($key) ? DefinitionSchema::itemNode($key) : NULL;
-    $after = DefinitionSchema::isList($refined) ? DefinitionSchema::itemNode($refined) : NULL;
+    $before = DefinitionSchema::isList($key) ? DefinitionSchema::itemOf($key) : NULL;
+    $after = DefinitionSchema::isList($refined) ? DefinitionSchema::itemOf($refined) : NULL;
     $narrowed = $before === NULL || $after === NULL ? 'the list is no longer a list' : static::narrowed($before, $after);
     if ($narrowed !== NULL) {
       throw new \LogicException(sprintf(self::ITEMS, $name, $narrowed));
@@ -361,7 +361,7 @@ final class Answer {
    *   When the answer names what no answer says.
    */
   protected static function applied(Schema $key, Schema|DoesNotApply $answer, string $name, string $who, bool $inside): Schema {
-    if (NodeFacts::doesNotApply($key)) {
+    if (SchemaFacts::doesNotApply($key)) {
       // Nothing is narrower than a key that does not apply.
       return $key;
     }
@@ -414,7 +414,7 @@ final class Answer {
           break;
 
         case $keyword === 'type':
-          $from = NodeFacts::dataType($current);
+          $from = SchemaFacts::dataType($current);
           $to = static::dataTypeOf($value);
           if ($to === NULL) {
             throw new \LogicException(sprintf(self::UNREAD, $name, $who, '`type`'));
@@ -422,7 +422,7 @@ final class Answer {
           // A type where the key states none narrows: the variants'
           // placeholder, and an open value. The key's own type says
           // nothing more; any other is refused, as Narrowing refuses it.
-          if ($from === 'any' && (NodeFacts::variantsBy($current) !== NULL || NodeFacts::isHeldWhole($current)) && isset(LeafTypes::ROWS[$to])) {
+          if ($from === 'any' && (SchemaFacts::variantsBy($current) !== NULL || SchemaFacts::isHeldWhole($current)) && isset(LeafTypes::ROWS[$to])) {
             $retype = $to;
             break;
           }
@@ -436,7 +436,7 @@ final class Answer {
       }
     }
     $members = DefinitionSchema::model($current);
-    $merged = NodeFacts::constraints($current);
+    $merged = SchemaFacts::constraints($current);
     $declared = is_array($members['declared'] ?? NULL) ? $members['declared'] : [];
     $before = $declared;
     // The bounds the keywords state come first, then each check in the
@@ -484,7 +484,7 @@ final class Answer {
       $set = static::listed($merged, $list);
       $declared[$set->constraint] = static::optionsOf($set);
     }
-    $require = $answer->isRequired() && !NodeFacts::isRequired($current);
+    $require = $answer->isRequired() && !SchemaFacts::isRequired($current);
     foreach ($texts as $text => $value) {
       if ($current->get($text) === $value) {
         unset($texts[$text]);
@@ -513,13 +513,13 @@ final class Answer {
    */
   protected static function insideProperties(Schema $current, array $properties, string $name, string $who): Schema {
     $held = $current->get('properties');
-    if (!is_array($held) || !DefinitionSchema::nodeIsMap($current)) {
+    if (!is_array($held) || !DefinitionSchema::holdsProperties($current)) {
       throw new \LogicException(sprintf(self::UNREAD, $name, $who, '`properties` for a key that holds none'));
     }
     $changed = FALSE;
     foreach ($properties as $property => $answer) {
       $property = (string) $property;
-      $schema = DefinitionSchema::propertyNode($current, $property);
+      $schema = DefinitionSchema::propertyOf($current, $property);
       if ($schema === NULL) {
         throw new \DomainException(sprintf('the map gained the property %s', $property));
       }
@@ -553,7 +553,7 @@ final class Answer {
    *   The schema, its item refined.
    */
   protected static function insideItems(Schema $current, Schema $answer, string $name, string $who): Schema {
-    $item = DefinitionSchema::isList($current) ? DefinitionSchema::itemNode($current) : NULL;
+    $item = DefinitionSchema::isList($current) ? DefinitionSchema::itemOf($current) : NULL;
     if ($item === NULL) {
       throw new \LogicException(sprintf(self::UNREAD, $name, $who, '`items` for a key that is no list'));
     }
@@ -767,7 +767,7 @@ final class Answer {
         unset($members[$member[$text]]);
       }
     }
-    $derived = NodeFacts::derived($members);
+    $derived = SchemaFacts::derived($members);
     $merged = array_key_exists('constraints', $old) ? static::merged($old, $members) : $derived;
     if ($merged !== $derived) {
       $members['constraints'] = $merged;
@@ -783,7 +783,7 @@ final class Answer {
     $model = $current->with(DefinitionSchema::MODEL, $members);
     if ($retype !== NULL) {
       $row = LeafTypes::ROWS[$retype]['type'];
-      $held['type'] = NodeFacts::isNullable($model) ? [$row, 'null'] : $row;
+      $held['type'] = SchemaFacts::isNullable($model) ? [$row, 'null'] : $row;
     }
     $schema = Schema::any();
     foreach (['title', 'description'] as $text) {
@@ -912,7 +912,7 @@ final class Answer {
    *   The schema with the mark in its `doesNotApply` member.
    */
   protected static function marked(Schema $key): Schema {
-    if (NodeFacts::doesNotApply($key)) {
+    if (SchemaFacts::doesNotApply($key)) {
       return $key;
     }
     $members = DefinitionSchema::model($key) + ['doesNotApply' => TRUE];
@@ -935,15 +935,15 @@ final class Answer {
    *   What widened, in words, or NULL.
    */
   protected static function widening(Schema $before, Schema $after): ?string {
-    if (NodeFacts::doesNotApply($after)) {
+    if (SchemaFacts::doesNotApply($after)) {
       return NULL;
     }
-    if (NodeFacts::doesNotApply($before)) {
+    if (SchemaFacts::doesNotApply($before)) {
       return 'a key that did not apply was made to apply';
     }
-    $from = NodeFacts::dataType($before);
-    $to = NodeFacts::dataType($after);
-    if (($from === 'any' && (NodeFacts::variantsBy($before) !== NULL || NodeFacts::isHeldWhole($before))) || str_starts_with($to, $from . ':')) {
+    $from = SchemaFacts::dataType($before);
+    $to = SchemaFacts::dataType($after);
+    if (($from === 'any' && (SchemaFacts::variantsBy($before) !== NULL || SchemaFacts::isHeldWhole($before))) || str_starts_with($to, $from . ':')) {
       return static::ownWidening($before, $after);
     }
     if ($from !== $to) {
@@ -966,11 +966,11 @@ final class Answer {
    *   What widened, in words, or NULL.
    */
   protected static function ownWidening(Schema $before, Schema $after): ?string {
-    if (NodeFacts::isRequired($before) && !NodeFacts::isRequired($after)) {
+    if (SchemaFacts::isRequired($before) && !SchemaFacts::isRequired($after)) {
       return 'the required flag was turned off';
     }
-    $refined = NodeFacts::constraints($after);
-    foreach (NodeFacts::constraints($before) as $constraint => $options) {
+    $refined = SchemaFacts::constraints($after);
+    foreach (SchemaFacts::constraints($before) as $constraint => $options) {
       $constraint = (string) $constraint;
       if (!array_key_exists($constraint, $refined)) {
         return sprintf('the %s constraint was removed', $constraint);
@@ -1026,8 +1026,8 @@ final class Answer {
    *   What widened, in words, or NULL.
    */
   protected static function itemWidening(Schema $before, Schema $after): ?string {
-    $item = DefinitionSchema::isList($before) ? DefinitionSchema::itemNode($before) : NULL;
-    $refined = DefinitionSchema::isList($after) ? DefinitionSchema::itemNode($after) : NULL;
+    $item = DefinitionSchema::isList($before) ? DefinitionSchema::itemOf($before) : NULL;
+    $refined = DefinitionSchema::isList($after) ? DefinitionSchema::itemOf($after) : NULL;
     if ($item === NULL || $refined === NULL) {
       return NULL;
     }

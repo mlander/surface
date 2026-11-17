@@ -61,7 +61,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * access on edit, view access on a read, delete access on a delete, which
  * removes the entity with every translation and revision it has. Both
  * resources declare `read` rather than take the one the build adds,
- * which is asked as `update` is: an account that may view a node and not
+ * which is asked as `update` is: an account that may view a schema and not
  * edit it reads it here.
  *
  * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.

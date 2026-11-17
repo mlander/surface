@@ -6,7 +6,7 @@ namespace Drupal\surface\ResourceBuild;
 
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use PortableSchema\Builder\Schema;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Cache\Cache;
@@ -1089,9 +1089,9 @@ final class Resources implements ResourcesInterface {
    *   below it: a list's item under `*`, a map's properties by name.
    */
   protected static function keyAsked(Schema $schema): array {
-    $widget = NodeFacts::setting($schema, 'widget');
-    $item = DefinitionSchema::isList($schema) ? DefinitionSchema::itemNode($schema) : NULL;
-    $below = $item !== NULL ? ['*' => $item] : NodeFacts::properties($schema);
+    $widget = SchemaFacts::setting($schema, 'widget');
+    $item = DefinitionSchema::isList($schema) ? DefinitionSchema::itemOf($schema) : NULL;
+    $below = $item !== NULL ? ['*' => $item] : SchemaFacts::properties($schema);
     return [is_string($widget) ? $widget : NULL, $below];
   }
 

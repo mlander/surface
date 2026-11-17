@@ -39,8 +39,8 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
   /**
    * {@inheritdoc}
    *
-   * The layout reads which keys are secret from each key's node, and a
-   * node is read with the constraints typed data gives a definition.
+   * The layout reads which keys are secret from each key's schema, and a
+   * schema is read with the constraints typed data gives a definition.
    */
   protected function setUp(): void {
     parent::setUp();
@@ -70,18 +70,18 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
   }
 
   /**
-   * Tests a node-first surface's secret keys are read from its nodes.
+   * Tests a schema-first surface's secret keys are read from its schemas.
    *
-   * A key that holds a child frame has its secret flag read from its node
-   * too, composed of its own facts around the child's entries' nodes (a
+   * A key that holds a child frame has its secret flag read from its schema
+   * too, composed of its own facts around the child's entries' schemas (a
    * map is never a secret), so the layout derives no definition; the keys
    * are those the definitions say, in either form (fromArrays() with
-   * and without nodeFirst).
+   * and without schemaFirst).
    */
-  public function testSecretKeysOfNodeFirstSurfaceDeriveNoDefinition(): void {
+  public function testSecretKeysOfSchemaFirstSurfaceDeriveNoDefinition(): void {
     $derived = new \ReflectionProperty(Entry::class, 'definition');
     $found = [];
-    foreach ([FALSE, TRUE] as $node_first) {
+    foreach ([FALSE, TRUE] as $schema_first) {
       // The child as a sealed child is, and the map of its keys the build
       // makes of it; then the surface the layout reads, made in each form.
       $child = new Surface(DefinitionMap::fromArrays(definitions: ['code' => DataDefinition::create('string')->setLabel('Code')]));
@@ -95,12 +95,12 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
           'place' => $place,
         ],
         attachments: ['place' => new Attachment($child)],
-        nodeFirst: $node_first,
+        schemaFirst: $schema_first,
       ));
       $found[] = EncryptedStorageLayout::secretKeys($surface);
-      if ($node_first) {
+      if ($schema_first) {
         foreach ($surface->getDefinitions()->entries() as $name => $entry) {
-          $this->assertTrue($entry->isNodeFirst());
+          $this->assertTrue($entry->isSchemaFirst());
           $this->assertNull($derived->getValue($entry), sprintf('Reading whether "%s" is secret derives no definition.', $name));
         }
       }

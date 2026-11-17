@@ -13,8 +13,8 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeDefinition;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\DefinitionFromSchema;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\ChoiceSet;
@@ -272,7 +272,7 @@ final class Surface implements SurfaceInterface {
    */
   public function getPortDefinition(string $port): ?DataDefinitionInterface {
     $schema = $this->getPortSchema($port);
-    return $schema === NULL ? NULL : NodeDefinition::of($schema);
+    return $schema === NULL ? NULL : DefinitionFromSchema::of($schema);
   }
 
   /**
@@ -393,14 +393,14 @@ final class Surface implements SurfaceInterface {
       return $entry->variants->variant($chosen)->child->withDefaults($own) + $held;
     }
     $schema = $entry->schema();
-    return static::mapWithDefaults($schema, NodeFacts::defaultOf($schema), $held);
+    return static::mapWithDefaults($schema, SchemaFacts::defaultOf($schema), $held);
   }
 
   /**
    * Lays a plain map's defaults under what it holds, property by property.
    *
    * Read from the key's schema (2026-11-16): a map's properties are the
-   * schemas its own holds (NodeFacts::properties()), as
+   * schemas its own holds (SchemaFacts::properties()), as
    * getPropertyDefinitions() gave them; a complex key that holds no
    * property, and a value, hold none.
    *
@@ -420,7 +420,7 @@ final class Surface implements SurfaceInterface {
     }
     $merged = [];
     $default = is_array($default) ? $default : [];
-    foreach (NodeFacts::properties($schema) as $property => $property_schema) {
+    foreach (SchemaFacts::properties($schema) as $property => $property_schema) {
       if (array_key_exists($property, $held)) {
         $merged[$property] = is_array($held[$property])
           ? static::mapWithDefaults($property_schema, $default[$property] ?? NULL, $held[$property])
@@ -441,11 +441,11 @@ final class Surface implements SurfaceInterface {
    * variants starts from the defaults of the variant its deciding key's
    * default chooses, and from nothing when that chooses none. A collection
    * starts from what its list declares, which is no items unless the owner
-   * said otherwise. Any other key's default is read from its node
-   * (NodeFacts::defaultOf()), a map's properties' defaults under it.
+   * said otherwise. Any other key's default is read from its schema
+   * (SchemaFacts::defaultOf()), a map's properties' defaults under it.
    *
    * Decision: see
-   * docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node.
+   * docs/decisions.md#a-fact-is-read-from-the-schema-and-the-options-service-takes-a-schema.
    *
    * @param \Drupal\surface\Entry $entry
    *   The key.
@@ -461,7 +461,7 @@ final class Surface implements SurfaceInterface {
       $chosen = $entry->variants->chosen($this->getDefault($entry->variants->by));
       return $chosen === NULL ? NULL : $entry->variants->defaultsOf($chosen);
     }
-    return NodeFacts::defaultOf($entry->schema());
+    return SchemaFacts::defaultOf($entry->schema());
   }
 
   /**
@@ -579,11 +579,11 @@ final class Surface implements SurfaceInterface {
         continue;
       }
       // The mark is read at each place on the way: from the refined key's
-      // node and the nodes below it, or, for a key whose source gave its
+      // schema and the schemas below it, or, for a key whose source gave its
       // definition, from that definition and the ones below it.
       $entry = $refined->getDefinitions()->entry((string) array_shift($parents));
       foreach ($entry === NULL ? [] : static::watchedPlaces($entry, $parents) as $place) {
-        if ($place instanceof Schema ? NodeFacts::doesNotApply($place) : DoesNotApply::marks($place)) {
+        if ($place instanceof Schema ? SchemaFacts::doesNotApply($place) : DoesNotApply::marks($place)) {
           $ruled[] = $path;
           break;
         }
@@ -659,7 +659,7 @@ final class Surface implements SurfaceInterface {
       if ($refined === NULL) {
         continue;
       }
-      if ($entry->list !== NULL && !NodeFacts::doesNotApply($refined)) {
+      if ($entry->list !== NULL && !SchemaFacts::doesNotApply($refined)) {
         Answer::assertItemsUntouched($entry->name, $entry->schema(), $refined);
       }
       $definitions = $definitions->with(static::refinedTo($entry, $entry, $refined));
@@ -726,7 +726,7 @@ final class Surface implements SurfaceInterface {
       return $definition;
     }
     if (DefinitionMap::derivedClasses($after)) {
-      return NodeDefinition::of($after);
+      return DefinitionFromSchema::of($after);
     }
     $copy = clone $definition;
     $was = DefinitionSchema::model($before);
@@ -748,15 +748,15 @@ final class Surface implements SurfaceInterface {
     $properties = $after->get('properties');
     if ($copy instanceof ComplexDataDefinitionInterface && method_exists($copy, 'setPropertyDefinition') && is_array($properties)) {
       foreach ($properties as $name => $property) {
-        $was_property = DefinitionSchema::propertyNode($before, (string) $name);
+        $was_property = DefinitionSchema::propertyOf($before, (string) $name);
         $held = $copy->getPropertyDefinition((string) $name);
         if ($property instanceof Schema && $was_property !== NULL && $held !== NULL && $property !== $was_property) {
           $copy->setPropertyDefinition((string) $name, static::writtenOn($held, $was_property, $property));
         }
       }
     }
-    $item = DefinitionSchema::itemNode($after);
-    $was_item = DefinitionSchema::itemNode($before);
+    $item = DefinitionSchema::itemOf($after);
+    $was_item = DefinitionSchema::itemOf($before);
     if ($copy instanceof ListDataDefinition && $item !== NULL && $was_item !== NULL && $item !== $was_item) {
       $copy->setItemDefinition(static::writtenOn($copy->getItemDefinition(), $was_item, $item));
     }
@@ -799,20 +799,20 @@ final class Surface implements SurfaceInterface {
    * at its mount, where its keys are accepted and stored as any key an
    * alter mounted is. Nothing of the parent's narrows a key there.
    *
-   * Where the key's own refiners left it as it was, its node is the
-   * entry's with the node at each refined structure's mount replaced by
-   * the structure's own node around the refined structure's entries'
-   * nodes (DefinitionSchema::withProperties(), withPropertyAt()), and the
-   * entry is node-first. Where they answered, the schema they gave is the
+   * Where the key's own refiners left it as it was, its schema is the
+   * entry's with the schema at each refined structure's mount replaced by
+   * the structure's own schema around the refined structure's entries'
+   * schemas (DefinitionSchema::withProperties(), withPropertyAt()), and the
+   * entry is schema-first. Where they answered, the schema they gave is the
    * key's source: its definition is derived and built as before, each
-   * refined structure written into a copy of it, and handed with the node
+   * refined structure written into a copy of it, and handed with the schema
    * composed of the answer's own facts and the refined structures'
-   * entries' nodes, so the narrowing check of the whole map stands. So
-   * does a key whose composed node holds a class no node derives a
+   * entries' schemas, so the narrowing check of the whole map stands. So
+   * does a key whose composed schema holds a class no schema derives a
    * definition of.
    *
    * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value and
-   * docs/decisions.md#a-refined-shell-is-composed-of-nodes.
+   * docs/decisions.md#a-refined-shell-is-composed-of-schemas.
    *
    * @param \Drupal\surface\Entry $entry
    *   The key holding the mounts, as advertised.
@@ -849,15 +849,15 @@ final class Surface implements SurfaceInterface {
     if ($answers === []) {
       return $refined === NULL ? NULL : static::refinedTo($entry, $base, $refined);
     }
-    $node = $refined === NULL ? static::composedMount($entry, $base->schema(), $answers) : NULL;
-    if ($node !== NULL && !$entry->madeByRefinement() && DefinitionMap::derivedClasses($node)) {
+    $schema = $refined === NULL ? static::composedMount($entry, $base->schema(), $answers) : NULL;
+    if ($schema !== NULL && !$entry->madeByRefinement() && DefinitionMap::derivedClasses($schema)) {
       // Each structure's keys were held to the narrowing check when the
       // structure refined them, against the sealed structure's, and the
       // rest of the map is the sealed entry's: nothing the map says can be
       // wider than what it advertises. A mount a refinement made is held
       // to the check below: its structures are refined from the sealed
       // ones, not from what that refinement made of them.
-      return $base->withSchema($node, TRUE);
+      return $base->withSchema($schema, TRUE);
     }
     // The definition, as before: the structures written into a copy of
     // the key as its own refiners left it, or as advertised.
@@ -878,82 +878,82 @@ final class Surface implements SurfaceInterface {
       }
       $written = Attachment::mapOf($shell, $answer);
       $map->setPropertyDefinition((string) end($parents), $written);
-      $nodes = static::nodesOf($answer);
-      if (count($parents) === 1 && $nodes !== []) {
-        // The structure's own facts around its refined entries' nodes.
-        $parts[$path] = DefinitionSchema::around($written, $nodes);
+      $schemas = static::schemasOf($answer);
+      if (count($parents) === 1 && $schemas !== []) {
+        // The structure's own facts around its refined entries' schemas.
+        $parts[$path] = DefinitionSchema::around($written, $schemas);
       }
     }
     Narrowing::assertNarrows($entry->name, 'the structures attached at its mounts', $before, $definition);
-    return $base->withDefinition($definition, $node ?? DefinitionSchema::around($definition, $parts));
+    return $base->withDefinition($definition, $schema ?? DefinitionSchema::around($definition, $parts));
   }
 
   /**
-   * Composes a mount's node with each refined structure's node in place.
+   * Composes a mount's schema with each refined structure's schema in place.
    *
    * @param \Drupal\surface\Entry $entry
    *   The key holding the mounts, as advertised.
-   * @param \PortableSchema\Builder\Schema $node
-   *   Its node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   Its schema.
    * @param array<string, \Drupal\surface\SurfaceInterface> $answers
    *   Each refined structure, by its mount's path.
    *
    * @return \PortableSchema\Builder\Schema|null
-   *   The node; NULL where a structure has no keys, whose map is read as a
+   *   The schema; NULL where a structure has no keys, whose map is read as a
    *   value, which no composition gives.
    *
    * @throws \LogicException
    *   When a mount no longer holds a map.
    */
-  protected static function composedMount(Entry $entry, Schema $node, array $answers): ?Schema {
+  protected static function composedMount(Entry $entry, Schema $schema, array $answers): ?Schema {
     foreach ($answers as $path => $answer) {
       $parents = explode('.', (string) $path);
-      $map = $node;
+      $map = $schema;
       foreach (array_slice($parents, 0, -1) as $parent) {
-        $map = $map !== NULL && DefinitionSchema::isComplex($map) ? DefinitionSchema::propertyNode($map, $parent) : NULL;
+        $map = $map !== NULL && DefinitionSchema::isComplex($map) ? DefinitionSchema::propertyOf($map, $parent) : NULL;
       }
-      $shell = $map !== NULL && static::isMapNode($map) ? DefinitionSchema::propertyNode($map, (string) end($parents)) : NULL;
-      if ($shell === NULL || !static::isMapNode($shell)) {
+      $shell = $map !== NULL && static::isReadFromMap($map) ? DefinitionSchema::propertyOf($map, (string) end($parents)) : NULL;
+      if ($shell === NULL || !static::isReadFromMap($shell)) {
         throw new \LogicException(sprintf('The "%s.%s" mount no longer holds a map, so the structure attached there has nowhere to be written.', $entry->name, $path));
       }
-      $nodes = static::nodesOf($answer);
-      if ($nodes === [] || !DefinitionSchema::nodeIsMap($shell)) {
+      $schemas = static::schemasOf($answer);
+      if ($schemas === [] || !DefinitionSchema::holdsProperties($shell)) {
         return NULL;
       }
-      $node = DefinitionSchema::withPropertyAt($node, $parents, DefinitionSchema::withProperties($shell, $nodes));
+      $schema = DefinitionSchema::withPropertyAt($schema, $parents, DefinitionSchema::withProperties($shell, $schemas));
     }
-    return $node;
+    return $schema;
   }
 
   /**
-   * Answers whether a node was read from a MapDataDefinition.
+   * Answers whether a schema was read from a MapDataDefinition.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   What `instanceof MapDataDefinition` answers for the definition it
    *   was read from, or derives.
    */
-  protected static function isMapNode(Schema $node): bool {
-    return is_a(DefinitionSchema::classOf($node), MapDataDefinition::class, TRUE);
+  protected static function isReadFromMap(Schema $schema): bool {
+    return is_a(DefinitionSchema::classOf($schema), MapDataDefinition::class, TRUE);
   }
 
   /**
-   * Gets the nodes a refined child's entries hold, by name.
+   * Gets the schemas a refined child's entries hold, by name.
    *
    * @param \Drupal\surface\SurfaceInterface $child
    *   The refined child.
    *
    * @return array<string, \PortableSchema\Builder\Schema>
-   *   Each entry's node (Entry::schema()), in the child's order.
+   *   Each entry's schema (Entry::schema()), in the child's order.
    */
-  protected static function nodesOf(SurfaceInterface $child): array {
-    $nodes = [];
+  protected static function schemasOf(SurfaceInterface $child): array {
+    $schemas = [];
     foreach ($child->getDefinitions()->entries() as $name => $entry) {
-      $nodes[(string) $name] = $entry->schema();
+      $schemas[(string) $name] = $entry->schema();
     }
-    return $nodes;
+    return $schemas;
   }
 
   /**
@@ -1032,7 +1032,7 @@ final class Surface implements SurfaceInterface {
     if ($answer === NULL) {
       return NULL;
     }
-    if (NodeFacts::doesNotApply($answer)) {
+    if (SchemaFacts::doesNotApply($answer)) {
       return $answer;
     }
     $narrowed = Answer::narrowed($entry->schema(), $answer);
@@ -1104,11 +1104,11 @@ final class Surface implements SurfaceInterface {
    *
    * The two watched-value walks (ruledOutWatchedValues(),
    * refusedWatchedValues()) find a place one way: a key whose source gave
-   * its node (Entry::isNodeFirst()) by its node and the nodes below it,
+   * its schema (Entry::isSchemaFirst()) by its schema and the schemas below it,
    * so no definition is derived to find it; a key whose source gave its
    * definition by that definition, part by part
    * (getPropertyDefinition()), as before, so a class that answers for a
-   * property its node does not hold is walked as it answers, as
+   * property its schema does not hold is walked as it answers, as
    * Location::below() walks it.
    *
    * @param \Drupal\surface\Entry $entry
@@ -1117,15 +1117,15 @@ final class Surface implements SurfaceInterface {
    *   The property names below the key.
    *
    * @return array<int, \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface|null>
-   *   The key's own node or definition, then one per part: the place
+   *   The key's own schema or definition, then one per part: the place
    *   there, or NULL from the first part that names nothing on.
    */
   private static function watchedPlaces(Entry $entry, array $parents): array {
-    $place = $entry->isNodeFirst() ? $entry->schema() : $entry->definition();
+    $place = $entry->isSchemaFirst() ? $entry->schema() : $entry->definition();
     $places = [$place];
     foreach ($parents as $property) {
       $place = match (TRUE) {
-        $place instanceof Schema => DefinitionSchema::isComplex($place) ? DefinitionSchema::propertyNode($place, (string) $property) : NULL,
+        $place instanceof Schema => DefinitionSchema::isComplex($place) ? DefinitionSchema::propertyOf($place, (string) $property) : NULL,
         $place instanceof ComplexDataDefinitionInterface => $place->getPropertyDefinition($property),
         default => NULL,
       };
@@ -1169,22 +1169,22 @@ final class Surface implements SurfaceInterface {
    * child's refined map for an attached child, and for variants the
    * chosen variant's refined map, or nothing while no variant is chosen.
    *
-   * The key's node is composed of its own node and the refined child's
-   * entries' nodes (DefinitionSchema::withProperties()): an attached
-   * child's in the entry's own node, a chosen variant's in the node of
-   * the variants' shell (Variants::shellNode()), whatever the child left
-   * as it was. The entry is node-first, a new one even where the child
+   * The key's schema is composed of its own schema and the refined child's
+   * entries' schemas (DefinitionSchema::withProperties()): an attached
+   * child's in the entry's own schema, a chosen variant's in the schema of
+   * the variants' shell (Variants::shellSchema()), whatever the child left
+   * as it was. The entry is schema-first, a new one even where the child
    * changed nothing, as the key's definition was a new one before.
    *
    * The narrowing check the key's definition was held to before is
    * implied there: the key's own facts are the advertised ones, and each
    * of the child's keys was held to the check when the child refined it.
    * It is kept, on the definition built as before (Attachment::mapOf(),
-   * Variants::definitionFor()), handed with the composed node, for what
+   * Variants::definitionFor()), handed with the composed schema, for what
    * the check still guards: a variant chosen where the deciding key is
    * locked, which the key already holds the map of (another variant
-   * gains and loses keys), and a key whose node holds a class no node
-   * derives a definition of, whose own definition the node does not say
+   * gains and loses keys), and a key whose schema holds a class no schema
+   * derives a definition of, whose own definition the schema does not say
    * all of, and a key a refinement made (Entry::madeByRefinement()),
    * refined again: its child is the sealed one, whose keys were checked
    * against the sealed child's, not against what the first refinement
@@ -1227,20 +1227,20 @@ final class Surface implements SurfaceInterface {
       return NULL;
     }
     $advertised = $entry->schema();
-    if ($chosen === NULL && !static::isMapNode($advertised)) {
+    if ($chosen === NULL && !static::isReadFromMap($advertised)) {
       throw new \LogicException(sprintf('The "%s" key no longer holds a map, so its attached child has nowhere to be written.', $entry->name));
     }
-    $nodes = static::nodesOf($refined);
-    $shell = $chosen === NULL ? $base->schema() : $entry->variants->shellNode();
-    $node = $nodes === [] || !DefinitionSchema::nodeIsMap($shell) ? NULL : DefinitionSchema::withProperties($shell, $nodes);
-    // A key with variants whose node is no placeholder holds a variant's
+    $schemas = static::schemasOf($refined);
+    $shell = $chosen === NULL ? $base->schema() : $entry->variants->shellSchema();
+    $schema = $schemas === [] || !DefinitionSchema::holdsProperties($shell) ? NULL : DefinitionSchema::withProperties($shell, $schemas);
+    // A key with variants whose schema is no placeholder holds a variant's
     // map already: its deciding key is locked.
-    $locked = $chosen !== NULL && !(NodeFacts::dataType($advertised) === 'any' && NodeFacts::variantsBy($advertised) !== NULL);
+    $locked = $chosen !== NULL && !(SchemaFacts::dataType($advertised) === 'any' && SchemaFacts::variantsBy($advertised) !== NULL);
     // A key a refinement made, refined again, is held to the check: its
     // child is the sealed one, so its keys were checked against the sealed
     // child's, not against what that refinement made of them.
-    if ($node !== NULL && !$locked && !$entry->madeByRefinement() && DefinitionMap::derivedClasses($node)) {
-      return $base->withSchema($node, TRUE);
+    if ($schema !== NULL && !$locked && !$entry->madeByRefinement() && DefinitionMap::derivedClasses($schema)) {
+      return $base->withSchema($schema, TRUE);
     }
     if ($chosen === NULL) {
       $definition = $entry->definition();
@@ -1251,7 +1251,7 @@ final class Surface implements SurfaceInterface {
       $definition = $entry->variants->definitionFor($chosen, $refined);
     }
     Narrowing::assertNarrows($entry->name, 'the child attached there', $entry->definition(), $definition);
-    return $base->withDefinition($definition, $node);
+    return $base->withDefinition($definition, $schema);
   }
 
   /**
@@ -1410,7 +1410,7 @@ final class Surface implements SurfaceInterface {
     if (isset($chains[self::OWNER])) {
       $owner = $this->runChain($target, self::OWNER, $chains[self::OWNER], $owner, $values, $cacheability);
     }
-    if ($advertised_set === NULL || NodeFacts::doesNotApply($owner)) {
+    if ($advertised_set === NULL || SchemaFacts::doesNotApply($owner)) {
       // Whether the key applies is the owner's to say, as everything but
       // its values is: ruled out, no contribution brings it back.
       // A key that advertises no list of values has no space to divide,
@@ -1428,7 +1428,7 @@ final class Surface implements SurfaceInterface {
         $schema = $this->runChain($target, $contributor, $chains[$contributor], $schema, $values, $cacheability);
       }
       // A contribution ruled out offers none of its values.
-      $narrowed = NodeFacts::doesNotApply($schema) ? NULL : ChoiceSet::ofSchema($schema, $advertised_set->constraint);
+      $narrowed = SchemaFacts::doesNotApply($schema) ? NULL : ChoiceSet::ofSchema($schema, $advertised_set->constraint);
       if ($narrowed !== NULL) {
         $values_union = array_merge($values_union, $narrowed->values);
         $labels += $narrowed->labels;
@@ -1471,12 +1471,12 @@ final class Surface implements SurfaceInterface {
       ? 'the declaring class'
       : sprintf('the %s contribution', $contributor);
     foreach ($chain as $link) {
-      if (NodeFacts::doesNotApply($schema)) {
+      if (SchemaFacts::doesNotApply($schema)) {
         break;
       }
       foreach ($link->refine($target, $schema, $values) as $answer) {
         $schema = Answer::apply($schema, $answer, $target, $who, TRUE);
-        if (NodeFacts::doesNotApply($schema)) {
+        if (SchemaFacts::doesNotApply($schema)) {
           break;
         }
       }

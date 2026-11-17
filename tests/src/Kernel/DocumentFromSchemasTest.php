@@ -182,7 +182,7 @@ class DocumentFromSchemasTest extends SurfaceKernelTestBase {
       $emitter->emitFull($surface, $id, $operation);
       $emitter->emitFull($surface, $id, $operation, NULL, TRUE);
       foreach ($entries as $here => [$entry, $refined]) {
-        if ($refined || !$entry->isNodeFirst()) {
+        if ($refined || !$entry->isSchemaFirst()) {
           continue;
         }
         $plain++;

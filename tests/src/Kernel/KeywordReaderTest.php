@@ -8,7 +8,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\KeywordReader;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Reference\References;
 use Drupal\surface\DefinitionMetadata;
@@ -95,7 +95,7 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
     [$today] = $this->authored('k', $schema);
     $read = KeywordReader::forBuild()->read('k', $schema);
     $this->assertEquals(DefinitionSchema::model($today)['arrangement'], DefinitionSchema::model($read->schema)['arrangement']);
-    $this->assertSame(3, NodeFacts::arrangement($read->schema)?->weight);
+    $this->assertSame(3, SchemaFacts::arrangement($read->schema)?->weight);
   }
 
   /**
@@ -145,9 +145,9 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
    */
   public function testRequiredByTheMarkAlone(): void {
     $reader = KeywordReader::forBuild();
-    $this->assertFalse(NodeFacts::isRequired($reader->read('k', Schema::string())->schema));
-    $this->assertTrue(NodeFacts::isRequired($reader->read('k', Schema::string()->required())->schema));
-    $this->assertTrue(NodeFacts::isRequired($reader->read('k', Schema::string(), TRUE)->schema));
+    $this->assertFalse(SchemaFacts::isRequired($reader->read('k', Schema::string())->schema));
+    $this->assertTrue(SchemaFacts::isRequired($reader->read('k', Schema::string()->required())->schema));
+    $this->assertTrue(SchemaFacts::isRequired($reader->read('k', Schema::string(), TRUE)->schema));
   }
 
   /**
@@ -262,9 +262,9 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
   public function testTheEmptyListIsNoValue(): void {
     $reader = KeywordReader::forBuild();
     foreach ([Schema::enum([])->type('string'), Schema::options([])->type('string')] as $schema) {
-      $this->assertSame(['Choice' => ['choices' => []]], NodeFacts::declaredConstraints($reader->read('k', $schema)->schema));
+      $this->assertSame(['Choice' => ['choices' => []]], SchemaFacts::declaredConstraints($reader->read('k', $schema)->schema));
     }
-    $kept = NodeFacts::declaredConstraints($reader->read('k', Schema::options([]))->schema);
+    $kept = SchemaFacts::declaredConstraints($reader->read('k', Schema::options([]))->schema);
     $this->assertSame(['enum' => []], $kept['JsonSchema']['schema']);
   }
 
@@ -275,8 +275,8 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
     $settings = [References::STORED_AS => References::BY_ID, 'format' => 'color'];
     $schema = Schema::string()->annotation(KeywordReader::SETTINGS, $settings);
     $read = KeywordReader::forBuild()->read('k', $schema);
-    $this->assertSame(References::BY_ID, NodeFacts::setting($read->schema, References::STORED_AS));
-    $this->assertSame('color', NodeFacts::setting($read->schema, 'format'));
+    $this->assertSame(References::BY_ID, SchemaFacts::setting($read->schema, References::STORED_AS));
+    $this->assertSame('color', SchemaFacts::setting($read->schema, 'format'));
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('/properties/k/x-surface-settings/widget: Not read: x-portable-ui `widget` says this setting.');
     KeywordReader::forBuild()->read('k', Schema::string()->annotation(KeywordReader::SETTINGS, ['widget' => 'radios']));

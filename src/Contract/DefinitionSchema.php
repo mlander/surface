@@ -19,7 +19,7 @@ use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
 use PortableSchema\Builder\Schema;
 
 /**
- * Reads a definition into its built node, and projects a node to a document.
+ * Reads a definition into its built schema, and projects one to a document.
  *
  * The class has two halves, split by what each needs.
  *
@@ -27,7 +27,7 @@ use PortableSchema\Builder\Schema;
  * they call) is a pure function of the definition:
  * - It uses no service, makes no `\Drupal::` call of its own, runs no
  *   options resolver, reads no plugin manager and renders no text. So a
- *   node can be read where a data surface is built, with no request.
+ *   schema can be read where a data surface is built, with no request.
  * - The calls it makes on a definition are getDataType(), getLabel(),
  *   getDescription(), isRequired(), getConstraints(), getSetting(),
  *   toArray() on a DataDefinition, getPropertyDefinitions() and
@@ -40,31 +40,31 @@ use PortableSchema\Builder\Schema;
  *   its type's default constraints, an entity's getPropertyDefinitions()
  *   asks the entity field manager, and a list's getItemDefinition() asks
  *   the typed data manager when it builds the item.
- * - of() is the one read of a definition into a `Schema`: the built node,
+ * - of() is the one read of a definition into a `Schema`: the built schema,
  *   the definition's own statement at every depth. It holds the title and
  *   description, the type and the keywords its constraints state, every
- *   property of a map and the item of a list (each the built node of that
+ *   property of a map and the item of a list (each the built schema of that
  *   definition, read by the same function), every declared check under
  *   `portable-check` with the options the definition holds, whether or not
  *   a list of values states it, the messages the definition gives
  *   (`x-portable-messages`), `writeOnly` for a secret, which is how a
- *   reader of the node knows it is one (Secrets::marked()), and MODEL.
- * - The node holds every fact of a DataDefinition, a ListDataDefinition
+ *   reader of the schema knows it is one (Secrets::marked()), and MODEL.
+ * - The schema holds every fact of a DataDefinition, a ListDataDefinition
  *   or a MapDataDefinition: what a keyword states stays in that keyword,
  *   and every other fact is a member of MODEL (MEMBERS), so a definition
- *   of the three classes is derived back from the node alone
- *   (NodeDefinition::of()) and equals the one read. A shape's, a config
- *   type's and `each`'s definition are read into nodes their members
+ *   of the three classes is derived back from the schema alone
+ *   (DefinitionFromSchema::of()) and equals the one read. A shape's, a config
+ *   type's and `each`'s definition are read into schemas their members
  *   hold. A definition of any other class is read as before: its keywords
- *   from its getters, its class in `definitionClass`. Its node does not
+ *   from its getters, its class in `definitionClass`. Its schema does not
  *   hold what the class keeps outside the definition array (a reference's
  *   target, a field item's field definition, an entity's properties, a
  *   FieldConfig's `required` and settings), and the inverse refuses it.
  * - A property a refinement marked as not applying (DoesNotApply) is on
- *   the node, and so is the mark, in its `doesNotApply` member, where the
+ *   the schema, and so is the mark, in its `doesNotApply` member, where the
  *   projection reads it.
  * - Every data type is read: a definition of a data type the leaf table
- *   has no row for (LeafTypes) gets a node with no `type` keyword, and
+ *   has no row for (LeafTypes) gets a schema with no `type` keyword, and
  *   its data type in MODEL; a definition with no place for a default or
  *   examples (DefinitionMetadata::canHoldDefaultValue(), canHoldExamples())
  *   has none. The read's one refusal: a definition met again inside
@@ -73,36 +73,36 @@ use PortableSchema\Builder\Schema;
  *   its data type and where it is met again, before the read runs out of
  *   memory.
  * - Text stays as the definition holds it: a title, a description and a
- *   message that are a TranslatableMarkup stay one, so a node is the same
+ *   message that are a TranslatableMarkup stay one, so a schema is the same
  *   in every language until it is projected. A title or description is
  *   kept when the definition holds one that is not NULL and not the
  *   literal ''. A message the reader writes itself (a check's own sentence
  *   given as a string, a Regex's, what a JsonSchema check holds a value
- *   to) is a NodeMessage built with no translation service. A check the
+ *   to) is a SchemaMessage built with no translation service. A check the
  *   definition gives no message holds none.
  *
- * Projecting (published(), publishedNode(), publishedKeywords(), entry())
- * is the one place a built node becomes a document node, and holds what
+ * Projecting (published(), publishedSchema(), publishedKeywords(), entry())
+ * is the one place a built schema becomes a document schema, and holds what
  * needs a service or the request:
  * - Whether a key offers a list of values (listed(), an option set, of its
  *   item for a list), and what follows from it: the check its list states
  *   and that check's message leave `portable-check`, and a map that offers
- *   one is said as one value, made from its node (oneValue(): its
+ *   one is said as one value, made from its schema (oneValue(): its
  *   properties, `type`, `required` and `additionalProperties` are no
- *   keywords of it). The options service is handed the node; whether
- *   it is a map comes from its node too (nodeIsMap()).
+ *   keywords of it). The options service is handed the schema; whether
+ *   it is a map comes from its schema too (holdsProperties()).
  * - Whether a list states a check (SurfaceOptions::isStatedByList(),
  *   SurfaceOptions::readsAsList()), kept on the service by plugin id and
  *   options; a check's label is kept by plugin id as its plugin holds it.
  *   Nothing rendered is kept.
  * - A check's label as its sentence where the definition states no
  *   message, or one that renders empty.
- * - A property that does not apply (its node's `doesNotApply` member) is
+ * - A property that does not apply (its schema's `doesNotApply` member) is
  *   left out, and the map's `required` follows.
  * - A value of a data type no row is for is refused, with LeafTypes'
- *   message, where its document node is made (publishedNode()), one node
- *   at a time, by MODEL's `type`. A reader that takes a node and does not
- *   project it (Location::definitionAt()) gets a node with no `type`
+ *   message, where its document schema is made (publishedSchema()), one schema
+ *   at a time, by MODEL's `type`. A reader that takes a schema and does not
+ *   project it (Location::definitionAt()) gets a schema with no `type`
  *   keyword and the data type in MODEL, and no refusal.
  * - Each check's options go through CheckOptions::published(); the title,
  *   the description and each message are rendered as plain text
@@ -110,37 +110,37 @@ use PortableSchema\Builder\Schema;
  *   is left out; MODEL is stripped. published() also strips MODEL at
  *   every other keyword position (`allOf`, `$defs`, `patternProperties`
  *   and the rest), at every depth.
- * A node is projected before anything compares it (Schemas::same()), so
+ * A schema is projected before anything compares it (Schemas::same()), so
  * every comparison of the walk sees what the document says, and two sites
  * whose checks differ only in their options still share one def. What
- * the projection knows of a definition it reads from the node: whether
- * it is a map, a list or one value (nodeIsMap(), isList(), isLeaf()),
+ * the projection knows of a definition it reads from the schema: whether
+ * it is a map, a list or one value (holdsProperties(), isList(), isLeaf()),
  * whether it is an `any` held as one (heldAsAny()), the mark of a key
  * that does not apply, and the label its refusal names. It takes the
- * definition beside the node, and walks the two together, only to hand
+ * definition beside the schema, and walks the two together, only to hand
  * each definition to the options resolvers (listed()); that parameter
- * goes when the options resolvers take a node.
+ * goes when the options resolvers take a schema.
  *
- * A built node is held in memory only: it never reaches the build cache, a
+ * A built schema is held in memory only: it never reaches the build cache, a
  * served document or ServedContract, a log or an exception message.
  *
  * Nothing is kept here: of() reads the definition each time it is called.
- * The node of a key is kept by its entry (Entry::schema()), and a reader
- * that walks down from an entry walks the entry's node in step
- * (propertyNode(), itemNode()), so no definition is read again at each
+ * The schema of a key is kept by its entry (Entry::schema()), and a reader
+ * that walks down from an entry walks the entry's schema in step
+ * (propertyOf(), itemOf()), so no definition is read again at each
  * depth. A definition two entries share is read once by each.
  *
- * MODEL holds what a node knows that no document says. A built node holds
+ * MODEL holds what a schema knows that no document says. A built schema holds
  * no reference to its definition: a reader that needs the definition takes
- * it from where it found the node (a Location), or derives one
- * from the node (NodeDefinition::of()). Its members are a closed list,
+ * it from where it found the schema (a Location), or derives one
+ * from the schema (DefinitionFromSchema::of()). Its members are a closed list,
  * MEMBERS, whose docblock says what each holds and who reads it; the
  * bridges among them, which go before the series closes, are BRIDGES.
  *
  * Decision: see
  * docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request,
- * docs/decisions.md#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it,
- * docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone.
+ * docs/decisions.md#a-schema-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it,
+ * docs/decisions.md#an-entry-holds-its-schema-the-memo-is-gone.
  *
  * @phpstan-type Definition \Drupal\Core\TypedData\DataDefinitionInterface
  *
@@ -149,25 +149,25 @@ use PortableSchema\Builder\Schema;
 final class DefinitionSchema {
 
   /**
-   * The model-only annotation: what a node knows that no document says.
+   * The model-only annotation: what a schema knows that no document says.
    */
   public const MODEL = 'x-surface-model';
 
   /**
-   * The members MODEL holds, a closed list, in the order a node holds them.
+   * The members MODEL holds, a closed list, in the order a schema holds them.
    *
-   * A member is on a node only where its definition states the fact, and
-   * only where no keyword of the node holds it already; `type` is on every
-   * node. What each holds, and who reads it:
+   * A member is on a schema only where its definition states the fact, and
+   * only where no keyword of the schema holds it already; `type` is on every
+   * schema. What each holds, and who reads it:
    * - `type`: the data type (getDataType()). Read by the projection, which
    *   names it in the refusal of a type no row is for, and by the inverse.
    * - `definitionClass`: the definition's PHP class, where it is not the
-   *   one implied() names for the node. Read by the projection (whether a
-   *   node is a list, a map or one value) and by the inverse.
+   *   one implied() names for the schema. Read by the projection (whether a
+   *   schema is a list, a map or one value) and by the inverse.
    * - `label`, `description`: the label or description as stored where
    *   `title` or `description` does not hold it: the literal '' or NULL.
    *   Read by the inverse; the projection reads `label` for its refusal.
-   * - `required`: the definition's stored `required`, on its own node (the
+   * - `required`: the definition's stored `required`, on its own schema (the
    *   parent's `required` keyword keeps its document rule). Read by the
    *   inverse.
    * - `readOnly`, `computed`: core's `read-only` and `computed` flags, as
@@ -175,23 +175,23 @@ final class DefinitionSchema {
    * - `settings`: the settings, whole and as stored. Read by the inverse.
    * - `constraints`: every constraint the definition declares with its
    *   type's defaults (getConstraints()), by plugin id, with its options as
-   *   held, only where NodeFacts::derived() does not give that list exactly
+   *   held, only where SchemaFacts::derived() does not give that list exactly
    *   from `type`, `declared`, `required` and `stored` (a type with no row
    *   in LeafTypes::DEFAULT_CONSTRAINTS, a `class` key, a class whose
    *   getConstraints() is its own); everywhere else the list is derived.
-   *   Read by NodeFacts::constraints() alone, which every reader of the
+   *   Read by SchemaFacts::constraints() alone, which every reader of the
    *   merged list asks (the check provider, declares(), options(),
-   *   oneValue(), keywordsOf(), the inverse's refusal of a node whose
+   *   oneValue(), keywordsOf(), the inverse's refusal of a schema whose
    *   type's defaults are another manager's).
    * - `declared`: the definition's own constraints (toArray()), as stored.
-   *   Read by the inverse, by NodeFacts::derived() and, through
-   *   NodeFacts::declaredConstraints(), by ConfigSchemaGenerator,
+   *   Read by the inverse, by SchemaFacts::derived() and, through
+   *   SchemaFacts::declaredConstraints(), by ConfigSchemaGenerator,
    *   ResourceCode and InputDefinitions.
    * - `default`, `examples`: the stored default or examples where the
    *   keyword does not hold them as stored: an explicit NULL, a map's, a
    *   secret's, examples with keys. Read by the inverse. A default merged
    *   from a map's properties (DefinitionMetadata::defaultOf()) is no
-   *   member: it is made from the properties' nodes.
+   *   member: it is made from the properties' schemas.
    * - `secret`: the stored secret flag where `writeOnly` does not state it
    *   as stored: FALSE, NULL, or a truthy value other than TRUE (beside
    *   `writeOnly`, which says TRUE). Read by the inverse.
@@ -204,10 +204,10 @@ final class DefinitionSchema {
    *   `title`, then to the `label` member.
    * - `compute`, `resolve`: the Computed and the Resolve the definition
    *   holds, the objects themselves. Read by the inverse.
-   * - `shape`: `{id, node}`, the shape's id and the node of the shape's
-   *   definition; `configType`: `{type, node}`, the config schema type and
-   *   the node of its own definition; `each`: the node of the definition
-   *   every entry has, or the class every entry is. Each node is read by
+   * - `shape`: `{id, schema}`, the shape's id and the schema of the shape's
+   *   definition; `configType`: `{type, schema}`, the config schema type and
+   *   the schema of its own definition; `each`: the schema of the definition
+   *   every entry has, or the class every entry is. Each schema is read by
    *   read(), so the recursion ends where the definitions held end, and a
    *   definition met again inside itself is refused. Read by the inverse.
    * - `doesNotApply`: the mark of a key a refinement ruled out, as stored.
@@ -261,12 +261,12 @@ final class DefinitionSchema {
    * The members that are bridges, each to go before the series closes.
    *
    * A bridge exists only so a Typed Data definition can be derived back
-   * (NodeDefinition::of()) or because a consumer has not moved yet; every
+   * (DefinitionFromSchema::of()) or because a consumer has not moved yet; every
    * other member is a fact of Surface's own model and stays. Each bridge,
    * its readers, and the slice it goes in:
    * - `type`: the projection (the refusal of a type no row is for), the
-   *   inverse, NodeFacts::derived(), and every reader of
-   *   NodeFacts::dataType() (the pipeline's casts, the config schema
+   *   inverse, SchemaFacts::derived(), and every reader of
+   *   SchemaFacts::dataType() (the pipeline's casts, the config schema
    *   generator, the tool door's inputs, the generated code, among
    *   others); goes before slice 35 closes;
    * - `definitionClass`: classOf() and so isList(), isComplex() and
@@ -275,14 +275,14 @@ final class DefinitionSchema {
    *   slice 35;
    * - `readOnly`, `computed`, `mainProperty`: the inverse alone; go in
    *   slice 35, when nothing derives a definition;
-   * - `stored`: the inverse, and NodeFacts::derived(), which gives no list
+   * - `stored`: the inverse, and SchemaFacts::derived(), which gives no list
    *   where it holds a `class` key; goes in slice 35;
-   * - `declared`: the inverse, NodeFacts::derived(), and
+   * - `declared`: the inverse, SchemaFacts::derived(), and
    *   ConfigSchemaGenerator, ResourceCode and InputDefinitions through
-   *   NodeFacts::declaredConstraints(); goes once an authored node says
+   *   SchemaFacts::declaredConstraints(); goes once an authored schema says
    *   what its own constraints are;
-   * - `constraints`: on a node only where NodeFacts::derived() does not
-   *   give getConstraints() exactly; read by NodeFacts::constraints()
+   * - `constraints`: on a schema only where SchemaFacts::derived() does not
+   *   give getConstraints() exactly; read by SchemaFacts::constraints()
    *   alone; goes in slice 35.
    */
   public const BRIDGES = [
@@ -297,7 +297,7 @@ final class DefinitionSchema {
   ];
 
   /**
-   * Where each key of a definition array is held on its node.
+   * Where each key of a definition array is held on its schema.
    *
    * The member, and the keyword that holds the key's value where it holds
    * it as stored (NULL for none), by the key, in the order the inverse
@@ -337,7 +337,7 @@ final class DefinitionSchema {
   ];
 
   /**
-   * The members that hold a node read from a definition the array holds.
+   * The members that hold a schema read from a definition the array holds.
    */
   protected const NESTED = ['shape', 'configType', 'each'];
 
@@ -433,7 +433,7 @@ final class DefinitionSchema {
   ) {}
 
   /**
-   * Reads the node of a collection's own definition, without its items.
+   * Reads the schema of a collection's own definition, without its items.
    *
    * What a collection key says of itself: its title, description, `type`
    * and keywords (`minItems`, `maxItems`), its checks and messages, and
@@ -444,7 +444,7 @@ final class DefinitionSchema {
    *   The list, as the parent says it.
    *
    * @return \PortableSchema\Builder\Schema
-   *   Its built node.
+   *   Its built schema.
    */
   public static function head(DataDefinitionInterface $definition): Schema {
     $keywords = static::keywords($definition, 'array');
@@ -455,164 +455,164 @@ final class DefinitionSchema {
   }
 
   /**
-   * Reads a definition's own facts around the nodes given for what is below.
+   * Reads a definition's own facts around the schemas given for what is below.
    *
-   * The node of() reads, with each property or item given here placed
-   * where of() would read it: the node of a key that holds a child frame
+   * The schema of() reads, with each property or item given here placed
+   * where of() would read it: the schema of a key that holds a child frame
    * (an attachment, variants, a collection, a mount), whose properties
    * are the child's keys, which the child's own entries read already.
    * What the definition says of itself (its keywords, `required` from its
    * properties' flags, its checks and MODEL) is read once, and nothing
    * given is read again. A property or an item not given is read as of()
-   * reads it. A node given for a property the map does not hold is placed
+   * reads it. A schema given for a property the map does not hold is placed
    * after the ones it holds, in the order given, and is in `required`
-   * where its own node says so: the seal hands a shell its own facts
-   * alone and its child's keys as nodes (Entry::sealed()), and the node is
+   * where its own schema says so: the seal hands a shell its own facts
+   * alone and its child's keys as schemas (Entry::sealed()), and the schema is
    * the one of() reads of the map the child's definitions would fill.
    * Unlike head(), which reads a collection's own keywords with no items
-   * at all, in its own order, the node is the one of() reads:
+   * at all, in its own order, the schema is the one of() reads:
    * the same keywords in the same order, so DefinitionSchema::same()
-   * holds between the two when each node given is the one of() reads for
+   * holds between the two when each schema given is the one of() reads for
    * its definition.
    *
    * Decision: see
-   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
+   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-schema-of-its-own.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    * @param array<string, \PortableSchema\Builder\Schema> $properties
-   *   For a map, the nodes of its properties, by name; those not given are
+   *   For a map, the schemas of its properties, by name; those not given are
    *   read, and those it does not hold come after the ones it holds.
    * @param \PortableSchema\Builder\Schema|null $items
-   *   For a list, the node of its item; NULL to read it.
+   *   For a list, the schema of its item; NULL to read it.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The built node.
+   *   The built schema.
    */
   public static function around(DataDefinitionInterface $definition, array $properties = [], ?Schema $items = NULL): Schema {
     return self::build($definition, '', [spl_object_id($definition) => TRUE], $properties, $items);
   }
 
   /**
-   * Reads a map's own facts as the node of a map that holds no property.
+   * Reads a map's own facts as the schema of a map that holds no property.
    *
-   * The node of() reads of the map once a child's keys fill it, its
+   * The schema of() reads of the map once a child's keys fill it, its
    * `properties` empty and no `required`: what withProperties() places a
    * child's keys in. Its own keywords, its checks and MODEL are read from
    * the definition alone: the shell of variants (Variants::$shell), which
    * every chosen variant wears.
    *
-   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-nodes.
+   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-schemas.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The map, its own facts alone.
    *
    * @return \PortableSchema\Builder\Schema
-   *   Its built node, as a map's.
+   *   Its built schema, as a map's.
    */
   public static function shell(DataDefinitionInterface $definition): Schema {
     return self::build($definition, '', [spl_object_id($definition) => TRUE], asMap: TRUE);
   }
 
   /**
-   * Places a map's properties in a map's node, by name, in the order given.
+   * Places a map's properties in a map's schema, by name, in the order given.
    *
    * The composer of a refined shell (an attachment, chosen variants, a
-   * structure at a mount): the shell's node with `properties` replaced by
-   * the nodes given, and its `required` list rewritten from each of them
-   * (requiredOf(), the rule around() places a node given by). Everything
-   * else the node holds (its own keywords, its checks, MODEL) is left as
-   * it is: nothing the node says of itself depends on its properties. No
-   * node given is read or copied: each is placed as it is. It writes no
+   * structure at a mount): the shell's schema with `properties` replaced by
+   * the schemas given, and its `required` list rewritten from each of them
+   * (requiredOf(), the rule around() places a schema given by). Everything
+   * else the schema holds (its own keywords, its checks, MODEL) is left as
+   * it is: nothing the schema says of itself depends on its properties. No
+   * schema given is read or copied: each is placed as it is. It writes no
    * fact of a property and no own fact of the map: not `declared`, not
    * the `constraints` member, not a key's own `required`.
    *
-   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-nodes.
+   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-schemas.
    *
    * @param \PortableSchema\Builder\Schema $shell
-   *   A map's node (one that holds `properties`): a sealed shell's, or
+   *   A map's schema (one that holds `properties`): a sealed shell's, or
    *   shell()'s.
    * @param array<string, \PortableSchema\Builder\Schema> $properties
-   *   The nodes of its properties, by name, in their order: a refined
-   *   child's entries' nodes.
+   *   The schemas of its properties, by name, in their order: a refined
+   *   child's entries' schemas.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The node, the very nodes given under `properties`.
+   *   The schema, the very schemas given under `properties`.
    */
   public static function withProperties(Schema $shell, array $properties): Schema {
-    assert(static::nodeIsMap($shell));
+    assert(static::holdsProperties($shell));
     $required = static::requiredOf($properties);
-    $node = $shell->with('properties', $properties);
-    if ($required === [] || $node->has('required')) {
-      return $required === [] ? $node->without('required') : $node->with('required', $required);
+    $schema = $shell->with('properties', $properties);
+    if ($required === [] || $schema->has('required')) {
+      return $required === [] ? $schema->without('required') : $schema->with('required', $required);
     }
     // `required` comes right after `additionalProperties`, where build()
     // writes it: what follows is taken off and put back after it.
     $after = [];
     $seen = FALSE;
-    foreach ($node->all() as $name => $value) {
+    foreach ($schema->all() as $name => $value) {
       if ($seen) {
         $after[(string) $name] = $value;
       }
       $seen = $seen || $name === 'additionalProperties';
     }
     foreach (array_keys($after) as $name) {
-      $node = $node->without((string) $name);
+      $schema = $schema->without((string) $name);
     }
-    $node = $node->with('required', $required);
+    $schema = $schema->with('required', $required);
     foreach ($after as $name => $value) {
-      $node = $node->with((string) $name, $value);
+      $schema = $schema->with((string) $name, $value);
     }
-    return $node;
+    return $schema;
   }
 
   /**
-   * Replaces the node at a path of properties below a map's node.
+   * Replaces the schema at a path of properties below a map's schema.
    *
-   * Each map on the way keeps its `required` list: the node placed is
+   * Each map on the way keeps its `required` list: the schema placed is
    * composed of the one it replaces (withProperties()), and says what
    * that one says of itself, so whether it is required is unchanged.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A map's node: a mount's.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A map's schema: a mount's.
    * @param string[] $parents
    *   The property names from it to the place.
    * @param \PortableSchema\Builder\Schema $with
-   *   The node to place there.
+   *   The schema to place there.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The node, the one at the path replaced.
+   *   The schema, the one at the path replaced.
    */
-  public static function withPropertyAt(Schema $node, array $parents, Schema $with): Schema {
+  public static function withPropertyAt(Schema $schema, array $parents, Schema $with): Schema {
     if ($parents === []) {
       return $with;
     }
     $name = array_shift($parents);
     $name = (string) $name;
-    $properties = $node->get('properties');
+    $properties = $schema->get('properties');
     assert(is_array($properties) && ($properties[$name] ?? NULL) instanceof Schema);
     $properties[$name] = static::withPropertyAt($properties[$name], $parents, $with);
-    return $node->with('properties', $properties);
+    return $schema->with('properties', $properties);
   }
 
   /**
-   * Lists the properties a map requires, by their nodes.
+   * Lists the properties a map requires, by their schemas.
    *
-   * The one rule for the `required` list of a map composed of nodes: a
-   * property is listed where its own node says it is required
+   * The one rule for the `required` list of a map composed of schemas: a
+   * property is listed where its own schema says it is required
    * (PropertySchema::required(): required, and neither a secret nor
    * computed), as required() says it of a definition.
    *
    * @param array<string, \PortableSchema\Builder\Schema> $properties
-   *   The nodes of the map's properties, by name.
+   *   The schemas of the map's properties, by name.
    *
    * @return string[]
    *   The names, in the order given.
    */
   private static function requiredOf(array $properties): array {
     $required = [];
-    foreach ($properties as $name => $node) {
-      if (PropertySchema::required($node)) {
+    foreach ($properties as $name => $schema) {
+      if (PropertySchema::required($schema)) {
         $required[] = (string) $name;
       }
     }
@@ -620,32 +620,32 @@ final class DefinitionSchema {
   }
 
   /**
-   * Reads one definition into its built node.
+   * Reads one definition into its built schema.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The built node, read afresh: nothing is kept. An entry keeps the
-   *   node of its definition (Entry::schema()).
+   *   The built schema, read afresh: nothing is kept. An entry keeps the
+   *   schema of its definition (Entry::schema()).
    */
   public static function of(DataDefinitionInterface $definition): Schema {
     return self::read($definition, '', []);
   }
 
   /**
-   * Reads one definition into its built node, below the ones above it.
+   * Reads one definition into its built schema, below the ones above it.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    * @param string $path
-   *   Where it is in the node being read, as a JSON Pointer ('' at the
+   *   Where it is in the schema being read, as a JSON Pointer ('' at the
    *   top).
    * @param array<int, true> $above
    *   The definitions above it, by object id.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The built node.
+   *   The built schema.
    *
    * @throws \LogicException
    *   When the definition is one of those above it.
@@ -653,31 +653,31 @@ final class DefinitionSchema {
   private static function read(DataDefinitionInterface $definition, string $path, array $above): Schema {
     $id = spl_object_id($definition);
     if (isset($above[$id])) {
-      throw new \LogicException(sprintf('The definition of the %s type at "%s" holds itself: it is met again inside itself, so no node can be read from it.', $definition->getDataType(), $path));
+      throw new \LogicException(sprintf('The definition of the %s type at "%s" holds itself: it is met again inside itself, so no schema can be read from it.', $definition->getDataType(), $path));
     }
     $above[$id] = TRUE;
     return self::build($definition, $path, $above);
   }
 
   /**
-   * Builds a node, reading a map's properties and a list's item with read().
+   * Builds a schema, reading a map's properties and a list's item with read().
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    * @param string $path
-   *   Where it is in the node being read, as a JSON Pointer.
+   *   Where it is in the schema being read, as a JSON Pointer.
    * @param array<int, true> $above
    *   The definitions above it and itself, by object id.
    * @param array<string, \PortableSchema\Builder\Schema> $given
-   *   The nodes of properties already read, by name (around()).
+   *   The schemas of properties already read, by name (around()).
    * @param \PortableSchema\Builder\Schema|null $item
-   *   The node of the item, already read (around()).
+   *   The schema of the item, already read (around()).
    * @param bool $asMap
    *   Whether a complex definition that holds no property is read as a
    *   map all the same (shell()).
    *
    * @return \PortableSchema\Builder\Schema
-   *   The built node.
+   *   The built schema.
    */
   private static function build(DataDefinitionInterface $definition, string $path, array $above, array $given = [], ?Schema $item = NULL, bool $asMap = FALSE): Schema {
     $schema = static::describe($definition);
@@ -688,7 +688,7 @@ final class DefinitionSchema {
       ];
       $schema = Schemas::defaults($schema, $list + static::keywords($definition, 'array'));
     }
-    // A map that holds no property is read as a value, unless nodes are
+    // A map that holds no property is read as a value, unless schemas are
     // given for properties it does not hold (around()), or it is read as
     // a shell (shell()).
     elseif ($definition instanceof ComplexDataDefinitionInterface && (static::isMap($definition) || $given !== [] || $asMap)) {
@@ -706,13 +706,13 @@ final class DefinitionSchema {
           $required[] = (string) $name;
         }
       }
-      // A node given for a property the map does not hold (a shell the
+      // A schema given for a property the map does not hold (a shell the
       // seal handed its own facts alone, around()) comes after the ones it
-      // holds, in the order given, and its own node says whether it is
+      // holds, in the order given, and its own schema says whether it is
       // required (requiredOf(), rule for rule required()).
       $placed = array_diff_key($given, $properties);
-      foreach ($placed as $name => $node) {
-        $properties[(string) $name] = $node;
+      foreach ($placed as $name => $property_schema) {
+        $properties[(string) $name] = $property_schema;
       }
       array_push($required, ...static::requiredOf($placed));
       $schema = Schemas::defaults($schema, [
@@ -774,65 +774,65 @@ final class DefinitionSchema {
   }
 
   /**
-   * Answers whether a built node is read as a map of properties.
+   * Answers whether a built schema is read as a map of properties.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where it holds `properties`: what isMap() answers for the
    *   definition it was read from.
    */
-  public static function nodeIsMap(Schema $node): bool {
-    return !$node->isBoolean() && is_array($node->get('properties'));
+  public static function holdsProperties(Schema $schema): bool {
+    return !$schema->isBoolean() && is_array($schema->get('properties'));
   }
 
   /**
-   * Gets the node of a property, below a map's node.
+   * Gets the schema of a property, below a map's schema.
    *
    * The step a reader takes from a map's definition to one of its
-   * properties, taken on the node: a built map's node holds a node for
+   * properties, taken on the schema: a built map's schema holds a schema for
    * every property its definition has, a marked one included.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    * @param string $name
    *   The property name.
    *
    * @return \PortableSchema\Builder\Schema|null
-   *   The property's node; NULL where the node holds no such property.
+   *   The property's schema; NULL where the schema holds no such property.
    */
-  public static function propertyNode(Schema $node, string $name): ?Schema {
-    $properties = $node->isBoolean() ? NULL : $node->get('properties');
+  public static function propertyOf(Schema $schema, string $name): ?Schema {
+    $properties = $schema->isBoolean() ? NULL : $schema->get('properties');
     $property = is_array($properties) ? $properties[$name] ?? NULL : NULL;
     return $property instanceof Schema ? $property : NULL;
   }
 
   /**
-   * Gets the node of a list's item, below the list's node.
+   * Gets the schema of a list's item, below the list's schema.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return \PortableSchema\Builder\Schema|null
-   *   The item's node; NULL where the node holds none (one head() read).
+   *   The item's schema; NULL where the schema holds none (one head() read).
    */
-  public static function itemNode(Schema $node): ?Schema {
-    $item = $node->isBoolean() ? NULL : $node->get('items');
+  public static function itemOf(Schema $schema): ?Schema {
+    $item = $schema->isBoolean() ? NULL : $schema->get('items');
     return $item instanceof Schema ? $item : NULL;
   }
 
   /**
    * Answers whether two reads of a definition say the same.
    *
-   * What an assertion compares a kept node with (Entry::schema()). Two
+   * What an assertion compares a kept schema with (Entry::schema()). Two
    * reads of a definition nothing wrote hold the same values and the same
-   * objects, except the messages the read itself makes (NodeMessage),
+   * objects, except the messages the read itself makes (SchemaMessage),
    * which are compared by what they say, never rendered. Any other object
    * is the same only if it is the same object.
    *
    * @param mixed $kept
-   *   A node, or a value inside one.
+   *   A schema, or a value inside one.
    * @param mixed $fresh
    *   The other.
    *
@@ -860,7 +860,7 @@ final class DefinitionSchema {
       }
       return TRUE;
     }
-    if ($kept instanceof NodeMessage && $fresh instanceof NodeMessage) {
+    if ($kept instanceof SchemaMessage && $fresh instanceof SchemaMessage) {
       return $kept->getUntranslatedString() === $fresh->getUntranslatedString()
         && static::same($kept->getArguments(), $fresh->getArguments())
         && static::same($kept->getOptions(), $fresh->getOptions());
@@ -869,78 +869,78 @@ final class DefinitionSchema {
   }
 
   /**
-   * Gets the node of the shape a node's definition is declared with.
+   * Gets the schema of the shape a schema's definition is declared with.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return \PortableSchema\Builder\Schema|null
-   *   The node of the shape's definition (MODEL's `shape`); NULL where none
+   *   The schema of the shape's definition (MODEL's `shape`); NULL where none
    *   is held.
    */
-  public static function shapeNode(Schema $node): ?Schema {
-    $shape = static::model($node)['shape']['node'] ?? NULL;
+  public static function shapeOf(Schema $schema): ?Schema {
+    $shape = static::model($schema)['shape']['schema'] ?? NULL;
     return $shape instanceof Schema ? $shape : NULL;
   }
 
   /**
-   * Answers whether a built node was read from a list definition.
+   * Answers whether a built schema was read from a list definition.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node (of(), head()).
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema (of(), head()).
    *
    * @return bool
    *   TRUE where its class (classOf()) is a list definition.
    */
-  public static function isList(Schema $node): bool {
-    return !$node->isBoolean() && is_a(static::classOf($node), ListDataDefinitionInterface::class, TRUE);
+  public static function isList(Schema $schema): bool {
+    return !$schema->isBoolean() && is_a(static::classOf($schema), ListDataDefinitionInterface::class, TRUE);
   }
 
   /**
-   * Answers whether a node was read from a complex definition.
+   * Answers whether a schema was read from a complex definition.
    *
    * Stands for `instanceof ComplexDataDefinitionInterface`: a map, a map
    * with no properties, and any other complex class (a field item), by
-   * the class the node was read from (classOf()).
+   * the class the schema was read from (classOf()).
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where its class is a complex definition.
    */
-  public static function isComplex(Schema $node): bool {
-    return !$node->isBoolean() && is_a(static::classOf($node), ComplexDataDefinitionInterface::class, TRUE);
+  public static function isComplex(Schema $schema): bool {
+    return !$schema->isBoolean() && is_a(static::classOf($schema), ComplexDataDefinitionInterface::class, TRUE);
   }
 
   /**
-   * Answers whether a built node was read from one value's definition.
+   * Answers whether a built schema was read from one value's definition.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where its class is neither complex nor a list: what
    *   LeafTypes::isLeaf() answers for its definition.
    */
-  public static function isLeaf(Schema $node): bool {
-    $class = static::classOf($node);
+  public static function isLeaf(Schema $schema): bool {
+    $class = static::classOf($schema);
     return !is_a($class, ComplexDataDefinitionInterface::class, TRUE) && !is_a($class, ListDataDefinitionInterface::class, TRUE);
   }
 
   /**
-   * Answers whether a built node is an `any` the module holds as one.
+   * Answers whether a built schema is an `any` the module holds as one.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   What LeafTypes::heldAsAny() answers for its definition: an `any`
    *   that marks variants (`variantsBy`, a string) or is held whole
    *   (`heldWhole`, set and not NULL).
    */
-  public static function heldAsAny(Schema $node): bool {
-    $model = static::model($node);
+  public static function heldAsAny(Schema $schema): bool {
+    $model = static::model($schema);
     return ($model['type'] ?? NULL) === LeafTypes::ANY && (is_string($model['variantsBy'] ?? NULL) || isset($model['heldWhole']));
   }
 
@@ -948,18 +948,18 @@ final class DefinitionSchema {
    * Writes a definition's MODEL.
    *
    * The members MEMBERS names, each where the definition states its fact
-   * and no keyword of the node holds it: `type` always, `definitionClass`,
+   * and no keyword of the schema holds it: `type` always, `definitionClass`,
    * for a DataDefinition what its array holds (stored()); for a definition
    * that is no DataDefinition (a FieldConfig) the getters say no more.
-   * `constraints` last, and only where NodeFacts::derived() does not give
+   * `constraints` last, and only where SchemaFacts::derived() does not give
    * getConstraints() exactly from the others (an empty list included).
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    * @param \PortableSchema\Builder\Schema $schema
-   *   Its node's keywords, MODEL aside.
+   *   Its schema's keywords, MODEL aside.
    * @param string $path
-   *   Where the node is, as a JSON Pointer.
+   *   Where the schema is, as a JSON Pointer.
    * @param array<int, true> $above
    *   The definitions above it and itself, by object id.
    *
@@ -985,19 +985,19 @@ final class DefinitionSchema {
     }
     // The merged list is derived from the other members wherever they say
     // it exactly; the member holds it only where they do not.
-    if (NodeFacts::derived($members) !== $constraints) {
+    if (SchemaFacts::derived($members) !== $constraints) {
       $members['constraints'] = $constraints;
     }
     return array_merge(array_intersect_key(array_fill_keys(self::MEMBERS, NULL), $members), $members);
   }
 
   /**
-   * Places each key of a definition array the node's keywords do not hold.
+   * Places each key of a definition array the schema's keywords do not hold.
    *
    * A key whose keyword (PLACES) holds the very value stored is that
    * keyword's; every other key of PLACES is its member, as stored; a
    * shape's, a config type's and `each`'s definition are read into their
-   * nodes (nested()); a key PLACES does not name, or a value its member
+   * schemas (nested()); a key PLACES does not name, or a value its member
    * cannot hold, is under `stored`. The order of the keys is not read.
    *
    * @param array $array
@@ -1005,9 +1005,9 @@ final class DefinitionSchema {
    * @param string $type
    *   The definition's data type.
    * @param \PortableSchema\Builder\Schema $schema
-   *   The node's keywords.
+   *   The schema's keywords.
    * @param string $path
-   *   Where the node is, as a JSON Pointer.
+   *   Where the schema is, as a JSON Pointer.
    * @param array<int, true> $above
    *   The definitions above it and itself, by object id.
    *
@@ -1031,12 +1031,12 @@ final class DefinitionSchema {
         $members[$name] = $value;
         continue;
       }
-      $node = static::nested($name, $value, $path . '/' . self::MODEL . '/' . $name, $above);
-      if ($node === NULL) {
+      $nested = static::nested($name, $value, $path . '/' . self::MODEL . '/' . $name, $above);
+      if ($nested === NULL) {
         $unnamed[$key] = $value;
         continue;
       }
-      $members[$name] = $node;
+      $members[$name] = $nested;
     }
     if ($unnamed !== []) {
       $members['stored'] = $unnamed;
@@ -1061,8 +1061,8 @@ final class DefinitionSchema {
    *   The definitions above it, by object id.
    *
    * @return \PortableSchema\Builder\Schema|array|string|null
-   *   `{id, node}` for a shape, `{type, node}` for a config type, a node or
-   *   the class for `each`; NULL for a value of another form, which is
+   *   `{id, schema}` for a shape, `{type, schema}` for a config type, a schema
+   *   or the class for `each`; NULL for a value of another form, which is
    *   kept under `stored`.
    */
   private static function nested(string $member, mixed $value, string $path, array $above): Schema|array|string|null {
@@ -1076,19 +1076,19 @@ final class DefinitionSchema {
     if (!is_array($value) || array_keys($value) !== [$name, 'definition'] || !is_string($value[$name]) || !$value['definition'] instanceof DataDefinitionInterface) {
       return NULL;
     }
-    return [$name => $value[$name], 'node' => static::read($value['definition'], $path . '/node', $above)];
+    return [$name => $value[$name], 'schema' => static::read($value['definition'], $path . '/schema', $above)];
   }
 
   /**
-   * Names the class the inverse makes for a node that names none.
+   * Names the class the inverse makes for a schema that names none.
    *
    * @param string $type
-   *   The node's data type.
+   *   The schema's data type.
    * @param bool $properties
-   *   Whether the node holds `properties`.
+   *   Whether the schema holds `properties`.
    *
    * @return string
-   *   ListDataDefinition for a list, MapDataDefinition for a node with
+   *   ListDataDefinition for a list, MapDataDefinition for a schema with
    *   properties, DataDefinition for any other.
    */
   public static function implied(string $type, bool $properties): string {
@@ -1100,18 +1100,18 @@ final class DefinitionSchema {
   }
 
   /**
-   * Names the class of the definition a node was read from.
+   * Names the class of the definition a schema was read from.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return string
    *   Its `definitionClass` member, else the class implied().
    */
-  public static function classOf(Schema $node): string {
-    $model = static::model($node);
+  public static function classOf(Schema $schema): string {
+    $model = static::model($schema);
     $type = $model['type'] ?? '';
-    return $model['definitionClass'] ?? static::implied(is_string($type) ? $type : '', is_array($node->get('properties')));
+    return $model['definitionClass'] ?? static::implied(is_string($type) ? $type : '', is_array($schema->get('properties')));
   }
 
   /**
@@ -1167,29 +1167,29 @@ final class DefinitionSchema {
   }
 
   /**
-   * Names the JSON type, and format, a built node's data type is.
+   * Names the JSON type, and format, a built schema's data type is.
    *
-   * Stands for type(), read from the node's facts: its data type, its
-   * `widget` setting, whether it declares DateOnly. The node's own `type`
+   * Stands for type(), read from the schema's facts: its data type, its
+   * `widget` setting, whether it declares DateOnly. The schema's own `type`
    * keyword says the type with null where the key may be cleared, and its
    * `format` keyword may be a constraint's; a reader that needs the
    * type's row as type() gives it (a cast, a signature) reads it here.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return array
-   *   What type() returns for the definition the node was read from.
+   *   What type() returns for the definition the schema was read from.
    */
-  public static function typeOf(Schema $node): array {
-    if (!static::isLeaf($node)) {
+  public static function typeOf(Schema $schema): array {
+    if (!static::isLeaf($schema)) {
       return [];
     }
-    $type = NodeFacts::dataType($node);
-    if ($type === 'string' && NodeFacts::setting($node, 'widget') === 'date') {
+    $type = SchemaFacts::dataType($schema);
+    if ($type === 'string' && SchemaFacts::setting($schema, 'widget') === 'date') {
       return ['type' => 'string', 'format' => 'date'];
     }
-    if ($type === 'datetime_iso8601' && static::declares($node, 'DateOnly')) {
+    if ($type === 'datetime_iso8601' && static::declares($schema, 'DateOnly')) {
       return LeafTypes::DATE_ONLY;
     }
     // A type no row is for, and an `any` the module holds as one, have
@@ -1274,32 +1274,32 @@ final class DefinitionSchema {
   }
 
   /**
-   * States a built node's constraints as JSON Schema keywords and checks.
+   * States a built schema's constraints as JSON Schema keywords and checks.
    *
-   * Stands for keywords(), read from the node's `constraints` member,
+   * Stands for keywords(), read from the schema's `constraints` member,
    * for a type the caller gives: what a reader compares that is not the
-   * node's own keywords, which were stated for the type with null where
+   * schema's own keywords, which were stated for the type with null where
    * the key may be cleared (PropertySchema::signature()).
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    * @param string|array|null $type
    *   The JSON type.
    * @param array $given
    *   What the key says already, as keywords() takes it.
    *
    * @return array
-   *   What keywords() returns for the definition the node was read from.
+   *   What keywords() returns for the definition the schema was read from.
    */
-  public static function keywordsOf(Schema $node, string|array|null $type, array $given = []): array {
-    return static::stated(NodeFacts::constraints($node), $type, $given);
+  public static function keywordsOf(Schema $schema, string|array|null $type, array $given = []): array {
+    return static::stated(SchemaFacts::constraints($schema), $type, $given);
   }
 
   /**
    * States constraints as JSON Schema keywords and checks.
    *
    * What keywords() says of a definition's constraints, read from the
-   * constraints alone, so a node's MODEL `constraints` gives the same.
+   * constraints alone, so a schema's MODEL `constraints` gives the same.
    *
    * @param array $constraints
    *   The constraints, options by plugin id, as getConstraints() gives
@@ -1350,12 +1350,12 @@ final class DefinitionSchema {
    * Decision: see docs/decisions.md#the-checks-the-document-names.
    *
    * @param \PortableSchema\Builder\Schema $schema
-   *   The map's node.
+   *   The map's schema.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The map.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The node, each of them under `portable-check` and its own message
+   *   The schema, each of them under `portable-check` and its own message
    *   under `x-portable-messages`.
    */
   private static function mapChecks(Schema $schema, DataDefinitionInterface $definition): Schema {
@@ -1423,7 +1423,7 @@ final class DefinitionSchema {
    *   Its options.
    *
    * @return \Stringable|null
-   *   The message as held, a source string given as a NodeMessage; NULL
+   *   The message as held, a source string given as a SchemaMessage; NULL
    *   for none.
    */
   public static function heldMessage(string $name, mixed $options): ?\Stringable {
@@ -1452,15 +1452,15 @@ final class DefinitionSchema {
    * @param array $schema
    *   The schema a JsonSchema constraint holds a value, or a frame, to.
    *
-   * @return \Drupal\surface\Contract\NodeMessage
+   * @return \Drupal\surface\Contract\SchemaMessage
    *   The message, built with no translation service.
    */
-  public static function heldTo(array $schema): NodeMessage {
+  public static function heldTo(array $schema): SchemaMessage {
     // Schemas held together as an `allOf` alone are named by what each
     // says: the message a frame's several schemas were written with.
     $together = array_keys($schema) === ['allOf'] && is_array($schema['allOf']) && array_is_list($schema['allOf']) && array_filter($schema['allOf'], 'is_array') === $schema['allOf'];
     $keywords = $together ? array_values(array_unique(array_merge(...array_map(JsonSchemaConstraint::keywords(...), $schema['allOf'])))) : JsonSchemaConstraint::keywords($schema);
-    return new NodeMessage('Checked on the server against the schema it was read from: @keywords.', ['@keywords' => implode(', ', $keywords)]);
+    return new SchemaMessage('Checked on the server against the schema it was read from: @keywords.', ['@keywords' => implode(', ', $keywords)]);
   }
 
   /**
@@ -1469,53 +1469,53 @@ final class DefinitionSchema {
    * @param string $string
    *   The source string.
    *
-   * @return \Drupal\surface\Contract\NodeMessage
+   * @return \Drupal\surface\Contract\SchemaMessage
    *   The message, translated each time it is rendered, built with no
    *   translation service.
    */
-  private static function text(string $string): NodeMessage {
+  private static function text(string $string): SchemaMessage {
     // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
-    return new NodeMessage($string);
+    return new SchemaMessage($string);
   }
 
   /**
-   * Reads a node's MODEL.
+   * Reads a schema's MODEL.
    *
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   A built node, or NULL.
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   A built schema, or NULL.
    *
    * @return array<string, mixed>
-   *   The members (MEMBERS) by name; empty for no node, or a node no
+   *   The members (MEMBERS) by name; empty for no schema, or a schema no
    *   definition was read into.
    */
-  public static function model(?Schema $node): array {
-    $model = $node?->get(self::MODEL);
+  public static function model(?Schema $schema): array {
+    $model = $schema?->get(self::MODEL);
     return is_array($model) ? $model : [];
   }
 
   /**
-   * Answers whether a built node's definition declares a constraint.
+   * Answers whether a built schema's definition declares a constraint.
    *
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The built node.
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   The built schema.
    * @param string $id
    *   The constraint's plugin id.
    *
    * @return bool
    *   TRUE where it does.
    */
-  public static function declares(?Schema $node, string $id): bool {
-    return $node !== NULL && array_key_exists($id, NodeFacts::constraints($node));
+  public static function declares(?Schema $schema, string $id): bool {
+    return $schema !== NULL && array_key_exists($id, SchemaFacts::constraints($schema));
   }
 
   /**
-   * Reads the options a built node's constraint runs with.
+   * Reads the options a built schema's constraint runs with.
    *
    * A check's own options, under `portable-check`; a constraint a keyword
    * states, or one no check names, from the declared list.
    *
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The built node.
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   The built schema.
    * @param string $id
    *   The constraint's plugin id.
    *
@@ -1523,21 +1523,21 @@ final class DefinitionSchema {
    *   Its options as the definition holds them: an array, NULL or a
    *   scalar; NULL where it declares none.
    */
-  public static function options(?Schema $node, string $id): mixed {
-    $checks = $node?->get(PortableKeywords::CHECK);
+  public static function options(?Schema $schema, string $id): mixed {
+    $checks = $schema?->get(PortableKeywords::CHECK);
     $name = PortableKeywords::PROVIDER . $id;
     if (is_array($checks) && array_key_exists($name, $checks)) {
       return $checks[$name];
     }
-    return $node === NULL ? NULL : NodeFacts::constraints($node)[$id] ?? NULL;
+    return $schema === NULL ? NULL : SchemaFacts::constraints($schema)[$id] ?? NULL;
   }
 
   /**
    * Answers whether a key offers a list of values.
    *
    * @param \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface $key
-   *   The key's node, which the options service is handed, of its item
-   *   for a list; or its definition, where the caller holds no node.
+   *   The key's schema, which the options service is handed, of its item
+   *   for a list; or its definition, where the caller holds no schema.
    *
    * @return bool
    *   TRUE where the options service resolves a set for it, of its item
@@ -1545,22 +1545,22 @@ final class DefinitionSchema {
    */
   public function listed(Schema|DataDefinitionInterface $key): bool {
     if ($key instanceof Schema) {
-      $item = static::isList($key) ? static::itemNode($key) : NULL;
+      $item = static::isList($key) ? static::itemOf($key) : NULL;
       return $this->options->resolve($item ?? $key) !== NULL;
     }
     return $this->options->resolve($key instanceof ListDataDefinitionInterface ? $key->getItemDefinition() : $key) !== NULL;
   }
 
   /**
-   * Projects a built node, and every node inside it, to the document form.
+   * Projects a built schema, and every schema inside it, to the document form.
    *
-   * Each node as publishedNode() projects it: a list's item and a map's
+   * Each schema as publishedSchema() projects it: a list's item and a map's
    * properties too, each offering a list of values or not as the options
-   * service says. A node at any other keyword position is no key's: MODEL
+   * service says. A schema at any other keyword position is no key's: MODEL
    * is stripped from it, at every depth, and nothing else.
    *
    * @param \PortableSchema\Builder\Schema $built
-   *   A built node (of(), head()).
+   *   A built schema (of(), head()).
    * @param bool|null $listed
    *   Whether the key offers a list of values; NULL to ask the options
    *   service.
@@ -1569,41 +1569,41 @@ final class DefinitionSchema {
    *   What a document says of it, at every depth.
    */
   public function published(Schema $built, ?bool $listed = NULL): Schema {
-    return Schemas::map($this->projected($built, $listed), static fn (Schema $node): Schema => $node->has(self::MODEL) ? $node->without(self::MODEL) : $node);
+    return Schemas::map($this->projected($built, $listed), static fn (Schema $schema): Schema => $schema->has(self::MODEL) ? $schema->without(self::MODEL) : $schema);
   }
 
   /**
-   * Projects a node, its item and its properties.
+   * Projects a schema, its item and its properties.
    *
    * @param \PortableSchema\Builder\Schema $built
-   *   A built node.
+   *   A built schema.
    * @param bool|null $listed
    *   Whether the key offers a list of values; NULL to ask the options
    *   service.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The node, each item and property projected (publishedNode()).
+   *   The schema, each item and property projected (publishedSchema()).
    */
   private function projected(Schema $built, ?bool $listed = NULL): Schema {
-    $node = $this->publishedNode($built, $listed);
+    $schema = $this->publishedSchema($built, $listed);
     if (static::isList($built)) {
-      $item = $node->get('items');
-      return $item instanceof Schema ? $node->with('items', $this->projected($item)) : $node;
+      $item = $schema->get('items');
+      return $item instanceof Schema ? $schema->with('items', $this->projected($item)) : $schema;
     }
-    $properties = $node->get('properties');
-    if (!is_array($properties) || !static::nodeIsMap($built)) {
-      return $node;
+    $properties = $schema->get('properties');
+    if (!is_array($properties) || !static::holdsProperties($built)) {
+      return $schema;
     }
     foreach ($properties as $name => $property) {
       if ($property instanceof Schema) {
         $properties[$name] = $this->projected($property);
       }
     }
-    return $node->with('properties', $properties);
+    return $schema->with('properties', $properties);
   }
 
   /**
-   * Projects one built node, and not the nodes inside it.
+   * Projects one built schema, and not the schemas inside it.
    *
    * What the class says the projection holds: a map that offers a list of
    * values said as one value (oneValue()), a property that does not
@@ -1613,39 +1613,39 @@ final class DefinitionSchema {
    * as plain text (publishedTexts()), MODEL stripped. Every keyword keeps
    * its place.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The built node (of(), head()).
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The built schema (of(), head()).
    * @param bool|null $listed
    *   Whether the key offers a list of values; NULL to ask the options
-   *   service, which is handed the node.
+   *   service, which is handed the schema.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The node as a document says it.
+   *   The schema as a document says it.
    *
    * @throws \LogicException
    *   For a value of a type no row is for (LeafTypes::unwritten()), whose
    *   type is named by MODEL's `type` alone.
    */
-  public function publishedNode(Schema $node, ?bool $listed = NULL): Schema {
-    if ($node->isBoolean()) {
-      return $node;
+  public function publishedSchema(Schema $schema, ?bool $listed = NULL): Schema {
+    if ($schema->isBoolean()) {
+      return $schema;
     }
     // What the definition is (a map, a list, one value) is read from the
-    // node it was read into, before a listed map is said as one value.
-    $read = $node;
-    $map = static::nodeIsMap($read);
+    // schema it was read into, before a listed map is said as one value.
+    $read = $schema;
+    $map = static::holdsProperties($read);
     if ($map) {
       $listed ??= $this->listed($read);
     }
     if ($map && $listed) {
-      $node = static::oneValue($node);
+      $schema = static::oneValue($schema);
       $map = FALSE;
     }
     elseif ($map) {
-      $node = static::applying($node);
+      $schema = static::applying($schema);
     }
     $value = !$map && !static::isList($read);
-    if ($value && static::isLeaf($read) && !$node->has('type') && !static::heldAsAny($read)) {
+    if ($value && static::isLeaf($read) && !$schema->has('type') && !static::heldAsAny($read)) {
       $model = static::model($read);
       $label = $read->has('title') ? $read->get('title') : ($model['label'] ?? NULL);
       throw LeafTypes::unwritten(is_string($label) || $label instanceof \Stringable ? $label : NULL, is_string($model['type'] ?? NULL) ? $model['type'] : '');
@@ -1653,8 +1653,8 @@ final class DefinitionSchema {
     // A list's own checks and a map's are never stated by a list of its
     // values, so the options service is asked only for a value's.
     $listed = $value && ($listed ?? $this->listed($read));
-    $node = $this->publishedChecks(static::publishedTexts($node), $map, $listed);
-    return $node->has(self::MODEL) ? $node->without(self::MODEL) : $node;
+    $schema = $this->publishedChecks(static::publishedTexts($schema), $map, $listed);
+    return $schema->has(self::MODEL) ? $schema->without(self::MODEL) : $schema;
   }
 
   /**
@@ -1676,62 +1676,62 @@ final class DefinitionSchema {
   }
 
   /**
-   * Says a map's built node as one value.
+   * Says a map's built schema as one value.
    *
    * What a map that offers a list of values is said as: a value with a
    * `oneOf`, so its own constraints are stated as a value's are, and its
    * properties, `type`, `required` and `additionalProperties` are no part
-   * of it. Made from the node alone: its title and description, and its
-   * merged constraints (NodeFacts::constraints()) read as keywords() reads
+   * of it. Made from the schema alone: its title and description, and its
+   * merged constraints (SchemaFacts::constraints()) read as keywords() reads
    * a value's constraints.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The map's built node (of()).
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The map's built schema (of()).
    *
    * @return \PortableSchema\Builder\Schema
-   *   The node of one value, MODEL kept.
+   *   The schema of one value, MODEL kept.
    */
-  private static function oneValue(Schema $node): Schema {
+  private static function oneValue(Schema $schema): Schema {
     $value = Schema::any();
     foreach (['title', 'description'] as $text) {
-      if ($node->has($text)) {
-        $value = $value->with($text, $node->get($text));
+      if ($schema->has($text)) {
+        $value = $value->with($text, $schema->get($text));
       }
     }
-    $value = Schemas::defaults($value, static::stated(NodeFacts::constraints($node), NULL));
+    $value = Schemas::defaults($value, static::stated(SchemaFacts::constraints($schema), NULL));
     // What only the server checks, and the messages, come last, as the
     // read places them (build()).
     $checks = array_intersect_key($value->all(), array_flip([PortableKeywords::CHECK, PortableKeywords::MESSAGES]));
     foreach (array_keys($checks) as $keyword) {
       $value = $value->without($keyword);
     }
-    if ($node->has('writeOnly')) {
-      $value = $value->with('writeOnly', $node->get('writeOnly'));
+    if ($schema->has('writeOnly')) {
+      $value = $value->with('writeOnly', $schema->get('writeOnly'));
     }
     $value = Schemas::defaults($value, $checks);
-    return $node->has(self::MODEL) ? $value->with(self::MODEL, $node->get(self::MODEL)) : $value;
+    return $schema->has(self::MODEL) ? $value->with(self::MODEL, $schema->get(self::MODEL)) : $value;
   }
 
   /**
    * Leaves out the properties of a map that do not apply.
    *
-   * A key an alter mounted and a refinement ruled out is on the built node
+   * A key an alter mounted and a refinement ruled out is on the built schema
    * and in its `required`; the document says neither, as at the top of a
    * frame. Every key ruled out leaves an object still.
    *
    * Decision: see docs/decisions.md#a-key-that-does-not-apply.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The map's built node, whose properties' nodes hold the mark in their
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The map's built schema, whose properties' schemas hold the mark in their
    *   `doesNotApply` member.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The node, without them.
+   *   The schema, without them.
    */
-  private static function applying(Schema $node): Schema {
-    $properties = $node->get('properties');
+  private static function applying(Schema $schema): Schema {
+    $properties = $schema->get('properties');
     if (!is_array($properties)) {
-      return $node;
+      return $schema;
     }
     $out = [];
     foreach ($properties as $name => $property) {
@@ -1741,44 +1741,44 @@ final class DefinitionSchema {
       }
     }
     if ($out === []) {
-      return $node;
+      return $schema;
     }
-    $node = $node->with('properties', array_diff_key($properties, $out));
-    $required = $node->get('required');
+    $schema = $schema->with('properties', array_diff_key($properties, $out));
+    $required = $schema->get('required');
     if (!is_array($required)) {
-      return $node;
+      return $schema;
     }
     $required = array_values(array_filter($required, static fn ($name): bool => !isset($out[(string) $name])));
-    return $required === [] ? $node->without('required') : $node->with('required', $required);
+    return $required === [] ? $schema->without('required') : $schema->with('required', $required);
   }
 
   /**
-   * Projects a node's title and description, and not the nodes inside it.
+   * Projects a schema's title and description, and not the schemas inside it.
    *
    * Each rendered as plain text; one that renders empty is left out.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node (of(), head(), describe()).
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema (of(), head(), describe()).
    *
    * @return \PortableSchema\Builder\Schema
-   *   The node, its texts as a document says them.
+   *   The schema, its texts as a document says them.
    */
-  public static function publishedTexts(Schema $node): Schema {
-    if ($node->isBoolean()) {
-      return $node;
+  public static function publishedTexts(Schema $schema): Schema {
+    if ($schema->isBoolean()) {
+      return $schema;
     }
     foreach (['title', 'description'] as $text) {
-      $held = $node->get($text);
+      $held = $schema->get($text);
       if (is_string($held) || $held instanceof \Stringable) {
         $rendered = (string) $held;
-        $node = $rendered === '' ? $node->without($text) : $node->with($text, PlainText::of($rendered));
+        $schema = $rendered === '' ? $schema->without($text) : $schema->with($text, PlainText::of($rendered));
       }
     }
-    return $node;
+    return $schema;
   }
 
   /**
-   * Projects a node's checks and messages.
+   * Projects a schema's checks and messages.
    *
    * Each check's options as CheckOptions::published() says them, but for a
    * check a list states (statedByList()), which is left out with its
@@ -1786,19 +1786,19 @@ final class DefinitionSchema {
    * (sentence()), one empty as plain text left out. The messages of
    * keywords come first, then each check's, in the checks' order.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    * @param bool $map
    *   Whether these are a map's own checks, which no list states.
    * @param bool $listed
    *   Whether the key, a value, offers a list of values.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The node, its checks and messages as a document says them.
+   *   The schema, its checks and messages as a document says them.
    */
-  private function publishedChecks(Schema $node, bool $map, bool $listed): Schema {
-    $checks = $node->get(PortableKeywords::CHECK);
-    $held = $node->get(PortableKeywords::MESSAGES);
+  private function publishedChecks(Schema $schema, bool $map, bool $listed): Schema {
+    $checks = $schema->get(PortableKeywords::CHECK);
+    $held = $schema->get(PortableKeywords::MESSAGES);
     $held = is_array($held) ? $held : [];
     if (!is_array($checks)) {
       $checks = [];
@@ -1815,7 +1815,7 @@ final class DefinitionSchema {
       }
     }
     $published = [];
-    $format = $node->get('format');
+    $format = $schema->get('format');
     foreach ($checks as $id => $options) {
       $id = (string) $id;
       $name = str_starts_with($id, PortableKeywords::PROVIDER) ? substr($id, strlen(PortableKeywords::PROVIDER)) : NULL;
@@ -1839,19 +1839,19 @@ final class DefinitionSchema {
         $said[$code] = $plain;
       }
     }
-    if ($node->has(PortableKeywords::CHECK)) {
-      $node = $published === [] ? $node->without(PortableKeywords::CHECK) : $node->with(PortableKeywords::CHECK, $published);
+    if ($schema->has(PortableKeywords::CHECK)) {
+      $schema = $published === [] ? $schema->without(PortableKeywords::CHECK) : $schema->with(PortableKeywords::CHECK, $published);
     }
     if ($said === []) {
-      return $node->has(PortableKeywords::MESSAGES) ? $node->without(PortableKeywords::MESSAGES) : $node;
+      return $schema->has(PortableKeywords::MESSAGES) ? $schema->without(PortableKeywords::MESSAGES) : $schema;
     }
-    if ($node->has(PortableKeywords::MESSAGES)) {
-      return $node->with(PortableKeywords::MESSAGES, $said);
+    if ($schema->has(PortableKeywords::MESSAGES)) {
+      return $schema->with(PortableKeywords::MESSAGES, $said);
     }
     // The messages stand right after the checks, where the read writes
-    // them: MODEL, which follows the checks on a built node, goes first.
-    $node = $node->has(self::MODEL) ? $node->without(self::MODEL) : $node;
-    return $node->with(PortableKeywords::MESSAGES, $said);
+    // them: MODEL, which follows the checks on a built schema, goes first.
+    $schema = $schema->has(self::MODEL) ? $schema->without(self::MODEL) : $schema;
+    return $schema->with(PortableKeywords::MESSAGES, $said);
   }
 
   /**
@@ -1931,7 +1931,7 @@ final class DefinitionSchema {
    * @param mixed $options
    *   Its options.
    * @param mixed $held
-   *   The message the node holds for it, or NULL.
+   *   The message the schema holds for it, or NULL.
    * @param bool $labeled
    *   FALSE where a message the constraint was not given is left empty,
    *   not said by its label or id.

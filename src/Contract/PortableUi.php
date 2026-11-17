@@ -45,12 +45,12 @@ final class PortableUi {
   public const KEYWORD = PortableKeywords::UI;
 
   /**
-   * The members, in the order a node carries them.
+   * The members, in the order a schema carries them.
    */
   public const MEMBERS = ['widget', 'options', 'group', 'weight', 'groups'];
 
   /**
-   * The options Surface writes, in the order a node carries them.
+   * The options Surface writes, in the order a schema carries them.
    */
   public const OPTIONS = ['multiple', 'placeholder', 'prefix', 'suffix', 'help', 'size', 'rows', 'emptyOption'];
 
@@ -151,31 +151,31 @@ final class PortableUi {
   }
 
   /**
-   * Adds hints to a node's `x-portable-ui`, placed before its `x-surface`.
+   * Adds hints to a schema's `x-portable-ui`, placed before its `x-surface`.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    * @param array $ui
-   *   The hints: members, and options merged into the node's own.
+   *   The hints: members, and options merged into the schema's own.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The node, its hints merged.
+   *   The schema, its hints merged.
    */
-  public static function set(Schema $node, array $ui): Schema {
+  public static function set(Schema $schema, array $ui): Schema {
     if ($ui === []) {
-      return $node;
+      return $schema;
     }
-    $had = $node->get(self::KEYWORD);
+    $had = $schema->get(self::KEYWORD);
     $had = is_array($had) ? $had : [];
     if (is_array($had['options'] ?? NULL) && is_array($ui['options'] ?? NULL)) {
       $ui['options'] = $ui['options'] + $had['options'];
     }
     $merged = self::ordered($ui + $had);
-    return $node->has(self::KEYWORD) ? $node->with(self::KEYWORD, $merged) : PortableKeywords::before($node, [self::KEYWORD => $merged]);
+    return $schema->has(self::KEYWORD) ? $schema->with(self::KEYWORD, $merged) : PortableKeywords::before($schema, [self::KEYWORD => $merged]);
   }
 
   /**
-   * Strips members and options from a node's hints.
+   * Strips members and options from a schema's hints.
    *
    * @param array $ui
    *   The keyword's value.
@@ -218,13 +218,13 @@ final class PortableUi {
    *   The same, settled.
    */
   public static function settled(Schema $schema): Schema {
-    return Schemas::map($schema, static function (Schema $node): Schema {
-      if ($node->get(ContractEmitter::EXTENSION) === []) {
-        $node = $node->without(ContractEmitter::EXTENSION);
+    return Schemas::map($schema, static function (Schema $subschema): Schema {
+      if ($subschema->get(ContractEmitter::EXTENSION) === []) {
+        $subschema = $subschema->without(ContractEmitter::EXTENSION);
       }
-      $properties = $node->get('properties');
+      $properties = $subschema->get('properties');
       if (!is_array($properties)) {
-        return $node;
+        return $subschema;
       }
       $groups = [];
       foreach ($properties as $name => $member) {
@@ -238,7 +238,7 @@ final class PortableUi {
           $properties[$name] = $member->with(self::KEYWORD, $ui);
         }
       }
-      return $groups === [] ? $node : self::set($node->with('properties', $properties), ['groups' => $groups]);
+      return $groups === [] ? $subschema : self::set($subschema->with('properties', $properties), ['groups' => $groups]);
     });
   }
 
@@ -256,7 +256,7 @@ final class PortableUi {
   }
 
   /**
-   * Orders a keyword's members, and its options, as a node carries them.
+   * Orders a keyword's members, and its options, as a schema carries them.
    *
    * @param array $ui
    *   The keyword's value.

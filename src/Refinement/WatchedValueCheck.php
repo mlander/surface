@@ -6,7 +6,7 @@ namespace Drupal\surface\Refinement;
 
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Pipeline\Coercion;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\ValueState;
@@ -70,13 +70,13 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
    */
   protected static function holdsIntegers(Schema $schema, mixed $value): bool {
     if (is_float($value)) {
-      return !in_array(NodeFacts::dataType($schema), ['integer', 'timestamp'], TRUE);
+      return !in_array(SchemaFacts::dataType($schema), ['integer', 'timestamp'], TRUE);
     }
     if (!is_array($value)) {
       return TRUE;
     }
-    $item = DefinitionSchema::isList($schema) ? DefinitionSchema::itemNode($schema) : NULL;
-    $properties = NodeFacts::properties($schema);
+    $item = DefinitionSchema::isList($schema) ? DefinitionSchema::itemOf($schema) : NULL;
+    $properties = SchemaFacts::properties($schema);
     foreach ($value as $name => $one) {
       $below = $item ?? $properties[$name] ?? NULL;
       if ($below !== NULL && !static::holdsIntegers($below, $one)) {
@@ -106,7 +106,7 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
     return static::eachValue($schema, $value, static function (Schema $leaf, mixed $one): mixed {
       // Read through the coercion table first, as accept() reads what a
       // form posts: a form's "1" is a boolean's TRUE.
-      $type = NodeFacts::dataType($leaf);
+      $type = SchemaFacts::dataType($leaf);
       $one = Coercion::scalar($type, DefinitionSchema::declares($leaf, 'DateOnly'), $one);
       if ($type === 'string' && is_scalar($one) && !is_string($one)) {
         // A scalar at a string key, which the watched-value check has
@@ -141,7 +141,7 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
    * @internal
    */
   public static function spelled(Schema $schema, mixed $value): mixed {
-    return static::eachValue($schema, $value, static fn (Schema $leaf, mixed $one): mixed => NodeFacts::dataType($leaf) === 'datetime_iso8601'
+    return static::eachValue($schema, $value, static fn (Schema $leaf, mixed $one): mixed => SchemaFacts::dataType($leaf) === 'datetime_iso8601'
       ? Coercion::served($one, DefinitionSchema::declares($leaf, 'DateOnly'))
       : $one);
   }
@@ -163,10 +163,10 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
   private static function eachValue(Schema $schema, mixed $value, \Closure $write): mixed {
     if (is_array($value)) {
       if (DefinitionSchema::isList($schema)) {
-        $item = DefinitionSchema::itemNode($schema);
+        $item = DefinitionSchema::itemOf($schema);
         return $item === NULL ? $value : array_map(static fn (mixed $one): mixed => static::eachValue($item, $one, $write), $value);
       }
-      $properties = NodeFacts::properties($schema);
+      $properties = SchemaFacts::properties($schema);
       foreach ($value as $name => $one) {
         if (isset($properties[$name])) {
           $value[$name] = static::eachValue($properties[$name], $one, $write);

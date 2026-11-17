@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Form\Document\DocumentNodes;
+use Drupal\surface\Form\Document\DocumentSchemas;
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\DataDefinition;
@@ -62,9 +62,9 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
   ];
 
   /**
-   * The nodes of the envelope form() drew last.
+   * The schemas of the envelope form() drew last.
    */
-  protected DocumentNodes $drawn;
+  protected DocumentSchemas $drawn;
 
   /**
    * {@inheritdoc}
@@ -103,8 +103,8 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
    */
   protected function form(SurfaceInterface $surface, array $values = []): array {
     $values += $surface->getDefaultValues();
-    // The nodes extraction reads each element back through.
-    $this->drawn = DocumentNodes::of($this->formBuilder()->envelope($surface, $values));
+    // The schemas extraction reads each element back through.
+    $this->drawn = DocumentSchemas::of($this->formBuilder()->envelope($surface, $values));
     return $this->formBuilder()->buildSurfaceForm($surface, $values, new FormState());
   }
 
@@ -124,7 +124,7 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
   /**
    * Reads one key back the way the form builder does, from posted values.
    *
-   * By the widget that drew the element, through the envelope's node at
+   * By the widget that drew the element, through the envelope's schema at
    * its pointer, as extraction reads it.
    *
    * @param array $element

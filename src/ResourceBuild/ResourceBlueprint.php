@@ -27,8 +27,8 @@ use Drupal\surface\Resource\ResourceCallable;
 use Drupal\surface\Resource\SiteListInterface;
 use Drupal\surface\Contract\KeywordReader;
 use Drupal\surface\Contract\LeafTypes;
-use Drupal\surface\Contract\NodeDefinition;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\DefinitionFromSchema;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\ValueSchema;
 use Drupal\surface\Contract\SchemaReader;
 use PortableSchema\Builder\Schema;
@@ -885,7 +885,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       // What every entry is, as a schema: its default inside it.
       $schema = $this->schemaOfOne('addEach', $key, $type);
       $default ??= ValueSchema::factsOf($schema)['default_value'] ?? NULL;
-      $type = NodeDefinition::of($schema);
+      $type = DefinitionFromSchema::of($schema);
     }
     $this->assertHoldsNoChild('declares keys from the site', $key);
     if ($type instanceof DataDefinitionInterface) {
@@ -1062,7 +1062,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       $required = $required || $type->isRequired();
       $reference = $type->get('$ref');
       $shape = is_string($reference) ? $this->shapeOf($reference) : NULL;
-      $type = $shape ?? (string) NodeFacts::dataType($this->schemaOfOne('reads', $port, $type));
+      $type = $shape ?? (string) SchemaFacts::dataType($this->schemaOfOne('reads', $port, $type));
     }
     if ($this->outputs) {
       throw new \LogicException(sprintf('reads() was asked to read "%s" into outputs. An output is emitted, never refined, so it has nothing to read.', $port));

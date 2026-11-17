@@ -137,16 +137,16 @@ class WidgetAskTest extends SurfaceKernelTestBase {
    * seal builds no map of the pair's keys for them, so the pair's keys
    * derive none.
    */
-  public function testNodeFirstBuildDerivesNoDefinitionWhereWidgetsAreAsked(): void {
+  public function testSchemaFirstBuildDerivesNoDefinitionWhereWidgetsAreAsked(): void {
     $derived = new \ReflectionProperty(Entry::class, 'definition');
     $pair = $this->built(PairStructure::class);
     foreach ($pair->getDefinitions()->entries() as $name => $entry) {
-      $this->assertTrue($entry->isNodeFirst());
+      $this->assertTrue($entry->isSchemaFirst());
       $this->assertNull($derived->getValue($entry), sprintf('The pair\'s "%s" asks for no widget and derives no definition at build.', $name));
     }
     $pairs = $this->built(PairsStructure::class);
     foreach ($pairs->getDefinitions()->entries() as $name => $entry) {
-      $this->assertTrue($entry->isNodeFirst());
+      $this->assertTrue($entry->isSchemaFirst());
       $this->assertNull($derived->getValue($entry), sprintf('"%s" asks for a widget, whose claim takes the key\'s schema: no definition is derived.', $name));
       foreach ($entry->attachment?->child->getDefinitions()->entries() ?? [] as $inside => $child_entry) {
         $this->assertNull($derived->getValue($child_entry), sprintf('The pair\'s "%s" inside "%s" derives no definition.', $inside, $name));

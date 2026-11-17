@@ -126,7 +126,7 @@
       "dep_gi": "4ce74b6425b8",
       "dep_gb": "781352521126"
     },
-    "plain | nodes": {
+    "plain | schemas": {
       "nope": "85cf5ad1bdc5",
       "nope.deeper": "85cf5ad1bdc5",
       "vault.0.m": "85cf5ad1bdc5",
@@ -301,7 +301,7 @@
       "dep_gi": "4ce74b6425b8",
       "dep_gb": "781352521126"
     },
-    "texts | nodes": {
+    "texts | schemas": {
       "nope": "85cf5ad1bdc5",
       "nope.deeper": "85cf5ad1bdc5",
       "vault.0.m": "85cf5ad1bdc5",

@@ -166,20 +166,20 @@ class ComputedKeysTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the class computing a key is handed the key's node.
+   * Tests the class computing a key is handed the key's schema.
    *
    * What it may read of it is the standard keywords: the handle's title
    * and the `maxLength` its Length declares.
    */
-  public function testTheClassIsHandedTheKeysNode(): void {
+  public function testTheClassIsHandedTheKeysSchema(): void {
     BadgeHandle::$handed = NULL;
     $this->assertTrue($this->submit(['first' => 'Ada', 'last' => 'Byron'])->isValid());
-    $node = BadgeHandle::handed();
-    $this->assertInstanceOf(Schema::class, $node);
-    $this->assertSame('Handle', (string) $node->get('title'));
-    $this->assertSame(12, $node->get('maxLength'));
-    $this->assertSame(['string', 'null'], $node->get('type'), 'Not required, so it may be NULL.');
-    $this->assertTrue(DefinitionSchema::same($this->badge()->getDefinitions()->entry('handle')->schema(), $node), 'It is the handle\'s node.');
+    $schema = BadgeHandle::handed();
+    $this->assertInstanceOf(Schema::class, $schema);
+    $this->assertSame('Handle', (string) $schema->get('title'));
+    $this->assertSame(12, $schema->get('maxLength'));
+    $this->assertSame(['string', 'null'], $schema->get('type'), 'Not required, so it may be NULL.');
+    $this->assertTrue(DefinitionSchema::same($this->badge()->getDefinitions()->entry('handle')->schema(), $schema), 'It is the handle\'s schema.');
   }
 
   /**

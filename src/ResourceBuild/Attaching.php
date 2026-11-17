@@ -20,7 +20,7 @@ use Drupal\surface\Resource\SiteListInterface;
 use Drupal\surface\Resource\BoundSiteListInterface;
 use Drupal\surface\Resource\ClosedSiteListInterface;
 use Drupal\surface\Resource\EntrySchemasInterface;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
@@ -516,12 +516,12 @@ final class Attaching {
         if ($match === NULL) {
           throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", which has no "%s" entry: %s listed it for one map and not the other.', $definition->id, $port, $id, $key, $sibling, $entry, $each['from']));
         }
-        $type = NodeFacts::dataType($match);
+        $type = SchemaFacts::dataType($match);
         if ($ports[$port]->type !== 'any' && $type !== $ports[$port]->type) {
           throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s", which reads %s %s, to "%s", whose "%s" entry holds %s %s.', $definition->id, $port, $id, $key, static::article($ports[$port]->type), $ports[$port]->type, $sibling, $entry, static::article($type), $type));
         }
         if (static::unshaped($ports[$port], $match) !== NULL) {
-          $shape = NodeFacts::shape($match);
+          $shape = SchemaFacts::shape($match);
           throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", whose "%s" entry is declared with %s, and the port reads the shape %s: the sibling map declares its entries with it, addEach(\'%s\', <shape>::class, from: ..., label: ...).', $definition->id, $port, $id, $key, $sibling, $entry, $shape === NULL ? 'a type alone' : 'the shape ' . $shape, $ports[$port]->shape, $sibling));
         }
         // Its sealed entry's schema itself: a schema is never written.
@@ -829,7 +829,7 @@ final class Attaching {
     if ($port->shape === NULL || $wired === NULL) {
       return NULL;
     }
-    $shape = $wired instanceof Schema ? NodeFacts::shape($wired) : DefinitionMetadata::shapeOf($wired);
+    $shape = $wired instanceof Schema ? SchemaFacts::shape($wired) : DefinitionMetadata::shapeOf($wired);
     if ($shape === $port->shape) {
       return NULL;
     }

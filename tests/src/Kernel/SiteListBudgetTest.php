@@ -664,8 +664,8 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
   protected static function withoutHints(array $schema): array {
     unset($schema['$id']);
     $hints = array_flip(['widget', 'multiple', 'placeholder', 'prefix', 'suffix', 'help', 'group', 'weight', 'groups']);
-    $strip = static function (array $node) use (&$strip, $hints): array {
-      foreach ($node as $key => $value) {
+    $strip = static function (array $subschema) use (&$strip, $hints): array {
+      foreach ($subschema as $key => $value) {
         if (!is_array($value) || in_array($key, ['const', 'default', 'examples', 'enum', 'x-surface'], TRUE)) {
           continue;
         }
@@ -679,10 +679,10 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
           }
           // An `x-portable-ui` that held only hints is not written.
           if ($value === []) {
-            unset($node[$key]);
+            unset($subschema[$key]);
             continue;
           }
-          $node[$key] = $value;
+          $subschema[$key] = $value;
           continue;
         }
         if ($key === 'properties') {
@@ -696,20 +696,20 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
             }
             $value[$name] = $stripped;
           }
-          if ($value === [] && $node[$key] !== []) {
-            unset($node[$key]);
+          if ($value === [] && $subschema[$key] !== []) {
+            unset($subschema[$key]);
             continue;
           }
-          $node[$key] = $value;
+          $subschema[$key] = $value;
           continue;
         }
         $stripped = $strip($value);
         // A narrowing left with nothing is `true`.
-        $node[$key] = in_array($key, ['allOf', 'anyOf', 'oneOf'], TRUE) && array_is_list($value)
+        $subschema[$key] = in_array($key, ['allOf', 'anyOf', 'oneOf'], TRUE) && array_is_list($value)
           ? array_map(static fn (mixed $member): mixed => is_array($member) && $member !== [] && $strip($member) === [] ? TRUE : (is_array($member) ? $strip($member) : $member), $value)
           : $stripped;
       }
-      return $node;
+      return $subschema;
     };
     return $strip($schema);
   }

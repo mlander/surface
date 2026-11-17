@@ -77,7 +77,7 @@ final class ExtensionExistsOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, Schema $node): OptionSet {
+  public function resolve(Constraint $constraint, Schema $schema): OptionSet {
     assert($constraint instanceof ExtensionExistsConstraint);
     $options = [];
     if ($constraint->type === 'theme') {

@@ -14,7 +14,7 @@ use Drupal\surface\Contract\ConstraintKeywords;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Contract\LeafTypes;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\DoesNotApply;
@@ -267,9 +267,9 @@ class AnswerTest extends UnitTestCase {
     $placeholder = DataDefinition::create('any')->setLabel('Value');
     DefinitionMetadata::setVariantsBy($placeholder, 'kind');
     $refined = Answer::apply(DefinitionSchema::of($placeholder), Schema::integer(), 'k', 'the declaring class');
-    $this->assertSame('integer', NodeFacts::dataType($refined));
+    $this->assertSame('integer', SchemaFacts::dataType($refined));
     $this->assertSame(['integer', 'null'], $refined->get('type'));
-    $this->assertNull(NodeFacts::variantsBy($refined));
+    $this->assertNull(SchemaFacts::variantsBy($refined));
     $key = DefinitionSchema::of(DataDefinition::create('string'));
     $this->assertSame($key, Answer::apply($key, Schema::string(), 'k', 'the declaring class'));
   }
@@ -367,7 +367,7 @@ class AnswerTest extends UnitTestCase {
    */
   public function testKeyHoldingChild(): void {
     $key = DefinitionSchema::of(static::map());
-    $this->assertTrue(NodeFacts::doesNotApply(Answer::forKeyHoldingChild($key, DoesNotApply::here(), 'address', 'the declaring class')));
+    $this->assertTrue(SchemaFacts::doesNotApply(Answer::forKeyHoldingChild($key, DoesNotApply::here(), 'address', 'the declaring class')));
     $this->assertNull(Answer::forKeyHoldingChild($key, Schema::any(), 'address', 'the declaring class'));
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage(sprintf(Answer::HOLDS_A_CHILD, 'address', 'the required flag was turned off'));

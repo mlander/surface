@@ -36,10 +36,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Each case was first shown to fail under a planted fault that no other
  * test saw: a default merged one level deep, a label of '' read as none,
  * a property walked with its parent's definition, a secret read from the
- * wrong place, a list item walked with the list's node, a map's
+ * wrong place, a list item walked with the list's schema, a map's
  * properties walked one level only.
  *
- * Decision: see docs/decisions.md#the-value-pipeline-reads-nodes.
+ * Decision: see docs/decisions.md#the-value-pipeline-reads-schemas.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]

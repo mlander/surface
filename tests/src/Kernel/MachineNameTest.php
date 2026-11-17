@@ -48,7 +48,7 @@ class MachineNameTest extends SurfaceKernelTestBase {
    * @param string|null $label
    *   The label.
    * @param \Drupal\Core\TypedData\DataDefinition|null $key
-   *   The computed key's definition, whose node it is handed; NULL for
+   *   The computed key's definition, whose schema it is handed; NULL for
    *   none.
    *
    * @return mixed

@@ -95,7 +95,7 @@ final class NodeTypeResource implements ResourceInterface {
    * Core's schema stores the name as a label, which may not span lines or
    * hold a control character, and the description and the help as text,
    * which may hold line breaks and tabs and no other control character:
-   * the Regex constraints say so too, so no door offers what the node
+   * the Regex constraints say so too, so no door offers what the schema
    * type's schema refuses. The machine name is computed from the name
    * unless typed, as core's form suggests it, and held once by the stock
    * SurfaceUnique the build adds on add. The title label is not
@@ -166,7 +166,7 @@ final class NodeTypeResource implements ResourceInterface {
       ->ui(widget: 'textarea'));
     $inputs->describe('help', group: $submission);
 
-    // Defaults of new content, kept on the node base fields.
+    // Defaults of new content, kept on the schema base fields.
     $inputs->addSchema('status', Schema::bool()
       ->title(t('Published'))
       ->description(t('Whether new content of this type is published by default.'))

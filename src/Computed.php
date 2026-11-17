@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Pipeline\PipelineGuard;
 use Drupal\surface\Resource\Compute;
@@ -124,8 +124,8 @@ final class Computed {
    *   The values of its level, sources included.
    * @param array $stored
    *   What storage holds for its level.
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The key's own node, handed to the class computing it.
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   The key's own schema, handed to the class computing it.
    * @param bool $creates
    *   TRUE when the write creates the thing (recomputes()).
    *
@@ -133,8 +133,8 @@ final class Computed {
    *   The value computed from the sources, or what is stored when it is
    *   not computed again.
    */
-  public function value(string $key, array $values, array $stored, ?Schema $node = NULL, bool $creates = FALSE): mixed {
-    return $this->recomputes($key, $values, $stored, $creates) ? $this->compute($values, $node) : $stored[$key];
+  public function value(string $key, array $values, array $stored, ?Schema $schema = NULL, bool $creates = FALSE): mixed {
+    return $this->recomputes($key, $values, $stored, $creates) ? $this->compute($values, $schema) : $stored[$key];
   }
 
   /**
@@ -146,8 +146,8 @@ final class Computed {
    *
    * @param array $values
    *   The values of the key's level, sources included.
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The key's own node: what it allows, for a class that fits its value
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   The key's own schema: what it allows, for a class that fits its value
    *   to it (MachineName cuts to its `maxLength`). Its standard keywords
    *   are promised, read through get(); what Surface keeps beyond them is
    *   not.
@@ -155,13 +155,13 @@ final class Computed {
    * @return mixed
    *   What the class computing it answers.
    */
-  public function compute(array $values, ?Schema $node = NULL): mixed {
+  public function compute(array $values, ?Schema $schema = NULL): mixed {
     $from = [];
     foreach ($this->from as $source) {
       $from[$source] = $values[$source] ?? NULL;
     }
     $using = $this->using;
-    $call = static fn (): mixed => $using::compute($from, $node);
+    $call = static fn (): mixed => $using::compute($from, $schema);
     $guarded = FALSE;
     assert(PipelineGuard::asserting($guarded));
     return $guarded ? PipelineGuard::guardCompute($using . '::compute()', $call) : $call();
@@ -187,10 +187,10 @@ final class Computed {
    */
   public static function apply(SurfaceInterface $surface, array $values, array $stored): array {
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
-      $node = $entry->schema();
-      $computed = NodeFacts::compute($node);
+      $schema = $entry->schema();
+      $computed = SchemaFacts::compute($schema);
       if ($computed !== NULL && !$entry->locked && !($computed->takesSent() && ValueState::isConfigured($values[$name] ?? NULL))) {
-        $values[$name] = $computed->value((string) $name, $values, $stored, $node);
+        $values[$name] = $computed->value((string) $name, $values, $stored, $schema);
       }
     }
     return $values;

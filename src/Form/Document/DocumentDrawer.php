@@ -19,7 +19,7 @@ use Drupal\surface\Form\SurfaceFormBuilder;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Pipeline\Sentences;
 use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraintValidator;
-use Drupal\surface\Widget\NodeDrawerInterface;
+use Drupal\surface\Widget\SchemaDrawerInterface;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\SurfaceWidgetManager;
 use Drupal\surface\Widget\WidgetContext;
@@ -36,7 +36,7 @@ use PortableSchema\Builder\Schema;
  * one rule per method, named as React names it where the names fit:
  *
  * - the widget is the one `x-portable-ui.widget` names, else the stock
- *   one for the node's shape (SurfaceWidgetManager::widgetFor());
+ *   one for the schema's shape (SurfaceWidgetManager::widgetFor());
  * - a key is required where its owner's `required` lists it;
  * - its title, description and `options.help`, and the note of a lock
  *   (`x-surface.locked`, or "Fixed for this operation."), are its label
@@ -61,13 +61,13 @@ use PortableSchema\Builder\Schema;
  *
  * Each element drawn for a value carries its JSON Pointer
  * (SurfaceFormBuilderInterface::PATH_KEY) and the widget that drew it;
- * extraction finds the node at that pointer in the envelope
- * (DocumentNodes::at()). The container keeps the values the envelope was
+ * extraction finds the schema at that pointer in the envelope
+ * (DocumentSchemas::at()). The container keeps the values the envelope was
  * emitted for (SurfaceFormBuilderInterface::VALUES_KEY), never the
- * nodes. A key the envelope leaves deferred with no conditional for the
+ * schemas. A key the envelope leaves deferred with no conditional for the
  * value its deciding key holds (a variant inside a collection's item) is
  * drawn from the document the host gives for that place and that value
- * (DocumentNodes::chosenVariant()), each frame below it narrowed by its
+ * (DocumentSchemas::chosenVariant()), each frame below it narrowed by its
  * conditionals as it is drawn. It reads no data surface, no definition and
  * no Typed Data: what changes when a value does is a new envelope, which
  * the host asks for and hands over.
@@ -76,7 +76,7 @@ use PortableSchema\Builder\Schema;
  *
  * @internal
  */
-final class DocumentDrawer implements NodeDrawerInterface {
+final class DocumentDrawer implements SchemaDrawerInterface {
 
   /**
    * Render key marking a collection's element: its dotted path.
@@ -137,15 +137,15 @@ final class DocumentDrawer implements NodeDrawerInterface {
   /**
    * The container being drawn: its DOM id, and whether it is locked whole.
    *
-   * @var array{wrapper: string, whole: bool, nodes: \Drupal\surface\Form\Document\DocumentNodes|null}
+   * @var array{wrapper: string, whole: bool, schemas: \Drupal\surface\Form\Document\DocumentSchemas|null}
    */
-  protected array $drawing = ['wrapper' => '', 'whole' => FALSE, 'nodes' => NULL];
+  protected array $drawing = ['wrapper' => '', 'whole' => FALSE, 'schemas' => NULL];
 
   /**
    * Constructs the drawer.
    *
    * @param \Drupal\surface\Widget\SurfaceWidgetManager $widgetManager
-   *   The widget manager, whose widgets draw each node.
+   *   The widget manager, whose widgets draw each schema.
    * @param \Drupal\surface\Form\Refreshing $refreshing
    *   What wires the drawn container to the rebuild.
    */
@@ -169,16 +169,16 @@ final class DocumentDrawer implements NodeDrawerInterface {
    *   made from.
    * @param string[] $keys
    *   The top keys to draw, a flow step's; none for every key.
-   * @param \Drupal\surface\Form\Document\DocumentNodes|null $nodes
-   *   The envelope's nodes, when the caller read them already.
+   * @param \Drupal\surface\Form\Document\DocumentSchemas|null $schemas
+   *   The envelope's schemas, when the caller read them already.
    *
    * @return array
    *   The container.
    */
-  public function draw(ServedContract $contract, FormStateInterface $form_state, ?WidgetHostInterface $host = NULL, string $wrapper_key = 'surface', array $keys = [], ?DocumentNodes $nodes = NULL): array {
-    $nodes ??= DocumentNodes::of($contract, $host);
-    $root = $nodes->root;
-    $values = $nodes->values;
+  public function draw(ServedContract $contract, FormStateInterface $form_state, ?WidgetHostInterface $host = NULL, string $wrapper_key = 'surface', array $keys = [], ?DocumentSchemas $schemas = NULL): array {
+    $schemas ??= DocumentSchemas::of($contract, $host);
+    $root = $schemas->root;
+    $values = $schemas->values;
     $stale = array_values(array_filter((array) ($contract->document['stale'] ?? []), 'is_string'));
     // One id per built container, not one per plugin: two placements of
     // the same block on one page would otherwise share a wrapper id. On a
@@ -190,7 +190,7 @@ final class DocumentDrawer implements NodeDrawerInterface {
       '#attributes' => ['id' => $wrapper_id],
       '#process' => $this->refreshing->surfaceProcess('container'),
       Refreshing::WRAPPER_KEY => $wrapper_id,
-      // What extraction finds each element's node by, with the envelope
+      // What extraction finds each element's schema by, with the envelope
       // the host emits for them again where this build is not in memory.
       SurfaceFormBuilderInterface::VALUES_KEY => $values,
     ];
@@ -200,7 +200,7 @@ final class DocumentDrawer implements NodeDrawerInterface {
     // Locked whole (`readOnly` at the top), the reason is said once,
     // above the form: no element repeats it, and none is marked required.
     // Decision: see docs/decisions.md#locked-at-the-top.
-    $this->drawing = ['wrapper' => $wrapper_id, 'whole' => $root->get('readOnly') === TRUE, 'nodes' => $nodes];
+    $this->drawing = ['wrapper' => $wrapper_id, 'whole' => $root->get('readOnly') === TRUE, 'schemas' => $schemas];
     try {
       $context = new WidgetContext('', FALSE, FALSE, FALSE, $host, $this, $stale);
       $container += $this->frame($root, $values, $context, $keys);
@@ -269,12 +269,12 @@ final class DocumentDrawer implements NodeDrawerInterface {
   /**
    * {@inheritdoc}
    */
-  public function drawNode(Schema $node, mixed $value, WidgetContext $context): array {
-    return $this->key($node, $value, $context, NULL, []);
+  public function drawSchema(Schema $schema, mixed $value, WidgetContext $context): array {
+    return $this->key($schema, $value, $context, NULL, []);
   }
 
   /**
-   * Draws the properties of an object node, each as its own element.
+   * Draws the properties of an object schema, each as its own element.
    *
    * In the object's order; a key the document leaves out because it does
    * not apply (the frame's `x-surface.doesNotApply`) is drawn as its
@@ -282,7 +282,7 @@ final class DocumentDrawer implements NodeDrawerInterface {
    * makes it apply has a place to put it.
    *
    * @param \PortableSchema\Builder\Schema $object
-   *   The object node, inline.
+   *   The object schema, inline.
    * @param array $values
    *   What it holds, by key.
    * @param \Drupal\surface\Widget\WidgetContext $context
@@ -303,7 +303,7 @@ final class DocumentDrawer implements NodeDrawerInterface {
     $required = array_map('strval', (array) ($object->get('required') ?? []));
     $groups = $object->isBoolean() ? [] : (Schemas::data(SurfaceWidgetBase::ui($object)['groups'] ?? NULL) ?? []);
     $elements = [];
-    foreach ($properties as $name => $node) {
+    foreach ($properties as $name => $schema) {
       $name = (string) $name;
       if ($keys !== [] && !in_array($name, $keys, TRUE)) {
         // Another step's: no element, so it says nothing, and accept keeps
@@ -312,12 +312,12 @@ final class DocumentDrawer implements NodeDrawerInterface {
         // docs/decisions.md#a-flow-is-declared-on-the-route-that-draws-it-not-a-resource.
         continue;
       }
-      if (!$node instanceof Schema || $node->isBoolean()) {
+      if (!$schema instanceof Schema || $schema->isBoolean()) {
         $elements[$name] = static::ruledOut();
         continue;
       }
       $at = $context->at($name, in_array($name, $required, TRUE));
-      $elements[$name] = static::arranged($this->key($node, $values[$name] ?? NULL, $at, $object, $values), $node, $groups);
+      $elements[$name] = static::arranged($this->key($schema, $values[$name] ?? NULL, $at, $object, $values), $schema, $groups);
     }
     $ruled = $object->isBoolean() ? [] : (Schemas::data(SurfaceWidgetBase::extension($object)['doesNotApply'] ?? NULL) ?? []);
     foreach ($ruled as $name => $dependencies) {
@@ -335,8 +335,8 @@ final class DocumentDrawer implements NodeDrawerInterface {
   /**
    * Draws one key: a computed value, a collection, variants or its widget.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's node, inline.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema, inline.
    * @param mixed $value
    *   What it holds, as shown.
    * @param \Drupal\surface\Widget\WidgetContext $context
@@ -350,30 +350,30 @@ final class DocumentDrawer implements NodeDrawerInterface {
    * @return array
    *   The element.
    */
-  protected function key(Schema $node, mixed $value, WidgetContext $context, ?Schema $frame, array $frame_values): array {
-    $extension = SurfaceWidgetBase::extension($node);
+  protected function key(Schema $schema, mixed $value, WidgetContext $context, ?Schema $frame, array $frame_values): array {
+    $extension = SurfaceWidgetBase::extension($schema);
     $depends = array_values(array_filter((array) ($extension['dependsOn'] ?? []), 'is_string'));
-    $locked = $node->get('readOnly') === TRUE && !$context->locked;
+    $locked = $schema->get('readOnly') === TRUE && !$context->locked;
     $computed = Schemas::data($extension['computed'] ?? NULL);
     if ($computed !== NULL && ($computed['when'] ?? NULL) !== 'unless_sent') {
       // Shown and fixed: nobody types it, and nothing is posted for it.
       // One computed unless sent is drawn by its widget, below.
       // Decision: see
       // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
-      return static::computedItem($node, $computed, $frame, $value) + [self::DEPENDS_KEY => $depends];
+      return static::computedItem($schema, $computed, $frame, $value) + [self::DEPENDS_KEY => $depends];
     }
-    if (static::isCollection($node)) {
+    if (static::isCollection($schema)) {
       // Decision: see docs/decisions.md#a-list-of-child-invocations.
-      $element = $this->collection($node, $value, $context, $locked);
+      $element = $this->collection($schema, $value, $context, $locked);
     }
-    elseif (DocumentNodes::isVariants($node)) {
+    elseif (DocumentSchemas::isVariants($schema)) {
       // The variant the frame's conditionals choose; a deferred one inside
       // an item, which no conditional ties to it, from the host's
       // document for that place and that value, a full schema whose
       // frames are narrowed as they are drawn.
       $variant = $frame === NULL ? NULL : static::resolveVariants($frame, $context->name(), $frame_values);
       if ($variant === NULL && $frame !== NULL) {
-        $variant = $this->drawing['nodes']?->chosenVariant($frame, $context->name(), $context->pointer, $frame_values);
+        $variant = $this->drawing['schemas']?->chosenVariant($frame, $context->name(), $context->pointer, $frame_values);
         $context = $variant === NULL ? $context : $context->narrowing();
       }
       if ($variant === NULL) {
@@ -398,15 +398,15 @@ final class DocumentDrawer implements NodeDrawerInterface {
       ];
     }
     else {
-      $element = $this->drawn($node, $value, $locked ? $context->locked() : $context);
+      $element = $this->drawn($schema, $value, $locked ? $context->locked() : $context);
       $source = $computed['from'][0] ?? NULL;
       $properties = $frame === NULL ? [] : (array) ($frame->get('properties') ?? []);
-      if (!$locked && !$context->locked && is_string($source) && isset($properties[$source]) && $node->get('pattern') === MachineNameElement::PATTERN) {
+      if (!$locked && !$context->locked && is_string($source) && isset($properties[$source]) && $schema->get('pattern') === MachineNameElement::PATTERN) {
         // A machine name computed from a title: core's element, suggesting
         // it as the title is typed.
         // Decision: see
         // docs/decisions.md#a-machine-name-is-a-computed-identity.
-        $element = MachineNameElement::draw($element, $source, SurfaceWidgetBase::text($node->get('title')));
+        $element = MachineNameElement::draw($element, $source, SurfaceWidgetBase::text($schema->get('title')));
       }
     }
     $element[self::DEPENDS_KEY] = $depends;
@@ -426,10 +426,10 @@ final class DocumentDrawer implements NodeDrawerInterface {
   }
 
   /**
-   * Draws a node with the widget it names, and marks the element.
+   * Draws a schema with the widget it names, and marks the element.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node, inline.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema, inline.
    * @param mixed $value
    *   What it holds.
    * @param \Drupal\surface\Widget\WidgetContext $context
@@ -438,9 +438,9 @@ final class DocumentDrawer implements NodeDrawerInterface {
    * @return array
    *   The element.
    */
-  protected function drawn(Schema $node, mixed $value, WidgetContext $context): array {
-    $widget = $this->widgetManager->widgetFor($node, $context);
-    $element = $widget->buildElement($node, $value, $context);
+  protected function drawn(Schema $schema, mixed $value, WidgetContext $context): array {
+    $widget = $this->widgetManager->widgetFor($schema, $context);
+    $element = $widget->buildElement($schema, $value, $context);
     $plugin_id = $widget instanceof SurfaceWidgetBase ? $widget->getPluginId() : get_class($widget);
     return static::marked($element, $context, $plugin_id);
   }
@@ -448,8 +448,8 @@ final class DocumentDrawer implements NodeDrawerInterface {
   /**
    * Marks an element with where its value is, and what reads it back.
    *
-   * Its JSON Pointer and the widget that drew it, nothing more: the node
-   * is the envelope's at that pointer (DocumentNodes::at()).
+   * Its JSON Pointer and the widget that drew it, nothing more: the schema
+   * is the envelope's at that pointer (DocumentSchemas::at()).
    *
    * @param array $element
    *   The element a widget built.
@@ -471,23 +471,23 @@ final class DocumentDrawer implements NodeDrawerInterface {
   }
 
   /**
-   * Answers whether a node is a collection: a list of objects.
+   * Answers whether a schema is a collection: a list of objects.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return bool
    *   TRUE for `x-surface.collection`, and for any list whose items are
    *   objects with properties.
    */
-  protected static function isCollection(Schema $node): bool {
-    if (SurfaceWidgetBase::type($node) !== 'array') {
+  protected static function isCollection(Schema $schema): bool {
+    if (SurfaceWidgetBase::type($schema) !== 'array') {
       return FALSE;
     }
-    if (!empty(SurfaceWidgetBase::extension($node)['collection'])) {
+    if (!empty(SurfaceWidgetBase::extension($schema)['collection'])) {
       return TRUE;
     }
-    $items = $node->get('items');
+    $items = $schema->get('items');
     return $items instanceof Schema && !$items->isBoolean() && is_array($items->get('properties')) && !SurfaceWidgetBase::offers($items);
   }
 
@@ -506,7 +506,7 @@ final class DocumentDrawer implements NodeDrawerInterface {
    *   What the object holds.
    *
    * @return \PortableSchema\Builder\Schema|null
-   *   The variant's node, or NULL when the deciding key chose nothing.
+   *   The variant's schema, or NULL when the deciding key chose nothing.
    */
   public static function resolveVariants(Schema $parent, string $name, array $parent_values): ?Schema {
     $properties = (array) ($parent->get('properties') ?? []);
@@ -703,8 +703,8 @@ final class DocumentDrawer implements NodeDrawerInterface {
   /**
    * Draws a computed key: its value, fixed, and what it is computed from.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    * @param array $computed
    *   Its `x-surface.computed`: `from` and `when`.
    * @param \PortableSchema\Builder\Schema|null $frame
@@ -715,7 +715,7 @@ final class DocumentDrawer implements NodeDrawerInterface {
    * @return array
    *   An item, which posts nothing.
    */
-  protected static function computedItem(Schema $node, array $computed, ?Schema $frame, mixed $value): array {
+  protected static function computedItem(Schema $schema, array $computed, ?Schema $frame, mixed $value): array {
     $properties = $frame === NULL ? [] : (array) ($frame->get('properties') ?? []);
     $sources = implode(', ', array_map(static function (mixed $source) use ($properties): string {
       $property = $properties[(string) $source] ?? NULL;
@@ -724,10 +724,10 @@ final class DocumentDrawer implements NodeDrawerInterface {
     $note = ($computed['when'] ?? NULL) === 'change'
       ? t('Computed from @sources, again whenever they change.', ['@sources' => $sources])
       : t('Computed from @sources when this is created, and kept as it is after.', ['@sources' => $sources]);
-    $description = SurfaceWidgetBase::text($node->get('description'));
+    $description = SurfaceWidgetBase::text($schema->get('description'));
     return [
       '#type' => 'item',
-      '#title' => SurfaceWidgetBase::text($node->get('title')),
+      '#title' => SurfaceWidgetBase::text($schema->get('title')),
       '#plain_text' => is_scalar($value) ? (string) $value : '',
       '#description' => $description !== NULL ? new Sentences($description, $note) : $note,
       self::COMPUTED_KEY => TRUE,
@@ -748,8 +748,8 @@ final class DocumentDrawer implements NodeDrawerInterface {
    * least its minimum, an empty item for each missing one. A locked list
    * is drawn disabled, every item and both controls with it.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The list's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The list's schema.
    * @param mixed $value
    *   The items, as shown.
    * @param \Drupal\surface\Widget\WidgetContext $context
@@ -760,17 +760,17 @@ final class DocumentDrawer implements NodeDrawerInterface {
    * @return array
    *   The list's element.
    */
-  protected function collection(Schema $node, mixed $value, WidgetContext $context, bool $locked): array {
-    $items_node = $node->get('items');
-    $items_node = $items_node instanceof Schema ? $items_node : Schema::from(['type' => 'object']);
+  protected function collection(Schema $schema, mixed $value, WidgetContext $context, bool $locked): array {
+    $items_schema = $schema->get('items');
+    $items_schema = $items_schema instanceof Schema ? $items_schema : Schema::from(['type' => 'object']);
     $items = is_array($value) ? array_values(array_filter($value, static fn (int|string $delta): bool => is_int($delta), ARRAY_FILTER_USE_KEY)) : [];
-    $min = is_int($node->get('minItems')) ? $node->get('minItems') : 0;
-    $max = is_int($node->get('maxItems')) ? $node->get('maxItems') : NULL;
+    $min = is_int($schema->get('minItems')) ? $schema->get('minItems') : 0;
+    $max = is_int($schema->get('maxItems')) ? $schema->get('maxItems') : NULL;
     while (count($items) < $min) {
       $items[] = [];
     }
     $path = WidgetContext::parentsOf($context->pointer);
-    $label = SurfaceWidgetBase::text($node->get('title')) ?? (string) end($path);
+    $label = SurfaceWidgetBase::text($schema->get('title')) ?? (string) end($path);
     $dotted = implode('.', $path);
     $disabled = $locked || $context->locked;
     $element = [
@@ -782,7 +782,7 @@ final class DocumentDrawer implements NodeDrawerInterface {
       Refreshing::REFRESH_KEY => $dotted,
       SurfaceFormBuilderInterface::PATH_KEY => $context->pointer,
     ];
-    $description = SurfaceWidgetBase::text($node->get('description'));
+    $description = SurfaceWidgetBase::text($schema->get('description'));
     if ($description !== NULL) {
       $element['#description'] = $description;
     }
@@ -813,7 +813,7 @@ final class DocumentDrawer implements NodeDrawerInterface {
         '#title' => static::itemLabel($label, $delta),
         '#open' => TRUE,
         SurfaceFormBuilderInterface::PATH_KEY => $at->pointer,
-      ] + $this->frame(static::narrowedFor($items_node, is_array($item) ? $item : [], $context->narrows), is_array($item) ? $item : [], $at);
+      ] + $this->frame(static::narrowedFor($items_schema, is_array($item) ? $item : [], $context->narrows), is_array($item) ? $item : [], $at);
       foreach (static::elementChildren($element[$delta]) as $name) {
         if (!empty($element[$delta][$name][self::DEPENDS_KEY])) {
           // Each item is a frame of its own: a key of it that depends on
@@ -844,16 +844,16 @@ final class DocumentDrawer implements NodeDrawerInterface {
    *
    * @param array $element
    *   The element drawn for the key.
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's own node, as its frame holds it.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's own schema, as its frame holds it.
    * @param array $groups
    *   The groups its frame declares, by id.
    *
    * @return array
    *   The element, arranged.
    */
-  public static function arranged(array $element, Schema $node, array $groups): array {
-    $ui = SurfaceWidgetBase::ui($node);
+  public static function arranged(array $element, Schema $schema, array $groups): array {
+    $ui = SurfaceWidgetBase::ui($schema);
     if (is_int($ui['weight'] ?? NULL)) {
       $element['#weight'] = $ui['weight'];
     }
@@ -874,7 +874,7 @@ final class DocumentDrawer implements NodeDrawerInterface {
       // A key that does not apply has no element, only its place.
       return $element;
     }
-    $options = SurfaceWidgetBase::options($node);
+    $options = SurfaceWidgetBase::options($schema);
     $type = $element['#type'] ?? NULL;
     $placeholder = SurfaceWidgetBase::text($options['placeholder'] ?? NULL);
     if ($placeholder !== NULL && in_array($type, self::PLACEHOLDER_TYPES, TRUE)) {

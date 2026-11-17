@@ -306,21 +306,21 @@ class ExamplesToolTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a node-first resource's tool definitions derive no definition.
+   * Tests a schema-first resource's tool definitions derive no definition.
    *
-   * The tool door reads each key from its node and hands the options
-   * service the node (InputDefinitions), so a key the service answers for,
+   * The tool door reads each key from its schema and hands the options
+   * service the schema (InputDefinitions), so a key the service answers for,
    * a venue and a room offered as lists, converts with no definition
    * derived (Entry::definition() is derived on the first ask and kept, so
    * the entry's private member says whether it was asked).
    */
-  public function testToolDefinitionsOfNodeFirstResourceDeriveNoDefinition(): void {
+  public function testToolDefinitionsOfSchemaFirstResourceDeriveNoDefinition(): void {
     $resources = $this->container->get('surface.resources');
     $surface = $resources->build(RegistrationStep3Resource::class, $resources->operation(RegistrationStep3Resource::class, 'configure'));
     $derived = new \ReflectionProperty(Entry::class, 'definition');
     $unread = [];
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
-      $this->assertTrue($entry->isNodeFirst());
+      $this->assertTrue($entry->isSchemaFirst());
       if ($derived->getValue($entry) === NULL) {
         $unread[(string) $name] = $entry;
       }

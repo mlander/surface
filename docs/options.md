@@ -201,19 +201,19 @@ use PortableSchema\Builder\Schema;
 use Symfony\Component\Validator\Constraint;
 
 public function applies(Constraint $constraint): bool;
-public function resolve(Constraint $constraint, Schema $node): OptionSet;
+public function resolve(Constraint $constraint, Schema $schema): OptionSet;
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 Nothing about resources or structures appears in either signature: a
-resolver is handed a constraint and the node of the key it was declared
+resolver is handed a constraint and the schema of the key it was declared
 on, and answers with an `OptionSet`: allowed values as keys mapped to
 their labels, optional per-value descriptions, and a `CacheableMetadata`
-saying how long the answer may be reused. What the node promises is its
-standard keywords, read with `get()`: `$node->get('title')`, its type,
-its bounds. What Surface keeps on a node beyond them is not promised.
-No stock resolver reads the node. Where the caller holds the key's node
+saying how long the answer may be reused. What the schema promises is its
+standard keywords, read with `get()`: `$schema->get('title')`, its type,
+its bounds. What Surface keeps on a schema beyond them is not promised.
+No stock resolver reads the schema. Where the caller holds the key's schema
 it is handed on; otherwise it is read from the definition when a
 resolver is about to be called
 (why: [decision](decisions.md#nothing-asks-for-a-definition-it-does-not-need)).
@@ -229,13 +229,13 @@ resolver did not exist.
 
 `surface.options` (`Options\SurfaceOptions`) is what consumers
 call. `resolve(Schema|DataDefinitionInterface $key): ?OptionSet` takes
-the key: its node, or its definition where the caller holds no node. It
+the key: its schema, or its definition where the caller holds no schema. It
 walks the key's constraints, asks each resolver, and answers with the
-list, or `NULL` when no constraint on the key names one. Handed a node,
-the constraints are the node's (`NodeFacts::constraints()`) and each
-resolver is handed that node. Handed a definition (core's options
+list, or `NULL` when no constraint on the key names one. Handed a schema,
+the constraints are the schema's (`SchemaFacts::constraints()`) and each
+resolver is handed that schema. Handed a definition (core's options
 provider, a widget's claim, the form's extraction), the constraints are
-the definition's, and the node is read from it when a resolver first
+the definition's, and the schema is read from it when a resolver first
 reads it.
 
 When more than one constraint resolves, the answer is their
@@ -244,11 +244,11 @@ once. Labels come from the first set, and the cacheability of both is
 merged, since an answer is only reusable for as long as its
 shorter-lived half.
 
-Answers are memoized weakly, keyed by the object handed, the node or
+Answers are memoized weakly, keyed by the object handed, the schema or
 the definition: an answer lives as long as its key, so a worker that
 outlives a request (an MCP stdio server, a queue, a Drush batch) keeps
 none it no longer uses. Narrowing needs no invalidation: a refined key
-is another object than the declared one, its node as much as its
+is another object than the declared one, its schema as much as its
 definition, so narrowing is never served a stale list. A list read from
 the site is forgotten when a tag it names is invalidated, under either
 kind of key.
@@ -543,7 +543,7 @@ as stored, as any stored value the list no longer offers
 )]
 final class RoleExistsOptions extends SurfaceOptionsResolverBase {
 
-  public function resolve(Constraint $constraint, Schema $node): OptionSet {
+  public function resolve(Constraint $constraint, Schema $schema): OptionSet {
     $options = [];
     foreach ($this->roleStorage->loadMultiple() as $id => $role) {
       $options[$id] = $role->label();

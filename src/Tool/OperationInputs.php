@@ -10,7 +10,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Computed;
 use Drupal\surface\Contract\Choices;
 use Drupal\surface\SurfaceInterface;
@@ -839,7 +839,7 @@ final class OperationInputs {
       // One computed unless sent is a value a caller may give.
       $computed = static function (string $name) use ($built): ?Computed {
         $entry = $built->getDefinitions()->entry($name);
-        return $entry === NULL ? NULL : NodeFacts::compute($entry->schema());
+        return $entry === NULL ? NULL : SchemaFacts::compute($entry->schema());
       };
       $properties = array_filter($properties, static fn (string $name): bool => $computed($name)?->takesSent() !== FALSE || $built->getDefinitions()->isLocked($name), ARRAY_FILTER_USE_KEY);
     }

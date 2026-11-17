@@ -104,7 +104,7 @@
       "kind3": "2f31630dc5dc",
       "req_v": "2f9e7b28ad15"
     },
-    "plain | nodes": {
+    "plain | schemas": {
       "nope": "85cf5ad1bdc5",
       "nope.deeper": "85cf5ad1bdc5",
       "settings.shell.kname": "85cf5ad1bdc5",

@@ -10,9 +10,9 @@ use Drupal\surface\Resource\StructureInterface;
 use PortableSchema\Builder\Schema;
 
 /**
- * Example 17: one node to retitle, an item of the retitle's list.
+ * Example 17: one schema to retitle, an item of the retitle's list.
  *
- * Its node is the thing the retitle's gates are asked about, for this
+ * Its schema is the thing the retitle's gates are asked about, for this
  * item alone.
  */
 #[Structure('ai.retitle.item')]
@@ -22,14 +22,14 @@ final class RetitleItemStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('node', 'integer', t('Node'))
+    $inputs->add('node', 'integer', t('Schema'))
       ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node'])
-      ->setDescription(t('The node to retitle.'))
+      ->setDescription(t('The schema to retitle.'))
       ->setRequired(TRUE);
 
     $inputs->addSchema('new_title', Schema::string()
       ->title(t('New title'))
-      ->description(t("Written as sent; left out, the node's title is rewritten in the style chosen."))
+      ->description(t("Written as sent; left out, the schema's title is rewritten in the style chosen."))
       ->maxLength(255));
   }
 

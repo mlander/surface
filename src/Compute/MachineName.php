@@ -74,7 +74,7 @@ final class MachineName implements ComputesValueInterface {
    * Reads the longest machine name the key allows.
    *
    * @param \PortableSchema\Builder\Schema|null $key
-   *   The computed key's node.
+   *   The computed key's schema.
    *
    * @return int
    *   Its `maxLength`, a Length's maximum, or MAX_LENGTH.

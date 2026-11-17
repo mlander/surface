@@ -8,7 +8,7 @@ use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\Core\Form\FormState;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\surface\Form\Document\DocumentDrawer;
-use Drupal\surface\Form\Document\DocumentNodes;
+use Drupal\surface\Form\Document\DocumentSchemas;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -118,10 +118,10 @@ class DocumentFormEntityTest extends SurfaceKernelTestBase {
     $schema = $envelope->document['schema'];
     $this->assertSame(self::FEATURED, $schema['properties']['field_featured_image']['description'], 'The site states the field\'s description.');
     $this->assertNotEmpty(array_filter($schema['$defs'], static fn (array $def): bool => isset($def['description'])), 'Its field item\'s def states one of its own.');
-    $nodes = DocumentNodes::of($envelope);
-    $this->assertSame(self::FEATURED, $nodes->at('/field_featured_image')?->get('description'));
-    $this->assertNull($nodes->at('/title')?->get('description'), 'A field with no description of its own shows none.');
-    $this->assertNull($nodes->at('/field_related_user')?->get('description'));
+    $schemas = DocumentSchemas::of($envelope);
+    $this->assertSame(self::FEATURED, $schemas->at('/field_featured_image')?->get('description'));
+    $this->assertNull($schemas->at('/title')?->get('description'), 'A field with no description of its own shows none.');
+    $this->assertNull($schemas->at('/field_related_user')?->get('description'));
 
     $form = $this->formBuilder()->buildSurfaceForm($page, $values, new FormState());
     $this->assertSame(self::FEATURED, (string) static::elementAt($form, '/field_featured_image')['#description']);
@@ -167,9 +167,9 @@ class DocumentFormEntityTest extends SurfaceKernelTestBase {
     $emitter = $this->container->get('surface.contract_emitter');
     $hinted = $emitter->emit($page, $values, 'entity.content:node.page', 'create', widgets: TRUE)->document['schema'];
     $plain = $emitter->emit($page, $values, 'entity.content:node.page', 'create')->document['schema'];
-    $title = DocumentNodes::of($emitter->emit($page, $values, 'entity.content:node.page', 'create', widgets: TRUE))->at('/title/value');
+    $title = DocumentSchemas::of($emitter->emit($page, $values, 'entity.content:node.page', 'create', widgets: TRUE))->at('/title/value');
     $this->assertSame(60, $title?->get('x-portable-ui')['options']['size'] ?? NULL, 'The title\'s text input, as the form display draws it.');
-    $description = DocumentNodes::of($emitter->emit($page, $values, 'entity.content:node.page', 'create', widgets: TRUE))->at('/field_description/value');
+    $description = DocumentSchemas::of($emitter->emit($page, $values, 'entity.content:node.page', 'create', widgets: TRUE))->at('/field_description/value');
     $this->assertSame(5, $description?->get('x-portable-ui')['options']['rows'] ?? NULL, 'The description\'s text area.');
     $this->assertStringContainsString('"size"', (string) json_encode($hinted));
     $this->assertStringNotContainsString('"size"', (string) json_encode($plain), 'Without the widget hints, no size.');

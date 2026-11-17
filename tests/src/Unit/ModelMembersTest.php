@@ -11,7 +11,7 @@ use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Pins the members a built node's MODEL holds, and the bridges among them.
+ * Pins the members a built schema's MODEL holds, and the bridges among them.
  *
  * The rules: the members are a closed list (DefinitionSchema::MEMBERS);
  * the bridges are members (DefinitionSchema::BRIDGES), the list slice 35's
@@ -23,7 +23,7 @@ use PHPUnit\Framework\Attributes\Group;
  * and every place names a member.
  *
  * Decision: see
- * docs/decisions.md#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it.
+ * docs/decisions.md#a-schema-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it.
  */
 #[Group('surface')]
 class ModelMembersTest extends UnitTestCase {
@@ -107,7 +107,7 @@ class ModelMembersTest extends UnitTestCase {
     }
     $this->assertCount(20, $keys, 'The 19 keys DefinitionMetadata writes, and the mark of a key that does not apply.');
     foreach ($keys as $key) {
-      $this->assertArrayHasKey($key, DefinitionSchema::PLACES, "$key has a place on the node.");
+      $this->assertArrayHasKey($key, DefinitionSchema::PLACES, "$key has a place on the schema.");
     }
     $this->assertSame([], array_values(array_diff(array_keys(DefinitionSchema::PLACES), [...$keys, ...self::CORE_KEYS])), 'Every key PLACES names is a constant of DefinitionMetadata or DoesNotApply, or one of core\'s.');
     $members = array_column(DefinitionSchema::PLACES, 0);

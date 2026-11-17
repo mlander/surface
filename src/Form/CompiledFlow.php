@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Form;
 
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Flow\FlowInterface;
 use Drupal\surface\Flow\FlowRegistry;
 use Drupal\surface\Flow\StagedInterface;
@@ -678,7 +678,7 @@ final class CompiledFlow {
     $groups = [];
     foreach ($surface->getDefinitions()->entries() as $key => $entry) {
       $key = (string) $key;
-      $group = NodeFacts::arrangement($entry->schema())?->group?->id;
+      $group = SchemaFacts::arrangement($entry->schema())?->group?->id;
       if ($group !== NULL) {
         $groups[$group] = TRUE;
       }
@@ -817,12 +817,12 @@ final class CompiledFlow {
       foreach ($definitions->entries() as $key => $entry) {
         $key = (string) $key;
         // A key the build locks, or computes from others, is no input.
-        $node = $entry->schema();
-        $computed = NodeFacts::compute($node);
+        $schema = $entry->schema();
+        $computed = SchemaFacts::compute($schema);
         if ($definitions->isLocked($key) || ($computed !== NULL && !$computed->takesSent())) {
           continue;
         }
-        if (NodeFacts::isRequired($node) && $surface->getDefault($key) === NULL && ($at[$key] ?? 0) !== 1) {
+        if (SchemaFacts::isRequired($schema) && $surface->getDefault($key) === NULL && ($at[$key] ?? 0) !== 1) {
           return sprintf('The %s route\'s flow creates through the "%s" operation of %s and draws its required key "%s", which has no default, %s: each step is validated as the whole create, so a required key with no default is drawn at the first step.', $name, $operation->id, $resource->id, $key, isset($at[$key]) ? 'at step ' . $at[$key] : 'at no step');
         }
       }

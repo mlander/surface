@@ -8,7 +8,7 @@ use Drupal\Component\Utility\Unicode;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Entry;
@@ -315,21 +315,21 @@ final class ResourceCode {
   protected function key(SurfaceInterface $surface, Entry $entry, string $path): string {
     $name = $entry->name;
     $at = $path . $name;
-    // A key's facts are read from its node, a key that holds a child
+    // A key's facts are read from its schema, a key that holds a child
     // frame's too (Entry::schema()).
-    $node = $entry->schema();
+    $schema = $entry->schema();
     $comments = $this->leftComments($at, $name, $entry->attachment === NULL && $entry->list === NULL);
     if ($entry->variants !== NULL) {
       $comments[] = sprintf('From the schema, not written here: %s holds variants chosen by %s. Declare each as a #[Variant] structure and attach them with attachVariants(%s, by: %s).', $this->named($name), $this->named($entry->variants->by), $this->ref($name), $this->ref($entry->variants->by));
       $this->comments++;
       return $this->comment($comments);
     }
-    if ($entry->attachment !== NULL && NodeFacts::each($node) !== NULL) {
+    if ($entry->attachment !== NULL && SchemaFacts::each($schema) !== NULL) {
       $comments[] = sprintf('From the schema, not written here: %s holds one entry per thing the site has. Declare it with addEach() or attachEach() and a provider.', $this->named($name));
       $this->comments++;
       return $this->comment($comments);
     }
-    [$label, $unlabeled] = $this->label(NodeFacts::ownLabel($node) ?? NodeFacts::label($node), $name);
+    [$label, $unlabeled] = $this->label(SchemaFacts::ownLabel($schema) ?? SchemaFacts::label($schema), $name);
     if ($unlabeled) {
       $this->unlabeled[] = $name;
     }
@@ -337,7 +337,7 @@ final class ResourceCode {
       $child = $entry->list !== NULL ? $entry->list->item : $entry->attachment;
       $class = $this->structure($child->child, $child->source ?? $at, $name, $label);
       if ($entry->list !== NULL) {
-        $count = NodeFacts::declaredConstraints($node)['Count'] ?? [];
+        $count = SchemaFacts::declaredConstraints($schema)['Count'] ?? [];
         $bounds = '';
         foreach (['min', 'max'] as $bound) {
           $bounds .= is_array($count) && isset($count[$bound]) ? sprintf(', %s: %s', $bound, PhpLiteral::scalar($count[$bound])) : '';
@@ -347,25 +347,25 @@ final class ResourceCode {
       else {
         $head = sprintf('$inputs->attach(%s, %s::class, %s)', $this->ref($name), $class, PhpLiteral::translated($label));
       }
-      $calls = $this->describedBy($node);
+      $calls = $this->describedBy($schema);
     }
     else {
       $default = $surface->getDefault($name);
-      $head = $this->declaration($name, $node, $label, $default);
+      $head = $this->declaration($name, $schema, $label, $default);
       $calls = [
-        ...$this->describedBy($node),
-        ...$this->constraintCalls($node, $this->named($name), $comments),
+        ...$this->describedBy($schema),
+        ...$this->constraintCalls($schema, $this->named($name), $comments),
       ];
     }
     if ($entry->locked) {
       $comments[] = sprintf('The schema makes %s readOnly, at the value it starts from: lock it with an access class, or leave it out.', $this->named($name));
       $this->comments++;
     }
-    if (Secrets::marked($node)) {
+    if (Secrets::marked($schema)) {
       $comments[] = sprintf('The schema makes %s writeOnly: a secret, which a storage holds apart. See docs/declaring-a-resource.md.', $this->named($name));
       $this->comments++;
     }
-    if (NodeFacts::isAlwaysHeld($node) && !NodeFacts::isRequired($node)) {
+    if (SchemaFacts::isAlwaysHeld($schema) && !SchemaFacts::isRequired($schema)) {
       $this->alwaysHeld[] = $at;
     }
     return ($comments === [] ? '' : $this->comment($comments) . "\n") . static::chain($head, $calls);
@@ -376,8 +376,8 @@ final class ResourceCode {
    *
    * @param string $name
    *   The key.
-   * @param \PortableSchema\Builder\Schema $node
-   *   Its node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   Its schema.
    * @param string $label
    *   Its label.
    * @param mixed $default
@@ -386,38 +386,38 @@ final class ResourceCode {
    * @return string
    *   The call, as it opens the statement.
    */
-  protected function declaration(string $name, Schema $node, string $label, mixed $default): string {
+  protected function declaration(string $name, Schema $schema, string $label, mixed $default): string {
     $default_argument = $default === NULL ? '' : ', default: ' . PhpLiteral::write($default, self::INDENT);
-    if (DefinitionSchema::isList($node)) {
-      return sprintf('$inputs->addList(%s, %s, %s%s)', $this->ref($name), $this->item(static::itemOf($node), self::INDENT + 2), PhpLiteral::translated($label), $default_argument);
+    if (DefinitionSchema::isList($schema)) {
+      return sprintf('$inputs->addList(%s, %s, %s%s)', $this->ref($name), $this->item(static::itemOf($schema), self::INDENT + 2), PhpLiteral::translated($label), $default_argument);
     }
-    if (DefinitionSchema::isComplex($node)) {
-      return $this->map('$inputs', $this->ref($name), $node, $label, is_array($default) ? $default : [], self::INDENT);
+    if (DefinitionSchema::isComplex($schema)) {
+      return $this->map('$inputs', $this->ref($name), $schema, $label, is_array($default) ? $default : [], self::INDENT);
     }
-    return sprintf('$inputs->add(%s, %s, %s%s)', $this->ref($name), PhpLiteral::string(NodeFacts::dataType($node)), PhpLiteral::translated($label), $default_argument);
+    return sprintf('$inputs->add(%s, %s, %s%s)', $this->ref($name), PhpLiteral::string(SchemaFacts::dataType($schema)), PhpLiteral::translated($label), $default_argument);
   }
 
   /**
-   * Gets the node of a list's item.
+   * Gets the schema of a list's item.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The list's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The list's schema.
    *
    * @return \PortableSchema\Builder\Schema
-   *   Its item's node.
+   *   Its item's schema.
    *
    * @throws \LogicException
-   *   Where the node holds none: a built list's node holds its item's.
+   *   Where the schema holds none: a built list's schema holds its item's.
    */
-  protected static function itemOf(Schema $node): Schema {
-    return DefinitionSchema::itemNode($node) ?? throw new \LogicException('A list\'s node holds no node of its item: a built node holds one.');
+  protected static function itemOf(Schema $schema): Schema {
+    return DefinitionSchema::itemOf($schema) ?? throw new \LogicException('A list\'s schema holds no schema of its item: a built schema holds one.');
   }
 
   /**
    * Writes a list's item.
    *
    * @param \PortableSchema\Builder\Schema $item
-   *   The item's node.
+   *   The item's schema.
    * @param int $indent
    *   The indentation of its chained calls.
    *
@@ -426,17 +426,17 @@ final class ResourceCode {
    */
   protected function item(Schema $item, int $indent): string {
     $calls = [];
-    $own = NodeFacts::ownLabel($item);
+    $own = SchemaFacts::ownLabel($item);
     if ($own !== NULL && (string) $own !== '') {
       $calls[] = '->setLabel(' . PhpLiteral::translated(static::text($own)) . ')';
     }
     $comments = [];
     $calls = [...$calls, ...$this->constraintCalls($item, '', $comments, $indent)];
     if ($calls === []) {
-      return PhpLiteral::string(NodeFacts::dataType($item));
+      return PhpLiteral::string(SchemaFacts::dataType($item));
     }
     $this->uses[DataDefinition::class] = TRUE;
-    return 'DataDefinition::create(' . PhpLiteral::string(NodeFacts::dataType($item)) . ')' . static::calls($calls, $indent);
+    return 'DataDefinition::create(' . PhpLiteral::string(SchemaFacts::dataType($item)) . ')' . static::calls($calls, $indent);
   }
 
   /**
@@ -448,7 +448,7 @@ final class ResourceCode {
    * @param string $key
    *   The key, as the call names it.
    * @param \PortableSchema\Builder\Schema $map
-   *   The map's node.
+   *   The map's schema.
    * @param string $label
    *   Its label.
    * @param array $default
@@ -462,10 +462,10 @@ final class ResourceCode {
   protected function map(string $receiver, string $key, Schema $map, string $label, array $default, int $indent): string {
     $inner = $indent + 2;
     $lines = '';
-    foreach (NodeFacts::properties($map) as $name => $property) {
+    foreach (SchemaFacts::properties($map) as $name => $property) {
       $name = (string) $name;
-      [$property_label] = $this->label(NodeFacts::ownLabel($property) ?? NodeFacts::label($property), $name);
-      $starts = $default[$name] ?? (NodeFacts::hasDefault($property) ? NodeFacts::default($property) : NULL);
+      [$property_label] = $this->label(SchemaFacts::ownLabel($property) ?? SchemaFacts::label($property), $name);
+      $starts = $default[$name] ?? (SchemaFacts::hasDefault($property) ? SchemaFacts::default($property) : NULL);
       $argument = $starts === NULL ? '' : ', default: ' . PhpLiteral::write($starts, $inner);
       $comments = [];
       if (DefinitionSchema::isComplex($property) && !DefinitionSchema::isList($property)) {
@@ -477,7 +477,7 @@ final class ResourceCode {
         $calls = [...$this->describedBy($property), ...$this->constraintCalls($property, '', $comments, $inner + 2)];
       }
       else {
-        $head = sprintf('$map->add(%s, %s, %s%s)', PhpLiteral::string($name), PhpLiteral::string(NodeFacts::dataType($property)), PhpLiteral::translated($property_label), $argument);
+        $head = sprintf('$map->add(%s, %s, %s%s)', PhpLiteral::string($name), PhpLiteral::string(SchemaFacts::dataType($property)), PhpLiteral::translated($property_label), $argument);
         $calls = [...$this->describedBy($property), ...$this->constraintCalls($property, '', $comments, $inner + 2)];
       }
       $lines .= "\n" . str_repeat(' ', $inner) . $head . static::calls($calls, $inner + 2) . ';';
@@ -556,16 +556,16 @@ final class ResourceCode {
   }
 
   /**
-   * Writes a key's description and whether it is required, from its node.
+   * Writes a key's description and whether it is required, from its schema.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    *
    * @return string[]
    *   The chained calls (described()).
    */
-  protected function describedBy(Schema $node): array {
-    return $this->described(NodeFacts::description($node), NodeFacts::isRequired($node));
+  protected function describedBy(Schema $schema): array {
+    return $this->described(SchemaFacts::description($schema), SchemaFacts::isRequired($schema));
   }
 
   /**
@@ -573,8 +573,8 @@ final class ResourceCode {
    *
    * A JsonSchema constraint is written as a comment naming its keywords.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    * @param string $at
    *   The key, as a comment names it; empty for a list's item.
    * @param string[] $comments
@@ -585,13 +585,13 @@ final class ResourceCode {
    * @return string[]
    *   The chained calls.
    */
-  protected function constraintCalls(Schema $node, string $at, array &$comments, int $indent = self::INDENT + 2): array {
+  protected function constraintCalls(Schema $schema, string $at, array &$comments, int $indent = self::INDENT + 2): array {
     $calls = [];
-    foreach (NodeFacts::declaredConstraints($node) as $constraint => $options) {
+    foreach (SchemaFacts::declaredConstraints($schema) as $constraint => $options) {
       $constraint = (string) $constraint;
       if ($constraint === 'JsonSchema') {
-        $schema = is_array($options['schema'] ?? NULL) ? $options['schema'] : [];
-        $comments[] = sprintf('From the schema, not written here: %s on %s, which no constraint here states; the reader keeps it as a JsonSchema constraint. Write a constraint for it.', static::keywords($schema), $at === '' ? 'each item' : $at);
+        $json_schema = is_array($options['schema'] ?? NULL) ? $options['schema'] : [];
+        $comments[] = sprintf('From the schema, not written here: %s on %s, which no constraint here states; the reader keeps it as a JsonSchema constraint. Write a constraint for it.', static::keywords($json_schema), $at === '' ? 'each item' : $at);
         $this->comments++;
         continue;
       }
@@ -604,8 +604,8 @@ final class ResourceCode {
       $calls[] = sprintf('->addConstraint(%s, %s)', PhpLiteral::string($constraint), PhpLiteral::write(is_array($options) ? $options : [], $indent, $translate));
     }
     // What the definition's array holds: a DataDefinition's settings are
-    // its stored settings, and a node of another class holds none.
-    $settings = is_a(DefinitionSchema::classOf($node), DataDefinition::class, TRUE) ? NodeFacts::settings($node) : [];
+    // its stored settings, and a schema of another class holds none.
+    $settings = is_a(DefinitionSchema::classOf($schema), DataDefinition::class, TRUE) ? SchemaFacts::settings($schema) : [];
     // The build writes the content mark on a reference key itself.
     unset($settings[References::CONTENT]);
     foreach ($settings as $setting => $value) {

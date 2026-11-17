@@ -41,7 +41,7 @@ use PortableSchema\Builder\Schema;
  * entity's; past the site list limit the variants are deferred and the
  * schema call with a bundle states its fields; and the tools and HTTP
  * paths stand beside the bundle's own. An entity type with a string id,
- * given a form display, is derived beside node: its id is the caller's to
+ * given a form display, is derived beside schema: its id is the caller's to
  * name on create, and taken once.
  *
  * Decision: see
@@ -620,11 +620,11 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
    * Takes a schema's lookup links off, and a narrowing that said only them.
    *
    * @param array $schema
-   *   The schema, or a node of it.
+   *   The schema, or a schema of it.
    * @param string $at
    *   Its JSON Pointer.
    * @param array<string, mixed> $links
-   *   Collects each lookup link's href, by the pointer of its node.
+   *   Collects each lookup link's href, by the pointer of its schema.
    *
    * @return array
    *   The same, with no lookup link; a site whose narrowing carried links

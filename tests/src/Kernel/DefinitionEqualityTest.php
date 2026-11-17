@@ -29,7 +29,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * that holds the data type beside none.
  *
  * Decision: see
- * docs/decisions.md#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it.
+ * docs/decisions.md#a-schema-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]

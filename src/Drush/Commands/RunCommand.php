@@ -7,7 +7,7 @@ namespace Drupal\surface\Drush\Commands;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AnonymousUserSession;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Operation\Door;
 use Drupal\surface\Operation\OperationRun;
 use Drupal\surface\Operation\OperationRunnerInterface;
@@ -259,10 +259,10 @@ final class RunCommand extends Command {
   protected function prepared(OperationRun $run, OutputInterface $output, DrushStyle $io, bool $json): int {
     $takes = [];
     foreach ($run->surface()->getDefinitions()->entries() as $key => $entry) {
-      $node = $entry->schema();
+      $schema = $entry->schema();
       $takes[(string) $key] = [
-        'type' => NodeFacts::dataType($node),
-        'required' => NodeFacts::isRequired($node),
+        'type' => SchemaFacts::dataType($schema),
+        'required' => SchemaFacts::isRequired($schema),
       ];
     }
     if ($json) {

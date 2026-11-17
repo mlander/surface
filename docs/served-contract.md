@@ -115,7 +115,7 @@ The widget hints moved into `x-portable-ui` on 2026-11-10, under the
 same number: the baselines carry no hints, and a client of the series
 reads the new keyword. A reference and a deferred list's fetch moved the
 same day, under the same number, into the check's options and
-`x-portable-links`: the lint reports each moved node as a note, and a
+`x-portable-links`: the lint reports each moved schema as a note, and a
 client of the series reads the new keywords. Later contracts of the same
 series move more into the dialect's keywords: the variants and the
 marker `refine`.
@@ -540,7 +540,7 @@ refers to it.
 
 ### The dialect's own keywords
 
-Beside the standard keywords, on the node they are about and before its
+Beside the standard keywords, on the schema they are about and before its
 `x-surface`, a document carries five keywords of the dialect, in this
 order. They are keywords of the dialect: they stay where they are
 written, below an applicator too, where `x-surface` moves to `within`.

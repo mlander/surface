@@ -2200,14 +2200,14 @@ final class SchemaReader {
    *   When nothing is there.
    */
   protected static function at(Schema $root, string $pointer): Schema {
-    $node = Schemas::at($root, $pointer);
-    if ($node === NULL) {
+    $schema = Schemas::at($root, $pointer);
+    if ($schema === NULL) {
       throw new \InvalidArgumentException(sprintf('%s: the document holds nothing there.', $pointer));
     }
-    if (!Schemas::isObjectSchema($node)) {
+    if (!Schemas::isObjectSchema($schema)) {
       throw new \InvalidArgumentException(sprintf('%s: the document holds no schema there.', $pointer));
     }
-    return $node;
+    return $schema;
   }
 
   /**
@@ -3563,7 +3563,7 @@ final class SchemaReader {
       // secret is said of the value, by the shape or by a key of its own.
       // Noted, so an author's schema that says it is refused.
       // Decision: see
-      // docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-node.
+      // docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-schema.
       $this->note(static::below($secretAt ?? $pointer, 'writeOnly'), self::SHAPED_SECRET);
     }
     if (static::text($site['description'] ?? NULL) !== NULL) {
@@ -4286,7 +4286,7 @@ final class SchemaReader {
    * them, is read as `any` with its schema kept whole on a JsonSchema
    * constraint (foreignValue()); the types are that schema's `type`, which
    * is where a widget reads them, from the key's schema (the options
-   * NodeFacts::constraints() gives).
+   * SchemaFacts::constraints() gives).
    *
    * @param \PortableSchema\Builder\Schema $schema
    *   The key's schema.
@@ -4297,7 +4297,7 @@ final class SchemaReader {
    *   a schema that states no type.
    */
   public static function statedTypes(Schema $schema): array {
-    $kept = NodeFacts::constraints($schema)['JsonSchema']['schema'] ?? NULL;
+    $kept = SchemaFacts::constraints($schema)['JsonSchema']['schema'] ?? NULL;
     $types = is_array($kept) ? ($kept['type'] ?? []) : [];
     return array_values(array_filter((array) $types, static fn (mixed $type): bool => is_string($type) && in_array($type, self::TYPES, TRUE)));
   }

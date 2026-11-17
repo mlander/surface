@@ -67,7 +67,7 @@ final class ManagedKeyOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, Schema $node): OptionSet {
+  public function resolve(Constraint $constraint, Schema $schema): OptionSet {
     return new OptionSet($this->keys->labels(), [], $this->keys->cacheability());
   }
 

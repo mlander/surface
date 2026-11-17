@@ -114,7 +114,7 @@ class TypedDataFootprintTest extends UnitTestCase {
   public const EDGES = [
     'modules/surface_examples_entity/src/FieldItemDerivation.php' => 'host reader: reads field item definitions',
     'src/Contract/DefinitionSchema.php' => 'the one read of a definition into a Schema; the host readers\' shared reader after the flip',
-    'src/Contract/NodeDefinition.php' => 'the inverse of the read: makes a definition from a node, the one place Typed Data is made from the model',
+    'src/Contract/DefinitionFromSchema.php' => 'the inverse of the read: makes a definition from a schema, the one place Typed Data is made from the model',
     'src/Reader/ConfigSchemaReader.php' => 'host reader: reads config schema',
     'src/Reader/TypedDataReader.php' => 'host reader: reads data type definitions',
     'src/Storage/ConfigEntityStorage.php' => 'host storage validates its own typed values',
@@ -134,27 +134,27 @@ class TypedDataFootprintTest extends UnitTestCase {
    * config found, and 3 services files. Lowered on 2026-11-12 to 153: a
    * shape is a Schema, so ShapeInterface and the two example shapes,
    * PhoneNumber and License, name no Typed Data. Lowered on 2026-11-13 to
-   * 151: the value pipeline reads nodes, so Pipeline/Coercion.php (handed
+   * 151: the value pipeline reads schemas, so Pipeline/Coercion.php (handed
    * a key's facts) and Pipeline/Outbound.php (it reads secrets and a
-   * datetime's type from an entry's node) name no Typed Data. Lowered on
+   * datetime's type from an entry's schema) name no Typed Data. Lowered on
    * 2026-11-14 to 150: Form/SurfaceFormatterTrait.php reads a key's label
-   * and properties from its entry's node. Lowered on 2026-11-15 to 131: an
+   * and properties from its entry's schema. Lowered on 2026-11-15 to 131: an
    * options resolver and the class computing a key are handed the key's
-   * node, so SurfaceOptionsResolverInterface, ComputesValueInterface, the
+   * schema, so SurfaceOptionsResolverInterface, ComputesValueInterface, the
    * nine stock resolvers, MachineName, the five example resolvers and the
    * two example computing classes name no Typed Data. Lowered on
-   * 2026-11-15 to 129: the options service takes a key's node, so the
-   * accept hands a value's node alone and walks no definition beside it:
+   * 2026-11-15 to 129: the options service takes a key's schema, so the
+   * accept hands a value's schema alone and walks no definition beside it:
    * Pipeline/Accepting.php and Pipeline/SurfacePipeline.php name no Typed
    * Data. Lowered on 2026-11-16 to 128: the form's extraction reads a
-   * refined key's node and hands it to the options service, so
+   * refined key's schema and hands it to the options service, so
    * Form/Extracting.php names no Typed Data. Lowered on 2026-11-16 to 110:
    * a widget is chosen by the key's schema, so the 15 stock widgets, the
    * extras' comma separated list widget and WidgetChoice name no Typed
    * Data, and DefinitionWidgetInterface is gone (SchemaWidgetInterface
    * names none). Lowered on 2026-11-16 to 109: the document is written
    * from schemas, so Contract/Choices.php reads whether a key is a map of
-   * keys from the site from its schema (NodeFacts::each()) and names no
+   * keys from the site from its schema (SchemaFacts::each()) and names no
    * Typed Data. Lowered on 2026-11-16 to 96: a refiner answers with a
    * schema, so SurfaceRefinerInterface, RuntimeRefiner and eleven example
    * files whose #[RefinesInput] methods were their one use name no Typed

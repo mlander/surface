@@ -272,17 +272,17 @@ final class Schemas {
       return NULL;
     }
     $steps = array_map(static fn (string $step): string => str_replace(['~1', '~0'], ['/', '~'], $step), explode('/', substr($pointer, 1)));
-    $node = $schema;
-    // What the node is: a schema, a map or a list of schemas, or a value.
+    $reached = $schema;
+    // What is reached: a schema, a map or a list of schemas, or a value.
     $holds = Keywords::SCHEMA;
     foreach ($steps as $step) {
       if ($holds === Keywords::SCHEMA) {
-        if (!$node instanceof Schema || !$node->has($step)) {
+        if (!$reached instanceof Schema || !$reached->has($step)) {
           return NULL;
         }
         $holds = Keywords::shape($step) ?? Keywords::VALUE;
-        $node = $node->get($step);
-        if (($holds === Keywords::SCHEMA_MAP || $holds === Keywords::SCHEMA_LIST) && !is_array($node)) {
+        $reached = $reached->get($step);
+        if (($holds === Keywords::SCHEMA_MAP || $holds === Keywords::SCHEMA_LIST) && !is_array($reached)) {
           $holds = Keywords::VALUE;
         }
         continue;
@@ -291,24 +291,24 @@ final class Schemas {
         if ($holds === Keywords::SCHEMA_LIST && !ctype_digit($step)) {
           return NULL;
         }
-        if (!is_array($node) || !array_key_exists($step, $node)) {
+        if (!is_array($reached) || !array_key_exists($step, $reached)) {
           return NULL;
         }
-        $node = $node[$step];
-        $holds = $node instanceof Schema ? Keywords::SCHEMA : Keywords::VALUE;
+        $reached = $reached[$step];
+        $holds = $reached instanceof Schema ? Keywords::SCHEMA : Keywords::VALUE;
         continue;
       }
-      if ($node instanceof \stdClass && property_exists($node, $step)) {
-        $node = $node->{$step};
+      if ($reached instanceof \stdClass && property_exists($reached, $step)) {
+        $reached = $reached->{$step};
       }
-      elseif (is_array($node) && array_key_exists($step, $node)) {
-        $node = $node[$step];
+      elseif (is_array($reached) && array_key_exists($step, $reached)) {
+        $reached = $reached[$step];
       }
       else {
         return NULL;
       }
     }
-    return $node;
+    return $reached;
   }
 
   /**

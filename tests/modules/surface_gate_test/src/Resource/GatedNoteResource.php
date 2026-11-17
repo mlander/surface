@@ -29,7 +29,7 @@ final class GatedNoteResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addSchema('node', Schema::integer()
-      ->title('Node')
+      ->title('Schema')
       ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node'])
       ->required());
     $inputs->addSchema('note', Schema::string()

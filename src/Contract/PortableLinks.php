@@ -27,7 +27,7 @@ use PortableSchema\Builder\Schema;
  *   keys from the site, an entry's id, which the key's
  *   `x-surface.deferred.entries` lists (no `source`).
  *
- * On a node the keyword comes after `x-portable-ui` and before
+ * On a schema the keyword comes after `x-portable-ui` and before
  * `x-surface` (PortableKeywords::before()), its links in the order of
  * RELATIONS. A link is never a widget hint: a document without the hints
  * keeps it. A link is a site's: the emitter writes it at a key of the
@@ -56,7 +56,7 @@ final class PortableLinks {
   public const CHOOSE = 'choose';
 
   /**
-   * The link relations Surface writes, in the order a node carries them.
+   * The link relations Surface writes, in the order a schema carries them.
    */
   public const RELATIONS = [self::LOOKUP, self::CHOOSE];
 
@@ -113,36 +113,36 @@ final class PortableLinks {
   }
 
   /**
-   * Adds a link to a node, its links in their order before its `x-surface`.
+   * Adds a link to a schema, its links in their order before its `x-surface`.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    * @param array $link
    *   What lookup() or choose() wrote; one of the same rel is replaced.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The node, its links in RELATIONS order.
+   *   The schema, its links in RELATIONS order.
    */
-  public static function set(Schema $node, array $link): Schema {
-    $links = array_values(array_filter(self::all($node), static fn (array $had): bool => $had['rel'] !== $link['rel']));
+  public static function set(Schema $schema, array $link): Schema {
+    $links = array_values(array_filter(self::all($schema), static fn (array $had): bool => $had['rel'] !== $link['rel']));
     $links[] = $link;
     $rank = array_flip(self::RELATIONS);
     usort($links, static fn (array $a, array $b): int => ($rank[$a['rel']] ?? count($rank)) <=> ($rank[$b['rel']] ?? count($rank)));
-    return PortableKeywords::before($node, [self::KEYWORD => $links]);
+    return PortableKeywords::before($schema, [self::KEYWORD => $links]);
   }
 
   /**
-   * Reads every link a node carries.
+   * Reads every link a schema carries.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return list<array{rel: string, href: string, source?: array}>
    *   Each link with a `rel` and an `href`, in order.
    */
-  public static function all(Schema $node): array {
+  public static function all(Schema $schema): array {
     $links = [];
-    $had = $node->get(self::KEYWORD);
+    $had = $schema->get(self::KEYWORD);
     foreach (is_array($had) ? $had : [] as $link) {
       $link = $link instanceof \stdClass ? (array) $link : $link;
       if (is_array($link) && is_string($link['rel'] ?? NULL) && is_string($link['href'] ?? NULL)) {
@@ -156,18 +156,18 @@ final class PortableLinks {
   }
 
   /**
-   * Reads a node's first link of a rel.
+   * Reads a schema's first link of a rel.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    * @param string $rel
    *   The rel: LOOKUP, CHOOSE.
    *
    * @return array{rel: string, href: string, source?: array}|null
    *   The link, or NULL.
    */
-  public static function of(Schema $node, string $rel): ?array {
-    foreach (self::all($node) as $link) {
+  public static function of(Schema $schema, string $rel): ?array {
+    foreach (self::all($schema) as $link) {
       if ($link['rel'] === $rel) {
         return $link;
       }

@@ -19,8 +19,8 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
   /**
    * Every widget, instantiated once and sorted by weight.
    *
-   * Widgets hold no per-node state (a node is an argument to every
-   * method they have), so one instance serves every node for the rest of
+   * Widgets hold no per-schema state (a schema is an argument to every
+   * method they have), so one instance serves every schema for the rest of
    * the request.
    *
    * @var \Drupal\surface\Widget\SurfaceWidgetInterface[]
@@ -176,7 +176,7 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
    *
    * One table, read on both sides of the document: the emitter names a
    * widget by the first word it answers to (wordOf()), and the drawer
-   * draws a node with the widget its `x-portable-ui.widget` names here.
+   * draws a schema with the widget its `x-portable-ui.widget` names here.
    *
    * @return array<string, string>
    *   Plugin IDs, by word.
@@ -215,15 +215,15 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
   }
 
   /**
-   * Gets the widget that draws a node of the served document.
+   * Gets the widget that draws a schema of the served document.
    *
-   * The word the node's `x-portable-ui.widget` says names the widget
+   * The word the schema's `x-portable-ui.widget` says names the widget
    * (words()): the emitter chose it from the definition, so the drawer
    * never chooses again. A word no widget answers to (a module's widget
-   * the site does not have), one whose widget does not draw the node, and
-   * a node with no word (a timestamp, a decimal, a key with variants) fall
-   * to the stock word for the node's shape, in the order of the React
-   * app's `stockWidget()` (stockWord()). A node whose shape that order
+   * the site does not have), one whose widget does not draw the schema, and
+   * a schema with no word (a timestamp, a decimal, a key with variants) fall
+   * to the stock word for the schema's shape, in the order of the React
+   * app's `stockWidget()` (stockWord()). A schema whose shape that order
    * names nothing for (a value of any type, which states no one type) is
    * drawn by the module's own widgets, asked in weight order, the JSON
    * widget last. A module's widget is drawn only where the document names
@@ -231,8 +231,8 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
    *
    * Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node, inline.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema, inline.
    * @param \Drupal\surface\Widget\WidgetContext $context
    *   Where it is drawn.
    *
@@ -240,45 +240,45 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
    *   The widget.
    *
    * @throws \InvalidArgumentException
-   *   When no widget draws the node.
+   *   When no widget draws the schema.
    */
-  public function widgetFor(Schema $node, WidgetContext $context): SurfaceWidgetInterface {
-    foreach ([SurfaceWidgetBase::ui($node)['widget'] ?? NULL, static::stockWord($node)] as $word) {
+  public function widgetFor(Schema $schema, WidgetContext $context): SurfaceWidgetInterface {
+    foreach ([SurfaceWidgetBase::ui($schema)['widget'] ?? NULL, static::stockWord($schema)] as $word) {
       $plugin_id = is_string($word) ? ($this->words()[$word] ?? NULL) : NULL;
-      if ($plugin_id !== NULL && $this->widget($plugin_id)->isApplicable($node, $context)) {
+      if ($plugin_id !== NULL && $this->widget($plugin_id)->isApplicable($schema, $context)) {
         return $this->widget($plugin_id);
       }
     }
     foreach ($this->instances() as $id => $widget) {
-      if (($this->getDefinitions()[$id]['provider'] ?? NULL) === 'surface' && $widget->isApplicable($node, $context)) {
+      if (($this->getDefinitions()[$id]['provider'] ?? NULL) === 'surface' && $widget->isApplicable($schema, $context)) {
         return $widget;
       }
     }
-    throw new \InvalidArgumentException(sprintf('No data surface widget draws the node at "%s".', $context->pointer));
+    throw new \InvalidArgumentException(sprintf('No data surface widget draws the schema at "%s".', $context->pointer));
   }
 
   /**
-   * Names the stock widget for a node's shape: React's `stockWidget()`.
+   * Names the stock widget for a schema's shape: React's `stockWidget()`.
    *
    * In this order: a list whose items offer choices a select (multiple),
-   * any other list `list`, a node offering choices a select, an object a
+   * any other list `list`, a schema offering choices a select, an object a
    * fieldset, a boolean a checkbox, an integer or a number a number input,
    * a string whose `format` is `email` an email input, any other string a
    * text input.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return string|null
-   *   The word, or NULL for a node that states no one type.
+   *   The word, or NULL for a schema that states no one type.
    */
-  public static function stockWord(Schema $node): ?string {
-    $type = SurfaceWidgetBase::type($node);
+  public static function stockWord(Schema $schema): ?string {
+    $type = SurfaceWidgetBase::type($schema);
     if ($type === 'array') {
-      $items = $node->get('items');
+      $items = $schema->get('items');
       return $items instanceof Schema && !$items->isBoolean() && $items->get('oneOf') !== NULL ? 'select' : 'list';
     }
-    if ($node->get('oneOf') !== NULL) {
+    if ($schema->get('oneOf') !== NULL) {
       return 'select';
     }
     return match ($type) {
@@ -286,7 +286,7 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
       'boolean' => 'checkbox',
       'integer', 'number' => 'number',
       // `idn-email` is how a document before contract 5 said it.
-      'string' => in_array($node->get('format'), ['email', 'idn-email'], TRUE) ? 'email' : 'text',
+      'string' => in_array($schema->get('format'), ['email', 'idn-email'], TRUE) ? 'email' : 'text',
       default => NULL,
     };
   }

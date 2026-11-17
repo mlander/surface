@@ -22,7 +22,7 @@ use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\surface\Variants;
 use Drupal\surface\Collection;
 use Drupal\surface\Form\Document\DocumentDrawer;
-use Drupal\surface\Form\Document\DocumentNodes;
+use Drupal\surface\Form\Document\DocumentSchemas;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use PortableSchema\Builder\Schema;
 use Drupal\surface\Widget\SurfaceWidgetManager;
@@ -93,9 +93,9 @@ final class Extracting {
    * @param \Drupal\Core\StringTranslation\TranslationInterface $stringTranslation
    *   The string translation service, which words a value of the wrong
    *   shape refused.
-   * @param \Closure $nodesFor
-   *   Finds the nodes of the envelope a container was drawn from,
-   *   `fn (SurfaceInterface $surface, array $container): DocumentNodes`.
+   * @param \Closure $schemasFor
+   *   Finds the schemas of the envelope a container was drawn from,
+   *   `fn (SurfaceInterface $surface, array $container): DocumentSchemas`.
    */
   public function __construct(
     protected readonly SurfaceWidgetManager $widgetManager,
@@ -104,16 +104,16 @@ final class Extracting {
     protected readonly SurfaceOptions $options,
     protected readonly ModuleHandlerInterface $moduleHandler,
     protected readonly TranslationInterface $stringTranslation,
-    protected readonly \Closure $nodesFor,
+    protected readonly \Closure $schemasFor,
   ) {
   }
 
   /**
-   * Finds the nodes of the container being read, once it is asked.
+   * Finds the schemas of the container being read, once it is asked.
    *
    * @var \Closure|null
    */
-  protected ?\Closure $nodes = NULL;
+  protected ?\Closure $schemas = NULL;
 
   /**
    * Names the in-progress input a rebuild has just invalidated.
@@ -211,10 +211,10 @@ final class Extracting {
   }
 
   /**
-   * Reads a key's node, or the node at a dotted path to a mounted key.
+   * Reads a key's schema, or the schema at a dotted path to a mounted key.
    *
-   * The key's entry's node (Entry::schema()), walked down its properties:
-   * a key's facts are read from its node, a refined key's too.
+   * The key's entry's schema (Entry::schema()), walked down its properties:
+   * a key's facts are read from its schema, a refined key's too.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
@@ -222,15 +222,15 @@ final class Extracting {
    *   A key, or `third_party_settings.<module>.<key>`.
    *
    * @return \PortableSchema\Builder\Schema|null
-   *   The node, or NULL when nothing is declared there.
+   *   The schema, or NULL when nothing is declared there.
    */
-  protected static function nodeAt(SurfaceInterface $surface, string $path): ?Schema {
+  protected static function schemaAt(SurfaceInterface $surface, string $path): ?Schema {
     $parents = explode('.', $path);
-    $node = $surface->getDefinitions()->entry((string) array_shift($parents))?->schema();
+    $schema = $surface->getDefinitions()->entry((string) array_shift($parents))?->schema();
     foreach ($parents as $property) {
-      $node = $node !== NULL && DefinitionSchema::isComplex($node) ? DefinitionSchema::propertyNode($node, $property) : NULL;
+      $schema = $schema !== NULL && DefinitionSchema::isComplex($schema) ? DefinitionSchema::propertyOf($schema, $property) : NULL;
     }
-    return $node;
+    return $schema;
   }
 
   /**
@@ -459,11 +459,11 @@ final class Extracting {
     if (!$moved) {
       return FALSE;
     }
-    $node = static::nodeAt($refined, $name);
-    if ($node === NULL || DefinitionSchema::isList($node) || $refined->getDefinitions()->entry($name)?->variants !== NULL) {
+    $schema = static::schemaAt($refined, $name);
+    if ($schema === NULL || DefinitionSchema::isList($schema) || $refined->getDefinitions()->entry($name)?->variants !== NULL) {
       return FALSE;
     }
-    $set = $this->options->resolve($node);
+    $set = $this->options->resolve($schema);
     return $set !== NULL && !$set->allows($value);
   }
 
@@ -555,11 +555,11 @@ final class Extracting {
     // alone. A list is left alone for the same reason the stale rule
     // leaves one alone: some items kept and others dropped is a shape
     // neither the widget nor this rule has.
-    $node = static::nodeAt($refined, $name);
-    if ($node === NULL || DefinitionSchema::isList($node) || (!is_int($value) && !is_string($value))) {
+    $schema = static::schemaAt($refined, $name);
+    if ($schema === NULL || DefinitionSchema::isList($schema) || (!is_int($value) && !is_string($value))) {
       return TRUE;
     }
-    $set = $this->options->resolve($node);
+    $set = $this->options->resolve($schema);
     return $set === NULL || $set->allows($value);
   }
 
@@ -568,8 +568,8 @@ final class Extracting {
    *
    * Every element drawn for a value says where its value is
    * (SurfaceFormBuilderInterface::PATH_KEY) and which widget drew it; each
-   * is read back by that widget, through the envelope's node at that
-   * pointer (DocumentNodes::at(), the envelope read once when a widget is
+   * is read back by that widget, through the envelope's schema at that
+   * pointer (DocumentSchemas::at(), the envelope read once when a widget is
    * first asked), an object a level at a time and a collection item by
    * item (read()). An element
    * drawn for a variant its deciding key no longer chooses gives nothing,
@@ -579,16 +579,16 @@ final class Extracting {
    */
   public function extractSurfaceValues(SurfaceInterface $surface, array $container, FormStateInterface $form_state, array $current = []): array {
     $container = SurfaceFormBuilder::findSurfaceContainer($container);
-    $was = $this->nodes;
+    $was = $this->schemas;
     $found = NULL;
-    $this->nodes = function () use (&$found, $surface, $container): DocumentNodes {
-      return $found ??= ($this->nodesFor)($surface, $container);
+    $this->schemas = function () use (&$found, $surface, $container): DocumentSchemas {
+      return $found ??= ($this->schemasFor)($surface, $container);
     };
     try {
       $raw = $this->readFrame($container, $form_state, $current, $current + $surface->getDefaultValues(), Refreshing::containerKey($container));
     }
     finally {
-      $this->nodes = $was;
+      $this->schemas = $was;
     }
     // A key drawn as nothing when the page was drawn sent nothing, even
     // where this build draws it: left out, it keeps what is stored.
@@ -674,7 +674,7 @@ final class Extracting {
    * added and left blank) dropped before the pipeline would drop it, and
    * the delta each item kept was drawn at remembered for the request, so
    * a violation about it is flagged on the element it came from; any
-   * other element by its widget, through the envelope's node at its
+   * other element by its widget, through the envelope's schema at its
    * pointer.
    *
    * @param array $element
@@ -716,8 +716,8 @@ final class Extracting {
     if ($plugin_id === 'fieldset') {
       return $this->readFrame($element, $form_state, $stored, $deciding, $container_key);
     }
-    $node = $this->nodes === NULL ? NULL : ($this->nodes)()->at((string) $element[SurfaceFormBuilderInterface::PATH_KEY]);
-    $value = $this->widgetManager->widget($plugin_id)->extractValue($element, $form_state, $node ?? Schema::from([]));
+    $schema = $this->schemas === NULL ? NULL : ($this->schemas)()->at((string) $element[SurfaceFormBuilderInterface::PATH_KEY]);
+    $value = $this->widgetManager->widget($plugin_id)->extractValue($element, $form_state, $schema ?? Schema::from([]));
     if (!ValueState::isConfigured($value) && array_key_exists(SurfaceWidgetBase::STALE_KEY, $element)) {
       // An untouched element standing for a stale value: left alone, it
       // keeps the value it could not show, which the host put on it, or

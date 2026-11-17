@@ -63,13 +63,13 @@ final class Variants {
   public const FLAT = 'flat';
 
   /**
-   * The shell's own facts as a map's node, read on the first ask.
+   * The shell's own facts as a map's schema, read on the first ask.
    *
-   * NULL until shellNode() reads it, and never serialized (__sleep()): a
+   * NULL until shellSchema() reads it, and never serialized (__sleep()): a
    * Variants read back from a build cache row reads it again on the first
    * ask. The shell is sealed and never written.
    */
-  private ?Schema $shellNode = NULL;
+  private ?Schema $shellSchema = NULL;
 
   /**
    * Constructs a Variants.
@@ -167,30 +167,30 @@ final class Variants {
   }
 
   /**
-   * Gets the node of the shell's own facts, as the node of a map.
+   * Gets the schema of the shell's own facts, as the schema of a map.
    *
-   * What a chosen variant's node is composed of, around the nodes of the
+   * What a chosen variant's schema is composed of, around the schemas of the
    * variant's entries (DefinitionSchema::withProperties()): read from the
    * shell once (DefinitionSchema::shell()) on the first ask, and kept, so
    * a refinement that chooses a variant reads nothing of the shell. With
    * assertions on, each later ask reads the shell again and checks the
    * two still say the same.
    *
-   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-nodes.
+   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-schemas.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The node, `properties` empty.
+   *   The schema, `properties` empty.
    */
-  public function shellNode(): Schema {
-    assert($this->shellNode === NULL || DefinitionSchema::same($this->shellNode, DefinitionSchema::shell($this->shell)), sprintf('The shell of the variants chosen by "%s" was written after its node was read.', $this->by));
-    return $this->shellNode ??= DefinitionSchema::shell($this->shell);
+  public function shellSchema(): Schema {
+    assert($this->shellSchema === NULL || DefinitionSchema::same($this->shellSchema, DefinitionSchema::shell($this->shell)), sprintf('The shell of the variants chosen by "%s" was written after its schema was read.', $this->by));
+    return $this->shellSchema ??= DefinitionSchema::shell($this->shell);
   }
 
   /**
-   * Names what a Variants serializes: every member but the shell's node.
+   * Names what a Variants serializes: every member but the shell's schema.
    *
    * So a build cache row is the same whether or not a refinement asked
-   * for the shell's node, and the same as before the node was kept.
+   * for the shell's schema, and the same as before the schema was kept.
    *
    * @return string[]
    *   The constructor's members, in their order.

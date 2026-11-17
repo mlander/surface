@@ -252,7 +252,7 @@
       "kind2": "176d504c1ee1",
       "flat": "0197f33fcf7f"
     },
-    "plain | nodes": {
+    "plain | schemas": {
       "nope": "85cf5ad1bdc5",
       "nope.deeper": "85cf5ad1bdc5",
       "child.r_blank": "85cf5ad1bdc5",

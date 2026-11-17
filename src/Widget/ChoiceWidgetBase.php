@@ -9,7 +9,7 @@ use PortableSchema\Builder\Schema;
 /**
  * Common ground for the widgets that draw a list of allowed values.
  *
- * A select, radios and checkboxes all read what a node offers from its
+ * A select, radios and checkboxes all read what a schema offers from its
  * `oneOf` (a list's from its `items`), each entry a `const` and the
  * `title` it is offered under, and put each entry's `description` under
  * its option. How long the list may be reused is the served contract's
@@ -18,19 +18,19 @@ use PortableSchema\Builder\Schema;
 abstract class ChoiceWidgetBase extends SurfaceWidgetBase {
 
   /**
-   * Reads the node a list of values offers its choices from.
+   * Reads the schema a list of values offers its choices from.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    *
    * @return \PortableSchema\Builder\Schema|null
-   *   The node itself for one value; its `items` for a list.
+   *   The schema itself for one value; its `items` for a list.
    */
-  protected static function offering(Schema $node): ?Schema {
-    if (static::type($node) !== 'array') {
-      return $node;
+  protected static function offering(Schema $schema): ?Schema {
+    if (static::type($schema) !== 'array') {
+      return $schema;
     }
-    $items = $node->get('items');
+    $items = $schema->get('items');
     return $items instanceof Schema ? $items : NULL;
   }
 

@@ -9,12 +9,12 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\surface\Contract\NodeMessage;
+use Drupal\surface\Contract\SchemaMessage;
 use Drupal\surface\DefinitionMetadata;
 use PortableSchema\Builder\Schema;
 
 /**
- * Says where two definitions, or two nodes, are not equal.
+ * Says where two definitions, or two schemas, are not equal.
  *
  * The round trip's equality (DefinitionRoundTripTest), at every depth:
  * - the same PHP class;
@@ -36,13 +36,13 @@ use PortableSchema\Builder\Schema;
  * Values are equal by these rules: a scalar and an array by `===` (an
  * array key by key, in order); a definition by the rule above; when
  * identity is asked, any other object only as the same object (a text,
- * a Computed, a Resolve, an Arrangement), but a NodeMessage, which the
+ * a Computed, a Resolve, an Arrangement), but a SchemaMessage, which the
  * read makes anew on each read, by its class and properties; when it is
  * not (after serialization), any object by its class and every property
  * by these rules, a text's rendering and translation service left out. A
  * getter compared by `===` when identity is asked, by these rules when
- * not. Two nodes are equal when their keywords are, in order, by these
- * rules, a node inside one by this rule, and both are boolean or required
+ * not. Two schemas are equal when their keywords are, in order, by these
+ * rules, a schema inside one by this rule, and both are boolean or required
  * in their parent alike.
  *
  * What it does not compare: the typed data manager a definition holds (a
@@ -50,7 +50,7 @@ use PortableSchema\Builder\Schema;
  * asks core's), and what a class keeps outside its definition array. So
  * it is used for the three classes the inverse derives (DataDefinition,
  * ListDataDefinition, MapDataDefinition): every other class is refused by
- * NodeDefinition::of() before it is compared. A definition held under a
+ * DefinitionFromSchema::of() before it is compared. A definition held under a
  * setting or a key the module has no name for is, by the inverse's rule,
  * the same object on both sides, which the comparator reports as the
  * object read; no walked definition holds one.
@@ -164,7 +164,7 @@ trait DefinitionEqualityTrait {
       return $a instanceof DataDefinitionInterface && $b instanceof DataDefinitionInterface ? static::definitionDifferences($a, $b, $at, $identity) : ["$at: one side is a definition"];
     }
     if ($a instanceof Schema || $b instanceof Schema) {
-      return $a instanceof Schema && $b instanceof Schema ? static::nodeDifferences($a, $b, $at, $identity) : ["$at: one side is a node"];
+      return $a instanceof Schema && $b instanceof Schema ? static::schemaDifferences($a, $b, $at, $identity) : ["$at: one side is a schema"];
     }
     if (is_array($a) || is_array($b)) {
       if (!is_array($a) || !is_array($b) || array_keys($a) !== array_keys($b)) {
@@ -185,7 +185,7 @@ trait DefinitionEqualityTrait {
       }
       // A message the read writes itself is made anew on each read; every
       // other object is the one the author's definition holds.
-      if ($identity && !$a instanceof NodeMessage) {
+      if ($identity && !$a instanceof SchemaMessage) {
         return [$a instanceof MarkupInterface ? "$at: a text that is not the author's object" : "$at: " . get_class($a) . " equal in content but not the author's object"];
       }
       // An object met again below itself is compared once.
@@ -206,12 +206,12 @@ trait DefinitionEqualityTrait {
   }
 
   /**
-   * Lists where two nodes differ.
+   * Lists where two schemas differ.
    *
    * @param \PortableSchema\Builder\Schema $a
-   *   The node read from the definition.
+   *   The schema read from the definition.
    * @param \PortableSchema\Builder\Schema $b
-   *   The node read from the definition derived from it.
+   *   The schema read from the definition derived from it.
    * @param string $at
    *   Where, for the message.
    * @param bool $identity
@@ -220,14 +220,14 @@ trait DefinitionEqualityTrait {
    * @return list<string>
    *   Each difference.
    */
-  protected static function nodeDifferences(Schema $a, Schema $b, string $at, bool $identity = TRUE): array {
+  protected static function schemaDifferences(Schema $a, Schema $b, string $at, bool $identity = TRUE): array {
     if ($a->isBoolean() !== $b->isBoolean() || $a->isRequired() !== $b->isRequired()) {
       return ["$at: boolean or required in its parent"];
     }
     if ($a->isBoolean()) {
       return $a->toDocument() === $b->toDocument() ? [] : ["$at: another boolean schema"];
     }
-    return static::valueDifferences($a->all(), $b->all(), "$at node", $identity);
+    return static::valueDifferences($a->all(), $b->all(), "$at schema", $identity);
   }
 
   /**
