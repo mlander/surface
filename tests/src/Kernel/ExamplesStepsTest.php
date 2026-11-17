@@ -623,12 +623,16 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
 
   /**
    * Tests the line counts the landing page shows stay screen sized.
+   *
+   * The bound was 45 from 2026-10-07; raised to 50 on 2026-11-17, when the
+   * keys became schemas written one chained call a line (decided by the
+   * maintainer: one format everywhere, and 50 lines still fit one screen).
    */
   public function testEachStepFitsOnOneScreen(): void {
     foreach ([RegistrationStep1Resource::class, RegistrationStep2Resource::class, RegistrationStep3Resource::class] as $class) {
       $lines = CodeLines::count((string) (new \ReflectionClass($class))->getFileName());
       $this->assertGreaterThan(10, $lines, $class);
-      $this->assertLessThanOrEqual(45, $lines, $class);
+      $this->assertLessThanOrEqual(50, $lines, $class);
     }
   }
 
