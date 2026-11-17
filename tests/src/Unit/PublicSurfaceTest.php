@@ -130,6 +130,15 @@ use PHPUnit\Framework\Attributes\Group;
  * The shape's contract is pinned by method and return type from this
  * date.
  *
+ * Cut on 2026-11-17 by one attribute and its three arguments,
+ * #[Constraint(name, options, item:)]: beside #[Input], #[Each] or
+ * #[Computed], the package's #[Schema] keywords and #[Check] checks are
+ * the key's rules, a list's item's under `items` and an entry's under
+ * `additionalProperties`
+ * (docs/decisions.md#a-class-may-declare-its-keys-as-properties): 26
+ * attributes, 110 arguments. Before it, #[Shape] and its one argument had
+ * gone, a shape's class carrying the package's #[Document]: 27 and 113.
+ *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
 #[Group('surface')]
@@ -149,8 +158,8 @@ class PublicSurfaceTest extends UnitTestCase {
    * What the surface holds, by kind.
    */
   protected const PINNED = [
-    'attributes' => 27,
-    'attribute arguments' => 113,
+    'attributes' => 26,
+    'attribute arguments' => 110,
     'blueprint methods' => 18,
     'interfaces' => 22,
   ];

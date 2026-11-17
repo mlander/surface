@@ -332,6 +332,16 @@ Surface's (`#[Of]`, `#[Schema]`, `#[Check]`, `#[Ui]`, `#[Required]`) are
 the package's, not counted; no Surface attribute, argument or interface
 was added.
 
+*Shrunk 2026-11-17,* by one attribute and its three arguments,
+`#[Constraint(name, options, item:)]`: beside `#[Input]`, `#[Each]` or
+`#[Computed]`, the package's `#[Schema]` keywords and `#[Check]` checks
+are the key's rules, a list's item's under `items` and an entry's under
+`additionalProperties`
+([A class may declare its keys as properties](#a-class-may-declare-its-keys-as-properties)).
+The pins are 26 attributes and 110 arguments since (27 and 113 before,
+`#[Shape]` and its one argument having gone when a shape's class came to
+carry the package's `#[Document]`).
+
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 36
 attribute arguments (35 until 2026-11-01, when `widget:` was added to
@@ -12790,8 +12800,9 @@ $inputs->add('page', 'integer', t('Announcement'))
   checked by `References::settle()` at the build as any key is
   (`Declaring::settleReferences()` hands it the definition every entry
   is copied from); `#[Each('integer', ...)]` with
-  `#[Constraint('SurfaceValidReference', [...], item: TRUE)]` as a
-  property. `to:` and `bundles:` are gone.
+  `#[Schema(additionalProperties: ['portable-check' =>
+  ['drupal:SurfaceValidReference' => [...]]])]` as a property. `to:` and
+  `bundles:` are gone.
 
 (`BlueprintAdapterBase::add()`, `References::settle()`,
 `Declaring::settleReferences()`, `KeyAnswers`, `ResourceCode`,
@@ -15407,9 +15418,12 @@ they served.
   Refused with the message `#[Input]` gets beside another kind ("which
   each say what it is"): `#[Output]`, `#[Port]`, `#[Computed]`,
   `#[Attach]`, `#[AttachList]`, `#[AttachVariants]`, `#[Each]`,
-  `#[AttachEach]`, `#[Map]`. Refused naming both spellings, since they
-  say what the package's attributes say: `#[Input]`, `#[Constraint]`,
-  `#[Widget]`, `#[Describe]`, `#[Setting]`. On the class, the package's
+  `#[AttachEach]`, `#[Map]`. `#[Schema]` and `#[Check]` alone beside
+  `#[Input]`, `#[Each]` or `#[Computed]` are not the package's spelling
+  of a key: they are that key's rules, a list's item's under `items` and
+  an entry's under `additionalProperties`. Refused naming both
+  spellings, since they say what the package's attributes say:
+  `#[Input]`, `#[Widget]`, `#[Describe]`, `#[Setting]`. On the class, the package's
   `#[Ui(groups:)]` declares groups as `#[Group]` does, one of the two
   per class; the group a key's `#[Ui(group:)]` names is laid on with
   `describe()`. `#[Of]`, `#[Schema]` and `#[Check]` on the class, and a

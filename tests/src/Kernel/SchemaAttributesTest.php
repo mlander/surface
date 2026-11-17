@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\surface\Compute\MachineName;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\Attribute\Computed;
-use Drupal\surface\Resource\Attribute\Constraint;
 use Drupal\surface\Resource\Attribute\Describe;
 use Drupal\surface\Resource\Attribute\Examples;
 use Drupal\surface\Resource\Attribute\Output;
@@ -29,6 +29,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PortableSchema\Builder\Attribute\Check;
 use PortableSchema\Builder\Attribute\Document;
 use PortableSchema\Builder\Attribute\Of;
+use PortableSchema\Builder\Attribute\Required;
 use PortableSchema\Builder\Attribute\Schema;
 use PortableSchema\Builder\Attribute\Ui;
 
@@ -154,16 +155,8 @@ class SchemaAttributesTest extends SurfaceKernelTestBase {
    * as it is beside #[Input].
    */
   public function testWhatIsSaidTwiceIsRefused(): void {
-    $twice = 'the Portable Schema package\'s spelling of a key, and #[%s], Surface\'s. A key is spelled one way: with #[Of], #[Schema], #[Check], #[Ui] and #[Required], or with #[Input], #[Constraint], #[Widget], #[Setting] and #[Describe].';
+    $twice = 'the Portable Schema package\'s spelling of a key, and #[%s], Surface\'s. A key is spelled one way: with #[Of], #[Schema], #[Check], #[Ui] and #[Required], or with #[Input], #[Widget], #[Setting] and #[Describe].';
     $classes = [
-      'Constraint' => new class {
-        /**
-         * A key.
-         */
-        #[Schema(title: 'Name')]
-        #[Constraint('Length', ['max' => 3])]
-        public ?string $name = NULL;
-      },
       'Widget' => new class {
         /**
          * A key.
@@ -206,6 +199,7 @@ class SchemaAttributesTest extends SurfaceKernelTestBase {
          * A key.
          */
         #[Schema(title: 'Name')]
+        #[Required]
         #[Computed('Name', from: ['other'], using: 'strtoupper')]
         public ?string $name = NULL;
       },
@@ -213,6 +207,23 @@ class SchemaAttributesTest extends SurfaceKernelTestBase {
     foreach ($kinds as $attribute => $object) {
       $this->assertRefused(get_class($object), sprintf('%s::$name carries #[Schema] and #[%s], which each say what it is. A property is one key of one kind: keep one of them.', get_class($object), $attribute));
     }
+    // #[Schema] alone beside #[Computed] is the key's rules, as beside
+    // #[Input]: a keyword that is no rule is refused as one.
+    $rules = new class {
+      /**
+       * The key it is computed from.
+       */
+      #[Schema(title: 'Other')]
+      public ?string $other = NULL;
+
+      /**
+       * A key.
+       */
+      #[Schema(title: 'Name')]
+      #[Computed('Name', from: ['other'], using: MachineName::class)]
+      public ?string $name = NULL;
+    };
+    $this->assertRefused(get_class($rules), get_class($rules) . '::$name carries #[Schema] with title beside Surface\'s spelling of the key. Beside #[Input], #[Schema] says the key\'s rules alone, the keywords that check a value (minimum, maxLength, pattern, enum and the like); the attribute that says what the key is says the rest.');
   }
 
   /**

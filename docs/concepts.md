@@ -128,7 +128,6 @@ refused.
 | `ConfigEntityStorage` | `use Drupal\surface\Storage\ConfigEntityStorage;` |
 | `ConfigObjectStorage` | `use Drupal\surface\Storage\ConfigObjectStorage;` |
 | `ConfigSchemaGenerator` | `use Drupal\surface\Storage\ConfigSchemaGenerator;` |
-| `Constraint` | `use Drupal\surface\Resource\Attribute\Constraint;` |
 | `DeclaresByProperties` | `use Drupal\surface\Resource\DeclaresByProperties;` |
 | `DefinesOutputsInterface` | `use Drupal\surface\Resource\DefinesOutputsInterface;` |
 | `DefinitionMetadata` | `use Drupal\surface\DefinitionMetadata;` |

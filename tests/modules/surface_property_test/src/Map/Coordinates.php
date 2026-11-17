@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\surface_property_test\Map;
 
-use Drupal\surface\Resource\Attribute\Constraint;
 use Drupal\surface\Resource\Attribute\Input;
+use PortableSchema\Builder\Attribute\Schema;
 
 /**
  * The keys of an anonymous map of plain values: no structure, no frame.
@@ -13,11 +13,11 @@ use Drupal\surface\Resource\Attribute\Input;
 final class Coordinates {
 
   #[Input('Latitude')]
-  #[Constraint('Range', ['min' => -90, 'max' => 90])]
+  #[Schema(minimum: -90, maximum: 90)]
   public float $lat;
 
   #[Input('Longitude')]
-  #[Constraint('Range', ['min' => -180, 'max' => 180])]
+  #[Schema(minimum: -180, maximum: 180)]
   public float $lng;
 
 }

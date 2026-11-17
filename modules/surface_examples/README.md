@@ -5176,35 +5176,39 @@ final class CateringResource implements ResourceInterface {
   public bool $public = FALSE;
 
   #[Input('Caterer')]
-  #[Constraint('Length', ['max' => 128])]
+  #[Schema(maxLength: 128)]
   #[Examples('Harbour Kitchen')]
   #[Describe(placeholder: 'The name on the contract')]
   public string $provider;
 
   #[Input('Headcount', description: 'How many people to cater for.')]
-  #[Constraint('Range', ['min' => 1, 'max' => 5000])]
+  #[Schema(minimum: 1, maximum: 5000)]
   public int $headcount;
 
   #[Input('Budget')]
-  #[Constraint('Range', ['min' => 0])]
+  #[Schema(minimum: 0)]
   #[Describe(group: 'details', suffix: 'EUR')]
   public ?float $budget = NULL;
 
   #[Input('Dietary needs', list: 'string')]
-  #[Constraint('LabeledChoice', [
-    'choices' => [
-      'vegetarian' => new TranslatableMarkup('Vegetarian'),
-      'vegan' => new TranslatableMarkup('Vegan'),
-      'gluten_free' => new TranslatableMarkup('Gluten free'),
-      'halal' => new TranslatableMarkup('Halal'),
-      'kosher' => new TranslatableMarkup('Kosher'),
+  #[Schema(items: [
+    'portable-check' => [
+      'drupal:LabeledChoice' => [
+        'choices' => [
+          'vegetarian' => new TranslatableMarkup('Vegetarian'),
+          'vegan' => new TranslatableMarkup('Vegan'),
+          'gluten_free' => new TranslatableMarkup('Gluten free'),
+          'halal' => new TranslatableMarkup('Halal'),
+          'kosher' => new TranslatableMarkup('Kosher'),
+        ],
+      ],
     ],
-  ], item: TRUE)]
+  ])]
   public array $dietary = [];
 
   #[Input('Served at', description: 'HH:MM, on a 24-hour clock.')]
   #[Widget('time')]
-  #[Constraint('Regex', [
+  #[Check('drupal:Regex', [
     'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
     'message' => new TranslatableMarkup('Write the time as HH:MM, such as 18:30.'),
   ])]
@@ -5235,8 +5239,15 @@ The labels, the descriptions, the placeholder, the suffix and the rule's
 reason are bare strings, which the reader makes translatable: a
 translation is used where one exists, but string extraction does not
 find a bare string. The dietary labels and the time's message sit inside
-a constraint's options, which the reader hands to core as they are, so
-they are written `new TranslatableMarkup()`, which extraction finds.
+a check's options, which the reader hands to core as they are, so they
+are written `new TranslatableMarkup()`, which extraction finds.
+
+The bounds are `#[Schema]` keywords, read as the constraints they are
+written from: `maxLength` a Length, `minimum` and `maximum` a Range. The
+pattern with its message and the labeled choices are checks named after
+their constraints, `drupal:Regex` in `#[Check]` and
+`drupal:LabeledChoice` on the list's item under `items`. `#[Schema]` and `#[Check]` are the Portable Schema package's
+attributes; beside `#[Input]` they say the key's rules alone.
 
 Show the caterer and two rules hold: the class's own, on `served_at`,
 and the person's, which reads the port and asks for its email. The full

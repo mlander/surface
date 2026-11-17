@@ -2693,8 +2693,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   ['entityTypeId' => 'node', 'bundles' => ['page']]), from: Slots::class,
   label: t('Pages'))`, its type checked against the entity type's id
   when the resource is built; as a property, `#[Each('integer', from:,
-  label:)]` with `#[Constraint('SurfaceValidReference', [...], item:
-  TRUE)]`. `entity:node` as the type is refused, as `add()` refuses it.
+  label:)]` with `#[Schema(additionalProperties: ['portable-check' =>
+  ['drupal:SurfaceValidReference' => [...]]])]`. `entity:node` as the type is refused, as `add()` refuses it.
   `attachEach($key, Structure::class, from:, label:)` holds the
   structure at every thing, as `attach()` holds one, its label optional
   as `attach()`'s is. Both return the map at the key, for the owner to

@@ -303,7 +303,8 @@ the record of the rework that brought the module to the pattern.
   `addEach('pages', DataDefinition::create('integer')->addConstraint(
   'SurfaceValidReference', ['entityTypeId' => 'node']), from:
   Provider::class, label: t('Pages'))`, `#[Each('integer', ...)]` with
-  `#[Constraint(..., item: TRUE)]` as a property) or `attachEach('rows',
+  `#[Schema(additionalProperties: ['portable-check' => [...]])]` as a
+  property) or `attachEach('rows',
   Row::class, from: ..., label: ...)` (a structure per thing); the provider is a service implementing
   `SiteListInterface`, whose `list()` answers a `SiteList` (id, label,
   optional start and lock, and the cacheability of what it read; an id

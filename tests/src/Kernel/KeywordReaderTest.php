@@ -301,8 +301,8 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
   /**
    * Tests #[Schema] and #[Check] beside #[Input] are the key's rules.
    *
-   * What #[Constraint] said: the same constraints on the key, and on a
-   * list's item under `items`.
+   * The constraints the keywords and checks are written from, on the key,
+   * and on a list's item under `items`.
    */
   public function testRulesBesideInput(): void {
     $beside = new class {

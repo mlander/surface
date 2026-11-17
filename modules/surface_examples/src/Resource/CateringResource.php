@@ -6,7 +6,6 @@ namespace Drupal\surface_examples\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Resource\Attribute\Attach;
-use Drupal\surface\Resource\Attribute\Constraint;
 use Drupal\surface\Resource\Attribute\Describe;
 use Drupal\surface\Resource\Attribute\Examples;
 use Drupal\surface\Resource\Attribute\Group;
@@ -20,6 +19,8 @@ use Drupal\surface\Resource\DeclaresByProperties;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Storage\CateringStorage;
 use Drupal\surface_examples\Structure\PersonStructure;
+use PortableSchema\Builder\Attribute\Check;
+use PortableSchema\Builder\Attribute\Schema;
 
 /**
  * Example 18: the same keys as properties, each carrying an attribute.
@@ -32,7 +33,7 @@ use Drupal\surface_examples\Structure\PersonStructure;
  * initializer) and whether it must be given (a type that is not nullable,
  * with no initializer). The attributes say the rest. Their texts are bare
  * strings, which the reader makes translatable; the one text it does not
- * see is inside a constraint's options, so the dietary labels are
+ * see is inside a check's options, so the dietary labels are
  * `new TranslatableMarkup()`.
  */
 #[Resource('event.catering', storage: CateringStorage::class)]
@@ -50,35 +51,39 @@ final class CateringResource implements ResourceInterface {
   public bool $public = FALSE;
 
   #[Input('Caterer')]
-  #[Constraint('Length', ['max' => 128])]
+  #[Schema(maxLength: 128)]
   #[Examples('Harbour Kitchen')]
   #[Describe(placeholder: 'The name on the contract')]
   public string $provider;
 
   #[Input('Headcount', description: 'How many people to cater for.')]
-  #[Constraint('Range', ['min' => 1, 'max' => 5000])]
+  #[Schema(minimum: 1, maximum: 5000)]
   public int $headcount;
 
   #[Input('Budget')]
-  #[Constraint('Range', ['min' => 0])]
+  #[Schema(minimum: 0)]
   #[Describe(group: 'details', suffix: 'EUR')]
   public ?float $budget = NULL;
 
   #[Input('Dietary needs', list: 'string')]
-  #[Constraint('LabeledChoice', [
-    'choices' => [
-      'vegetarian' => new TranslatableMarkup('Vegetarian'),
-      'vegan' => new TranslatableMarkup('Vegan'),
-      'gluten_free' => new TranslatableMarkup('Gluten free'),
-      'halal' => new TranslatableMarkup('Halal'),
-      'kosher' => new TranslatableMarkup('Kosher'),
+  #[Schema(items: [
+    'portable-check' => [
+      'drupal:LabeledChoice' => [
+        'choices' => [
+          'vegetarian' => new TranslatableMarkup('Vegetarian'),
+          'vegan' => new TranslatableMarkup('Vegan'),
+          'gluten_free' => new TranslatableMarkup('Gluten free'),
+          'halal' => new TranslatableMarkup('Halal'),
+          'kosher' => new TranslatableMarkup('Kosher'),
+        ],
+      ],
     ],
-  ], item: TRUE)]
+  ])]
   public array $dietary = [];
 
   #[Input('Served at', description: 'HH:MM, on a 24-hour clock.')]
   #[Widget('time')]
-  #[Constraint('Regex', [
+  #[Check('drupal:Regex', [
     'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
     'message' => new TranslatableMarkup('Write the time as HH:MM, such as 18:30.'),
   ])]

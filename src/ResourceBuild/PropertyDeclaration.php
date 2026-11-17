@@ -20,7 +20,6 @@ use Drupal\surface\Resource\Attribute\AttachEach;
 use Drupal\surface\Resource\Attribute\AttachList;
 use Drupal\surface\Resource\Attribute\AttachVariants;
 use Drupal\surface\Resource\Attribute\Computed;
-use Drupal\surface\Resource\Attribute\Constraint;
 use Drupal\surface\Resource\Attribute\Describe;
 use Drupal\surface\Resource\Attribute\Each;
 use Drupal\surface\Resource\Attribute\Examples;
@@ -59,7 +58,7 @@ use PortableSchema\Builder\Schema;
  * they that run. This class refuses only what the verbs cannot know: a
  * property with no attribute saying what it is, or with two, a group no
  * #[Group] declares, a property type that is no key type, a child or map
- * that names no class, an item constraint on a key that is no list, and
+ * that names no class, an item's rules on a key that is no list, and
  * an output on a class that declares none.
  *
  * It is pure. Nothing instantiates the class or reads a property's
@@ -90,8 +89,10 @@ use PortableSchema\Builder\Schema;
  * #[Input], so they combine with what #[Input] combines with and no more:
  * #[Examples] and #[Rule]; another kind (#[Output], #[Port], #[Computed],
  * #[Attach] and the rest) is refused as it is beside #[Input]. #[Input],
- * #[Constraint], #[Widget], #[Describe] and #[Setting] say what the
- * package's spelling says, and are refused beside it. A Surface shape's
+ * #[Widget], #[Describe] and #[Setting] say what the package's spelling
+ * says, and are refused beside it. #[Schema] and #[Check] alone beside
+ * #[Input], #[Each] or #[Computed] are not that spelling: they are the
+ * key's rules (rules()). A Surface shape's
  * class, as the type or in #[Of], is that shape. On the class, a #[Ui]
  * declares groups as #[Group] does, one of the two per class.
  *
@@ -142,7 +143,6 @@ final class PropertyDeclaration {
    */
   private const SPELLED_TWICE = [
     Input::class,
-    Constraint::class,
     Widget::class,
     Describe::class,
     Setting::class,
@@ -358,7 +358,7 @@ final class PropertyDeclaration {
     foreach ($property->getAttributes() as $attribute) {
       $name = $attribute->getName();
       if (in_array($name, self::SPELLED_TWICE, TRUE)) {
-        throw new \LogicException(sprintf('%s::$%s carries %s, the Portable Schema package\'s spelling of a key, and #[%s], Surface\'s. A key is spelled one way: with #[Of], #[Schema], #[Check], #[Ui] and #[Required], or with #[Input], #[Constraint], #[Widget], #[Setting] and #[Describe].', $property->getDeclaringClass()->getName(), $property->getName(), $portable, substr($name, strlen(self::NAMESPACE))));
+        throw new \LogicException(sprintf('%s::$%s carries %s, the Portable Schema package\'s spelling of a key, and #[%s], Surface\'s. A key is spelled one way: with #[Of], #[Schema], #[Check], #[Ui] and #[Required], or with #[Input], #[Widget], #[Setting] and #[Describe].', $property->getDeclaringClass()->getName(), $property->getName(), $portable, substr($name, strlen(self::NAMESPACE))));
       }
     }
   }
@@ -655,8 +655,8 @@ final class PropertyDeclaration {
       return $definition;
     }
     if ($each = self::attribute($property, Each::class)) {
-      // An entry a constraint is laid on, `item: TRUE`, is a definition,
-      // which decorate() reaches through the map.
+      // An entry #[Schema(additionalProperties:)] lays rules on is a
+      // definition, which decorate() reaches through the map.
       $entry = self::constrainsItem($property) ? DataDefinition::create($each->type) : $each->type;
       $definition = $blueprint->addEach($key, $entry, $each->from, self::label($each->label), $each->default);
       self::word($definition, $each->description);
@@ -694,7 +694,7 @@ final class PropertyDeclaration {
   }
 
   /**
-   * Adds the constraints, examples, widget and settings, in attribute order.
+   * Adds the examples, widget and settings in attribute order, then the rules.
    *
    * @param \ReflectionProperty $property
    *   The property.
@@ -704,18 +704,7 @@ final class PropertyDeclaration {
   private static function decorate(\ReflectionProperty $property, DataDefinitionInterface $definition): void {
     foreach ($property->getAttributes() as $attribute) {
       $instance = $attribute->newInstance();
-      if ($instance instanceof Constraint) {
-        // Until its uses are converted to #[Schema] and #[Check] (rules()).
-        $constrained = $definition;
-        if ($instance->item) {
-          $constrained = $definition instanceof ListDataDefinition ? $definition->getItemDefinition() : DefinitionMetadata::eachOf($definition);
-          if (!$constrained instanceof DataDefinitionInterface) {
-            throw new \LogicException(sprintf('%s::$%s puts #[Constraint(\'%s\')] on its item, `item: TRUE`, but the key is no list and no #[Each]. Drop `item:`, or declare a list with #[Input(list:)].', $property->getDeclaringClass()->getName(), $property->getName(), $instance->name));
-          }
-        }
-        $constrained->addConstraint($instance->name, $instance->options);
-      }
-      elseif ($instance instanceof Examples) {
+      if ($instance instanceof Examples) {
         DefinitionMetadata::setExamples($definition, $instance->values);
       }
       elseif ($instance instanceof Widget && $definition instanceof DataDefinition) {
@@ -742,15 +731,15 @@ final class PropertyDeclaration {
    *   The property.
    *
    * @return bool
-   *   TRUE where it carries #[Input] or #[Each] and, of the package's
-   *   attributes, #[Schema] and #[Check] alone. Beside any other kind the
-   *   package's spelling is a kind of its own (assertOneKind()).
+   *   TRUE where it carries #[Input], #[Each] or #[Computed] and, of the
+   *   package's attributes, #[Schema] and #[Check] alone. Beside any other
+   *   kind the package's spelling is a kind of its own (assertOneKind()).
    */
   private static function holdsRulesBeside(\ReflectionProperty $property): bool {
     $kind = FALSE;
     foreach ($property->getAttributes() as $attribute) {
       $name = $attribute->getName();
-      if ($name === Input::class || $name === Each::class) {
+      if ($name === Input::class || $name === Each::class || $name === Computed::class) {
         $kind = TRUE;
       }
       elseif (in_array($name, self::PORTABLE, TRUE) && !in_array($name, self::RULES, TRUE)) {
@@ -1170,11 +1159,6 @@ final class PropertyDeclaration {
    *   `additionalProperties`.
    */
   private static function constrainsItem(\ReflectionProperty $property): bool {
-    foreach ($property->getAttributes(Constraint::class) as $attribute) {
-      if ($attribute->newInstance()->item) {
-        return TRUE;
-      }
-    }
     foreach ($property->getAttributes(SchemaAttribute::class) as $attribute) {
       $keywords = $attribute->newInstance()->keywords;
       if (array_key_exists('items', $keywords) || array_key_exists('additionalProperties', $keywords)) {
