@@ -11,7 +11,7 @@ use PortableSchema\Builder\Schema;
  *
  * The facts are what a definition of the value would hold in its array
  * (`type`, `label`, `description`, `required`, `constraints`, `settings`,
- * `default_value`, `examples`, `secret` and the keys DefinitionMetadata
+ * `default_value`, `examples`, `secret` and the keys Surface's metadata
  * stores), and the schema is the one DefinitionSchema::of() reads from
  * such a definition: the same keywords in the same order, the same checks
  * and messages, the same MODEL members. No definition is made. A list's

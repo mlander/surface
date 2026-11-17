@@ -172,7 +172,6 @@ refused.
 | `SchemaViolations` | `use Drupal\surface\Storage\SchemaViolations;` |
 | `SchemaWidgetInterface` | `use Drupal\surface\Contract\SchemaWidgetInterface;` |
 | `Setting` | `use Drupal\surface\Resource\Attribute\Setting;` |
-| `Shape` | `use Drupal\surface\Resource\Attribute\Shape;` |
 | `ShapeInterface` | `use Drupal\surface\Resource\ShapeInterface;` |
 | `SiteList` | `use Drupal\surface\Resource\SiteList;` |
 | `SiteListInterface` | `use Drupal\surface\Resource\SiteListInterface;` |

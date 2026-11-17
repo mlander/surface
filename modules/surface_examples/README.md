@@ -227,7 +227,8 @@ final class RegistrationStep1Resource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addSchema(self::TITLE, Schema::string()
-      ->title(t('Event title')));
+      ->title(t('Event title'))
+      ->required());
 
     $inputs->addSchema(self::CAPACITY, Schema::integer()
       ->title(t('Capacity'))
@@ -314,7 +315,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/RegistrationStep1Resource.php`](src/Resource/RegistrationStep1Resource.php) | the resource: three keys, each with what it allows, and the operation that asks for them | 23 |
+| [`modules/surface_examples/src/Resource/RegistrationStep1Resource.php`](src/Resource/RegistrationStep1Resource.php) | the resource: three keys, each with what it allows, and the operation that asks for them | 24 |
 | [`modules/surface_examples/src/Storage/RegistrationStep1Storage.php`](src/Storage/RegistrationStep1Storage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step1` | the route: the generic operation form, serving the resource | 8 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.registration_step1` | the config schema, generated from the class | 21 |
@@ -880,7 +881,7 @@ No form alter, no hook.
 <!-- code: ../surface_examples_compliance/src/Shape/License.php -->
 
 ```php
-#[Shape('event.license')]
+#[Document('event.license')]
 final class License implements ShapeInterface {
 
   /**
@@ -1412,7 +1413,7 @@ final class PersonStructure implements StructureInterface {
 <!-- code: src/Shape/PhoneNumber.php -->
 
 ```php
-#[Shape('event.phone')]
+#[Document('event.phone')]
 final class PhoneNumber implements ShapeInterface {
 
   /**

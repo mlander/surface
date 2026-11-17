@@ -6,7 +6,7 @@ module has a say in a resource it does not own.
 ## What it shows
 
 Three classes. `Shape\License` is what an event license is wherever it
-is asked for, a shape (`#[Shape('event.license')]`): a string of four
+is asked for, a shape (`#[Document('event.license')]`): a string of four
 digits, its pattern explained by a message, its description and its
 example, declared once in a static `schema()`. `Structure\ComplianceStructure`
 is what compliance asks of any event: a license of that shape,
