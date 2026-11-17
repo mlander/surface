@@ -12,7 +12,6 @@ use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeDefinition;
 use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\Condition;
@@ -373,16 +372,21 @@ final class Binding {
         ? $builder->getThirdPartyDefinition((string) $module, $refiner->key)
         : $builder->getDefinition($refiner->key);
       assert($advertised !== NULL);
-      // Its answer is applied to the key's schema; the builder holds
-      // definitions, so what it is handed back is the definition an
-      // old-shape method returned, or the one derived from the schema.
+      // Its one answer is known now: one that would widen the key as
+      // declared is refused, and it is applied to the key's schema. The
+      // builder holds definitions, so it is handed the definition the
+      // applied schema reads as.
       $key = DefinitionSchema::of($advertised);
-      [$answer, $returned] = $link->answerOf($refiner, $key, [], $refiner->key, $refiner->describe(), $advertised);
+      $answer = $link->answerOf($refiner, $key, [], $refiner->key);
+      $widened = Answer::widensAsWritten($key, $answer, $refiner->key, $refiner->describe());
+      if ($widened !== NULL) {
+        throw new \LogicException(sprintf(Answer::WIDENED, $refiner->key, $refiner->describe(), $widened));
+      }
       $schema = Answer::apply($key, $answer, $refiner->key, $refiner->describe(), TRUE);
       if (in_array($refiner->key, $lists, TRUE)) {
         Answer::assertItemsUntouched($refiner->key, $key, $schema);
       }
-      $refined = $returned ?? NodeDefinition::of($schema);
+      $refined = Surface::writtenOn($advertised, $key, $schema);
       if ($own) {
         $builder->setThirdPartyDefinition((string) $module, $refiner->key, $refined);
         continue;
@@ -853,13 +857,6 @@ final class Binding {
    *   Naming the method and what is wrong with it.
    */
   protected static function assertRefinable(ResourceDefinition $definition, RefinerDefinition $refiner, array $input_keys, array $output_keys, ?array $watchable = NULL): void {
-    if (!$refiner->takesDefinition) {
-      throw new \LogicException(sprintf(
-        '%s refines "%s" but takes no parameters: its first parameter receives that key\'s definition.',
-        $refiner->describe(),
-        $refiner->key,
-      ));
-    }
     if (!in_array($refiner->key, $input_keys, TRUE)) {
       throw new \LogicException(in_array($refiner->key, $output_keys, TRUE)
         ? sprintf(

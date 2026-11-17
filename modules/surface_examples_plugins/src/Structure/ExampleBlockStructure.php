@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace Drupal\surface_examples_plugins\Structure;
 
 use Drupal\Core\Entity\ContentEntityInterface;
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * What the example block can be configured with.
@@ -94,12 +93,10 @@ final class ExampleBlockStructure implements StructureInterface {
    * Watches the entity type by parameter name.
    */
   #[RefinesInput('bundle')]
-  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
-    $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type]);
-    if ($bundle instanceof DataDefinition) {
-      $bundle->setDescription(t('A @entity_type bundle.', ['@entity_type' => $entity_type]));
-    }
-    return $bundle;
+  public static function bundleOfEntityType(string $entity_type): Schema {
+    return Schema::any()
+      ->check('drupal:EntityBundleExists', ['entityTypeId' => $entity_type])
+      ->description(t('A @entity_type bundle.', ['@entity_type' => $entity_type]));
   }
 
   /**
@@ -110,18 +107,16 @@ final class ExampleBlockStructure implements StructureInterface {
    * and again when either changes.
    */
   #[RefinesInput('field')]
-  public static function fieldOfBundle(DataDefinitionInterface $field, string $entity_type, string $bundle): DataDefinitionInterface {
-    $field->addConstraint('SurfaceExamplesBundleField', [
-      'entityTypeId' => $entity_type,
-      'bundle' => $bundle,
-    ]);
-    if ($field instanceof DataDefinition) {
-      $field->setDescription(t('A field on @entity_type @bundle.', [
+  public static function fieldOfBundle(string $entity_type, string $bundle): Schema {
+    return Schema::any()
+      ->check('drupal:SurfaceExamplesBundleField', [
+        'entityTypeId' => $entity_type,
+        'bundle' => $bundle,
+      ])
+      ->description(t('A field on @entity_type @bundle.', [
         '@entity_type' => $entity_type,
         '@bundle' => $bundle,
       ]));
-    }
-    return $field;
   }
 
 }

@@ -28,7 +28,7 @@ final class CacheableCasingRefiner implements SurfaceRefinerInterface, Cacheable
   /**
    * {@inheritdoc}
    */
-  public function refine(string $name, Schema $key, array $values, string $who): array {
+  public function refine(string $name, Schema $key, array $values): array {
     return [Schema::any()->with(PortableKeywords::CHECK, ['drupal:Length' => ['max' => 5]])];
   }
 

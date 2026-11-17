@@ -19,7 +19,7 @@ final class AnyToIntegerRefiner implements SurfaceRefinerInterface {
   /**
    * {@inheritdoc}
    */
-  public function refine(string $name, Schema $key, array $values, string $who): array {
+  public function refine(string $name, Schema $key, array $values): array {
     return [Schema::integer()];
   }
 

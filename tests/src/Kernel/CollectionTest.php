@@ -251,7 +251,7 @@ class CollectionTest extends SurfaceKernelTestBase {
       /**
        * {@inheritdoc}
        */
-      public function refine(string $name, Schema $key, array $values, string $who): array {
+      public function refine(string $name, Schema $key, array $values): array {
         return ($values['size'] ?? NULL) === 'small' ? [Schema::any()->maxItems(2)] : [];
       }
 
@@ -302,14 +302,17 @@ class CollectionTest extends SurfaceKernelTestBase {
     $this->assertSame(80, $shelf->refine(['unit' => 'in', 'height' => 30])->getDefinition('height')->getConstraints()['Range']['max']);
     $this->assertSame(200, $shelf->refine(['unit' => 'cm', 'height' => 30])->getDefinition('height')->getConstraints()['Range']['max']);
 
-    // A parent refiner that narrows inside the items is refused.
+    // A parent refiner that answers for the items is refused: an author's
+    // answer is for its key alone. Before refiners answered with schemas,
+    // it reached the items through the definition and was refused as
+    // reaching inside its collection's items.
     $broken = $this->resources()->build(NarrowsListItemsStructure::class, new OperationContext('configure'));
     try {
       $broken->refine(['size' => 'small']);
       $this->fail('A parent refiner narrowed inside its collection\'s items.');
     }
     catch (\LogicException $e) {
-      $this->assertStringContainsString('Refining the "racks" collection reached inside its items', $e->getMessage());
+      $this->assertStringContainsString('Refining "racks" for ' . NarrowsListItemsStructure::class . '::racksOfSize() answered with `items`, which an answer does not say', $e->getMessage());
     }
     // One that watches the list is refused when the structure is built.
     try {

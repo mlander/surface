@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples_references\Structure;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A reference to an entity of any type: its entity type, then its id.
@@ -70,18 +70,16 @@ abstract class AnyEntityStructure implements StructureInterface {
   /**
    * Narrows the id to an entity of the entity type chosen.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $id
-   *   The id.
    * @param string $entity_type
    *   The entity type chosen.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The id, referring to that entity type and the bundles allowed of it.
+   * @return \PortableSchema\Builder\Schema
+   *   A reference to that entity type and the bundles allowed of it.
    */
   #[RefinesInput('id')]
-  public static function id(DataDefinitionInterface $id, string $entity_type): DataDefinitionInterface {
-    $bundles = (array) ($id->getSetting(References::TARGETS)[$entity_type] ?? []);
-    return $id->addConstraint(References::CONSTRAINT, array_filter([
+  public static function id(string $entity_type): Schema {
+    $bundles = (array) ((static::ENTITY_TYPES['targets'] ?? [])[$entity_type] ?? []);
+    return Schema::any()->check('drupal:' . References::CONSTRAINT, array_filter([
       'entityTypeId' => $entity_type,
       'bundles' => array_values($bundles),
     ]));

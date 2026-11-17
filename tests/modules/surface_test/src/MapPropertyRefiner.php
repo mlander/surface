@@ -27,7 +27,7 @@ final class MapPropertyRefiner implements SurfaceRefinerInterface {
   /**
    * {@inheritdoc}
    */
-  public function refine(string $name, Schema $key, array $values, string $who): array {
+  public function refine(string $name, Schema $key, array $values): array {
     if (DefinitionSchema::propertyNode($key, self::PROPERTY) === NULL) {
       return [];
     }

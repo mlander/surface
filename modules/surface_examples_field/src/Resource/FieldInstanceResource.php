@@ -6,7 +6,6 @@ namespace Drupal\surface_examples_field\Resource;
 
 use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -18,6 +17,7 @@ use Drupal\surface_examples_field\FieldSettingsSchemaVariants;
 use Drupal\surface_examples_field\Storage\FieldInstanceStorage;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
+use PortableSchema\Builder\Schema;
 
 /**
  * A field on a bundle. Generic: knows nothing of any field type.
@@ -199,8 +199,8 @@ final class FieldInstanceResource implements ResourceInterface {
    * The bundle must belong to the chosen entity type.
    */
   #[RefinesInput('bundle')]
-  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
-    return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type]);
+  public static function bundleOfEntityType(string $entity_type): Schema {
+    return Schema::any()->check('drupal:EntityBundleExists', ['entityTypeId' => $entity_type]);
   }
 
 }

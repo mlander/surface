@@ -57,8 +57,8 @@ final class RuntimeRefiner implements SurfaceRefinerInterface, CacheableDependen
   /**
    * {@inheritdoc}
    */
-  public function refine(string $name, Schema $key, array $values, string $who): array {
-    return $this->link->refine($name, $key, $values, $who);
+  public function refine(string $name, Schema $key, array $values): array {
+    return $this->link->refine($name, $key, $values);
   }
 
   /**

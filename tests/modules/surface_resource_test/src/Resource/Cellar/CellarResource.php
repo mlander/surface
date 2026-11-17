@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Resource\Cellar;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -14,6 +13,7 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Resource\Larder\SpiceRackResource;
 use Drupal\surface_resource_test\Structure\Pantry\ShelfStructure;
 use Drupal\surface_resource_test\Storage\CellarStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A cellar: two collections of children it already knows.
@@ -64,12 +64,8 @@ final class CellarResource implements ResourceInterface {
    * A small cellar holds two racks at most: the parent narrows its list.
    */
   #[RefinesInput('racks')]
-  public static function fewerRacksWhenSmall(DataDefinitionInterface $racks, string $size): DataDefinitionInterface {
-    if ($size !== 'small') {
-      return $racks;
-    }
-    $count = $racks->getConstraints()['Count'] ?? [];
-    return $racks->addConstraint('Count', array_replace($count, ['max' => min(2, $count['max'] ?? 2)]));
+  public static function fewerRacksWhenSmall(string $size): Schema {
+    return $size === 'small' ? Schema::any()->maxItems(2) : Schema::any();
   }
 
 }

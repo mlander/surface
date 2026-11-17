@@ -733,8 +733,12 @@ final class Surface implements SurfaceInterface {
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
    *   The definition the refined schema reads as.
+   *
+   * @internal
+   *   Public only for the build step, which runs a refiner that watches
+   *   nothing once and hands the builder a definition.
    */
-  protected static function writtenOn(DataDefinitionInterface $definition, Schema $before, Schema $after): DataDefinitionInterface {
+  public static function writtenOn(DataDefinitionInterface $definition, Schema $before, Schema $after): DataDefinitionInterface {
     if ($after === $before) {
       return $definition;
     }
@@ -1494,7 +1498,7 @@ final class Surface implements SurfaceInterface {
       if (NodeFacts::doesNotApply($schema)) {
         break;
       }
-      foreach ($link->refine($target, $schema, $values, $who) as $answer) {
+      foreach ($link->refine($target, $schema, $values) as $answer) {
         $schema = Answer::apply($schema, $answer, $target, $who, TRUE);
         if (NodeFacts::doesNotApply($schema)) {
           break;
@@ -1505,36 +1509,6 @@ final class Surface implements SurfaceInterface {
       }
     }
     return $schema;
-  }
-
-  /**
-   * Carries the metadata a refiner cannot be expected to copy.
-   *
-   * A refiner that mutates the definition it was handed keeps both by
-   * definition. One that builds a fresh definition (the variants'
-   * placeholder becoming the chosen variant's map) would otherwise drop
-   * the declared default and the examples, and the rendered form and the
-   * accepted value would then disagree about what the key starts from.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $from
-   *   The definition handed over.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $to
-   *   What came back.
-   *
-   * @internal
-   *   Public only for the build step, which runs a refiner that
-   *   watches nothing once, at build time, under the same rules.
-   */
-  public static function carryMetadata(DataDefinitionInterface $from, DataDefinitionInterface $to): void {
-    if ($from === $to) {
-      return;
-    }
-    if (DefinitionMetadata::hasDefaultValue($from) && !DefinitionMetadata::hasDefaultValue($to)) {
-      DefinitionMetadata::setDefaultValue($to, DefinitionMetadata::getDefaultValue($from));
-    }
-    if (DefinitionMetadata::getExamples($to) === [] && DefinitionMetadata::getExamples($from) !== []) {
-      DefinitionMetadata::setExamples($to, DefinitionMetadata::getExamples($from));
-    }
   }
 
   /**

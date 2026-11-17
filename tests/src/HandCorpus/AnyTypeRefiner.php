@@ -22,7 +22,7 @@ final class AnyTypeRefiner implements SurfaceRefinerInterface {
   /**
    * {@inheritdoc}
    */
-  public function refine(string $name, Schema $key, array $values, string $who): array {
+  public function refine(string $name, Schema $key, array $values): array {
     $type = $values['entity_type'] ?? NULL;
     if (!is_string($type) || $type === '') {
       return [];

@@ -176,7 +176,15 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests every verdict the conservative narrowing check gives.
+   * Tests every verdict the applier of answers gives.
+   *
+   * Before refiners answered with schemas, each link was held to the
+   * narrowing check: a bound that moved out, a pattern replaced, a
+   * constraint removed and the required flag turned off were refused at
+   * run time. An answer cannot remove or unrequire, so those rows went;
+   * of a bound and a pattern the key's stands where it is the stricter
+   * (decision 14), which the rows below say and testTheStricterStands()
+   * reads.
    *
    * @param array $advertised
    *   The constraints the key is advertised with.
@@ -210,6 +218,23 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage($refused);
     $surface->refine(['casing' => 'uppercase']);
+  }
+
+  /**
+   * Tests that of a key's bound and a looser answer's, the key's stands.
+   */
+  public function testTheStricterStands(): void {
+    $length = ['min' => 2, 'max' => 10];
+    $definition = DataDefinition::create('string')->setLabel('Variant')->addConstraint('Length', $length);
+    $builder = new SurfaceBuilder(
+      definitions: ['casing' => DataDefinition::create('string'), 'variant' => $definition],
+      refinements: ['variant' => ['casing']],
+    );
+    $builder->addRefiner('variant', new ConstraintRewritingRefiner(['Length' => ['min' => 1, 'max' => 40]]));
+    $refined = $builder->seal()->refine(['casing' => 'uppercase'])->getDefinitions()->entry('variant');
+    $this->assertNotNull($refined);
+    $this->assertSame(2, $refined->schema()->get('minLength'));
+    $this->assertSame(10, $refined->schema()->get('maxLength'));
   }
 
   /**
@@ -250,41 +275,31 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
       'dropping the list of allowed values' => [
         $choices, FALSE,
         new ConstraintRewritingRefiner(['Choice' => ['multiple' => TRUE]]),
-        'the Choice constraint lost its list of allowed values',
+        'the options of the Choice constraint were replaced',
       ],
-      'removing a constraint' => [
-        $length, FALSE,
-        new ConstraintRewritingRefiner(['Length' => NULL]),
-        'the Length constraint was removed',
-      ],
-      'lowering a minimum' => [
+      'lowering a minimum: the key\'s stands' => [
         $length, FALSE,
         new ConstraintRewritingRefiner(['Length' => ['min' => 1, 'max' => 10]]),
-        'the min of the Length constraint moved from 2 to 1',
+        NULL,
       ],
-      'raising a maximum' => [
+      'raising a maximum: the key\'s stands' => [
         $length, FALSE,
         new ConstraintRewritingRefiner(['Length' => ['min' => 2, 'max' => 40]]),
-        'the max of the Length constraint moved from 10 to 40',
+        NULL,
       ],
-      'widening a range' => [
+      'widening a range: the key\'s stands' => [
         ['Range' => ['min' => 1, 'max' => 10]], FALSE,
         new ConstraintRewritingRefiner(['Range' => ['min' => 1, 'max' => 50]]),
-        'the max of the Range constraint moved from 10 to 50',
+        NULL,
       ],
-      'replacing options that cannot be compared' => [
+      'another pattern: the key\'s stands' => [
         ['Regex' => ['pattern' => '/^a/']], FALSE,
         new ConstraintRewritingRefiner(['Regex' => ['pattern' => '/^b/']]),
-        'the options of the Regex constraint were replaced',
-      ],
-      'turning required off' => [
-        [], TRUE,
-        new ConstraintRewritingRefiner(required: FALSE),
-        'the required flag was turned off',
+        NULL,
       ],
       'changing the data type' => [
         [], FALSE,
-        new ConstraintRewritingRefiner(dataType: 'integer'),
+        new ConstraintRewritingRefiner(type: 'integer'),
         'the data type changed from string to integer',
       ],
     ];

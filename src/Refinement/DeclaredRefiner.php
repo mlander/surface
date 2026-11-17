@@ -73,10 +73,10 @@ final class DeclaredRefiner implements SurfaceRefinerInterface, ApplicabilityInt
   /**
    * {@inheritdoc}
    */
-  public function refine(string $name, Schema $key, array $values, string $who): array {
+  public function refine(string $name, Schema $key, array $values): array {
     $rules = $this->rules[$name] ?? [];
     if ($this->at !== NULL) {
-      return $this->answersAt(explode('.', $this->at), $key, $rules, $values, $name, $who);
+      return $this->answersAt(explode('.', $this->at), $key, $rules, $values, $name);
     }
     if ($name === RefinesInputRefiner::MOUNT && $this->module !== NULL) {
       $own = DefinitionSchema::propertyNode($key, $this->module);
@@ -91,12 +91,12 @@ final class DeclaredRefiner implements SurfaceRefinerInterface, ApplicabilityInt
         if ($inner !== NULL && !NodeFacts::doesNotApply($inner) && $this->holds($rule, $values)) {
           $answer = static::placed([$this->module, $rule->key], $rule->answer($inner));
           $answers[] = $answer;
-          $schema = Answer::apply($schema, $answer, $name, $who, TRUE);
+          $schema = static::applied($schema, $answer, $name);
         }
       }
       return $answers;
     }
-    return $this->answersAt([], $key, $rules, $values, $name, $who);
+    return $this->answersAt([], $key, $rules, $values, $name);
   }
 
   /**
@@ -114,13 +114,11 @@ final class DeclaredRefiner implements SurfaceRefinerInterface, ApplicabilityInt
    *   The values the engine handed over.
    * @param string $name
    *   The key, for a refusal.
-   * @param string $who
-   *   Who the chain is, in words.
    *
    * @return array<int, \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply>
    *   The answers, each for the key.
    */
-  protected function answersAt(array $parents, Schema $key, array $rules, array $values, string $name, string $who): array {
+  protected function answersAt(array $parents, Schema $key, array $rules, array $values, string $name): array {
     $answers = [];
     $schema = $key;
     foreach ($rules as $rule) {
@@ -140,9 +138,34 @@ final class DeclaredRefiner implements SurfaceRefinerInterface, ApplicabilityInt
       }
       $answer = static::placed($parents, $rule->answer($inner));
       $answers[] = $answer;
-      $schema = Answer::apply($schema, $answer, $name, $who, TRUE);
+      $schema = static::applied($schema, $answer, $name);
     }
     return $answers;
+  }
+
+  /**
+   * Applies an answer to the schema a rule after it reads.
+   *
+   * An answer the key refuses is refused where the chain applies it,
+   * which names the chain; the schema read after it is the one before.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
+   * @param \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply $answer
+   *   The answer.
+   * @param string $name
+   *   The key.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The schema as the answer leaves it.
+   */
+  protected static function applied(Schema $schema, Schema|DoesNotApply $answer, string $name): Schema {
+    try {
+      return Answer::apply($schema, $answer, $name, 'a declared rule', TRUE);
+    }
+    catch (\LogicException) {
+      return $schema;
+    }
   }
 
   /**

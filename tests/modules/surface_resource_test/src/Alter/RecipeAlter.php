@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Alter;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface_resource_test\Resource\RecipeResource;
+use Drupal\surface\Refinement\ChoiceSet;
+use PortableSchema\Builder\Schema;
 
 /**
  * Adds an input to every recipe, and tightens the dish.
@@ -28,12 +29,11 @@ final class RecipeAlter implements AltersInputsInterface {
    * No fish in a vegetarian recipe. Runs after the owner's dish refiner.
    */
   #[RefinesInput('dish')]
-  public static function noFishForVegetarians(DataDefinitionInterface $dish, bool $vegetarian): DataDefinitionInterface {
+  public static function noFishForVegetarians(Schema $dish, bool $vegetarian): Schema {
     if (!$vegetarian) {
-      return $dish;
+      return Schema::any();
     }
-    $choices = $dish->getConstraints()['Choice']['choices'] ?? [];
-    return $dish->addConstraint('Choice', ['choices' => array_values(array_diff($choices, ['fish']))]);
+    return Schema::enum(array_values(array_diff(ChoiceSet::of($dish)->values ?? [], ['fish'])));
   }
 
 }

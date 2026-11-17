@@ -1983,17 +1983,18 @@ final class ResourceRegistry {
         // typed for it, and is no watched key.
         // Decision: see
         // docs/decisions.md#nothing-an-operation-runs-reads-the-request.
-        $last = count($parameters) > 1 ? $parameters[count($parameters) - 1]->getType() : NULL;
+        $last = $parameters === [] ? NULL : $parameters[count($parameters) - 1]->getType();
         $account = $last instanceof \ReflectionNamedType && is_a($last->getName(), AccountInterface::class, TRUE);
         if ($account) {
           array_pop($parameters);
         }
-        // The first parameter's type tells the shape: the key's schema, a
-        // watched key (a scalar), or a definition (the old shape).
+        // A first parameter typed Schema is handed the key's schema; one
+        // typed for any other class is a definition, which no method takes
+        // (RefinesInputRefiner refuses it); every other is a watched key.
         $type = $parameters === [] ? NULL : $parameters[0]->getType();
         $first = match (TRUE) {
-          $type instanceof \ReflectionNamedType && $type->getName() === Schema::class => 'schema',
-          $type instanceof \ReflectionNamedType && $type->isBuiltin() => 'none',
+          !$type instanceof \ReflectionNamedType || $type->isBuiltin() => 'none',
+          $type->getName() === Schema::class => 'schema',
           default => 'definition',
         };
         $refiners[] = new RefinerDefinition(
@@ -2004,7 +2005,6 @@ final class ResourceRegistry {
             static fn (\ReflectionParameter $parameter): string => $parameter->getName(),
             $first === 'none' ? $parameters : array_slice($parameters, 1),
           ),
-          takesDefinition: $parameters !== [],
           first: $first,
           isStatic: $method->isStatic(),
           runtime: $refines->runtime,

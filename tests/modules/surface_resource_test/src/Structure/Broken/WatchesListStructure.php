@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Broken;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Resource\Larder\SpiceRackResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * Broken: a parent refiner that watches its own collection.
@@ -32,8 +32,8 @@ final class WatchesListStructure implements StructureInterface {
    * Reads the racks, which belong to the racks.
    */
   #[RefinesInput('note')]
-  public static function noteOfRacks(DataDefinitionInterface $note, array $racks): DataDefinitionInterface {
-    return $note;
+  public static function noteOfRacks(array $racks): Schema {
+    return Schema::any();
   }
 
 }

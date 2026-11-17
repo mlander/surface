@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Drupal\surface_examples_first\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_first\Storage\StoreStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * The store location: a region is one of the chosen country's.
@@ -57,10 +57,8 @@ final class StoreResource implements ResourceInterface {
    * the key is spelled as a string: rename the key, rename the parameter.
    */
   #[RefinesInput(self::REGION)]
-  public static function regionOfCountry(DataDefinitionInterface $region, string $country): DataDefinitionInterface {
-    return $region->addConstraint('LabeledChoice', [
-      'choices' => self::regions($country),
-    ]);
+  public static function regionOfCountry(string $country): Schema {
+    return Schema::options(self::regions($country));
   }
 
   /**

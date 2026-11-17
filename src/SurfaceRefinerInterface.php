@@ -59,15 +59,11 @@ interface SurfaceRefinerInterface {
    * @param array $values
    *   The dependency values, keyed by key. Every declared dependency is
    *   present and configured.
-   * @param string $who
-   *   Who the chain is, in words, for a refusal: the declaring class or a
-   *   named contribution. Read by the old-shape methods' adapter alone,
-   *   and goes with it.
    *
    * @return array<int, \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply>
    *   The answers, in the order the link's methods or rules gave them;
    *   empty for none.
    */
-  public function refine(string $name, Schema $key, array $values, string $who): array;
+  public function refine(string $name, Schema $key, array $values): array;
 
 }

@@ -155,9 +155,12 @@ class TypedDataFootprintTest extends UnitTestCase {
    * names none). Lowered on 2026-11-16 to 109: the document is written
    * from schemas, so Contract/Choices.php reads whether a key is a map of
    * keys from the site from its schema (NodeFacts::each()) and names no
-   * Typed Data.
+   * Typed Data. Lowered on 2026-11-16 to 97: a refiner answers with a
+   * schema, so SurfaceRefinerInterface, RuntimeRefiner and ten example
+   * files whose #[RefinesInput] methods were their one use name no Typed
+   * Data.
    */
-  public const OUTSIDE_THE_EDGES = 110;
+  public const OUTSIDE_THE_EDGES = 97;
 
   /**
    * Finds the files that use Typed Data.

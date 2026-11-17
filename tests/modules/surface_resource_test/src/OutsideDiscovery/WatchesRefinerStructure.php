@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\OutsideDiscovery;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Broken: a refiner that says watches:, which the attribute no longer takes.
@@ -28,8 +28,8 @@ final class WatchesRefinerStructure implements StructureInterface {
    * Lists what it watches beside its parameters.
    */
   #[RefinesInput('third', watches: ['first'])]
-  public static function thirdOf(DataDefinitionInterface $third, string $first): DataDefinitionInterface {
-    return $third;
+  public static function thirdOf(string $first): Schema {
+    return Schema::any();
   }
 
 }

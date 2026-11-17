@@ -27,8 +27,6 @@ final class RefinerDefinition {
    *   The input key the method tightens.
    * @param string[] $parameters
    *   The names of the parameters after the first, in order.
-   * @param bool $takesDefinition
-   *   Whether the method has a first parameter to receive the definition.
    * @param bool $isStatic
    *   Whether the method is static, as the owner's must be; an alter's
    *   may be either. Not to be confused with the refiner's kind.
@@ -43,34 +41,23 @@ final class RefinerDefinition {
    *   the account the operation runs as, never a watched key. Only a
    *   runtime refiner may take it.
    * @param string $first
-   *   What the first parameter is handed: `definition` for one typed
-   *   DataDefinitionInterface or DataDefinition, the old shape, handed the
-   *   key's definition and returning it tightened; `schema` for one typed
-   *   Schema, handed the key's schema and returning an answer; `none` when
-   *   every parameter is a watched key and the method returns an answer.
+   *   What the first parameter is handed: `schema` for one typed Schema,
+   *   the key's schema; `none` when every parameter is a watched key;
+   *   `definition` for one typed for another class (a definition), which
+   *   no #[RefinesInput] method takes and the build refuses
+   *   (RefinesInputRefiner).
    */
   public function __construct(
     public readonly string $class,
     public readonly string $method,
     public readonly string $key,
     public readonly array $parameters,
-    public readonly bool $takesDefinition,
     public readonly bool $isStatic = FALSE,
     public readonly bool $runtime = FALSE,
     public readonly bool $mayNotApply = FALSE,
     public readonly bool $takesAccount = FALSE,
-    public readonly string $first = 'definition',
+    public readonly string $first = 'none',
   ) {}
-
-  /**
-   * Answers whether the method is the old shape, handed a definition.
-   *
-   * @return bool
-   *   TRUE where its first parameter is typed for a definition.
-   */
-  public function takesOldShape(): bool {
-    return $this->first === 'definition';
-  }
 
   /**
    * Gets the sibling keys the method is handed, in parameter order.

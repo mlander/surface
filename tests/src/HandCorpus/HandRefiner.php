@@ -34,17 +34,21 @@ final class HandRefiner implements SurfaceRefinerInterface {
    *   boolean, '' for no value.
    * @param string $gate
    *   The key whose value chooses the steps.
+   * @param string $who
+   *   Who the chain is, in words, for the refusal of a bound step that
+   *   would widen the key.
    */
   public function __construct(
     protected readonly array $steps,
     protected readonly string $gate = 'gate',
+    protected readonly string $who = 'the declaring class',
   ) {
   }
 
   /**
    * {@inheritdoc}
    */
-  public function refine(string $name, Schema $key, array $values, string $who): array {
+  public function refine(string $name, Schema $key, array $values): array {
     $held = $values[$this->gate] ?? NULL;
     $held = is_bool($held) ? ($held ? 'true' : 'false') : (is_scalar($held) ? (string) $held : '');
     $answers = [];
@@ -58,16 +62,23 @@ final class HandRefiner implements SurfaceRefinerInterface {
         continue;
       }
       $parents = $path === '' ? [] : explode('.', $path);
-      // A bound written over the key's, as the step wrote it on a copy of
-      // the definition: one that would widen it is refused, in the words
-      // of the narrowing check.
+      // A bound step is written over the key's bound, as the corpus wrote
+      // it on a copy of the definition: one that would widen it is
+      // refused, in the words of the narrowing check, whatever the
+      // applier would make of it.
       $widened = static::widened($schema, $parents, $operation, $step[2] ?? NULL);
       if ($widened !== NULL) {
-        throw new \LogicException(sprintf(Answer::WIDENED, $name, $who, $widened));
+        throw new \LogicException(sprintf(Answer::WIDENED, $name, $this->who, $widened));
       }
       $answer = static::at($schema, $parents, $operation, $step[2] ?? NULL);
       $answers[] = $answer;
-      $schema = Answer::apply($schema, $answer, $name, $who, TRUE);
+      try {
+        $schema = Answer::apply($schema, $answer, $name, $this->who, TRUE);
+      }
+      catch (\LogicException) {
+        // Refused where the chain applies it.
+        break;
+      }
     }
     return $answers;
   }

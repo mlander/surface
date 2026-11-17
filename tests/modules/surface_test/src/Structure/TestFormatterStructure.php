@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\surface_test\Structure;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The test formatter's settings: a prefix, a casing, and its variant.
@@ -42,11 +42,9 @@ final class TestFormatterStructure implements StructureInterface {
    * A casing other than none offers its own variants, and no others.
    */
   #[RefinesInput('variant')]
-  public static function variantOfCasing(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface {
+  public static function variantOfCasing(string $casing): Schema {
     $offered = TestBlockStructure::variants()[$casing] ?? NULL;
-    return $offered === NULL
-      ? $variant
-      : $variant->addConstraint('LabeledChoice', ['choices' => $offered]);
+    return $offered === NULL ? Schema::any() : Schema::options($offered);
   }
 
 }

@@ -24,7 +24,7 @@ final class ModeSubsetRefiner implements SurfaceRefinerInterface {
   /**
    * {@inheritdoc}
    */
-  public function refine(string $name, Schema $key, array $values, string $who): array {
+  public function refine(string $name, Schema $key, array $values): array {
     if ($name === 'mode' && ($values['scope'] ?? NULL) === 'basic') {
       return [Schema::enum(self::BASIC)];
     }

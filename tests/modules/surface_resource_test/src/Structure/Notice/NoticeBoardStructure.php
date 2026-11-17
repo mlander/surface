@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Notice;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A notice board whose pinned notice applies only while the board is open.
@@ -40,8 +40,8 @@ final class NoticeBoardStructure implements StructureInterface {
    * A pinned notice applies only while the board is open.
    */
   #[RefinesInput('pinned', runtime: TRUE)]
-  public static function pinnedWhileOpen(DataDefinitionInterface $pinned): DataDefinitionInterface|DoesNotApply {
-    return \Drupal::state()->get(self::CLOSED) ? DoesNotApply::here() : $pinned;
+  public static function pinnedWhileOpen(): Schema|DoesNotApply {
+    return \Drupal::state()->get(self::CLOSED) ? DoesNotApply::here() : Schema::any();
   }
 
 }

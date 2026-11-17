@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Mixin;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Resource\Attribute\RefinesInput;
@@ -12,6 +11,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Access\OwnershipAccess;
+use PortableSchema\Builder\Schema;
 
 /**
  * Who owns a thing, and whether its editors share it: mixed in, with a port.
@@ -46,8 +46,8 @@ final class OwnershipStructure implements StructureInterface {
    * A public thing is shared with everyone already.
    */
   #[RefinesInput('shared')]
-  public static function sharedInsideOnly(DataDefinitionInterface $shared, string $audience): DataDefinitionInterface|DoesNotApply {
-    return $audience === 'public' ? DoesNotApply::here() : $shared;
+  public static function sharedInsideOnly(string $audience): Schema|DoesNotApply {
+    return $audience === 'public' ? DoesNotApply::here() : Schema::any();
   }
 
 }

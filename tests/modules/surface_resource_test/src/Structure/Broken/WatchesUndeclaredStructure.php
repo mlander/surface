@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Broken;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Has a refiner watching a key its shape never declares.
@@ -27,8 +27,8 @@ final class WatchesUndeclaredStructure implements StructureInterface {
    * Watches a sibling that is not there.
    */
   #[RefinesInput('name')]
-  public static function nameOfGhost(DataDefinitionInterface $name, string $ghost): DataDefinitionInterface {
-    return $name;
+  public static function nameOfGhost(string $ghost): Schema {
+    return Schema::any();
   }
 
 }

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Alter;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface_resource_test\Structure\Broken\StrictMountWatcherStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Watches a key it mounted with a parameter that cannot take NULL.
@@ -32,8 +32,8 @@ final class StrictMountWatcherAlter implements AltersInputsInterface {
    * Watches the kind, which may be NULL, as a string.
    */
   #[RefinesInput('size')]
-  public static function sizeOfKind(DataDefinitionInterface $size, string $kind): DataDefinitionInterface {
-    return $size;
+  public static function sizeOfKind(string $kind): Schema {
+    return Schema::any();
   }
 
 }

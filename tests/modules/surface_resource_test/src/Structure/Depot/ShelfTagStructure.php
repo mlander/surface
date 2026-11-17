@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Depot;
 
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Shape\Sku;
+use PortableSchema\Builder\Schema;
 
 /**
  * A shelf tag: a label printed beside a stock code it reads.
@@ -33,8 +33,8 @@ final class ShelfTagStructure implements StructureInterface {
    * The label says which code it is printed beside.
    */
   #[RefinesInput('label')]
-  public static function besideTheCode(DataDefinition $label, string $code): DataDefinition {
-    return $label->setDescription(t('Printed beside @code.', ['@code' => $code]));
+  public static function besideTheCode(string $code): Schema {
+    return Schema::any()->description(t('Printed beside @code.', ['@code' => $code]));
   }
 
 }

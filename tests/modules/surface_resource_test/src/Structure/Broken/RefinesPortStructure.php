@@ -7,8 +7,8 @@ namespace Drupal\surface_resource_test\Structure\Broken;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
+use PortableSchema\Builder\Schema;
 
 /**
  * Refines a port it reads, which only its container may.
@@ -28,8 +28,8 @@ final class RefinesPortStructure implements StructureInterface {
    * Narrows the port.
    */
   #[RefinesInput('layout')]
-  public static function narrowsTheLayout(DataDefinitionInterface $layout): DataDefinitionInterface {
-    return $layout;
+  public static function narrowsTheLayout(): Schema {
+    return Schema::any();
   }
 
 }

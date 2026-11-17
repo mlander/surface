@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface_resource_test\Resource\Exhibit;
 
 use Drupal\Core\Session\AccountInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -15,6 +14,7 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\ExhibitStorage;
 use Drupal\surface_resource_test\Structure\Exhibit\LoanStructure;
 use Drupal\surface_resource_test\Structure\Exhibit\ProvenanceStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * An exhibit: access of both kinds, on keys, an attached child and a mixin.
@@ -77,11 +77,11 @@ final class ExhibitResource implements ResourceInterface {
    * current user itself.
    */
   #[RefinesInput('room', runtime: TRUE)]
-  public static function roomsForAccount(DataDefinitionInterface $room, AccountInterface $account): DataDefinitionInterface {
+  public static function roomsForAccount(AccountInterface $account): Schema {
     if ($account->hasPermission('use the vault')) {
-      return $room;
+      return Schema::any();
     }
-    return $room->addConstraint('LabeledChoice', ['choices' => array_diff_key(self::ROOMS, ['vault' => TRUE])]);
+    return Schema::options(array_diff_key(self::ROOMS, ['vault' => TRUE]));
   }
 
 }

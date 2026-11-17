@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Drupal\surface_entity_test\Structure;
 
 use Drupal\Core\Field\FieldDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface_examples_entity\Structure\Attribute\FieldItemStructure;
 use Drupal\surface_examples_entity\Structure\FieldItemStructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A telephone field's item structure, written by hand.
@@ -33,8 +33,8 @@ final class TelephoneItemStructure implements FieldItemStructureInterface {
    * A number is at most twenty characters, said by a refiner of its own.
    */
   #[RefinesInput('value')]
-  public static function shortNumbers(DataDefinitionInterface $value): DataDefinitionInterface {
-    return $value->addConstraint('Length', ['max' => 20]);
+  public static function shortNumbers(): Schema {
+    return Schema::any()->maxLength(20);
   }
 
 }

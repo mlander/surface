@@ -7,8 +7,6 @@ namespace Drupal\surface_examples_compliance\Alter;
 use Drupal\Core\State\StateInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\Attribute\RefinesInput;
@@ -16,6 +14,8 @@ use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\surface_examples_compliance\Structure\ComplianceStructure;
+use Drupal\surface\Refinement\ChoiceSet;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 4: others get a say.
@@ -85,14 +85,14 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
    * @see docs/decisions.md#static-by-default-runtime-by-declaration
    */
   #[RefinesInput('room', runtime: TRUE)]
-  public function openRooms(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
-    $rooms = $room->getConstraints()['LabeledChoice']['choices'] ?? [];
+  public function openRooms(Schema $room, string $venue): Schema {
+    $set = ChoiceSet::of($room);
+    $rooms = $set === NULL ? [] : array_intersect_key($set->labels, array_flip($set->values));
     $closed = array_intersect_key($rooms, array_flip((array) $this->state->get(self::CLOSED_ROOMS, [])));
-    if ($closed === [] || !$room instanceof DataDefinition) {
-      return $room;
+    if ($closed === []) {
+      return Schema::any();
     }
-    $room->addConstraint('LabeledChoice', ['choices' => array_diff_key($rooms, $closed)]);
-    return $room->setDescription($this->formatPlural(
+    return Schema::enum(array_keys(array_diff_key($rooms, $closed)))->description($this->formatPlural(
       count($closed),
       'The @rooms is closed.',
       'The @rooms are closed.',

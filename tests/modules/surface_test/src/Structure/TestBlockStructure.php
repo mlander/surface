@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_test\Structure;
 
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The test block's configuration: five keys, one refined by another.
@@ -73,16 +72,12 @@ final class TestBlockStructure implements StructureInterface {
    * A casing other than none offers its own variants, and no others.
    */
   #[RefinesInput('variant')]
-  public static function variantOfCasing(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface {
+  public static function variantOfCasing(string $casing): Schema {
     $offered = static::variants()[$casing] ?? NULL;
     if ($offered === NULL) {
-      return $variant;
+      return Schema::any();
     }
-    $variant->addConstraint('LabeledChoice', ['choices' => $offered]);
-    if ($variant instanceof DataDefinition) {
-      $variant->setDescription(t('A @casing variant.', ['@casing' => $casing]));
-    }
-    return $variant;
+    return Schema::options($offered)->description(t('A @casing variant.', ['@casing' => $casing]));
   }
 
 }

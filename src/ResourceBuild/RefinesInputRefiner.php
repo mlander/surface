@@ -7,19 +7,14 @@ namespace Drupal\surface\ResourceBuild;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AnonymousUserSession;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeDefinition;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\SurfaceRefinerInterface;
 use Drupal\surface\Refinement\Answer;
-use Drupal\surface\Refinement\AnswerFromDefinition;
 use Drupal\surface\Refinement\ApplicabilityInterface;
 use Drupal\surface\Refinement\DoesNotApply;
-use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Pipeline\PipelineGuard;
-use Drupal\surface\Surface;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -28,14 +23,17 @@ use PortableSchema\Builder\Schema;
  * One of these per class that refines (the resource or structure, then
  * each alter), registered in the owner's chain of every key it refines,
  * in that order. So the engine runs the owner's methods first and the
- * alters' after, hands each link a deep clone, and checks every link
- * narrower; nothing about refinement, its narrowing check, its
- * cacheability or the form's AJAX and discard machinery knows a method
- * is behind the link.
+ * alters' after and applies each answer (Answer::apply()); nothing about
+ * refinement, its cacheability or the form's AJAX and discard machinery
+ * knows a method is behind the link.
  *
  * Asked to refine one key, it calls that key's methods on its class in
- * declaration order, each with the definition the one before returned,
- * and with the sibling values each one watches, by parameter order. The
+ * declaration order, each with the sibling values it watches, by
+ * parameter order, and, where its first parameter is typed Schema, with
+ * the key's schema as the methods before it left it. Each answers a
+ * Schema of what the values add, or DoesNotApply::here(), and the link
+ * gives the answers in order. A method whose first parameter is typed
+ * for a definition is refused when the link is made. The
  * engine calls it only once every key the key refines against holds a
  * value; for a key two methods refine, that is the union of what both
  * watch, because the engine gates per key rather than per method. A
@@ -70,17 +68,16 @@ use PortableSchema\Builder\Schema;
  * An alter's method on a key the alter itself added is bound under the
  * mount, `third_party_settings`, the one key the engine knows the
  * alter's keys by. Asked to refine the mount, the link refines only its
- * own module's property inside it, each method handed that property's
- * definition, so the method reads exactly as it would on an owner's key.
+ * own module's property inside it, each method's answer placed at that
+ * property, so the method reads exactly as it would on an owner's key.
  * A method watching a key its alter added is handed that key's value
  * the same way, read at its dotted path, `third_party_settings.<module>.
  * <key>`, which is the name the engine knows the dependency by.
  *
  * A method that answers DoesNotApply::here() rules the key out: the link
- * hands back the definition it was handed, marked, and calls none of the
- * key's methods after it, since nothing is narrower. Only a method that
- * names DoesNotApply in its return type may answer it, so what may be
- * ruled out is known before anything runs (mayNotApply()).
+ * calls none of the key's methods after it, since nothing is narrower.
+ * Only a method that names DoesNotApply in its return type may answer it,
+ * so what may be ruled out is known before anything runs (mayNotApply()).
  *
  * @internal
  */
@@ -115,6 +112,16 @@ final class RefinesInputRefiner implements SurfaceRefinerInterface, Applicabilit
     protected ?string $module = NULL,
     protected array $paths = [],
   ) {
+    foreach ($bindings as $refiners) {
+      foreach ($refiners as $refiner) {
+        if ($refiner->first === 'definition') {
+          throw new \LogicException(sprintf(
+            '%s takes the key\'s definition as its first parameter. A #[RefinesInput] method returns a Schema of what the values it watches add to the key, or DoesNotApply::here(); a first parameter typed Schema is handed the key\'s schema.',
+            $refiner->describe(),
+          ));
+        }
+      }
+    }
   }
 
   /**
@@ -148,61 +155,54 @@ final class RefinesInputRefiner implements SurfaceRefinerInterface, Applicabilit
   /**
    * {@inheritdoc}
    */
-  public function refine(string $name, Schema $key, array $values, string $who): array {
+  public function refine(string $name, Schema $key, array $values): array {
     if ($name === self::MOUNT && $this->module !== NULL) {
-      return $this->refineMounted($key, $values, $who);
+      return $this->refineMounted($key, $values);
     }
     $answers = [];
     $schema = $key;
-    $held = NULL;
     foreach ($this->bindings[$name] ?? [] as $refiner) {
       if (NodeFacts::doesNotApply($schema)) {
         break;
       }
-      [$answer, $held] = $this->answerOf($refiner, $schema, $values, $name, $who, $held);
+      $answer = $this->answerOf($refiner, $schema, $values, $name);
       $answers[] = $answer;
-      $schema = Answer::apply($schema, $answer, $name, $who, TRUE);
+      // The next method reads the key as this one left it. An answer the
+      // key refuses is refused where the chain applies it, which names the
+      // chain: nothing after it runs.
+      try {
+        $schema = Answer::apply($schema, $answer, $name, $refiner->describe(), TRUE);
+      }
+      catch (\LogicException) {
+        break;
+      }
     }
     return $answers;
   }
 
   /**
-   * Gives one method's answer for a key.
-   *
-   * A method of the old shape is handed the key's definition, a copy, and
-   * what it returns is held to the narrowing check (Narrowing) and read as
-   * an answer (AnswerFromDefinition); a method of the answer shape is
-   * handed the key's schema where its first parameter asks for it, and
-   * its answer is held to its key (Answer::assertAuthored()).
+   * Gives one method's answer for a key, held to its key.
    *
    * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
    *   The method.
    * @param \PortableSchema\Builder\Schema $key
-   *   The key's schema as it stands.
+   *   The key's schema as it stands, handed where the method's first
+   *   parameter is typed Schema.
    * @param array $values
    *   Sibling values, keyed by input key.
    * @param string $name
    *   The key, for a refusal.
-   * @param string $who
-   *   Who the chain is, in words, for a refusal.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $held
-   *   The definition an old-shape method before this one returned for the
-   *   key, which this one is handed; NULL to derive it from the schema.
    *
-   * @return array{0: \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply, 1: \Drupal\Core\TypedData\DataDefinitionInterface|null}
-   *   The answer, and the definition an old-shape method returned.
+   * @return \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply
+   *   The answer.
+   *
+   * @throws \LogicException
+   *   When the answer reaches inside the key (Answer::assertAuthored()).
    */
-  public function answerOf(RefinerDefinition $refiner, Schema $key, array $values, string $name, string $who, ?DataDefinitionInterface $held = NULL): array {
-    if ($refiner->takesOldShape()) {
-      $before = $held ?? NodeDefinition::of($key);
-      $returned = $this->invoke($refiner, Surface::deepClone($before), $values);
-      Narrowing::assertNarrows($name, $who, $before, $returned);
-      Surface::carryMetadata($before, $returned);
-      return [AnswerFromDefinition::between($key, $returned, $before, $refiner->describe(), $name), $returned];
-    }
+  public function answerOf(RefinerDefinition $refiner, Schema $key, array $values, string $name): Schema|DoesNotApply {
     $answer = $this->answer($refiner, $key, $values);
     Answer::assertAuthored($answer, $name, $refiner->describe());
-    return [$answer, NULL];
+    return $answer;
   }
 
   /**
@@ -221,11 +221,8 @@ final class RefinesInputRefiner implements SurfaceRefinerInterface, Applicabilit
   /**
    * Answers for the alter's own keys inside the mount.
    *
-   * Each method's answer is placed at its key, inside the module's map
-   * inside the mount, so it is applied there; a method of the old shape is
-   * held to the narrowing check as the whole mount, so its refusal names
-   * the mount and the path inside it, as the check of the mount's
-   * definition names them.
+   * Each method is handed its key's schema inside the module's map inside
+   * the mount, and its answer is placed there, so it is applied there.
    *
    * Decision: see docs/decisions.md#an-alter-refines-its-own-mounted-key.
    *
@@ -233,13 +230,11 @@ final class RefinesInputRefiner implements SurfaceRefinerInterface, Applicabilit
    *   The mount's schema.
    * @param array $values
    *   Sibling values, keyed by input key.
-   * @param string $who
-   *   Who the chain is, in words.
    *
    * @return array<int, \PortableSchema\Builder\Schema>
    *   The answers, each for the mount.
    */
-  protected function refineMounted(Schema $mount, array $values, string $who): array {
+  protected function refineMounted(Schema $mount, array $values): array {
     $module = (string) $this->module;
     $own = DefinitionSchema::propertyNode($mount, $module);
     if ($own === NULL || !is_a(DefinitionSchema::classOf($own), MapDataDefinition::class, TRUE)) {
@@ -253,26 +248,19 @@ final class RefinesInputRefiner implements SurfaceRefinerInterface, Applicabilit
       if ($key === NULL || NodeFacts::doesNotApply($key)) {
         continue;
       }
-      if ($refiner->takesOldShape()) {
-        $before = NodeDefinition::of($key);
-        $returned = $this->invoke($refiner, Surface::deepClone($before), $values);
-        $wrap = static fn (DataDefinitionInterface $definition): MapDataDefinition => MapDataDefinition::create()
-          ->setPropertyDefinition($module, MapDataDefinition::create()->setPropertyDefinition($refiner->key, $definition));
-        Narrowing::assertNarrows(self::MOUNT, $who, $wrap($before), $wrap($returned));
-        Surface::carryMetadata($before, $returned);
-        $answer = AnswerFromDefinition::between($key, $returned, $before, $refiner->describe(), $refiner->key);
-      }
-      else {
-        $answer = $this->answer($refiner, $key, $values);
-        Answer::assertAuthored($answer, $refiner->key, $refiner->describe());
-      }
+      $answer = $this->answerOf($refiner, $key, $values, $refiner->key);
       $placed = Schema::any()->with('properties', [
         $module => Schema::any()->with('properties', [
           $refiner->key => $answer instanceof DoesNotApply ? Schema::boolean(FALSE) : $answer,
         ]),
       ]);
       $answers[] = $placed;
-      $schema = Answer::apply($schema, $placed, self::MOUNT, $who, TRUE);
+      try {
+        $schema = Answer::apply($schema, $placed, self::MOUNT, $refiner->describe(), TRUE);
+      }
+      catch (\LogicException) {
+        break;
+      }
     }
     return $answers;
   }
@@ -290,41 +278,6 @@ final class RefinesInputRefiner implements SurfaceRefinerInterface, Applicabilit
     }
     // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
     return \Drupal::currentUser()->getAccount();
-  }
-
-  /**
-   * Calls one method with the definition and the siblings it watches.
-   *
-   * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
-   *   The method.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition to refine.
-   * @param array $values
-   *   Sibling values, keyed by input key, a mounted one by its dotted
-   *   path; every watched key is present.
-   *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   What the method returned; the definition handed over, marked, when
-   *   it answered that the key does not apply.
-   *
-   * @throws \LogicException
-   *   When the method returned something other than a definition or
-   *   DoesNotApply, or DoesNotApply without declaring it.
-   */
-  public function invoke(RefinerDefinition $refiner, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-    $refined = $this->call($refiner, [$definition], $values, 'DataDefinitionInterface');
-    if ($refined instanceof DoesNotApply) {
-      // Decision: see docs/decisions.md#a-key-that-does-not-apply.
-      return DoesNotApply::marked($definition);
-    }
-    if (!$refined instanceof DataDefinitionInterface) {
-      throw new \LogicException(sprintf(
-        '%s returned %s; a #[RefinesInput] method returns the definition it was handed, tightened, or DoesNotApply::here().',
-        $refiner->describe(),
-        get_debug_type($refined),
-      ));
-    }
-    return $refined;
   }
 
   /**

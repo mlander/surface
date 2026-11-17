@@ -6,13 +6,13 @@ namespace Drupal\surface_resource_test\Plugin\Block;
 
 use Drupal\Core\Block\Attribute\Block;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Plugin\Block\TypedBlockBase;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\UsesStructure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A block that is its own structure, and names its id with #[Structure].
@@ -45,8 +45,8 @@ final class StickyNoteBlock extends TypedBlockBase implements StructureInterface
    * A pink note is a short one.
    */
   #[RefinesInput('note')]
-  public static function shortOnPink(DataDefinitionInterface $note, string $color): DataDefinitionInterface {
-    return $color === 'pink' ? $note->addConstraint('Length', ['max' => 10]) : $note;
+  public static function shortOnPink(string $color): Schema {
+    return $color === 'pink' ? Schema::any()->maxLength(10) : Schema::any();
   }
 
   /**

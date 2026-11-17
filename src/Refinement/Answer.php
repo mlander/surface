@@ -50,8 +50,8 @@ use PortableSchema\Builder\Schema;
  *   own links only.
  *
  * A key that does not apply is left as it is: nothing is narrower. A
- * refusal says what a widening would have done in Narrowing's words, so a
- * refusal an old-shape method earns and one an answer earns read alike.
+ * refusal says what a widening would have done in Narrowing's words, the
+ * words a refinement of a definition was refused in before.
  *
  * @see \Drupal\surface\SurfaceInterface::refine()
  *
@@ -163,6 +163,53 @@ final class Answer {
         throw new \LogicException(sprintf(self::UNREAD, $name, $who, '`' . $keyword . '`'));
       }
     }
+  }
+
+  /**
+   * Says what an answer, written over the key as it is, would widen.
+   *
+   * What the build refuses where it knows an answer ahead of time (a
+   * refiner that watches nothing): a bound looser than the key's, and a
+   * pattern other than the key's, which apply() would leave as the key
+   * has them. Read from the answer's own bounds and checks.
+   *
+   * @param \PortableSchema\Builder\Schema $key
+   *   The key's schema.
+   * @param \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply $answer
+   *   The answer.
+   * @param string $name
+   *   The key, for a refusal of what no answer says.
+   * @param string $who
+   *   Who answered, in words.
+   *
+   * @return string|null
+   *   What widens, in Narrowing's words, or NULL.
+   */
+  public static function widensAsWritten(Schema $key, Schema|DoesNotApply $answer, string $name, string $who): ?string {
+    if (!$answer instanceof Schema || $answer->isBoolean()) {
+      return NULL;
+    }
+    $merged = NodeFacts::constraints($key);
+    $read = array_intersect_key($answer->all(), array_flip([...self::BOUNDS, PortableKeywords::MESSAGES]));
+    $said = static::boundsRead($key, $read, $name, $who);
+    $checks = $answer->get(PortableKeywords::CHECK);
+    foreach (is_array($checks) ? $checks : [] as $id => $options) {
+      $constraint = substr((string) $id, strlen(PortableKeywords::PROVIDER));
+      if (static::isBound($constraint) || $constraint === 'Regex') {
+        $said[$constraint] = $options instanceof \stdClass ? (array) $options : $options;
+      }
+    }
+    foreach ($said as $constraint => $options) {
+      $existing = $merged[$constraint] ?? NULL;
+      if (!is_array($existing)) {
+        continue;
+      }
+      $widened = Narrowing::constraintWidened((string) $constraint, $existing, $constraint === 'Regex' ? (array) $options : array_replace($existing, (array) $options));
+      if ($widened !== NULL) {
+        return $widened;
+      }
+    }
+    return NULL;
   }
 
   /**

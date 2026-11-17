@@ -162,7 +162,7 @@ class RefusalLabelsTest extends SurfaceKernelTestBase {
       /**
        * {@inheritdoc}
        */
-      public function refine(string $name, Schema $key, array $values, string $who): array {
+      public function refine(string $name, Schema $key, array $values): array {
         // The watched values, each by its path.
         return ($values[$this->flag] ?? NULL) === NULL ? [] : [DoesNotApply::here()];
       }

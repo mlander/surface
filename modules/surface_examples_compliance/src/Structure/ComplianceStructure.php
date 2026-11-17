@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Drupal\surface_examples_compliance\Structure;
 
 use Drupal\Core\StringTranslation\PluralTranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_examples_compliance\Shape\License;
+use PortableSchema\Builder\Schema;
 
 /**
  * What compliance asks of any event: a license and enough stewards.
@@ -39,10 +39,10 @@ final class ComplianceStructure implements StructureInterface {
    * One steward for every fifty people, at least one.
    */
   #[RefinesInput('stewards')]
-  public static function stewardsForCapacity(DataDefinition $stewards, int $capacity): DataDefinition {
+  public static function stewardsForCapacity(int $capacity): Schema {
     $n = max(1, (int) ceil($capacity / 50));
-    return $stewards->addConstraint('Range', ['min' => $n])
-      ->setDescription(new PluralTranslatableMarkup(
+    return Schema::any()->minimum($n)
+      ->description(new PluralTranslatableMarkup(
         $n,
         'At least 1 steward for @capacity attendees.',
         'At least @count stewards for @capacity attendees.',

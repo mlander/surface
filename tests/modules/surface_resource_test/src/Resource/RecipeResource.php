@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Resource;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -14,6 +13,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Access\RecipeAccess;
 use Drupal\surface_resource_test\Storage\RecipeStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A recipe in a kitchen: every part of a resource, in one.
@@ -90,8 +90,8 @@ final class RecipeResource implements ResourceInterface, DefinesOutputsInterface
    * The dish is one the course offers. Watches the course by name.
    */
   #[RefinesInput('dish')]
-  public static function dishOfCourse(DataDefinitionInterface $dish, string $course): DataDefinitionInterface {
-    return $dish->addConstraint('Choice', ['choices' => self::DISHES[$course] ?? []]);
+  public static function dishOfCourse(string $course): Schema {
+    return Schema::enum(self::DISHES[$course] ?? []);
   }
 
   /**
@@ -100,21 +100,18 @@ final class RecipeResource implements ResourceInterface, DefinesOutputsInterface
    * Watches two siblings, by its parameter names.
    */
   #[RefinesInput('servings')]
-  public static function servingsFor(DataDefinitionInterface $servings, string $course, bool $vegetarian): DataDefinitionInterface {
-    $max = ($course === 'dessert' ? 8 : 12) - ($vegetarian ? 2 : 0);
-    // Only the maximum moves: an operation may have raised the minimum,
-    // and replacing the whole constraint would lower it back.
-    $range = $servings->getConstraints()['Range'] ?? [];
-    $range['max'] = min($range['max'] ?? $max, $max);
-    return $servings->addConstraint('Range', $range);
+  public static function servingsFor(string $course, bool $vegetarian): Schema {
+    // Of the key's maximum and this one, the stricter stands: an operation
+    // may have lowered it, and its minimum stands.
+    return Schema::any()->maximum(($course === 'dessert' ? 8 : 12) - ($vegetarian ? 2 : 0));
   }
 
   /**
    * A name fits on a card. Watches nothing, so it runs once, at build.
    */
   #[RefinesInput('name')]
-  public static function nameFitsOnCard(DataDefinitionInterface $name): DataDefinitionInterface {
-    return $name->addConstraint('Length', ['max' => 40]);
+  public static function nameFitsOnCard(): Schema {
+    return Schema::any()->maxLength(40);
   }
 
 }

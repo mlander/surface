@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Pantry;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A shelf: a child with a refiner that runs in its own frame.
@@ -35,10 +35,8 @@ final class ShelfStructure implements StructureInterface {
    * A shelf is no taller than the unit allows. Watches its own sibling.
    */
   #[RefinesInput('height')]
-  public static function heightInUnit(DataDefinitionInterface $height, string $unit): DataDefinitionInterface {
-    $range = $height->getConstraints()['Range'] ?? [];
-    $range['max'] = self::MAX[$unit] ?? 1;
-    return $height->addConstraint('Range', $range);
+  public static function heightInUnit(string $unit): Schema {
+    return Schema::any()->maximum(self::MAX[$unit] ?? 1);
   }
 
 }
