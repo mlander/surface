@@ -55,8 +55,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * two #[Variant] children; #[Each] and #[AttachEach] from a
  * SiteListInterface provider, wired with `reads:`, and #[Each] of a
  * reference, its check on each entry under `additionalProperties`;
- * #[Port] typed and of `any`, required and not; #[Computed] with `when:`, never required by
- * inference; #[MixIn] with `reads:`; #[Output] of a value and of a list
+ * #[Port] typed and of `any`, required and not; #[Computed] with
+ * `when:`, never required by inference; #[MixIn] with `reads:`; #[Output] of a value and of a list
  * whose item is a plain class; a #[RefinesInput] method beside the
  * properties; a block that is its own structure, #[UsesStructure]
  * with no argument; and keys spelled with the Portable Schema package's
