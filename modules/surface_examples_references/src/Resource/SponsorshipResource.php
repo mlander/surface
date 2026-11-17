@@ -39,22 +39,19 @@ final class SponsorshipResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     // A venue keeps its id as a string, a user and a node as an integer.
-    $inputs->addSchema('venue', Schema::string()
-      ->title(t('Venue'))
-      ->description(t("Where the sponsor's stand is."))
-      ->default('riverside')
-      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'event_venue'])
-      ->required());
+    $inputs->add('venue', 'string', t('Venue'), default: 'riverside')
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue'])
+      ->setDescription(t("Where the sponsor's stand is."))
+      ->setRequired(TRUE);
 
     $inputs->addSchema('contact', Schema::integer()
       ->title(t('Contact'))
       ->description(t('Who answers for the sponsor.'))
       ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'user']));
 
-    $inputs->addSchema('page', Schema::integer()
-      ->title(t('Announcement'))
-      ->description(t('The article that announces the sponsor.'))
-      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]));
+    $inputs->add('page', 'integer', t('Announcement'))
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']])
+      ->setDescription(t('The article that announces the sponsor.'));
 
     // Of any type: an entity type, then an id of it.
     $inputs->attach(
