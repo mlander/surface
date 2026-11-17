@@ -148,7 +148,8 @@ class CompiledAloneParityTest extends SurfaceKernelTestBase {
           $this->setCompiled($validator, $site ? [$hash => $overSite] : []);
           $provider = $validator->provider($surface, $values, $pipeline);
           try {
-            $held[$way] = array_map(static fn ($found): array => [$found->path, $found->code, $found->params, (string) $found->message], $validator->held($schema, $provider->document(), $provider));
+            $said = static fn ($found): array => [$found->path, $found->code, $found->params, (string) $found->message];
+            $held[$way] = array_map($said, $validator->held($schema, $provider->document(), $provider));
           }
           catch (\Throwable $thrown) {
             $held[$way] = ['thrown' => get_class($thrown) . ': ' . $thrown->getMessage()];

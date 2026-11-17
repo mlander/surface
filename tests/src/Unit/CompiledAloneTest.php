@@ -54,18 +54,23 @@ class CompiledAloneTest extends UnitTestCase {
    */
   public static function providerAlone(): array {
     $property = ['type' => 'string', 'maxLength' => 4];
+    $defs = ['$defs' => ['a' => $property]];
+    $anchored = ['$defs' => ['a' => ['$anchor' => 'a'] + $property]];
+    $deep = ['anyOf' => [['allOf' => [['items' => ['$ref' => '#/$defs/a']]]], ['type' => 'null']]];
+    $checked = ['portable-check' => ['drupal:Length' => ['max' => 4]]];
+    $extension = ['x-surface' => ['by' => 'a', 'variants' => ['b' => []]]];
     return [
       'a boolean document' => [TRUE],
       'an empty document' => [[]],
       'no reference' => [['type' => 'object', 'properties' => ['a' => $property]]],
       'its own $id at the root' => [['$id' => self::ID, 'type' => 'string']],
-      'a fragment to its defs' => [['$defs' => ['a' => $property], 'properties' => ['a' => ['$ref' => '#/$defs/a']]]],
-      'a fragment to an anchor' => [['$defs' => ['a' => ['$anchor' => 'a'] + $property], 'items' => ['$ref' => '#a']]],
+      'a fragment to its defs' => [$defs + ['properties' => ['a' => ['$ref' => '#/$defs/a']]]],
+      'a fragment to an anchor' => [$anchored + ['items' => ['$ref' => '#a']]],
       'the root by fragment' => [['properties' => ['child' => ['$ref' => '#']]]],
       'its own id' => [['properties' => ['child' => ['$ref' => self::ID]]]],
-      'its own id and a fragment' => [['$defs' => ['a' => $property], 'properties' => ['a' => ['$ref' => self::ID . '#/$defs/a']]]],
-      'a fragment deep in branches' => [['$defs' => ['a' => $property], 'anyOf' => [['allOf' => [['items' => ['$ref' => '#/$defs/a']]]], ['type' => 'null']]]],
-      'checks and the extension' => [['portable-check' => ['drupal:Length' => ['max' => 4]], 'x-surface' => ['by' => 'a', 'variants' => ['b' => []]]]],
+      'its own id and a fragment' => [$defs + ['properties' => ['a' => ['$ref' => self::ID . '#/$defs/a']]]],
+      'a fragment deep in branches' => [$defs + $deep],
+      'checks and the extension' => [$checked + $extension],
     ];
   }
 
@@ -87,7 +92,9 @@ class CompiledAloneTest extends UnitTestCase {
    *   Each document.
    */
   public static function providerOverSite(): array {
-    $at = static fn (array $schema): array => ['type' => 'object', 'properties' => ['a' => ['anyOf' => [['items' => $schema]]]]];
+    // Each keyword is read deep in the document.
+    $at = static fn (array $schema): array => ['properties' => ['a' => ['anyOf' => [['items' => $schema]]]]];
+    $typeBy = ['href' => '#/$defs/{kind}', 'source' => ['kind' => '1/kind']];
     return [
       'a $ref to a library type' => [$at(['$ref' => 'portable:string'])],
       'an absolute $ref' => [$at(['$ref' => 'https://example.com/schemas/a'])],
@@ -99,7 +106,7 @@ class CompiledAloneTest extends UnitTestCase {
       'a $ref that is no string' => [['properties' => ['$ref' => ['type' => 'string']]]],
       'a $dynamicRef' => [$at(['$dynamicRef' => '#meta'])],
       'a $recursiveRef' => [$at(['$recursiveRef' => '#'])],
-      'a portable-typeBy' => [$at(['portable-typeBy' => ['href' => '#/$defs/{kind}', 'source' => ['kind' => '1/kind']]])],
+      'a portable-typeBy' => [$at(['portable-typeBy' => $typeBy])],
       'a $id below the root' => [$at(['$id' => 'urn:other', 'type' => 'string'])],
       'a $id at the root that is no string' => [['$id' => ['urn:other'], 'type' => 'string']],
       'a $ref inside a const' => [$at(['const' => ['$ref' => 'portable:string']])],
@@ -116,9 +123,11 @@ class CompiledAloneTest extends UnitTestCase {
     $site = Registry::withTypes();
     $validator = new PortableValidator($site, new ContractEmitter($options, $translation), new ConstraintRunner($this->createMock(TypedDataManagerInterface::class), $this->createMock(ClassResolverInterface::class)), $this->createMock(ConstraintManager::class), $translation, $options, new AnonymousUserSession());
     $compiled = new \ReflectionProperty(PortableValidator::class, 'compiled');
+    $short = ['$defs' => ['short' => ['type' => 'string', 'maxLength' => 2]]];
+    $library = ['$ref' => 'portable:string', 'maxLength' => 2];
     $documents = [
-      'alone' => [['$defs' => ['short' => ['type' => 'string', 'maxLength' => 2]], 'properties' => ['a' => ['$ref' => '#/$defs/short']]], 1],
-      'over the site' => [['properties' => ['a' => ['$ref' => 'portable:string', 'maxLength' => 2]]], count($site->ids()) + 1],
+      'alone' => [$short + ['properties' => ['a' => ['$ref' => '#/$defs/short']]], 1],
+      'over the site' => [['properties' => ['a' => $library]], count($site->ids()) + 1],
     ];
     foreach ($documents as $case => [$document, $schemas]) {
       $compiled->setValue($validator, []);
