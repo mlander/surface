@@ -7,6 +7,7 @@ namespace Drupal\surface_widget_test\Structure;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Asks for widgets that do not draw what they are asked of.
@@ -21,7 +22,9 @@ final class WrongWidgetStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('word', 'string', t('Word'))->setSetting('widget', 'no_such_widget');
+    $inputs->addSchema('word', Schema::string()
+      ->title(t('Word'))
+      ->ui(widget: 'no_such_widget'));
   }
 
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_widget_test\Structure;
 
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
@@ -24,7 +23,8 @@ final class DeepWrongWidgetStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addSchema('note', Schema::string()
       ->title(t('Note')));
-    $inputs->addList('tags', DataDefinition::create('string')->setSetting('widget', 'no_such_widget'), t('Tags'));
+    $inputs->addSchema('tags', Schema::list(Schema::string()->ui(widget: 'no_such_widget'))
+      ->title(t('Tags')));
   }
 
 }

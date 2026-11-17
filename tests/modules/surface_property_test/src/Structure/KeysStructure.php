@@ -63,9 +63,10 @@ final class KeysStructure implements StructureInterface {
       ->title(t('Day'))
       ->ui(widget: 'date'));
 
-    $tags = $inputs->addList('tags', 'string', t('Tags'), default: [])
-      ->addConstraint('Count', ['max' => 5]);
-    $tags->getItemDefinition()->addConstraint('Length', ['max' => 10]);
+    $inputs->addSchema('tags', Schema::list(Schema::string()->maxLength(10))
+      ->title(t('Tags'))
+      ->default([])
+      ->maxItems(5));
 
     $inputs->addSchema('count', Schema::integer()
       ->title(t('Count'))

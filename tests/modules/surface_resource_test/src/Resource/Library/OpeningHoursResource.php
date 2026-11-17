@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Resource\Library;
 
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -60,21 +59,20 @@ final class OpeningHoursResource implements ResourceInterface {
       ->maximum(1439)
       ->required());
 
-    $day = DataDefinition::create('string')
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'mon' => t('Monday'),
-          'tue' => t('Tuesday'),
-          'wed' => t('Wednesday'),
-          'thu' => t('Thursday'),
-          'fri' => t('Friday'),
-          'sat' => t('Saturday'),
-          'sun' => t('Sunday'),
-        ],
-      ]);
-    $inputs->addList('days', $day, t('Days open'), default: ['mon', 'tue', 'wed', 'thu', 'fri'])
-      ->setRequired(TRUE)
-      ->addConstraint('UniqueItems', []);
+    $day = Schema::options([
+      'mon' => t('Monday'),
+      'tue' => t('Tuesday'),
+      'wed' => t('Wednesday'),
+      'thu' => t('Thursday'),
+      'fri' => t('Friday'),
+      'sat' => t('Saturday'),
+      'sun' => t('Sunday'),
+    ]);
+    $inputs->addSchema('days', Schema::list($day)
+      ->title(t('Days open'))
+      ->default(['mon', 'tue', 'wed', 'thu', 'fri'])
+      ->uniqueItems(TRUE)
+      ->required());
 
     $inputs->addSchema('notes', Schema::string()
       ->title(t('Notes'))
@@ -92,12 +90,14 @@ final class OpeningHoursResource implements ResourceInterface {
       ->unless(Condition::equals('after_hours', TRUE))
       ->doesNotApply();
 
-    $inputs->addList('late_days', $day, t('After-hours days'), default: [])
-      ->setRequired(TRUE)
-      ->addConstraint('Count', [
+    $inputs->addSchema('late_days', Schema::list($day)
+      ->title(t('After-hours days'))
+      ->default([])
+      ->check('drupal:Count', [
         'min' => 1,
         'minMessage' => t('Choose at least one day for after-hours access.'),
-      ]);
+      ])
+      ->required());
     $inputs->narrow('late_days')
       ->unless(Condition::equals('after_hours', TRUE))
       ->doesNotApply();

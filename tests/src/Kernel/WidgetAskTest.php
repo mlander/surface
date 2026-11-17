@@ -91,10 +91,13 @@ class WidgetAskTest extends SurfaceKernelTestBase {
 
   /**
    * Tests a widget asked for that does not draw its key is refused at build.
+   *
+   * A widget no plugin is named is refused where addSchema() reads the
+   * key, so the word names the call, the key's pointer and the widget.
    */
   public function testWidgetThatCannotDrawItIsRefusedAtBuild(): void {
     foreach ([
-      WrongWidgetStructure::class => 'widget_test.wrong_widget asks for the "no_such_widget" widget at "word", which no widget answers to or which does not draw it',
+      WrongWidgetStructure::class => 'addSchema("word") reads the schema as the author\'s own, and these parts of it are not read as written (by JSON pointer into the object the key is laid in, the key at /properties/<key>): /properties/word/x-portable-ui/widget: Not read: no widget of this site is named "no_such_widget"',
       MisfitHolderStructure::class => 'widget_test.misfit_holder asks for the "checkbox" widget at "pair"',
     ] as $structure => $said) {
       try {
@@ -110,9 +113,8 @@ class WidgetAskTest extends SurfaceKernelTestBase {
   /**
    * Tests a widget asked for below a key is refused at its depth.
    *
-   * The build walks a sealed entry by its node, deriving a definition only
-   * for a key that asks for a widget: the refusal names the key and the
-   * depth it asks at.
+   * The list's item is read where addSchema() is handed it: the refusal
+   * names the key and the item's pointer.
    */
   public function testWidgetAskedAtDepthIsRefused(): void {
     try {
@@ -120,7 +122,7 @@ class WidgetAskTest extends SurfaceKernelTestBase {
       $this->fail('The list whose item asks for no widget is refused.');
     }
     catch (\LogicException $e) {
-      $this->assertStringContainsString('widget_test.deep_wrong_widget asks for the "no_such_widget" widget at "tags.*", which no widget answers to or which does not draw it', $e->getMessage());
+      $this->assertStringContainsString('addSchema("tags") reads the schema as the author\'s own, and these parts of it are not read as written (by JSON pointer into the object the key is laid in, the key at /properties/<key>): /properties/tags/items/x-portable-ui/widget: Not read: no widget of this site is named "no_such_widget"', $e->getMessage());
     }
   }
 

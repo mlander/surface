@@ -58,16 +58,15 @@ final class CateringByMethodResource implements ResourceInterface {
       ->minimum(0));
     $inputs->describe('budget', group: $details, suffix: t('EUR'));
 
-    $dietary = $inputs->addList('dietary', 'string', t('Dietary needs'), default: []);
-    $dietary->getItemDefinition()->addConstraint('LabeledChoice', [
-      'choices' => [
-        'vegetarian' => t('Vegetarian'),
-        'vegan' => t('Vegan'),
-        'gluten_free' => t('Gluten free'),
-        'halal' => t('Halal'),
-        'kosher' => t('Kosher'),
-      ],
-    ]);
+    $inputs->addSchema('dietary', Schema::list(Schema::options([
+      'vegetarian' => t('Vegetarian'),
+      'vegan' => t('Vegan'),
+      'gluten_free' => t('Gluten free'),
+      'halal' => t('Halal'),
+      'kosher' => t('Kosher'),
+    ]))
+      ->title(t('Dietary needs'))
+      ->default([]));
 
     $inputs->addSchema('served_at', Schema::string()
       ->title(t('Served at'))

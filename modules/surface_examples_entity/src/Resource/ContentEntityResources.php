@@ -363,17 +363,19 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
    */
   protected function defineId(BlueprintInterface $inputs, string $entity_type_id): void {
     $singular = $this->entityTypeManager->getDefinition($entity_type_id)->getSingularLabel();
-    $id = $inputs->add('id', $this->derivation->idType($entity_type_id), $this->t('ID'));
+    $id = ($this->derivation->idType($entity_type_id) === 'integer' ? Schema::integer() : Schema::string())
+      ->title($this->t('ID'));
     if (!$this->derivation->callerNamesId($entity_type_id)) {
-      $id->setDescription($this->t('Given by storage when the @entity_type is saved.', ['@entity_type' => $singular]));
+      $inputs->addSchema('id', $id
+        ->description($this->t('Given by storage when the @entity_type is saved.', ['@entity_type' => $singular])));
       return;
     }
-    $id->setRequired(TRUE)
-      ->setDescription($this->t('Named by whoever creates the @entity_type, and kept as it is.', ['@entity_type' => $singular]));
+    $id = $id->description($this->t('Named by whoever creates the @entity_type, and kept as it is.', ['@entity_type' => $singular]));
     $max = $this->derivation->idField($entity_type_id)?->getSetting('max_length');
     if (is_int($max) && $max > 0) {
-      $id->addConstraint('Length', ['max' => $max]);
+      $id = $id->check('drupal:Length', ['max' => $max]);
     }
+    $inputs->addSchema('id', $id->required());
   }
 
   /**
@@ -448,10 +450,12 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
    *   The bundle.
    */
   public function defineOutputs(BlueprintInterface $outputs, string $entity_type_id, string $bundle): void {
-    $outputs->add('id', $this->derivation->idType($entity_type_id), $this->t('ID'))
-      ->setDescription($this->t('The id of the @entity_type written, which a new one has only once it is saved.', [
+    $id = $this->derivation->idType($entity_type_id) === 'integer' ? Schema::integer() : Schema::string();
+    $outputs->addSchema('id', $id
+      ->title($this->t('ID'))
+      ->description($this->t('The id of the @entity_type written, which a new one has only once it is saved.', [
         '@entity_type' => $this->entityTypeManager->getDefinition($entity_type_id)->getSingularLabel(),
-      ]));
+      ])));
   }
 
   /**
