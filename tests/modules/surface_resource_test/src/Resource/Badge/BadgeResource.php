@@ -38,11 +38,31 @@ final class BadgeResource implements ResourceInterface {
       ->required());
     $inputs->addSchema('last', Schema::string()
       ->title(t('Last name')));
-    $inputs->compute('code', 'string', t('Code'), from: ['first'], using: BadgeCode::class);
-    $inputs->compute('handle', 'string', t('Handle'), from: ['first', 'last'], using: BadgeHandle::class, when: Compute::ON_CHANGE)
-      ->addConstraint('Length', ['max' => 12]);
-    $inputs->compute('tag', 'machine_name', t('Tag'), from: ['last'], using: MachineName::class, when: Compute::UNLESS_SENT)
-      ->addConstraint('Length', ['max' => 8]);
+    $inputs->compute(
+      'code',
+      Schema::string()
+        ->title(t('Code')),
+      from: ['first'],
+      using: BadgeCode::class,
+    );
+    $inputs->compute(
+      'handle',
+      Schema::string()
+        ->title(t('Handle'))
+        ->maxLength(12),
+      from: ['first', 'last'],
+      using: BadgeHandle::class,
+      when: Compute::ON_CHANGE,
+    );
+    $inputs->compute(
+      'tag',
+      Schema::of('drupal:config/machine_name')
+        ->title(t('Tag'))
+        ->check('drupal:Length', ['max' => 8]),
+      from: ['last'],
+      using: MachineName::class,
+      when: Compute::UNLESS_SENT,
+    );
     $inputs->addSchema('color', Schema::string()
       ->title(t('Color'))
       ->default('blue'));

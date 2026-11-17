@@ -86,9 +86,23 @@ final class LedgerResource implements ResourceInterface {
     $inputs->addSchema('tags', Schema::list(Schema::string())
       ->title(t('Tags')));
 
-    $inputs->compute('slug', 'string', t('Slug'), from: ['title'], using: LedgerSlug::class, when: Compute::ON_CHANGE);
+    $inputs->compute(
+      'slug',
+      Schema::string()
+        ->title(t('Slug')),
+      from: ['title'],
+      using: LedgerSlug::class,
+      when: Compute::ON_CHANGE,
+    );
 
-    $inputs->compute('handle', 'string', t('Handle'), from: ['title'], using: LedgerSlug::class, when: Compute::ON_CREATE);
+    $inputs->compute(
+      'handle',
+      Schema::string()
+        ->title(t('Handle')),
+      from: ['title'],
+      using: LedgerSlug::class,
+      when: Compute::ON_CREATE,
+    );
   }
 
 }

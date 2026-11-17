@@ -108,18 +108,30 @@ final class VenueResource implements ResourceInterface {
       ->maxLength(128)
       ->required());
 
-    $inputs->compute('id', 'machine_name', t('Machine name'),
-      from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
-      ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
-      ->addConstraint('Length', ['max' => 32]);
+    $inputs->compute(
+      'id',
+      Schema::of('drupal:config/machine_name')
+        ->title(t('Machine name'))
+        ->description(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
+        ->check('drupal:Length', ['max' => 32]),
+      from: ['label'],
+      using: MachineName::class,
+      when: Compute::UNLESS_SENT,
+    );
 
-    $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
-      ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
-      ->addConstraint('Regex', [
-        'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
-        'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
-      ])
-      ->addConstraint('Length', ['max' => 128]);
+    $inputs->compute(
+      'slug',
+      Schema::string()
+        ->title(t('Slug'))
+        ->description(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
+        ->check('drupal:Regex', [
+          'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
+          'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
+        ])
+        ->maxLength(128),
+      from: ['label'],
+      using: Slugify::class,
+    );
 
     $inputs->addSchema('capacity', Schema::integer()
       ->title(t('Capacity'))

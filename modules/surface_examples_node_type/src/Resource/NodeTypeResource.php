@@ -118,10 +118,16 @@ final class NodeTypeResource implements ResourceInterface {
       ])
       ->required());
 
-    $inputs->compute('type', 'machine_name', t('Machine name'),
-      from: ['name'], using: MachineName::class, when: Compute::UNLESS_SENT)
-      ->setDescription(t('Unique machine readable name: lowercase letters, numbers, and underscores only.'))
-      ->addConstraint('Length', ['max' => EntityTypeInterface::BUNDLE_MAX_LENGTH]);
+    $inputs->compute(
+      'type',
+      Schema::of('drupal:config/machine_name')
+        ->title(t('Machine name'))
+        ->description(t('Unique machine readable name: lowercase letters, numbers, and underscores only.'))
+        ->check('drupal:Length', ['max' => EntityTypeInterface::BUNDLE_MAX_LENGTH]),
+      from: ['name'],
+      using: MachineName::class,
+      when: Compute::UNLESS_SENT,
+    );
 
     $inputs->addSchema('description', Schema::string()
       ->title(t('Description'))
