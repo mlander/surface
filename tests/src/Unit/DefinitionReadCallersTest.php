@@ -48,16 +48,16 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *   nodeFirst): a shell is handed its own facts alone and composed by
    *   the same calls, its child's keys placed by name (since 2026-11-15);
    *   fromArrays() reads nothing itself.
-   * - src/Contract/Conditionals.php, of(): stated() describes a definition
-   *   no entry holds: a declared rule's answer, made on a copy (rules()),
-   *   and a key a caller describes by its definition alone (describeKey()
-   *   handed one).
-   * - src/Contract/PropertySchema.php, of(): property() reads a shape's
-   *   definition where its key's node does not hold the shape's node.
-   * - src/Contract/PropertySchema.php, head(): listNode() reads a
-   *   collection's own node, without its items, which no entry's node is
-   *   (a list's node holds its items, the child's whole tree), for its
-   *   keywords, its default, its arrangement and its signature.
+   * - src/Contract/Conditionals.php, of(): rules() reads a declared rule's
+   *   answer, made on a copy of the key's definition, which no entry
+   *   holds (since 2026-11-16 stated() takes the schema its caller reads).
+   * - src/Contract/ContractEmitter.php, of(): describeKey() reads a
+   *   definition its caller hands, which no entry holds (since
+   *   2026-11-16; with none handed it reads the entry's schema).
+   * - src/Contract/PropertySchema.php reads none since 2026-11-16:
+   *   property() describes a shape from the schema its key's own holds,
+   *   and listNode() gives a collection's own keywords from the list's
+   *   schema, without its items; it reads no definition.
    * - src/Tool/InputDefinitions.php, of(): the public converters,
    *   fromDefinition() and outputFromDefinition(), read the node of a
    *   definition a caller hands with no node; every caller in the module
@@ -66,18 +66,24 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *   a collection's declared constraints, and what every entry of a map
    *   of entries from the site is, are read from the key's own node,
    *   which is composed of its child's entries' nodes (Entry::schema()).
-   * - src/Pipeline/Validating.php, of(): nodeAt() reads a port's node. A
-   *   port has no entry: the container hands the child a bare definition
-   *   (SurfaceInterface::getPortDefinition()), whose label a refusal
-   *   names.
+   * - src/Pipeline/Validating.php reads none since 2026-11-16: a port's
+   *   key is held as its schema (SurfaceInterface::getPortSchema()), and
+   *   nodeAt() hands it on, to the options service too.
+   * - src/Surface.php, of(): withPorts() reads a port's key handed as a
+   *   definition into its schema, once, at the door (since 2026-11-16).
+   * - src/Attachment.php, of(): withReads() reads the definition of the
+   *   key a port is wired to into its schema, once (since 2026-11-16):
+   *   the build hands the builder's definition (Attaching::wiredKeys()),
+   *   and a port of an entry of a map of keys from the site the sibling
+   *   entry's own schema, which is held as it is.
    *
    * - src/Options/SurfaceOptions.php, of(): resolve() hands a resolver
    *   the node of the definition it was handed, where its caller holds
    *   no node, read when a resolver is about to be called (since
    *   2026-11-15).
-   * - src/Resolve.php, of(): a resolved key's class is handed the node of
-   *   the key's definition; a key a mount holds has no entry of its own
-   *   (since 2026-11-15).
+   * - src/Resolve.php reads none since 2026-11-16: a resolved key's class
+   *   is handed its entry's schema, and a key a mount holds the schema its
+   *   mount's schema holds.
    * - src/Surface.php, around(): a mount its own refiners refined, with a
    *   structure refined in it too, keeps the definition built as before
    *   (refineMounted()), and its node is composed of the refiners'
@@ -92,13 +98,12 @@ class DefinitionReadCallersTest extends UnitTestCase {
    * which this list then shows.
    */
   protected const CALLERS = [
+    'src/Attachment.php' => ['of' => 1],
     'src/Contract/Conditionals.php' => ['of' => 1],
-    'src/Contract/PropertySchema.php' => ['head' => 1, 'of' => 1],
+    'src/Contract/ContractEmitter.php' => ['of' => 1],
     'src/Entry.php' => ['around' => 4, 'of' => 4],
     'src/Options/SurfaceOptions.php' => ['of' => 1],
-    'src/Pipeline/Validating.php' => ['of' => 1],
-    'src/Resolve.php' => ['of' => 1],
-    'src/Surface.php' => ['around' => 2],
+    'src/Surface.php' => ['around' => 2, 'of' => 1],
     'src/Tool/InputDefinitions.php' => ['of' => 2],
     'src/Variants.php' => ['shell' => 2],
   ];

@@ -15,10 +15,12 @@ use Drupal\surface\Contract\NodeMessage;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Contract\Secrets;
+use Drupal\surface\Attachment;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\Location;
+use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\User;
@@ -538,7 +540,11 @@ class LocationNodeTest extends SurfaceKernelTestBase {
    * Lists the nodes a value keeps outside an entry's own node.
    *
    * A node-first entry's own node is its source and is not walked; the
-   * rest of the entry is. Any other Schema holding MODEL is a kept node,
+   * rest of the entry is. A port's key is held as its schema, by the
+   * attachment that wires it (Attachment::$wired) and by the data surface
+   * it is bound to (Surface::$portSchemas), since 2026-11-16: a port has
+   * no entry, so those are sources too and are not walked. Any other
+   * Schema holding MODEL is a kept node,
    * and a Schema holding an object other than a plain JSON object is
    * listed by that object's class.
    *
@@ -575,6 +581,14 @@ class LocationNodeTest extends SurfaceKernelTestBase {
       if ($value instanceof Entry && $value->isNodeFirst()) {
         $sources++;
         unset($members["\0" . Entry::class . "\0node"]);
+      }
+      if ($value instanceof Attachment && $value->wired !== []) {
+        $sources++;
+        unset($members['wired']);
+      }
+      if ($value instanceof Surface && ($members["\0*\0portSchemas"] ?? []) !== []) {
+        $sources++;
+        unset($members["\0*\0portSchemas"]);
       }
       $value = $members;
     }

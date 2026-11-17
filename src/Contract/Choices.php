@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface\Contract;
 
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
 use Drupal\surface\Variants;
 
@@ -352,7 +351,7 @@ final class Choices {
       $list = $entry->variants;
       $values = $entry->variants->variantIds();
     }
-    elseif ($entry->attachment !== NULL && DefinitionMetadata::eachOf($entry->definition()) !== NULL) {
+    elseif ($entry->attachment !== NULL && NodeFacts::each($entry->schema()) !== NULL) {
       $list = $entry->attachment->child;
       $values = array_map('strval', $list->getDefinitions()->names());
     }

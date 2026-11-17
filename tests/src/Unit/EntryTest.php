@@ -7,6 +7,7 @@ namespace Drupal\Tests\surface\Unit;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Attachment;
@@ -418,9 +419,16 @@ class EntryTest extends UnitTestCase {
   }
 
   /**
-   * Tests a place whose definition has a property its node lacks is refused.
+   * Tests a place is what the key's schema declares, and nothing else.
+   *
+   * Since 2026-11-16 Location::below() walks the key's schema alone,
+   * whichever form its source gave. A class that answers for a property
+   * it does not list declares none there as far as its schema says (the
+   * read never sees the property): the place is none. Until then the
+   * definition was walked beside the schema for a definition-first entry,
+   * and such a place was refused as out of step.
    */
-  public function testLocationRefusesNodeOutOfStep(): void {
+  public function testLocationIsReadFromTheSchemaAlone(): void {
     // A map that answers for a property it does not list: the read never
     // sees it, so the node holds none for it.
     $map = new class(['type' => 'map']) extends MapDataDefinition {
@@ -440,9 +448,15 @@ class EntryTest extends UnitTestCase {
     $this->assertInstanceOf(Location::class, $found);
     $this->assertSame($entry->schema()->get('properties')['city'], $found->node, 'The node at a place is the one its parent node holds.');
     $this->assertNull($below->invoke(NULL, $entry, [], ['nothing']), 'A place nothing declares is none.');
-    $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('holds no node at "ghost"');
-    $below->invoke(NULL, $entry, [], ['ghost']);
+    $this->assertNull($below->invoke(NULL, $entry, [], ['ghost']), 'A place only the class answers for is none: its schema declares nothing there.');
+    // Below a list, a delta names its item and any other segment nothing.
+    $tags = MapDataDefinition::create()->setPropertyDefinition('tags', new ListDataDefinition([], DataDefinition::create('string')));
+    $listed = new Entry('listed', $tags);
+    $item = $below->invoke(NULL, $listed, ['tags' => ['a']], ['tags', '0']);
+    $this->assertInstanceOf(Location::class, $item);
+    $this->assertSame($listed->schema()->get('properties')['tags']->get('items'), $item->node, 'A delta below a list is its item.');
+    $this->assertSame('a', $item->value);
+    $this->assertNull($below->invoke(NULL, $listed, ['tags' => ['a']], ['tags', 'x']), 'A name below a list is no place.');
   }
 
   /**

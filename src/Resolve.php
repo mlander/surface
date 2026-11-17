@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Drupal\surface;
 
 use Drupal\Component\Utility\NestedArray;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Pipeline\PipelineGuard;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\ResourceBuild\RefinesInputRefiner;
@@ -123,13 +123,13 @@ final class Resolve {
    */
   protected static function applyIn(DefinitionMap $map, array $stored): array {
     $values = $stored;
-    foreach (static::own($map) as $path => [$resolve, $definition]) {
+    foreach (static::own($map) as $path => [$resolve, $schema]) {
       $from = $resolve->sources($stored);
       if ($from === NULL) {
         continue;
       }
       $using = $resolve->using;
-      $value = PipelineGuard::onBehalf(PipelineGuard::RESOLVE, $using, 'compute', static fn (): mixed => $using::compute($from, DefinitionSchema::of($definition)));
+      $value = PipelineGuard::onBehalf(PipelineGuard::RESOLVE, $using, 'compute', static fn (): mixed => $using::compute($from, $schema));
       NestedArray::setValue($values, explode('.', (string) $path), $value, TRUE);
     }
     foreach ($map->entries() as $name => $entry) {
@@ -169,8 +169,8 @@ final class Resolve {
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource as built.
    *
-   * @return array<string, array{0: static, 1: \Drupal\Core\TypedData\DataDefinitionInterface}>
-   *   What each is resolved from and its definition, by its dotted path
+   * @return array<string, array{0: static, 1: \PortableSchema\Builder\Schema}>
+   *   What each is resolved from and its schema, by its dotted path
    *   from the top: a child's under the key it is held at, an item's or an
    *   entry's from the site under `*`, a variant's under its key, whichever
    *   variant it is.
@@ -187,8 +187,8 @@ final class Resolve {
    * @param string $prefix
    *   Their path, a dotted path and a dot; empty at the top.
    *
-   * @return array<string, array{0: static, 1: \Drupal\Core\TypedData\DataDefinitionInterface}>
-   *   What each is resolved from and its definition, by its dotted path.
+   * @return array<string, array{0: static, 1: \PortableSchema\Builder\Schema}>
+   *   What each is resolved from and its schema, by its dotted path.
    */
   protected static function declaredIn(DefinitionMap $map, string $prefix): array {
     $declared = [];
@@ -206,7 +206,7 @@ final class Resolve {
         }
       }
       elseif ($entry->attachment !== NULL) {
-        $at = DefinitionMetadata::eachOf($entry->definition()) === NULL ? $name . '.' : $name . '.*.';
+        $at = NodeFacts::each($entry->schema()) === NULL ? $name . '.' : $name . '.*.';
         $children[] = [$at, static::entryChild($entry)];
       }
       foreach ($children as [$at, $child]) {
@@ -234,7 +234,7 @@ final class Resolve {
    */
   protected static function entryChild(Entry $entry): ?SurfaceInterface {
     $child = $entry->attachment?->child;
-    if ($child === NULL || DefinitionMetadata::eachOf($entry->definition()) === NULL) {
+    if ($child === NULL || NodeFacts::each($entry->schema()) === NULL) {
       return $child;
     }
     $entries = $child->getDefinitions()->entries();
@@ -248,30 +248,32 @@ final class Resolve {
    * @param \Drupal\surface\DefinitionMap $map
    *   The frame's keys.
    *
-   * @return array<string, array{0: static, 1: \Drupal\Core\TypedData\DataDefinitionInterface}>
-   *   What each is resolved from and its definition, by its dotted path in
-   *   the frame.
+   * @return array<string, array{0: static, 1: \PortableSchema\Builder\Schema}>
+   *   What each is resolved from and its schema, by its dotted path in the
+   *   frame: a key's own (Entry::schema()), and a mounted key's the one its
+   *   mount's schema holds, which its class is handed.
    */
   protected static function own(DefinitionMap $map): array {
     $declared = [];
     foreach ($map->entries() as $name => $entry) {
-      if ($name === RefinesInputRefiner::MOUNT && $entry->definition() instanceof ComplexDataDefinitionInterface) {
-        foreach ($entry->definition()->getPropertyDefinitions() as $module => $mount) {
-          if (!$mount instanceof ComplexDataDefinitionInterface || isset($entry->mounted[$module])) {
+      $schema = $entry->schema();
+      if ($name === RefinesInputRefiner::MOUNT && DefinitionSchema::isComplex($schema)) {
+        foreach (NodeFacts::properties($schema) as $module => $mount) {
+          if (!DefinitionSchema::isComplex($mount) || isset($entry->mounted[$module])) {
             continue;
           }
-          foreach ($mount->getPropertyDefinitions() as $key => $definition) {
-            $resolve = static::of($definition);
+          foreach (NodeFacts::properties($mount) as $key => $property) {
+            $resolve = NodeFacts::resolve($property);
             if ($resolve !== NULL) {
-              $declared[RefinesInputRefiner::path((string) $module, (string) $key)] = [$resolve, $definition];
+              $declared[RefinesInputRefiner::path((string) $module, (string) $key)] = [$resolve, $property];
             }
           }
         }
         continue;
       }
-      $resolve = static::of($entry->definition());
+      $resolve = NodeFacts::resolve($schema);
       if ($resolve !== NULL) {
-        $declared[(string) $name] = [$resolve, $entry->definition()];
+        $declared[(string) $name] = [$resolve, $schema];
       }
     }
     return $declared;

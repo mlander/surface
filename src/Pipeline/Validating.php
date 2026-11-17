@@ -10,7 +10,6 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Computed;
 use Drupal\surface\Contract\DefinitionSchema;
@@ -640,8 +639,8 @@ final class Validating {
     foreach ($dependencies as $dependency) {
       $at = explode('.', $dependency);
       // The key the options service is handed: the watched key's node, or
-      // a port's definition; nothing else is read.
-      $watched = static::optionsKeyAt($refined, $at);
+      // a port's schema; nothing else is read.
+      $watched = static::nodeAt($refined, $at);
       $arguments = ['@key' => $this->conditionKey($refined, $dependency)];
       if (array_key_exists($dependency, $withheld)) {
         // What the rule was handed: nothing, since its own key refused it.
@@ -1117,9 +1116,11 @@ final class Validating {
   /**
    * Finds the node at a key, or at a property path inside it.
    *
-   * A port is read as the container's key it is wired to. A delta below
+   * A port is read as the container's key it is wired to, by the schema
+   * its container bound (SurfaceInterface::getPortSchema()). A delta below
    * a list names its item, so a refused item's choices are its item's, as
-   * a scalar's are its own.
+   * a scalar's are its own. The options service is handed what this finds,
+   * a port's schema too.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
@@ -1134,34 +1135,7 @@ final class Validating {
     $entry = $surface->getDefinitions()->entry($first);
     if ($entry === NULL) {
       // A port: the container's key it reads.
-      $port = $parents === [] ? $surface->getPortDefinition($first) : NULL;
-      return $port === NULL ? NULL : DefinitionSchema::of($port);
-    }
-    return static::below($entry->schema(), $parents);
-  }
-
-  /**
-   * Finds the key the options service is handed at a place.
-   *
-   * The node at a key or at a property path inside it, as nodeAt() finds
-   * it. A port has no entry, so no node is held for it: its definition is
-   * handed, the bare one the container wired to it
-   * (SurfaceInterface::getPortDefinition()), which the service reads once
-   * per definition.
-   *
-   * @param \Drupal\surface\SurfaceInterface $surface
-   *   The data surface.
-   * @param string[] $parents
-   *   The key, then the property names or deltas below it; or a port.
-   *
-   * @return \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface|null
-   *   The node, a port's definition, or NULL when the path names none.
-   */
-  protected static function optionsKeyAt(SurfaceInterface $surface, array $parents): Schema|DataDefinitionInterface|null {
-    $first = (string) array_shift($parents);
-    $entry = $surface->getDefinitions()->entry($first);
-    if ($entry === NULL) {
-      return $parents === [] ? $surface->getPortDefinition($first) : NULL;
+      return $parents === [] ? $surface->getPortSchema($first) : NULL;
     }
     return static::below($entry->schema(), $parents);
   }

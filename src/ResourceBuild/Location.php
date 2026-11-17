@@ -187,7 +187,12 @@ final class Location {
   }
 
   /**
-   * Reads down a plain key's node, its properties and items.
+   * Reads down a plain key's schema, its properties and items.
+   *
+   * The key's schema says what is declared at each step, whichever form
+   * its entry's source gave: a list's item below a delta, a complex key's
+   * property below its name (2026-11-16). The definition is walked only
+   * when it is asked (definition()).
    *
    * @param \Drupal\surface\Entry $entry
    *   The key's entry.
@@ -200,34 +205,19 @@ final class Location {
    *   What is there, or NULL where nothing declares the place.
    */
   protected static function below(Entry $entry, mixed $value, array $segments): ?static {
-    $node = $entry->schema();
-    // A definition the entry's source gave is walked beside the node, and
-    // says what is declared there; a node-first entry's node says it, and
-    // its definition, derived from the node, is not asked.
-    $given = $entry->isNodeFirst() ? NULL : $entry->definition();
+    $schema = $entry->schema();
     foreach ($segments as $segment) {
-      $node = match (TRUE) {
-        DefinitionSchema::isList($node) => ctype_digit($segment) ? DefinitionSchema::itemNode($node) : NULL,
-        DefinitionSchema::isComplex($node) => DefinitionSchema::propertyNode($node, $segment),
+      $schema = match (TRUE) {
+        DefinitionSchema::isList($schema) => ctype_digit($segment) ? DefinitionSchema::itemNode($schema) : NULL,
+        DefinitionSchema::isComplex($schema) => DefinitionSchema::propertyNode($schema, $segment),
         default => NULL,
       };
-      if ($given !== NULL) {
-        $given = $given instanceof ListDataDefinitionInterface && !ctype_digit($segment) ? NULL : static::step($given, $segment);
-        if ($given === NULL) {
-          return NULL;
-        }
-        if ($node === NULL) {
-          // A place with a definition and no node would answer "no secret,
-          // no check" for a key that may have both.
-          throw new \LogicException(sprintf('The node of the "%s" key holds no node at "%s" where its definition holds one: a built node holds one for every property and item.', $entry->name, $segment));
-        }
-      }
-      if ($node === NULL) {
+      if ($schema === NULL) {
         return NULL;
       }
       $value = is_array($value) ? $value[$segment] ?? NULL : NULL;
     }
-    return new static(NULL, $value, $node, $entry, $segments);
+    return new static(NULL, $value, $schema, $entry, $segments);
   }
 
   /**

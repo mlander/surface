@@ -8,7 +8,6 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
@@ -21,6 +20,7 @@ use Drupal\surface\Resource\SiteListInterface;
 use Drupal\surface\Resource\BoundSiteListInterface;
 use Drupal\surface\Resource\ClosedSiteListInterface;
 use Drupal\surface\Resource\EntrySchemasInterface;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
@@ -483,9 +483,10 @@ final class Attaching {
    * @param array<string, \Drupal\surface\SurfaceInterface|null> $listed
    *   The maps built so far, by key.
    *
-   * @return array<string, array<string, \Drupal\Core\TypedData\DataDefinitionInterface>>
-   *   For each entry, the sibling's entry each port reads, as declared, by
-   *   port: what a refusal in the entry names.
+   * @return array<string, array<string, \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface>>
+   *   For each entry, the schema of the sibling's entry each port reads,
+   *   as declared, by port: what a refusal in the entry names; the
+   *   definition of an entry its source gave as one.
    *
    * @throws \LogicException
    *   Naming the owner, the port and what is wrong with the wiring.
@@ -512,19 +513,23 @@ final class Attaching {
       }
       $read = $listed[$sibling] ?? NULL;
       foreach (array_keys($wired) as $entry) {
-        $match = $read?->getDefinition($entry);
-        if ($match === NULL) {
+        $held = $read?->getDefinitions()->entry((string) $entry);
+        $match = $held?->schema();
+        if ($held === NULL || $match === NULL) {
           throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", which has no "%s" entry: %s listed it for one map and not the other.', $definition->id, $port, $id, $key, $sibling, $entry, $each['from']));
         }
-        $type = $match->getDataType();
+        $type = NodeFacts::dataType($match);
         if ($ports[$port]->type !== 'any' && $type !== $ports[$port]->type) {
           throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s", which reads %s %s, to "%s", whose "%s" entry holds %s %s.', $definition->id, $port, $id, $key, static::article($ports[$port]->type), $ports[$port]->type, $sibling, $entry, static::article($type), $type));
         }
         if (static::unshaped($ports[$port], $match) !== NULL) {
-          $shape = DefinitionMetadata::shapeOf($match);
+          $shape = NodeFacts::shape($match);
           throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", whose "%s" entry is declared with %s, and the port reads the shape %s: the sibling map declares its entries with it, addEach(\'%s\', <shape>::class, from: ..., label: ...).', $definition->id, $port, $id, $key, $sibling, $entry, $shape === NULL ? 'a type alone' : 'the shape ' . $shape, $ports[$port]->shape, $sibling));
         }
-        $wired[$entry][$port] = Surface::deepClone($match);
+        // Its sealed entry's schema itself: a schema is never written. An
+        // entry of a class outside NodeDefinition::DERIVED is wired by the
+        // definition it holds, which Attachment::withReads() keeps.
+        $wired[$entry][$port] = $held->isNodeFirst() ? $match : $held->definition();
       }
     }
     foreach ($ports as $port) {
@@ -817,17 +822,18 @@ final class Attaching {
    *
    * @param \Drupal\surface\Port $port
    *   The port.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $wired
-   *   The key wired to it.
+   * @param \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface|null $wired
+   *   The key wired to it: a sealed entry's schema, or a builder's
+   *   definition.
    *
    * @return string|null
    *   Why not, or NULL when it may be.
    */
-  public static function unshaped(Port $port, ?DataDefinitionInterface $wired): ?string {
+  public static function unshaped(Port $port, Schema|DataDefinitionInterface|null $wired): ?string {
     if ($port->shape === NULL || $wired === NULL) {
       return NULL;
     }
-    $shape = DefinitionMetadata::shapeOf($wired);
+    $shape = $wired instanceof Schema ? NodeFacts::shape($wired) : DefinitionMetadata::shapeOf($wired);
     if ($shape === $port->shape) {
       return NULL;
     }
@@ -847,14 +853,15 @@ final class Attaching {
    *   The wiring.
    *
    * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
-   *   Each wired key's definition, by port.
+   *   Each wired key's definition, by port, as the builder holds it:
+   *   Attachment::withReads() reads each into its schema, at once.
    */
   protected static function wiredKeys(SurfaceBuilder $builder, array $reads): array {
     $wired = [];
     foreach ($reads as $port => $key) {
       $definition = $builder->getDefinition($key);
       if ($definition !== NULL) {
-        $wired[$port] = Surface::deepClone($definition);
+        $wired[$port] = $definition;
       }
     }
     return $wired;

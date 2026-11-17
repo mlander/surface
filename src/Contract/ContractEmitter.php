@@ -13,18 +13,15 @@ use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMap;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Pipeline\Outbound;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Refinement\DeclaredRefiner;
-use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Attachment;
 use Drupal\surface\Port;
 use Drupal\surface\Entry;
@@ -651,14 +648,15 @@ final class ContractEmitter {
         $ruled[$name] = $advertised->dependencies($name);
         continue;
       }
-      // A key holding a child, variants or a list of children has its
-      // facts read from its definition here. Its node is composed of the
-      // refined child's entries' nodes (Entry::schema()), and the document
-      // refines the child again in its own frame and reads those: the
-      // node would read each of the child's keys twice. Decision: see
-      // docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
-      $node = $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL ? $current->schema() : NULL;
-      $requires = $node === NULL ? DefinitionSchema::required($current->definition()) : PropertySchema::required($node);
+      // Every key's own facts are read from its schema (Entry::schema()),
+      // a key holding a child, variants or a list of children too: its
+      // schema is composed of its own facts and its child's entries'
+      // schemas, and only its own facts are read here; the document
+      // describes the child in its own frame. Decision: see
+      // docs/decisions.md#the-document-is-written-from-schemas.
+      $own = $current->schema();
+      $node = $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL ? $own : NULL;
+      $requires = PropertySchema::required($own);
       $depends = $advertised->dependencies($name);
       // Whether a static refiner has something to refine the key against
       // yet; while it has not, what it would answer is stated ahead.
@@ -698,7 +696,7 @@ final class ContractEmitter {
         // chosen.
         // Decision: see
         // docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
-        $properties[$name] = $this->propertySchema->describe(DefinitionSchema::describe($current->definition()))->with('type', DefinitionSchema::nullable('object', $current->definition()));
+        $properties[$name] = $this->propertySchema->describe($own)->with('type', static::objectType($own));
         if ($locked) {
           $properties[$name] = $properties[$name]->with('readOnly', TRUE);
         }
@@ -713,9 +711,9 @@ final class ContractEmitter {
         }
         $entries = [];
         foreach ($entry->attachment->child->getDefinitions()->entries() as $id => $each) {
-          $entries[] = ['id' => (string) $id, 'label' => (string) $each->definition()->getLabel()];
+          $entries[] = ['id' => (string) $id, 'label' => (string) NodeFacts::label($each->schema())];
         }
-        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write('fieldset'), DefinitionMetadata::arrangementOf($entry->definition())));
+        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write('fieldset'), NodeFacts::arrangement($entry->schema())));
         // The fetch is a link, `{value}` an entry's id, which the entries
         // list gives; written at the site, never in a def, which several
         // sites share.
@@ -748,12 +746,12 @@ final class ContractEmitter {
         if ($declaring) {
           $shown[$name] = new \stdClass();
         }
-        $instance = $instance->with('type', DefinitionSchema::nullable('object', $current->definition()));
-        $properties[$name] = Schemas::first($instance, $this->propertySchema->describe(DefinitionSchema::describe($current->definition()))->all());
+        $instance = $instance->with('type', static::objectType($own));
+        $properties[$name] = Schemas::first($instance, $this->propertySchema->describe($own)->all());
         if ($locked) {
           $properties[$name] = $properties[$name]->with('readOnly', TRUE);
         }
-        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write($this->propertySchema->asked($current->definition()->getSetting('widget')) ?? 'fieldset'), DefinitionMetadata::arrangementOf($entry->definition())));
+        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write($this->propertySchema->asked(NodeFacts::setting($own, 'widget')) ?? 'fieldset'), NodeFacts::arrangement($entry->schema())));
         $properties[$name] = $properties[$name]->with(self::EXTENSION, (array) $instance->get(self::EXTENSION) + $this->propertySchema->extension($depends, $this->propertySchema->anyRefined($instance)));
         if ($ahead_of_time) {
           $enumerated = $this->conditionals->enumerate($declared, $static, $entry, $values, $properties[$name], $emission, TRUE);
@@ -785,11 +783,11 @@ final class ContractEmitter {
         finally {
           $this->site = $around;
         }
-        $properties[$name] = Schemas::first($reference, $this->propertySchema->describe(DefinitionSchema::describe($current->definition()))->all());
+        $properties[$name] = Schemas::first($reference, $this->propertySchema->describe($own)->all());
         if ($locked) {
           $properties[$name] = $properties[$name]->with('readOnly', TRUE);
         }
-        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write($this->propertySchema->asked($current->definition()->getSetting('widget')) ?? 'fieldset'), DefinitionMetadata::arrangementOf($entry->definition())));
+        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write($this->propertySchema->asked(NodeFacts::setting($own, 'widget')) ?? 'fieldset'), NodeFacts::arrangement($entry->schema())));
         $properties[$name] = $properties[$name]->with(self::EXTENSION, $this->propertySchema->extension($depends, $this->propertySchema->anyRefined($instance)));
         if ($ahead_of_time) {
           // A parent's refiner of an attached key says only whether it
@@ -839,7 +837,7 @@ final class ContractEmitter {
         // a refinement moved it (Entry::sameSource()): one source has one
         // signature, and the advertised node is not read for nothing.
         $moved = !$entry->sameSource($current);
-        [$properties[$name], $shown[$name]] = $this->propertySchema->property($current->definition(), $node, $moved ? $entry->definition() : NULL, $moved ? $entry->schema() : NULL, $value, $prefix . $name, $locked, $depends, $emission);
+        [$properties[$name], $shown[$name]] = $this->propertySchema->property($node, $moved ? $entry->schema() : NULL, $value, $prefix . $name, $locked, $depends, $emission);
         $properties[$name] = $this->linked($properties[$name], $node, $name, $declaring);
         if ($declaring && $entry->locked) {
           // What the context fixed it to is the instance's, not the
@@ -885,7 +883,7 @@ final class ContractEmitter {
           // narrowed for these values): a runtime refiner may have
           // narrowed it for the present moment already, and a conditional
           // says what the coded ones add.
-          $base = $current->sameSource($stated) ? $properties[$name] : $this->propertySchema->property($stated->definition(), $stated->schema(), NULL, NULL, NULL, $prefix . $name, FALSE, [], $emission->withoutStale())[0];
+          $base = $current->sameSource($stated) ? $properties[$name] : $this->propertySchema->property($stated->schema(), NULL, NULL, $prefix . $name, FALSE, [], $emission->withoutStale())[0];
           $enumerated = $this->conditionals->enumerate($declared, $static, $entry, $values, $base, $emission);
           if ($enumerated !== NULL && $current->sameSource($stated)) {
             $properties[$name] = $enumerated['base'];
@@ -928,7 +926,7 @@ final class ContractEmitter {
         // Decision: see docs/decisions.md#a-rule-declared-as-data.
         // The frame's `x-surface.rules` lists each conditional that states
         // one; the key itself carries no marker.
-        [$properties[$name], $stating, $requires] = $this->conditionals->rules($entry, $current->definition(), $properties[$name], $stating, $requires, $emission, array_keys($ports), $current);
+        [$properties[$name], $stating, $requires] = $this->conditionals->rules($entry, $properties[$name], $stating, $requires, $emission, array_keys($ports), $current);
       }
       if ($entry->mounted !== [] && !$declaring) {
         // The structures alters attached at their mounts: each module's
@@ -1245,10 +1243,9 @@ final class ContractEmitter {
       return [[], []];
     }
     // The key as the static refiners leave it, by the entry that holds it,
-    // whose node is read once.
+    // whose schema is read once.
     $holder = $static->getDefinitions()->entry($entry->name) ?? $entry;
-    $definition = $holder->definition();
-    $base = $inline ?? $this->conditionals->stated($entry, $definition, $emission, $holder);
+    $base = $inline ?? $this->conditionals->stated($entry, $holder->schema(), $emission);
     $markers = [];
     $branches = [];
     if ($below === '') {
@@ -1313,8 +1310,11 @@ final class ContractEmitter {
       }
     }
     if ($links !== []) {
-      $pseudo = new Entry($entry->name, $definition, refiners: [SurfaceInterface::OWNER => $links]);
-      [, $stated] = $this->conditionals->rules($pseudo, $definition, $base, [], FALSE, $emission, holder: $holder);
+      // The rules, on the key as its holder holds it: the holder's schema
+      // states the base, and a rule is applied to its definition
+      // (Conditionals::rules()).
+      $pseudo = Entry::ofSchema($entry->name, $holder->schema(), refiners: [SurfaceInterface::OWNER => $links]);
+      [, $stated] = $this->conditionals->rules($pseudo, $base, [], FALSE, $emission, holder: $holder);
       array_push($branches, ...$stated);
     }
     return [$branches, $markers];
@@ -1471,7 +1471,7 @@ final class ContractEmitter {
   protected function mounts(SurfaceInterface $declared, SurfaceInterface $static, Entry $entry, Entry $current, Schema $property, array $values, bool $locked, Emission $emission): array {
     $subschemas = $emission->subschemas;
     $branches = [];
-    $holder = $entry->isNested() || $entry->list !== NULL ? NULL : $current->schema();
+    $holder = $current->schema();
     foreach ($entry->mounted as $module => $attachment) {
       $module = (string) $module;
       // Bound as the refinement of this frame bound it.
@@ -1497,11 +1497,9 @@ final class ContractEmitter {
       finally {
         $this->site = $around;
       }
-      // The mount's title and description, from the node of the key that
-      // holds the mounts where it holds no child.
-      $map = $holder === NULL
-        ? ($current->definition() instanceof ComplexDataDefinitionInterface && ($mount = $current->definition()->getPropertyDefinition($module)) !== NULL ? DefinitionSchema::describe($mount) : NULL)
-        : DefinitionSchema::propertyNode($holder, $module);
+      // The mount's title and description, from the schema the key that
+      // holds the mounts holds for it: a list's holds none.
+      $map = DefinitionSchema::propertyNode($holder, $module);
       $site = Schemas::first($this->propertySchema->reference($key, $instance, $subschemas), $map === NULL ? [] : $this->propertySchema->describe($map)->all());
       if ($inline->get('readOnly') !== NULL) {
         $site = $site->with('readOnly', $inline->get('readOnly'));
@@ -1604,13 +1602,13 @@ final class ContractEmitter {
     finally {
       $this->site = $around;
     }
-    $definition = $current->definition();
-    // The list's own node, without its items: they are the child's.
-    $head = $this->propertySchema->listNode($definition);
-    [$schema, $checks] = $this->propertySchema->listKeywords($head);
+    // The list's schema, as the parent refined it; its own keywords are
+    // stated without its items, which are the child's.
+    $list_schema = $current->schema();
+    [$schema, $checks] = $this->propertySchema->listKeywords($this->propertySchema->listNode($list_schema));
     $schema = $schema->with('items', $items);
-    if (NodeFacts::hasDefault($head) && !$declaring) {
-      $schema = $schema->with('default', NodeFacts::default($head));
+    if (NodeFacts::hasDefault($list_schema) && !$declaring) {
+      $schema = $schema->with('default', NodeFacts::default($list_schema));
     }
     if ($locked) {
       $schema = $schema->with('readOnly', TRUE);
@@ -1619,9 +1617,9 @@ final class ContractEmitter {
     // As advertised: read only where a refinement moved the key
     // (Entry::sameSource()), and compared only there.
     $moved = !$entry->sameSource($current);
-    $advertised = $moved ? $this->propertySchema->listNode($entry->definition()) : $head;
+    $advertised = $moved ? $entry->schema() : $list_schema;
     $schema = PortableUi::set($schema, $this->propertySchema->hints(PortableUi::write('list'), NodeFacts::arrangement($advertised)));
-    $refined = $moved && $this->propertySchema->signature($advertised, $entry->definition()) !== $this->propertySchema->signature($head, $definition);
+    $refined = $moved && $this->propertySchema->signature($advertised) !== $this->propertySchema->signature($list_schema);
     $schema = $schema->with(self::EXTENSION, $this->propertySchema->extension($depends, $refined) + ['collection' => TRUE]);
 
     $shown = NULL;
@@ -2113,7 +2111,7 @@ final class ContractEmitter {
     if ($locked) {
       $property = $property->with('readOnly', TRUE);
     }
-    $property = PortableUi::set($property, $this->propertySchema->hints(PortableUi::write('variants'), DefinitionMetadata::arrangementOf($entry->definition())));
+    $property = PortableUi::set($property, $this->propertySchema->hints(PortableUi::write('variants'), NodeFacts::arrangement($entry->schema())));
     $property = $property->with(self::EXTENSION, $this->propertySchema->extension($depends, $chosen !== NULL) + [
       'by' => $variants->by,
       'variants' => [],
@@ -2248,24 +2246,42 @@ final class ContractEmitter {
    * @param \Drupal\surface\Entry $entry
    *   The key, from the data surface's definition map.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
-   *   The definition to describe; NULL for the entry's own.
+   *   A definition to describe, which is read into its schema here; NULL
+   *   for the entry's own schema (Entry::schema()).
    *
    * @return array|false
    *   The schema, with no `x-surface` at any depth; empty for a key nothing
    *   describes; FALSE for a key that does not apply.
    */
   public function describeKey(Entry $entry, ?DataDefinitionInterface $definition = NULL): array|false {
-    $definition ??= $entry->definition();
-    if (DoesNotApply::marks($definition)) {
+    $schema = $definition === NULL ? $entry->schema() : DefinitionSchema::of($definition);
+    if (NodeFacts::doesNotApply($schema)) {
       return FALSE;
     }
-    $described = Schemas::arrayed($this->propertySchema->withoutExtension($this->conditionals->stated($entry, $definition, Emission::detached())));
+    $described = Schemas::arrayed($this->propertySchema->withoutExtension($this->conditionals->stated($entry, $schema, Emission::detached())));
     // A key nothing describes is the empty schema, a \stdClass.
     if ($described instanceof \stdClass) {
       return [];
     }
     assert(is_array($described));
     return $described;
+  }
+
+  /**
+   * Names the JSON type of a key that holds a child frame, by its schema.
+   *
+   * An object; with null beside it where the key may be cleared
+   * (NodeFacts::isNullable()), as DefinitionSchema::nullable() says it of
+   * a definition: neither a key its storage always holds nor a secret.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
+   *
+   * @return string|string[]
+   *   `object`, or `object` and `null`.
+   */
+  protected static function objectType(Schema $schema): string|array {
+    return NodeFacts::isNullable($schema) ? ['object', 'null'] : 'object';
   }
 
   /**

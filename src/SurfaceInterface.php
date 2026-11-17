@@ -7,6 +7,7 @@ namespace Drupal\surface;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Storage\StorageLayoutInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A runtime description of the values something accepts.
@@ -406,9 +407,10 @@ interface SurfaceInterface extends CacheableDependencyInterface {
    * @param array<string, mixed> $values
    *   What each port holds, by port name; names that are no port are
    *   ignored, and a port left out holds nothing.
-   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $definitions
+   * @param array<string, \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface> $definitions
    *   The container's key each port reads, by port name: what a refusal
-   *   names when it depends on the port.
+   *   names when it depends on the port. Held as its schema
+   *   (getPortSchema()): a definition handed is read into one, once.
    *
    * @return static
    *   The data surface, bound.
@@ -424,10 +426,22 @@ interface SurfaceInterface extends CacheableDependencyInterface {
    *   The port.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
-   *   The key's definition, or NULL for no port, or one no container
-   *   bound.
+   *   The key's definition, derived from its schema (getPortSchema()) on
+   *   each ask; NULL for no port, or one no container bound.
    */
   public function getPortDefinition(string $port): ?DataDefinitionInterface;
+
+  /**
+   * Gets the schema of the container's key a port reads, as bound.
+   *
+   * @param string $name
+   *   The port.
+   *
+   * @return \PortableSchema\Builder\Schema|null
+   *   The key's schema, as its container declared it; NULL for no port,
+   *   or one no container bound.
+   */
+  public function getPortSchema(string $name): ?Schema;
 
   /**
    * Gets what each port holds, as its container bound it.

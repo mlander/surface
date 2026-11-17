@@ -749,14 +749,17 @@ the record of the rework that brought the module to the pattern.
   the entry is made (a change works on a copy): with assertions on,
   every later `schema()` ask compares a fresh read with the kept node
   (`DefinitionSchema::same()`), and `EntryNodeIsNeverStaleTest` proves
-  it over the examples. `PropertySchema::property()` takes its node
+  it over the examples. `PropertySchema::property()` takes its schema
   from its caller and reads nothing, so what still calls `of()` or
   `head()` is every read there is (the options service reads one where a
-  resolver is called and its caller handed a definition, and `Resolve` one for a
-  resolved key's class), pinned by file (`DefinitionReadCallersTest`). Never in the build cache or a served
+  resolver is called and its caller handed a definition, a rule's answer
+  in `Conditionals::rules()`, a definition handed to
+  `ContractEmitter::describeKey()`, and a port's key handed as a
+  definition, at `withPorts()` and `Attachment::withReads()`), pinned by
+  file (`DefinitionReadCallersTest`). Never in the build cache or a served
   document. `Location::definitionAt()` gives the check provider and the
-  form the node at a place (the entry's, walked down; a place with a
-  definition and no node throws), the frame and the value, the
+  form the node at a place (the entry's schema, walked down alone since
+  2026-11-16), the frame and the value, the
   definition derived only when asked (`Location::definition()`), and
   both refine each level once (`KeepsRefines`); never a
   node of the served document
@@ -787,21 +790,33 @@ the record of the rework that brought the module to the pattern.
   required property of a plain map, stale, the labels its refusals name)
   read the node, a key that holds a child frame's too since its node is
   composed of its child's entries' nodes (2026-11-14). And
-  `Validating::nodeAt()` walks to the node at a key path (a port's node
-  is read from its bare definition; `optionsKeyAt()` hands the options
-  service the node, a port's definition for a port). `PropertySchema`,
-  `ContractEmitter`, `Conditionals` and `DocumentHead` read a plain key's
-  facts from its node (`describe()`, `required()`, `nullable()`,
-  `cast()`, `signature()` take one; `DefinitionSchema::typeOf()` and
-  `keywordsOf()` stand for `type()` and `keywords()`); in the emitter a
-  key that holds a child, variants or a list of children is read from
-  its definition, since its composed node would read the refined
-  child's keys, which the document reads again from its own refinement
-  of the child, and a collection through its own node without items
-  (`PropertySchema::listNode()`). The
-  definition stays beside the node for the widget claims; the options
-  service is handed the node (2026-11-15)
+  `Validating::nodeAt()` walks to the node at a key path (a port's is
+  the schema its container bound, `SurfaceInterface::getPortSchema()`),
+  which the options service is handed too
   (`docs/decisions.md#the-validators-checks-and-the-document-read-nodes`).
+- **The document is written from schemas**: `PropertySchema`
+  (`property(Schema $schema, ?Schema $advertised, ...)`, `signature()`,
+  `listNode()`, `optionSet()`), `ContractEmitter`, `Conditionals` and
+  `DocumentHead` read every key from its entry's schema and hand on
+  schemas, a key that holds a child, variants or a list of children for
+  its own facts too (`required`, title, description, whether null
+  clears it, its `widget`, its arrangement); below a key, its
+  properties, item and shape are the schemas its own holds. A
+  collection is read from its whole schema (its item composed of the
+  child's entries' schemas); `listNode()` gives its own keywords, the
+  schema without `items`, `default`, `examples` and `writeOnly`.
+  `Conditionals::stated()` takes the schema its caller means: the
+  holder's, or the read of a rule's answer. The one definition the
+  document derives is a rule's key's, where a declared rule narrows it:
+  a rule is applied to a definition (`Conditionals::rules()`). A refined
+  key whose refiner chain ran is definition-first, and its schema reads
+  the answer once. A port's key is held as its schema
+  (`Surface::$portSchemas`, `Attachment::$wired`,
+  `SurfaceInterface::getPortSchema()`); `getPortDefinition()` derives
+  one on each ask, and the watched-value check is handed one, but for a
+  key of a class outside `NodeDefinition::DERIVED`, whose definition is
+  kept beside its schema and handed as it is
+  (`docs/decisions.md#the-document-is-written-from-schemas`).
 - **The remaining readers read nodes**: `KeyPaths` (`reachedOn()`,
   `heldOn()`, `held()`, `pathsOf()`), `EncryptedStorageLayout`'s secret
   keys, `References` (`targetIn()`, `handlerIn()`, `nodeAt()` beside the

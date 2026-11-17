@@ -3912,7 +3912,8 @@ value changed.
   container hands the child a bare definition
   (`SurfaceInterface::getPortDefinition()`), so its node is read there
   with `DefinitionSchema::of()`, the one caller this adds to
-  `DefinitionReadCallersTest`. `Accepting::unmatchedSecret()` names the
+  `DefinitionReadCallersTest`. (2026-11-16: a port's key is held as its
+  schema, which `nodeAt()` reads: see [The document is written from schemas](#the-document-is-written-from-schemas).) `Accepting::unmatchedSecret()` names the
   secret through `nodeAt()`.
 - **The copy is gone.** `withoutRuledOut()` cloned a map's definition
   without the properties a refinement ruled out. Its readers were
@@ -3954,7 +3955,10 @@ value changed.
   keywords, default, arrangement and signature; a mount's title from
   the node of the key that holds it. `Conditionals` reads `required`
   and a watched sibling's type from the node; `DocumentHead` an output's
-  `required`.
+  `required`. (2026-11-16: every key, a key that holds a child too, is
+  read from its schema, and no definition is walked beside it; a
+  collection's own keywords are its schema's without its items: see
+  [The document is written from schemas](#the-document-is-written-from-schemas).)
 - **Compared only where the definition moved.** Whether a key is
   narrowed now is its signature against the advertised key's. Read from
   nodes, that would read the advertised entry's node besides the
@@ -4781,12 +4785,15 @@ value changed.
   the kept walk and the validator's computed checks carry no definition
   beside the node), `Validating` (always held, stale, and the two
   watched-key sentences, whose node is the place's: `optionsKeyAt()`, a
-  port's definition for a port, which has no entry), the tool door
+  port's definition for a port, which has no entry; 2026-11-16: a port's
+  schema, through `nodeAt()`, see [The document is written from schemas](#the-document-is-written-from-schemas)), the tool door
   (`constraintsOf()`, `withLookups()`), `DefinitionSchema::listed()` and
   the projection (`publishedNode()`, `published()` take no definition),
   `PropertySchema::optionSet()` and `signature()` (a collection's own
   node holds no item, so its signature still asks the item's
-  definition), `ContractPanel::allows()`, `Conditionals::domain()`. A
+  definition; 2026-11-16: a collection is signed by its whole schema,
+  whose item it holds), `ContractPanel::allows()`,
+  `Conditionals::domain()`. A
   definition, where no node is held without a new read: the widget
   claims (`WidgetChoice::optionSet()`, until slice 32's public
   contracts), the form's extraction (`Extracting::isOrphaned()` and
@@ -4914,7 +4921,8 @@ refusal, message or value changed.
   nodes](#a-refined-shell-is-composed-of-nodes). Refinement builds no
   refined shell's definition and its readers ask none; the emitter
   compares sources (`Entry::sameSource()`), so a port copy derives
-  nothing first.) A node-first entry serializes its
+  nothing first. 2026-11-16: the emitter and the ports ask for no
+  definition, but a rule's key's: see [The document is written from schemas](#the-document-is-written-from-schemas).) A node-first entry serializes its
   node, which is larger than its definition, so a cached operation build
   is larger: 1.23 times over the development site's 171 operation builds.
   That is a matter for the build cache (slice 33).
@@ -5248,7 +5256,9 @@ changed. One public contract changed, by decision.
   still takes the key's definition and the advertised one and walks them
   beside the node; nothing reads them now. The emitter still derives a
   definition per key it describes to hand them on. The emitter's own
-  reads of definitions are the next part.
+  reads of definitions are the next part. (2026-11-16: `property()`
+  takes schemas alone and the emitter derives none but a rule's key's:
+  see [The document is written from schemas](#the-document-is-written-from-schemas).)
 - **The parity, before the flip.** With the tree at the base, an
   instrumented copy asked, at every place a widget was asked about a
   definition (each `drawsDefinition()`, each static helper, each
@@ -5296,6 +5306,162 @@ changed. One public contract changed, by decision.
   says the fact, a widget reads the keyword (`writeOnly` for a secret,
   as [the claiming widget](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)
   shows). Open: which readers a widget may rely on.
+
+### The document is written from schemas
+
+Decided 2026-11-16. The classes that write the served document
+(`ContractEmitter`, `DocumentHead`, `Conditionals` and `PropertySchema`)
+read every key from its schema (`Entry::schema()`) and hand on schemas.
+Until now `PropertySchema::property()` took the key's definition beside
+its schema, so the emitter derived a definition for nearly every key it
+described, and a few decisions were made on definitions. Every one of
+them had the schema at hand. A port's key is held as its schema. No
+served byte, refusal, message, stored value or drawn form changed.
+
+- **`PropertySchema` takes schemas.** `property(Schema $schema,
+  ?Schema $advertised, ...)` takes the key's schema and the advertised
+  key's, where it took a definition beside each. Below the key
+  it describes each property, its item and its shape from the schema
+  its own holds: a property's schema is `NodeFacts::properties()`, an
+  item's `DefinitionSchema::itemNode()`, a shape's
+  `DefinitionSchema::shapeNode()`, the schema its key's own holds beside
+  the shape's id. The definition walk beside the schema
+  (`itemDefinition()`, `propertyDefinition()`,
+  `DefinitionMetadata::shapeDefinition()`) is gone, with the read of a
+  shape's definition that stood where the key's schema held no shape's
+  schema: none is built without one. `signature(Schema $schema)` reads
+  a list's item from the list's schema. `optionSet()` takes a schema.
+- **A collection is read from its whole schema.** Its entry's schema
+  holds its item, composed of the child's entries' schemas.
+  `listNode(Schema $list)` gives the list's own keywords: the schema
+  without `items`, and without `default`, `examples` and `writeOnly`,
+  which `DefinitionSchema::head()` did not state of a list's definition
+  either, so its title, description, `type`, keywords and checks are the
+  ones `head()` read, in its order. Its default, its arrangement and its
+  signature are read from the whole schema; a collection's signature
+  reads only its item's offered values, so its item's tree is not
+  walked.
+- **The emitter's sites.** A key that holds a child, variants or a list
+  of children has its own facts read from its schema, as every other
+  key's: `required` (`PropertySchema::required()`), its title and
+  description (`describe()`), whether null clears it
+  (`NodeFacts::isNullable()`, where `DefinitionSchema::nullable()` read
+  the definition), the `widget` it asks for (`NodeFacts::setting()`),
+  its arrangement (`NodeFacts::arrangement()`), an entry's label in a
+  deferred list (`NodeFacts::label()`), a mount's title from the schema
+  the key's own holds for it, for a key that holds a child too.
+  `DocumentHead::outputs()` hands an output's schema. `describeKey()`
+  reads its entry's schema, or a definition handed to it with
+  `DefinitionSchema::of()`. The decisions that compare sources stay on
+  `Entry::sameSource()`.
+- **`Conditionals::stated()` takes the schema.** It told a definition
+  its holder held from one no entry held by identity
+  (`$holder->definition() === $definition`): the first read the
+  holder's schema, the second read the definition afresh. Every caller
+  that handed the holder's definition hands the holder's schema now, the
+  very schema the identity test chose, and the one caller that handed a
+  definition no entry held (a rule's answer, written on a copy) reads it
+  with `DefinitionSchema::of()`. So no test is left and none parts from
+  the old one: a holder refined to an equal copy, a port copy
+  (`Entry::readingFrom()`, which shares its source), a key inside a
+  refined shell and a key of a class outside the three each hand their
+  own entry's schema, as the identity test chose. `answer()` reads
+  whether a key does not apply from the holder's schema
+  (`NodeFacts::doesNotApply()`).
+- **What the emitter still derives: a rule's key.** A declared rule is
+  applied to a definition (`Rule::apply()`) until a rule is applied to
+  a schema. `Conditionals::rules()` takes the key's holder and derives
+  its definition only where a rule has effects to apply, for a copy to
+  apply them to; a rule that rules its key out, and a key holding a
+  child, ask none. `ContractEmitter::site()` makes the rules' pseudo
+  entry of the holder's schema (`Entry::ofSchema()`).
+- **A refined key whose refiner chain ran** is still definition-first:
+  its source is the refiner's answer. The emitter asks its schema, which
+  reads the answer once (`DefinitionSchema::of()` through
+  `Entry::schema()`); it moves cost from deriving to reading for those
+  keys until refined keys are schema-first.
+- **Ports are held as schemas.** `Surface::$portSchemas` and
+  `Attachment::$wired` hold the schema of the container's key each port
+  reads. `SurfaceInterface::getPortSchema(string $name)` gives it;
+  `getPortDefinition()` derives a definition from it on each ask
+  (`NodeDefinition::of()`) for a key of the three derived classes, until
+  the definition accessors go.
+  `withPorts(array $values, array $definitions)` keeps its signature:
+  a definition handed is read into its schema once, there, and a
+  schema handed is held; handed what it holds (equal, by
+  `DefinitionSchema::same()`), it binds nothing new. The build reads the
+  builder's definition of a wired key into its schema once
+  (`Attaching::wiredKeys()`, through `Attachment::withReads()`), and a
+  port of an entry of a map of keys from the site holds the sibling
+  entry's own schema, or the definition a sibling entry kept
+  definition-first holds (`Attaching::assertEachWiring()`). `Validating::nodeAt()` reads a
+  port's schema, and the options service is handed it
+  (`optionsKeyAt()` is gone). The watched-value check takes a
+  definition, so `Surface::refusedWatchedValues()` derives one from a
+  port's schema of the three derived classes where it asks the check. A port wired to a key of a
+  class outside `NodeDefinition::DERIVED` (a `BaseFieldDefinition`, the
+  hand corpus's `NotAMapDefinition`) keeps the definition it was handed
+  beside its schema (`Attachment::$wiredDefinitions`,
+  `Surface::$portDefinitions`): the check is handed that definition and
+  `getPortDefinition()` returns it, so nothing is derived or read for it
+  per request, and `SerializedMaps` walks it as it walked
+  `Attachment::$wired` before. Both members go when `admits()` takes a
+  schema. `Surface::withPortKeys()` (internal) binds the schemas and
+  definitions an attachment holds without reading them. A wired key is
+  still read twice at build: `Attaching::wiredKeys()` hands the
+  builder's definition to `withReads()`, and the key's own entry reads it
+  again at the seal; the second read goes when the builder holds schemas.
+- **What changed in public shapes.** `SurfaceInterface` gains
+  `getPortSchema()`. `Resolve::declared()` pairs each `Resolve` with the
+  key's schema, where it paired it with the key's definition.
+  `Attachment::withReads()` reads a definition it is handed when it is
+  called, so a wired key that cannot be read is refused there, not at
+  the seal.
+- **The small readers.** `Surface::mapWithDefaults()` walks a map's
+  schema; `Resolve` reads what a key is resolved from with
+  `NodeFacts::resolve()`, walks a mount by its schema and hands a
+  resolving class the schema it holds; `Choices` and `Resolve` read
+  `each` with `NodeFacts::each()`; `Location::below()` walks the key's
+  schema alone, whichever form its source gave (`Location::definition()`
+  still derives, for the check provider). A place a definition's class
+  answers for and does not list, which its schema never holds, is now no
+  place; until now a definition-first entry's walk refused it as out of
+  step. `References::definitionAt()` has no caller and stays with the
+  definition accessors.
+- **What still derives, and why.** Refinement (a refiner is handed a
+  definition: `Surface::refinedEntry()`, `unionOfContributions()`,
+  `refineNested()`, `Variants::definitionFor()`), the watched-value
+  check (`WatchedValueCheckInterface::admits()` takes a definition), the
+  edges (`DrupalCheckProvider`, `Location::definition()`,
+  `ConfigSchemaGenerator`, `HeldToConfigSchemaTrait`), the public
+  accessors (`SurfaceInterface::getDefinition()`, `getPortDefinition()`,
+  `DefinitionMap`'s forms, `References::definitionAt()`) and a rule's
+  key in the document.
+- **The proofs.** Both sides recorded in one sitting (the base a copy
+  of the module before this part, loaded over the tree, the build cache
+  emptied before each instrument): 39,109 and 3,737 value cases, 684
+  and 364 documents, the narrowed, anonymous and corpus records, and
+  8,344 door digests, none differs. The emitter's five identity sites
+  (whether a key moved, `Entry::sameSource()`) gave 288,689 answers on
+  each side, none differs. Every hand surface and its alternates (2,575
+  emits: over what is stored, each case, nothing, `emit()` and
+  `emitFull()` with and without hints, fresh and woken, and
+  `describeKey()`), and the cases `SchemaEmitCases` builds, write the
+  same documents on both sides; `DocumentFromSchemasTest` pins the
+  latter. Over the counter's run (262 operations as two accounts) the
+  definitions derived fall from 5,237 to 632: the emitter asked 4,705
+  first and asks 24 now, at a rule's key (`Conditionals::rules()`); the
+  ports' 42 are gone. The rest are refinement's (530, up from 458, since
+  entries the emitter asked first are now first asked there), the check
+  provider's (`Location::definition()`, 46) and the build's mounts (28).
+  `DefinitionSchema::of()` reads per phase are unchanged in every phase
+  but the build (5,736 to 5,808), boot and other (6 each): a port's key
+  is read into its schema when it is wired (`Attachment::withReads()`).
+  A refined key's schema was read before this part too, by the emitter
+  that handed it to `property()`, so moving its definition ask to its
+  schema moves no read.
+- **What names Typed Data.** `Contract/Choices.php` no longer does
+  (`TypedDataFootprintTest`, 110 to 109).
 
 ### A key that does not apply
 

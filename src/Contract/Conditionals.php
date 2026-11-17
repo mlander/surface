@@ -214,10 +214,13 @@ final class Conditionals {
    *
    * Decision: see docs/decisions.md#a-rule-declared-as-data.
    *
+   * The key as the document states it is its holder's schema. A rule's
+   * effects are applied to a copy of the holder's definition, asked here
+   * where a rule has effects to apply and nowhere else: the one place the
+   * document derives a definition (until a rule is applied to a schema).
+   *
    * @param \Drupal\surface\Entry $entry
    *   The key.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key as the document states it.
    * @param \PortableSchema\Builder\Schema $property
    *   Its property schema.
    * @param \PortableSchema\Builder\Schema[] $branches
@@ -231,17 +234,18 @@ final class Conditionals {
    *   site that wires it states it, and a key it may rule out is not
    *   required here.
    * @param \Drupal\surface\Entry|null $holder
-   *   The entry that holds $definition, whose node is the definition's;
-   *   NULL for $entry.
+   *   The entry that holds the key as the document states it: the key's
+   *   in the frame refined for these values; NULL for $entry.
    *
    * @return array{0: \PortableSchema\Builder\Schema, 1: \PortableSchema\Builder\Schema[], 2: bool}
    *   The property, the key's conditionals, the coded ones first, and
    *   whether the frame still requires the key.
    */
-  public function rules(Entry $entry, DataDefinitionInterface $definition, Schema $property, array $branches, bool $requires, Emission $emission, array $ports = [], ?Entry $holder = NULL): array {
+  public function rules(Entry $entry, Schema $property, array $branches, bool $requires, Emission $emission, array $ports = [], ?Entry $holder = NULL): array {
     $name = $entry->name;
+    $holder ??= $entry;
     $applicability = $entry->isNested();
-    $base = $applicability ? Schema::any() : $this->stated($entry, $definition, $emission, $holder);
+    $base = $applicability ? Schema::any() : $this->stated($entry, $holder->schema(), $emission);
     $declared = [];
     $ruling = [];
     foreach ($entry->refiners as $chain) {
@@ -276,8 +280,11 @@ final class Conditionals {
           }
           $then = [];
           if (!$applicability) {
-            $answer = static::appliedAt(Surface::deepClone($definition), $below, $rule);
-            $narrowed = static::onlyAdded($this->narrowed($this->stated($entry, $answer, $emission), $base), $base);
+            // A rule is applied to a definition: the holder's, derived for
+            // a key its source gave as a schema, and a copy written. What
+            // it answers is read into its schema here.
+            $answer = static::appliedAt(Surface::deepClone($holder->definition()), $below, $rule);
+            $narrowed = static::onlyAdded($this->narrowed($this->stated($entry, DefinitionSchema::of($answer), $emission), $base), $base);
             if ($narrowed->all() !== []) {
               $then['properties'] = [$name => $narrowed];
             }
@@ -559,8 +566,7 @@ final class Conditionals {
     $vanishing = [];
     foreach ($combinations as $i => [$combination, $surface]) {
       $holder = $surface->getDefinitions()->entry($entry->name) ?? $entry;
-      $definition = $holder->definition();
-      $schema = $this->answer($entry, $definition, $emission, $applicability, $holder);
+      $schema = $this->answer($entry, $holder, $emission, $applicability);
       // In development and tests only, and for one combination per key:
       // asked again, a static refiner answers the same.
       assert($i > 0 || $this->answersAgain($declared, $entry, array_replace($values, $combination), $schema, $emission, $applicability));
@@ -614,24 +620,24 @@ final class Conditionals {
    *
    * @param \Drupal\surface\Entry $entry
    *   The key.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   Its definition, refined for the combination.
+   * @param \Drupal\surface\Entry $holder
+   *   The entry that holds the key refined for the combination, whose
+   *   schema is read.
    * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the key's frame.
    * @param bool $applicability
    *   Whether only whether it applies is asked: a key holding a child,
    *   whose parent may say nothing else about it.
-   * @param \Drupal\surface\Entry|null $holder
-   *   The entry that holds $definition; NULL for $entry.
    *
    * @return \PortableSchema\Builder\Schema|false
    *   The key's schema, FALSE where it does not apply.
    */
-  protected function answer(Entry $entry, DataDefinitionInterface $definition, Emission $emission, bool $applicability = FALSE, ?Entry $holder = NULL): Schema|false {
-    if (DoesNotApply::marks($definition)) {
+  protected function answer(Entry $entry, Entry $holder, Emission $emission, bool $applicability = FALSE): Schema|false {
+    $schema = $holder->schema();
+    if (NodeFacts::doesNotApply($schema)) {
       return FALSE;
     }
-    return $applicability ? Schema::any() : $this->stated($entry, $definition, $emission, $holder);
+    return $applicability ? Schema::any() : $this->stated($entry, $schema, $emission);
   }
 
   /**
@@ -744,28 +750,33 @@ final class Conditionals {
   /**
    * Describes a key the way a conditional is diffed from.
    *
+   * The caller hands the schema it means: the schema of the entry that
+   * holds the key (as declared, or refined for a combination), or the
+   * read of a definition no entry holds (a rule's answer, written on a
+   * copy; a definition handed to ContractEmitter::describeKey()). Before
+   * 2026-11-16 the caller handed a definition, and this told the two
+   * apart by identity with the holder's definition; every caller that
+   * handed the holder's own definition hands the holder's schema now, the
+   * very one that identity chose, so nothing is told apart here.
+   *
+   * Decision: see docs/decisions.md#the-document-is-written-from-schemas.
+   *
    * @param \Drupal\surface\Entry $entry
-   *   The key.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   Its definition: as declared, or refined for a combination.
+   *   The key: whether it is a collection, and its name.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema: as declared, or refined for a combination.
    * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the key's frame.
-   * @param \Drupal\surface\Entry|null $holder
-   *   The entry that holds $definition, whose node is read once: the key's
-   *   in a refined data surface; NULL for $entry. A definition no entry
-   *   holds (a rule's answer, written on a copy) is read afresh.
    *
    * @return \PortableSchema\Builder\Schema
    *   A collection's own keywords, its items being the child's, which no
    *   parent's refiner reaches; any other key's property schema.
    */
-  public function stated(Entry $entry, DataDefinitionInterface $definition, Emission $emission, ?Entry $holder = NULL): Schema {
+  public function stated(Entry $entry, Schema $schema, Emission $emission): Schema {
     if ($entry->list !== NULL) {
-      return $this->propertySchema->listKeywords($this->propertySchema->listNode($definition))[0];
+      return $this->propertySchema->listKeywords($this->propertySchema->listNode($schema))[0];
     }
-    $holder ??= $entry;
-    $node = $holder->definition() === $definition ? $holder->schema() : DefinitionSchema::of($definition);
-    return $this->propertySchema->property($definition, $node, NULL, NULL, NULL, $emission->at($entry->name), FALSE, [], $emission->withoutStale())[0];
+    return $this->propertySchema->property($schema, NULL, NULL, $emission->at($entry->name), FALSE, [], $emission->withoutStale())[0];
   }
 
   /**
@@ -864,7 +875,7 @@ final class Conditionals {
    */
   protected function answersAgain(SurfaceInterface $declared, Entry $entry, array $values, Schema|false $schema, Emission $emission, bool $applicability = FALSE): bool {
     $holder = $declared->refine($values, $emission->kinds())->getDefinitions()->entry($entry->name) ?? $entry;
-    $again = $this->answer($entry, $holder->definition(), $emission, $applicability, $holder);
+    $again = $this->answer($entry, $holder, $emission, $applicability);
     if (json_encode($again === FALSE ? FALSE : $this->propertySchema->withoutExtension($again)) === json_encode($schema === FALSE ? FALSE : $this->propertySchema->withoutExtension($schema))) {
       return TRUE;
     }

@@ -152,9 +152,12 @@ class TypedDataFootprintTest extends UnitTestCase {
    * a widget is chosen by the key's schema, so the 15 stock widgets, the
    * extras' comma separated list widget and WidgetChoice name no Typed
    * Data, and DefinitionWidgetInterface is gone (SchemaWidgetInterface
-   * names none).
+   * names none). Lowered on 2026-11-16 to 109: the document is written
+   * from schemas, so Contract/Choices.php reads whether a key is a map of
+   * keys from the site from its schema (NodeFacts::each()) and names no
+   * Typed Data.
    */
-  public const OUTSIDE_THE_EDGES = 110;
+  public const OUTSIDE_THE_EDGES = 109;
 
   /**
    * Finds the files that use Typed Data.

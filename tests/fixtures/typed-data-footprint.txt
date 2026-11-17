@@ -34,7 +34,6 @@ model src/Attachment.php
 model src/Collection.php
 pipeline src/Computed.php
 constraints src/ConstraintMessages.php
-emitter src/Contract/Choices.php
 emitter src/Contract/Conditionals.php
 emitter src/Contract/ConfigSchemaDocument.php
 emitter src/Contract/ContractEmitter.php

@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
+use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\SurfaceBuilder;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
@@ -130,6 +134,30 @@ class DefaultsUnderStoredMapTest extends SurfaceKernelTestBase {
       'period' => MarkAction::REMOVE,
       'underscore' => MarkAction::REMOVE,
     ], $built->withDefaults([])['marks']);
+  }
+
+  /**
+   * Tests a map property's default is laid under a stored map, at depth.
+   *
+   * Surface::mapWithDefaults() walks the map key's schema (2026-11-16): a
+   * property the stored map leaves out reads as its default, a nested map
+   * it holds as an empty map gains its own property's default, and what
+   * it holds stands.
+   */
+  public function testThePropertyDefaultFillsTheStoredMap(): void {
+    $plain = DataDefinition::create('string')->setLabel('A');
+    DefinitionMetadata::setDefaultValue($plain, 'x');
+    $deep = DataDefinition::create('string')->setLabel('C');
+    DefinitionMetadata::setDefaultValue($deep, 'y');
+    $map = MapDataDefinition::create()->setLabel('M')
+      ->setPropertyDefinition('a', $plain)
+      ->setPropertyDefinition('b', DataDefinition::create('string')->setLabel('B'))
+      ->setPropertyDefinition('inner', MapDataDefinition::create()->setLabel('Inner')->setPropertyDefinition('c', $deep));
+    $surface = (new SurfaceBuilder(['m' => $map]))->seal();
+    $this->assertSame(
+      ['m' => ['a' => 'x', 'b' => 'q', 'inner' => ['c' => 'y']]],
+      $surface->withDefaults(['m' => ['b' => 'q', 'inner' => []]]),
+    );
   }
 
   /**

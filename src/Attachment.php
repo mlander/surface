@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace Drupal\surface;
 
 use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeDefinition;
+use PortableSchema\Builder\Schema;
 
 /**
  * A sealed child at one key of its parent: an attached structure.
@@ -69,9 +73,10 @@ final class Attachment {
    *   The child's ports its container wired, each mapped to the dotted
    *   path in the container's frame of the key it reads: an owner's key
    *   by its name. A port left out is unwired, and holds nothing.
-   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $wired
-   *   The container's key each wired port reads, as declared, by port:
-   *   what a refusal in the child names when it depends on the port.
+   * @param array<string, \PortableSchema\Builder\Schema> $wired
+   *   The schema of the container's key each wired port reads, as
+   *   declared, by port: what a refusal in the child names when it
+   *   depends on the port (SurfaceInterface::getPortSchema()).
    * @param array<string, mixed>|null $ports
    *   What each wired port holds as the container admitted it, once a
    *   refinement of the container has read it; NULL until then.
@@ -81,6 +86,12 @@ final class Attachment {
    * @param string|\Stringable|null $description
    *   What it is for (ResourceDefinition::description()), or NULL: its
    *   def's description.
+   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $wiredDefinitions
+   *   For a wired port whose key's definition is of a class no schema
+   *   derives a definition of (outside NodeDefinition::DERIVED), that
+   *   definition, kept beside its schema, by port: the watched-value check
+   *   takes a definition (WatchedValueCheckInterface::admits()). This
+   *   member goes when the check takes a schema.
    */
   public function __construct(
     SurfaceInterface|SettlesChildInterface $child,
@@ -91,6 +102,7 @@ final class Attachment {
     public readonly ?array $ports = NULL,
     public readonly string|\Stringable|null $label = NULL,
     public readonly string|\Stringable|null $description = NULL,
+    public readonly array $wiredDefinitions = [],
   ) {
     $this->holds = $child;
   }
@@ -177,14 +189,29 @@ final class Attachment {
    * @param array<string, string> $reads
    *   Each port, mapped to the path of the key in the container's frame it
    *   reads.
-   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $wired
-   *   Each port's key, as declared.
+   * @param array<string, \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface> $wired
+   *   Each port's key, as declared: its schema, or its definition, which
+   *   is read into its schema here, once; a definition of a class outside
+   *   NodeDefinition::DERIVED is kept beside it, a copy
+   *   ($wiredDefinitions).
    *
    * @return static
    *   The attachment.
    */
   public function withReads(array $reads, array $wired = []): static {
-    return new static($this->holds, $this->source, $this->id, $reads, $wired, label: $this->label, description: $this->description);
+    $schemas = array_map(static fn (Schema|DataDefinitionInterface $key): Schema => $key instanceof Schema ? $key : DefinitionSchema::of($key), $wired);
+    $kept = [];
+    foreach ($wired as $port => $key) {
+      if ($key instanceof DataDefinitionInterface && !in_array($key::class, NodeDefinition::DERIVED, TRUE)) {
+        $kept[$port] = Surface::deepClone($key);
+      }
+      elseif (isset($this->wiredDefinitions[$port]) && $key === ($this->wired[$port] ?? NULL)) {
+        // This attachment's own schema of the key, handed back: its kept
+        // definition stays beside it.
+        $kept[$port] = $this->wiredDefinitions[$port];
+      }
+    }
+    return new static($this->holds, $this->source, $this->id, $reads, $schemas, label: $this->label, description: $this->description, wiredDefinitions: $kept);
   }
 
   /**
@@ -206,7 +233,7 @@ final class Attachment {
     foreach ($this->reads as $port => $path) {
       $ports[(string) $port] = NestedArray::getValue($values, explode('.', $path));
     }
-    return new static($this->holds, $this->source, $this->id, $this->reads, $this->wired, $ports, $this->label, $this->description);
+    return new static($this->holds, $this->source, $this->id, $this->reads, $this->wired, $ports, $this->label, $this->description, $this->wiredDefinitions);
   }
 
   /**
@@ -226,7 +253,9 @@ final class Attachment {
     if ($this->reads === []) {
       return $this->child;
     }
-    return $this->child->withPorts($this->ports ?? $this->readFrom($values)->ports ?? [], $this->wired);
+    $ports = $this->ports ?? $this->readFrom($values)->ports ?? [];
+    $child = $this->child;
+    return $child instanceof Surface ? $child->withPortKeys($ports, $this->wired, $this->wiredDefinitions) : $child->withPorts($ports, $this->wiredDefinitions + $this->wired);
   }
 
   /**

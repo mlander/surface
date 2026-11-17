@@ -119,30 +119,40 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    * the refined shell's definition held before; the shell's definition is
    * now derived from its node, with copies, which reach() does not walk,
    * as for any node-first shell. Every definition compared is compared
-   * still.
+   * still. Since the document is written from schemas (2026-11-16), 2
+   * more are compared and 10 more reached, 795 and 1,007: the value sets
+   * are read from served documents, whose emitter derived a definition
+   * for each key it described; a refinement that keeps a key's source
+   * then held that very definition. Now each entry derives its own when
+   * this walk asks. With every sealed entry's definition derived before
+   * the refinements, as the emitter did, the counts are 793 and 997 again.
    */
   protected const COUNTS = [
     'surfaces' => 327,
-    'compared' => 793,
-    'reachable' => 997,
+    'compared' => 795,
+    'reachable' => 1007,
   ];
 
   /**
    * The distinct definitions reachable, by class.
    *
-   * 705, 43 and 350 before 2026-11-16: the 101 fewer of COUNTS.
+   * 705, 43 and 350 before 2026-11-16: the 101 fewer of COUNTS. 647, 39
+   * and 311 until the document was written from schemas (2026-11-16): the
+   * 10 more of COUNTS.
    */
   protected const CLASSES = [
-    DataDefinition::class => 647,
+    DataDefinition::class => 653,
     ListDataDefinition::class => 39,
-    MapDataDefinition::class => 311,
+    MapDataDefinition::class => 315,
   ];
 
   /**
    * The distinct definitions reachable, by data type.
    *
    * Before 2026-11-16 (the 101 fewer of COUNTS): any 47, boolean 64,
-   * email 28, integer 122, list 43, map 350, string 404.
+   * email 28, integer 122, list 43, map 350, string 404. Until the
+   * document was written from schemas (2026-11-16, the 10 more of
+   * COUNTS): integer 114, map 311, string 391.
    */
   protected const TYPES = [
     'any' => 31,
@@ -151,10 +161,10 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     'decimal' => 1,
     'email' => 13,
     'float' => 14,
-    'integer' => 114,
+    'integer' => 116,
     'list' => 39,
-    'map' => 311,
-    'string' => 391,
+    'map' => 315,
+    'string' => 395,
     'timestamp' => 5,
     'uri' => 13,
   ];
@@ -165,19 +175,21 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    * `constraints` is 1 (1,105 before part 32.5): the merged list is derived
    * wherever the node's other members say it (NodeFacts::derived()), and
    * the one node that holds it is HandBuiltSurfaces' `decimal`, a type
-   * with no row in LeafTypes::DEFAULT_CONSTRAINTS.
+   * with no row in LeafTypes::DEFAULT_CONSTRAINTS. Until the document was
+   * written from schemas (2026-11-16, the 10 more of COUNTS): type 1,625,
+   * required 409, declared 579, grouping 30, placedAfter 15, shape 44.
    */
   protected const MEMBERS = [
-    'type' => 1625,
+    'type' => 1635,
     'definitionClass' => 49,
     'label' => 1,
     'description' => 98,
-    'required' => 409,
+    'required' => 411,
     'readOnly' => 0,
     'computed' => 0,
     'settings' => 101,
     'constraints' => 1,
-    'declared' => 579,
+    'declared' => 583,
     'default' => 12,
     'examples' => 0,
     'secret' => 0,
@@ -186,15 +198,15 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     'readVariants' => 12,
     'oneVariant' => 0,
     'fixed' => 0,
-    'grouping' => 30,
+    'grouping' => 32,
     'alwaysHeld' => 164,
-    'placedAfter' => 15,
+    'placedAfter' => 17,
     'variantsFrom' => 116,
     'ownLabel' => 1,
     'arrangement' => 46,
     'compute' => 5,
     'resolve' => 3,
-    'shape' => 44,
+    'shape' => 46,
     'configType' => 4,
     'each' => 4,
     'doesNotApply' => 41,
