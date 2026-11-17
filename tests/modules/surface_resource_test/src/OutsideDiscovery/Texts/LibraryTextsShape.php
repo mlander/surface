@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\OutsideDiscovery\Texts;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
 /**
  * A type of the library, with a title and a pattern's message of its own.
  */
-#[Shape('resource_test.texts.library')]
+#[Document('resource_test.texts.library')]
 final class LibraryTextsShape implements ShapeInterface {
 
   /**

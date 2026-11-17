@@ -32,7 +32,6 @@ use Drupal\surface\Resource\Attribute\Port;
 use Drupal\surface\Resource\Attribute\Rule;
 use Drupal\surface\Resource\Attribute\Setting;
 use Drupal\surface\Resource\Attribute\Widget;
-use Drupal\surface\Resource\Attribute\Shape;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\ShapeInterface;
@@ -343,8 +342,9 @@ final class PropertyDeclaration {
    * Declares a property spelled with the package's attributes.
    *
    * Its schema, as ClassReader builds a property's (schema()), declared
-   * with addSchema(), required where it carries #[Required] and else by
-   * the rule addSchema() holds (no default and no null); the group its
+   * with addSchema(), marked required where it carries #[Required], or has
+   * no initializer and a type that refuses null, as ClassReader marks a
+   * property; the group its
    * #[Ui] names is the class's, laid on with describe() as #[Describe]
    * lays one. What addSchema() refuses is refused naming the property.
    *
@@ -359,8 +359,14 @@ final class PropertyDeclaration {
     $key = $property->getName();
     $ui = self::attribute($property, Ui::class);
     $schema = self::schema($property);
+    // Required as the package's ClassReader marks a property: #[Required],
+    // or no initializer and a type that refuses null.
+    $type = $property->getType();
+    if (self::attribute($property, Required::class) !== NULL || (!$property->hasDefaultValue() && !($type?->allowsNull() ?? TRUE))) {
+      $schema = $schema->required();
+    }
     try {
-      $blueprint->addSchema($key, $schema, self::attribute($property, Required::class) !== NULL ? TRUE : NULL);
+      $blueprint->addSchema($key, $schema);
     }
     catch (\InvalidArgumentException $refused) {
       throw new \InvalidArgumentException(sprintf('%s::$%s: %s', $property->getDeclaringClass()->getName(), $key, $refused->getMessage()), 0, $refused);
@@ -419,7 +425,7 @@ final class PropertyDeclaration {
     elseif ($of !== NULL) {
       $id = class_exists($of->ref) ? self::documentId($of->ref) : $of->ref;
       if ($id === NULL) {
-        throw new \LogicException(sprintf('%s::$%s carries #[Of(%s::class)], a class that is no shape and has no #[Document] id to refer to. Give the class #[Document] with an id, mark it a shape with #[Shape], or name a type of the library, #[Of(\'portable:email\')].', $property->getDeclaringClass()->getName(), $property->getName(), $of->ref));
+        throw new \LogicException(sprintf('%s::$%s carries #[Of(%s::class)], a class that is no shape and has no #[Document] id to refer to. Give the class #[Document] with an id, make it a shape (implement ShapeInterface and carry #[Document]), or name a type of the library, #[Of(\'portable:email\')].', $property->getDeclaringClass()->getName(), $property->getName(), $of->ref));
       }
       $schema = Schema::of($id);
       if ($nullable && $type !== NULL) {
@@ -536,12 +542,12 @@ final class PropertyDeclaration {
     if ($class === NULL || !class_exists($class) || !is_subclass_of($class, ShapeInterface::class)) {
       return NULL;
     }
-    $attribute = (new \ReflectionClass($class))->getAttributes(Shape::class)[0] ?? NULL;
-    if ($attribute === NULL) {
-      throw new \LogicException(sprintf('%s is named as a shape and carries no #[Shape] id, by which a schema refers to it.', $class));
+    $id = ((new \ReflectionClass($class))->getAttributes(Document::class)[0] ?? NULL)?->newInstance()->id;
+    if ($id === NULL) {
+      throw new \LogicException(sprintf('%s is named as a shape and carries no #[Document] id, by which a schema refers to it.', $class));
     }
     $type = Shapes::dataType($class);
-    return [$attribute->newInstance()->id, LeafTypes::ROWS[$type]['type'] ?? 'string'];
+    return [$id, LeafTypes::ROWS[$type]['type'] ?? 'string'];
   }
 
   /**

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\my_module\Shape;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
@@ -15,7 +15,7 @@ use PortableSchema\Builder\Schema;
  * uses it at two keys; IntroductionExcerptsTest finds the def the served
  * contract writes for it on the page.
  */
-#[Shape('my_module.hex_color')]
+#[Document('my_module.hex_color')]
 final class HexColor implements ShapeInterface {
 
   /**

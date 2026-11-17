@@ -72,6 +72,15 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @param array $arguments
    *   What the provider lists for (BoundSiteListInterface::listFor()), or
    *   none for its list(). The shape is the provider's.
+   * @param string|\Stringable|null $description
+   *   The key's description, as setDescription() on the definition
+   *   returned would write it; NULL for none.
+   * @param bool $required
+   *   TRUE to require the key, as setRequired(TRUE) on the definition
+   *   returned would.
+   * @param string|null $storedAs
+   *   How the variants are stored, the value of Variants::STORED_AS
+   *   (Variants::FLAT); NULL to say nothing.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key, for the owner to describe with the core
@@ -85,7 +94,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @see docs/resources.md#variants-from-the-site
    */
-  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = []): MapDataDefinition;
+  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition;
 
   /**
    * A map with one value per thing the site has: keys from the site.
@@ -129,6 +138,9 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @param mixed $default
    *   What every entry starts from unless it says otherwise; NULL for
    *   nothing.
+   * @param string|\Stringable|null $description
+   *   The key's description, as setDescription() on the definition
+   *   returned would write it; NULL for none.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key, for the owner to describe.
@@ -143,7 +155,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @see docs/resources.md#keys-that-come-from-the-site
    */
-  public function addEach(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition;
+  public function addEach(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL, string|\Stringable|null $description = NULL): MapDataDefinition;
 
   /**
    * A map with one child per thing the site has: keys from the site.
@@ -173,6 +185,9 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @param array<string, string> $reads
    *   Each port of the structure, mapped to a sibling map from the same
    *   provider, whose entry of the same id it reads.
+   * @param string|\Stringable|null $description
+   *   The key's description, as setDescription() on the definition
+   *   returned would write it; NULL for none.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key, for the owner to describe.
@@ -182,7 +197,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @see docs/resources.md#ports-on-an-entry
    */
-  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition;
+  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL): MapDataDefinition;
 
   /**
    * Mixes a structure in: its members become this blueprint's own keys.

@@ -149,8 +149,8 @@ class PublicSurfaceTest extends UnitTestCase {
    * What the surface holds, by kind.
    */
   protected const PINNED = [
-    'attributes' => 28,
-    'attribute arguments' => 114,
+    'attributes' => 27,
+    'attribute arguments' => 113,
     'blueprint methods' => 18,
     'interfaces' => 22,
   ];

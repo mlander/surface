@@ -215,19 +215,19 @@ class ShapesTest extends SurfaceKernelTestBase {
     foreach ([
       'both kinds, as a shape' => [
         ['shapes' => [ShapeAndStructureClass::class => $module]],
-        ShapeAndStructureClass::class . ' carries both #[Shape] and #[Structure]. A class is one kind: a shape is one value reused at many keys, a structure holds keys of its own.',
+        ShapeAndStructureClass::class . ' carries both #[Document] and #[Structure]. A class is one kind: a shape is one value reused at many keys, a structure holds keys of its own.',
       ],
       'both kinds, as a structure' => [
         ['resources' => [ShapeAndStructureClass::class => $module]],
-        ShapeAndStructureClass::class . ' carries both #[Shape] and #[Structure]. A class is one kind: a shape is one value reused at many keys, a structure holds keys of its own.',
+        ShapeAndStructureClass::class . ' carries both #[Document] and #[Structure]. A class is one kind: a shape is one value reused at many keys, a structure holds keys of its own.',
       ],
       'an instance schema()' => [
         ['shapes' => [InstanceSchemaShape::class => $module]],
-        InstanceSchemaShape::class . ' carries #[Shape] and declares schema() as an instance method. What a shape allows belongs to the class: declare it `public static function schema(): Schema`, and implement Drupal\surface\Resource\ShapeInterface.',
+        InstanceSchemaShape::class . ' carries #[Document] and declares schema() as an instance method. What a shape allows belongs to the class: declare it `public static function schema(): Schema`, and implement Drupal\surface\Resource\ShapeInterface.',
       ],
       'no interface' => [
         ['shapes' => [UnimplementedShape::class => $module]],
-        UnimplementedShape::class . ' carries #[Shape] but does not implement Drupal\surface\Resource\ShapeInterface.',
+        UnimplementedShape::class . ' carries #[Document] but does not implement Drupal\surface\Resource\ShapeInterface.',
       ],
       'an id a resource claims' => [
         ['resources' => [LedgerResource::class => $module], 'shapes' => [ClashingShape::class => $module]],

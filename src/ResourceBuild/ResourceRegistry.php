@@ -18,7 +18,7 @@ use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\DerivedOperation;
@@ -886,7 +886,7 @@ final class ResourceRegistry {
    * Answers whether a shape is discovered, by class or id.
    *
    * @param string $shape
-   *   The class, or its #[Shape] id.
+   *   The class, or its #[Document] id.
    *
    * @return bool
    *   TRUE when discovery found it.
@@ -899,7 +899,7 @@ final class ResourceRegistry {
    * Gets one shape, by class or by id.
    *
    * @param string $shape
-   *   The class, or its #[Shape] id.
+   *   The class, or its #[Document] id.
    *
    * @return \Drupal\surface\ResourceBuild\ShapeDefinition
    *   The shape.
@@ -909,7 +909,7 @@ final class ResourceRegistry {
    */
   public function getShape(string $shape): ShapeDefinition {
     return $this->findShape($shape) ?? throw new \InvalidArgumentException(sprintf(
-      'No shape "%s" was discovered: one is a class carrying #[Shape] and implementing %s in an enabled module\'s src/Shape directory.',
+      'No shape "%s" was discovered: one is a class carrying #[Document] and implementing %s in an enabled module\'s src/Shape directory.',
       $shape,
       ShapeInterface::class,
     ));
@@ -1196,7 +1196,8 @@ final class ResourceRegistry {
     foreach ($this->classes['shapes'] ?? [] as $class => $module) {
       $reflection = new \ReflectionClass($class);
       self::assertShapeClass($reflection);
-      $id = $reflection->getAttributes(Shape::class)[0]->newInstance()->id;
+      $id = $reflection->getAttributes(Document::class)[0]->newInstance()->id
+        ?? throw new \LogicException(sprintf('%s carries #[Document] with no id: a shape is named by its id, #[Document(\'<id>\')].', $class));
       if (isset($ids[$id])) {
         throw new \LogicException(sprintf(
           'Two classes claim the id "%s": %s and %s. A shape\'s id names its def in the served contract, beside every resource\'s and structure\'s, so it names one class.',
@@ -1427,9 +1428,9 @@ final class ResourceRegistry {
   }
 
   /**
-   * Refuses a #[Shape] class that cannot be one, and says why.
+   * Refuses a #[Document] class that cannot be one, and says why.
    *
-   * A shape carries #[Shape] alone, implements ShapeInterface and
+   * A shape carries #[Document] alone, implements ShapeInterface and
    * declares schema() static. PHP refuses a class implementing the
    * interface with an instance schema(), so a class reaching here with one
    * dropped the interface; it is named for what it is.
@@ -1437,7 +1438,7 @@ final class ResourceRegistry {
    * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
    *
    * @param \ReflectionClass $class
-   *   The class carrying #[Shape].
+   *   The class carrying #[Document].
    *
    * @throws \LogicException
    *   Naming the class and what it is missing.
@@ -1446,13 +1447,13 @@ final class ResourceRegistry {
     self::assertOneKind($class);
     if ($class->hasMethod('schema') && !$class->getMethod('schema')->isStatic()) {
       throw new \LogicException(sprintf(
-        '%s carries #[Shape] and declares schema() as an instance method. What a shape allows belongs to the class: declare it `public static function schema(): Schema`, and implement %s.',
+        '%s carries #[Document] and declares schema() as an instance method. What a shape allows belongs to the class: declare it `public static function schema(): Schema`, and implement %s.',
         $class->getName(),
         ShapeInterface::class,
       ));
     }
     if (!$class->implementsInterface(ShapeInterface::class)) {
-      throw new \LogicException(sprintf('%s carries #[Shape] but does not implement %s.', $class->getName(), ShapeInterface::class));
+      throw new \LogicException(sprintf('%s carries #[Document] but does not implement %s.', $class->getName(), ShapeInterface::class));
     }
   }
 
@@ -1552,7 +1553,7 @@ final class ResourceRegistry {
   }
 
   /**
-   * Refuses a class carrying #[Shape] beside #[Resource] or #[Structure].
+   * Refuses a class carrying #[Document] beside #[Resource] or #[Structure].
    *
    * @param \ReflectionClass $class
    *   The class.
@@ -1561,13 +1562,13 @@ final class ResourceRegistry {
    *   When it carries both.
    */
   protected static function assertOneKind(\ReflectionClass $class): void {
-    if ($class->getAttributes(Shape::class) === []) {
+    if ($class->getAttributes(Document::class) === []) {
       return;
     }
     foreach ([Resource::class => 'Resource', Structure::class => 'Structure'] as $attribute => $name) {
       if ($class->getAttributes($attribute) !== []) {
         throw new \LogicException(sprintf(
-          '%s carries both #[Shape] and #[%s]. A class is one kind: a shape is one value reused at many keys, a %s holds keys of its own.',
+          '%s carries both #[Document] and #[%s]. A class is one kind: a shape is one value reused at many keys, a %s holds keys of its own.',
           $class->getName(),
           $name,
           strtolower($name),
@@ -1952,7 +1953,7 @@ final class ResourceRegistry {
     }
     // Decision: see docs/decisions.md#a-class-that-is-not-there.
     $reflection = class_exists($class) ? new \ReflectionClass($class) : NULL;
-    if ($reflection !== NULL && $reflection->getAttributes(Resource::class) === [] && $reflection->getAttributes(Structure::class) === [] && $reflection->getAttributes(Shape::class) === [] && !ResourcePluginHooks::isOwnStructure($class)) {
+    if ($reflection !== NULL && $reflection->getAttributes(Resource::class) === [] && $reflection->getAttributes(Structure::class) === [] && $reflection->getAttributes(Document::class) === [] && !ResourcePluginHooks::isOwnStructure($class)) {
       throw new \LogicException(sprintf(
         '%s names %s, which is no discovered resource or structure: one carries #[Resource] or #[Structure] and lives in its module\'s src/Resource or src/Structure directory, or is a plugin carrying #[UsesStructure] with no argument.',
         $referrer,

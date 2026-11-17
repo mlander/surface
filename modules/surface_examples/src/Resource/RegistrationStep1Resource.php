@@ -36,7 +36,8 @@ final class RegistrationStep1Resource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addSchema(self::TITLE, Schema::string()
-      ->title(t('Event title')));
+      ->title(t('Event title'))
+      ->required());
 
     $inputs->addSchema(self::CAPACITY, Schema::integer()
       ->title(t('Capacity'))

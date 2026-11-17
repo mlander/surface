@@ -363,7 +363,7 @@ class SchemaAttributesTest extends SurfaceKernelTestBase {
       #[Of(PlainItem::class)]
       public ?object $address = NULL;
     };
-    $this->assertRefused(get_class($of), get_class($of) . '::$address carries #[Of(' . PlainItem::class . '::class)], a class that is no shape and has no #[Document] id to refer to. Give the class #[Document] with an id, mark it a shape with #[Shape], or name a type of the library, #[Of(\'portable:email\')].');
+    $this->assertRefused(get_class($of), get_class($of) . '::$address carries #[Of(' . PlainItem::class . '::class)], a class that is no shape and has no #[Document] id to refer to. Give the class #[Document] with an id, make it a shape (implement ShapeInterface and carry #[Document]), or name a type of the library, #[Of(\'portable:email\')].');
   }
 
   /**

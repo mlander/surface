@@ -165,7 +165,9 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
     }
     $this->assertSame([
       ['add', ['seats', 'integer', 'Seats', 1]],
-      ['attach', ['row', EntryPropertiesStructure::class, 'Row', []]],
+      // A mock is handed every argument: since part 32.9 attach() takes
+      // description:, required: and storedAs: besides.
+      ['attach', ['row', EntryPropertiesStructure::class, 'Row', [], NULL, FALSE, NULL]],
     ], $readings[1]);
     $this->assertSame($readings[1], $readings[2]);
   }

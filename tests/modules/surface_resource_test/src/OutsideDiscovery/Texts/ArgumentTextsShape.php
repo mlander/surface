@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\OutsideDiscovery\Texts;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
 /**
  * Says its title and its pattern's message with a text as an argument.
  */
-#[Shape('resource_test.texts.arguments')]
+#[Document('resource_test.texts.arguments')]
 final class ArgumentTextsShape implements ShapeInterface {
 
   /**

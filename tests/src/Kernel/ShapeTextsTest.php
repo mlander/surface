@@ -176,10 +176,12 @@ class ShapeTextsTest extends SurfaceKernelTestBase {
    *   The definition.
    *
    * @return array<string, string>
-   *   Each label, by value, in the language set now.
+   *   Each label, by value, in the language set now: a labeled list holds
+   *   its labels by value (`choices`), as add() declares one, since part
+   *   32.9; before, beside its values (`labels`).
    */
   protected static function labels(DataDefinitionInterface $definition): array {
-    return array_map('strval', $definition->getConstraints()['LabeledChoice']['labels'] ?? []);
+    return array_map('strval', $definition->getConstraints()['LabeledChoice']['choices'] ?? []);
   }
 
   /**
@@ -306,7 +308,7 @@ class ShapeTextsTest extends SurfaceKernelTestBase {
     $builder = new SurfaceBuilder();
     (new ResourceBlueprint($builder, $this->container->get('typed_data_manager')))->addSchema('code', Schema::string()
       ->check('drupal:Regex', ['pattern' => '/^[a-z]+$/'])
-      ->message('check.drupal:Regex', TextsMade::t('Lowercase only.')), FALSE);
+      ->message('check.drupal:Regex', TextsMade::t('Lowercase only.')));
     $this->assertSame(['pattern' => '/^[a-z]+$/', 'message' => 'Lowercase only.'], $builder->seal()->getDefinition('code')->getConstraints()['Regex'], 'And so does an addSchema() key.');
   }
 
@@ -323,7 +325,7 @@ class ShapeTextsTest extends SurfaceKernelTestBase {
         ->title(TextsMade::t('Name'))
         ->description(TextsMade::t('Your name'))
         ->pattern('^a+$')
-        ->message('pattern', TextsMade::t('Use @what only.', ['@what' => TextsMade::t('the letter a')])), FALSE);
+        ->message('pattern', TextsMade::t('Use @what only.', ['@what' => TextsMade::t('the letter a')])));
       $made = TextsMade::$made;
       $this->assertSame([], static::rendered($made), "Read under $read, nothing the author made is rendered.");
       $definition = $blueprint->definitionOf('letter');

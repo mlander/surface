@@ -45,9 +45,12 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
   ];
 
   /**
-   * Tests each value key reads to the schema authored() declares.
+   * Tests SchemaReader::authored() declares the schema the reader reads.
+   *
+   * The method authored() reads a value key with KeywordReader and declares its
+   * schema: the builder holds that schema itself (and a lock beside it).
    */
-  public function testValueKeysReadAsTheReaderReadsThem(): void {
+  public function testAuthoredDeclaresTheSchemaRead(): void {
     $keys = [
       'plain' => Schema::string()->title(new TranslatableMarkup('Plain'))->maxLength(20),
       'optional' => Schema::string()->title('Optional')->default('x'),
@@ -131,13 +134,119 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a reader made so requires a key only where it is marked.
+   * Tests a key is required where its schema is marked, and only there.
    */
   public function testRequiredByTheMarkAlone(): void {
-    $marking = new KeywordReader(requiredByMark: TRUE);
-    $this->assertFalse(NodeFacts::isRequired($marking->read('k', Schema::string())->schema));
-    $this->assertTrue(NodeFacts::isRequired($marking->read('k', Schema::string()->required())->schema));
-    $this->assertTrue(NodeFacts::isRequired(KeywordReader::forBuild()->read('k', Schema::string())->schema));
+    $reader = KeywordReader::forBuild();
+    $this->assertFalse(NodeFacts::isRequired($reader->read('k', Schema::string())->schema));
+    $this->assertTrue(NodeFacts::isRequired($reader->read('k', Schema::string()->required())->schema));
+    $this->assertTrue(NodeFacts::isRequired($reader->read('k', Schema::string(), TRUE)->schema));
+  }
+
+  /**
+   * Tests the natural spellings read as the typed verbs declare the key.
+   *
+   * A labeled list is a LabeledChoice of its labels by value, the
+   * constraints are declared in the order written, a check handed no
+   * options holds none; a bound, a pattern ending in its anchor and a
+   * widget's own setting as their typed forms.
+   */
+  public function testNaturalSpellingsAreTheTypedVerbsKeys(): void {
+    $time = new TranslatableMarkup('Write the time as HH:MM.');
+    $pairs = [
+      'options' => [
+        fn ($i) => $i
+          ->add('k', 'string', 'N')
+          ->addConstraint('LabeledChoice', ['choices' => ['a' => 'A', 'b' => 'B']]),
+        Schema::options(['a' => 'A', 'b' => 'B'])
+          ->type('string')
+          ->title('N'),
+      ],
+      'options int' => [
+        fn ($i) => $i
+          ->add('k', 'integer', 'N')
+          ->addConstraint('LabeledChoice', ['choices' => [1 => 'One', 2 => 'Two']]),
+        Schema::options([1 => 'One', 2 => 'Two'])
+          ->type('integer')
+          ->title('N'),
+      ],
+      'length then regex' => [
+        fn ($i) => $i
+          ->add('k', 'string', 'N')
+          ->addConstraint('Length', ['max' => 9])
+          ->addConstraint('Regex', ['pattern' => '/^a/']),
+        Schema::string()
+          ->title('N')
+          ->maxLength(9)
+          ->check('drupal:Regex', ['pattern' => '/^a/']),
+      ],
+      'range then choice' => [
+        fn ($i) => $i
+          ->add('k', 'integer', 'N')
+          ->addConstraint('Range', ['min' => 1])
+          ->addConstraint('Choice', ['choices' => [1, 2]]),
+        Schema::integer()
+          ->title('N')
+          ->minimum(1)
+          ->with('enum', [1, 2]),
+      ],
+      'unique then count' => [
+        fn ($i) => $i
+          ->addList('k', 'string', 'N')
+          ->addConstraint('UniqueItems', [])
+          ->addConstraint('Count', ['max' => 3]),
+        Schema::list(Schema::string())
+          ->title('N')
+          ->uniqueItems(TRUE)
+          ->maxItems(3),
+      ],
+      'no options' => [
+        fn ($i) => $i
+          ->add('k', 'string', 'N')
+          ->addConstraint('NotBlank'),
+        Schema::string()
+          ->title('N')
+          ->check('drupal:NotBlank'),
+      ],
+      'pattern' => [
+        fn ($i) => $i
+          ->add('k', 'string', 'N')
+          ->addConstraint('Regex', ['pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D', 'message' => $time]),
+        Schema::string()
+          ->title('N')
+          ->pattern('^([01]\d|2[0-3]):[0-5]\d$')
+          ->message('pattern', $time),
+      ],
+      'multiline false' => [
+        fn ($i) => $i
+          ->add('k', 'string', 'N')
+          ->setSetting('multiline', FALSE),
+        Schema::string()
+          ->title('N')
+          ->annotation(KeywordReader::SETTINGS, ['multiline' => FALSE]),
+      ],
+      'email' => [
+        fn ($i) => $i
+          ->add('k', 'email', 'N'),
+        Schema::string()
+          ->format('email')
+          ->title('N'),
+      ],
+      'required' => [
+        fn ($i) => $i
+          ->add('k', 'string', 'N')
+          ->setRequired(TRUE),
+        Schema::string()
+          ->title('N')
+          ->required(),
+      ],
+    ];
+    $typed = $this->container->get('typed_data_manager');
+    foreach ($pairs as $label => [$declare, $schema]) {
+      $builder = new SurfaceBuilder();
+      $declare(new ResourceBlueprint($builder, $typed));
+      $this->assertTrue(DefinitionSchema::same(DefinitionSchema::of($builder->getDefinition('k')), KeywordReader::forBuild()->read('k', $schema)?->schema), $label);
+    }
   }
 
   /**
@@ -175,7 +284,7 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
     $builder = new SurfaceBuilder();
     (new ResourceBlueprint($builder, $typed))->useShapes($shapes)->add('name', 'machine_name', 'Name')->setRequired(TRUE);
     $added = DefinitionSchema::of($builder->getDefinition('name'));
-    $read = KeywordReader::forBuild($shapes)->read('name', Schema::of(KeywordReader::CONFIG_TYPE . 'machine_name')->title('Name'));
+    $read = KeywordReader::forBuild($shapes)->read('name', Schema::of(KeywordReader::CONFIG_TYPE . 'machine_name')->title('Name')->required());
     $this->assertTrue(DefinitionSchema::same($added, $read->schema));
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('this site has no config schema type "no_such_type"');
@@ -191,13 +300,15 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
    *   Its schema.
    *
    * @return array{0: \PortableSchema\Builder\Schema, 1: array<string, string>, 2: bool}
-   *   The schema the builder holds, the notes, and whether it is locked.
+   *   The schema the builder holds (the false schema where it holds a
+   *   definition), the notes, and whether it is locked.
    */
   protected function authored(string $key, Schema $schema): array {
     $builder = new SurfaceBuilder();
     $notes = SchemaReader::authored(new ResourceBlueprint($builder, $this->container->get('typed_data_manager')), $key, $schema);
     $locked = in_array($key, (new \ReflectionProperty(SurfaceBuilder::class, 'locked'))->getValue($builder), TRUE);
-    return [DefinitionSchema::of($builder->getDefinition($key)), $notes, $locked];
+    // The builder holds the key's schema itself.
+    return [$builder->heldSchema($key) ?? Schema::boolean(FALSE), $notes, $locked];
   }
 
 }

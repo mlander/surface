@@ -24,26 +24,29 @@ use PortableSchema\Registry;
 /**
  * Reads a value key an author states as a Schema by its keywords.
  *
- * The direct path of SchemaReader::authored(): a key of one value, or a
- * list of values, read from the author's Schema itself into the key's
- * schema, with no document written, prepared or read back and no
- * definition made. What it reads, and every note and refusal it gives,
- * is what authored() reads and gives for the same key, word for word:
- * each step here is the step SchemaReader takes for a value (key(),
- * value(), constraints(), choice(), settings(), finished() and the
- * helpers they call), writing the facts a definition would hold where
- * SchemaReader writes a definition, and ValueSchema writes the schema
- * of those facts.
+ * The path SchemaReader::authored() reads a value key by: a key of one
+ * value, or a list of values, read from the author's Schema itself into
+ * the key's schema, with no document written, prepared or read back and
+ * no definition made; the builder holds the schema
+ * (SurfaceBuilder::setSchema()). Each step here is the step SchemaReader
+ * takes for a value of a document (value(), constraints(), choice(),
+ * settings(), finished() and the helpers they call), writing the facts a
+ * definition would hold, and ValueSchema writes the schema of those facts.
+ * Three readings are the typed verbs' rather than the document reader's,
+ * so a key converted from add() keeps its schema: a labeled list is a
+ * LabeledChoice of its labels by value, the constraints are declared in
+ * the order the author wrote them, and a check handed no options holds
+ * none. A key is required where its schema is marked `required()`, and
+ * only there. A `$ref` to `drupal:config/<type>` is that config schema
+ * type, and SETTINGS says a key's settings no keyword says.
  *
  * What it does not read it says so by answering NULL, before it reads
  * anything, and the caller reads the key with SchemaReader: a key that
  * needs a frame or a structure (an object of properties, a collection,
  * a `$ref` into `$defs`, a shape, variants, `portable-typeBy`), a key
- * whose schema holds what preparing a
- * document rewrites (a draft's spelling, `x-surface`), and a key whose
- * schema holds a keyword that holds a schema and is handed something
- * else. The aim is one reader: the document path decodes and prepares
- * its document, then reads each value key with the code here.
+ * whose schema holds what preparing a document rewrites (a draft's
+ * spelling, `x-surface`), and a key whose schema holds a keyword that
+ * holds a schema and is handed something else.
  *
  * Decision: see docs/decisions.md#authoring-takes-a-schema.
  *
@@ -241,19 +244,6 @@ final class KeywordReader {
    *   reader that reads none.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface|null $typedDataManager
    *   The typed data manager a config schema type is read with.
-   * @param bool $requiredByMark
-   *   TRUE to require a key only where its schema is marked `required()`
-   *   (decision 4 of part 32.9), where read() is handed no answer; FALSE
-   *   for the rule SchemaReader::authored() holds today.
-   * @param bool $typedSpellings
-   *   TRUE to read the natural spellings of an author's schema as the
-   *   typed verbs declare the same key (add() with its constraints): a
-   *   labeled list as a LabeledChoice of a map of labels by value, the
-   *   constraints in the order the author wrote them, a check with no
-   *   options as one handed none, a leaf type of the library as its row
-   *   alone; FALSE for what SchemaReader::authored() reads today. The
-   *   choice between the two is part 32.9's to make before one reader is
-   *   left (see the stream's DECISIONS.md, the verbs stream's six gaps).
    */
   public function __construct(
     protected readonly ?EntityTypeManagerInterface $entityTypeManager = NULL,
@@ -261,8 +251,6 @@ final class KeywordReader {
     protected readonly ?SurfaceWidgetManager $widgets = NULL,
     protected readonly ?Shapes $shapes = NULL,
     protected readonly ?TypedDataManagerInterface $typedDataManager = NULL,
-    protected readonly bool $requiredByMark = FALSE,
-    protected readonly bool $typedSpellings = FALSE,
   ) {}
 
   /**
@@ -270,15 +258,11 @@ final class KeywordReader {
    *
    * @param \Drupal\surface\ResourceBuild\Shapes|null $shapes
    *   What reads a config schema type; NULL for none.
-   * @param bool $requiredByMark
-   *   As the constructor takes it.
-   * @param bool $typedSpellings
-   *   As the constructor takes it.
    *
    * @return static
    *   The reader, as SchemaReader::authored() makes its own.
    */
-  public static function forBuild(?Shapes $shapes = NULL, bool $requiredByMark = FALSE, bool $typedSpellings = FALSE): static {
+  public static function forBuild(?Shapes $shapes = NULL): static {
     $widgets = \Drupal::hasService('plugin.manager.surface_widget') ? \Drupal::service('plugin.manager.surface_widget') : NULL;
     $typed = \Drupal::hasService('typed_data_manager') ? \Drupal::service('typed_data_manager') : NULL;
     return new static(
@@ -287,8 +271,6 @@ final class KeywordReader {
       $widgets instanceof SurfaceWidgetManager ? $widgets : NULL,
       $shapes,
       $typed instanceof TypedDataManagerInterface ? $typed : NULL,
-      $requiredByMark,
-      $typedSpellings,
     );
   }
 
@@ -305,10 +287,8 @@ final class KeywordReader {
    * @param \PortableSchema\Builder\Schema $schema
    *   What it holds.
    * @param bool|null $required
-   *   TRUE to require it, FALSE to leave it optional; NULL for the rule
-   *   SchemaReader::authored() holds (required where the schema has no
-   *   `default` and allows no null, or is marked `required()`), or, for a
-   *   reader made to require by the mark alone, whether it is marked.
+   *   TRUE to require it, FALSE to leave it optional; NULL to require it
+   *   where its schema is marked `required()`.
    * @param string|null $what
    *   Who was handed the schema, for the messages; NULL for
    *   `addSchema("<key>")`.
@@ -329,7 +309,9 @@ final class KeywordReader {
     }
     $pointer = static::below('', 'properties', $key);
     static::assertNamed($schema, $what, $pointer);
-    $required ??= $this->requiredByMark ? $schema->isRequired() : $schema->isRequired() || (!$schema->has('default') && !static::allowsNull($schema));
+    // A key is required where its schema is marked so, and only there.
+    // Decision: see docs/decisions.md#authoring-takes-a-schema.
+    $required ??= $schema->isRequired();
     $reference = $schema->get('$ref');
     if (is_string($reference) && str_starts_with($reference, self::CONFIG_TYPE)) {
       return $this->configTypeKey($key, $schema->without('$ref'), substr($reference, strlen(self::CONFIG_TYPE)), $required, $what, $pointer);
@@ -496,13 +478,6 @@ final class KeywordReader {
     $library = $this->libraryOf($property, $pointer);
     if ($library !== NULL && $library['leaf'] !== NULL) {
       $leaf = $library['leaf'];
-      if ($this->typedSpellings) {
-        // The type the row is, as add() declares a key of it: what the
-        // library says beyond the row (an email's length, a timestamp's
-        // range) is the type's to hold, not the key's.
-        $library['kept'] = [];
-        $library['flat'] = array_intersect_key($library['flat'], ['type' => TRUE, 'format' => TRUE]);
-      }
       [$property, $extra] = $this->besideLeaf($property->without('$ref'), $library, $pointer);
       $types = $property->get('type') !== NULL ? $this->types($property, $pointer) : [LeafTypes::ROWS[$leaf]['type']];
       $read = Schema::from(array_replace($library['flat'], $property->all()));
@@ -1048,10 +1023,11 @@ final class KeywordReader {
       }
     }
     $constraints = [];
-    foreach ($this->typedSpellings ? static::asWritten($read, $property->all()) : ConstraintKeywords::ordered($read, $property->all()) as $back) {
+    // In the order the author wrote them, as the verbs declare constraints.
+    foreach (static::asWritten($read, $property->all()) as $back) {
       if ($back->constraint !== NULL) {
         // A check handed no options is a constraint added with none.
-        $none = $this->typedSpellings && $back->options === [] && $back->consumed === [PortableKeywords::CHECK];
+        $none = $back->options === [] && $back->consumed === [PortableKeywords::CHECK];
         $constraints[] = [$back->constraint, $none ? NULL : $back->options];
       }
     }
@@ -1263,7 +1239,7 @@ final class KeywordReader {
       'labels' => array_combine(array_map('strval', $values), array_map(static fn (string|\Stringable|null $label, mixed $value): string|\Stringable => $label ?? (string) $value, $labels, $values)),
     ];
     $described = array_filter(array_combine(array_map('strval', $values), $descriptions), static fn (string|\Stringable|null $description): bool => $description !== NULL);
-    if ($this->typedSpellings && $described === [] && array_filter($values, static fn (mixed $value): bool => !is_string($value) && !is_int($value)) === []) {
+    if ($described === [] && array_filter($values, static fn (mixed $value): bool => !is_string($value) && !is_int($value)) === []) {
       // As add() declares a labeled list: the labels by value.
       return ['LabeledChoice', ['choices' => array_combine($values, $options['labels'])]];
     }
@@ -2140,34 +2116,6 @@ final class KeywordReader {
         }
       }
     }
-  }
-
-  /**
-   * Answers whether a schema allows null, by its type or a member.
-   *
-   * @param \PortableSchema\Builder\Schema $schema
-   *   The schema.
-   *
-   * @return bool
-   *   As SchemaReader::allowsNull() answers.
-   */
-  protected static function allowsNull(Schema $schema): bool {
-    if (in_array('null', (array) ($schema->get('type') ?? []), TRUE)) {
-      return TRUE;
-    }
-    $restricting = ['type', 'enum', 'const', '$ref', 'anyOf', 'oneOf', 'allOf', 'not'];
-    if (array_intersect_key($schema->all(), array_flip($restricting)) === []) {
-      return TRUE;
-    }
-    foreach (['anyOf', 'oneOf'] as $keyword) {
-      $members = $schema->get($keyword);
-      foreach (is_array($members) ? $members : [] as $member) {
-        if (Schemas::isObjectSchema($member) && ($member->get('type') === 'null' || ($member->has('const') && $member->get('const') === NULL))) {
-          return TRUE;
-        }
-      }
-    }
-    return FALSE;
   }
 
   /**

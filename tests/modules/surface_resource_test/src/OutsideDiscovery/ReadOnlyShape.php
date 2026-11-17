@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\OutsideDiscovery;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
 /**
  * Says readOnly, which belongs to the key that uses a shape.
  */
-#[Shape('resource_test.broken.read_only')]
+#[Document('resource_test.broken.read_only')]
 final class ReadOnlyShape implements ShapeInterface {
 
   /**

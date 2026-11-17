@@ -9,7 +9,7 @@ use PortableSchema\Builder\Schema;
 /**
  * A shape: one scalar value, its type and what it allows, named.
  *
- * Carries #[Shape]. Like a resource or a structure it is never
+ * Carries #[Document]. Like a resource or a structure it is never
  * instantiated: schema() is static, called on the class, and returns the
  * schema of one scalar value, with its title, description, checks,
  * messages and examples. Whatever belongs to the key that uses it stays
@@ -18,7 +18,7 @@ use PortableSchema\Builder\Schema;
  * `$inputs->add('license', License::class, t('Event license'))`, or of a
  * port, `$inputs->reads('code', License::class)`.
  *
- * @see \Drupal\surface\Resource\Attribute\Shape
+ * @see \PortableSchema\Builder\Attribute\Document
  * @see docs/declaring-a-resource.md#named-shapes
  */
 interface ShapeInterface {

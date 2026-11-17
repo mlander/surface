@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\OutsideDiscovery;
 
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\ShapeInterface;
 use PortableSchema\Builder\Schema;
 
 /**
  * Claims the ledger's id, which names the ledger's def already.
  */
-#[Shape('resource_test.ledger')]
+#[Document('resource_test.ledger')]
 final class ClashingShape implements ShapeInterface {
 
   /**

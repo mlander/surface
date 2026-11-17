@@ -9,7 +9,7 @@ use Drupal\surface\Resource\Attribute\DerivesResources;
 use Drupal\surface\Resource\Attribute\Flow;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
-use Drupal\surface\Resource\Attribute\Shape;
+use PortableSchema\Builder\Attribute\Document;
 use Drupal\surface\Resource\Attribute\Structure;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -25,10 +25,10 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
  * attribute decides the kind, not the directory: a class carrying
  * #[Resource] or #[Structure] is found in either of the first two, which
  * are read as one list, sorted by the class's name below its directory,
- * and one carrying #[Shape] wherever it is scanned.
+ * and one carrying #[Document] wherever it is scanned.
  *
  * What it keeps is deliberately small: which classes carry #[Resource]
- * or #[Structure], which carry #[Shape], which carry #[Alters], which
+ * or #[Structure], which carry #[Document], which carry #[Alters], which
  * carry #[DerivesResources], which carry #[Operation] on the class
  * or on a method, and which carry #[Flow], each with the module it came
  * from; and, for each
@@ -230,7 +230,7 @@ final class ResourceCollectorPass implements CompilerPassInterface {
         }
       }
     }
-    if ($class->getAttributes(Shape::class) !== []) {
+    if ($class->getAttributes(Document::class) !== []) {
       $found['shapes'][$name] = $module;
     }
     if ($class->getAttributes(Alters::class) !== []) {
