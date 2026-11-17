@@ -7087,8 +7087,11 @@ output entries' schemas, in the input path's codes.
   `UnexpectedTypeException` out of `accept()` (`TRUE` at a block's
   `bundle`) is refused with `type` instead, which moves eight rows of the
   value baseline (`block.surface_examples_plugins`, `/bundle TRUE` and
-  `FALSE`) and one (`block.placement--create`, where the input's own
-  check now throws the same exception from `validate()`). A port's key is held as its schema alone. *Open:* a site's or a route's value (`KeyPaths::violation()`)
+  `FALSE`) and one (`block.placement--create`, where `accept()` takes
+  the value and `validate()` refuses it with `type`, beside `enum`; the
+  input's own check threw the same exception there until the check in a
+  branch was left unasked, see
+  [Validation runs through the dialect's validator](#validation-runs-through-the-dialects-validator)). A port's key is held as its schema alone. *Open:* a site's or a route's value (`KeyPaths::violation()`)
   is still held through `ConstraintRunner::conforms()`: moving it changes
   the refusals the door corpus pins (316 rows over ten surfaces: Typed
   Data's sentences become the dialect's, "This value should be of the
@@ -15192,7 +15195,14 @@ say is run by a check on the server.
   are asked where only that format refuses. `Validation\Nodes` reads the
   document's nodes that apply at each place; where it reads a keyword
   otherwise than the validator does, the run is made again with every
-  check asked.
+  check asked. A schema in a branch (`anyOf`, `oneOf`, `then`, `else`)
+  counts for a check it names itself, together with the schemas around
+  it at the same place: the validator asks the check only where it
+  evaluates that branch (built 2026-11-17, slice 34: `TRUE` at a placed
+  block's `settings.bundle`, one branch for each plugin, threw Symfony's
+  `UnexpectedTypeException` from EntityBundleExists and is now refused
+  with `type`). A check a list's refusal is worded by is skipped on the
+  same terms (`DrupalCheckProvider::constraintMessage()`).
 - **Checks the document does not name yet.** The document writes a
   plain key's map (a key's settings, a map an alter mounted, the map
   each item of a list is) as its properties alone, never the map's own

@@ -41,9 +41,18 @@ final class Nodes {
   /**
    * The nodes at each place, by its JSON Pointer.
    *
-   * @var array<string, list<array{0: array, 1: bool}>>
+   * Each with whether it is certain and the branch it stands in: the
+   * branches around it from the top, each numbered as visit() reaches
+   * it (`/3/9`), the empty string for a certain one.
+   *
+   * @var array<string, list<array{0: array, 1: bool, 2: string}>>
    */
   private array $at = [];
+
+  /**
+   * How many branches visit() has numbered.
+   */
+  private int $branches = 0;
 
   /**
    * Constructs a Nodes.
@@ -54,7 +63,7 @@ final class Nodes {
    *   The data, as the validator is handed it.
    */
   public function __construct(private readonly array $root, mixed $data) {
-    $this->visit($root, $data, '', TRUE, 0);
+    $this->visit($root, $data, '', '', 0);
   }
 
   /**
@@ -79,12 +88,20 @@ final class Nodes {
   }
 
   /**
-   * Answers whether a certain node at a place refuses a value by a keyword.
+   * Answers whether a schema that holds at a place refuses a value.
    *
    * The keywords BEFORE_CHECKS name, and `format`: `type`, `pattern`,
    * `maxLength`, `minLength`, each as the validator reads it. A keyword
    * this cannot read (a pattern PHP does not compile) refuses nothing
    * here.
+   *
+   * A schema under `anyOf`, `oneOf`, `then` or `else` counts for a check
+   * it names itself: the validator asks that check only where it
+   * evaluates that schema, so the schema's own keywords hold the value the
+   * check is handed (a block's settings, one branch for each plugin). A
+   * request does not say which schema named it, so the check is left
+   * unasked only where every schema at the place naming it refuses the
+   * value.
    *
    * @param string $location
    *   The place.
@@ -92,13 +109,56 @@ final class Nodes {
    *   Its value.
    * @param bool $formats
    *   FALSE to leave `format` out.
+   * @param string|null $check
+   *   The name of the check asked, as a schema names it under
+   *   `portable-check`; NULL to read the certain ones alone.
    *
    * @return bool
    *   TRUE when one refuses it.
    */
-  public function refusedByKeyword(string $location, mixed $value, bool $formats = TRUE): bool {
-    foreach ($this->at[$location] ?? [] as [$node, $certain]) {
+  public function refusedByKeyword(string $location, mixed $value, bool $formats = TRUE, ?string $check = NULL): bool {
+    $naming = [];
+    foreach ($this->at[$location] ?? [] as [$node, $certain, $branch]) {
       if ($certain && self::refuses($node, $value, $formats)) {
+        return TRUE;
+      }
+      if ($check !== NULL && is_array($node['portable-check'] ?? NULL) && array_key_exists($check, $node['portable-check'])) {
+        $naming[] = $branch;
+      }
+    }
+    if ($naming === []) {
+      return FALSE;
+    }
+    foreach ($naming as $named) {
+      if (!$this->refusedWithin($location, $value, $formats, $named)) {
+        return FALSE;
+      }
+    }
+    return TRUE;
+  }
+
+  /**
+   * Answers whether a schema that holds with a branch refuses a value.
+   *
+   * A schema holds wherever a branch is evaluated when it stands in that
+   * branch or in one the branch is inside of: the branch's own `$ref`,
+   * `allOf` members and properties, and the branches around it.
+   *
+   * @param string $location
+   *   The place.
+   * @param mixed $value
+   *   Its value.
+   * @param bool $formats
+   *   FALSE to leave `format` out.
+   * @param string $branch
+   *   The branch, as visit() names it.
+   *
+   * @return bool
+   *   TRUE when one refuses it.
+   */
+  private function refusedWithin(string $location, mixed $value, bool $formats, string $branch): bool {
+    foreach ($this->at[$location] ?? [] as [$node, , $around]) {
+      if (($around === '' || $around === $branch || str_starts_with($branch, $around . '/')) && self::refuses($node, $value, $formats)) {
         return TRUE;
       }
     }
@@ -213,42 +273,43 @@ final class Nodes {
    *   The value at the place.
    * @param string $location
    *   The place.
-   * @param bool $certain
-   *   Whether the node applies whatever else holds.
+   * @param string $branch
+   *   The branch it stands in, the empty string where it applies whatever
+   *   else holds.
    * @param int $depth
    *   How deep the walk is.
    */
-  private function visit(mixed $node, mixed $data, string $location, bool $certain, int $depth): void {
+  private function visit(mixed $node, mixed $data, string $location, string $branch, int $depth): void {
     if (!is_array($node) || $depth > self::DEPTH) {
       return;
     }
-    $this->at[$location][] = [$node, $certain];
+    $this->at[$location][] = [$node, $branch === '', $branch];
     $ref = $node['$ref'] ?? NULL;
     if (is_string($ref) && str_starts_with($ref, '#')) {
-      $this->visit($this->resolve(substr($ref, 1)), $data, $location, $certain, $depth + 1);
+      $this->visit($this->resolve(substr($ref, 1)), $data, $location, $branch, $depth + 1);
     }
     foreach (is_array($node['allOf'] ?? NULL) ? $node['allOf'] : [] as $member) {
-      $this->visit($member, $data, $location, $certain, $depth + 1);
+      $this->visit($member, $data, $location, $branch, $depth + 1);
     }
     foreach (['anyOf', 'oneOf'] as $keyword) {
-      foreach (is_array($node[$keyword] ?? NULL) ? $node[$keyword] : [] as $branch) {
-        $this->visit($branch, $data, $location, FALSE, $depth + 1);
+      foreach (is_array($node[$keyword] ?? NULL) ? $node[$keyword] : [] as $member) {
+        $this->visit($member, $data, $location, $branch . '/' . ++$this->branches, $depth + 1);
       }
     }
     foreach (['then', 'else'] as $keyword) {
-      $this->visit($node[$keyword] ?? NULL, $data, $location, FALSE, $depth + 1);
+      $this->visit($node[$keyword] ?? NULL, $data, $location, $branch . '/' . ++$this->branches, $depth + 1);
     }
     if (is_array($node['properties'] ?? NULL) && ($data instanceof \stdClass || (is_array($data) && !array_is_list($data)))) {
       $held = (array) $data;
       foreach ($node['properties'] as $name => $property) {
         if (array_key_exists((string) $name, $held)) {
-          $this->visit($property, $held[(string) $name], Location::append($location, (string) $name), $certain, $depth + 1);
+          $this->visit($property, $held[(string) $name], Location::append($location, (string) $name), $branch, $depth + 1);
         }
       }
     }
     if (is_array($node['items'] ?? NULL) && is_array($data) && array_is_list($data)) {
       foreach ($data as $delta => $item) {
-        $this->visit($node['items'], $item, Location::append($location, $delta), $certain, $depth + 1);
+        $this->visit($node['items'], $item, Location::append($location, $delta), $branch, $depth + 1);
       }
     }
   }
