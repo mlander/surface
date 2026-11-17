@@ -172,7 +172,7 @@ final class Conforming {
     if (is_object($value)) {
       $objects[] = self::full($key, $path);
       $expected = is_array($written) ? array_values(array_diff(array_map('strval', (array) ($written['type'] ?? [])), ['null'])) : [];
-      $message = $expected === []
+      $message = $expected === [] || array_intersect($expected, ['object', 'array']) !== []
         ? $this->t('This value must be a plain value, @actual given.', ['@actual' => get_debug_type($value)])
         : $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => implode(' or ', $expected),
