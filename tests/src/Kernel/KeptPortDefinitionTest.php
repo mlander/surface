@@ -11,17 +11,18 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests a port wired to a key of a class outside the three keeps it.
  *
- * A port's key is held as its schema; one whose definition is of a class
- * no schema derives a definition of (NodeDefinition::DERIVED) keeps that
- * definition beside it (Attachment::$wiredDefinitions,
- * Surface::$portDefinitions), and the watched-value check is handed it.
- * The cases (KeptPortCases): a NotAMapDefinition port, a
- * BaseFieldDefinition port and an integer port, each with the check
- * sealed in, a value of the key's type and one of another, through the
- * container and bound directly, fresh and woken (the NotAMapDefinition
- * case fresh alone). A value the check
- * refuses is withheld from the refiner that watches the port. Every
- * answer is the one 38648793 gave, where the definition was held whole.
+ * A port's key is held as its schema, and the watched-value check is
+ * handed that schema, whatever class its definition was of
+ * (NodeDefinition::DERIVED or another). The cases (KeptPortCases): a
+ * NotAMapDefinition port, a BaseFieldDefinition port and an integer port,
+ * each with the check sealed in, a value of the key's type and one of
+ * another, through the container and bound directly, fresh and woken (the
+ * NotAMapDefinition case fresh alone). A value the check refuses is
+ * withheld from the refiner that watches the port. Every answer is the one
+ * 38648793 gave, where the definition was held whole, but two: a string
+ * bound directly to the BaseFieldDefinition port, which Typed Data let
+ * through and the key's schema (a list of items) refuses. `port` names the
+ * class the port's schema was read from.
  *
  * Decision: see docs/decisions.md#the-document-is-written-from-schemas.
  */
@@ -87,7 +88,9 @@ class KeptPortDefinitionTest extends SurfaceKernelTestBase {
     ],
     'baseField wrong' => 'Drupal\\surface\\Pipeline\\TypeMismatchException: The value at "k.0" must be of type map, string given.',
     'baseField wrong bound' => [
-      'withheld' => [],
+      // Since slice 34 the check holds the value to the key's schema, a
+      // list of items: a string is refused, so the refiner is not handed it.
+      'withheld' => ['p'],
       'port' => 'Drupal\\Core\\Field\\BaseFieldDefinition',
     ],
     'baseField woken right' => [
@@ -110,7 +113,7 @@ class KeptPortDefinitionTest extends SurfaceKernelTestBase {
     ],
     'baseField woken wrong' => 'Drupal\\surface\\Pipeline\\TypeMismatchException: The value at "k.0" must be of type map, string given.',
     'baseField woken wrong bound' => [
-      'withheld' => [],
+      'withheld' => ['p'],
       'port' => 'Drupal\\Core\\Field\\BaseFieldDefinition',
     ],
     'integer right' => [

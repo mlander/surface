@@ -30,8 +30,8 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
  * conforms() holds a value to a whole definition with the constraints it
  * implies: a value of another primitive type and a null where the value
  * is required are refused; a key a map does not declare is not, since
- * Typed Data holds only the keys it declares (Conforming refuses such a
- * key itself, before it asks).
+ * Typed Data holds only the keys it declares (KeyPaths refuses such a key
+ * itself, before it asks).
  *
  * @see docs/decisions.md#one-adapter-runs-a-constraint-the-typed-data-footprint-is-pinned
  */

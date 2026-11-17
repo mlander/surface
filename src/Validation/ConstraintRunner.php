@@ -16,6 +16,7 @@ use Drupal\surface\DefinitionTypedData;
 use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
 use Drupal\surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
 use Drupal\surface\Plugin\Validation\Constraint\LanguageExistsConstraint;
+use Drupal\surface\Plugin\Validation\Constraint\LinkUriConstraint;
 use Drupal\surface\Plugin\Validation\Constraint\ReferenceableTypeConstraint;
 use Drupal\surface\Plugin\Validation\Constraint\UniqueConstraint;
 use Drupal\surface\Plugin\Validation\Constraint\UniqueItemsConstraint;
@@ -53,11 +54,11 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  *   reader, ValueOnlyConstraintsTest, which holds the two paths to the
  *   same violations.
  * - conforms(): a value against a whole definition, every constraint at
- *   every depth, the implied ones included. Outputs (Conforming), a
- *   watched value (WatchedValueCheck) and a default or fixed value from a
- *   site or a route (KeyPaths) ask this.
+ *   every depth, the implied ones included. A default or fixed value from
+ *   a site or a route (KeyPaths) asks this; outputs and a watched value are
+ *   held to their schema by the dialect's validator (Pipeline\Conforming).
  *
- * Surface's own seven constraint plugins read the value alone, which
+ * Surface's own eight constraint plugins read the value alone, which
  * ValueOnlyConstraintsTest shows, so they run without a typed value.
  *
  * Decision: see
@@ -84,6 +85,7 @@ final class ConstraintRunner {
     'JsonSchema' => JsonSchemaConstraint::class,
     'LabeledChoice' => LabeledChoiceConstraint::class,
     'LanguageExists' => LanguageExistsConstraint::class,
+    'SurfaceLinkUri' => LinkUriConstraint::class,
     'SurfaceReferenceableType' => ReferenceableTypeConstraint::class,
     'SurfaceUnique' => UniqueConstraint::class,
     'SurfaceValidReference' => ValidReferenceConstraint::class,

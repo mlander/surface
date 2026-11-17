@@ -23,9 +23,9 @@ use Symfony\Component\Validator\Constraints\Unique;
 /**
  * Tests Surface's own constraint plugins validate a plain value.
  *
- * The rule: none of the seven plugins Surface ships (JsonSchema,
- * LabeledChoice, LanguageExists, SurfaceReferenceableType, SurfaceUnique,
- * UniqueItems, SurfaceValidReference) needs a typed value, so
+ * The rule: none of the eight plugins Surface ships (JsonSchema,
+ * LabeledChoice, LanguageExists, SurfaceLinkUri, SurfaceReferenceableType,
+ * SurfaceUnique, UniqueItems, SurfaceValidReference) needs a typed value, so
  * ConstraintRunner::check() runs each on the plain value, through its
  * plain validator (ConstraintRunner::VALUE_ONLY). Each runs here on plain
  * PHP values, valid and invalid, with the option sets the shipped examples
@@ -124,6 +124,7 @@ class ValueOnlyConstraintsTest extends KernelTestBase {
       ['LabeledChoice', ['choices' => []], [], ['ribbon', ''], $string],
       // AddressFieldSettingsResource.
       ['LanguageExists', [], ['en'], ['xx', 'und'], $string],
+      ['SurfaceLinkUri', [], ['https://example.com', 'route:<nolink>', 'internal:/'], ['/node/1', 'node', 42], $string],
       // SettingStructure, of surface_examples_references.
       ['SurfaceReferenceableType', $settings, ['event_venue', 'user_role'], ['user', 'nothing'], $string],
       // What Declaring::holdIdentityOnce() adds to a venue's machine name.
@@ -202,6 +203,7 @@ class ValueOnlyConstraintsTest extends KernelTestBase {
       'JsonSchema',
       'LabeledChoice',
       'LanguageExists',
+      'SurfaceLinkUri',
       'SurfaceReferenceableType',
       'SurfaceUnique',
       'SurfaceValidReference',

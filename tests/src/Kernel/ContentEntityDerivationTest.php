@@ -194,7 +194,7 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
       'field_date' => ['value' => 'string'],
       'field_datetime' => ['value' => 'string'],
       'field_timestamp' => ['value' => 'integer'],
-      'field_link' => ['uri' => 'uri', 'title' => 'string'],
+      'field_link' => ['uri' => 'string', 'title' => 'string'],
       'field_term' => ['target_id' => 'integer'],
       'changed' => ['value' => 'integer'],
     ], $types);
@@ -210,6 +210,8 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $this->assertSame([1, 2], $constraint('field_list_integer', 'value', 'LabeledChoice')['choices']);
     $this->assertSame(['1.5'], $constraint('field_list_float', 'value', 'LabeledChoice')['choices']);
     $this->assertSame('/^\d{4}-\d{2}-\d{2}$/D', $constraint('field_date', 'value', 'Regex')['pattern']);
+    // A link's uri is held to what a link field takes, not the format.
+    $this->assertArrayHasKey('SurfaceLinkUri', static::child($surface, 'field_link')->getDefinition('uri')->getConstraints());
     $this->assertSame('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/D', $constraint('field_datetime', 'value', 'Regex')['pattern']);
     // Every enabled format, or the ones the field allows.
     $this->assertSame(['basic', 'plain_text', 'trusted'], $constraint('field_text', 'format', 'LabeledChoice')['choices']);

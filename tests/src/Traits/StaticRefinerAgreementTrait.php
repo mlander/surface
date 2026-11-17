@@ -9,6 +9,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
@@ -221,7 +222,7 @@ trait StaticRefinerAgreementTrait {
         $samples = array_merge([NULL], $samples, self::held($definition));
         $samples = array_values(array_filter(
           array_unique($samples, SORT_REGULAR),
-          static fn (mixed $value): bool => $value === NULL || ($definition !== NULL && \Drupal::service('surface.watched_value_check')->admits($definition, $value)),
+          static fn (mixed $value): bool => $value === NULL || ($definition !== NULL && \Drupal::service('surface.watched_value_check')->admits(DefinitionSchema::of($definition), $value)),
         ));
         $next = [];
         foreach ($points as $point) {
@@ -242,7 +243,7 @@ trait StaticRefinerAgreementTrait {
         $standing = $surface->refine($sampled, SurfaceInterface::STATIC);
         foreach ($point as $path => $value) {
           $definition = self::definitionAt($standing, (string) $path);
-          if ($value !== NULL && ($definition === NULL || DoesNotApply::marks($definition) || !\Drupal::service('surface.watched_value_check')->admits($definition, $value))) {
+          if ($value !== NULL && ($definition === NULL || DoesNotApply::marks($definition) || !\Drupal::service('surface.watched_value_check')->admits(DefinitionSchema::of($definition), $value))) {
             continue 2;
           }
         }

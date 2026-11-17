@@ -81,7 +81,10 @@ final class FieldItemDerivation {
     'timestamp' => ['value' => 'integer'],
     'created' => ['value' => 'integer'],
     'changed' => ['value' => 'integer'],
-    'link' => ['uri' => 'uri', 'title' => 'string'],
+    // A link's uri is text held to what a link field takes
+    // (SurfaceLinkUri, narrow()), not the `uri` format, which refuses
+    // `route:<nolink>`.
+    'link' => ['uri' => 'string', 'title' => 'string'],
     'entity_reference' => ['target_id' => NULL],
   ];
 
@@ -574,6 +577,11 @@ final class FieldItemDerivation {
           : $this->t('Write the date and time as YYYY-MM-DDTHH:MM:SS, in UTC.'),
       ]);
       $definition->setDescription($date_type === 'date' ? $this->t('A date, YYYY-MM-DD.') : $this->t('A date and time in UTC, YYYY-MM-DDTHH:MM:SS.'));
+    }
+    if ($type === 'link' && $name === 'uri') {
+      // Decision: see
+      // docs/decisions.md#a-link-is-held-to-what-a-link-field-takes.
+      $definition->addConstraint('SurfaceLinkUri');
     }
     if ($name === 'format') {
       $formats = $this->formats($field);
