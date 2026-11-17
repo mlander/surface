@@ -363,7 +363,10 @@ class RouteValuesTest extends SurfaceKernelTestBase {
     $create = $this->resources()->operation(self::CARD, 'create');
     $this->assertRefused(
       'The "create" operation fixes "envelope.color" on route_test.card to "red", which the key does not accept: The value you selected is not a valid choice.',
-      $create->withConstraint('envelope.color', Schema::any()->check('drupal:Choice', ['choices' => ['red'], Declaring::FIXED => TRUE])),
+      $create->withConstraint('envelope.color', Schema::any()->check('drupal:Choice', [
+        'choices' => ['red'],
+        Declaring::FIXED => TRUE,
+      ])),
     );
     $this->assertRefused(
       'The "create" operation sets "title" on route_test.card to "This title is longer than forty characters by far", which the key does not accept: This value is too long. It should have 40 characters or less.',
@@ -392,11 +395,17 @@ class RouteValuesTest extends SurfaceKernelTestBase {
     );
     $this->assertRefused(
       'The "create" operation: "inserts.color" on route_test.card is inside "inserts", a collection, each item starting from its structure\'s defaults, so a fixed value does not reach it.',
-      $create->withConstraint('inserts.color', Schema::any()->check('drupal:Choice', ['choices' => ['cream'], Declaring::FIXED => TRUE])),
+      $create->withConstraint('inserts.color', Schema::any()->check('drupal:Choice', [
+        'choices' => ['cream'],
+        Declaring::FIXED => TRUE,
+      ])),
     );
     $this->assertRefused(
       'The "create" operation: "code" on route_test.card is a secret: both documents state a fixed value as `const`, and a secret is never read back, so it cannot be fixed.',
-      $create->withConstraint('code', Schema::any()->check('drupal:Choice', ['choices' => ['1234'], Declaring::FIXED => TRUE])),
+      $create->withConstraint('code', Schema::any()->check('drupal:Choice', [
+        'choices' => ['1234'],
+        Declaring::FIXED => TRUE,
+      ])),
     );
     $this->assertRefused(
       'The "create" operation: "code" on route_test.card is a secret: both documents state a default, and a secret is never read back, so it takes none.',
@@ -404,7 +413,10 @@ class RouteValuesTest extends SurfaceKernelTestBase {
     );
     $this->assertRefused(
       'The "create" operation: "greeting" on route_test.card holds a map, and a fixed value is one value of a key that holds one: fix each key inside it by its path.',
-      $create->withConstraint('greeting', Schema::any()->check('drupal:Choice', ['choices' => ['html'], Declaring::FIXED => TRUE])),
+      $create->withConstraint('greeting', Schema::any()->check('drupal:Choice', [
+        'choices' => ['html'],
+        Declaring::FIXED => TRUE,
+      ])),
     );
     $this->assertRefused(
       'The "create" operation: "envelope" on route_test.card holds a structure: set each of its keys, as "envelope.<key>".',
@@ -596,7 +608,10 @@ class RouteValuesTest extends SurfaceKernelTestBase {
     $update = $this->resources()->operation(self::CARD, 'update', ['card' => 'six']);
     $this->assertRefused(
       'The "update" operation fixes "card" on route_test.card, an identity key the context knows: identity is the operation\'s to say, from its parameters, so neither a route nor a parent may fix or fill it.',
-      $update->withConstraint('card', Schema::any()->check('drupal:Choice', ['choices' => ['other'], Declaring::FIXED => TRUE])),
+      $update->withConstraint('card', Schema::any()->check('drupal:Choice', [
+        'choices' => ['other'],
+        Declaring::FIXED => TRUE,
+      ])),
     );
     $this->assertRefused(
       'The "create" operation sets "card" on route_test.card, an identity key the context knows: identity is the operation\'s to say, from its parameters, so neither a route nor a parent may fix or fill it.',
@@ -701,7 +716,10 @@ class RouteValuesTest extends SurfaceKernelTestBase {
     $bin = $this->container->get('cache.surface_build');
     $bin->deleteAll();
     $context = $resources->operation(self::CARD, 'update', ['card' => 'nine'])
-      ->withConstraint('envelope.color', Schema::any()->check('drupal:Choice', ['choices' => ['cream'], Declaring::FIXED => TRUE]));
+      ->withConstraint('envelope.color', Schema::any()->check('drupal:Choice', [
+        'choices' => ['cream'],
+        Declaring::FIXED => TRUE,
+      ]));
     $held = $resources->holdDeclared(self::CARD, $context);
     $counts = $resources->buildCounts();
     $this->assertSame($held, $resources->holdDeclared(self::CARD, $context));

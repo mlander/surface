@@ -130,7 +130,8 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   The key the map sits at.
    * @param string|\Drupal\Core\TypedData\DataDefinitionInterface|\PortableSchema\Builder\Schema $type
    *   What each entry is: its schema, one value, its default inside it,
-   *   or a shape the schema refers to, Schema::of(Shape::class); or, until the old spelling's callers are converted, one of the types
+   *   or a shape the schema refers to, Schema::of(Shape::class); or,
+   *   until the old spelling's callers are converted, one of the types
    *   add() takes, the class of a shape, or the entry's definition, one
    *   value, copied for every entry.
    * @param string $from

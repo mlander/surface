@@ -40,7 +40,7 @@ final class Rule {
    *   A sibling key that holds nothing, Condition::absent().
    * @param array{0: string, 1: array<int|float|string|bool>}|null $whenIn
    *   A sibling key and the values it may hold, Condition::in().
-   * @param array<string, mixed>|null $constrain
+   * @param array<int|string, mixed>|null $constrain
    *   What the rule adds while the condition holds, as keywords by name:
    *   a bound (`maximum`, `maxLength`, ...), `pattern`, `enum`, or
    *   `portable-check` of a bound's check, read as Rule::constrain()

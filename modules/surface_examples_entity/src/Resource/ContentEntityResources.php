@@ -733,7 +733,10 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
       'id' => $id_type === 'integer' ? (int) $entity->id() : (string) $entity->id(),
       'bundle' => $entity->bundle(),
       ContentEntityStorage::FIELDS_AT => self::FIELDS,
-    ]))->withConstraint('bundle', Schema::any()->check('drupal:Choice', ['choices' => [$entity->bundle()], 'surface_fixed' => TRUE]));
+    ]))->withConstraint('bundle', Schema::any()->check('drupal:Choice', [
+      'choices' => [$entity->bundle()],
+      'surface_fixed' => TRUE,
+    ]));
   }
 
 }

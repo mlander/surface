@@ -1178,7 +1178,10 @@ final class OperationRoute {
    */
   protected static function seeded(OperationContext $context, array $seeds): OperationContext {
     foreach ($seeds[self::FIXED] as $path => $value) {
-      $context = $context->withConstraint((string) $path, Schema::any()->check('drupal:Choice', ['choices' => [$value], Declaring::FIXED => TRUE]));
+      $context = $context->withConstraint((string) $path, Schema::any()->check('drupal:Choice', [
+        'choices' => [$value],
+        Declaring::FIXED => TRUE,
+      ]));
     }
     return $seeds[self::DEFAULTS] === [] ? $context : $context->withDefaults($seeds[self::DEFAULTS]);
   }
