@@ -618,6 +618,16 @@ class OperationRunnerTest extends SurfaceKernelTestBase {
     $this->assertSame('Odd', $this->stages()->named((string) $pipeline->real['id'])->label, 'The write was made.');
     $this->assertCount(1, $logger->logged);
     $this->assertStringStartsWith('error: The storage of surface.stage answered outputs of its "create" operation that the surface does not declare', $logger->logged[0]);
+
+    // A check that throws after the write is logged too, never thrown.
+    $logger->logged = [];
+    $pipeline->outputs = NULL;
+    $pipeline->conformThrows = new \RuntimeException('A check failed.');
+    $run = $this->runnerWith(pipeline: $pipeline, logger: $logger)->run('surface.stage', 'create', values: ['label' => 'Thrown']);
+    $this->assertTrue($run->result()->committed);
+    $this->assertFalse($run->conformed());
+    $this->assertArrayHasKey('id', $run->outputs());
+    $this->assertSame(['error: The outputs of the "create" operation of surface.stage could not be held to the surface, answered as the storage gave them: RuntimeException: A check failed.'], $logger->logged);
   }
 
   /**

@@ -420,10 +420,11 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     // stage's to its declaration.
     // Decision: see docs/decisions.md#who-produces-outputs.
     $outputs = array_diff_key($run->outputs(), $answer);
-    $left = [];
-    if (!$run->conformed()) {
-      [$outputs, $left] = $this->declared($outputs);
-    }
+    // Held to the Tool API's own check whether or not they conformed: an
+    // output it refuses would turn the committed write into a failure.
+    // Decision: see
+    // docs/decisions.md#outputs-conform-through-the-dialects-validator.
+    [$outputs, $left] = $this->declared($outputs);
     $answer += $outputs;
     // Decision: see docs/decisions.md#locked-at-the-top.
     return ExecutableResult::success(
