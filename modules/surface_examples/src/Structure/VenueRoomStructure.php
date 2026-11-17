@@ -7,6 +7,7 @@ namespace Drupal\surface_examples\Structure;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 15: one room of a venue, an item of its list of rooms.
@@ -21,21 +22,25 @@ final class VenueRoomStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('id', 'string', t('Room id'))
-      ->setRequired(TRUE)
-      ->addConstraint('Regex', [
+    $inputs->addSchema('id', Schema::string()
+      ->title(t('Room id'))
+      ->check('drupal:Regex', [
         'pattern' => '/^[a-z0-9_]+$/D',
         'message' => t('A room id holds only lowercase letters, numbers and underscores.'),
       ])
-      ->addConstraint('Length', ['max' => 64]);
+      ->maxLength(64)
+      ->required());
 
-    $inputs->add('label', 'string', t('Room name'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 128]);
+    $inputs->addSchema('label', Schema::string()
+      ->title(t('Room name'))
+      ->maxLength(128)
+      ->required());
 
-    $inputs->add('seats', 'integer', t('Seats'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 10000]);
+    $inputs->addSchema('seats', Schema::integer()
+      ->title(t('Seats'))
+      ->minimum(1)
+      ->maximum(10000)
+      ->required());
   }
 
 }

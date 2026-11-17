@@ -7,6 +7,7 @@ namespace Drupal\surface_examples\Structure;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Who to contact about the event: a part example 3 always has.
@@ -22,10 +23,12 @@ final class ContactStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('email', 'email', t('Email'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('email', Schema::string()->format('email')
+      ->title(t('Email'))
+      ->required());
 
-    $inputs->add('phone', 'string', t('Phone'));
+    $inputs->addSchema('phone', Schema::string()
+      ->title(t('Phone')));
   }
 
 }

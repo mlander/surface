@@ -23,6 +23,7 @@ use Drupal\surface_examples_entity\FieldItemDerivation;
 use Drupal\surface_examples_entity\Structure\Attribute\FieldItemStructure;
 use Drupal\surface_examples_entity\Storage\ContentEntityStorage;
 use Drupal\surface_examples_entity\Variants\BundleFieldStructures;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
@@ -331,9 +332,13 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
   public function defineInputs(BlueprintInterface $inputs, string $entity_type_id, string $bundle, array $overridden = []): void {
     $entity_type = $this->entityTypeManager->getDefinition($entity_type_id);
 
-    $inputs->add('entity_type', 'string', $this->t('Entity type'))->setRequired(TRUE);
+    $inputs->addSchema('entity_type', Schema::string()
+      ->title($this->t('Entity type'))
+      ->required());
 
-    $inputs->add('bundle', 'string', $entity_type->getBundleLabel() ?: $this->t('Bundle'))->setRequired(TRUE);
+    $inputs->addSchema('bundle', Schema::string()
+      ->title($entity_type->getBundleLabel() ?: $this->t('Bundle'))
+      ->required());
 
     $this->defineId($inputs, $entity_type_id);
 
@@ -410,14 +415,17 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
     $entity_type = $this->entityTypeManager->getDefinition($entity_type_id);
     $bundle_label = $entity_type->getBundleLabel() ?: $this->t('Bundle');
 
-    $inputs->add('entity_type', 'string', $this->t('Entity type'))->setRequired(TRUE);
+    $inputs->addSchema('entity_type', Schema::string()
+      ->title($this->t('Entity type'))
+      ->required());
 
-    $inputs->add('bundle', 'string', $bundle_label)
-      ->setDescription($this->t('Which @bundle_label the @entity_type is, which chooses its fields.', [
+    $inputs->addSchema('bundle', Schema::string()
+      ->title($bundle_label)
+      ->description($this->t('Which @bundle_label the @entity_type is, which chooses its fields.', [
         '@bundle_label' => $bundle_label,
         '@entity_type' => $entity_type->getSingularLabel(),
       ]))
-      ->setRequired(TRUE);
+      ->required());
 
     $this->defineId($inputs, $entity_type_id);
 

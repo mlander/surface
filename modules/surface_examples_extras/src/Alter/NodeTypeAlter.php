@@ -17,6 +17,7 @@ use Drupal\surface_examples_extras\NodeTypeReviewSettings;
 use Drupal\surface_examples_extras\Plugin\SurfaceWidget\CommaSeparatedListWidget;
 use Drupal\surface_examples_extras\ReviewDeadlineLayout;
 use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * The editorial review settings, on the content type resource.
@@ -90,23 +91,24 @@ final class NodeTypeAlter implements AltersInputsInterface, AltersStorageLayoutI
         ],
       ]);
     $inputs->addMap(NodeTypeReviewSettings::DEADLINE, $this->t('Review deadline'), function (BlueprintInterface $deadline) use ($unit): void {
-      $deadline->add(NodeTypeReviewSettings::AMOUNT, 'integer', $this->t('Amount'))
-        ->addConstraint('Range', ['min' => 1]);
+      $deadline->addSchema(NodeTypeReviewSettings::AMOUNT, Schema::integer()
+        ->title($this->t('Amount'))
+        ->minimum(1));
       $deadline->addDefinition(NodeTypeReviewSettings::UNIT, $unit, default: NodeTypeReviewSettings::DEFAULT_UNIT);
     })
       ->setDescription($this->t('How long an editor has to review new content of this type, from one hour to thirty days. Leave the amount empty for no deadline.'))
       ->addConstraint('SurfaceExamplesExtrasReviewDeadline', []);
-
-    $tag = DataDefinition::create('string')
-      ->setLabel($this->t('Audience tag'))
-      ->addConstraint('Regex', [
+    $inputs->addSchema(NodeTypeReviewSettings::TAGS, Schema::list(Schema::string()
+      ->title($this->t('Audience tag'))
+      ->check('drupal:Regex', [
         'pattern' => NodeTypeReviewSettings::TAG_PATTERN,
         'message' => $this->t('An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it.'),
-      ]);
-    $inputs->addList(NodeTypeReviewSettings::TAGS, $tag, $this->t('Audience tags'), default: [])
-      ->setDescription($this->t('Who content of this type is written for, each tag listed once and in lower case, for example "local news" or "sports".'))
-      ->setSetting(CommaSeparatedListWidget::SETTING, TRUE)
-      ->addConstraint('UniqueItems', []);
+      ]))
+      ->title($this->t('Audience tags'))
+      ->description($this->t('Who content of this type is written for, each tag listed once and in lower case, for example "local news" or "sports".'))
+      ->default([])
+      ->uniqueItems(TRUE)
+      ->annotation('x-surface-settings', [CommaSeparatedListWidget::SETTING => TRUE]));
     $inputs->describe('third_party_settings.surface_examples_extras', label: $this->t('Editorial review'));
   }
 

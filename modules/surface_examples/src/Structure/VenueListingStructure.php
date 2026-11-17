@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 15: what a listing of the venues takes, and what it answers.
@@ -26,16 +27,23 @@ final class VenueListingStructure implements StructureInterface, DefinesOutputsI
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('offset', 'integer', t('Offset'), default: 0)
-      ->setDescription(t('How many venues to skip, in order of weight.'))
-      ->addConstraint('Range', ['min' => 0, 'max' => 10000]);
+    $inputs->addSchema('offset', Schema::integer()
+      ->title(t('Offset'))
+      ->description(t('How many venues to skip, in order of weight.'))
+      ->default(0)
+      ->minimum(0)
+      ->maximum(10000));
 
-    $inputs->add('limit', 'integer', t('Limit'), default: 20)
-      ->setDescription(t('How many venues to answer at most.'))
-      ->addConstraint('Range', ['min' => 1, 'max' => 50]);
+    $inputs->addSchema('limit', Schema::integer()
+      ->title(t('Limit'))
+      ->description(t('How many venues to answer at most.'))
+      ->default(20)
+      ->minimum(1)
+      ->maximum(50));
 
-    $inputs->add('status', 'boolean', t('Enabled'))
-      ->setDescription(t('Only the venues enabled, or only those disabled; left out, every venue.'));
+    $inputs->addSchema('status', Schema::bool()
+      ->title(t('Enabled'))
+      ->description(t('Only the venues enabled, or only those disabled; left out, every venue.')));
   }
 
   /**
@@ -52,9 +60,10 @@ final class VenueListingStructure implements StructureInterface, DefinesOutputsI
       ->setDescription(t('The page of venues, lighter first, each one the account may read.'))
       ->setRequired(TRUE);
 
-    $outputs->add('total', 'integer', t('Total'))
-      ->setDescription(t('How many venues the filter matched that the account may read, on every page.'))
-      ->setRequired(TRUE);
+    $outputs->addSchema('total', Schema::integer()
+      ->title(t('Total'))
+      ->description(t('How many venues the filter matched that the account may read, on every page.'))
+      ->required());
   }
 
 }

@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Drupal\surface_examples\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Storage\WebhookStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 14, the alter's way: a resource that knows nothing of managed keys.
@@ -31,12 +31,15 @@ final class WebhookResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('endpoint', 'uri', t('Endpoint'), default: 'https://hooks.example.com/sales')
-      ->setRequired(TRUE);
+    $inputs->addSchema('endpoint', Schema::string()->format('uri')
+      ->title(t('Endpoint'))
+      ->default('https://hooks.example.com/sales')
+      ->required());
 
-    $api_key = $inputs->add('api_key', 'string', t('API key'))
-      ->setDescription(t('The key each post is signed with, pasted here.'));
-    DefinitionMetadata::setSecret($api_key);
+    $inputs->addSchema('api_key', Schema::string()
+      ->title(t('API key'))
+      ->description(t('The key each post is signed with, pasted here.'))
+      ->writeOnly(TRUE));
   }
 
 }

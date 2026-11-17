@@ -154,38 +154,51 @@ final class FieldInstanceResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     // Which field this is.
-    $inputs->add('entity_type', 'string', t('Entity type'))->setRequired(TRUE)
-      ->setDescription(t('The machine name of the entity type the field is on.'))
-      ->addConstraint('PluginExists', [
+    $inputs->addSchema('entity_type', Schema::string()
+      ->title(t('Entity type'))
+      ->description(t('The machine name of the entity type the field is on.'))
+      ->check('drupal:PluginExists', [
         'manager' => 'entity_type.manager',
         'interface' => FieldableEntityInterface::class,
-      ]);
+      ])
+      ->required());
 
-    $inputs->add('bundle', 'string', t('Bundle'))->setRequired(TRUE)
-      ->setDescription(t('The bundle the field is on, for example article or page.'));
+    $inputs->addSchema('bundle', Schema::string()
+      ->title(t('Bundle'))
+      ->description(t('The bundle the field is on, for example article or page.'))
+      ->required());
 
-    $inputs->add('field_type', 'string', t('Field type'))->setRequired(TRUE)
-      ->setDescription(t('The field type, which decides what the settings are.'));
+    $inputs->addSchema('field_type', Schema::string()
+      ->title(t('Field type'))
+      ->description(t('The field type, which decides what the settings are.'))
+      ->required());
 
     // What a field storage's name may be, which its constructor refuses
     // otherwise with an exception rather than a violation.
-    $inputs->add('field_name', 'string', t('Machine name'))->setRequired(TRUE)
-      ->setDescription(t('The machine name of the field storage, for example field_tags.'))
-      ->addConstraint('Length', ['max' => FieldStorageConfig::NAME_MAX_LENGTH])
-      ->addConstraint('Regex', [
+    $inputs->addSchema('field_name', Schema::string()
+      ->title(t('Machine name'))
+      ->description(t('The machine name of the field storage, for example field_tags.'))
+      ->maxLength(FieldStorageConfig::NAME_MAX_LENGTH)
+      ->check('drupal:Regex', [
         'pattern' => '/^[_a-z]+[_a-z0-9]*$/D',
         'message' => t('The machine name must start with a lowercase letter or underscore, and contain only lowercase letters, numbers and underscores.'),
-      ]);
+      ])
+      ->required());
 
     // The field itself.
-    $inputs->add('label', 'string', t('Label'))->setRequired(TRUE)
-      ->setDescription(t('The human readable label for the field on this bundle.'));
+    $inputs->addSchema('label', Schema::string()
+      ->title(t('Label'))
+      ->description(t('The human readable label for the field on this bundle.'))
+      ->required());
 
-    $inputs->add('description', 'string', t('Help text'))
-      ->setDescription(t('Help text to display for the field.'));
+    $inputs->addSchema('description', Schema::string()
+      ->title(t('Help text'))
+      ->description(t('Help text to display for the field.')));
 
-    $inputs->add('required', 'boolean', t('Required field'), default: FALSE)
-      ->setDescription(t('Whether the field is required.'));
+    $inputs->addSchema('required', Schema::bool()
+      ->title(t('Required field'))
+      ->description(t('Whether the field is required.'))
+      ->default(FALSE));
 
     // Its parts.
     $inputs->attach('storage', FieldStorageResource::class, t('Field storage'))

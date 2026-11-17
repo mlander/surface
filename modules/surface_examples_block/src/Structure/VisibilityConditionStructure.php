@@ -9,6 +9,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface\Variants;
 use Drupal\surface_examples_block\Variants\ConditionPluginStructures;
+use PortableSchema\Builder\Schema;
 
 /**
  * One condition a placed block is shown under.
@@ -29,12 +30,15 @@ final class VisibilityConditionStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('id', 'string', t('Condition'))
-      ->setDescription(t('The condition plugin.'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('id', Schema::string()
+      ->title(t('Condition'))
+      ->description(t('The condition plugin.'))
+      ->required());
 
-    $inputs->add('negate', 'boolean', t('Negate'), default: FALSE)
-      ->setDescription(t('Whether the block is shown when the condition does not hold, rather than when it does.'));
+    $inputs->addSchema('negate', Schema::bool()
+      ->title(t('Negate'))
+      ->description(t('Whether the block is shown when the condition does not hold, rather than when it does.'))
+      ->default(FALSE));
 
     $inputs->attachVariants('settings', by: 'id', label: t('Settings'), from: ConditionPluginStructures::class)
       ->setDescription(t('The settings of the condition chosen.'))

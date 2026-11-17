@@ -30,9 +30,13 @@ final class ComplianceStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('capacity', 'integer', required: TRUE);
 
-    $inputs->add('license', License::class, t('Event license'));
+    $inputs->addSchema('license', Schema::of(License::class)
+      ->title(t('Event license')));
 
-    $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
+    $inputs->addSchema('stewards', Schema::integer()
+      ->title(t('Stewards'))
+      ->default(1)
+      ->required());
   }
 
   /**

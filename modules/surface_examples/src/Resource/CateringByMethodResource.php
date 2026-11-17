@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface_examples\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\Attribute\Operation;
@@ -14,6 +13,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Storage\CateringStorage;
 use Drupal\surface_examples\Structure\PersonStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 18: the same keys as CateringResource, declared with calls.
@@ -35,21 +35,27 @@ final class CateringByMethodResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $details = ArrangementGroup::fieldset('details', t('Details'));
 
-    $inputs->add('public', 'boolean', t('Show the caterer on the event page'), default: FALSE);
+    $inputs->addSchema('public', Schema::bool()
+      ->title(t('Show the caterer on the event page'))
+      ->default(FALSE));
 
-    $provider = $inputs->add('provider', 'string', t('Caterer'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 128]);
-    DefinitionMetadata::setExamples($provider, ['Harbour Kitchen']);
+    $inputs->addSchema('provider', Schema::string()
+      ->title(t('Caterer'))
+      ->maxLength(128)
+      ->examples(['Harbour Kitchen'])
+      ->required());
     $inputs->describe('provider', placeholder: t('The name on the contract'));
 
-    $inputs->add('headcount', 'integer', t('Headcount'))
-      ->setDescription(t('How many people to cater for.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 5000]);
+    $inputs->addSchema('headcount', Schema::integer()
+      ->title(t('Headcount'))
+      ->description(t('How many people to cater for.'))
+      ->minimum(1)
+      ->maximum(5000)
+      ->required());
 
-    $inputs->add('budget', 'float', t('Budget'))
-      ->addConstraint('Range', ['min' => 0]);
+    $inputs->addSchema('budget', Schema::number()
+      ->title(t('Budget'))
+      ->minimum(0));
     $inputs->describe('budget', group: $details, suffix: t('EUR'));
 
     $dietary = $inputs->addList('dietary', 'string', t('Dietary needs'), default: []);
@@ -63,16 +69,18 @@ final class CateringByMethodResource implements ResourceInterface {
       ],
     ]);
 
-    $inputs->add('served_at', 'string', t('Served at'))
-      ->setDescription(t('HH:MM, on a 24-hour clock.'))
-      ->setSetting('widget', 'time')
-      ->addConstraint('Regex', [
+    $inputs->addSchema('served_at', Schema::string()
+      ->title(t('Served at'))
+      ->description(t('HH:MM, on a 24-hour clock.'))
+      ->check('drupal:Regex', [
         'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
         'message' => t('Write the time as HH:MM, such as 18:30.'),
-      ]);
+      ])
+      ->ui(widget: 'time'));
 
-    $inputs->add('notes', 'string', t('Notes for the caterer'))
-      ->setSetting('multiline', TRUE);
+    $inputs->addSchema('notes', Schema::string()
+      ->title(t('Notes for the caterer'))
+      ->ui(widget: 'textarea'));
     $inputs->describe('notes', group: $details);
 
     $inputs->attach('contact', PersonStructure::class, t('Caterer contact'), reads: ['listed' => 'public']);

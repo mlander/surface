@@ -11,6 +11,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Storage\ProgramStorage;
 use Drupal\surface_examples\Structure\FeesStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 10: access, static and runtime, and how each operation behaves.
@@ -38,13 +39,19 @@ final class ProgramResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('headline', 'string', t('Headline'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('headline', Schema::string()
+      ->title(t('Headline'))
+      ->required());
 
-    $inputs->add('sessions', 'integer', t('Sessions'), default: 8)
-      ->addConstraint('Range', ['min' => 1, 'max' => 30]);
+    $inputs->addSchema('sessions', Schema::integer()
+      ->title(t('Sessions'))
+      ->default(8)
+      ->minimum(1)
+      ->maximum(30));
 
-    $inputs->add('published', 'boolean', t('Published'), default: FALSE);
+    $inputs->addSchema('published', Schema::bool()
+      ->title(t('Published'))
+      ->default(FALSE));
 
     $inputs->attach('fees', FeesStructure::class, t('Fees'));
   }

@@ -13,6 +13,7 @@ use Drupal\surface_examples_references\Storage\SponsorshipStorage;
 use Drupal\surface_examples_references\Structure\CreditStructure;
 use Drupal\surface_examples_references\Structure\SettingStructure;
 use Drupal\surface_examples_references\Structure\ThingStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 16: a key that refers to an entity, three ways.
@@ -38,18 +39,22 @@ final class SponsorshipResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     // A venue keeps its id as a string, a user and a node as an integer.
-    $inputs->add('venue', 'string', t('Venue'), default: 'riverside')
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue'])
-      ->setDescription(t("Where the sponsor's stand is."))
-      ->setRequired(TRUE);
+    $inputs->addSchema('venue', Schema::string()
+      ->title(t('Venue'))
+      ->description(t("Where the sponsor's stand is."))
+      ->default('riverside')
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'event_venue'])
+      ->required());
 
-    $inputs->add('contact', 'integer', t('Contact'))
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user'])
-      ->setDescription(t('Who answers for the sponsor.'));
+    $inputs->addSchema('contact', Schema::integer()
+      ->title(t('Contact'))
+      ->description(t('Who answers for the sponsor.'))
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'user']));
 
-    $inputs->add('page', 'integer', t('Announcement'))
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']])
-      ->setDescription(t('The article that announces the sponsor.'));
+    $inputs->addSchema('page', Schema::integer()
+      ->title(t('Announcement'))
+      ->description(t('The article that announces the sponsor.'))
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]));
 
     // Of any type: an entity type, then an id of it.
     $inputs->attach('thing', ThingStructure::class, t('Featured beside'))

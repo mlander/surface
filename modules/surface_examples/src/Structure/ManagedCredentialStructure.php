@@ -8,6 +8,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 14: the credential as a key the site manages, named.
@@ -26,10 +27,11 @@ final class ManagedCredentialStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('key_id', 'string', t('Key'))
-      ->setDescription(t('A key the site manages; its value is read where it is used, never stored here.'))
-      ->setRequired(TRUE)
-      ->addConstraint('ManagedKey');
+    $inputs->addSchema('key_id', Schema::string()
+      ->title(t('Key'))
+      ->description(t('A key the site manages; its value is read where it is used, never stored here.'))
+      ->check('drupal:ManagedKey')
+      ->required());
   }
 
 }

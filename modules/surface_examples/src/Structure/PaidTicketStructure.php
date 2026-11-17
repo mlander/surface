@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
+use PortableSchema\Builder\Schema;
 
 /**
  * The ticket, when registration is paid: a price, and its currency.
@@ -28,13 +29,15 @@ final class PaidTicketStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('price', 'float', t('Price'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 0.01]);
+    $inputs->addSchema('price', Schema::number()
+      ->title(t('Price'))
+      ->minimum(0.01)
+      ->required());
 
-    $inputs->add('currency', 'string', t('Currency'), default: 'EUR')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['EUR', 'GBP', 'USD']]);
+    $inputs->addSchema('currency', Schema::enum(['EUR', 'GBP', 'USD'])
+      ->title(t('Currency'))
+      ->default('EUR')
+      ->required());
   }
 
 }

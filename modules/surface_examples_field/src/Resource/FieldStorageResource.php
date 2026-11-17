@@ -15,6 +15,7 @@ use Drupal\surface_examples_field\FieldStorageSettingsSchemaVariants;
 use Drupal\surface_examples_field\Storage\FieldStorageStorage;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\field\FieldStorageConfigInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * What every bundle using a field shares: its storage.
@@ -137,21 +138,28 @@ final class FieldStorageResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     // Which storage this is: the field's, which hands it to its storage.
-    $inputs->add('entity_type', 'string', t('Entity type'))
-      ->setDescription(t('The machine name of the entity type the field is on.'));
+    $inputs->addSchema('entity_type', Schema::string()
+      ->title(t('Entity type'))
+      ->description(t('The machine name of the entity type the field is on.')));
 
-    $inputs->add('field_name', 'string', t('Machine name'))
-      ->setDescription(t('The machine name of the field, for example field_tags.'));
+    $inputs->addSchema('field_name', Schema::string()
+      ->title(t('Machine name'))
+      ->description(t('The machine name of the field, for example field_tags.')));
 
-    $inputs->add('field_type', 'string', t('Field type'))
-      ->setDescription(t("The field type, which decides what the storage settings are. The same as the field's."));
+    $inputs->addSchema('field_type', Schema::string()
+      ->title(t('Field type'))
+      ->description(t("The field type, which decides what the storage settings are. The same as the field's.")));
 
     // The storage itself.
-    $inputs->add('cardinality', 'integer', t('Allowed number of values'), default: 1)
-      ->setDescription(t('How many values the field holds: a number of one or more, or -1 for unlimited.'))
-      ->addConstraint('Range', ['min' => FieldStorageConfigInterface::CARDINALITY_UNLIMITED]);
+    $inputs->addSchema('cardinality', Schema::integer()
+      ->title(t('Allowed number of values'))
+      ->description(t('How many values the field holds: a number of one or more, or -1 for unlimited.'))
+      ->default(1)
+      ->minimum(FieldStorageConfigInterface::CARDINALITY_UNLIMITED));
 
-    $inputs->add('translatable', 'boolean', t('Translatable'), default: TRUE);
+    $inputs->addSchema('translatable', Schema::bool()
+      ->title(t('Translatable'))
+      ->default(TRUE));
 
     // Its part.
     $inputs->attachVariants('settings', by: 'field_type', label: t('Storage settings'), from: FieldStorageSettingsSchemaVariants::class)

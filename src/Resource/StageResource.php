@@ -11,6 +11,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Storage\StageStorage;
 use Drupal\surface\Structure\StageAppliedStructure;
 use Drupal\surface\Structure\StageChangesStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * A stage: writes kept until they are applied together, or discarded.
@@ -109,20 +110,23 @@ final class StageResource implements ResourceInterface, DefinesOutputsInterface 
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('id', 'string', t('Stage id'))
-      ->setDescription(t('Given by storage when the stage is opened.'));
+    $inputs->addSchema('id', Schema::string()
+      ->title(t('Stage id'))
+      ->description(t('Given by storage when the stage is opened.')));
 
-    $inputs->add('label', 'string', t('Label'))
-      ->setDescription(t('What the stage is for; shown by a listing and a confirmation page.'))
-      ->addConstraint('Length', ['max' => 255]);
+    $inputs->addSchema('label', Schema::string()
+      ->title(t('Label'))
+      ->description(t('What the stage is for; shown by a listing and a confirmation page.'))
+      ->maxLength(255));
   }
 
   /**
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $outputs->add('id', 'string', t('Stage id'))
-      ->setDescription(t('The stage written; none once it is discarded.'));
+    $outputs->addSchema('id', Schema::string()
+      ->title(t('Stage id'))
+      ->description(t('The stage written; none once it is discarded.')));
   }
 
   /**

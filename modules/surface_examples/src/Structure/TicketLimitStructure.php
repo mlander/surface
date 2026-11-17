@@ -8,6 +8,7 @@ use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 9: how one ticket type is sold, held at every type the site has.
@@ -23,10 +24,15 @@ final class TicketLimitStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('per_order', 'integer', t('Per order'), default: 4)
-      ->addConstraint('Range', ['min' => 1, 'max' => 10]);
+    $inputs->addSchema('per_order', Schema::integer()
+      ->title(t('Per order'))
+      ->default(4)
+      ->minimum(1)
+      ->maximum(10));
 
-    $inputs->add('waiting_list', 'boolean', t('Waiting list when sold out'), default: FALSE);
+    $inputs->addSchema('waiting_list', Schema::bool()
+      ->title(t('Waiting list when sold out'))
+      ->default(FALSE));
 
     $inputs->reads('selling', 'boolean');
 

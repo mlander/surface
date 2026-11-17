@@ -15,6 +15,7 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_retitle\Storage\RetitleStorage;
 use Drupal\surface_examples_retitle\Structure\RetitleItemStructure;
 use Drupal\surface_examples_retitle\TitleRewriter;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 17: a bulk retitle that borrows each node's access.
@@ -42,9 +43,10 @@ final class RetitleResource implements ResourceInterface, DefinesOutputsInterfac
       ->setDescription(t('Each node to retitle, one to fifty.'))
       ->setRequired(TRUE);
 
-    $inputs->add('style', 'string', t('Style'), default: TitleRewriter::TITLE)
-      ->setDescription(t('How the title of a node sent no new title is rewritten.'))
-      ->addConstraint('LabeledChoice', ['choices' => TitleRewriter::styles()]);
+    $inputs->addSchema('style', Schema::options(TitleRewriter::styles())->type('string')
+      ->title(t('Style'))
+      ->description(t('How the title of a node sent no new title is rewritten.'))
+      ->default(TitleRewriter::TITLE));
   }
 
   /**

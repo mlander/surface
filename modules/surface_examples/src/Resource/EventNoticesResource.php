@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Storage\EventNoticesStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 19: the event's notices, the third step of its setup flow.
@@ -31,11 +32,15 @@ final class EventNoticesResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('banner', 'string', t('Banner'), default: '')
-      ->setSetting('multiline', TRUE)
-      ->addConstraint('Length', ['max' => 500]);
+    $inputs->addSchema('banner', Schema::string()
+      ->title(t('Banner'))
+      ->default('')
+      ->maxLength(500)
+      ->ui(widget: 'textarea'));
 
-    $inputs->add('show_banner', 'boolean', t('Show the banner'), default: FALSE);
+    $inputs->addSchema('show_banner', Schema::bool()
+      ->title(t('Show the banner'))
+      ->default(FALSE));
   }
 
 }

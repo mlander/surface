@@ -9,6 +9,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * What the example block needs to know when it renders a grid.
@@ -28,10 +29,13 @@ final class GridPresentationStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('columns', 'integer', t('Columns'), default: 3)
-      ->setDescription(t('How many items sit side by side.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 6]);
+    $inputs->addSchema('columns', Schema::integer()
+      ->title(t('Columns'))
+      ->description(t('How many items sit side by side.'))
+      ->default(3)
+      ->minimum(1)
+      ->maximum(6)
+      ->required());
   }
 
 }

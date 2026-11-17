@@ -12,6 +12,7 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Storage\PressStorage;
 use Drupal\surface_examples\Structure\PersonStructure;
 use Drupal\surface_examples\Structure\ReviewStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 8: the press page, one of two resources reusing a person.
@@ -31,7 +32,9 @@ final class PressResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('public', 'boolean', t('Show on the press page'), default: TRUE);
+    $inputs->addSchema('public', Schema::bool()
+      ->title(t('Show on the press page'))
+      ->default(TRUE));
 
     $inputs->attach('contact', PersonStructure::class, t('Press contact'), reads: ['listed' => 'public']);
 

@@ -44,21 +44,28 @@ final class RegistrationStep2Resource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add(self::TITLE, 'string', t('Event title'))
-      ->setRequired(TRUE);
+    $inputs->addSchema(self::TITLE, Schema::string()
+      ->title(t('Event title'))
+      ->required());
 
-    $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
+    $inputs->addSchema(self::OPEN, Schema::bool()
+      ->title(t('Registration open'))
+      ->default(TRUE));
 
-    $inputs->add(self::VENUE, 'string', t('Venue'))
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue'])
-      ->setRequired(TRUE);
+    $inputs->addSchema(self::VENUE, Schema::string()
+      ->title(t('Venue'))
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'event_venue'])
+      ->required());
 
-    $inputs->add(self::ROOM, 'string', t('Room'))
-      ->setRequired(TRUE)
-      ->addConstraint('EventVenueRoom');
+    $inputs->addSchema(self::ROOM, Schema::string()
+      ->title(t('Room'))
+      ->check('drupal:EventVenueRoom')
+      ->required());
 
-    $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1]);
+    $inputs->addSchema(self::CAPACITY, Schema::integer()
+      ->title(t('Capacity'))
+      ->default(50)
+      ->minimum(1));
   }
 
   /**

@@ -36,24 +36,31 @@ final class RegistrationStep3Resource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Event title'))
-      ->setRequired(TRUE);
+    $inputs->addSchema('title', Schema::string()
+      ->title(t('Event title'))
+      ->required());
 
-    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
+    $inputs->addSchema('open', Schema::bool()
+      ->title(t('Registration open'))
+      ->default(TRUE));
 
-    $inputs->add('venue', 'string', t('Venue'))
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
+    $inputs->addSchema('venue', Schema::options(Venues::VENUES)->type('string')
+      ->title(t('Venue'))
+      ->required());
 
-    $inputs->add('room', 'string', t('Room'))
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
+    $inputs->addSchema('room', Schema::options(Venues::rooms())->type('string')
+      ->title(t('Room'))
+      ->required());
 
-    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1]);
+    $inputs->addSchema('capacity', Schema::integer()
+      ->title(t('Capacity'))
+      ->default(50)
+      ->minimum(1));
 
-    $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
-      ->setRequired(TRUE);
+    $inputs->addSchema('pricing', Schema::string()
+      ->title(t('Pricing'))
+      ->default('free')
+      ->required());
 
     $inputs->attachVariants('ticket', by: 'pricing', label: t('Ticket'));
 
