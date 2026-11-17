@@ -2438,22 +2438,24 @@ document, refusal or stored value changed.
   on one value, alone, never the definition's own constraints or its
   properties': the check provider asks it for every `drupal:<id>`
   check. `conforms($definition, $value)` holds a value to a whole
-  definition, the constraints it implies (`PrimitiveType`, `NotNull`,
-  `ComplexData`) included: outputs (`Conforming`), a watched value
-  (`WatchedValueCheck`) and a site's or a route's value (`KeyPaths`) ask
-  it. Nothing else takes the typed data manager to validate such a
-  value: `PortableValidator`, `DrupalCheckProvider`, `SurfacePipeline`,
-  `SiteDefaults` and the build step's declaring phase hold the runner,
+  definition, the constraints it implies included: a site's or a
+  route's value (`KeyPaths`) asks it. *Changed 2026-11-16 (slice 34):*
+  outputs and a watched value are held to their schema by the dialect's
+  validator instead
+  ([Outputs conform through the dialect's validator](#outputs-conform-through-the-dialects-validator)).
+  Nothing else takes the typed data manager to validate such a value:
+  `PortableValidator`, `DrupalCheckProvider` and the build step's
+  declaring phase hold the runner,
   and the provider asks core's constraint manager whether the site has a
   check's plugin. The runner stays when the model moves to `Schema`,
   because core's constraint plugins expect a typed value: some
   validators read the context object (`ValidKeys`,
   `EntityBundleExists`, `AllowedValues` with a callback), and the
   implied constraints always do.
-- **Surface's own constraints read the value.** The seven plugins the
+- **Surface's own constraints read the value.** The eight plugins the
   module ships (`JsonSchema`, `LabeledChoice`, `LanguageExists`,
-  `SurfaceReferenceableType`, `SurfaceUnique`, `UniqueItems`,
-  `SurfaceValidReference`) give a plain Symfony validator, on plain PHP
+  `SurfaceLinkUri`, `SurfaceReferenceableType`, `SurfaceUnique`,
+  `UniqueItems`, `SurfaceValidReference`) give a plain Symfony validator, on plain PHP
   values with the option sets the examples use, the violations the
   runner gives: the same message template, parameters, property path
   and code, the same message with its class and words, and the same
@@ -2661,7 +2663,7 @@ document, refusal or stored value changed.
   pipeline writes them, and an item of a collection whose structure
   names a check on its whole, run on a map of the structure's keys.
 - **Surface's own constraints run on plain values.**
-  `ConstraintRunner::check()` runs the seven plugins the module ships
+  `ConstraintRunner::check()` runs the plugins the module ships
   (`VALUE_ONLY`, each plugin id with the class the module ships) through
   a plain validator made once, core's `BasicRecursiveValidatorFactory`
   (Symfony's recursive validator with `DrupalTranslator`), in the
@@ -5407,7 +5409,11 @@ served byte, refusal, message, stored value or drawn form changed.
   per request, and `SerializedMaps` walks it as it walked
   `Attachment::$wired` before. Both members go when `admits()` takes a
   schema. `Surface::withPortKeys()` (internal) binds the schemas and
-  definitions an attachment holds without reading them. A wired key is
+  definitions an attachment holds without reading them. *Changed
+  2026-11-16 (slice 34):* `admits()` takes the port's schema, so those
+  members and `withPortKeys()` are gone, and `getPortDefinition()`
+  derives a definition of the three classes alone, as
+  `NodeDefinition::of()` does. A wired key is
   still read twice at build: `Attaching::wiredKeys()` hands the
   builder's definition to `withReads()`, and the key's own entry reads it
   again at the seal; the second read goes when the builder holds schemas.
@@ -7007,6 +7013,104 @@ behavior is unchanged: each read the cases that apply to it.
 
 (`SurfacePipeline::outputs()`, `ResourceOperationTool`,
 `ResourceApiController`, `StageStorage`, `BulkDeleteFlowTest`)
+
+### Outputs conform through the dialect's validator
+
+Decided 2026-11-15, built 2026-11-16 (slice 34). Outputs are held as
+inputs are: by the dialect's validator, over a document built from the
+output entries' schemas, in the input path's codes.
+
+- **The document.** `Contract\OutputsDocument` writes each output key
+  as the served document's writer of a key does
+  (`PropertySchema::property()`), keeps `portable-check` and
+  `x-portable-messages`, so a check no keyword states runs, and closes
+  every object that names its keys (`additionalProperties: false`), the
+  top included. A map that names no keys is `type: object`. The served
+  outputs document is this document less the checks and their messages
+  (`DocumentHead::outputs()`), so it says what is enforced: its top
+  gained `additionalProperties: false`.
+- **The check.** `conformOutput()` (`Pipeline\Conforming`) strips every
+  `NotEmitted` key; refuses an object anywhere with `type` (`actual:
+  object`), since an output is a plain value; refuses a key nothing
+  declares where it stands, at any depth, `unknown_key`, as `accept()`
+  refuses an input key; refuses a required output that is absent,
+  `required`, "@label was not emitted."; then holds the rest to the
+  document, once. Each `drupal:` check runs from the output entry's
+  schema, the entries read as a frame of plain keys
+  (`Location::definitionAt()`). A required property absent inside a map
+  is `required` at the property, in the same words; an
+  `unknownProperty` is not said twice.
+- **Codes, old to new.** NULL where the type takes none, `is_null` to
+  `type`; a required property absent, `is_null` to `required`;
+  `no_such_choice` to `enum`; `too_long`, `too_short` to `maxLength`,
+  `minLength`; `not_in_range` to `maximum` or `minimum`; `too_few`,
+  `too_many` to `minItems`, `maxItems`; `is_blank` to `minLength`;
+  `invalid_format` to `format.email`; `primitive_type` to `type` or a
+  `format.*`; `regex_failed` to `pattern`, or to the check where the
+  pattern is written as one; another plugin's code to
+  `check.drupal:<id>[.<name>]`; a plugin the site lacks to `unchecked`; a
+  list for a map, `unknown_key` for each item and `is_null`, to one
+  `type`.
+- **Verdicts the dialect gives.** Refused now: a map for a list, an
+  empty or all-null map with required keys, a numeric string for a
+  timestamp, a date and time with no offset, a URI that is not RFC 3986
+  (`route:<nolink>`: a link is held otherwise, see the next entry), a
+  required property that is NULL two maps deep, a string for a map that
+  names no keys. Taken now: `3.0` for an integer, `[]` for a required
+  list (required means present), NULL for an optional key with
+  `NotBlank` or a `Count` minimum (a place holding nothing is not asked a
+  check).
+- **Every resource.** The runner holds every resource's outputs, not the
+  stage's alone (`OperationRunner::conformed()`). A failure, or a check
+  that throws, is logged, the run is marked not conformed, and the
+  outputs are served as the storage gave them: nothing is refused after
+  a write, at any door.
+- **The tool door** holds the outputs to the Tool API's own check every
+  time, conformed or not, and leaves out only what that check refuses,
+  since the Tool API would otherwise fail the committed call
+  (`ResourceOperationTool::declared()`).
+- **A secret output is refused at declaration**, at any depth, when it
+  is added and again at seal (`SurfaceBuilder::assertOutputDeclarable()`):
+  an output is served to whoever runs the operation.
+- **A watched value, the same way.** The watched-value check
+  (`WatchedValueCheckInterface::admits(Schema $schema, $value)`) holds a
+  value to its key's schema as the one output of a frame
+  (`Surface::holding()`), the value written as the document holds it (a
+  date and time with its offset); a float at an integer key is not handed
+  to a refiner typed for an integer. A value Typed Data let through at a
+  key of another type (`TRUE` at a string key, a string at a key that
+  holds a list of field items) is withheld now, as the input path refuses
+  it. A port's key is held as its schema alone. *Open:* a site's or a route's value (`KeyPaths::violation()`)
+  is still held through `ConstraintRunner::conforms()`: moving it changes
+  the refusals the door corpus pins (316 rows over ten surfaces: Typed
+  Data's sentences become the dialect's, "This value should be of the
+  correct primitive type." becomes "This value must be of type integer,
+  string given.", and an empty or all-null map with required keys is now
+  refused), which waits for the owner's word.
+
+Why: the outputs were Surface's own walk and then Typed Data, read from
+definitions, in Symfony's codes, held for the stage alone; the inputs
+were the dialect's. One check, one document, one set of codes reads the
+same on both sides, and a client that validates what it is served
+against the served document gets the server's answer.
+
+(`OutputsDocument`, `Conforming`, `OperationRunner`,
+`ResourceOperationTool`, `WatchedValueCheck`, `KeyPaths`,
+`OutputsConformanceTest`, `OutputsRecordTest`)
+
+### A link is held to what a link field takes
+
+Decided 2026-11-16. The `uri` format stays RFC 3986's, which refuses
+`<` and `>`, so `route:<nolink>`, `route:<front>`, `route:<none>` and
+`route:<button>`, which core's link field stores, are refused at a `uri`
+key. A key that holds a link field's URI is text held to the module's
+`SurfaceLinkUri` check in place of the format: a value with a scheme, as
+`parse_url()` reads one (core's PrimitiveType for a `uri`) or as RFC 3986
+spells one, so it takes every value the format takes and Drupal's own.
+The content entity example declares it for a link field's `uri`
+(`FieldItemDerivation`), on inputs and outputs alike.
+
+(`LinkUriConstraint`, `LinkUriTest`, `ContentEntityDerivationTest`)
 
 ### A computed key is a pure function of its sources
 
@@ -9861,7 +9965,8 @@ closed.", `OperationRunner::NOT_ALLOWED`), where the tool said "You do
 not have permission to use the stage ..." and "You do not have
 permission to do this."; the permission and every withheld refusal keep
 "You do not have permission to do this.". The plugin's own outputs
-check went: the runner holds the stage's outputs and logs a mismatch.
+check went: the runner holds the stage's outputs and logs a mismatch
+(every resource's since slice 34).
 Kept, as recorded: a stage input that is not a string, which the Tool
 API lets through to a PHP caller, is answered by the tool (`not_found`,
 or `does_not_apply` on a tool that takes no stage), after the runner's

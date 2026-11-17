@@ -261,9 +261,11 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 The output half of `validate()`, and the only stage that runs after the
 host has done its work rather than before. It holds what was emitted to
 the data surface's [output definitions](outputs.md), which are never
-refined: it strips the `NotEmitted` sentinel, refuses keys no output declares, and checks what is
-left against each definition's type and constraints, answering with the
-same `ViolationSet` everything else answers with.
+refined: it strips the `NotEmitted` sentinel, refuses an object, keys
+no output declares and a required output left out, and holds what is
+left by the dialect's validator to the outputs' validation document,
+answering with the same `ViolationSet`, in the same codes, everything
+else answers with ([Conformance](outputs.md#conformance)).
 
 Nothing is cast. Input arrives from people and payloads, so `accept()`
 coerces it; an output is produced by code that had the declaration in
@@ -272,7 +274,8 @@ front of it, so a wrong type is a violation rather than a notation.
 It is not part of `submit()`. Emitting is the host's own act, not a
 pipeline stage, and the pipeline has no way to run it; what the pipeline
 offers is the check, so a host, or a generated test, can hold the
-emitted array to what the data surface advertised.
+emitted array to what the data surface advertised. The runner asks it
+after every run, for every resource, and logs what it refuses.
 
 ### prepare
 

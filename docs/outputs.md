@@ -119,14 +119,25 @@ $violations = $pipeline->conformOutput($surface, $emitted);
 What it does, in order:
 
 1. Strips every `NotEmitted` key, at every depth.
-2. Refuses keys no output definition declares, at any depth, in the same
-   spirit `accept()` refuses unknown input keys.
-3. Checks every present value against its definition's type and
-   constraints, through typed data, with path-aware violations.
+2. Refuses an object anywhere, `type`: an output is a plain value, so a
+   `TranslatableMarkup`, an enum or a `JsonSerializable` is refused, not
+   read as what it would serialize to.
+3. Refuses keys no output declares, at any depth, `unknown_key`, as
+   `accept()` refuses unknown input keys, and a required output that is
+   absent, `required`, "@label was not emitted.".
+4. Holds the rest, once, to the outputs' validation document by the
+   dialect's validator, as `validate()` holds inputs: each output key
+   written as the served document writes it, its checks kept, every
+   object that names its keys closed. Each `drupal:` check runs the
+   constraint of its place.
 
-It answers with the same `ViolationSet` of `Violation` objects
-that `validate()` answers with, so a caller reads one shape whichever
-direction it is checking.
+It answers with the same `ViolationSet` of `Violation` objects, in the
+same codes, that `validate()` answers with (`type`, `required`, `enum`,
+`maxLength`, `maximum`, `format.email`, `check.drupal:<id>`, ...), so a
+caller reads one shape whichever direction it is checking. The served
+outputs document is the validation document less its checks, so it
+says what is enforced, `additionalProperties: false` at the top
+included (why: [decision](decisions.md#outputs-conform-through-the-dialects-validator)).
 
 **Nothing is coerced.** Input arrives from people and payloads and is
 coerced through [the coercion table](semantics.md#the-coercion-table); an output is produced
@@ -134,12 +145,21 @@ by code that had the declaration in front of it, so `'2'` where an
 integer was declared is a bug in the producer and reporting it is the
 point. That is stricter than core's own `PrimitiveType` constraint,
 which asks whether a value *could be* the type, and deliberately so: the
-question here is what a consumer will actually be handed. The strict
-check covers the plain scalar types (integer, float,
-boolean, string, email, uri) and leaves everything else alone, because
-a rule this module never defined would be a guess. An integer where a
-float was declared is the one widening allowed, since every integer is
-that float exactly.
+question here is what a consumer will actually be handed. The type is
+JSON's: an integer is a number, and `3.0` is an integer. A list is a PHP
+array keyed 0 to n-1 in order; a map given for a list is refused, and
+so is a list given for a map. A date and time needs its offset, and a
+`uri` is RFC 3986's, stricter than core: a link field's URI is held to
+what a link field takes instead
+([decision](decisions.md#a-link-is-held-to-what-a-link-field-takes)).
+
+Every resource's outputs are held by the runner after each run. A
+mismatch is logged and the run is marked not conformed
+(`OperationRun::conformed()`); the outputs are served as the storage
+gave them, since nothing is refused after a write.
+
+A secret output is refused when it is declared: an output is served to
+whoever runs the operation, and a secret is never read back.
 
 This is what makes generated conformance tests possible: a loop over
 some fixtures, one `conformOutput()` per emitted array, and a host that
@@ -190,7 +210,10 @@ answers, and never locked.
 
 What travels: the data type, the label, the description, the required
 flag, the constraints, and the enum, through the same treatment the
-inputs get. What is lost, on top of the two the inputs already lose
+inputs get. After a run the tool holds what it answers to the Tool
+API's own check, whether or not the outputs conformed, and leaves out,
+logs and names in its message only what that check refuses: the Tool
+API would otherwise fail a call whose write is committed. What is lost, on top of the two the inputs already lose
 (example values and type settings, both Tool API gaps):
 
 - **The `NotEmitted` marker itself**, which is a PHP marker and not a
