@@ -15692,6 +15692,14 @@ they served.
   leaf, an enum, an object, a type of the library or a `$ref`. The
   package writes `?Size` and a nullable `#[Of]` so. A document from
   anywhere else is read as before.
+- **A list of objects at an output.** Outputs hold no attached
+  structure, so `Schema::list(Schema::object([...]))` handed to an
+  outputs blueprint is a list of maps, as `addList()` declares one: each
+  item a plain map, a list of plain objects inside it too. At an input it
+  stays a collection of children (decided 2026-11-17, on the condition
+  that the venue listing's served document stays byte-identical, which
+  `ContractBaselineTest` holds). A `portable:timestamp` property is no
+  plain map's yet, since the library's type adds a range.
 - **Labels stay translatable.** The reader reads a `Schema` an author
   hands it as it is, never through JSON, so a title, description or
   option label made with `t()` stays a `TranslatableMarkup` in the

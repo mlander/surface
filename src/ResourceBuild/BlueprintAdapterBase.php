@@ -541,6 +541,20 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   }
 
   /**
+   * Answers whether this blueprint declares outputs.
+   *
+   * @return bool
+   *   TRUE for an outputs blueprint.
+   *
+   * @internal
+   *   For SchemaReader, which reads a list of objects at an output as a
+   *   list of maps.
+   */
+  public function declaresOutputs(): bool {
+    return $this->outputs;
+  }
+
+  /**
    * Answers whether this blueprint's builder holds its keys as schemas.
    *
    * @return bool

@@ -487,6 +487,17 @@ final class SchemaReader {
   protected bool $authored = FALSE;
 
   /**
+   * Whether an author's schema is read into an outputs blueprint.
+   *
+   * Outputs hold no attached structure, so a list of objects there is a
+   * list of maps, as addList() declares one: its items read as plain
+   * maps, a list of objects inside them too.
+   *
+   * Decision: see docs/decisions.md#authoring-takes-a-schema.
+   */
+  protected bool $outputs = FALSE;
+
+  /**
    * Constructs a SchemaReader.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceRegistry|null $registry
@@ -706,6 +717,7 @@ final class SchemaReader {
     $widgets = \Drupal::hasService('plugin.manager.surface_widget') ? \Drupal::service('plugin.manager.surface_widget') : NULL;
     $reader = new static(entityTypeManager: \Drupal::hasService('entity_type.manager') ? \Drupal::entityTypeManager() : NULL, library: static::library(), widgets: $widgets instanceof SurfaceWidgetManager ? $widgets : NULL);
     $reader->authored = TRUE;
+    $reader->outputs = $inputs instanceof BlueprintAdapterBase && $inputs->declaresOutputs();
     [$root, $read] = static::preparing($document);
     $reader->document = $root;
     // The author's Schema value itself, where preparing it moved nothing
@@ -3269,7 +3281,7 @@ final class SchemaReader {
       $items = $library_items;
       $property = $property->with('items', $items);
     }
-    if ($not_null === ['array'] && Schemas::isObjectSchema($items) && ($this->isObject($items) || $this->refersToObject($items, $root))) {
+    if ($not_null === ['array'] && Schemas::isObjectSchema($items) && ($this->isObject($items) || $this->refersToObject($items, $root)) && !$this->isOutputMaps($items)) {
       $this->collection($name, $property, $required, $pointer, $inputs, $root);
       return;
     }
@@ -3694,11 +3706,26 @@ final class SchemaReader {
       if ($types === ['object'] && is_array($nested) && $nested !== [] && !$this->isPlainMap($property)) {
         return FALSE;
       }
-      if ($types === ['array'] && Schemas::isObjectSchema($property->get('items')) && $this->isObject($property->get('items'))) {
+      if ($types === ['array'] && Schemas::isObjectSchema($property->get('items')) && $this->isObject($property->get('items')) && !$this->isOutputMaps($property->get('items'))) {
         return FALSE;
       }
     }
     return TRUE;
+  }
+
+  /**
+   * Answers whether a list's items are read as plain maps at an output.
+   *
+   * @param \PortableSchema\Builder\Schema $items
+   *   The list's items.
+   *
+   * @return bool
+   *   TRUE where an author's schema is read into outputs and the items are
+   *   an object of properties that is a plain map.
+   */
+  protected function isOutputMaps(Schema $items): bool {
+    $types = array_values(array_diff((array) ($items->get('type') ?? []), ['null']));
+    return $this->outputs && $types === ['object'] && is_array($items->get('properties')) && $items->get('properties') !== [] && $this->isPlainMap($items);
   }
 
   /**
@@ -3979,7 +4006,14 @@ final class SchemaReader {
       $items = Schemas::isObjectSchema($property->get('items')) ? $this->throughLibrary($property->get('items'), $root) : Schema::any();
       $item_types = $this->types($items, static::below($pointer, 'items'));
       $item_library = $this->libraryOf($items, static::below($pointer, 'items'));
-      if (array_values(array_diff($item_types, ['null'])) === ['array'] || ($items->all() !== [] && $this->isObject($items) && ($item_library === NULL || $item_library['object']))) {
+      if ($this->isOutputMaps($items)) {
+        // A list of objects at an output: a list of maps.
+        $item = $this->map($items, static::below($pointer, 'items'), $root);
+        if (static::text($items->get('title')) !== NULL) {
+          $item->setLabel($items->get('title'));
+        }
+      }
+      elseif (array_values(array_diff($item_types, ['null'])) === ['array'] || ($items->all() !== [] && $this->isObject($items) && ($item_library === NULL || $item_library['object']))) {
         $item = $this->foreignValue($items, static::below($pointer, 'items'), $root);
       }
       else {

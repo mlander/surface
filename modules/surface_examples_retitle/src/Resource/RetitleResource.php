@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface_examples_retitle\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
@@ -59,14 +57,14 @@ final class RetitleResource implements ResourceInterface, DefinesOutputsInterfac
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $title = MapDataDefinition::create()
-      ->setLabel(t('Title'))
-      ->setPropertyDefinition('node', DataDefinition::create('integer')->setLabel(t('Node'))->setRequired(TRUE))
-      ->setPropertyDefinition('old', DataDefinition::create('string')->setLabel(t('Old title'))->setRequired(TRUE))
-      ->setPropertyDefinition('new', DataDefinition::create('string')->setLabel(t('New title'))->setRequired(TRUE));
-    $outputs->addList('titles', $title, t('Titles'))
-      ->setDescription(t("Each node's title before and after, in the order sent: what a dry run would write, or what was written."))
-      ->setRequired(TRUE);
+    $outputs->addSchema('titles', Schema::list(Schema::object([
+      'node' => Schema::integer()->title(t('Node'))->required(),
+      'old' => Schema::string()->title(t('Old title'))->required(),
+      'new' => Schema::string()->title(t('New title'))->required(),
+    ])->title(t('Title')))
+      ->title(t('Titles'))
+      ->description(t("Each node's title before and after, in the order sent: what a dry run would write, or what was written."))
+      ->required());
   }
 
 }
