@@ -15678,9 +15678,12 @@ they served.
   both hold. A check kept inside the JsonSchema constraint would be
   answered `unchecked` for every value, so the keyword is the one kept
   there. A message under any other code but `pattern` and `not` is
-  refused. A document from anywhere else is read as before: its checks
-  describe what its server runs, and only `drupal:JsonSchema` and a
-  reference's are read.
+  refused. A reference check naming an entity type the site lacks is
+  read as its constraint, as `add()` holds it, and judged at the build
+  where `add()`'s is (decided 2026-11-17: the config schema command
+  reads modules that are not installed). A document from anywhere else
+  is read as before: its checks describe what its server runs, and only
+  `drupal:JsonSchema` and a reference's are read.
 - **A union of one schema and null.** In an author's schema, an `anyOf`
   or `oneOf` of exactly one schema and `{"type": "null"}` (or `{"const":
   null}`), in either order, is that schema with null allowed: its

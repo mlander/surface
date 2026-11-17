@@ -52,9 +52,10 @@ final class RegistrationStep2Resource implements ResourceInterface {
       ->title(t('Registration open'))
       ->default(TRUE));
 
-    $inputs->add(self::VENUE, 'string', t('Venue'))
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue'])
-      ->setRequired(TRUE);
+    $inputs->addSchema(self::VENUE, Schema::string()
+      ->title(t('Venue'))
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'event_venue'])
+      ->required());
 
     $inputs->addSchema(self::ROOM, Schema::string()
       ->title(t('Room'))

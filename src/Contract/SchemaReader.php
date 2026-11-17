@@ -1754,12 +1754,16 @@ final class SchemaReader {
    * @param string|null $why
    *   Set to why the options are not read, where the check names an
    *   entity type they cannot be read for; NULL otherwise.
+   * @param bool $anyType
+   *   Whether an entity type the site lacks is read too: an author's
+   *   check is, as add() holds its constraint, and the build judges it
+   *   (References::settle()).
    *
    * @return array{entityTypeId: string, bundles?: string[]}|null
    *   The constraint's options, as an author declares them; NULL where its
    *   check names no entity type, or one that is not read.
    */
-  protected function referenceOptions(Schema $property, ?string &$why = NULL): ?array {
+  protected function referenceOptions(Schema $property, ?string &$why = NULL, bool $anyType = FALSE): ?array {
     $why = NULL;
     $checks = $property->get(PortableKeywords::CHECK);
     $options = is_array($checks) ? ($checks[PortableKeywords::PROVIDER . References::CONSTRAINT] ?? NULL) : NULL;
@@ -1767,7 +1771,7 @@ final class SchemaReader {
     if (!is_array($options) || !is_string($options['entityTypeId'] ?? NULL) || $options['entityTypeId'] === '') {
       return NULL;
     }
-    if ($this->entityTypeManager !== NULL && !$this->entityTypeManager->hasDefinition($options['entityTypeId'])) {
+    if (!$anyType && $this->entityTypeManager !== NULL && !$this->entityTypeManager->hasDefinition($options['entityTypeId'])) {
       $why = sprintf('it refers to %s, an entity type this site does not have', $options['entityTypeId']);
       return NULL;
     }
@@ -4485,7 +4489,7 @@ final class SchemaReader {
               $held_at = static::below($at, PortableKeywords::PROVIDER . 'JsonSchema', 'schema');
               $read[] = new ReadBack('JsonSchema', ['schema' => static::fragment($this->keptSchema(static::checked($check['options']['schema'], $held_at), $held_at))], [$keyword]);
             }
-            elseif ($check['constraint'] === References::CONSTRAINT && ($refers = $this->referenceOptions($property, $why)) !== NULL) {
+            elseif ($check['constraint'] === References::CONSTRAINT && ($refers = $this->referenceOptions($property, $why, $this->authored)) !== NULL) {
               // What a key refers to, as its author declares it.
               // Decision: see
               // docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
