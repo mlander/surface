@@ -27,6 +27,9 @@ use Drupal\surface\Resource\ResourceCallable;
 use Drupal\surface\Resource\SiteListInterface;
 use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\Contract\SchemaReader;
+use PortableSchema\Builder\Schema;
+use Drupal\surface\Variants;
+use Drupal\surface\Reference\References;
 
 /**
  * The owner's blueprint: keys land at the top of the data surface.
@@ -415,8 +418,50 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
 
   /**
    * {@inheritdoc}
+   *
+   * The members of a structure mixed in too, as definitions() lists them.
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
+  public function referenceDefinitions(): array {
+    $definitions = parent::referenceDefinitions();
+    foreach ($this->mixins as $mixin) {
+      $definitions += $mixin['blueprint']->referenceDefinitions();
+    }
+    return $definitions;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The inputs: the builder holds each key's schema (SurfaceBuilder::
+   * setSchema()). An output is declared as its definition.
+   */
+  protected function holdsSchemas(): bool {
+    return !$this->outputs;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * In order at every level, as declare() records a key, and held by the
+   * builder as the schema.
+   */
+  protected function declareSchema(string $key, Schema $schema): void {
+    for ($level = $this; $level !== NULL; $level = $level->into) {
+      $level->order[] = $key;
+    }
+    if ($this->into !== NULL) {
+      $this->root()->origins[$key] ??= (string) $this->owner;
+    }
+    $this->builder->setSchema($key, $schema);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
+    if ($description !== NULL || $required || $storedAs !== NULL) {
+      return static::stated($this->attach($key, $structure, $label, $reads), $description, $required, $storedAs, References::STORED_AS);
+    }
     $this->assertUnwiredInMixin($structure, $key, $reads);
     return parent::attach($key, $structure, $label, $reads);
   }
@@ -434,7 +479,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#an-anonymous-map.
    */
-  public function addMap(string $key, string|\Stringable $label, callable $define): MapDataDefinition {
+  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): MapDataDefinition {
+    if ($description !== NULL) {
+      return static::stated($this->addMap($key, $label, $define), $description);
+    }
     if ($this->capture !== NULL) {
       $shell = $this->reserveChild('addMap', $key);
       $shell->setLabel($label);
@@ -519,7 +567,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    */
-  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = []): MapDataDefinition {
+  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
+    if ($description !== NULL || $required || $storedAs !== NULL) {
+      return static::stated($this->attachVariants($key, $by, $label, $from, $arguments), $description, $required, $storedAs, Variants::STORED_AS);
+    }
     $this->assertHoldsNoChild('attaches variants', $key);
     if ($from !== NULL && !is_subclass_of($from, SiteListInterface::class)) {
       throw new \LogicException(sprintf('attachVariants("%s") names %s as where its variants come from, which does not implement %s: a provider lists the site\'s variants, each with its schema or structure, with list().', $key, $from, SiteListInterface::class));
@@ -822,7 +873,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    */
-  public function addEach(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition {
+  public function addEach(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL, string|\Stringable|null $description = NULL): MapDataDefinition {
+    if ($description !== NULL) {
+      return static::stated($this->addEach($key, $type, $from, $label, $default), $description);
+    }
     $this->assertHoldsNoChild('declares keys from the site', $key);
     if ($type instanceof DataDefinitionInterface) {
       if (!LeafTypes::isLeaf($type)) {
@@ -853,7 +907,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    */
-  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
+  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL): MapDataDefinition {
+    if ($description !== NULL) {
+      return static::stated($this->attachEach($key, $structure, $from, $label, $reads), $description);
+    }
     $this->assertHoldsNoChild('attaches a child per thing the site has', $key);
     static::assertNoShape('attachEach', $key, $structure);
     return static::labeled($this->reserveEach('attachEach', $key, $structure, $from, NULL, TRUE, $reads), $label);

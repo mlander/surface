@@ -852,16 +852,17 @@ final class Attaching {
    * @param array<string, string> $reads
    *   The wiring.
    *
-   * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
-   *   Each wired key's definition, by port, as the builder holds it:
-   *   Attachment::withReads() reads each into its schema, at once.
+   * @return array<string, \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface>
+   *   Each wired key as the builder holds it, by port: its schema itself,
+   *   which is read no more, or its definition, which
+   *   Attachment::withReads() reads into its schema, at once.
    */
   protected static function wiredKeys(SurfaceBuilder $builder, array $reads): array {
     $wired = [];
     foreach ($reads as $port => $key) {
-      $definition = $builder->getDefinition($key);
-      if ($definition !== NULL) {
-        $wired[$port] = $definition;
+      $held = $builder->heldSchema($key) ?? $builder->getDefinition($key);
+      if ($held !== NULL) {
+        $wired[$port] = $held;
       }
     }
     return $wired;

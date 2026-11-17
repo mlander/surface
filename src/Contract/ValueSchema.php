@@ -77,6 +77,86 @@ final class ValueSchema {
   }
 
   /**
+   * Reads back the facts a value's or a list's schema was written from.
+   *
+   * What a definition of the schema would hold in its array, as
+   * NodeDefinition::of() derives it: each fact from its member, else from
+   * the keyword that holds it. A member that holds a schema (`shape`,
+   * `configType`, `each`) is kept as it is held.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema of one value or a list, as value() or list() writes it.
+   *
+   * @return array
+   *   The facts.
+   */
+  public static function factsOf(Schema $schema): array {
+    $model = DefinitionSchema::model($schema);
+    $facts = [];
+    foreach (DefinitionSchema::PLACES as $key => [$member, $keyword]) {
+      if ($member === 'type') {
+        $facts[$key] = $model['type'] ?? NULL;
+      }
+      elseif (array_key_exists($member, $model)) {
+        $facts[$key] = $model[$member];
+      }
+      elseif ($keyword !== NULL && $schema->has($keyword)) {
+        $facts[$key] = $schema->get($keyword);
+      }
+    }
+    foreach ((array) ($model['stored'] ?? []) as $key => $value) {
+      $facts[$key] = $value;
+    }
+    return $facts;
+  }
+
+  /**
+   * Answers whether a schema is one this class writes and reads back.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A key's schema.
+   *
+   * @return bool
+   *   TRUE for one value or a list of one value, of a type LeafTypes
+   *   derives the constraints of, held in neither `constraints` nor
+   *   `definitionClass` (the classes value() and list() write).
+   */
+  public static function writes(Schema $schema): bool {
+    if ($schema->isBoolean()) {
+      return FALSE;
+    }
+    $model = DefinitionSchema::model($schema);
+    if (!is_string($model['type'] ?? NULL) || isset($model['definitionClass']) || array_key_exists('constraints', $model) || $schema->has('properties')) {
+      return FALSE;
+    }
+    if ($model['type'] !== 'list') {
+      return isset(LeafTypes::DEFAULT_CONSTRAINTS[$model['type']]) && $model['type'] !== 'map';
+    }
+    $item = $schema->get('items');
+    return $item instanceof Schema && static::writes($item) && DefinitionSchema::model($item)['type'] !== 'list';
+  }
+
+  /**
+   * Writes a value's or a list's schema again, some facts changed.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema, one writes() answers TRUE for.
+   * @param \Closure(array): array $change
+   *   Takes the facts and gives them changed.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The schema written from the facts changed.
+   */
+  public static function with(Schema $schema, \Closure $change): Schema {
+    assert(static::writes($schema));
+    $facts = $change(static::factsOf($schema));
+    $item = $schema->get('items');
+    return DefinitionSchema::model($schema)['type'] === 'list' && $item instanceof Schema
+      ? static::list($facts, static::factsOf($item))
+      : static::value($facts);
+  }
+
+  /**
    * Writes what follows a value's keywords: its checks last, then MODEL.
    *
    * @param \PortableSchema\Builder\Schema $schema

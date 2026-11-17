@@ -143,8 +143,9 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * arrays, and this is where they become one collection, so nothing
    * about declaring a resource or structure changes.
    *
-   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $definitions
-   *   The definitions, keyed by definition key, in declaration order.
+   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface|\PortableSchema\Builder\Schema> $definitions
+   *   The definitions, keyed by definition key, in declaration order; a
+   *   key the builder holds as its schema is given as the schema.
    * @param array<string, string[]> $refinements
    *   Refinement dependencies: target key => the sibling keys it
    *   refines against. A target may be a dotted path to one property
@@ -272,6 +273,30 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     }
     $entries = [];
     foreach ($definitions as $name => $definition) {
+      if ($definition instanceof Schema) {
+        // A key the builder holds as its schema: node-first from the
+        // start, as the seal makes a key of one value.
+        $entries[] = Entry::ofSchema(
+          name: (string) $name,
+          node: $definition,
+          contributor: $contributor,
+          locked: in_array($name, $locked, TRUE),
+          dependencies: $dependencies[$name] ?? [],
+          refiners: $refiners[$name] ?? [],
+          contributions: $contributions[$name] ?? [],
+          attachment: $attachments[$name] ?? NULL,
+          variants: $variants[$name] ?? NULL,
+          paths: $paths[$name] ?? [],
+          runtimeOnly: array_values(array_diff($dependencies[$name] ?? [], $static[$name] ?? [])),
+          list: $lists[$name] ?? NULL,
+          watchedBy: $kinds[$name] ?? [],
+          mounted: $mounted[$name] ?? [],
+          held: in_array($name, $held, TRUE),
+          runtimeAccess: in_array($name, $runtimeAccess, TRUE),
+          lockedBecause: in_array($name, $locked, TRUE) ? ($lockReasons[$name] ?? NULL) : NULL,
+        );
+        continue;
+      }
       $entries[] = new Entry(
         name: (string) $name,
         definition: $definition,
