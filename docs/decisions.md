@@ -7075,12 +7075,20 @@ output entries' schemas, in the input path's codes.
 - **A watched value, the same way.** The watched-value check
   (`WatchedValueCheckInterface::admits(Schema $schema, $value)`) holds a
   value to its key's schema as the one output of a frame
-  (`Surface::holding()`), the value written as the document holds it (a
-  date and time with its offset); a float at an integer key is not handed
-  to a refiner typed for an integer. A value Typed Data let through at a
-  key of another type (`TRUE` at a string key, a string at a key that
-  holds a list of field items) is withheld now, as the input path refuses
-  it. A port's key is held as its schema alone. *Open:* a site's or a route's value (`KeyPaths::violation()`)
+  (`Surface::holding()`), the value read through the coercion table as
+  `accept()` reads what a form posts (a form's `"1"` is `TRUE`) and
+  written as the document holds it (a date and time with its offset); a
+  float the table leaves a float is not handed to a refiner typed for an
+  integer. *Open:* a scalar at a string key (`TRUE`) is read as its text
+  and handed over, as Typed Data's string took any scalar, since the value
+  baseline pins it (`values_test.keys`, gate `TRUE` and `FALSE`). A string
+  at a key that holds a list of field items, which Typed Data let
+  through, is withheld now; and a value whose check threw Symfony's
+  `UnexpectedTypeException` out of `accept()` (`TRUE` at a block's
+  `bundle`) is refused with `type` instead, which moves eight rows of the
+  value baseline (`block.surface_examples_plugins`, `/bundle TRUE` and
+  `FALSE`) and one (`block.placement--create`, where the input's own
+  check now throws the same exception from `validate()`). A port's key is held as its schema alone. *Open:* a site's or a route's value (`KeyPaths::violation()`)
   is still held through `ConstraintRunner::conforms()`: moving it changes
   the refusals the door corpus pins (316 rows over ten surfaces: Typed
   Data's sentences become the dialect's, "This value should be of the

@@ -9,6 +9,7 @@ use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Pipeline\Coercion;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
+use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Surface;
 use PortableSchema\Builder\Schema;
 
@@ -48,15 +49,16 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
    * {@inheritdoc}
    */
   public function admits(Schema $schema, mixed $value): bool {
-    return static::holdsIntegers($schema, $value) && $this->pipeline->conformOutput(Surface::holding($schema), ['value' => static::written($schema, $value)])->isEmpty();
+    $written = static::written($schema, $value);
+    return static::holdsIntegers($schema, $written) && $this->pipeline->conformOutput(Surface::holding($schema), ['value' => $written])->isEmpty();
   }
 
   /**
    * Answers whether every integer place holds a PHP integer.
    *
    * The dialect reads a whole float as an integer, and a refiner typed for
-   * an integer is handed it as PHP holds it: a float an integer key holds
-   * is not handed over.
+   * an integer is handed it as PHP holds it: a float the coercion table
+   * left a float (one past PHP's integers) is not handed over.
    *
    * @param \PortableSchema\Builder\Schema $schema
    *   The value's built schema.
@@ -87,9 +89,11 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
   /**
    * Writes an accepted value as the document holds it.
    *
-   * What SurfacePipelineInterface::document() writes of a value: a date
+   * Each value that is not a list or a map is read through the coercion
+   * table, as accept() reads a value a form posts (Coercion::scalar()),
+   * then written as SurfacePipelineInterface::document() writes it: a date
    * and time with its offset (Coercion::served()), at every depth of a
-   * list or a map. Every other value is held as it is.
+   * list or a map.
    *
    * @param \PortableSchema\Builder\Schema $schema
    *   The value's built schema.
@@ -113,7 +117,22 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
       }
       return $value;
     }
-    return is_string($value) && NodeFacts::dataType($schema) === 'datetime_iso8601' ? Coercion::served($value, DefinitionSchema::declares($schema, 'DateOnly')) : $value;
+    if (!ValueState::isConfigured($value) || !DefinitionSchema::isLeaf($schema)) {
+      return $value;
+    }
+    // Read through the coercion table first, as accept() reads what a
+    // form posts: a form's "1" is a boolean's TRUE.
+    $type = NodeFacts::dataType($schema);
+    $date_only = DefinitionSchema::declares($schema, 'DateOnly');
+    $value = Coercion::scalar($type, $date_only, $value);
+    if ($type === 'string' && is_scalar($value) && !is_string($value)) {
+      // A scalar at a string key, which the watched-value check has always
+      // handed over, as Typed Data's string takes any scalar; the value
+      // baseline pins it. Open: see
+      // docs/decisions.md#outputs-conform-through-the-dialects-validator.
+      return is_bool($value) ? ($value ? '1' : '0') : (string) $value;
+    }
+    return $type === 'datetime_iso8601' ? Coercion::served($value, $date_only) : $value;
   }
 
 }

@@ -70,7 +70,10 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *   key is held as its schema (SurfaceInterface::getPortSchema()), and
    *   nodeAt() hands it on, to the options service too.
    * - src/Surface.php, of(): withPorts() reads a port's key handed as a
-   *   definition into its schema, once, at the door (since 2026-11-16).
+   *   definition into its schema, once, at the door (since 2026-11-16);
+   *   refusedWatchedValues() reads the place of a watched key its source
+   *   gave as a definition, which the watched-value check is handed as a
+   *   schema (since slice 34).
    * - src/Attachment.php, of(): withReads() reads the definition of the
    *   key a port is wired to into its schema, once (since 2026-11-16):
    *   the build hands the builder's definition (Attaching::wiredKeys()),
@@ -103,7 +106,7 @@ class DefinitionReadCallersTest extends UnitTestCase {
     'src/Contract/ContractEmitter.php' => ['of' => 1],
     'src/Entry.php' => ['around' => 4, 'of' => 4],
     'src/Options/SurfaceOptions.php' => ['of' => 1],
-    'src/Surface.php' => ['around' => 2, 'of' => 1],
+    'src/Surface.php' => ['around' => 2, 'of' => 2],
     'src/Tool/InputDefinitions.php' => ['of' => 2],
     'src/Variants.php' => ['shell' => 2],
   ];

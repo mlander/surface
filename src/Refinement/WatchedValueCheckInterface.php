@@ -41,5 +41,4 @@ interface WatchedValueCheckInterface {
    */
   public function admits(Schema $schema, mixed $value): bool;
 
-
 }
