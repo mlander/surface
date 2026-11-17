@@ -1,9 +1,5 @@
 example modules/surface_examples/src/ConfigSchemaContract.php
-example modules/surface_examples/src/Resource/CateringByMethodResource.php
-example modules/surface_examples/src/Resource/DoorsResource.php
-example modules/surface_examples/src/Resource/WebhookResource.php
 example modules/surface_examples/src/Storage/VenueStorage.php
-example modules/surface_examples/src/Structure/PastedCredentialStructure.php
 example modules/surface_examples/src/Structure/VenueListingStructure.php
 example modules/surface_examples/surface_examples.services.yml
 example modules/surface_examples_address/src/Resource/AddressFieldSettingsResource.php
@@ -16,8 +12,6 @@ example modules/surface_examples_field/src/Storage/FieldInstanceStorage.php
 example modules/surface_examples_field/src/Storage/FieldStorageStorage.php
 example modules/surface_examples_node_type/src/Storage/NodeTypeStorage.php
 example modules/surface_examples_performance/src/Storage/PerformanceStorage.php
-example modules/surface_examples_plugins/src/Plugin/Field/FieldFormatter/ExampleFormatter.php
-example modules/surface_examples_plugins/src/Structure/ExampleBlockStructure.php
 example modules/surface_examples_retitle/src/Resource/RetitleResource.php
 model src/Attachment.php
 model src/Collection.php

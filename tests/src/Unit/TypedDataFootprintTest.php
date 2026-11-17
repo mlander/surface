@@ -164,8 +164,12 @@ class TypedDataFootprintTest extends UnitTestCase {
    * to 94: the key paths a rule watches are read on the validator and
    * ConstraintRunner::conforms() is gone, so Pipeline/Conforming.php,
    * Refinement/WatchedValueCheck.php and its interface name no Typed Data.
+   * Lowered on 2026-11-17 to 88: the verbs replay writes the keys of the
+   * examples as schemas, so CateringByMethodResource, DoorsResource,
+   * WebhookResource, PastedCredentialStructure, ExampleFormatter and
+   * ExampleBlockStructure name no Typed Data.
    */
-  public const OUTSIDE_THE_EDGES = 94;
+  public const OUTSIDE_THE_EDGES = 88;
 
   /**
    * Finds the files that use Typed Data.
