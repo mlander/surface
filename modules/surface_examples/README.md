@@ -5297,7 +5297,7 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples/src/Resource/CateringByMethodResource.php`](src/Resource/CateringByMethodResource.php) | the before: the same keys with defineInputs(), as examples 1 to 17 write them | 49 |
-| [`modules/surface_examples/src/Resource/CateringResource.php`](src/Resource/CateringResource.php) | the after, the resource: eight keys as properties, a type, a default and presence read from PHP, the rest from one attribute per verb, and the person attached with its port wired | 49 |
+| [`modules/surface_examples/src/Resource/CateringResource.php`](src/Resource/CateringResource.php) | the after, the resource: eight keys as properties, a type, a default and presence read from PHP, the rest from one attribute per verb, and the person attached with its port wired | 53 |
 | [`modules/surface_examples/src/Storage/CateringStorage.php`](src/Storage/CateringStorage.php) | the storage both save through: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step18` | the route of the properties | 8 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step18_method` | the route of the calls | 8 |
