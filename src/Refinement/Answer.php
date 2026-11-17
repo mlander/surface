@@ -134,6 +134,34 @@ final class Answer {
   }
 
   /**
+   * Refuses an author's answer that reaches inside the key.
+   *
+   * A #[RefinesInput] method answers for its key alone: `properties` and
+   * `items` are the engine's own links' to say (apply() with $inside).
+   * What else no answer says, apply() refuses where it applies it.
+   *
+   * @param \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply $answer
+   *   The answer.
+   * @param string $name
+   *   The key.
+   * @param string $who
+   *   Who answered, in words.
+   *
+   * @throws \LogicException
+   *   When the answer names `properties`, `items` or `required` names.
+   */
+  public static function assertAuthored(Schema|DoesNotApply $answer, string $name, string $who): void {
+    if ($answer instanceof DoesNotApply || $answer->isBoolean()) {
+      return;
+    }
+    foreach (['properties', 'items', 'required'] as $keyword) {
+      if ($answer->has($keyword)) {
+        throw new \LogicException(sprintf(self::UNREAD, $name, $who, '`' . $keyword . '`'));
+      }
+    }
+  }
+
+  /**
    * Answers whether an answer adds nothing.
    *
    * @param \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply $answer

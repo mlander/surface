@@ -293,6 +293,17 @@ class AnswerTest extends UnitTestCase {
   }
 
   /**
+   * Tests that an author's answer may not reach inside its key.
+   */
+  public function testAuthoredAnswerStaysAtItsKey(): void {
+    Answer::assertAuthored(Schema::any()->maxLength(3)->required(), 'k', 'the declaring class');
+    Answer::assertAuthored(DoesNotApply::here(), 'k', 'the declaring class');
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage(sprintf(Answer::UNREAD, 'k', 'Example::code()', '`items`'));
+    Answer::assertAuthored(Schema::any()->items(Schema::any()->maxLength(2)), 'k', 'Example::code()');
+  }
+
+  /**
    * Tests that the engine's own links reach inside a map, and only they.
    */
   public function testInsideMap(): void {
