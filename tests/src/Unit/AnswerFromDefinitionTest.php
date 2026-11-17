@@ -95,7 +95,10 @@ class AnswerFromDefinitionTest extends UnitTestCase {
    *   The handed definition, the refiner, and the answer's keywords.
    */
   public static function providerChanges(): array {
-    $labeled = static fn (): DataDefinition => DataDefinition::create('string')->addConstraint('LabeledChoice', ['choices' => ['a', 'b', 'c'], 'labels' => ['a' => 'A', 'b' => 'B', 'c' => 'C']]);
+    $labeled = static fn (): DataDefinition => DataDefinition::create('string')->addConstraint('LabeledChoice', [
+      'choices' => ['a', 'b', 'c'],
+      'labels' => ['a' => 'A', 'b' => 'B', 'c' => 'C'],
+    ]);
     $narrowed = static function (array $values, array $labels = []): callable {
       return static function (DataDefinition $definition) use ($values, $labels): DataDefinition {
         $set = ChoiceSet::of($definition);
@@ -126,8 +129,8 @@ class AnswerFromDefinitionTest extends UnitTestCase {
         [],
       ],
       'a bound tightened' => [
-        static fn (): DataDefinition => DataDefinition::create('integer')->addConstraint('Range', ['min' => 1, 'max' => 100]),
-        static fn (DataDefinition $definition): DataDefinition => $definition->addConstraint('Range', ['min' => 1, 'max' => 40]),
+        static fn (): DataDefinition => DataDefinition::create('integer')->addConstraint('Range', ['max' => 9]),
+        static fn (DataDefinition $d): DataDefinition => $d->addConstraint('Range', ['max' => 4]),
         ['portable-check'],
       ],
       'a check added' => [
@@ -164,10 +167,10 @@ class AnswerFromDefinitionTest extends UnitTestCase {
     $file = tempnam(sys_get_temp_dir(), 'answers');
     putenv(AnswerFromDefinition::LOG . '=' . $file);
     $definition = DataDefinition::create('integer')->addConstraint('Range', ['max' => 100]);
-    $returned = Surface::deepClone($definition)->addConstraint('Range', ['max' => 10])->setDescription('Ten at most.');
+    $returned = (clone $definition)->addConstraint('Range', ['max' => 10])->setDescription('Ten at most.');
     AnswerFromDefinition::between(DefinitionSchema::of($definition), $returned, $definition, 'Example::capacity()', 'capacity');
     // Nothing logged for an answer that needed none of those.
-    AnswerFromDefinition::between(DefinitionSchema::of($definition), Surface::deepClone($definition)->setRequired(TRUE), $definition, 'Example::required()', 'capacity');
+    AnswerFromDefinition::between(DefinitionSchema::of($definition), (clone $definition)->setRequired(TRUE), $definition, 'Example::required()', 'capacity');
     $this->assertSame("Example::capacity()\tcapacity\tdescription,bound\n", file_get_contents($file));
     unlink($file);
   }

@@ -21,20 +21,29 @@ use PortableSchema\Builder\Schema;
  * read or derived. The schema it gives is the one DefinitionSchema::of()
  * reads from the key's definition with the same change made to it.
  *
- * | The answer says | What the key's schema becomes |
- * | --- | --- |
- * | Nothing (`Schema::any()`, `true`) | the key's schema, unchanged |
- * | DoesNotApply::here(), or `false` | the key's schema, marked as not applying |
- * | A bound: `minimum`, `maximum`, `minLength`, `maxLength`, `minItems`, `maxItems`, or `drupal:Range`, `drupal:Length`, `drupal:Count` | of the key's bound and the answer's, the stricter stands; the constraint's other options are the answer's |
- * | `pattern`, or `drupal:Regex` | the pattern, where the key holds none; the key's stands where it holds one |
- * | `required()` | required; nothing in an answer unrequires |
- * | `enum` | the key's list, filtered: the key's order and the key's labels |
- * | `options()` (a `oneOf` of `const` and `title`) | the list for these values, in its order with its labels (held in the order the key holds its labels in); a value the key's list does not offer is refused |
- * | `Schema::enum([])`, `Schema::options([])` | the empty list |
- * | `title`, `description` | written as given |
- * | A named check, `drupal:<id>` | added; one the key holds with other options is refused |
- * | `type`, `default`, anything else | refused |
- * | `properties`, `items` | each applied at its place, for the engine's own links only |
+ * What each part of an answer does to the key's schema:
+ * - nothing (`Schema::any()`, `true`): the key's schema, unchanged;
+ * - DoesNotApply::here(), or `false`: the key's schema, marked as not
+ *   applying;
+ * - a bound (`minimum`, `maximum`, `minLength`, `maxLength`, `minItems`,
+ *   `maxItems`, or the checks `drupal:Range`, `drupal:Length`,
+ *   `drupal:Count`): of the key's bound and the answer's, the stricter
+ *   stands; the constraint's other options are the answer's;
+ * - `pattern`, or `drupal:Regex`: the pattern, where the key holds none;
+ *   the key's stands where it holds one;
+ * - `required()`: required; nothing in an answer unrequires;
+ * - `enum`: the key's list, filtered, in the key's order with the key's
+ *   labels;
+ * - `options()`, a `oneOf` of `const` and `title`: the list for these
+ *   values, in its order with its labels (held in the order the key holds
+ *   its labels in); a value the key's list does not offer is refused;
+ * - `Schema::enum([])` and `Schema::options([])`: the empty list;
+ * - `title`, `description`: written as given;
+ * - a named check, `drupal:<id>`: added; one the key holds with other
+ *   options is refused;
+ * - `type`, `default`, anything else: refused;
+ * - `properties`, `items`: each applied at its place, for the engine's
+ *   own links only.
  *
  * A key that does not apply is left as it is: nothing is narrower. A
  * refusal says what a widening would have done in Narrowing's words, so a
@@ -516,7 +525,8 @@ final class Answer {
     $labels = [];
     foreach ($branches as $branch) {
       $keywords = $branch instanceof Schema && !$branch->isBoolean() ? $branch->all() : NULL;
-      if ($keywords === NULL || !array_key_exists('const', $keywords) || array_diff(array_keys($keywords), ['const', 'title']) !== []) {
+      $said = ['const', 'title'];
+      if ($keywords === NULL || !array_key_exists('const', $keywords) || array_diff(array_keys($keywords), $said) !== []) {
         throw new \LogicException(sprintf(self::UNREAD, $name, $who, 'a `oneOf` that is not a list of options'));
       }
       $value = $keywords['const'];
@@ -534,7 +544,7 @@ final class Answer {
    * @param array $merged
    *   The key's constraints, merged.
    * @param array $list
-   *   `enum` or `options`, the values, and the labels.
+   *   The kind, `enum` or `options`, the values, and the labels.
    *
    * @return \Drupal\surface\Refinement\ChoiceSet
    *   The list to write.
@@ -557,7 +567,8 @@ final class Answer {
     if ($set === NULL) {
       return new ChoiceSet('LabeledChoice', $values, $labels);
     }
-    $gained = Narrowing::constraintWidened($set->constraint, ['choices' => $set->values, 'labels' => []], ['choices' => $values, 'labels' => []]);
+    $offered = ['choices' => $set->values, 'labels' => []];
+    $gained = Narrowing::constraintWidened($set->constraint, $offered, ['choices' => $values, 'labels' => []]);
     if ($gained !== NULL) {
       throw new \DomainException($gained);
     }

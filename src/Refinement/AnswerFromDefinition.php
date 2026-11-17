@@ -104,7 +104,11 @@ final class AnswerFromDefinition {
     }
     $answer = Schema::any();
     $model = DefinitionSchema::model($key);
-    foreach (['title' => [$returned->getLabel(), 'label'], 'description' => [$returned->getDescription(), 'description']] as $text => [$now, $member]) {
+    $texts = [
+      'title' => [$returned->getLabel(), 'label'],
+      'description' => [$returned->getDescription(), 'description'],
+    ];
+    foreach ($texts as $text => [$now, $member]) {
       $was = $key->has($text) ? $key->get($text) : ($model[$member] ?? NULL);
       if ($now === $was) {
         continue;

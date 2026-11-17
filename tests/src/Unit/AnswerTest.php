@@ -173,7 +173,8 @@ class AnswerTest extends UnitTestCase {
     $definition = static::labeled();
     $expected = clone $definition;
     ChoiceSet::of($definition)->withValues(['a', 'c'])->applyTo($expected);
-    $this->assertSameSchema(DefinitionSchema::of($expected), Answer::apply(DefinitionSchema::of($definition), Schema::enum(['c', 'a', 'z']), 'k', 'the declaring class'));
+    $key = DefinitionSchema::of($definition);
+    $this->assertSameSchema(DefinitionSchema::of($expected), Answer::apply($key, Schema::enum(['c', 'a', 'z']), 'k', 'the declaring class'));
     // A key with no list gains a Choice of the values.
     $plain = DataDefinition::create('string');
     $this->assertSameSchema(
@@ -197,7 +198,7 @@ class AnswerTest extends UnitTestCase {
   /**
    * Tests that `options()` holding a value the key does not offer is refused.
    */
-  public function testOptionsMayNotAddAValue(): void {
+  public function testOptionsMayNotAddValue(): void {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage(self::WIDENED . 'the LabeledChoice constraint gained the values z' . self::ONLY_NARROW);
     Answer::apply(DefinitionSchema::of(static::labeled()), Schema::options(['a' => 'A', 'z' => 'Zed']), 'k', 'the declaring class');
@@ -294,12 +295,11 @@ class AnswerTest extends UnitTestCase {
   /**
    * Tests that the engine's own links reach inside a map, and only they.
    */
-  public function testInsideAMap(): void {
+  public function testInsideMap(): void {
     $map = static::map();
     $key = DefinitionSchema::of($map);
     $expected = static::map();
-    $expected->getPropertyDefinition('code')->addConstraint('Length', ['max' => 4]);
-    $expected->getPropertyDefinition('code')->setRequired(TRUE);
+    $expected->setPropertyDefinition('code', DataDefinition::create('string')->addConstraint('Length', ['max' => 4])->setRequired(TRUE));
     $answer = Schema::any()->properties(['code' => Schema::any()->maxLength(4)->required()]);
     $this->assertSameSchema(DefinitionSchema::of($expected), Answer::apply($key, $answer, 'k', 'the declaring class', TRUE));
     $ruled = static::map();
@@ -310,7 +310,7 @@ class AnswerTest extends UnitTestCase {
   /**
    * Tests a refusal inside a map, in Narrowing's words.
    */
-  public function testInsideAMapRefused(): void {
+  public function testInsideMapRefused(): void {
     $map = static::map();
     $map->getPropertyDefinition('code')->addConstraint('Uuid', ['strict' => TRUE]);
     $this->expectException(\LogicException::class);
@@ -321,7 +321,7 @@ class AnswerTest extends UnitTestCase {
   /**
    * Tests that a property the map does not hold is refused.
    */
-  public function testInsideAMapNoSuchProperty(): void {
+  public function testInsideMapNoSuchProperty(): void {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage(self::WIDENED . 'the map gained the property other' . self::ONLY_NARROW);
     Answer::apply(DefinitionSchema::of(static::map()), Schema::any()->properties(['other' => Schema::any()->maxLength(4)]), 'k', 'the declaring class', TRUE);
@@ -330,7 +330,7 @@ class AnswerTest extends UnitTestCase {
   /**
    * Tests that the engine's own links reach a list's item.
    */
-  public function testInsideAList(): void {
+  public function testInsideList(): void {
     $list = static::list();
     $expected = static::list();
     $expected->getItemDefinition()->addConstraint('Length', ['max' => 3]);
@@ -340,7 +340,7 @@ class AnswerTest extends UnitTestCase {
   /**
    * Tests the one answer a parent gives about a key holding a child.
    */
-  public function testKeyHoldingAChild(): void {
+  public function testKeyHoldingChild(): void {
     $key = DefinitionSchema::of(static::map());
     $this->assertTrue(NodeFacts::doesNotApply(Answer::forKeyHoldingChild($key, DoesNotApply::here(), 'address', 'the declaring class')));
     $this->assertNull(Answer::forKeyHoldingChild($key, Schema::any(), 'address', 'the declaring class'));
@@ -364,7 +364,7 @@ class AnswerTest extends UnitTestCase {
   /**
    * Tests that a collection that is no longer a list is said so.
    */
-  public function testItemsNoLongerAList(): void {
+  public function testItemsNoLongerList(): void {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage(sprintf(Answer::ITEMS, 'racks', 'the list is no longer a list'));
     Answer::assertItemsUntouched('racks', DefinitionSchema::of(static::list()), DefinitionSchema::of(DataDefinition::create('string')));
@@ -397,7 +397,10 @@ class AnswerTest extends UnitTestCase {
    *   A string with a LabeledChoice of a, b and c.
    */
   protected static function labeled(): DataDefinition {
-    return DataDefinition::create('string')->addConstraint('LabeledChoice', ['choices' => ['a', 'b', 'c'], 'labels' => ['a' => 'A', 'b' => 'B', 'c' => 'C']]);
+    return DataDefinition::create('string')->addConstraint('LabeledChoice', [
+      'choices' => ['a', 'b', 'c'],
+      'labels' => ['a' => 'A', 'b' => 'B', 'c' => 'C'],
+    ]);
   }
 
   /**
