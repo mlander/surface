@@ -11,6 +11,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Storage\BulletinStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 7: a rule declared as data, and a key that does not apply.
@@ -54,7 +55,7 @@ final class BulletinResource implements ResourceInterface {
 
     $inputs->narrow('items')
       ->when(Condition::equals('frequency', 'weekly'))
-      ->constrain('Range', ['max' => 5])
+      ->constrain(Schema::any()->maximum(5))
       ->because(t('Up to 5 in a weekly issue.'));
   }
 

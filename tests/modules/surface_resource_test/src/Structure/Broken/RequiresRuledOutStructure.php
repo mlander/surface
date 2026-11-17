@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Broken;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Requires, by a rule, a key a refiner may rule out.
@@ -33,8 +33,8 @@ final class RequiresRuledOutStructure implements StructureInterface {
    * A detail applies only in the detailed mode.
    */
   #[RefinesInput('detail')]
-  public static function detailOnlyWhenDetailed(DataDefinitionInterface $detail, string $mode): DataDefinitionInterface|DoesNotApply {
-    return $mode === 'detailed' ? $detail : DoesNotApply::here();
+  public static function detailOnlyWhenDetailed(string $mode): Schema|DoesNotApply {
+    return $mode === 'detailed' ? Schema::any() : DoesNotApply::here();
   }
 
 }

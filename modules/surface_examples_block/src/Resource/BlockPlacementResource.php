@@ -6,7 +6,6 @@ namespace Drupal\surface_examples_block\Resource;
 
 use Drupal\block\BlockInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -16,6 +15,7 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_block\Storage\BlockPlacementStorage;
 use Drupal\surface_examples_block\Structure\VisibilityConditionStructure;
 use Drupal\surface_examples_block\Variants\BlockPluginStructures;
+use PortableSchema\Builder\Schema;
 
 /**
  * A placed block: where it is, what it shows, and when.
@@ -151,8 +151,8 @@ final class BlockPlacementResource implements ResourceInterface {
    * The regions the chosen theme shows, as the block layout offers them.
    */
   #[RefinesInput('region')]
-  public static function regionsOfTheme(DataDefinitionInterface $region, string $theme): DataDefinitionInterface {
-    return $region->addConstraint('SurfaceThemeRegion', ['theme' => $theme]);
+  public static function regionsOfTheme(string $theme): Schema {
+    return Schema::any()->check('drupal:SurfaceThemeRegion', ['theme' => $theme]);
   }
 
 }

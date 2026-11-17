@@ -6,12 +6,12 @@ namespace Drupal\surface_examples_extras\Alter;
 
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * This module's additions to the example block.
@@ -81,14 +81,10 @@ final class ExampleBlockAlter implements AltersInputsInterface {
    * A grid of fifty teasers is a page, not a block.
    */
   #[RefinesInput('limit')]
-  public static function shortInGrid(DataDefinitionInterface $limit, string $presentation): DataDefinitionInterface {
-    if ($presentation !== 'grid') {
-      return $limit;
-    }
-    // Only the maximum moves, so a minimum anybody else raised stands.
-    $range = $limit->getConstraints()['Range'] ?? [];
-    $range['max'] = min($range['max'] ?? self::GRID_LIMIT, self::GRID_LIMIT);
-    return $limit->addConstraint('Range', $range);
+  public static function shortInGrid(string $presentation): Schema {
+    // Of the key's maximum and this one, the stricter stands, and a
+    // minimum anybody else raised stands with it.
+    return $presentation === 'grid' ? Schema::any()->maximum(self::GRID_LIMIT) : Schema::any();
   }
 
 }

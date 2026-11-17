@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Alter;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface_resource_test\Structure\Broken\InstanceAlterRefinerStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Refines with an instance method that does not declare itself runtime.
@@ -31,8 +31,8 @@ final class InstanceRefinerAlter implements AltersInputsInterface {
    * An instance method, declared static by default.
    */
   #[RefinesInput('name')]
-  public function nameOfKind(DataDefinitionInterface $name, string $kind): DataDefinitionInterface {
-    return $name->addConstraint('Length', ['max' => 10]);
+  public function nameOfKind(string $kind): Schema {
+    return Schema::any()->maxLength(10);
   }
 
 }

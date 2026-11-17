@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Fixtures;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
+use PortableSchema\Builder\Schema;
 
 /**
  * Refiners for StaticRefinerRuleTest: which the rule flags, and which not.
@@ -16,33 +16,33 @@ final class StaticRefinerFixture {
    * Static, and reads State: flagged.
    */
   #[RefinesInput('room')]
-  public static function readsState(DataDefinitionInterface $room): DataDefinitionInterface {
-    return \Drupal::state()->get('closed') ? $room : $room->setRequired(TRUE);
+  public static function readsState(): Schema {
+    return \Drupal::state()->get('closed') ? Schema::any() : Schema::any()->required();
   }
 
   /**
    * Static, and asks the container for a service: flagged.
    */
   #[RefinesInput('room')]
-  public static function asksForService(DataDefinitionInterface $room): DataDefinitionInterface {
+  public static function asksForService(): Schema {
     \Drupal::service('surface.options');
-    return $room;
+    return Schema::any();
   }
 
   /**
    * Runtime by declaration: not flagged.
    */
   #[RefinesInput('room', runtime: TRUE)]
-  public static function runtime(DataDefinitionInterface $room): DataDefinitionInterface {
-    return \Drupal::currentUser()->isAnonymous() ? $room : $room->setRequired(TRUE);
+  public static function runtime(): Schema {
+    return \Drupal::currentUser()->isAnonymous() ? Schema::any() : Schema::any()->required();
   }
 
   /**
    * Pure: not flagged.
    */
   #[RefinesInput('room')]
-  public static function pure(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
-    return $venue === 'hall' ? $room->setRequired(TRUE) : $room;
+  public static function pure(string $venue): Schema {
+    return $venue === 'hall' ? Schema::any()->required() : Schema::any();
   }
 
   /**

@@ -11,6 +11,8 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\DeclaredRefiner;
@@ -22,7 +24,6 @@ use Drupal\surface\Resource\KnowsClearableKeysInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceStorageInterface;
-use Drupal\surface\Entry;
 
 /**
  * The binding phase of the build: refiners and rules into the builder.
@@ -371,12 +372,21 @@ final class Binding {
         ? $builder->getThirdPartyDefinition((string) $module, $refiner->key)
         : $builder->getDefinition($refiner->key);
       assert($advertised !== NULL);
-      $refined = $link->invoke($refiner, Surface::deepClone($advertised), []);
-      Narrowing::assertNarrows($refiner->key, $refiner->describe(), $advertised, $refined);
-      if (in_array($refiner->key, $lists, TRUE)) {
-        Surface::assertItemsUntouched(new Entry($refiner->key, $advertised), $refined);
+      // Its one answer is known now: one that would widen the key as
+      // declared is refused, and it is applied to the key's schema. The
+      // builder holds definitions, so it is handed the definition the
+      // applied schema reads as.
+      $key = DefinitionSchema::of($advertised);
+      $answer = $link->answerOf($refiner, $key, [], $refiner->key);
+      $widened = Answer::widensAsWritten($key, $answer, $refiner->key, $refiner->describe());
+      if ($widened !== NULL) {
+        throw new \LogicException(sprintf(Answer::WIDENED, $refiner->key, $refiner->describe(), $widened));
       }
-      Surface::carryMetadata($advertised, $refined);
+      $schema = Answer::apply($key, $answer, $refiner->key, $refiner->describe(), TRUE);
+      if (in_array($refiner->key, $lists, TRUE)) {
+        Answer::assertItemsUntouched($refiner->key, $key, $schema);
+      }
+      $refined = Surface::writtenOn($advertised, $key, $schema);
       if ($own) {
         $builder->setThirdPartyDefinition((string) $module, $refiner->key, $refined);
         continue;
@@ -744,7 +754,7 @@ final class Binding {
       if ($module === NULL || in_array($watched, $input_keys, TRUE) || !in_array($watched, $mounted, TRUE)) {
         continue;
       }
-      $parameter = (new \ReflectionMethod($refiner->class, $refiner->method))->getParameters()[$position + 1] ?? NULL;
+      $parameter = (new \ReflectionMethod($refiner->class, $refiner->method))->getParameters()[$position + ($refiner->first === 'schema' ? 1 : 0)] ?? NULL;
       if ($parameter !== NULL && !$parameter->allowsNull()) {
         throw new \LogicException(sprintf(
           '%s watches "%s", a key its alter mounted on %s, which is handed as it stands and is NULL until answered: declare $%s nullable.',
@@ -847,13 +857,6 @@ final class Binding {
    *   Naming the method and what is wrong with it.
    */
   protected static function assertRefinable(ResourceDefinition $definition, RefinerDefinition $refiner, array $input_keys, array $output_keys, ?array $watchable = NULL): void {
-    if (!$refiner->takesDefinition) {
-      throw new \LogicException(sprintf(
-        '%s refines "%s" but takes no parameters: its first parameter receives that key\'s definition.',
-        $refiner->describe(),
-        $refiner->key,
-      ));
-    }
     if (!in_array($refiner->key, $input_keys, TRUE)) {
       throw new \LogicException(in_array($refiner->key, $output_keys, TRUE)
         ? sprintf(

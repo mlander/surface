@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface_resource_test\Shape\Sku;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tightens the stock code at every key that uses it: at most twelve.
@@ -33,7 +34,7 @@ final class SkuAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->narrow('resource_test.sku')->constrain('Length', ['max' => 12]);
+    $inputs->narrow('resource_test.sku')->constrain(Schema::any()->maxLength(12));
     $inputs->describe('resource_test.sku', description: $this->t('Two capitals and digits, as printed on the shelf.'));
   }
 

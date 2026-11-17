@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Alter;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface_resource_test\Structure\Notice\NoticeStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Mounts a signature on the notice, and a footer.
@@ -34,8 +34,8 @@ final class NoticeAlter implements AltersInputsInterface {
    * A signature applies only to a notice sent by email.
    */
   #[RefinesInput('signature')]
-  public static function signatureOnlyByEmail(DataDefinitionInterface $signature, string $channel): DataDefinitionInterface|DoesNotApply {
-    return $channel === 'email' ? $signature : DoesNotApply::here();
+  public static function signatureOnlyByEmail(string $channel): Schema|DoesNotApply {
+    return $channel === 'email' ? Schema::any() : DoesNotApply::here();
   }
 
 }

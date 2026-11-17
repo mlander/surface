@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Broken;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Has a static refiner that answers differently each time it is asked.
@@ -40,8 +40,8 @@ final class FickleStructure implements StructureInterface {
    * A maximum that moves every time it is asked.
    */
   #[RefinesInput('size')]
-  public static function sizeOfKind(DataDefinitionInterface $size, string $kind): DataDefinitionInterface {
-    return $size->addConstraint('Range', ['max' => 100 - ++self::$calls]);
+  public static function sizeOfKind(string $kind): Schema {
+    return Schema::any()->maximum(100 - ++self::$calls);
   }
 
 }

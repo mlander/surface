@@ -6,8 +6,6 @@ namespace Drupal\surface_examples\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface_examples\Structure\ContactStructure;
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -15,6 +13,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Storage\RegistrationStep3Storage;
 use Drupal\surface_examples\Venues;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 3: made of parts.
@@ -65,8 +64,8 @@ final class RegistrationStep3Resource implements ResourceInterface {
    * The room must be one of the chosen venue's rooms.
    */
   #[RefinesInput('room')]
-  public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
-    return $room->addConstraint('LabeledChoice', ['choices' => Venues::rooms($venue)]);
+  public static function roomInVenue(string $venue): Schema {
+    return Schema::options(Venues::rooms($venue));
   }
 
   /**
@@ -76,16 +75,17 @@ final class RegistrationStep3Resource implements ResourceInterface {
    * its lower bound and has no upper one.
    */
   #[RefinesInput('capacity')]
-  public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
+  public static function capacityOfRoom(string $room): Schema {
     $seats = Venues::seats($room);
-    if ($seats !== NULL && $capacity instanceof DataDefinition) {
-      $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats])
-        ->setDescription(t('Up to @seats for the @room.', [
-          '@seats' => $seats,
-          '@room' => Venues::rooms()[$room],
-        ]));
+    if ($seats === NULL) {
+      return Schema::any();
     }
-    return $capacity;
+    return Schema::any()
+      ->maximum($seats)
+      ->description(t('Up to @seats for the @room.', [
+        '@seats' => $seats,
+        '@room' => Venues::rooms()[$room],
+      ]));
   }
 
 }

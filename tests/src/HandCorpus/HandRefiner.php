@@ -4,23 +4,25 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\HandCorpus;
 
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinition;
-use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\PortableKeywords;
+use Drupal\surface\Refinement\Answer;
+use Drupal\surface\Refinement\ChoiceSet;
+use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\SurfaceRefinerInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Refines a key by what one gate key holds, for the hand corpus.
  *
  * For each value of the gate, a list of steps, each an operation and the
  * dotted path below the key it applies at ('' for the key itself): `out`
- * rules the place out, `choice` adds a Choice of the choices given, `req`
- * makes it required, `label` gives it the label given, `len` adds a
- * Length and `count` a Count of the maximum given, each on a copy;
- * `clone` goes on with a copy of the key's definition, and `same` hands
- * back the definition as it is. A list's item is the place below a
- * list, whatever its path says.
+ * rules the place out, `choice` answers a Choice of the choices given,
+ * `req` requires it, `label` gives it the title given, `len` a Length and
+ * `count` a Count of the maximum given, each an answer at its place;
+ * `clone` answers nothing, and `same` ends the steps. A list's item is
+ * the place below a list, whatever its path says.
  */
 final class HandRefiner implements SurfaceRefinerInterface {
 
@@ -32,38 +34,60 @@ final class HandRefiner implements SurfaceRefinerInterface {
    *   boolean, '' for no value.
    * @param string $gate
    *   The key whose value chooses the steps.
+   * @param string $who
+   *   Who the chain is, in words, for the refusal of a bound step that
+   *   would widen the key.
    */
   public function __construct(
     protected readonly array $steps,
     protected readonly string $gate = 'gate',
+    protected readonly string $who = 'the declaring class',
   ) {
   }
 
   /**
    * {@inheritdoc}
    */
-  public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
+  public function refine(string $name, Schema $key, array $values): array {
     $held = $values[$this->gate] ?? NULL;
     $held = is_bool($held) ? ($held ? 'true' : 'false') : (is_scalar($held) ? (string) $held : '');
+    $answers = [];
+    $schema = $key;
     foreach ($this->steps[$held] ?? [] as $step) {
       [$operation, $path] = $step;
       if ($operation === 'same') {
-        return $definition;
+        break;
       }
       if ($operation === 'clone') {
-        $definition = clone $definition;
         continue;
       }
-      $definition = static::at($definition, $path === '' ? [] : explode('.', $path), $operation, $step[2] ?? NULL);
+      $parents = $path === '' ? [] : explode('.', $path);
+      // A bound step is written over the key's bound, as the corpus wrote
+      // it on a copy of the definition: one that would widen it is
+      // refused, in the words of the narrowing check, whatever the
+      // applier would make of it.
+      $widened = static::widened($schema, $parents, $operation, $step[2] ?? NULL);
+      if ($widened !== NULL) {
+        throw new \LogicException(sprintf(Answer::WIDENED, $name, $this->who, $widened));
+      }
+      $answer = static::at($schema, $parents, $operation, $step[2] ?? NULL);
+      $answers[] = $answer;
+      try {
+        $schema = Answer::apply($schema, $answer, $name, $this->who, TRUE);
+      }
+      catch (\LogicException) {
+        // Refused where the chain applies it.
+        break;
+      }
     }
-    return $definition;
+    return $answers;
   }
 
   /**
-   * Takes one step at a place below a definition, on copies.
+   * Gives one step's answer at a place below a key.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema there, as it stands.
    * @param list<string> $path
    *   The path below it.
    * @param string $operation
@@ -71,35 +95,93 @@ final class HandRefiner implements SurfaceRefinerInterface {
    * @param mixed $argument
    *   What the step takes.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The definition, changed at the place.
+   * @return \PortableSchema\Builder\Schema
+   *   The answer for the place, placed at the path.
    */
-  protected static function at(DataDefinitionInterface $definition, array $path, string $operation, mixed $argument): DataDefinitionInterface {
-    if (!$definition instanceof DataDefinition) {
-      throw new \LogicException('The hand corpus refines only definitions it built.');
-    }
+  protected static function at(Schema $schema, array $path, string $operation, mixed $argument): Schema {
     if ($path === []) {
       return match ($operation) {
-        'out' => DoesNotApply::marked($definition),
-        'choice' => (clone $definition)->addConstraint('Choice', ['choices' => $argument]),
-        'req' => (clone $definition)->setRequired(TRUE),
-        'label' => (clone $definition)->setLabel($argument),
-        'len' => (clone $definition)->addConstraint('Length', ['max' => $argument]),
-        'count' => (clone $definition)->addConstraint('Count', ['max' => $argument]),
+        'out' => Schema::boolean(FALSE),
+        'choice' => static::choice($schema, (array) $argument),
+        'req' => Schema::any()->required(),
+        'label' => Schema::any()->with('title', $argument),
+        'len' => Schema::any()->with(PortableKeywords::CHECK, ['drupal:Length' => ['max' => $argument]]),
+        'count' => Schema::any()->with(PortableKeywords::CHECK, ['drupal:Count' => ['max' => $argument]]),
         default => throw new \LogicException("No step $operation."),
       };
     }
-    $property = array_shift($path);
-    $copy = clone $definition;
-    if ($copy instanceof ListDataDefinition) {
-      $copy->setItemDefinition(static::at($copy->getItemDefinition(), $path, $operation, $argument));
-      return $copy;
+    $property = (string) array_shift($path);
+    if (DefinitionSchema::isList($schema)) {
+      $item = DefinitionSchema::itemNode($schema);
+      if ($item === NULL) {
+        throw new \LogicException('The hand corpus steps only into maps and lists.');
+      }
+      return Schema::any()->with('items', static::at($item, $path, $operation, $argument));
     }
-    if (!method_exists($copy, 'setPropertyDefinition') || !method_exists($copy, 'getPropertyDefinition')) {
+    $inner = DefinitionSchema::propertyNode($schema, $property);
+    if ($inner === NULL) {
       throw new \LogicException('The hand corpus steps only into maps and lists.');
     }
-    $copy->setPropertyDefinition($property, static::at($copy->getPropertyDefinition($property), $path, $operation, $argument));
-    return $copy;
+    return Schema::any()->with('properties', [$property => static::at($inner, $path, $operation, $argument)]);
+  }
+
+  /**
+   * Says what a bound step written over the key's bound would widen.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema there.
+   * @param list<string> $path
+   *   The path below it.
+   * @param string $operation
+   *   The step.
+   * @param mixed $argument
+   *   What the step takes.
+   *
+   * @return string|null
+   *   What widens, as Narrowing says it, or NULL.
+   */
+  protected static function widened(Schema $schema, array $path, string $operation, mixed $argument): ?string {
+    if ($path === []) {
+      $constraint = ['len' => 'Length', 'count' => 'Count'][$operation] ?? NULL;
+      $held = $constraint === NULL ? NULL : NodeFacts::constraints($schema)[$constraint] ?? NULL;
+      return $held === NULL ? NULL : Narrowing::constraintWidened($constraint, (array) $held, ['max' => $argument]);
+    }
+    $property = (string) array_shift($path);
+    if (DefinitionSchema::isList($schema)) {
+      $item = DefinitionSchema::itemNode($schema);
+      $widened = $item === NULL ? NULL : static::widened($item, $path, $operation, $argument);
+      return $widened === NULL ? NULL : 'inside the list items, ' . $widened;
+    }
+    $inner = DefinitionSchema::propertyNode($schema, $property);
+    $widened = $inner === NULL ? NULL : static::widened($inner, $path, $operation, $argument);
+    return $widened === NULL ? NULL : sprintf('inside the %s property, %s', $property, $widened);
+  }
+
+  /**
+   * Says a Choice of the values given as an answer.
+   *
+   * A Choice where the key holds none; the key's Choice narrowed (`enum`
+   * where the values keep its order, `options()` where they do not).
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
+   * @param array $choices
+   *   The values.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The answer.
+   */
+  protected static function choice(Schema $schema, array $choices): Schema {
+    $choices = array_values($choices);
+    $set = ChoiceSet::ofSchema($schema, 'Choice');
+    if ($set === NULL || ChoiceSet::ofSchema($schema)?->constraint !== 'Choice') {
+      return Schema::any()->with(PortableKeywords::CHECK, ['drupal:Choice' => ['choices' => $choices]]);
+    }
+    $kept = array_values(array_filter($set->values, static fn (mixed $value): bool => in_array($value, $choices, TRUE)));
+    if ($kept === $choices) {
+      return Schema::enum($choices);
+    }
+    return Schema::oneOf(array_map(static fn (mixed $value): Schema => Schema::const($value), $choices));
   }
 
 }

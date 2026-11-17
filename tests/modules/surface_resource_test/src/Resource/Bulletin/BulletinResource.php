@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Resource\Bulletin;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\RefinesInput;
@@ -13,6 +12,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\BulletinStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A bulletin whose send day applies only when it goes out weekly.
@@ -58,8 +58,8 @@ final class BulletinResource implements ResourceInterface {
    * A send day applies only to a weekly bulletin.
    */
   #[RefinesInput('send_day')]
-  public static function sendDayOnlyWhenWeekly(DataDefinitionInterface $send_day, string $frequency): DataDefinitionInterface|DoesNotApply {
-    return $frequency === 'weekly' ? $send_day : DoesNotApply::here();
+  public static function sendDayOnlyWhenWeekly(string $frequency): Schema|DoesNotApply {
+    return $frequency === 'weekly' ? Schema::any() : DoesNotApply::here();
   }
 
 }

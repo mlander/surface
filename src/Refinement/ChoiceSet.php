@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Drupal\surface\Refinement;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\NodeFacts;
+use PortableSchema\Builder\Schema;
 
 /**
  * The list of values a definition's choice constraint allows.
@@ -22,12 +24,12 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * what a form offers are different questions, and the second one is
  * answered by the options resolvers, which read live site state as well.
  *
+ * Its one public promise, to a #[RefinesInput] method that reads its key:
+ * of(), handed the key's schema, and the set's `values` and `labels`.
+ * Everything else here is how this module reads a choice constraint.
+ *
  * @see \Drupal\surface\Plugin\Validation\Constraint\LabeledChoiceConstraint
  * @see \Drupal\surface\Options\SurfaceOptions
- *
- * @internal
- *   The shape of a choice constraint is the constraint's business; this
- *   is how this module reads it and nothing more.
  */
 final class ChoiceSet {
 
@@ -60,17 +62,44 @@ final class ChoiceSet {
   }
 
   /**
-   * Reads the choice constraint a definition carries, if it carries one.
+   * Reads the list of values a key allows, if it allows a list.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition to read.
+   * The reader a #[RefinesInput] method is promised for the key's schema
+   * it is handed: the values, in the key's order, and what each is called.
+   * Handed a definition, it reads the definition's constraints the same
+   * way.
+   *
+   * @param \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface $key
+   *   The key's schema, or a definition.
    *
    * @return \Drupal\surface\Refinement\ChoiceSet|null
-   *   The set, or NULL when the definition names no list of values and
-   *   so allows anything its type allows.
+   *   The set, or NULL when the key names no list of values and so allows
+   *   anything its type allows.
    */
-  public static function of(DataDefinitionInterface $definition): ?ChoiceSet {
-    return static::fromConstraints($definition->getConstraints());
+  public static function of(Schema|DataDefinitionInterface $key): ?ChoiceSet {
+    return $key instanceof Schema ? static::ofSchema($key) : static::fromConstraints($key->getConstraints());
+  }
+
+  /**
+   * Reads the choice constraint a key's schema holds, if it holds one.
+   *
+   * What of() and ofConstraint() read, from the key's schema: its
+   * constraints as NodeFacts::constraints() gives them.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
+   * @param string|null $name
+   *   The constraint plugin ID to read; NULL for the one of() reads.
+   *
+   * @return \Drupal\surface\Refinement\ChoiceSet|null
+   *   The set, or NULL when the schema holds no such list.
+   */
+  public static function ofSchema(Schema $schema, ?string $name = NULL): ?ChoiceSet {
+    $constraints = NodeFacts::constraints($schema);
+    if ($name === NULL) {
+      return static::fromConstraints($constraints);
+    }
+    return array_key_exists($name, $constraints) ? self::fromOptions($name, (array) $constraints[$name]) : NULL;
   }
 
   /**

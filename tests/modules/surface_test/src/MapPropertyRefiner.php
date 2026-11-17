@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\surface_test;
 
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\PortableKeywords;
+use PortableSchema\Builder\Schema;
 use Drupal\surface\SurfaceRefinerInterface;
 
 /**
@@ -26,12 +27,15 @@ final class MapPropertyRefiner implements SurfaceRefinerInterface {
   /**
    * {@inheritdoc}
    */
-  public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-    if ($definition instanceof ComplexDataDefinitionInterface) {
-      $property = $definition->getPropertyDefinitions()[self::PROPERTY] ?? NULL;
-      $property?->addConstraint('Length', ['max' => 3]);
+  public function refine(string $name, Schema $key, array $values): array {
+    if (DefinitionSchema::propertyNode($key, self::PROPERTY) === NULL) {
+      return [];
     }
-    return $definition;
+    return [
+      Schema::any()->with('properties', [
+        self::PROPERTY => Schema::any()->with(PortableKeywords::CHECK, ['drupal:Length' => ['max' => 3]]),
+      ]),
+    ];
   }
 
 }

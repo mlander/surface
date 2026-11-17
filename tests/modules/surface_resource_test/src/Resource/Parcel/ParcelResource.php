@@ -12,6 +12,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\ParcelStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A parcel to send, whose every rule between keys is declared as data.
@@ -91,34 +92,34 @@ final class ParcelResource implements ResourceInterface {
     // Standard and express carry no cold parcel.
     $inputs->narrow('handling')
       ->when(Condition::in('service', ['standard', 'express']))
-      ->constrain('LabeledChoice', ['choices' => ['fragile', 'upright']]);
+      ->constrain(Schema::enum(['fragile', 'upright']));
     // From 30 kilograms a parcel goes by freight.
     $inputs->narrow('service')
       ->when(Condition::atLeast('weight', 30))
-      ->constrain('Choice', ['choices' => ['freight']]);
+      ->constrain(Schema::enum(['freight']));
     // Up to 5 kilograms, one label fits.
     $inputs->narrow('labels')
       ->when(Condition::atMost('weight', 5))
-      ->constrain('Count', ['max' => 1]);
+      ->constrain(Schema::any()->maxItems(1));
     // Under 2 kilograms, a small declared value.
     $inputs->narrow('declared_value')
       ->when(Condition::below('weight', 2))
-      ->constrain('Range', ['max' => 500])
+      ->constrain(Schema::any()->maximum(500))
       ->because(t('Up to 500 for a parcel under 2 kilograms.'));
     // With no reference, a value no higher than 5000.
     $inputs->narrow('declared_value')
       ->when(Condition::absent('reference'))
-      ->constrain('Range', ['max' => 5000]);
+      ->constrain(Schema::any()->maximum(5000));
     // Insured, no higher than 2000: said only where it lowers the value,
     // so a light parcel keeps its own words.
     $inputs->narrow('declared_value')
       ->when(Condition::equals('insured', TRUE))
-      ->constrain('Range', ['max' => 2000])
+      ->constrain(Schema::any()->maximum(2000))
       ->because(t('Up to 2000 for an insured parcel.'));
     // Above 1000, a signature is a name, not an initial.
     $inputs->narrow('signature')
       ->when(Condition::above('declared_value', 1000))
-      ->constrain('Length', ['min' => 2]);
+      ->constrain(Schema::any()->minLength(2));
     // A note is for the freight driver alone.
     $inputs->narrow('note')
       ->unless(Condition::equals('service', 'freight'))
@@ -129,10 +130,10 @@ final class ParcelResource implements ResourceInterface {
         Condition::present('reference'),
         Condition::anyOf(Condition::equals('service', 'express'), Condition::equals('insured', TRUE)),
       ))
-      ->constrain('Regex', [
+      ->constrain(Schema::any()->check('drupal:Regex', [
         'pattern' => '/^[A-Z]{2}\d{6}$/D',
         'message' => 'A tracking code is two capitals and six digits, such as AB123456.',
-      ]);
+      ]));
   }
 
 }

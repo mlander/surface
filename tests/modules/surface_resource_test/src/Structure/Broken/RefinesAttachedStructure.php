@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Broken;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Structure\Pantry\ShelfStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Refines the key its own child is attached at, which the wall refuses.
@@ -28,8 +28,8 @@ final class RefinesAttachedStructure implements StructureInterface {
    * Reaches into the child.
    */
   #[RefinesInput('shelf')]
-  public static function intoTheShelf(DataDefinitionInterface $shelf): DataDefinitionInterface {
-    return $shelf;
+  public static function intoTheShelf(): Schema {
+    return Schema::any();
   }
 
 }

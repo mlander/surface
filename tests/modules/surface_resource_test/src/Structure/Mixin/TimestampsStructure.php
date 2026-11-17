@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Mixin;
 
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * When a thing was created and last changed: shared members, mixed in.
@@ -45,11 +44,8 @@ final class TimestampsStructure implements StructureInterface {
    * Changed is never before created.
    */
   #[RefinesInput('changed')]
-  public static function changedSinceCreated(DataDefinitionInterface $changed, int $created): DataDefinitionInterface {
-    if (!$changed instanceof DataDefinition) {
-      return $changed;
-    }
-    return $changed->addConstraint('Range', ['min' => $created]);
+  public static function changedSinceCreated(int $created): Schema {
+    return Schema::any()->minimum($created);
   }
 
 }

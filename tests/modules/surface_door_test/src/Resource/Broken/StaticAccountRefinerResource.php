@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Drupal\surface_door_test\Resource\Broken;
 
 use Drupal\Core\Session\AccountInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_door_test\Storage\DoorNoteStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A static refiner that takes the account: refused at build.
@@ -31,8 +31,8 @@ final class StaticAccountRefinerResource implements ResourceInterface {
    * Shortens the note of a signed-in account, and says it is static.
    */
   #[RefinesInput('note')]
-  public static function requiredWhenSignedIn(DataDefinitionInterface $note, AccountInterface $account): DataDefinitionInterface {
-    return $account->isAnonymous() ? $note : $note->addConstraint('Length', ['max' => 10]);
+  public static function requiredWhenSignedIn(AccountInterface $account): Schema {
+    return $account->isAnonymous() ? Schema::any() : Schema::any()->maxLength(10);
   }
 
 }

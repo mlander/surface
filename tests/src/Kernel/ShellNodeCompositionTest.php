@@ -105,12 +105,15 @@ class ShellNodeCompositionTest extends SurfaceKernelTestBase {
    * every one of them as a definition, and they were counted as "from the
    * refined child" (76 attachments, 39 mounts, 815 chosen and 80 none
    * chosen, the variants with no keys) and "read" (108 collections); the
-   * sealed source was not counted. No count fell.
+   * sealed source was not counted. No count fell. Since refiners answer
+   * with schemas (2026-11-16), a refiner's answer for a collection (its
+   * Count) is applied to the collection's composed schema, so the 108
+   * collections counted "read" are "composed".
    */
   protected const REFINED = [
     'attachment, composed' => 76,
     'attachment, the sealed source' => 30,
-    'collection, read' => 108,
+    'collection, composed' => 108,
     'mount, composed' => 39,
     'mount, the sealed source' => 36,
     'variants, chosen, composed' => 815,

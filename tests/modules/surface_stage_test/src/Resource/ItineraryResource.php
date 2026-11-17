@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface_stage_test\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\RefinesInput;
@@ -14,6 +13,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_stage_test\Storage\ItineraryStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A trip, by an id its caller names, drawn over three groups.
@@ -116,8 +116,8 @@ final class ItineraryResource implements ResourceInterface {
    * A region offers its own guides.
    */
   #[RefinesInput('guide')]
-  public static function guides(DataDefinitionInterface $guide, string $region): DataDefinitionInterface {
-    return $guide->addConstraint('Choice', ['choices' => self::GUIDES[$region] ?? []]);
+  public static function guides(string $region): Schema {
+    return Schema::enum(self::GUIDES[$region] ?? []);
   }
 
 }

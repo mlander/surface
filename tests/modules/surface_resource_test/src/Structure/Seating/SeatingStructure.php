@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Seating;
 
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * How a room is seated, reading two values from whatever holds it.
@@ -52,7 +51,7 @@ final class SeatingStructure implements StructureInterface {
     // Up to a hundred guests, ten rows at most.
     $inputs->narrow('rows')
       ->when(Condition::atMost('guests', 100))
-      ->constrain('Range', ['max' => 10])
+      ->constrain(Schema::any()->maximum(10))
       ->because(t('Up to 10 rows for up to 100 guests.'));
     // Over two hundred guests, the ushers are said, even if none.
     $inputs->narrow('ushers')
@@ -64,18 +63,13 @@ final class SeatingStructure implements StructureInterface {
    * The aisles a layout has: none at all for a standing room.
    */
   #[RefinesInput('aisle')]
-  public static function aisleForLayout(DataDefinitionInterface $aisle, string $layout): DataDefinitionInterface|DoesNotApply {
+  public static function aisleForLayout(string $layout): Schema|DoesNotApply {
     if ($layout === 'standing') {
       return DoesNotApply::here();
     }
-    if (!$aisle instanceof DataDefinition) {
-      return $aisle;
-    }
-    return $aisle->addConstraint('LabeledChoice', [
-      'choices' => $layout === 'theatre'
-        ? ['centre' => t('Centre'), 'side' => t('Side')]
-        : ['side' => t('Side'), 'none' => t('None')],
-    ]);
+    return Schema::options($layout === 'theatre'
+      ? ['centre' => t('Centre'), 'side' => t('Side')]
+      : ['side' => t('Side'), 'none' => t('None')]);
   }
 
 }

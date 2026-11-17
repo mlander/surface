@@ -11,6 +11,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Resource\Kit\KitResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * A tent: the kit's variant for "tent", at its gear.
@@ -35,7 +36,7 @@ final class TentKitStructure implements StructureInterface {
     $inputs->add('fly', 'boolean', t('Rain fly'), default: FALSE);
     $inputs->narrow('poles')
       ->when(Condition::equals('fly', TRUE))
-      ->constrain('Range', ['min' => 2])
+      ->constrain(Schema::any()->minimum(2))
       ->because(t('A rain fly takes two poles at least.'));
   }
 

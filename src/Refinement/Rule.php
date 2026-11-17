@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Refinement;
 
+use Drupal\surface\Contract\ConstraintKeywords;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\PortableKeywords;
+use PortableSchema\Builder\Schema;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\ConstraintMessages;
@@ -170,7 +174,112 @@ final class Rule {
   }
 
   /**
-   * Adds or tightens a constraint while the condition holds.
+   * Adds or tightens what the key holds to while the condition holds.
+   *
+   * The same Schema a refiner answers with: a bound (`minimum`,
+   * `maximum`, `minLength`, `maxLength`, `minItems`, `maxItems`), a
+   * `pattern`, `enum` (the values of the key's own list to keep), or the
+   * check of one of them (`drupal:Range`, `drupal:Length`, `drupal:Count`,
+   * `drupal:Regex`, `drupal:Choice`, `drupal:LabeledChoice`) with its
+   * options. A bound's check with one message option (`minMessage`,
+   * `maxMessage`, ...) is the rule's message for the bounds it states:
+   * written under the option each bound that stands is refused in, as a
+   * rule's message always is.
+   *
+   * The constraint and its options, as two arguments, is the form before
+   * a rule took a Schema; it stays for the readers that build rules from
+   * a document and from property attributes.
+   *
+   * @param \PortableSchema\Builder\Schema|string $constraint
+   *   What the rule adds; or, in the earlier form, the constraint.
+   * @param array $options
+   *   In the earlier form, the constraint's options; nothing with a
+   *   Schema.
+   *
+   * @return $this
+   *
+   * @throws \InvalidArgumentException
+   *   For a keyword, a constraint or an option outside the vocabulary, or
+   *   a pattern no schema can state exactly.
+   */
+  public function constrain(Schema|string $constraint, array $options = []): static {
+    if (is_string($constraint)) {
+      return $this->constrainBy($constraint, $options);
+    }
+    foreach (static::constraintsOf($this->key, $constraint) as [$name, $read]) {
+      $this->constrainBy($name, $read);
+    }
+    return $this;
+  }
+
+  /**
+   * Reads what a rule's Schema adds as constraints and their options.
+   *
+   * @param string $key
+   *   The key the rule narrows, for a refusal.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   What the rule adds.
+   *
+   * @return list<array{0: string, 1: array}>
+   *   Each constraint, with the options constrainBy() takes.
+   *
+   * @throws \InvalidArgumentException
+   *   For a keyword or a check a rule cannot state.
+   */
+  protected static function constraintsOf(string $key, Schema $schema): array {
+    $bounds = [
+      'minimum' => ['Range', 'min'],
+      'maximum' => ['Range', 'max'],
+      'minLength' => ['Length', 'min'],
+      'maxLength' => ['Length', 'max'],
+      'minItems' => ['Count', 'min'],
+      'maxItems' => ['Count', 'max'],
+    ];
+    $read = [];
+    foreach ($schema->isBoolean() ? ['a boolean schema' => NULL] : $schema->all() as $keyword => $value) {
+      $keyword = (string) $keyword;
+      if (isset($bounds[$keyword])) {
+        [$name, $option] = $bounds[$keyword];
+        $read[$name][$option] = $value;
+        continue;
+      }
+      if ($keyword === 'pattern' && is_string($value)) {
+        $back = ConstraintKeywords::read(['pattern' => $value], ['string'])[0] ?? NULL;
+        $read['Regex'] = $back?->constraint === 'Regex' ? ['pattern' => $back->options['pattern']] : ['pattern' => NULL];
+        continue;
+      }
+      if ($keyword === 'enum' && is_array($value)) {
+        $read['Choice'] = ['choices' => array_values($value)];
+        continue;
+      }
+      if ($keyword === PortableKeywords::CHECK && is_array($value)) {
+        foreach ($value as $id => $options) {
+          $name = substr((string) $id, strlen(PortableKeywords::PROVIDER));
+          $options = $options instanceof \stdClass ? (array) $options : (array) $options;
+          if (!str_starts_with((string) $id, PortableKeywords::PROVIDER) || !isset(self::CONSTRAINTS[$name])) {
+            throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain() was given the check %s, which a rule cannot state: it may state %s. A rule whose effect must be computed is a #[RefinesInput] method.', $key, $id, implode(', ', array_map(static fn (string $one): string => PortableKeywords::PROVIDER . $one, array_keys(self::CONSTRAINTS)))));
+          }
+          if (isset(self::BOUND_MESSAGES[$name])) {
+            $said = array_intersect_key($options, array_flip(self::BOUND_MESSAGES[$name]));
+            if (count($said) === 1) {
+              // One message: the rule's, for the bounds that stand.
+              $options = array_diff_key($options, $said) + ['message' => reset($said)];
+            }
+          }
+          $read[$name] = ($read[$name] ?? []) + $options;
+        }
+        continue;
+      }
+      throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain() was given %s, which a rule cannot state: it states a bound, a pattern, the values of the key\'s list to keep (`enum`), or the check of one of them. A rule whose effect must be computed is a #[RefinesInput] method.', $key, $keyword === 'a boolean schema' ? $keyword : '`' . $keyword . '`'));
+    }
+    if ($read === []) {
+      throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain() was given a Schema that adds nothing.', $key));
+    }
+    return array_map(static fn (string $name): array => [$name, $read[$name]], array_keys($read));
+  }
+
+  /**
+   * Adds or tightens one constraint while the condition holds.
    *
    * @param string $constraint
    *   Range, Length or Count (min and max, at least one, and a message a
@@ -186,7 +295,7 @@ final class Rule {
    *   For a constraint or an option outside the vocabulary, or a pattern
    *   no schema can state exactly.
    */
-  public function constrain(string $constraint, array $options): static {
+  protected function constrainBy(string $constraint, array $options): static {
     $this->assertApplies('constrain');
     if (!isset(self::CONSTRAINTS[$constraint])) {
       throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain() was given %s, which a rule cannot state: it may constrain %s. A rule whose effect must be computed is a #[RefinesInput] method.', $this->key, $constraint, implode(', ', array_keys(self::CONSTRAINTS))));
@@ -332,6 +441,75 @@ final class Rule {
    */
   public function constraints(): array {
     return $this->constraints;
+  }
+
+  /**
+   * Gives the rule's effects as an answer for a key's schema.
+   *
+   * What apply() writes on a definition, said as an answer the applier
+   * (Answer::apply()) writes on the key's schema: each bound as its check,
+   * tightened by the key's own and with the rule's message where the
+   * rule's bound stands; a list as `enum`, so the key keeps its order and
+   * labels, and nothing where the key offers no list; a pattern as its
+   * check, which the applier adds only where the key holds none;
+   * `required()`; the description only where the rule does something to
+   * the key, as apply() writes it.
+   *
+   * @param \PortableSchema\Builder\Schema $key
+   *   The key's schema as it stands.
+   *
+   * @return \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply
+   *   The answer.
+   */
+  public function answer(Schema $key): Schema|DoesNotApply {
+    if ($this->rulesOut) {
+      return DoesNotApply::here();
+    }
+    $merged = NodeFacts::constraints($key);
+    $answer = Schema::any();
+    $checks = [];
+    foreach ($this->constraints as $name => $options) {
+      if ($name === 'Choice') {
+        if (ChoiceSet::fromConstraints($merged) !== NULL) {
+          $answer = $answer->with('enum', array_values($options['choices']));
+        }
+        continue;
+      }
+      if ($name === 'Regex') {
+        $checks[PortableKeywords::PROVIDER . 'Regex'] = $options;
+        continue;
+      }
+      $existing = is_array($merged[$name] ?? NULL) ? $merged[$name] : [];
+      $bounds = $options;
+      unset($bounds['message']);
+      if (isset($options['min'], $existing['min'])) {
+        $bounds['min'] = max($existing['min'], $options['min']);
+      }
+      if (isset($options['max'], $existing['max'])) {
+        $bounds['max'] = min($existing['max'], $options['max']);
+      }
+      $written = array_replace($existing, $bounds);
+      if (isset($options['message'])) {
+        $written = array_replace($written, $this->boundMessages($name, $options, $existing, $written, FALSE));
+      }
+      $checks[PortableKeywords::PROVIDER . $name] = $written;
+    }
+    if ($checks !== []) {
+      $answer = $answer->with(PortableKeywords::CHECK, $checks);
+    }
+    if ($this->requires) {
+      $answer = $answer->required();
+    }
+    if ($this->description !== NULL) {
+      // The rule says why only where it did something: a bound the key
+      // already held at or inside the rule's leaves the key's own words.
+      $tightened = $this->constraints === [] || $this->requires
+        || serialize(NodeFacts::constraints(Answer::apply($key, $answer, $this->key, 'the rule'))) !== serialize($merged);
+      if ($tightened) {
+        $answer = $answer->with('description', $this->description);
+      }
+    }
+    return $answer;
   }
 
   /**

@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\surface_test\Structure;
 
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The test condition's configuration: a reading against a threshold.
@@ -47,15 +46,11 @@ final class TestConditionStructure implements StructureInterface {
    * everything the refined one allows.
    */
   #[RefinesInput('threshold')]
-  public static function atLeastOneAtMost(DataDefinitionInterface $threshold, string $mode): DataDefinitionInterface {
+  public static function atLeastOneAtMost(string $mode): Schema {
     if ($mode !== 'at_most') {
-      return $threshold;
+      return Schema::any();
     }
-    $threshold->addConstraint('Range', ['min' => 1] + ($threshold->getConstraints()['Range'] ?? []));
-    if ($threshold instanceof DataDefinition) {
-      $threshold->setDescription(t('The number no reading may pass.'));
-    }
-    return $threshold;
+    return Schema::any()->minimum(1)->description(t('The number no reading may pass.'));
   }
 
 }

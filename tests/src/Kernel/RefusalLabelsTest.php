@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
+use PortableSchema\Builder\Schema;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\SurfaceRefinerInterface;
@@ -162,9 +162,9 @@ class RefusalLabelsTest extends SurfaceKernelTestBase {
       /**
        * {@inheritdoc}
        */
-      public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
+      public function refine(string $name, Schema $key, array $values): array {
         // The watched values, each by its path.
-        return ($values[$this->flag] ?? NULL) === NULL ? $definition : DoesNotApply::marked($definition);
+        return ($values[$this->flag] ?? NULL) === NULL ? [] : [DoesNotApply::here()];
       }
 
     });

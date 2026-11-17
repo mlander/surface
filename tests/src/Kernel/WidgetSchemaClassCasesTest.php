@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
+use PortableSchema\Builder\Schema;
 use Drupal\Core\TypedData\ListDataDefinition;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaWidgetInterface;
@@ -118,11 +117,8 @@ class WidgetSchemaClassCasesTest extends SurfaceKernelTestBase {
       /**
        * {@inheritdoc}
        */
-      public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-        if ($definition instanceof ListDataDefinitionInterface && ($values['size'] ?? NULL) === 'small') {
-          $definition->getItemDefinition()->addConstraint('Choice', ['choices' => ['red']]);
-        }
-        return $definition;
+      public function refine(string $name, Schema $key, array $values): array {
+        return ($values['size'] ?? NULL) === 'small' ? [Schema::any()->with('items', Schema::enum(['red']))] : [];
       }
 
     });

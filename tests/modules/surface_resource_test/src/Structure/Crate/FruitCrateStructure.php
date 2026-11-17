@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Crate;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A crate of fruit: how many layers it holds depends on the fruit.
@@ -40,8 +40,8 @@ final class FruitCrateStructure implements StructureInterface {
    * No more layers than the fruit bears.
    */
   #[RefinesInput('layers')]
-  public static function layersOfFruit(DataDefinitionInterface $layers, string $fruit): DataDefinitionInterface {
-    return $layers->addConstraint('Range', ['min' => 1, 'max' => self::LAYERS[$fruit] ?? 1]);
+  public static function layersOfFruit(string $fruit): Schema {
+    return Schema::any()->minimum(1)->maximum(self::LAYERS[$fruit] ?? 1);
   }
 
 }

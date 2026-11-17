@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Broken;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Has a #[RefinesInput] method that is an instance method.
@@ -28,8 +28,8 @@ final class InstanceRefinerStructure implements StructureInterface {
    * Not static, which a structure's refiner has to be.
    */
   #[RefinesInput('name')]
-  public function nameOfKind(DataDefinitionInterface $name, string $kind): DataDefinitionInterface {
-    return $name->addConstraint('Length', ['max' => 10]);
+  public function nameOfKind(string $kind): Schema {
+    return Schema::any()->maxLength(10);
   }
 
 }

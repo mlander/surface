@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\surface;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
+use PortableSchema\Builder\Schema;
 
 /**
- * Narrows data definitions against known sibling values.
+ * Answers what known sibling values add to a key.
  *
  * The engine's link in a refiner chain. Nothing an author writes
  * implements it: the build step binds each class's #[RefinesInput]
@@ -15,15 +15,13 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * a class's runtime methods as another, wrapped in
  * Refinement\RuntimeRefiner so the engine can tell the kinds apart.
  *
- * The narrowing contract: a refiner may tighten constraints, supply a
- * concrete option list, or sharpen a description, but the refined
- * definition must accept only values the one it was handed already
- * accepted. Changing the data type is refused (except from the variants'
- * placeholder, an `any` that becomes the variant its deciding key chose,
- * and to a derivative of the type), as is turning
- * required off, removing a constraint, or replacing one whose options
- * cannot be compared. The contract is
- * enforced by Surface::refine() on every link, not trusted.
+ * A link is handed the key's schema and gives answers: each a `Schema` of
+ * what the values add to the key, or DoesNotApply::here(). The engine
+ * applies them, in order, with Refinement\Answer::apply(), which is where
+ * the narrowing contract holds: of a bound the stricter stands, a list
+ * only filters, nothing in an answer removes what the key says, and an
+ * answer that would widen the key otherwise is refused. A link writes on
+ * no schema of the key's: a `Schema` is a value.
  *
  * A refiner narrows one contribution. The owner gets the
  * values it declared itself; a module that contributed values with
@@ -51,21 +49,21 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 interface SurfaceRefinerInterface {
 
   /**
-   * Refines one definition against dependency values.
+   * Answers what the dependency values add to one key.
    *
    * @param string $name
-   *   The definition key being refined.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition to refine, holding this contribution's own slice of
-   *   the allowed values. Always a deep clone: implementations may
-   *   mutate and return it, or return a replacement.
+   *   The key being refined.
+   * @param \PortableSchema\Builder\Schema $key
+   *   The key's schema as it stands, holding this contribution's own slice
+   *   of the allowed values.
    * @param array $values
-   *   The dependency values, keyed by definition key. Every declared
-   *   dependency is present and configured.
+   *   The dependency values, keyed by key. Every declared dependency is
+   *   present and configured.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The refined definition.
+   * @return array<int, \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply>
+   *   The answers, in the order the link's methods or rules gave them;
+   *   empty for none.
    */
-  public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface;
+  public function refine(string $name, Schema $key, array $values): array;
 
 }

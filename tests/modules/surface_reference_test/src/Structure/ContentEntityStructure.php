@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Drupal\surface_reference_test\Structure;
 
 use Drupal\Core\Entity\ContentEntityInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Any content entity: its entity type, then its id.
@@ -45,17 +45,15 @@ final class ContentEntityStructure implements StructureInterface {
   /**
    * Narrows the id to an entity of the entity type chosen.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $id
-   *   The id.
    * @param string $entity_type
    *   The entity type chosen.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The id, referring to that entity type.
+   * @return \PortableSchema\Builder\Schema
+   *   A reference to that entity type.
    */
   #[RefinesInput('id')]
-  public static function id(DataDefinitionInterface $id, string $entity_type): DataDefinitionInterface {
-    return $id->addConstraint(References::CONSTRAINT, ['entityTypeId' => $entity_type]);
+  public static function id(string $entity_type): Schema {
+    return Schema::any()->check('drupal:' . References::CONSTRAINT, ['entityTypeId' => $entity_type]);
   }
 
 }

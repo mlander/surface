@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Drupal\surface_examples_entity\Refinement;
 
 use Drupal\Core\Session\AccountInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\filter\FilterFormatRepositoryInterface;
+use Drupal\surface\Refinement\ChoiceSet;
+use PortableSchema\Builder\Schema;
 
 /**
  * Narrows a text field's formats to those the account may use.
@@ -26,26 +27,20 @@ final class TextFormatRefiner {
   /**
    * Keeps the formats the account may use.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $format
-   *   The format key, with the field's formats as a LabeledChoice.
+   * @param \PortableSchema\Builder\Schema $format
+   *   The format key's schema, with the field's formats as its list.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account the operation runs as, handed in.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The key, its choices narrowed.
+   * @return \PortableSchema\Builder\Schema
+   *   The formats it may use, of the key's.
    */
   #[RefinesInput('format', runtime: TRUE)]
-  public static function formatsTheAccountMayUse(DataDefinitionInterface $format, AccountInterface $account): DataDefinitionInterface {
-    $constraints = $format->getConstraints();
-    if (!isset($constraints['LabeledChoice']['choices'])) {
-      return $format;
+  public static function formatsTheAccountMayUse(Schema $format, AccountInterface $account): Schema {
+    if (ChoiceSet::of($format) === NULL) {
+      return Schema::any();
     }
-    $usable = array_map('strval', array_keys(static::usable($account)));
-    $choice = $constraints['LabeledChoice'];
-    $choice['choices'] = array_values(array_filter($choice['choices'], static fn ($id): bool => in_array((string) $id, $usable, TRUE)));
-    $choice['labels'] = array_intersect_key($choice['labels'] ?? [], array_flip($choice['choices']));
-    $format->addConstraint('LabeledChoice', $choice);
-    return $format;
+    return Schema::enum(array_map('strval', array_keys(static::usable($account))));
   }
 
   /**

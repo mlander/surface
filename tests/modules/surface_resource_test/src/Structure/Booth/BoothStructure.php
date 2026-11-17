@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Booth;
 
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A booth whose width and depth both follow its size.
@@ -42,34 +41,32 @@ final class BoothStructure implements StructureInterface {
    * The widest a booth of the size may be.
    */
   #[RefinesInput('width')]
-  public static function widthForSize(DataDefinitionInterface $width, ?string $size): DataDefinitionInterface {
-    return static::upTo($width, $size);
+  public static function widthForSize(?string $size): Schema {
+    return static::upTo($size);
   }
 
   /**
    * The deepest a booth of the size may be.
    */
   #[RefinesInput('depth')]
-  public static function depthForSize(DataDefinitionInterface $depth, ?string $size): DataDefinitionInterface {
-    return static::upTo($depth, $size);
+  public static function depthForSize(?string $size): Schema {
+    return static::upTo($size);
   }
 
   /**
    * Narrows a measure to what the size allows.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $measure
-   *   The key's definition.
    * @param string|null $size
    *   The size, or NULL when none is chosen.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The key, narrowed.
+   * @return \PortableSchema\Builder\Schema
+   *   What the size adds to the key.
    */
-  protected static function upTo(DataDefinitionInterface $measure, ?string $size): DataDefinitionInterface {
-    if ($size === NULL || !isset(self::MAX[$size]) || !$measure instanceof DataDefinition) {
-      return $measure;
+  protected static function upTo(?string $size): Schema {
+    if ($size === NULL || !isset(self::MAX[$size])) {
+      return Schema::any();
     }
-    return $measure->addConstraint('Range', ['min' => 1, 'max' => self::MAX[$size]]);
+    return Schema::any()->minimum(1)->maximum(self::MAX[$size]);
   }
 
 }

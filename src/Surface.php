@@ -8,6 +8,7 @@ use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
@@ -15,6 +16,7 @@ use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\NodeDefinition;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Pipeline\ValueState;
+use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\DeclaredRefiner;
 use Drupal\surface\Refinement\DoesNotApply;
@@ -638,7 +640,7 @@ final class Surface implements SurfaceInterface {
         // docs/decisions.md#a-key-that-does-not-apply.
         $ruled = $refines ? $this->ruledOut($entry, $admitted, $runtime, $cacheability) : NULL;
         if ($ruled !== NULL) {
-          $definitions = $definitions->with($entry->withDefinition($ruled));
+          $definitions = $definitions->with(static::refinedTo($entry, $entry, $ruled));
           $changed = TRUE;
           continue;
         }
@@ -674,15 +676,111 @@ final class Surface implements SurfaceInterface {
       if ($refined === NULL) {
         continue;
       }
-      if ($entry->list !== NULL && !DoesNotApply::marks($refined)) {
-        static::assertItemsUntouched($entry, $refined);
+      if ($entry->list !== NULL && !NodeFacts::doesNotApply($refined)) {
+        Answer::assertItemsUntouched($entry->name, $entry->schema(), $refined);
       }
-      $definitions = $definitions->with($entry->withDefinition($refined));
+      $definitions = $definitions->with(static::refinedTo($entry, $entry, $refined));
       $changed = TRUE;
     }
     return $changed
       ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portSchemas, $this->lockedWhole, $this->changesNothing, $this->version, runtimeAccessOwn: $this->runtimeAccessOwn, portDefinitions: $this->portDefinitions)
       : $this;
+  }
+
+  /**
+   * Makes the entry of a key its refiners answered for.
+   *
+   * Schema-first where every class its schema holds derives a definition
+   * (DefinitionMap::derivedClasses()). A key that holds a class no
+   * schema derives a definition of keeps one: what the answers wrote is
+   * written on a copy of the key's definition (writtenOn()), and the
+   * entry is definition-first, its schema the one the answers gave.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The key, as advertised.
+   * @param \Drupal\surface\Entry $base
+   *   The entry the refined one is made from: the advertised one, or its
+   *   copy bound to these values' ports.
+   * @param \PortableSchema\Builder\Schema $refined
+   *   The key's schema as its refiners left it.
+   *
+   * @return \Drupal\surface\Entry
+   *   The refined entry.
+   */
+  protected static function refinedTo(Entry $entry, Entry $base, Schema $refined): Entry {
+    if (DefinitionMap::derivedClasses($refined)) {
+      return $base->withSchema($refined, TRUE);
+    }
+    return $base->withDefinition(static::writtenOn($entry->definition(), $entry->schema(), $refined), $refined);
+  }
+
+  /**
+   * Writes what a refined schema says that its key's did not on a definition.
+   *
+   * Where nothing below a place changed, its definition is the one
+   * handed. A place of one of the classes a definition derives from is
+   * the definition derived from its refined schema. Any other is a copy,
+   * written with what an answer may change: its own constraints, its
+   * required flag, its label and description, and the mark of a key that
+   * does not apply; its properties and item written the same way.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition at the place.
+   * @param \PortableSchema\Builder\Schema $before
+   *   Its schema.
+   * @param \PortableSchema\Builder\Schema $after
+   *   Its refined schema.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The definition the refined schema reads as.
+   *
+   * @internal
+   *   Public only for the build step, which runs a refiner that watches
+   *   nothing once and hands the builder a definition.
+   */
+  public static function writtenOn(DataDefinitionInterface $definition, Schema $before, Schema $after): DataDefinitionInterface {
+    if ($after === $before) {
+      return $definition;
+    }
+    if (DefinitionMap::derivedClasses($after)) {
+      return NodeDefinition::of($after);
+    }
+    $copy = clone $definition;
+    $was = DefinitionSchema::model($before);
+    $is = DefinitionSchema::model($after);
+    if ($copy instanceof DataDefinition) {
+      if (($is['declared'] ?? NULL) !== ($was['declared'] ?? NULL)) {
+        $copy->setConstraints(is_array($is['declared'] ?? NULL) ? $is['declared'] : []);
+      }
+      if (!empty($is['required']) && empty($was['required'])) {
+        $copy->setRequired(TRUE);
+      }
+      foreach (['title' => 'label', 'description' => 'description'] as $keyword => $member) {
+        $text = $after->has($keyword) ? $after->get($keyword) : ($is[$member] ?? NULL);
+        if ($text !== ($before->has($keyword) ? $before->get($keyword) : ($was[$member] ?? NULL))) {
+          $member === 'label' ? $copy->setLabel($text) : $copy->setDescription($text);
+        }
+      }
+    }
+    $properties = $after->get('properties');
+    if ($copy instanceof ComplexDataDefinitionInterface && method_exists($copy, 'setPropertyDefinition') && is_array($properties)) {
+      foreach ($properties as $name => $property) {
+        $was_property = DefinitionSchema::propertyNode($before, (string) $name);
+        $held = $copy->getPropertyDefinition((string) $name);
+        if ($property instanceof Schema && $was_property !== NULL && $held !== NULL && $property !== $was_property) {
+          $copy->setPropertyDefinition((string) $name, static::writtenOn($held, $was_property, $property));
+        }
+      }
+    }
+    $item = DefinitionSchema::itemNode($after);
+    $was_item = DefinitionSchema::itemNode($before);
+    if ($copy instanceof ListDataDefinition && $item !== NULL && $was_item !== NULL && $item !== $was_item) {
+      $copy->setItemDefinition(static::writtenOn($copy->getItemDefinition(), $was_item, $item));
+    }
+    if (!empty($is['doesNotApply']) && empty($was['doesNotApply'])) {
+      return DoesNotApply::marked($copy);
+    }
+    return $copy;
   }
 
   /**
@@ -722,12 +820,13 @@ final class Surface implements SurfaceInterface {
    * entry's with the node at each refined structure's mount replaced by
    * the structure's own node around the refined structure's entries'
    * nodes (DefinitionSchema::withProperties(), withPropertyAt()), and the
-   * entry is node-first. Where they answered, their answer is the key's
-   * source: its definition is built as before, each refined structure
-   * written into a copy of the answer, and handed with the node composed
-   * of the answer's own facts and the refined structures' entries'
-   * nodes, so the narrowing check of the whole map stands. So does a key
-   * whose composed node holds a class no node derives a definition of.
+   * entry is node-first. Where they answered, the schema they gave is the
+   * key's source: its definition is derived and built as before, each
+   * refined structure written into a copy of it, and handed with the node
+   * composed of the answer's own facts and the refined structures'
+   * entries' nodes, so the narrowing check of the whole map stands. So
+   * does a key whose composed node holds a class no node derives a
+   * definition of.
    *
    * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value and
    * docs/decisions.md#a-refined-shell-is-composed-of-nodes.
@@ -737,9 +836,9 @@ final class Surface implements SurfaceInterface {
    * @param \Drupal\surface\Entry $base
    *   The entry the refined one is made from: the advertised one, or its
    *   copy bound to these values' ports.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $refined
-   *   The key as its own refiners left it for these values, or NULL when
-   *   none ran.
+   * @param \PortableSchema\Builder\Schema|null $refined
+   *   The key's schema as its own refiners left it for these values, or
+   *   NULL when none ran.
    * @param array $values
    *   The values the data surface is being refined against.
    * @param array $admitted
@@ -752,7 +851,7 @@ final class Surface implements SurfaceInterface {
    * @return \Drupal\surface\Entry|null
    *   The key for these values, or NULL when nothing about it changes.
    */
-  protected function refineMounted(Entry $entry, Entry $base, ?DataDefinitionInterface $refined, array $values, array $admitted, int $runtime, CacheableMetadata $cacheability): ?Entry {
+  protected function refineMounted(Entry $entry, Entry $base, ?Schema $refined, array $values, array $admitted, int $runtime, CacheableMetadata $cacheability): ?Entry {
     $answers = [];
     foreach ($entry->mounted as $path => $attachment) {
       $parents = explode('.', (string) $path);
@@ -765,7 +864,7 @@ final class Surface implements SurfaceInterface {
       }
     }
     if ($answers === []) {
-      return $refined === NULL ? NULL : $base->withDefinition($refined);
+      return $refined === NULL ? NULL : static::refinedTo($entry, $base, $refined);
     }
     $node = $refined === NULL ? static::composedMount($entry, $base->schema(), $answers) : NULL;
     if ($node !== NULL && !$entry->madeByRefinement() && DefinitionMap::derivedClasses($node)) {
@@ -779,7 +878,9 @@ final class Surface implements SurfaceInterface {
     }
     // The definition, as before: the structures written into a copy of
     // the key as its own refiners left it, or as advertised.
-    $before = $refined ?? $entry->definition();
+    // A mount is a map: the definition of what its own refiners answered
+    // is derived.
+    $before = $refined === NULL ? $entry->definition() : static::refinedTo($entry, $base, $refined)->definition();
     $definition = static::deepClone($before);
     $parts = [];
     foreach ($answers as $path => $answer) {
@@ -884,10 +985,10 @@ final class Surface implements SurfaceInterface {
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what the refiners that run declare they depend on.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
-   *   The refined definition, or NULL when nothing ran.
+   * @return \PortableSchema\Builder\Schema|null
+   *   The refined schema, a new one, or NULL when nothing ran.
    */
-  protected function refinedEntry(Entry $entry, array $admitted, int $runtime, CacheableMetadata $cacheability): ?DataDefinitionInterface {
+  protected function refinedEntry(Entry $entry, array $admitted, int $runtime, CacheableMetadata $cacheability): ?Schema {
     $dependencies = $entry->gate($runtime);
     $dependency_values = $dependencies === [] ? NULL : $this->dependencyValues($dependencies, $admitted);
     if ($dependency_values === NULL) {
@@ -912,7 +1013,10 @@ final class Surface implements SurfaceInterface {
         $dependency_values[$dependency] ??= NestedArray::getValue($admitted, explode('.', $dependency));
       }
     }
-    return $this->unionOfContributions($entry, $chains, $dependency_values, $cacheability);
+    $refined = $this->unionOfContributions($entry, $chains, $dependency_values, $cacheability);
+    // A key a refinement made has a source of its own, even where it says
+    // what the advertised key says (Entry::sameSource()).
+    return $refined === $entry->schema() ? $refined->with(DefinitionSchema::MODEL, DefinitionSchema::model($refined)) : $refined;
   }
 
   /**
@@ -931,13 +1035,13 @@ final class Surface implements SurfaceInterface {
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what the refiners that run declare they depend on.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
-   *   The key, marked, when it does not apply; NULL when it does.
+   * @return \PortableSchema\Builder\Schema|null
+   *   The key's schema, marked, when it does not apply; NULL when it does.
    *
    * @throws \LogicException
    *   When a refiner narrowed into the child.
    */
-  protected function ruledOut(Entry $entry, array $admitted, int $runtime, CacheableMetadata $cacheability): ?DataDefinitionInterface {
+  protected function ruledOut(Entry $entry, array $admitted, int $runtime, CacheableMetadata $cacheability): ?Schema {
     if ($entry->refiners === []) {
       return NULL;
     }
@@ -945,51 +1049,14 @@ final class Surface implements SurfaceInterface {
     if ($answer === NULL) {
       return NULL;
     }
-    if (DoesNotApply::marks($answer)) {
+    if (NodeFacts::doesNotApply($answer)) {
       return $answer;
     }
-    $narrowed = Narrowing::narrowed($entry->definition(), $answer);
+    $narrowed = Answer::narrowed($entry->schema(), $answer);
     if ($narrowed !== NULL) {
-      throw new \LogicException(sprintf(
-        'Refining "%s", which holds a child, %s. A parent may only answer that a key holding a child does not apply; what the child holds is the child\'s to narrow.',
-        $entry->name,
-        $narrowed,
-      ));
+      throw new \LogicException(sprintf(Answer::HOLDS_A_CHILD, $entry->name, $narrowed));
     }
     return NULL;
-  }
-
-  /**
-   * Refuses a parent's refinement of a collection that reached its items.
-   *
-   * The list key is the parent's, so the parent's refiners narrow it: its
-   * Count, its own constraints. Each item is the child's, refined by the
-   * child in its own frame, so the item definition a parent's refiner
-   * hands back must be the one it was handed.
-   *
-   * Decision: see docs/decisions.md#count-is-the-parents.
-   *
-   * @param \Drupal\surface\Entry $entry
-   *   The collection, as advertised.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $refined
-   *   What the parent's refiners made of it.
-   *
-   * @throws \LogicException
-   *   When the items were narrowed.
-   */
-  public static function assertItemsUntouched(Entry $entry, DataDefinitionInterface $refined): void {
-    $before = $entry->definition() instanceof ListDataDefinition ? $entry->definition()->getItemDefinition() : NULL;
-    $after = $refined instanceof ListDataDefinition ? $refined->getItemDefinition() : NULL;
-    $narrowed = $before === NULL || $after === NULL
-      ? 'the list is no longer a list'
-      : Narrowing::narrowed($before, $after);
-    if ($narrowed !== NULL) {
-      throw new \LogicException(sprintf(
-        'Refining the "%s" collection reached inside its items: %s. The list is its parent\'s to narrow (its Count, its own constraints); every item is its child\'s, refined by the child in its own frame.',
-        $entry->name,
-        $narrowed,
-      ));
-    }
   }
 
   /**
@@ -1331,10 +1398,11 @@ final class Surface implements SurfaceInterface {
    * The owner's refiners run over the owner's own option space — the
    * advertised values minus everything contributed — and each
    * contributor's refiners over the values that contributor added. The
-   * refined definition is the owner's, with its list of allowed values
+   * refined schema is the owner's, with its list of allowed values
    * replaced by the union of every narrowed list: nobody can narrow away
    * what somebody else contributed, and nobody can hand back a value
-   * they were not given.
+   * they were not given. Each list is written on the schema once
+   * (Answer::withChoices()).
    *
    * A key with a single contribution, which is nearly every key, reduces
    * to exactly the chain this replaced, minus the ability to widen.
@@ -1348,25 +1416,25 @@ final class Surface implements SurfaceInterface {
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what the refiners that run declare they depend on.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The refined definition.
+   * @return \PortableSchema\Builder\Schema
+   *   The refined schema.
    */
-  protected function unionOfContributions(Entry $entry, array $chains, array $values, CacheableMetadata $cacheability): DataDefinitionInterface {
+  protected function unionOfContributions(Entry $entry, array $chains, array $values, CacheableMetadata $cacheability): Schema {
     $target = $entry->name;
-    $advertised = $entry->definition();
+    $advertised = $entry->schema();
     $contributed = $entry->contributions;
-    $advertised_set = ChoiceSet::of($advertised);
+    $advertised_set = ChoiceSet::ofSchema($advertised);
 
     // The owner's space is what nobody else contributed.
-    $owner = static::deepClone($advertised);
+    $owner = $advertised;
     if ($advertised_set !== NULL) {
       $contributed_values = $contributed === [] ? [] : array_merge(...array_values($contributed));
-      $advertised_set->withValues(array_diff($advertised_set->values, $contributed_values))->applyTo($owner);
+      $owner = Answer::withChoices($advertised, $advertised_set->withValues(array_diff($advertised_set->values, $contributed_values)));
     }
     if (isset($chains[self::OWNER])) {
       $owner = $this->runChain($target, self::OWNER, $chains[self::OWNER], $owner, $values, $cacheability);
     }
-    if ($advertised_set === NULL || DoesNotApply::marks($owner)) {
+    if ($advertised_set === NULL || NodeFacts::doesNotApply($owner)) {
       // Whether the key applies is the owner's to say, as everything but
       // its values is: ruled out, no contribution brings it back.
       // A key that advertises no list of values has no space to divide,
@@ -1374,105 +1442,73 @@ final class Surface implements SurfaceInterface {
       return $owner;
     }
 
-    $union = ChoiceSet::ofConstraint($owner, $advertised_set->constraint);
+    $union = ChoiceSet::ofSchema($owner, $advertised_set->constraint);
     $values_union = $union === NULL ? [] : $union->values;
     $labels = $union === NULL ? [] : $union->labels;
     foreach (array_keys($contributed + array_diff_key($chains, [self::OWNER => TRUE])) as $contributor) {
       $contributor = (string) $contributor;
-      $definition = static::deepClone($advertised);
-      $advertised_set->withValues($contributed[$contributor] ?? [])->applyTo($definition);
+      $schema = Answer::withChoices($advertised, $advertised_set->withValues($contributed[$contributor] ?? []));
       if (isset($chains[$contributor])) {
-        $definition = $this->runChain($target, $contributor, $chains[$contributor], $definition, $values, $cacheability);
+        $schema = $this->runChain($target, $contributor, $chains[$contributor], $schema, $values, $cacheability);
       }
       // A contribution ruled out offers none of its values.
-      $narrowed = DoesNotApply::marks($definition) ? NULL : ChoiceSet::ofConstraint($definition, $advertised_set->constraint);
+      $narrowed = NodeFacts::doesNotApply($schema) ? NULL : ChoiceSet::ofSchema($schema, $advertised_set->constraint);
       if ($narrowed !== NULL) {
         $values_union = array_merge($values_union, $narrowed->values);
         $labels += $narrowed->labels;
       }
     }
-    ($union ?? $advertised_set)
-      ->withValues(array_values(array_unique($values_union)), $labels + $advertised_set->labels)
-      ->applyTo($owner);
-    return $owner;
+    return Answer::withChoices($owner, ($union ?? $advertised_set)
+      ->withValues(array_values(array_unique($values_union)), $labels + $advertised_set->labels));
   }
 
   /**
-   * Runs one contribution's refiner chain, checking every link.
+   * Runs one contribution's refiner chain, applying every answer.
+   *
+   * Each link answers for the key as it stands, and each answer is
+   * applied in turn (Answer::apply()), which refuses one that would widen
+   * the key; nothing is narrower than a key that does not apply, so the
+   * chain stops there.
    *
    * @param string $target
-   *   The definition key being refined.
+   *   The key being refined.
    * @param string $contributor
    *   The contributor whose chain this is.
    * @param \Drupal\surface\SurfaceRefinerInterface[] $chain
    *   The refiners, in registration order.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition the chain starts from: this contribution's own
-   *   option space, already cloned.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema the chain starts from: this contribution's own option
+   *   space.
    * @param array $values
    *   The dependency values.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what the refiners declare they depend on.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The narrowed definition.
+   * @return \PortableSchema\Builder\Schema
+   *   The narrowed schema.
    *
    * @throws \LogicException
-   *   When a link hands back more than it was given.
+   *   When an answer would widen the key.
    */
-  protected function runChain(string $target, string $contributor, array $chain, DataDefinitionInterface $definition, array $values, CacheableMetadata $cacheability): DataDefinitionInterface {
+  protected function runChain(string $target, string $contributor, array $chain, Schema $schema, array $values, CacheableMetadata $cacheability): Schema {
     $who = $contributor === self::OWNER
       ? 'the declaring class'
       : sprintf('the %s contribution', $contributor);
     foreach ($chain as $link) {
-      if (DoesNotApply::marks($definition)) {
-        // Nothing is narrower than a key that does not apply.
+      if (NodeFacts::doesNotApply($schema)) {
         break;
       }
-      // The link is handed a copy and the original is kept as the
-      // pre-image. A refiner is expected to mutate what it is given and
-      // hand it back, and an object compared with itself has of course
-      // never changed: without a pre-image the check would pass
-      // everything.
-      $refined = $link->refineDataDefinition($target, static::deepClone($definition), $values);
-      Narrowing::assertNarrows($target, $who, $definition, $refined);
-      static::carryMetadata($definition, $refined);
+      foreach ($link->refine($target, $schema, $values) as $answer) {
+        $schema = Answer::apply($schema, $answer, $target, $who, TRUE);
+        if (NodeFacts::doesNotApply($schema)) {
+          break;
+        }
+      }
       if ($link instanceof CacheableDependencyInterface) {
         $cacheability->addCacheableDependency($link);
       }
-      $definition = $refined;
     }
-    return $definition;
-  }
-
-  /**
-   * Carries the metadata a refiner cannot be expected to copy.
-   *
-   * A refiner that mutates the definition it was handed keeps both by
-   * definition. One that builds a fresh definition (the variants'
-   * placeholder becoming the chosen variant's map) would otherwise drop
-   * the declared default and the examples, and the rendered form and the
-   * accepted value would then disagree about what the key starts from.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $from
-   *   The definition handed over.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $to
-   *   What came back.
-   *
-   * @internal
-   *   Public only for the build step, which runs a refiner that
-   *   watches nothing once, at build time, under the same rules.
-   */
-  public static function carryMetadata(DataDefinitionInterface $from, DataDefinitionInterface $to): void {
-    if ($from === $to) {
-      return;
-    }
-    if (DefinitionMetadata::hasDefaultValue($from) && !DefinitionMetadata::hasDefaultValue($to)) {
-      DefinitionMetadata::setDefaultValue($to, DefinitionMetadata::getDefaultValue($from));
-    }
-    if (DefinitionMetadata::getExamples($to) === [] && DefinitionMetadata::getExamples($from) !== []) {
-      DefinitionMetadata::setExamples($to, DefinitionMetadata::getExamples($from));
-    }
+    return $schema;
   }
 
   /**

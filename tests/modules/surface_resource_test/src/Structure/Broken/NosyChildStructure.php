@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Broken;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Watches a key only its parent declares, which the wall refuses.
@@ -27,8 +27,8 @@ final class NosyChildStructure implements StructureInterface {
    * Reads the parent's pantry.
    */
   #[RefinesInput('height')]
-  public static function heightInPantry(DataDefinitionInterface $height, string $pantry): DataDefinitionInterface {
-    return $height;
+  public static function heightInPantry(string $pantry): Schema {
+    return Schema::any();
   }
 
 }

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_test\Alter;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface_resource_test\Structure\MountWatcherStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Watches a key another module mounted, which is refused.
@@ -31,8 +31,8 @@ final class ForeignMountWatcherAlter implements AltersInputsInterface {
    * Watches the other module's kind.
    */
   #[RefinesInput('note')]
-  public static function noteOfKind(DataDefinitionInterface $note, ?string $kind): DataDefinitionInterface {
-    return $note;
+  public static function noteOfKind(?string $kind): Schema {
+    return Schema::any();
   }
 
 }

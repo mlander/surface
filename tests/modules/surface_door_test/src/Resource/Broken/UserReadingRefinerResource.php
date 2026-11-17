@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\surface_door_test\Resource\Broken;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_door_test\Storage\DoorNoteStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A runtime refiner that reads the current user itself: refused.
@@ -34,8 +34,8 @@ final class UserReadingRefinerResource implements ResourceInterface {
    * Shortens the note of a signed-in account, read from the current user.
    */
   #[RefinesInput('note', runtime: TRUE)]
-  public static function requiredWhenSignedIn(DataDefinitionInterface $note): DataDefinitionInterface {
-    return \Drupal::currentUser()->isAnonymous() ? $note : $note->addConstraint('Length', ['max' => 10]);
+  public static function requiredWhenSignedIn(): Schema {
+    return \Drupal::currentUser()->isAnonymous() ? Schema::any() : Schema::any()->maxLength(10);
   }
 
 }

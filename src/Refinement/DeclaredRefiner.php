@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Refinement;
 
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\SurfaceRefinerInterface;
 use Drupal\surface\ResourceBuild\RefinesInputRefiner;
+use PortableSchema\Builder\Schema;
 
 /**
  * The engine's refiner for the rules one contributor declared as data.
@@ -72,64 +73,121 @@ final class DeclaredRefiner implements SurfaceRefinerInterface, ApplicabilityInt
   /**
    * {@inheritdoc}
    */
-  public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
+  public function refine(string $name, Schema $key, array $values): array {
+    $rules = $this->rules[$name] ?? [];
     if ($this->at !== NULL) {
-      return $this->refineAt(explode('.', $this->at), $definition, $this->rules[$name] ?? [], $values);
+      return $this->answersAt(explode('.', $this->at), $key, $rules, $values, $name);
     }
     if ($name === RefinesInputRefiner::MOUNT && $this->module !== NULL) {
-      $own = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($this->module) : NULL;
-      if (!$own instanceof MapDataDefinition) {
-        return $definition;
+      $own = DefinitionSchema::propertyNode($key, $this->module);
+      if ($own === NULL || !is_a(DefinitionSchema::classOf($own), MapDataDefinition::class, TRUE)) {
+        return [];
       }
-      foreach ($this->rules[$name] ?? [] as $rule) {
-        $key = $own->getPropertyDefinition($rule->key);
-        if ($key !== NULL && !DoesNotApply::marks($key) && $this->holds($rule, $values)) {
-          $own->setPropertyDefinition($rule->key, $rule->apply($key));
+      $answers = [];
+      $schema = $key;
+      foreach ($rules as $rule) {
+        $own = DefinitionSchema::propertyNode($schema, $this->module);
+        $inner = $own === NULL ? NULL : DefinitionSchema::propertyNode($own, $rule->key);
+        if ($inner !== NULL && !NodeFacts::doesNotApply($inner) && $this->holds($rule, $values)) {
+          $answer = static::placed([$this->module, $rule->key], $rule->answer($inner));
+          $answers[] = $answer;
+          $schema = static::applied($schema, $answer, $name);
         }
       }
-      return $definition;
+      return $answers;
     }
-    foreach ($this->rules[$name] ?? [] as $rule) {
-      if (DoesNotApply::marks($definition)) {
-        break;
-      }
-      if ($this->holds($rule, $values)) {
-        $definition = $rule->apply($definition);
-      }
-    }
-    return $definition;
+    return $this->answersAt([], $key, $rules, $values, $name);
   }
 
   /**
-   * Applies the rules that hold to the key at a path inside a map.
+   * Gives the answers of the rules that hold, for the key at a path.
+   *
+   * Each rule reads the key as the rules before it left it.
    *
    * @param string[] $parents
-   *   The path below the definition.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition, a copy.
+   *   The path below the key; empty for the key itself.
+   * @param \PortableSchema\Builder\Schema $key
+   *   The key's schema.
    * @param \Drupal\surface\Refinement\Rule[] $rules
    *   The rules.
    * @param array $values
    *   The values the engine handed over.
+   * @param string $name
+   *   The key, for a refusal.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The definition.
+   * @return array<int, \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply>
+   *   The answers, each for the key.
    */
-  protected function refineAt(array $parents, DataDefinitionInterface $definition, array $rules, array $values): DataDefinitionInterface {
-    if ($parents === []) {
-      foreach ($rules as $rule) {
-        if (!DoesNotApply::marks($definition) && $this->holds($rule, $values)) {
-          $definition = $rule->apply($definition);
-        }
+  protected function answersAt(array $parents, Schema $key, array $rules, array $values, string $name): array {
+    $answers = [];
+    $schema = $key;
+    foreach ($rules as $rule) {
+      $inner = $schema;
+      foreach ($parents as $parent) {
+        // A path inside a map, each step a map, as the rule is bound.
+        $inner = $inner !== NULL && is_a(DefinitionSchema::classOf($inner), MapDataDefinition::class, TRUE) ? DefinitionSchema::propertyNode($inner, (string) $parent) : NULL;
       }
-      return $definition;
+      if ($inner === NULL || NodeFacts::doesNotApply($inner)) {
+        if ($parents === []) {
+          break;
+        }
+        continue;
+      }
+      if (!$this->holds($rule, $values)) {
+        continue;
+      }
+      $answer = static::placed($parents, $rule->answer($inner));
+      $answers[] = $answer;
+      $schema = static::applied($schema, $answer, $name);
     }
-    $first = (string) array_shift($parents);
-    $inner = $definition instanceof MapDataDefinition ? $definition->getPropertyDefinition($first) : NULL;
-    if ($definition instanceof MapDataDefinition && $inner !== NULL && !DoesNotApply::marks($inner)) {
-      $definition->setPropertyDefinition($first, $this->refineAt($parents, $inner, $rules, $values));
+    return $answers;
+  }
+
+  /**
+   * Applies an answer to the schema a rule after it reads.
+   *
+   * An answer the key refuses is refused where the chain applies it,
+   * which names the chain; the schema read after it is the one before.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
+   * @param \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply $answer
+   *   The answer.
+   * @param string $name
+   *   The key.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The schema as the answer leaves it.
+   */
+  protected static function applied(Schema $schema, Schema|DoesNotApply $answer, string $name): Schema {
+    try {
+      return Answer::apply($schema, $answer, $name, 'a declared rule', TRUE);
     }
-    return $definition;
+    catch (\LogicException) {
+      return $schema;
+    }
+  }
+
+  /**
+   * Places an answer at a path inside a key.
+   *
+   * @param string[] $parents
+   *   The path; empty for the key itself.
+   * @param \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply $answer
+   *   The answer there.
+   *
+   * @return \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply
+   *   The answer for the key.
+   */
+  public static function placed(array $parents, Schema|DoesNotApply $answer): Schema|DoesNotApply {
+    if ($parents === []) {
+      return $answer;
+    }
+    $placed = $answer instanceof DoesNotApply ? Schema::boolean(FALSE) : $answer;
+    foreach (array_reverse($parents) as $parent) {
+      $placed = Schema::any()->with('properties', [(string) $parent => $placed]);
+    }
+    return $placed;
   }
 
   /**

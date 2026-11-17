@@ -34,6 +34,7 @@ use Drupal\surface\Resource\ShapeInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface\Resource\ResourceDeriverInterface;
 use Drupal\surface\Resource\KnowsDerivativeListTagsInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Every resource, structure and shape, with operations, alters, variants.
@@ -1982,20 +1983,29 @@ final class ResourceRegistry {
         // typed for it, and is no watched key.
         // Decision: see
         // docs/decisions.md#nothing-an-operation-runs-reads-the-request.
-        $last = count($parameters) > 1 ? $parameters[count($parameters) - 1]->getType() : NULL;
+        $last = $parameters === [] ? NULL : $parameters[count($parameters) - 1]->getType();
         $account = $last instanceof \ReflectionNamedType && is_a($last->getName(), AccountInterface::class, TRUE);
         if ($account) {
           array_pop($parameters);
         }
+        // A first parameter typed Schema is handed the key's schema; one
+        // typed for any other class is a definition, which no method takes
+        // (RefinesInputRefiner refuses it); every other is a watched key.
+        $type = $parameters === [] ? NULL : $parameters[0]->getType();
+        $first = match (TRUE) {
+          !$type instanceof \ReflectionNamedType || $type->isBuiltin() => 'none',
+          $type->getName() === Schema::class => 'schema',
+          default => 'definition',
+        };
         $refiners[] = new RefinerDefinition(
           class: $class->getName(),
           method: $method->getName(),
           key: $refines->key,
           parameters: array_map(
             static fn (\ReflectionParameter $parameter): string => $parameter->getName(),
-            array_slice($parameters, 1),
+            $first === 'none' ? $parameters : array_slice($parameters, 1),
           ),
-          takesDefinition: $parameters !== [],
+          first: $first,
           isStatic: $method->isStatic(),
           runtime: $refines->runtime,
           mayNotApply: DoesNotApply::isDeclaredBy($method),

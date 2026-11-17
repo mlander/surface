@@ -6,12 +6,12 @@ namespace Drupal\surface_examples_extras\Alter;
 
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter;
+use PortableSchema\Builder\Schema;
 
 /**
  * This module's additions to the example formatter.
@@ -83,11 +83,8 @@ final class ExampleFormatterAlter implements AltersInputsInterface {
    * casing it goes, and the formatter's own variants are the formatter's.
    */
   #[RefinesInput('variant')]
-  public static function ribbonInUpperCase(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface {
-    if ($casing === 'uppercase') {
-      return $variant;
-    }
-    return $variant->addConstraint('LabeledChoice', ['choices' => []]);
+  public static function ribbonInUpperCase(string $casing): Schema {
+    return $casing === 'uppercase' ? Schema::any() : Schema::enum([]);
   }
 
 }

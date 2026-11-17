@@ -8,7 +8,6 @@ use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Pipeline\NotEmitted;
 use Drupal\surface\Plugin\Field\FieldFormatter\TypedFormatterBase;
 use Drupal\surface\Refinement\ChoiceSet;
@@ -18,6 +17,7 @@ use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_examples_plugins\ExampleVariant;
+use PortableSchema\Builder\Schema;
 
 /**
  * A field formatter that is its own structure.
@@ -100,23 +100,16 @@ final class ExampleFormatter extends TypedFormatterBase implements StructureInte
    * a value another module offered is that module's to narrow.
    */
   #[RefinesInput('variant')]
-  public static function variantsOfCasing(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface {
+  public static function variantsOfCasing(Schema $variant, string $casing): Schema {
     $offered = ExampleVariant::choicesFor($casing);
     if ($offered === []) {
-      return $variant;
+      return Schema::any();
     }
-    // Read through ChoiceSet: either spelling of the constraint may be on
-    // the definition by now, and this is the one place reading both.
+    // The key's list by now, read through ChoiceSet: its offered variants,
+    // in their order, of those the key still holds.
     $declared = ChoiceSet::of($variant);
-    $variant->addConstraint('LabeledChoice', [
-      'choices' => $declared === NULL
-        ? []
-        : array_intersect_key($offered, array_flip($declared->values)),
-    ]);
-    if ($variant instanceof DataDefinition) {
-      $variant->setDescription(t('A @casing display variant.', ['@casing' => $casing]));
-    }
-    return $variant;
+    return Schema::options($declared === NULL ? [] : array_intersect_key($offered, array_flip($declared->values)))
+      ->description(t('A @casing display variant.', ['@casing' => $casing]));
   }
 
   /**

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Attachment;
@@ -61,12 +60,14 @@ class RefinedShellTest extends SurfaceKernelTestBase {
    *
    * @param \Drupal\surface\SurfaceRefinerInterface|null $refiner
    *   What refines the code, by the mode; a HandRefiner by default.
+   * @param \Drupal\Core\TypedData\DataDefinition|null $code
+   *   The code as advertised; a required string of up to eight by default.
    *
    * @return \Drupal\surface\SurfaceInterface
    *   The child, sealed.
    */
-  protected static function child(?SurfaceRefinerInterface $refiner = NULL): SurfaceInterface {
-    $code = DataDefinition::create('string')->setLabel('Code')->setRequired(TRUE)->addConstraint('Length', ['max' => 8]);
+  protected static function child(?SurfaceRefinerInterface $refiner = NULL, ?DataDefinition $code = NULL): SurfaceInterface {
+    $code ??= DataDefinition::create('string')->setLabel('Code')->setRequired(TRUE)->addConstraint('Length', ['max' => 8]);
     $builder = new SurfaceBuilder([
       'mode' => DataDefinition::create('string')->setLabel('Mode'),
       'code' => $code,
@@ -206,25 +207,19 @@ class RefinedShellTest extends SurfaceKernelTestBase {
 
   /**
    * Tests a shell whose node holds a class no node derives keeps a definition.
+   *
+   * Before refiners answered with schemas, the child's refiner handed back
+   * a definition of a class no node derives, and the shells built from
+   * the refined child were held to that. A refiner's answer names no
+   * class, so the class is the advertised key's here: the child's `code`
+   * is of a class outside the three, and narrowing it keeps the shells
+   * definition-first.
    */
   public function testTheClassRule(): void {
-    $other = new class implements SurfaceRefinerInterface {
-
-      /**
-       * {@inheritdoc}
-       */
-      public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-        if (($values['mode'] ?? NULL) !== 'other') {
-          return $definition;
-        }
-        $foreign = new class(['type' => 'string']) extends DataDefinition {};
-        $foreign->setLabel('Code')->setRequired(TRUE)->addConstraint('Length', ['max' => 4]);
-        return $foreign;
-      }
-
-    };
-    $surface = static::shells(static::child($other));
-    $refined = $surface->refine(static::at('other'));
+    $foreign = new class(['type' => 'string']) extends DataDefinition {};
+    $foreign->setLabel('Code')->setRequired(TRUE)->addConstraint('Length', ['max' => 8]);
+    $surface = static::shells(static::child(NULL, $foreign));
+    $refined = $surface->refine(static::at('narrow'));
     foreach (['att', 'pick', 'fixed', 'deep', 'third_party_settings'] as $key) {
       $entry = $refined->getDefinitions()->entry($key);
       $this->assertNotNull($entry);
@@ -232,7 +227,7 @@ class RefinedShellTest extends SurfaceKernelTestBase {
       $this->assertFalse(DefinitionMap::derivedClasses($entry->schema()), "$key: its node holds a class no node derives.");
       $this->assertTrue(DefinitionSchema::same($entry->schema(), DefinitionSchema::of($entry->definition())), "$key: its node, composed, is what its definition, built as before, reads.");
     }
-    $plain = $surface->refine(static::at('none'));
+    $plain = static::shells(static::child())->refine(static::at('narrow'));
     $this->assertTrue($plain->getDefinitions()->entry('att')->isNodeFirst(), 'The same shell is node-first where the child\'s keys are of the derived classes.');
   }
 
@@ -355,44 +350,31 @@ class RefinedShellTest extends SurfaceKernelTestBase {
   /**
    * Builds a frame whose watched key is a definition its node does not say.
    *
+   * Before refiners answered with schemas, the refiner of `cfg` handed
+   * back a copy of a definition that answers for `x`, a property its
+   * properties do not list, marked; an answer says only what the key's
+   * schema holds, so `x` is a property `cfg` lists, and the refiner rules
+   * it out by its answer.
+   *
    * @return \Drupal\surface\SurfaceInterface
-   *   `cfg`, a map of a class no node derives a definition of, whose
-   *   definition answers for `x` (one of a and b), a property its
-   *   properties do not list, and marks `x` ruled out once `mode` is
-   *   `out`; `target` (Length 9), narrowed to 3 by `cfg.x` holding `a`.
+   *   `cfg`, a map of a class no node derives a definition of, holding `x`
+   *   (one of a and b) and `y`, `x` ruled out once `mode` is `out`;
+   *   `target` (Length 9), narrowed to 3 by `cfg.x` holding `a`.
    */
   protected function definitionWatchedFrame(): SurfaceInterface {
-    $cfg = new class(['type' => 'map']) extends MapDataDefinition {
-
-      /**
-       * Whether `x` is ruled out.
-       */
-      public bool $out = FALSE;
-
-      /**
-       * {@inheritdoc}
-       */
-      public function getPropertyDefinition($name) {
-        if ($name !== 'x') {
-          return parent::getPropertyDefinition($name);
-        }
-        $x = DataDefinition::create('string')->setLabel('X')->addConstraint('Choice', ['choices' => ['a', 'b']]);
-        return $this->out ? DoesNotApply::marked($x) : $x;
-      }
-
-    };
-    $cfg->setLabel('Cfg')->setPropertyDefinition('y', DataDefinition::create('string')->setLabel('Y'));
+    $cfg = new class(['type' => 'map']) extends MapDataDefinition {};
+    $cfg->setLabel('Cfg')
+      ->setPropertyDefinition('x', DataDefinition::create('string')->setLabel('X')->addConstraint('Choice', [
+        'choices' => ['a', 'b'],
+      ]))
+      ->setPropertyDefinition('y', DataDefinition::create('string')->setLabel('Y'));
     $ruling = new class implements SurfaceRefinerInterface {
 
       /**
        * {@inheritdoc}
        */
-      public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-        $copy = clone $definition;
-        if (($values['mode'] ?? NULL) === 'out' && property_exists($copy, 'out')) {
-          $copy->out = TRUE;
-        }
-        return $copy;
+      public function refine(string $name, Schema $key, array $values): array {
+        return ($values['mode'] ?? NULL) === 'out' ? [Schema::any()->with('properties', ['x' => FALSE])] : [];
       }
 
     };

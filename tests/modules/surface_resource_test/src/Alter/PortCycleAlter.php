@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface_resource_test\Structure\Broken\PortCycleStructure;
 use Drupal\surface_resource_test\Structure\Seating\SeatingStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Wires the seating's guests to the owner's size, which reads the rows.
@@ -30,7 +31,7 @@ final class PortCycleAlter implements AltersInputsInterface {
     ]);
     $inputs->narrow('size')
       ->when(Condition::atLeast('rows', 20))
-      ->constrain('Range', ['max' => 500]);
+      ->constrain(Schema::any()->maximum(500));
   }
 
 }

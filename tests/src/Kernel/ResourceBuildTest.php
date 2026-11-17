@@ -37,6 +37,7 @@ use Drupal\surface_resource_test\Structure\Broken\StrictMountWatcherStructure;
 use Drupal\surface_resource_test\Alter\InstanceRefinerAlter;
 use Drupal\surface_resource_test\Alter\StrictMountWatcherAlter;
 use Drupal\surface_resource_test\Structure\Broken\WatchesUndeclaredStructure;
+use Drupal\surface_resource_test\Structure\Broken\TakesDefinitionStructure;
 use Drupal\surface_resource_test\Structure\Broken\WideningRefinerStructure;
 use Drupal\surface_resource_test\Structure\MountWatcherStructure;
 use Drupal\surface_resource_test\Resource\RecipeResource;
@@ -282,9 +283,13 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
         ClashingOperationStructure::class,
         'resource_test.broken.clashing_operation has two operations with the id "open", from #[Operation] on ' . ClashingOperationStructure::class . ' in surface_resource_test and from ' . ClashingOperationStructure::class . '::open() in surface_resource_test.',
       ],
+      'a refiner handed the key\'s definition' => [
+        TakesDefinitionStructure::class,
+        TakesDefinitionStructure::class . '::nameOfKind() takes the key\'s definition as its first parameter.',
+      ],
       'a refiner that watches nothing widens' => [
         WideningRefinerStructure::class,
-        'Refining "name" for ' . WideningRefinerStructure::class . '::nameIsOptional() widened what it was given: the required flag was turned off.',
+        'Refining "name" for ' . WideningRefinerStructure::class . '::nameMayBeLonger() widened what it was given: the max of the Length constraint moved from 10 to 40.',
       ],
       'a parent refines its attached structure' => [
         RefinesAttachedStructure::class,

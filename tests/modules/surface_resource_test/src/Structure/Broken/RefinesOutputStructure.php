@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Broken;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Has a refiner naming an output key.
@@ -35,8 +35,8 @@ final class RefinesOutputStructure implements StructureInterface, DefinesOutputs
    * Tries to refine an output.
    */
   #[RefinesInput('total')]
-  public static function totalOfCount(DataDefinitionInterface $total, int $count): DataDefinitionInterface {
-    return $total;
+  public static function totalOfCount(int $count): Schema {
+    return Schema::any();
   }
 
 }

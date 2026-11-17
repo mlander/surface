@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\surface_test\Structure;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Three keys, each narrowing the next, with deliberate overlaps.
@@ -60,33 +60,29 @@ final class ChainBlockStructure implements StructureInterface {
    * The second tier offers what the first tier's value names.
    */
   #[RefinesInput('tier_two')]
-  public static function secondOfFirst(DataDefinitionInterface $tier_two, string $tier_one): DataDefinitionInterface {
-    return static::tier($tier_two, self::SECOND[$tier_one] ?? NULL);
+  public static function secondOfFirst(string $tier_one): Schema {
+    return static::tier(self::SECOND[$tier_one] ?? NULL);
   }
 
   /**
    * The third tier offers what the second tier's value names.
    */
   #[RefinesInput('tier_three')]
-  public static function thirdOfSecond(DataDefinitionInterface $tier_three, string $tier_two): DataDefinitionInterface {
-    return static::tier($tier_three, self::THIRD[$tier_two] ?? NULL);
+  public static function thirdOfSecond(string $tier_two): Schema {
+    return static::tier(self::THIRD[$tier_two] ?? NULL);
   }
 
   /**
    * Narrows one tier to what the tier above it offers.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The advertised definition.
    * @param array|null $choices
    *   The values on offer, or NULL when the tier above offers none.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The narrowed definition.
+   * @return \PortableSchema\Builder\Schema
+   *   What the tier above adds to this one.
    */
-  protected static function tier(DataDefinitionInterface $definition, ?array $choices): DataDefinitionInterface {
-    return $choices === NULL
-      ? $definition
-      : $definition->addConstraint('Choice', ['choices' => $choices]);
+  protected static function tier(?array $choices): Schema {
+    return $choices === NULL ? Schema::any() : Schema::enum($choices);
   }
 
 }

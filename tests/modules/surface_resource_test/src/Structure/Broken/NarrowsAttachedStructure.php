@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure\Broken;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Structure\Notice\NoticeAddressStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * May rule its attached key out, and narrows into the child instead.
@@ -31,8 +31,8 @@ final class NarrowsAttachedStructure implements StructureInterface {
    * Rules the address out by email, and by post narrows into the child.
    */
   #[RefinesInput('address')]
-  public static function intoTheAddress(DataDefinitionInterface $address, string $channel): DataDefinitionInterface|DoesNotApply {
-    return $channel === 'email' ? DoesNotApply::here() : $address->addConstraint('Count', ['max' => 1]);
+  public static function intoTheAddress(string $channel): Schema|DoesNotApply {
+    return $channel === 'email' ? DoesNotApply::here() : Schema::any()->check('drupal:Count', ['max' => 1]);
   }
 
 }

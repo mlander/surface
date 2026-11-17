@@ -48,9 +48,13 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *   nodeFirst): a shell is handed its own facts alone and composed by
    *   the same calls, its child's keys placed by name (since 2026-11-15);
    *   fromArrays() reads nothing itself.
-   * - src/Contract/Conditionals.php, of(): rules() reads a declared rule's
-   *   answer, made on a copy of the key's definition, which no entry
-   *   holds (since 2026-11-16 stated() takes the schema its caller reads).
+   * - src/Contract/Conditionals.php reads none since 2026-11-16: a
+   *   declared rule's answer is applied to the key's schema
+   *   (Answer::apply()).
+   * - src/ResourceBuild/Binding.php, of(): the build's once-run of a
+   *   refiner that watches nothing reads the key the builder holds as a
+   *   definition, to apply the refiner's answer to its schema (since
+   *   2026-11-16; goes when the builder holds schemas).
    * - src/Contract/ContractEmitter.php, of(): describeKey() reads a
    *   definition its caller hands, which no entry holds (since
    *   2026-11-16; with none handed it reads the entry's schema).
@@ -99,10 +103,10 @@ class DefinitionReadCallersTest extends UnitTestCase {
    */
   protected const CALLERS = [
     'src/Attachment.php' => ['of' => 1],
-    'src/Contract/Conditionals.php' => ['of' => 1],
     'src/Contract/ContractEmitter.php' => ['of' => 1],
     'src/Entry.php' => ['around' => 4, 'of' => 4],
     'src/Options/SurfaceOptions.php' => ['of' => 1],
+    'src/ResourceBuild/Binding.php' => ['of' => 1],
     'src/Surface.php' => ['around' => 2, 'of' => 1],
     'src/Tool/InputDefinitions.php' => ['of' => 2],
     'src/Variants.php' => ['shell' => 2],

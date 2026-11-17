@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Structure;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use Drupal\surface\Refinement\ChoiceSet;
+use PortableSchema\Builder\Schema;
 
 /**
  * A structure with both kinds of refiner, which counts every call.
@@ -85,28 +86,27 @@ final class StockroomStructure implements StructureInterface {
    * The shelf is one of the aisle's: static, so it can be listed.
    */
   #[RefinesInput('shelf')]
-  public static function shelfInAisle(DataDefinitionInterface $shelf, string $aisle): DataDefinitionInterface {
+  public static function shelfInAisle(string $aisle): Schema {
     self::$calls[__FUNCTION__] = (self::$calls[__FUNCTION__] ?? 0) + 1;
-    return $shelf->addConstraint('LabeledChoice', ['choices' => self::SHELVES[$aisle] ?? []]);
+    return Schema::options(self::SHELVES[$aisle] ?? []);
   }
 
   /**
    * No closed shelf: only the runtime knows which are closed.
    */
   #[RefinesInput('shelf', runtime: TRUE)]
-  public static function openShelf(DataDefinitionInterface $shelf, string $aisle): DataDefinitionInterface {
+  public static function openShelf(Schema $shelf, string $aisle): Schema {
     self::$calls[__FUNCTION__] = (self::$calls[__FUNCTION__] ?? 0) + 1;
-    $choices = $shelf->getConstraints()['LabeledChoice']['choices'] ?? [];
-    return $shelf->addConstraint('LabeledChoice', ['choices' => array_diff_key($choices, array_flip(self::$closed))]);
+    return Schema::enum(array_values(array_diff(ChoiceSet::of($shelf)->values ?? [], self::$closed)));
   }
 
   /**
    * No banned tag, whatever else is answered.
    */
   #[RefinesInput('tag', runtime: TRUE)]
-  public static function allowedTag(DataDefinitionInterface $tag): DataDefinitionInterface {
+  public static function allowedTag(): Schema {
     self::$calls[__FUNCTION__] = (self::$calls[__FUNCTION__] ?? 0) + 1;
-    return $tag->addConstraint('LabeledChoice', ['choices' => array_diff_key(self::TAGS, array_flip(self::$banned))]);
+    return Schema::options(array_diff_key(self::TAGS, array_flip(self::$banned)));
   }
 
 }
