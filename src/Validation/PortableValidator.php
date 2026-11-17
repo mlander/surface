@@ -27,11 +27,18 @@ use PortableSchema\Validator;
  * Holds values to the document a data surface serves for them.
  *
  * One run of the dialect's validator: the document is what emit() serves
- * for these values (ServedContract::schema()), held in a clone of the
- * site's registry (`surface.portable_registry`) under its `$id`, or an id
- * of its own when it has none; the data is what the pipeline writes for
- * the values (SurfacePipelineInterface::document()). Every check the
+ * for these values (ServedContract::schema()), held under its `$id`, or
+ * an id of its own when it has none; the data is what the pipeline writes
+ * for the values (SurfacePipelineInterface::document()). Every check the
  * document names is answered by one DrupalCheckProvider for the call.
+ *
+ * The validator compiles every schema of the registry it is given. A
+ * document that reaches no schema outside itself (reachesOutside()) is
+ * compiled over a registry that holds only the document; any other over
+ * a clone of the site's registry (`surface.portable_registry`) with the
+ * document added. So a broken schema of the site's registry throws only
+ * for a document that may reach outside itself. Decision: see
+ * docs/decisions.md#a-document-that-reaches-nothing-else-is-compiled-alone.
  *
  * A compiled validator is kept for the request, by the document's hash, at
  * most KEPT of them, the oldest let go first: a form rebuilt for the same
@@ -275,6 +282,10 @@ final class PortableValidator {
   /**
    * Gets the compiled validator for a document, compiling it once.
    *
+   * Over a registry of the document alone where it reaches nothing
+   * outside itself (reachesOutside()), else over the site's registry and
+   * the document.
+   *
    * @param \PortableSchema\Builder\Schema $schema
    *   The document.
    *
@@ -292,8 +303,13 @@ final class PortableValidator {
     $decoded = Schemas::decoded($schema);
     $decoded = is_array($decoded) ? $decoded : [];
     $id = is_string($decoded['$id'] ?? NULL) ? $decoded['$id'] : 'urn:surface:validate:' . $hash;
-    $registry = clone $this->registry;
-    $registry->add($object, $id);
+    if (self::reachesOutside($decoded, $id)) {
+      $registry = clone $this->registry;
+      $registry->add($object, $id);
+    }
+    else {
+      $registry = (new Registry())->add($object, $id);
+    }
     $kept = [new Validator($registry), $id, self::checkNames($decoded), $registry, $decoded];
     if (count($this->compiled) >= self::KEPT) {
       array_shift($this->compiled);
@@ -483,6 +499,74 @@ final class PortableValidator {
       }
     }
     return Sentences::ofError($error->code, $error->params, $context, $this->translation);
+  }
+
+  /**
+   * Answers whether a document may reach a schema outside itself.
+   *
+   * Every member is read, at every depth, values such as `const`,
+   * `default` and `x-surface` included, so the answer errs toward TRUE. A
+   * document reaches outside itself when it holds:
+   * - a `$ref` that is not a string naming a place in the document: a
+   *   fragment (`#...`), the document's own id, or its id and a fragment;
+   * - a `$dynamicRef` or `$recursiveRef`, which the validator resolves
+   *   through the registry (the profile refuses `$dynamicRef`; the
+   *   validator still parses both);
+   * - a `portable-typeBy`, whose target is chosen from the data when it
+   *   runs;
+   * - a `$id` below its root, which would change the base a reference is
+   *   resolved against (Registry::add() refuses one).
+   * Nothing else in the package reads the registry for a document: a
+   * format, a named check and a message are resolved without it, and the
+   * Shaper and message() read only schemas the validation reached, and
+   * the target of a property's `$ref`.
+   *
+   * A document this answers FALSE for is compiled without the site's
+   * registry, so a broken schema there no longer throws for it: one is
+   * only met by a document that may reach it.
+   *
+   * @param array|bool $document
+   *   The document, decoded.
+   * @param string $id
+   *   The document's id in the registry.
+   *
+   * @return bool
+   *   TRUE when the document is compiled over the site's registry; FALSE
+   *   when a registry that holds only the document gives the same result.
+   */
+  public static function reachesOutside(array|bool $document, string $id): bool {
+    return self::leaves($document, $id, TRUE);
+  }
+
+  /**
+   * Answers whether a value within a document may reach outside it.
+   *
+   * @param mixed $value
+   *   The document, decoded, or a schema or value within it.
+   * @param string $id
+   *   The document's id in the registry.
+   * @param bool $root
+   *   TRUE for the document itself, where its own `$id` is allowed.
+   *
+   * @return bool
+   *   TRUE as reachesOutside() says.
+   */
+  private static function leaves(mixed $value, string $id, bool $root): bool {
+    if (!is_array($value)) {
+      return FALSE;
+    }
+    foreach ($value as $keyword => $member) {
+      $leaves = match ($keyword) {
+        '$ref' => !is_string($member) || !($member === $id || str_starts_with($member, '#') || str_starts_with($member, $id . '#')),
+        '$dynamicRef', '$recursiveRef', 'portable-typeBy' => TRUE,
+        '$id' => !$root || !is_string($member),
+        default => self::leaves($member, $id, FALSE),
+      };
+      if ($leaves) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
   /**

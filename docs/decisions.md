@@ -15323,7 +15323,10 @@ say is run by a check on the server.
   not used.
 - **One validator per document.** `surface.portable_validator` adds the
   document to a clone of `surface.portable_registry` under its `$id`, or
-  `urn:surface:validate:<hash>`, and keeps the compiled validator for
+  `urn:surface:validate:<hash>` (since 2026-11-17 to a registry of its
+  own when it reaches nothing outside itself:
+  [A document that reaches nothing else is compiled alone](#a-document-that-reaches-nothing-else-is-compiled-alone)),
+  and keeps the compiled validator for
   the request by the document's hash, at most 16. The document emitted
   for a data surface and its values is kept the same way, for the
   account, until a cache tag is invalidated
@@ -15369,6 +15372,46 @@ say is run by a check on the server.
 (`PortableValidator`, `DrupalCheckProvider`, `Nodes`, `Found`,
 `Location`, `Sentences::ofError()`, `Coercion::served()`,
 `PortableValidationTest`, `PortableValidatorTest`)
+
+### A document that reaches nothing else is compiled alone
+
+Decided 2026-11-17. The package's `Validator` meta-checks and compiles
+every schema of the registry it is given, so a document added to a
+clone of the site's registry also paid for the 27 library types it
+never reaches. `PortableValidator::compiled()` now compiles a document
+over `(new Registry())->add($document, $id)` when
+`PortableValidator::reachesOutside()` answers FALSE, and over the clone
+as before otherwise.
+
+- **The rule errs toward the site's registry.** Every member of the
+  decoded document is read, at every depth, `const`, `default` and
+  `x-surface` included. It reaches outside itself when it holds a
+  `$ref` that is not a string naming a place in it (`#...`, its own id,
+  or its id and a fragment), a `$dynamicRef` or `$recursiveRef`, a
+  `portable-typeBy`, or a `$id` below its root. In the package nothing
+  else reads the registry for a document: formats, named checks and
+  messages are resolved without it, and the Shaper and
+  `PortableValidator::message()` read only the schemas the validation
+  reached and the target of a property's `$ref`.
+- **The saving.** Measured on the host CLI with SQLite, medians: a key
+  held alone (`conformOutput()`) from 1.35 to 0.44 ms; the first compile
+  of a request from 5.2 to 1.7 ms; a whole document in a new request
+  from 5.8 to 2.5 ms (`first.newsletter`), 19.3 to 12.6
+  (`registration.step3`), 35.7 to 30.9 (`event.spotlight`) and 50.3 to
+  47.3 (`block.placement:create`). A repeated document is unchanged
+  (0.11 ms). On a large document the meta check of the document itself
+  stays the larger part.
+- **One check is lost.** A broken schema of the site's registry used to
+  throw for every document; it now throws only for a document that may
+  reach outside itself.
+- **Proof.** `CompiledAloneParityTest` holds every example and test
+  surface's document for its defaults and for values it refuses, both
+  ways: the same refusals, places, codes, params and messages
+  (60 surfaces, 333 value sets, 557 refusals). `CompiledAloneTest` pins
+  the rule.
+
+(`PortableValidator::reachesOutside()`, `PortableValidator::compiled()`,
+`CompiledAloneParityTest`, `CompiledAloneTest`)
 
 ### The form is drawn from the document
 
