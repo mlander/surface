@@ -468,9 +468,16 @@ final class DrupalCheckProvider implements CheckProvider {
       // module's to say (required, cannot be cleared), never a check's.
       return new CheckResult();
     }
-    if ($this->nodes?->refusedByKeyword($request->location, $request->value, !in_array($id, self::FORMAT_CHECKS, TRUE), $name)) {
-      // A keyword refuses the value: that refusal stands alone.
-      $this->unasked[$request->location] = TRUE;
+    $formats = !in_array($id, self::FORMAT_CHECKS, TRUE);
+    if ($this->nodes?->refusedByKeyword($request->location, $request->value, $formats, $name)) {
+      // A keyword refuses the value: that refusal stands alone. Only a
+      // refusal by a schema that holds in every case is one the validator
+      // must file at the place, and so one PortableValidator::held() runs
+      // again for when it is not filed; a refusal in a branch is not filed
+      // where another branch takes the value.
+      if ($this->nodes->refusedByKeyword($request->location, $request->value, $formats)) {
+        $this->unasked[$request->location] = TRUE;
+      }
       return new CheckResult();
     }
     $composite = array_intersect(ConstraintKeywords::row($id)?->keywords() ?? [], ['allOf', 'anyOf']);
