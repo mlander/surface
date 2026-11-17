@@ -275,6 +275,27 @@ final class Narrowing {
   }
 
   /**
+   * Says how one constraint widened, in this table's words.
+   *
+   * For the applier of a refiner's answer (Answer), which compares a
+   * key's schema with the schema an answer gives and says what moved in
+   * the words this check uses.
+   *
+   * @param string $name
+   *   The constraint plugin ID.
+   * @param array $before
+   *   The options the constraint was declared with.
+   * @param array $after
+   *   The options it carries now.
+   *
+   * @return string|null
+   *   What widened, in words, or NULL.
+   */
+  public static function constraintWidened(string $name, array $before, array $after): ?string {
+    return self::constraintWidening($name, $before, $after);
+  }
+
+  /**
    * Says how one constraint widened, or NULL when it did not.
    *
    * @param string $name
