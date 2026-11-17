@@ -991,7 +991,10 @@ use `DeclaresByProperties`, which supplies `defineInputs()` and
 - **Conditions in words.** `Condition`'s factories are calls, so
   `#[Rule]` spells four: `whenEquals:`, `whenPresent:`, `whenAbsent:`,
   `whenIn:`, all required to hold when several are given. Any other is
-  `narrow()` in `defineInputs()` or a `#[RefinesInput]` method.
+  `narrow()` in `defineInputs()` or a `#[RefinesInput]` method. Its
+  `constrain:` is a keyword map, `constrain: ['maximum' => 5]`, read as
+  `Rule::constrain()` reads a Schema of those keywords; a constraint and
+  its options is refused (decided 2026-11-17).
 - **Not spelled.** `addDefinition()`, the long form, which has no short
   form by design; `resolve()` and `extendChoices()`, an alter's verbs,
   and alters keep the blueprint; `addCacheableDependency()`, used by

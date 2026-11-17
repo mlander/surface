@@ -52,7 +52,7 @@ final class KeysPropertiesStructure implements StructureInterface {
   public ?string $id = NULL;
 
   #[Input('Code')]
-  #[Rule(whenAbsent: 'email', constrain: ['Length', ['max' => 4]], because: 'Up to 4 letters without an email.')]
+  #[Rule(whenAbsent: 'email', constrain: ['maxLength' => 4], because: 'Up to 4 letters without an email.')]
   public ?Code $code = NULL;
 
   #[Input('Note')]
