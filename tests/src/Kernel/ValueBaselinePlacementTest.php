@@ -28,7 +28,7 @@ class ValueBaselinePlacementTest extends ValueBaselineTestBase {
     'surfaces' => 1,
     'value sets' => 33,
     'cases' => 11031,
-    'accepted' => 10306,
+    'accepted' => 10307,
   ];
 
 }

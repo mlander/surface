@@ -28,7 +28,7 @@ class ValueBaselineBlocksTest extends ValueBaselineTestBase {
     'surfaces' => 5,
     'value sets' => 42,
     'cases' => 11393,
-    'accepted' => 10919,
+    'accepted' => 10927,
   ];
 
 }
