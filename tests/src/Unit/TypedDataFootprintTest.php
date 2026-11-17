@@ -155,9 +155,11 @@ class TypedDataFootprintTest extends UnitTestCase {
    * names none). Lowered on 2026-11-16 to 109: the document is written
    * from schemas, so Contract/Choices.php reads whether a key is a map of
    * keys from the site from its schema (NodeFacts::each()) and names no
-   * Typed Data.
+   * Typed Data. Raised on 2026-11-17 to 110: Contract/KeywordReader.php,
+   * the reader of a key's keywords, reads a config schema type it is
+   * handed (`drupal:config/<type>`) through typed config.
    */
-  public const OUTSIDE_THE_EDGES = 109;
+  public const OUTSIDE_THE_EDGES = 110;
 
   /**
    * Finds the files that use Typed Data.
