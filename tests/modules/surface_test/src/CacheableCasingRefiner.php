@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\surface_test;
 
+use Drupal\surface\Contract\PortableKeywords;
+use PortableSchema\Builder\Schema;
 use Drupal\Core\Cache\CacheableDependencyInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\SurfaceRefinerInterface;
 
 /**
@@ -27,9 +28,8 @@ final class CacheableCasingRefiner implements SurfaceRefinerInterface, Cacheable
   /**
    * {@inheritdoc}
    */
-  public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-    $definition->addConstraint('Length', ['max' => 5]);
-    return $definition;
+  public function refine(string $name, Schema $key, array $values, string $who): array {
+    return [Schema::any()->with(PortableKeywords::CHECK, ['drupal:Length' => ['max' => 5]])];
   }
 
   /**

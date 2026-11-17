@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Drupal\surface\Refinement;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\SurfaceRefinerInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A link in a refiner chain whose answer only the runtime may give.
@@ -16,7 +16,7 @@ use Drupal\surface\SurfaceRefinerInterface;
  * this, so the engine can tell the two kinds apart without knowing what
  * is behind a link. Refined for values, which is what the pipeline, a
  * form and the served contract's schema for those values do, it runs in
- * its chain like any other link, held to the same narrowing check.
+ * its chain like any other link, its answers applied as any other's.
  * Asked what the static refiners alone answer (SurfaceInterface::
  * refine() with $runtime FALSE), which is all the served contract may
  * state ahead of time, the engine leaves it out.
@@ -57,8 +57,8 @@ final class RuntimeRefiner implements SurfaceRefinerInterface, CacheableDependen
   /**
    * {@inheritdoc}
    */
-  public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-    return $this->link->refineDataDefinition($name, $definition, $values);
+  public function refine(string $name, Schema $key, array $values, string $who): array {
+    return $this->link->refine($name, $key, $values, $who);
   }
 
   /**

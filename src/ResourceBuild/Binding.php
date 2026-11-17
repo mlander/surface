@@ -11,6 +11,9 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeDefinition;
+use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\DeclaredRefiner;
@@ -22,7 +25,6 @@ use Drupal\surface\Resource\KnowsClearableKeysInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceStorageInterface;
-use Drupal\surface\Entry;
 
 /**
  * The binding phase of the build: refiners and rules into the builder.
@@ -371,12 +373,16 @@ final class Binding {
         ? $builder->getThirdPartyDefinition((string) $module, $refiner->key)
         : $builder->getDefinition($refiner->key);
       assert($advertised !== NULL);
-      $refined = $link->invoke($refiner, Surface::deepClone($advertised), []);
-      Narrowing::assertNarrows($refiner->key, $refiner->describe(), $advertised, $refined);
+      // Its answer is applied to the key's schema; the builder holds
+      // definitions, so what it is handed back is the definition an
+      // old-shape method returned, or the one derived from the schema.
+      $key = DefinitionSchema::of($advertised);
+      [$answer, $returned] = $link->answerOf($refiner, $key, [], $refiner->key, $refiner->describe(), $advertised);
+      $schema = Answer::apply($key, $answer, $refiner->key, $refiner->describe(), TRUE);
       if (in_array($refiner->key, $lists, TRUE)) {
-        Surface::assertItemsUntouched(new Entry($refiner->key, $advertised), $refined);
+        Answer::assertItemsUntouched($refiner->key, $key, $schema);
       }
-      Surface::carryMetadata($advertised, $refined);
+      $refined = $returned ?? NodeDefinition::of($schema);
       if ($own) {
         $builder->setThirdPartyDefinition((string) $module, $refiner->key, $refined);
         continue;

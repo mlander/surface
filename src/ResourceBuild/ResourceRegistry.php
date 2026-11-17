@@ -34,6 +34,7 @@ use Drupal\surface\Resource\ShapeInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface\Resource\ResourceDeriverInterface;
 use Drupal\surface\Resource\KnowsDerivativeListTagsInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Every resource, structure and shape, with operations, alters, variants.
@@ -1987,15 +1988,24 @@ final class ResourceRegistry {
         if ($account) {
           array_pop($parameters);
         }
+        // The first parameter's type tells the shape: the key's schema, a
+        // watched key (a scalar), or a definition (the old shape).
+        $type = $parameters === [] ? NULL : $parameters[0]->getType();
+        $first = match (TRUE) {
+          $type instanceof \ReflectionNamedType && $type->getName() === Schema::class => 'schema',
+          $type instanceof \ReflectionNamedType && $type->isBuiltin() => 'none',
+          default => 'definition',
+        };
         $refiners[] = new RefinerDefinition(
           class: $class->getName(),
           method: $method->getName(),
           key: $refines->key,
           parameters: array_map(
             static fn (\ReflectionParameter $parameter): string => $parameter->getName(),
-            array_slice($parameters, 1),
+            $first === 'none' ? $parameters : array_slice($parameters, 1),
           ),
           takesDefinition: $parameters !== [],
+          first: $first,
           isStatic: $method->isStatic(),
           runtime: $refines->runtime,
           mayNotApply: DoesNotApply::isDeclaredBy($method),

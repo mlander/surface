@@ -6,14 +6,12 @@ namespace Drupal\surface\Contract;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Refinement\DeclaredRefiner;
-use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\ResourceBuild\RefinesInputRefiner;
 use Drupal\surface\Entry;
@@ -280,11 +278,10 @@ final class Conditionals {
           }
           $then = [];
           if (!$applicability) {
-            // A rule is applied to a definition: the holder's, derived for
-            // a key its source gave as a schema, and a copy written. What
-            // it answers is read into its schema here.
-            $answer = static::appliedAt(Surface::deepClone($holder->definition()), $below, $rule);
-            $narrowed = static::onlyAdded($this->narrowed($this->stated($entry, DefinitionSchema::of($answer), $emission), $base), $base);
+            // A rule's answer is applied to the holder's schema
+            // (Answer::apply()): no definition is read or derived.
+            $answer = static::appliedAt($holder->schema(), $below, $rule, $name);
+            $narrowed = static::onlyAdded($this->narrowed($this->stated($entry, $answer, $emission), $base), $base);
             if ($narrowed->all() !== []) {
               $then['properties'] = [$name => $narrowed];
             }
@@ -388,37 +385,44 @@ final class Conditionals {
   }
 
   /**
-   * Applies a rule's effects to a key, or to a key below it.
+   * Applies a rule's effects to a key's schema, or to a key below it.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   A copy of the key.
+   * The rule's answer (Rule::answer()), applied as the pipeline applies
+   * it, and its description written whether or not the rule tightens the
+   * key for the values it will meet: an annotation the schema cannot
+   * place otherwise.
+   *
+   * @param \PortableSchema\Builder\Schema $key
+   *   The key's schema.
    * @param string $below
    *   The dotted path of a key below it, or '' for the key itself.
    * @param \Drupal\surface\Refinement\Rule $rule
    *   The rule.
+   * @param string $name
+   *   The key, for a refusal.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The key with the effects applied where they apply.
+   * @return \PortableSchema\Builder\Schema
+   *   The key's schema with the effects applied where they apply.
    */
-  protected static function appliedAt(DataDefinitionInterface $definition, string $below, Rule $rule): DataDefinitionInterface {
+  protected static function appliedAt(Schema $key, string $below, Rule $rule, string $name): Schema {
     if ($below === '') {
-      $applied = $rule->apply($definition);
-      // An annotation the schema cannot place: kept whether or not the
-      // rule tightens the key for the values it will meet.
-      if ($rule->description() !== NULL && $applied instanceof DataDefinition && !DoesNotApply::marks($applied)) {
-        $applied->setDescription($rule->description());
+      $applied = Answer::apply($key, $rule->answer($key), $name, 'the rule', TRUE);
+      if ($rule->description() !== NULL && is_a(DefinitionSchema::classOf($applied), DataDefinition::class, TRUE) && !NodeFacts::doesNotApply($applied)) {
+        $applied = Answer::apply($applied, Schema::any()->description($rule->description()), $name, 'the rule', TRUE);
       }
       return $applied;
     }
-    if (!$definition instanceof MapDataDefinition) {
-      return $definition;
+    if (!is_a(DefinitionSchema::classOf($key), MapDataDefinition::class, TRUE)) {
+      return $key;
     }
     [$first, $rest] = array_pad(explode('.', $below, 2), 2, '');
-    $inner = $definition->getPropertyDefinition($first);
-    if ($inner !== NULL) {
-      $definition->setPropertyDefinition($first, static::appliedAt($inner, $rest, $rule));
+    $inner = DefinitionSchema::propertyNode($key, $first);
+    $properties = $key->get('properties');
+    if ($inner === NULL || !is_array($properties)) {
+      return $key;
     }
-    return $definition;
+    $applied = static::appliedAt($inner, $rest, $rule, $name);
+    return $applied === $inner ? $key : DefinitionSchema::withProperties($key, array_replace($properties, [$first => $applied]));
   }
 
   /**

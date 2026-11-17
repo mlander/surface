@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\HandCorpus;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\PortableKeywords;
+use PortableSchema\Builder\Schema;
 use Drupal\surface\Reference\References;
 use Drupal\surface\SurfaceRefinerInterface;
 
@@ -19,13 +21,12 @@ final class BundleNarrowingRefiner implements SurfaceRefinerInterface {
   /**
    * {@inheritdoc}
    */
-  public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
+  public function refine(string $name, Schema $key, array $values, string $who): array {
     if (($values['gate'] ?? NULL) !== 'narrow') {
-      return $definition;
+      return [];
     }
-    $copy = clone $definition;
-    $options = $copy->getConstraints()[References::CONSTRAINT] ?? [];
-    return $copy->addConstraint(References::CONSTRAINT, ['bundles' => ['page']] + $options);
+    $options = NodeFacts::constraints($key)[References::CONSTRAINT] ?? [];
+    return [Schema::any()->with(PortableKeywords::CHECK, [PortableKeywords::PROVIDER . References::CONSTRAINT => ['bundles' => ['page']] + (array) $options])];
   }
 
 }

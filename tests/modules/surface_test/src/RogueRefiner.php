@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_test;
 
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
+use PortableSchema\Builder\Schema;
 use Drupal\surface\SurfaceRefinerInterface;
 
 /**
@@ -16,8 +15,8 @@ final class RogueRefiner implements SurfaceRefinerInterface {
   /**
    * {@inheritdoc}
    */
-  public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-    return DataDefinition::create('integer');
+  public function refine(string $name, Schema $key, array $values, string $who): array {
+    return [Schema::integer()];
   }
 
 }

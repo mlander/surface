@@ -65,6 +65,7 @@ reader src/Reader/LeafRules.php
 edge src/Reader/TypedDataReader.php
 storage src/Reference/ReferenceStorageLayout.php
 pipeline src/Reference/References.php
+model src/Refinement/AnswerFromDefinition.php
 constraints src/Refinement/ChoiceSet.php
 model src/Refinement/DeclaredRefiner.php
 model src/Refinement/DoesNotApply.php

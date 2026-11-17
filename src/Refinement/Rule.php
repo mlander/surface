@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Refinement;
 
+use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\PortableKeywords;
+use PortableSchema\Builder\Schema;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\ConstraintMessages;
@@ -332,6 +335,75 @@ final class Rule {
    */
   public function constraints(): array {
     return $this->constraints;
+  }
+
+  /**
+   * Gives the rule's effects as an answer for a key's schema.
+   *
+   * What apply() writes on a definition, said as an answer the applier
+   * (Answer::apply()) writes on the key's schema: each bound as its check,
+   * tightened by the key's own and with the rule's message where the
+   * rule's bound stands; a list as `enum`, so the key keeps its order and
+   * labels, and nothing where the key offers no list; a pattern as its
+   * check, which the applier adds only where the key holds none;
+   * `required()`; the description only where the rule does something to
+   * the key, as apply() writes it.
+   *
+   * @param \PortableSchema\Builder\Schema $key
+   *   The key's schema as it stands.
+   *
+   * @return \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply
+   *   The answer.
+   */
+  public function answer(Schema $key): Schema|DoesNotApply {
+    if ($this->rulesOut) {
+      return DoesNotApply::here();
+    }
+    $merged = NodeFacts::constraints($key);
+    $answer = Schema::any();
+    $checks = [];
+    foreach ($this->constraints as $name => $options) {
+      if ($name === 'Choice') {
+        if (ChoiceSet::fromConstraints($merged) !== NULL) {
+          $answer = $answer->with('enum', array_values($options['choices']));
+        }
+        continue;
+      }
+      if ($name === 'Regex') {
+        $checks[PortableKeywords::PROVIDER . 'Regex'] = $options;
+        continue;
+      }
+      $existing = is_array($merged[$name] ?? NULL) ? $merged[$name] : [];
+      $bounds = $options;
+      unset($bounds['message']);
+      if (isset($options['min'], $existing['min'])) {
+        $bounds['min'] = max($existing['min'], $options['min']);
+      }
+      if (isset($options['max'], $existing['max'])) {
+        $bounds['max'] = min($existing['max'], $options['max']);
+      }
+      $written = array_replace($existing, $bounds);
+      if (isset($options['message'])) {
+        $written = array_replace($written, $this->boundMessages($name, $options, $existing, $written, FALSE));
+      }
+      $checks[PortableKeywords::PROVIDER . $name] = $written;
+    }
+    if ($checks !== []) {
+      $answer = $answer->with(PortableKeywords::CHECK, $checks);
+    }
+    if ($this->requires) {
+      $answer = $answer->required();
+    }
+    if ($this->description !== NULL) {
+      // The rule says why only where it did something: a bound the key
+      // already held at or inside the rule's leaves the key's own words.
+      $tightened = $this->constraints === [] || $this->requires
+        || serialize(NodeFacts::constraints(Answer::apply($key, $answer, $this->key, 'the rule'))) !== serialize($merged);
+      if ($tightened) {
+        $answer = $answer->with('description', $this->description);
+      }
+    }
+    return $answer;
   }
 
   /**

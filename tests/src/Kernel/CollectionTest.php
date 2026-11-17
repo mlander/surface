@@ -8,7 +8,6 @@ use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\SchemaResolver;
@@ -252,8 +251,8 @@ class CollectionTest extends SurfaceKernelTestBase {
       /**
        * {@inheritdoc}
        */
-      public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-        return ($values['size'] ?? NULL) === 'small' ? $definition->addConstraint('Count', ['max' => 2]) : $definition;
+      public function refine(string $name, Schema $key, array $values, string $who): array {
+        return ($values['size'] ?? NULL) === 'small' ? [Schema::any()->maxItems(2)] : [];
       }
 
     });

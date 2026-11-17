@@ -42,6 +42,12 @@ final class RefinerDefinition {
    *   Whether its last parameter is typed AccountInterface: it is handed
    *   the account the operation runs as, never a watched key. Only a
    *   runtime refiner may take it.
+   * @param string $first
+   *   What the first parameter is handed: `definition` for one typed
+   *   DataDefinitionInterface or DataDefinition, the old shape, handed the
+   *   key's definition and returning it tightened; `schema` for one typed
+   *   Schema, handed the key's schema and returning an answer; `none` when
+   *   every parameter is a watched key and the method returns an answer.
    */
   public function __construct(
     public readonly string $class,
@@ -53,7 +59,18 @@ final class RefinerDefinition {
     public readonly bool $runtime = FALSE,
     public readonly bool $mayNotApply = FALSE,
     public readonly bool $takesAccount = FALSE,
+    public readonly string $first = 'definition',
   ) {}
+
+  /**
+   * Answers whether the method is the old shape, handed a definition.
+   *
+   * @return bool
+   *   TRUE where its first parameter is typed for a definition.
+   */
+  public function takesOldShape(): bool {
+    return $this->first === 'definition';
+  }
 
   /**
    * Gets the sibling keys the method is handed, in parameter order.

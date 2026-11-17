@@ -6,7 +6,6 @@ namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
@@ -624,8 +623,8 @@ class EntryTest extends UnitTestCase {
       /**
        * {@inheritdoc}
        */
-      public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-        return $definition;
+      public function refine(string $name, Schema $key, array $values, string $who): array {
+        return [];
       }
 
     };

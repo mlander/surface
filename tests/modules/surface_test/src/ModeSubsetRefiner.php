@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_test;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
+use PortableSchema\Builder\Schema;
 use Drupal\surface\SurfaceRefinerInterface;
 
 /**
@@ -24,15 +24,11 @@ final class ModeSubsetRefiner implements SurfaceRefinerInterface {
   /**
    * {@inheritdoc}
    */
-  public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
+  public function refine(string $name, Schema $key, array $values, string $who): array {
     if ($name === 'mode' && ($values['scope'] ?? NULL) === 'basic') {
-      $declared = $definition->getConstraints()['LabeledChoice'] ?? [];
-      $definition->addConstraint('LabeledChoice', [
-        'choices' => array_values(array_intersect($declared['choices'] ?? [], self::BASIC)),
-        'labels' => array_intersect_key($declared['labels'] ?? [], array_flip(self::BASIC)),
-      ]);
+      return [Schema::enum(self::BASIC)];
     }
-    return $definition;
+    return [];
   }
 
 }

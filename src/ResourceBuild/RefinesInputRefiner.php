@@ -7,13 +7,20 @@ namespace Drupal\surface\ResourceBuild;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AnonymousUserSession;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\NodeDefinition;
+use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\SurfaceRefinerInterface;
+use Drupal\surface\Refinement\Answer;
+use Drupal\surface\Refinement\AnswerFromDefinition;
 use Drupal\surface\Refinement\ApplicabilityInterface;
 use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface\Surface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The engine's refiner, spoken by one class's #[RefinesInput] methods.
@@ -141,17 +148,61 @@ final class RefinesInputRefiner implements SurfaceRefinerInterface, Applicabilit
   /**
    * {@inheritdoc}
    */
-  public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
+  public function refine(string $name, Schema $key, array $values, string $who): array {
     if ($name === self::MOUNT && $this->module !== NULL) {
-      return $this->refineMounted($definition, $values);
+      return $this->refineMounted($key, $values, $who);
     }
+    $answers = [];
+    $schema = $key;
+    $held = NULL;
     foreach ($this->bindings[$name] ?? [] as $refiner) {
-      if (DoesNotApply::marks($definition)) {
+      if (NodeFacts::doesNotApply($schema)) {
         break;
       }
-      $definition = $this->invoke($refiner, $definition, $values);
+      [$answer, $held] = $this->answerOf($refiner, $schema, $values, $name, $who, $held);
+      $answers[] = $answer;
+      $schema = Answer::apply($schema, $answer, $name, $who, TRUE);
     }
-    return $definition;
+    return $answers;
+  }
+
+  /**
+   * Gives one method's answer for a key.
+   *
+   * A method of the old shape is handed the key's definition, a copy, and
+   * what it returns is held to the narrowing check (Narrowing) and read as
+   * an answer (AnswerFromDefinition); a method of the answer shape is
+   * handed the key's schema where its first parameter asks for it, and
+   * its answer is held to its key (Answer::assertAuthored()).
+   *
+   * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
+   *   The method.
+   * @param \PortableSchema\Builder\Schema $key
+   *   The key's schema as it stands.
+   * @param array $values
+   *   Sibling values, keyed by input key.
+   * @param string $name
+   *   The key, for a refusal.
+   * @param string $who
+   *   Who the chain is, in words, for a refusal.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $held
+   *   The definition an old-shape method before this one returned for the
+   *   key, which this one is handed; NULL to derive it from the schema.
+   *
+   * @return array{0: \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply, 1: \Drupal\Core\TypedData\DataDefinitionInterface|null}
+   *   The answer, and the definition an old-shape method returned.
+   */
+  public function answerOf(RefinerDefinition $refiner, Schema $key, array $values, string $name, string $who, ?DataDefinitionInterface $held = NULL): array {
+    if ($refiner->takesOldShape()) {
+      $before = $held ?? NodeDefinition::of($key);
+      $returned = $this->invoke($refiner, Surface::deepClone($before), $values);
+      Narrowing::assertNarrows($name, $who, $before, $returned);
+      Surface::carryMetadata($before, $returned);
+      return [AnswerFromDefinition::between($key, $returned, $before, $refiner->describe(), $name), $returned];
+    }
+    $answer = $this->answer($refiner, $key, $values);
+    Answer::assertAuthored($answer, $name, $refiner->describe());
+    return [$answer, NULL];
   }
 
   /**
@@ -168,30 +219,62 @@ final class RefinesInputRefiner implements SurfaceRefinerInterface, Applicabilit
   }
 
   /**
-   * Refines the alter's own keys inside the mount, in place.
+   * Answers for the alter's own keys inside the mount.
+   *
+   * Each method's answer is placed at its key, inside the module's map
+   * inside the mount, so it is applied there; a method of the old shape is
+   * held to the narrowing check as the whole mount, so its refusal names
+   * the mount and the path inside it, as the check of the mount's
+   * definition names them.
    *
    * Decision: see docs/decisions.md#an-alter-refines-its-own-mounted-key.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $mount
-   *   The mount's map, a copy the engine handed over.
+   * @param \PortableSchema\Builder\Schema $mount
+   *   The mount's schema.
    * @param array $values
    *   Sibling values, keyed by input key.
+   * @param string $who
+   *   Who the chain is, in words.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The mount, with this module's keys refined.
+   * @return array<int, \PortableSchema\Builder\Schema>
+   *   The answers, each for the mount.
    */
-  protected function refineMounted(DataDefinitionInterface $mount, array $values): DataDefinitionInterface {
-    $own = $mount instanceof ComplexDataDefinitionInterface ? $mount->getPropertyDefinition((string) $this->module) : NULL;
-    if (!$own instanceof MapDataDefinition) {
-      return $mount;
+  protected function refineMounted(Schema $mount, array $values, string $who): array {
+    $module = (string) $this->module;
+    $own = DefinitionSchema::propertyNode($mount, $module);
+    if ($own === NULL || !is_a(DefinitionSchema::classOf($own), MapDataDefinition::class, TRUE)) {
+      return [];
     }
+    $answers = [];
+    $schema = $mount;
     foreach ($this->bindings[self::MOUNT] ?? [] as $refiner) {
-      $key = $own->getPropertyDefinition($refiner->key);
-      if ($key !== NULL && !DoesNotApply::marks($key)) {
-        $own->setPropertyDefinition($refiner->key, $this->invoke($refiner, $key, $values));
+      $own = DefinitionSchema::propertyNode($schema, $module);
+      $key = $own === NULL ? NULL : DefinitionSchema::propertyNode($own, $refiner->key);
+      if ($key === NULL || NodeFacts::doesNotApply($key)) {
+        continue;
       }
+      if ($refiner->takesOldShape()) {
+        $before = NodeDefinition::of($key);
+        $returned = $this->invoke($refiner, Surface::deepClone($before), $values);
+        $wrap = static fn (DataDefinitionInterface $definition): MapDataDefinition => MapDataDefinition::create()
+          ->setPropertyDefinition($module, MapDataDefinition::create()->setPropertyDefinition($refiner->key, $definition));
+        Narrowing::assertNarrows(self::MOUNT, $who, $wrap($before), $wrap($returned));
+        Surface::carryMetadata($before, $returned);
+        $answer = AnswerFromDefinition::between($key, $returned, $before, $refiner->describe(), $refiner->key);
+      }
+      else {
+        $answer = $this->answer($refiner, $key, $values);
+        Answer::assertAuthored($answer, $refiner->key, $refiner->describe());
+      }
+      $placed = Schema::any()->with('properties', [
+        $module => Schema::any()->with('properties', [
+          $refiner->key => $answer instanceof DoesNotApply ? Schema::boolean(FALSE) : $answer,
+        ]),
+      ]);
+      $answers[] = $placed;
+      $schema = Answer::apply($schema, $placed, self::MOUNT, $who, TRUE);
     }
-    return $mount;
+    return $answers;
   }
 
   /**
@@ -229,7 +312,74 @@ final class RefinesInputRefiner implements SurfaceRefinerInterface, Applicabilit
    *   DoesNotApply, or DoesNotApply without declaring it.
    */
   public function invoke(RefinerDefinition $refiner, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-    $arguments = [$definition];
+    $refined = $this->call($refiner, [$definition], $values, 'DataDefinitionInterface');
+    if ($refined instanceof DoesNotApply) {
+      // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+      return DoesNotApply::marked($definition);
+    }
+    if (!$refined instanceof DataDefinitionInterface) {
+      throw new \LogicException(sprintf(
+        '%s returned %s; a #[RefinesInput] method returns the definition it was handed, tightened, or DoesNotApply::here().',
+        $refiner->describe(),
+        get_debug_type($refined),
+      ));
+    }
+    return $refined;
+  }
+
+  /**
+   * Calls one method of the answer shape and gives its answer.
+   *
+   * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
+   *   The method.
+   * @param \PortableSchema\Builder\Schema $key
+   *   The key's schema, handed where the method's first parameter is
+   *   typed Schema.
+   * @param array $values
+   *   Sibling values, keyed by input key, a mounted one by its dotted
+   *   path; every watched key is present.
+   *
+   * @return \PortableSchema\Builder\Schema|\Drupal\surface\Refinement\DoesNotApply
+   *   What the method answered.
+   *
+   * @throws \LogicException
+   *   When the method returned something other than a Schema or
+   *   DoesNotApply, or DoesNotApply without declaring it.
+   */
+  public function answer(RefinerDefinition $refiner, Schema $key, array $values): Schema|DoesNotApply {
+    $answer = $this->call($refiner, $refiner->first === 'schema' ? [$key] : [], $values, 'Schema');
+    if (!$answer instanceof Schema && !$answer instanceof DoesNotApply) {
+      throw new \LogicException(sprintf(
+        '%s returned %s; a #[RefinesInput] method returns a Schema of what the watched values add, or DoesNotApply::here().',
+        $refiner->describe(),
+        get_debug_type($answer),
+      ));
+    }
+    return $answer;
+  }
+
+  /**
+   * Calls one method with what it is handed and the siblings it watches.
+   *
+   * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
+   *   The method.
+   * @param array $first
+   *   What its first parameter is handed, if anything: the definition or
+   *   the schema.
+   * @param array $values
+   *   Sibling values, keyed by input key, a mounted one by its dotted
+   *   path; every watched key is present.
+   * @param string $returns
+   *   What the method returns beside DoesNotApply, for the refusal.
+   *
+   * @return mixed
+   *   What the method returned.
+   *
+   * @throws \LogicException
+   *   When it answered DoesNotApply without declaring it.
+   */
+  protected function call(RefinerDefinition $refiner, array $first, array $values, string $returns): mixed {
+    $arguments = $first;
     foreach ($refiner->watched() as $key) {
       $arguments[] = $values[$this->paths[$key] ?? $key] ?? NULL;
     }
@@ -255,21 +405,11 @@ final class RefinesInputRefiner implements SurfaceRefinerInterface, Applicabilit
       !$refiner->runtime => PipelineGuard::guard($refiner->describe(), $call),
       default => PipelineGuard::onBehalf(PipelineGuard::RUNTIME_REFINER, $refiner->class, $refiner->method, $call),
     };
-    if ($refined instanceof DoesNotApply) {
-      if (!$refiner->mayNotApply) {
-        throw new \LogicException(sprintf(
-          '%s answered DoesNotApply::here() without naming DoesNotApply in its return type. Declare it, `: DataDefinitionInterface|DoesNotApply`, so the schema and the tool know ahead of time that the key may not apply.',
-          $refiner->describe(),
-        ));
-      }
-      // Decision: see docs/decisions.md#a-key-that-does-not-apply.
-      return DoesNotApply::marked($definition);
-    }
-    if (!$refined instanceof DataDefinitionInterface) {
+    if ($refined instanceof DoesNotApply && !$refiner->mayNotApply) {
       throw new \LogicException(sprintf(
-        '%s returned %s; a #[RefinesInput] method returns the definition it was handed, tightened, or DoesNotApply::here().',
+        '%s answered DoesNotApply::here() without naming DoesNotApply in its return type. Declare it, `: %s|DoesNotApply`, so the schema and the tool know ahead of time that the key may not apply.',
         $refiner->describe(),
-        get_debug_type($refined),
+        $returns,
       ));
     }
     return $refined;

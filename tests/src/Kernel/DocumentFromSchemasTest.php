@@ -24,8 +24,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *   of any key refinement does not read: a key a refiner refines is
  *   handed to it as a definition, and a key a refiner watches is handed
  *   to the watched-value check as one; neither is the emitter's;
- * - the one place the emitter derives a definition is a declared rule's
- *   key whose rule narrows it: the rule is applied to a definition;
+ * - emitting declared rules derives no definition: a rule's answer is
+ *   applied to the key's schema;
  * - the documents of the hand-built cases (SchemaEmitCases) are the ones
  *   the emitter wrote from definitions (taken at 38648793), fresh and
  *   woken;
@@ -196,15 +196,15 @@ class DocumentFromSchemasTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a declared rule's key is the one the emitter derives.
+   * Tests emitting declared rules derives no definition.
    *
    * The full schema states each rule as written and runs none, so no
-   * refinement reads a key: what is derived is the emitter's. A rule that
-   * narrows its key is applied to a copy of the key's definition; a rule
-   * that rules its key out is not applied, and the key it reads is not
-   * asked.
+   * refinement reads a key: what would be derived is the emitter's. A rule
+   * that narrows its key is applied to the key's schema (Rule::answer(),
+   * Answer::apply()); before, it was applied to a copy of the key's
+   * definition, and the two keys it narrows (`name`, `list`) derived one.
    */
-  public function testOnlyTheRuleKeyDerives(): void {
+  public function testRulesDeriveNothing(): void {
     $derived = new \ReflectionProperty(Entry::class, 'definition');
     $surface = SchemaEmitCases::rules();
     $this->container->get('surface.contract_emitter')->emitFull($surface, 'hand', 'op', 'Op', TRUE);
@@ -214,7 +214,7 @@ class DocumentFromSchemasTest extends SurfaceKernelTestBase {
         $asked[] = (string) $name;
       }
     }
-    $this->assertSame(['name', 'list'], $asked, 'The keys a rule narrows, and no other.');
+    $this->assertSame([], $asked, 'No key derives a definition.');
   }
 
   /**

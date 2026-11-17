@@ -12,6 +12,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Contract\ConstraintKeywords;
 use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Refinement\Answer;
@@ -260,6 +261,20 @@ class AnswerTest extends UnitTestCase {
   }
 
   /**
+   * Tests a type: taken where the key states none, nothing where the key's.
+   */
+  public function testTypeOnThePlaceholder(): void {
+    $placeholder = DataDefinition::create('any')->setLabel('Value');
+    DefinitionMetadata::setVariantsBy($placeholder, 'kind');
+    $refined = Answer::apply(DefinitionSchema::of($placeholder), Schema::integer(), 'k', 'the declaring class');
+    $this->assertSame('integer', NodeFacts::dataType($refined));
+    $this->assertSame(['integer', 'null'], $refined->get('type'));
+    $this->assertNull(NodeFacts::variantsBy($refined));
+    $key = DefinitionSchema::of(DataDefinition::create('string'));
+    $this->assertSame($key, Answer::apply($key, Schema::string(), 'k', 'the declaring class'));
+  }
+
+  /**
    * Tests the keywords no answer says.
    *
    * @param \PortableSchema\Builder\Schema $answer
@@ -283,7 +298,6 @@ class AnswerTest extends UnitTestCase {
    */
   public static function providerUnread(): array {
     return [
-      'the same type' => [Schema::object(), '`type`'],
       'a default' => [Schema::any()->default('a'), '`default`'],
       'properties' => [Schema::any()->properties(['x' => Schema::any()->maxLength(2)]), '`properties`'],
       'items' => [Schema::any()->items(Schema::any()->maxLength(2)), '`items`'],

@@ -6,6 +6,7 @@ namespace Drupal\surface\Refinement;
 
 use Drupal\surface\Contract\ConstraintKeywords;
 use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Contract\PortableKeywords;
 use PortableSchema\Builder\Schema;
@@ -41,7 +42,10 @@ use PortableSchema\Builder\Schema;
  * - `title`, `description`: written as given;
  * - a named check, `drupal:<id>`: added; one the key holds with other
  *   options is refused;
- * - `type`, `default`, anything else: refused;
+ * - `type`: on a key that states none (the variants' placeholder, an
+ *   open value), the key takes it; the key's own type says nothing more;
+ *   any other is refused;
+ * - `default`, anything else: refused;
  * - `properties`, `items`: each applied at its place, for the engine's
  *   own links only.
  *
@@ -325,6 +329,7 @@ final class Answer {
     $read = [];
     $checks = [];
     $list = NULL;
+    $retype = NULL;
     foreach ($answer->all() as $keyword => $value) {
       $keyword = (string) $keyword;
       switch (TRUE) {
@@ -364,10 +369,20 @@ final class Answer {
         case $keyword === 'type':
           $from = NodeFacts::dataType($current);
           $to = static::dataTypeOf($value);
-          if ($to !== NULL && $to !== $from) {
+          if ($to === NULL) {
+            throw new \LogicException(sprintf(self::UNREAD, $name, $who, '`type`'));
+          }
+          // A type where the key states none narrows: the variants'
+          // placeholder, and an open value. The key's own type says
+          // nothing more; any other is refused, as Narrowing refuses it.
+          if ($from === 'any' && (NodeFacts::variantsBy($current) !== NULL || NodeFacts::isHeldWhole($current)) && isset(LeafTypes::ROWS[$to])) {
+            $retype = $to;
+            break;
+          }
+          if ($to !== $from) {
             throw new \DomainException(sprintf('the data type changed from %s to %s', $from, $to));
           }
-          throw new \LogicException(sprintf(self::UNREAD, $name, $who, '`type`'));
+          break;
 
         default:
           throw new \LogicException(sprintf(self::UNREAD, $name, $who, '`' . $keyword . '`'));
@@ -428,10 +443,10 @@ final class Answer {
         unset($texts[$text]);
       }
     }
-    if ($declared === $before && !$require && $texts === []) {
+    if ($declared === $before && !$require && $texts === [] && $retype === NULL) {
       return $current;
     }
-    return static::rewritten($current, $declared === $before && !array_key_exists('declared', $members) ? NULL : $declared, $texts, $require);
+    return static::rewritten($current, $declared === $before && !array_key_exists('declared', $members) ? NULL : $declared, $texts, $require, $retype);
   }
 
   /**
@@ -675,14 +690,21 @@ final class Answer {
    *   The `title` and `description` the answer gives.
    * @param bool $require
    *   Whether the key is now required.
+   * @param string|null $retype
+   *   The data type a placeholder takes; NULL for none.
    *
    * @return \PortableSchema\Builder\Schema
    *   The schema.
    */
-  protected static function rewritten(Schema $current, ?array $declared, array $texts, bool $require): Schema {
+  protected static function rewritten(Schema $current, ?array $declared, array $texts, bool $require, ?string $retype = NULL): Schema {
     $old = DefinitionSchema::model($current);
     $members = $old;
     unset($members['constraints']);
+    if ($retype !== NULL) {
+      // The key takes the type: it is no longer the placeholder.
+      $members['type'] = $retype;
+      unset($members['variantsBy'], $members['heldWhole']);
+    }
     if ($declared !== NULL) {
       $members['declared'] = $declared;
     }
@@ -712,6 +734,10 @@ final class Answer {
       $held['type'] = $type[0];
     }
     $model = $current->with(DefinitionSchema::MODEL, $members);
+    if ($retype !== NULL) {
+      $row = LeafTypes::ROWS[$retype]['type'];
+      $held['type'] = NodeFacts::isNullable($model) ? [$row, 'null'] : $row;
+    }
     $schema = Schema::any();
     foreach (['title', 'description'] as $text) {
       $value = array_key_exists($text, $texts) ? $texts[$text] : ($held[$text] ?? NULL);
