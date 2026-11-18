@@ -3684,7 +3684,10 @@ final class SchemaReader {
     if ($required) {
       $list->setRequired(TRUE);
     }
-    if (!in_array('null', (array) ($property->get('type') ?? []), TRUE) && !$required) {
+    // An author's list is held as attachList() holds one: required()
+    // decides. A served document's non-nullable list is one its storage
+    // always holds.
+    if (!$this->authored && !in_array('null', (array) ($property->get('type') ?? []), TRUE) && !$required) {
       DefinitionMetadata::setAlwaysHeld($list);
     }
     foreach (array_diff_key($property->all(), array_flip(self::COLLECTION)) as $keyword => $value) {

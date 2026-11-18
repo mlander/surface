@@ -137,4 +137,27 @@ class AuthorSpellingRefusalsTest extends SurfaceKernelTestBase {
     $this->assertNotNull($builder->heldSchema('mixed'));
   }
 
+  /**
+   * Tests an author's optional list of objects may be left out.
+   *
+   * required() decides, as for attachList(): the reader no longer marks
+   * an author's list as one its storage always holds.
+   */
+  public function testOptionalListOfObjectsMayBeLeftOut(): void {
+    $builder = new SurfaceBuilder();
+    $this->blueprint($builder)
+      ->add('objects', Schema::list(Schema::object()->property('a', Schema::string()))->title('Objects'))
+      ->add('needed', Schema::list(Schema::object()->property('a', Schema::string()))->title('Needed')->required());
+    $surface = $builder->seal();
+    $codes = static function (iterable $violations): array {
+      $codes = [];
+      foreach ($violations as $violation) {
+        $codes[] = $violation->key . ' ' . $violation->code;
+      }
+      return $codes;
+    };
+    $this->assertSame([], $codes($this->pipeline()->validate($surface, ['needed' => [['a' => 'x']]])));
+    $this->assertSame(['needed required'], $codes($this->pipeline()->validate($surface, ['objects' => [['a' => 'x']]])));
+  }
+
 }
