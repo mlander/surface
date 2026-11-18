@@ -882,8 +882,8 @@ only kind an instance method may be:
   nothing.
 - **The stewards follow the capacity.** The structure cannot name
   example 3's capacity, since it is meant for any event: it reads a
-  `capacity` port, `$inputs->reads('capacity', 'integer', required:
-  TRUE)`, and its method on `stewards` watches the port, one steward per
+  `capacity` port, `$inputs->reads('capacity',
+  Schema::integer()->required())`, and its method on `stewards` watches the port, one steward per
   fifty people, at least one. The alter wires the port to example 3's
   key, `reads: ['capacity' => 'capacity']`; another module attaching the
   structure would wire it to a key of its own.
