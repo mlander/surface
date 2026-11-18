@@ -401,8 +401,7 @@ final class DoorCorpusRecorder {
       $entry_rows = new \ReflectionMethod($this->panel, 'entryRows');
       foreach ($refined->entries()->entries() as $name => $entry) {
         $declared = $surface->entries()->entry((string) $name);
-        $definition = $declared === NULL ? NULL : DefinitionFromSchema::forEntry($declared);
-        $arguments = [&$rows, (string) $name, $entry, $definition, $refined, $value, $declared];
+        $arguments = [&$rows, (string) $name, $entry, $refined, $value, $declared];
         $entry_rows->invokeArgs($this->panel, $arguments);
       }
       return static::plain($rows);

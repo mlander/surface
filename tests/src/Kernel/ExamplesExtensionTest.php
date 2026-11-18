@@ -4,17 +4,16 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Refinement\Rule;
-use Drupal\surface\Resolve;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_examples\ConceptPanel;
 use Drupal\surface_examples\Resource\MailerResource;
 use Drupal\surface_examples\Resource\WebhookResource;
 use Drupal\surface_examples\WebhookSigner;
-use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -849,7 +848,7 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
     $this->keys(TRUE);
     $this->assertSame($signed('wh-pasted-1'), $signer()->sign($payload), 'On, with no key chosen: the pasted key still.');
     $built = $this->container->get('surface.resources')->buildOperation('event.webhook', 'configure');
-    $this->assertEquals(['key_id' => 'third_party_settings.' . self::KEYS . '.key_id'], Resolve::of(DerivedDefinition::at($built, 'api_key'))?->from, 'The alter\'s own key, read from its mount.');
+    $this->assertEquals(['key_id' => 'third_party_settings.' . self::KEYS . '.key_id'], SchemaFacts::resolve($built->getSchema('api_key'))?->from, 'The alter\'s own key, read from its mount.');
     [$ok] = $this->call('event.webhook:configure', self::MOUNTED);
     $this->assertTrue($ok);
     $this->assertSame($signed('wh-managed-9a1f2c'), $signer()->sign($payload), 'A key chosen: its value.');

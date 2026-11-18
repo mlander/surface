@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Computed;
 use Drupal\surface\Contract\DefinitionSchema;
@@ -354,7 +355,7 @@ class ComputedKeysTest extends SurfaceKernelTestBase {
     $refused(fn () => $inputs->compute('code', Schema::string()->title('Code'), ['first'], DataDefinition::class), 'which implements no');
     $refused(fn () => $inputs->compute('code', Schema::string()->title('Code'), ['first'], BadgeCode::class, 'always'), 'says when: "always"; it is Compute::ON_CREATE, Compute::ON_CHANGE or Compute::UNLESS_SENT.');
     $inputs->compute('code', Schema::string()->title('Code'), ['first'], BadgeCode::class);
-    $this->assertEquals(new Computed(['first'], BadgeCode::class), Computed::of($builder->getDefinition('code')));
+    $this->assertEquals(new Computed(['first'], BadgeCode::class), SchemaFacts::compute($builder->getSchema('code')));
   }
 
 }

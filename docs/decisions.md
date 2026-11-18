@@ -16895,3 +16895,45 @@ so the part not read as written is refused instead. Keeping it would need
 a fact on the item that the built schema and the emitter carry
 (`PropertySchema::neverNull()`). A list of nullable scalars is still read
 without null at both sides, as before. (`SchemaReader::value()`)
+
+## Slice 35, the remnants, fourth builder (2026-11-18)
+
+### The sealed side reads no definition metadata
+
+What the doors and the storage read of a sealed data surface is read
+from schemas; `DefinitionMetadata` is read there no more.
+
+- **A Variants holds its shell as a schema.** `Variants::$shell` is the
+  key's schema read as a map, and `valueSchema()` the same key read as
+  one value; the seal reads both from the shell it built
+  (`DefinitionSchema::shell()`, `of()`). `shellSchema()` is gone. The
+  placeholder a key advertises before a variant is chosen is a schema
+  (`Variants::placeholder()`, written by `ValueSchema::value()`). The
+  build cache's format is `schema-shells`.
+- **The readers of a shell read its schema.** Where its variants come
+  from (`SchemaFacts::variantsFrom()`), whether the site lists them
+  (`readVariants()`), its constraints, title, description and type.
+- **The contract panel walks schemas.** Every row, a property of a key
+  that holds a child frame included, is read from a schema.
+- **`Computed::of()` and `Resolve::of()` are gone.** A schema answers
+  through `SchemaFacts::compute()` and `resolve()`; the read of a
+  definition asks `DefinitionMetadata::computedOf()`.
+
+### A value's kind comes from a table by row
+
+The config schema check compares the kind of value a key holds with a
+config schema type's (string, integer, float, boolean). A key's kind is
+its data type's row of `LeafTypes::KINDS`; only a class its definition
+names, a schema read from a class other than `DataDefinition`, or a
+data type with no row asks for a class. `DefaultConstraintsTest` holds
+each row to the class the typed data manager gives the type.
+
+### The inverse compares only a constraint list the read wrote down
+
+`DefinitionFromSchema::of()` refuses a schema whose derived definition
+gives other constraints only where the schema holds the `constraints`
+member. Where it holds none, the list is the table's
+(`LeafTypes::DEFAULT_CONSTRAINTS`), which is the model's; core adds the
+site's defaults to the definition it derives, as it does for any
+definition. `DefaultConstraintsTest` stays the alarm for a site whose
+module changes a type's defaults.

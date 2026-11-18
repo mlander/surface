@@ -1458,7 +1458,8 @@ final class SurfaceBuilder {
     $sealed = [];
     $picked = [];
     foreach ($this->variants as $key => ['by' => $by, 'variants' => $members]) {
-      $variants = new Variants($by, $this->assertShell((string) $key), $members);
+      $shell = $this->assertShell((string) $key);
+      $variants = new Variants($by, DefinitionSchema::shell($shell), $members, DefinitionSchema::of($shell));
       $sealed[$key] = $variants;
       // A locked deciding key has its one value already, so the key is
       // that variant from the start: what the data surface advertises is the
@@ -1470,7 +1471,7 @@ final class SurfaceBuilder {
         $definitions[$key] = $variants->placeholder();
       }
       else {
-        $definitions[$key] = clone $variants->shell;
+        $definitions[$key] = clone $shell;
         $picked[$key] = $chosen;
       }
     }

@@ -1117,7 +1117,7 @@ final class Surface implements SurfaceInterface {
    * The key's schema is composed of its own schema and the refined child's
    * entries' schemas (DefinitionSchema::withProperties()): an attached
    * child's in the entry's own schema, a chosen variant's in the schema of
-   * the variants' shell (Variants::shellSchema()), whatever the child left
+   * the variants' shell (Variants::$shell), whatever the child left
    * as it was. The entry is a new one even where the child changed
    * nothing. A child with no keys, whose map is read as a value, gives the
    * shell alone. The whole key is held to the narrowing check
@@ -1163,7 +1163,7 @@ final class Surface implements SurfaceInterface {
       throw new \LogicException(sprintf('The "%s" key no longer holds a map, so its attached child has nowhere to be written.', $entry->name));
     }
     $schemas = static::schemasOf($refined);
-    $shell = $chosen === NULL ? $base->schema() : $entry->variants->shellSchema();
+    $shell = $chosen === NULL ? $base->schema() : $entry->variants->shell;
     // A child with no keys: its map is read as a value, the shell alone.
     $schema = $schemas === [] || !DefinitionSchema::holdsProperties($shell)
       ? ($chosen === NULL ? $shell : $entry->variants->valueSchema())

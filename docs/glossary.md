@@ -373,7 +373,7 @@ and access have each had their say.
 Precisely: what the build step seals from a resource or structure in a
 context: an immutable group of keys, each a Portable Schema
 (held in an `Entries` that refuses
-writes; [Built on typed data](on-typed-data.md)), plus the map of which
+writes; [Typed Data at the edges](on-typed-data.md)), plus the map of which
 keys depend on which others and the refiners that narrow them.
 Once sealed it is only read. It has two halves: what a host
 **accepts**, and what its execution **emits**, declared in the same
@@ -414,7 +414,7 @@ class and a context into a sealed `SurfaceInterface`. The blueprint
 is filled once at build, then sealed; the context is applied once by
 the build step. It exists because core holds no group of keys that
 several parties write in order and that is then fixed
-([Built on typed data](on-typed-data.md)).
+([Typed Data at the edges](on-typed-data.md)).
 
 Introduced in [Sealed](introduction/16-sealed.md). Reference:
 [The build step](how-it-fits.md#the-build-step).
@@ -430,7 +430,7 @@ to `defineInputs()` and `defineOutputs()` as a `BlueprintInterface`; an
 alter gets the add-only `BlueprintAdditionsInterface`. Each key it holds
 is a Portable Schema: `add()` takes the key's name and its schema, reads
 the schema at the call and returns the blueprint
-([Built on typed data](on-typed-data.md)). Filled once at build, then
+([Typed Data at the edges](on-typed-data.md)). Filled once at build, then
 sealed.
 
 Not in the introduction. Reference:

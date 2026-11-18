@@ -17,6 +17,7 @@ use Drupal\surface\Entry;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Variants;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\User;
 use Symfony\Component\HttpFoundation\Request;
@@ -429,7 +430,9 @@ class LocationSchemaTest extends SurfaceKernelTestBase {
    * rest of the entry is. A port's key is held as its schema, by the
    * attachment that wires it (Attachment::$wired) and by the data surface
    * it is bound to (Surface::$portSchemas), since 2026-11-16: a port has
-   * no entry, so those are sources too and are not walked. Any other
+   * no entry, so those are sources too and are not walked. So are the two
+   * schemas a Variants holds of its shell (Variants::$shell, its value
+   * schema), since 2026-11-18. Any other
    * Schema holding MODEL is a kept schema,
    * and a Schema holding an object other than a plain JSON object is
    * listed by that object's class.
@@ -471,6 +474,10 @@ class LocationSchemaTest extends SurfaceKernelTestBase {
       if ($value instanceof Attachment && $value->wired !== []) {
         $sources++;
         unset($members['wired']);
+      }
+      if ($value instanceof Variants) {
+        $sources++;
+        unset($members['shell'], $members["\0" . Variants::class . "\0value"]);
       }
       if ($value instanceof Surface && ($members["\0*\0portSchemas"] ?? []) !== []) {
         $sources++;

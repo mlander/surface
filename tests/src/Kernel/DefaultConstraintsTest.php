@@ -9,6 +9,10 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\Plugin\DataType\StringData;
+use Drupal\Core\TypedData\Type\BooleanInterface;
+use Drupal\Core\TypedData\Type\FloatInterface;
+use Drupal\Core\TypedData\Type\IntegerInterface;
+use Drupal\Core\TypedData\Type\StringInterface;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\Contract\DefinitionFromSchema;
@@ -54,6 +58,25 @@ class DefaultConstraintsTest extends SurfaceKernelTestBase {
     $this->assertSame([], array_diff_key(LeafTypes::ROWS, LeafTypes::DEFAULT_CONSTRAINTS), 'Every leaf type has a row.');
     foreach (['map', 'list', LeafTypes::ANY] as $type) {
       $this->assertArrayHasKey($type, LeafTypes::DEFAULT_CONSTRAINTS, "$type has a row.");
+    }
+  }
+
+  /**
+   * Tests every kind of the table against the typed data manager's class.
+   */
+  public function testEveryKindIsTheManagers(): void {
+    $manager = $this->container->get('typed_data_manager');
+    $this->assertSame(array_keys(LeafTypes::ROWS), array_keys(LeafTypes::KINDS), 'Every row has a kind.');
+    foreach (LeafTypes::KINDS as $type => $kind) {
+      $class = $manager->getDefinition($type)['class'];
+      $expected = match (TRUE) {
+        is_a($class, BooleanInterface::class, TRUE) => 'boolean',
+        is_a($class, IntegerInterface::class, TRUE) => 'integer',
+        is_a($class, FloatInterface::class, TRUE) => 'float',
+        is_a($class, StringInterface::class, TRUE) => 'string',
+        default => NULL,
+      };
+      $this->assertSame($expected, $kind, "The kind of $type is its class's, $class.");
     }
   }
 

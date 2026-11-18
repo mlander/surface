@@ -8,7 +8,6 @@ use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\surface\Attachment;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
 use Drupal\surface\Variants;
 
@@ -123,7 +122,7 @@ final class SiteListBudget {
    */
   public static function listedBySite(Entry $entry): bool {
     if ($entry->variants !== NULL) {
-      return DefinitionMetadata::variantsListedBySite($entry->variants->shell);
+      return SchemaFacts::readVariants($entry->variants->shell);
     }
     if ($entry->attachment === NULL) {
       return FALSE;
@@ -164,7 +163,7 @@ final class SiteListBudget {
    *   TRUE when the documents state the key open.
    */
   public function variantsOver(Variants $variants, ?CacheableMetadata $cacheability = NULL): bool {
-    if (!DefinitionMetadata::variantsListedBySite($variants->shell)) {
+    if (!SchemaFacts::readVariants($variants->shell)) {
       return FALSE;
     }
     $cacheability?->addCacheableDependency($this->cacheability());

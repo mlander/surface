@@ -553,7 +553,8 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     foreach ($this->examples() as [$id, , $surface]) {
       foreach ($surface->entries()->entries() as $entry) {
         if ($id === 'event.mailer' && $entry->name === 'credential' && $entry->variants !== NULL) {
-          $member = clone $entry->variants->shell;
+          $member = DefinitionFromSchema::of($entry->variants->shell);
+          assert($member instanceof MapDataDefinition);
           foreach ($entry->variants->variant('pasted')->child->entries()->entries() as $name => $key) {
             $member->setPropertyDefinition((string) $name, Surface::deepClone(DefinitionFromSchema::forEntry($key)));
           }

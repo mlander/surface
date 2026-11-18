@@ -9,7 +9,6 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\surface\Computed;
 use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\LeafTypes;
@@ -306,7 +305,7 @@ final class KeyPaths {
         ? $this->refusal('%s: "%s" on %s is a secret: both documents state a fixed value as `const`, and a secret is never read back, so it cannot be fixed.', $where['source'], $where['at'] . $path, $where['resource'])
         : $this->refusal('%s: "%s" on %s is a secret: both documents state a default, and a secret is never read back, so it takes none.', $where['source'], $where['at'] . $path, $where['resource']);
     }
-    $computed = $schema === NULL ? Computed::of($definition) : SchemaFacts::compute($schema);
+    $computed = $schema === NULL ? DefinitionMetadata::computedOf($definition) : SchemaFacts::compute($schema);
     if ($computed !== NULL) {
       throw $this->refusal('%s: "%s" on %s is computed from %s, so it takes no %s.', $where['source'], $where['at'] . $path, $where['resource'], implode(', ', $computed->from), $fixing ? 'fixed value' : 'default');
     }

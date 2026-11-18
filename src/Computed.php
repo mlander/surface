@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Pipeline\PipelineGuard;
@@ -41,19 +40,6 @@ final class Computed {
     public readonly string $using,
     public readonly string $when = Compute::ON_CREATE,
   ) {
-  }
-
-  /**
-   * Reads what a key is computed from, off its definition.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
-   *   The key's definition.
-   *
-   * @return static|null
-   *   What it is computed from, or NULL for a key a caller types.
-   */
-  public static function of(?DataDefinitionInterface $definition): ?static {
-    return $definition === NULL ? NULL : DefinitionMetadata::computedOf($definition);
   }
 
   /**

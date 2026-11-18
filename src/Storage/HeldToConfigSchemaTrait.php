@@ -17,6 +17,7 @@ use Drupal\Core\TypedData\Type\IntegerInterface;
 use Drupal\Core\TypedData\Type\StringInterface;
 use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
@@ -374,7 +375,7 @@ trait HeldToConfigSchemaTrait {
    * Compares one key with its schema, a map's or a list's too.
    *
    * Its facts are read from its schema, the PHP class a value's data type
-   * maps to too (valueClass()). Its definition is asked only for the
+   * holds too (valueKind()). Its definition is asked only for the
    * class of a value whose schema was read from a class other than
    * DataDefinition.
    *
@@ -384,7 +385,7 @@ trait HeldToConfigSchemaTrait {
    * @param \PortableSchema\Builder\Schema $schema
    *   The key's schema.
    * @param \Closure $definition
-   *   Gives the key's definition, called only where valueClass() needs it.
+   *   Gives the key's definition, called only where valueKind() needs it.
    * @param array $config_schema
    *   Its schema, merged with its type.
    * @param string $path
@@ -430,7 +431,7 @@ trait HeldToConfigSchemaTrait {
     if (SchemaFacts::dataType($schema) === 'any') {
       return;
     }
-    $mine = static::kind(static::valueClass($schema, $definition));
+    $mine = static::valueKind($schema, $definition);
     $theirs = static::kind((string) ($config_schema['class'] ?? ''));
     if ($theirs === 'mapping' || $theirs === 'sequence') {
       $wider[$path] = sprintf('it is one value, which the schema types %s, a %s', $type, $theirs);
@@ -468,32 +469,39 @@ trait HeldToConfigSchemaTrait {
   }
 
   /**
-   * Gives the PHP class a value's data type maps to, from its schema.
+   * Gives the kind of value a key holds, from its schema.
    *
-   * What DataDefinition::getClass() answers: the class its definition
-   * names (under the schema's `stored` member), else the class the typed
-   * data manager gives its data type. A schema read from another class
-   * (DefinitionSchema::classOf()) may answer otherwise, so its definition
-   * is asked.
+   * The kind of the class its definition names (under the schema's
+   * `stored` member), else its data type's row of LeafTypes::KINDS; only a
+   * data type with no row asks the typed data manager for its class. A
+   * schema read from another class (DefinitionSchema::classOf()) may
+   * answer otherwise, so its definition is asked.
+   *
+   * Decision: see docs/decisions.md#a-values-kind-comes-from-a-table-by-row.
    *
    * @param \PortableSchema\Builder\Schema $schema
    *   The value's schema.
    * @param \Closure $definition
    *   Gives its definition.
    *
-   * @return string
-   *   The class; '' where the data type names none.
+   * @return string|null
+   *   The kind, as kind() names it; NULL where the data type names no
+   *   class of one.
    */
-  protected static function valueClass(Schema $schema, \Closure $definition): string {
+  protected static function valueKind(Schema $schema, \Closure $definition): ?string {
     if (DefinitionSchema::classOf($schema) !== DataDefinition::class) {
-      return (string) $definition()->getClass();
+      return static::kind((string) $definition()->getClass());
     }
     $class = DefinitionSchema::model($schema)['stored']['class'] ?? NULL;
     if (is_string($class)) {
-      return $class;
+      return static::kind($class);
     }
-    $type = \Drupal::typedDataManager()->getDefinition(SchemaFacts::dataType($schema), FALSE);
-    return is_array($type) && is_string($type['class'] ?? NULL) ? $type['class'] : '';
+    $type = SchemaFacts::dataType($schema);
+    if (isset(LeafTypes::KINDS[$type])) {
+      return LeafTypes::KINDS[$type];
+    }
+    $row = \Drupal::typedDataManager()->getDefinition($type, FALSE);
+    return is_array($row) && is_string($row['class'] ?? NULL) ? static::kind($row['class']) : NULL;
   }
 
   /**

@@ -682,5 +682,5 @@ concept. The naming of sources and resolvers is undecided.
 
 The rework kept the module's builder and changed what an author writes
 to reach it ([Questions the pattern settled](#questions-the-pattern-settled),
-item 6). [Built on typed data](on-typed-data.md) says why a builder
+item 6). [Typed Data at the edges](on-typed-data.md) says why a builder
 sits on top of core's typed data at all.

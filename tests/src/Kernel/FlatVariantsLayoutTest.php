@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
@@ -216,7 +217,7 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
     $variants = $map->entry('gear')->variants;
     $this->assertSame('kind', $variants->by);
     $this->assertSame(['stove', 'tent'], $variants->variantIds(), 'In the order discovery found them.');
-    $this->assertSame(Variants::FLAT, $variants->shell->getSetting(Variants::STORED_AS));
+    $this->assertSame(Variants::FLAT, SchemaFacts::setting($variants->shell, Variants::STORED_AS));
     $this->assertTrue($variants->storedFlat());
     $this->assertSame(['weight', 'fuel'], $variants->variant('stove')->child->entries()->names());
     $this->assertSame(['weight', 'poles', 'fly'], $variants->variant('tent')->child->entries()->names());

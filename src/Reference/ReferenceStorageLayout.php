@@ -11,7 +11,6 @@ use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Entries;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
 use Drupal\surface\Storage\StoredSchemaInterface;
 use PortableSchema\Builder\Schema;
@@ -296,7 +295,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
       return static::bare($entry) === NULL ? ['' => $entry->attachment->child->entries()] : [];
     }
     if ($entry->variants !== NULL) {
-      if (DefinitionMetadata::variantsFrom($entry->variants->shell) !== NULL) {
+      if (SchemaFacts::variantsFrom($entry->variants->shell) !== NULL) {
         return [];
       }
       $maps = [];

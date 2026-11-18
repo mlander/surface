@@ -128,12 +128,15 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    * the refinements, as the emitter did, the counts are 793 and 997 again.
    * Since an entry holds its schema alone (2026-11-18) an edge's definition
    * is derived once per schema object (DefinitionFromSchema::forEntry()),
-   * so an entry a refinement kept shares it: 793 and 997.
+   * so an entry a refinement kept shares it: 793 and 997. Since a
+   * Variants holds its shell as a schema (2026-11-18) a shell's definition
+   * is derived once per shell schema, and two Variants holding one shell
+   * schema share it: 780 and 984.
    */
   protected const COUNTS = [
     'surfaces' => 327,
-    'compared' => 793,
-    'reachable' => 997,
+    'compared' => 780,
+    'reachable' => 984,
   ];
 
   /**
@@ -142,12 +145,13 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    * 705, 43 and 350 before 2026-11-16: the 101 fewer of COUNTS. 647, 39
    * and 311 until the document was written from schemas (2026-11-16): the
    * 10 more of COUNTS; and again since an entry holds its schema alone
-   * (2026-11-18).
+   * (2026-11-18). 298 maps since a Variants holds its shell as a schema
+   * (2026-11-18): the 13 fewer of COUNTS.
    */
   protected const CLASSES = [
     DataDefinition::class => 647,
     ListDataDefinition::class => 39,
-    MapDataDefinition::class => 311,
+    MapDataDefinition::class => 298,
   ];
 
   /**
@@ -157,7 +161,8 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    * email 28, integer 122, list 43, map 350, string 404. Until the
    * document was written from schemas (2026-11-16, the 10 more of
    * COUNTS): integer 114, map 311, string 391; and again since an entry
-   * holds its schema alone (2026-11-18).
+   * holds its schema alone (2026-11-18). Map 298 since a Variants holds its
+   * shell as a schema (2026-11-18).
    */
   protected const TYPES = [
     'any' => 31,
@@ -168,7 +173,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     'float' => 14,
     'integer' => 114,
     'list' => 39,
-    'map' => 311,
+    'map' => 298,
     'string' => 391,
     'timestamp' => 5,
     'uri' => 13,
@@ -183,11 +188,13 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    * with no row in LeafTypes::DEFAULT_CONSTRAINTS. Until the document was
    * written from schemas (2026-11-16, the 10 more of COUNTS): type 1,625,
    * required 409, declared 579, grouping 30, placedAfter 15, shape 44; and
-   * again since an entry holds its schema alone (2026-11-18).
+   * again since an entry holds its schema alone (2026-11-18). Type 1,612,
+   * definitionClass 36 and variantsFrom 103 since a Variants holds its
+   * shell as a schema (2026-11-18): the 13 fewer shells of COUNTS.
    */
   protected const MEMBERS = [
-    'type' => 1625,
-    'definitionClass' => 49,
+    'type' => 1612,
+    'definitionClass' => 36,
     'label' => 1,
     'description' => 98,
     'required' => 409,
@@ -207,7 +214,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     'grouping' => 30,
     'alwaysHeld' => 164,
     'placedAfter' => 15,
-    'variantsFrom' => 116,
+    'variantsFrom' => 103,
     'ownLabel' => 1,
     'arrangement' => 46,
     'compute' => 5,
@@ -453,7 +460,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     $this->assertInstanceOf(DataDefinition::class, $derived);
     $this->assertNotSame($definition, $derived);
     $this->assertSame($computed, $model['compute']);
-    $this->assertSame($computed, Computed::of($derived));
+    $this->assertSame($computed, DefinitionMetadata::computedOf($derived));
     foreach (['object' => $object, 'definition' => $inside] as $setting => $held) {
       $this->assertSame($held, $model['settings'][$setting], "The schema holds the $setting in the setting.");
       $this->assertSame($held, $derived->getSetting($setting), "The derived definition holds the $setting in the setting.");
@@ -582,8 +589,11 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
         }
         $children = [];
         if ($entry->variants !== NULL) {
-          if (!$tops->contains($entry->variants->shell)) {
-            $tops->attach($entry->variants->shell, "$here shell");
+          // One definition per shell schema, as one shell was walked once.
+          static $shells = new \WeakMap();
+          if (!isset($shells[$entry->variants->shell])) {
+            $shells[$entry->variants->shell] = DefinitionFromSchema::of($entry->variants->shell);
+            $tops->attach($shells[$entry->variants->shell], "$here shell");
           }
           foreach ($entry->variants->variantIds() as $variant) {
             $children["variant $variant"] = $entry->variants->variant($variant)->settledChild();
