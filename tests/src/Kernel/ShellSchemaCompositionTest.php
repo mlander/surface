@@ -804,7 +804,7 @@ class ShellSchemaCompositionTest extends SurfaceKernelTestBase {
       $where !== 'refined' => NULL,
       $sealed !== NULL && $entry->sameSource($sealed) => 'the sealed source',
       $entry->isSchemaFirst() => 'composed',
-      (new \ReflectionProperty(Entry::class, 'node'))->getValue($entry) !== NULL => 'with its definition',
+      (new \ReflectionProperty(Entry::class, 'schema'))->getValue($entry) !== NULL => 'with its definition',
       default => 'read',
     };
     $shells[$entry] = [$kind, $where, $how];
