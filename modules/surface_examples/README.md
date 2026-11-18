@@ -481,7 +481,7 @@ the resource uses. It edits the same config object. It chooses from
 Its page says what the two forms share and counts both, from the files,
 the way the landing page counts every class: without the namespace, the
 use statements, blank lines and comments. The twin is **94 lines of
-code**; example 2's resource and its storage are **45**. The storage is
+code**; example 2's resource and its storage are **53**. The storage is
 counted with the resource because the twin names its config object
 itself, which the resource leaves to its storage.
 
@@ -644,7 +644,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/RegistrationStep2Resource.php`](src/Resource/RegistrationStep2Resource.php) | the resource: five keys and two refiners, the rooms by the venue and the capacity by the room; the venue refers to a venue entity | 42 |
+| [`modules/surface_examples/src/Resource/RegistrationStep2Resource.php`](src/Resource/RegistrationStep2Resource.php) | the resource: five keys and two refiners, the rooms by the venue and the capacity by the room; the venue refers to a venue entity | 50 |
 | [`modules/surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php) | the room's constraint: a room of a venue the site has, a Choice whose list is the site's | 17 |
 | [`modules/surface_examples/src/Plugin/Validation/Constraint/RoomOfEventVenueConstraint.php`](src/Plugin/Validation/Constraint/RoomOfEventVenueConstraint.php) | the constraint the room refiner adds: a room of the chosen venue | 6 |
 | [`modules/surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraintValidator.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraintValidator.php) | their validator: reads the rooms, then holds the value to them as Choice does | 14 |
@@ -836,10 +836,10 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/RegistrationStep3Resource.php`](src/Resource/RegistrationStep3Resource.php) | the resource: six keys, the ticket's variants chosen by the pricing, and the contact attached | 41 |
-| [`modules/surface_examples/src/Structure/FreeTicketStructure.php`](src/Structure/FreeTicketStructure.php) | the free ticket: the variant for the pricing free, a note | 11 |
-| [`modules/surface_examples/src/Structure/PaidTicketStructure.php`](src/Structure/PaidTicketStructure.php) | the paid ticket: the variant for the pricing paid, a price and a currency | 15 |
-| [`modules/surface_examples/src/Structure/ContactStructure.php`](src/Structure/ContactStructure.php) | the contact: a structure of two keys, attached | 8 |
+| [`modules/surface_examples/src/Resource/RegistrationStep3Resource.php`](src/Resource/RegistrationStep3Resource.php) | the resource: six keys, the ticket's variants chosen by the pricing, and the contact attached | 49 |
+| [`modules/surface_examples/src/Structure/FreeTicketStructure.php`](src/Structure/FreeTicketStructure.php) | the free ticket: the variant for the pricing free, a note | 12 |
+| [`modules/surface_examples/src/Structure/PaidTicketStructure.php`](src/Structure/PaidTicketStructure.php) | the paid ticket: the variant for the pricing paid, a price and a currency | 17 |
+| [`modules/surface_examples/src/Structure/ContactStructure.php`](src/Structure/ContactStructure.php) | the contact: a structure of two keys, attached | 10 |
 | [`modules/surface_examples/src/Storage/RegistrationStep3Storage.php`](src/Storage/RegistrationStep3Storage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step3` | the route | 8 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.registration_step3` | the config schema, generated from the class | 49 |
@@ -1075,7 +1075,7 @@ of code, counted without blank lines or comments:
 | --- | --- | --- |
 | [`modules/surface_examples_compliance/surface_examples_compliance.info.yml`](../surface_examples_compliance/surface_examples_compliance.info.yml) | the module: a second one, which example 3 does not know | 9 |
 | [`modules/surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php`](../surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php) | the alter: attaches the structure, rewords the title, caps the capacity without a license, and leaves closed rooms out | 32 |
-| [`modules/surface_examples_compliance/src/Structure/ComplianceStructure.php`](../surface_examples_compliance/src/Structure/ComplianceStructure.php) | the structure it attaches: a license and the stewards, which read the capacity through a port | 19 |
+| [`modules/surface_examples_compliance/src/Structure/ComplianceStructure.php`](../surface_examples_compliance/src/Structure/ComplianceStructure.php) | the structure it attaches: a license and the stewards, which read the capacity through a port | 23 |
 | [`modules/surface_examples_compliance/src/Shape/License.php`](../surface_examples_compliance/src/Shape/License.php) | the license: a named shape, four digits | 11 |
 | [`modules/surface_examples_compliance/config/schema/surface_examples_compliance.schema.yml`](../surface_examples_compliance/config/schema/surface_examples_compliance.schema.yml), entry `surface_examples.registration_step3.third_party.surface_examples_compliance` | the config schema of what it stores on example 3 | 18 |
 
@@ -1393,7 +1393,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/BulletinResource.php`](src/Resource/BulletinResource.php) | the resource: three keys and two declared rules | 29 |
+| [`modules/surface_examples/src/Resource/BulletinResource.php`](src/Resource/BulletinResource.php) | the resource: three keys and two declared rules | 34 |
 | [`modules/surface_examples/src/Storage/BulletinStorage.php`](src/Storage/BulletinStorage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step7` | the route | 8 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.bulletin` | the config schema, generated from the class | 20 |
@@ -1629,12 +1629,12 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Structure/PersonStructure.php`](src/Structure/PersonStructure.php) | the person: three keys, and a rule that reads a port, listed | 14 |
+| [`modules/surface_examples/src/Structure/PersonStructure.php`](src/Structure/PersonStructure.php) | the person: three keys, and a rule that reads a port, listed | 17 |
 | [`modules/surface_examples/src/Shape/PhoneNumber.php`](src/Shape/PhoneNumber.php) | the phone: a named shape | 11 |
-| [`modules/surface_examples/src/Structure/ReviewStructure.php`](src/Structure/ReviewStructure.php) | the review: two keys and a rule, mixed into the press page | 17 |
-| [`modules/surface_examples/src/Resource/PressResource.php`](src/Resource/PressResource.php) | the press page: one key, the person attached, the review mixed in | 13 |
+| [`modules/surface_examples/src/Structure/ReviewStructure.php`](src/Structure/ReviewStructure.php) | the review: two keys and a rule, mixed into the press page | 19 |
+| [`modules/surface_examples/src/Resource/PressResource.php`](src/Resource/PressResource.php) | the press page: one key, the person attached, the review mixed in | 15 |
 | [`modules/surface_examples/src/Storage/PressStorage.php`](src/Storage/PressStorage.php) | its storage: names the config object | 3 |
-| [`modules/surface_examples/src/Resource/InfoDeskResource.php`](src/Resource/InfoDeskResource.php) | the information desk: the phone, where it stands as an anonymous map, the person attached, and a collection of up to four | 21 |
+| [`modules/surface_examples/src/Resource/InfoDeskResource.php`](src/Resource/InfoDeskResource.php) | the information desk: the phone, where it stands as an anonymous map, the person attached, and a collection of up to four | 30 |
 | [`modules/surface_examples/src/Storage/InfoDeskStorage.php`](src/Storage/InfoDeskStorage.php) | its storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step8` | the press page's route | 8 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step8_desk` | the information desk's route | 8 |
@@ -1849,8 +1849,8 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/TicketSalesResource.php`](src/Resource/TicketSalesResource.php) | the resource: a checkbox and a set of limits per ticket type | 13 |
-| [`modules/surface_examples/src/Structure/TicketLimitStructure.php`](src/Structure/TicketLimitStructure.php) | one type's limits: two keys that apply while it is on sale, read through a port | 11 |
+| [`modules/surface_examples/src/Resource/TicketSalesResource.php`](src/Resource/TicketSalesResource.php) | the resource: a checkbox and a set of limits per ticket type | 18 |
+| [`modules/surface_examples/src/Structure/TicketLimitStructure.php`](src/Structure/TicketLimitStructure.php) | one type's limits: two keys that apply while it is on sale, read through a port | 16 |
 | [`modules/surface_examples/src/Keys/TicketTypes.php`](src/Keys/TicketTypes.php) | the provider: lists the ticket types from the site's configuration | 17 |
 | [`modules/surface_examples/src/Storage/TicketSalesStorage.php`](src/Storage/TicketSalesStorage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step9` | the route | 8 |
@@ -2151,8 +2151,8 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/ProgramResource.php`](src/Resource/ProgramResource.php) | the resource: four keys, and two operations, one of which changes nothing | 22 |
-| [`modules/surface_examples/src/Structure/FeesStructure.php`](src/Structure/FeesStructure.php) | the fees: two keys, naming their access class | 9 |
+| [`modules/surface_examples/src/Resource/ProgramResource.php`](src/Resource/ProgramResource.php) | the resource: four keys, and two operations, one of which changes nothing | 28 |
+| [`modules/surface_examples/src/Structure/FeesStructure.php`](src/Structure/FeesStructure.php) | the fees: two keys, naming their access class | 13 |
 | [`modules/surface_examples/src/Access/FeesAccess.php`](src/Access/FeesAccess.php) | the access class: locks the fees by permission, then once the program is published | 18 |
 | [`modules/surface_examples/src/Storage/ProgramStorage.php`](src/Storage/ProgramStorage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step10` | the route that configures | 8 |
@@ -2282,7 +2282,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/DoorsResource.php`](src/Resource/DoorsResource.php) | the resource: five keys, each drawn by a stock widget | 32 |
+| [`modules/surface_examples/src/Resource/DoorsResource.php`](src/Resource/DoorsResource.php) | the resource: five keys, each drawn by a stock widget | 42 |
 | [`modules/surface_examples/src/Storage/DoorsStorage.php`](src/Storage/DoorsStorage.php) | the storage: names the config object and the keys it always holds | 4 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step11` | the route | 8 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.doors` | the config schema, fully validatable, generated from the class | 31 |
@@ -2692,7 +2692,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/SpotlightResource.php`](src/Resource/SpotlightResource.php) | the resource: a component, and its props and slots as variants the component chooses | 14 |
+| [`modules/surface_examples/src/Resource/SpotlightResource.php`](src/Resource/SpotlightResource.php) | the resource: a component, and its props and slots as variants the component chooses | 16 |
 | [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 42 |
 | [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 220 |
 | [`src/Variants/ComponentsOffered.php`](../../src/Variants/ComponentsOffered.php) | the components both providers offer: every one, or those surface.settings:components_offered allows; the main module's | 31 |
@@ -3053,7 +3053,7 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples_component_block/surface_examples_component_block.info.yml`](../surface_examples_component_block/surface_examples_component_block.info.yml) | the module the block lives in | 10 |
-| [`modules/surface_examples_component_block/src/Structure/ComponentBlockStructure.php`](../surface_examples_component_block/src/Structure/ComponentBlockStructure.php) | the block's structure: example 12's three lines under the block's id | 8 |
+| [`modules/surface_examples_component_block/src/Structure/ComponentBlockStructure.php`](../surface_examples_component_block/src/Structure/ComponentBlockStructure.php) | the block's structure: example 12's three lines under the block's id | 9 |
 | [`modules/surface_examples_component_block/src/Plugin/Block/ComponentBlock.php`](../surface_examples_component_block/src/Plugin/Block/ComponentBlock.php) | the block plugin: names the structure and draws the chosen component | 96 |
 | [`modules/surface_examples_component_block/config/schema/surface_examples_component_block.schema.yml`](../surface_examples_component_block/config/schema/surface_examples_component_block.schema.yml), entry `block.settings.surface_component` | the config schema of the block's settings | 14 |
 | [`modules/surface_examples/src/Hook/SpotlightBlockHooks.php`](src/Hook/SpotlightBlockHooks.php) | places the Spotlight and Tonight blocks once both modules are enabled | 36 |
@@ -3651,17 +3651,17 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/MailerResource.php`](src/Resource/MailerResource.php) | the owner's way: a sender, a mail service, and a credential whose source a provider lists | 17 |
+| [`modules/surface_examples/src/Resource/MailerResource.php`](src/Resource/MailerResource.php) | the owner's way: a sender, a mail service, and a credential whose source a provider lists | 23 |
 | [`modules/surface_examples/src/Variants/CredentialSources.php`](src/Variants/CredentialSources.php) | the provider: the pasted source always, the managed source while the keys module is on, both named for storage | 28 |
-| [`modules/surface_examples/src/Structure/PastedCredentialStructure.php`](src/Structure/PastedCredentialStructure.php) | the pasted source: a key, a secret | 12 |
-| [`modules/surface_examples/src/Structure/ManagedCredentialStructure.php`](src/Structure/ManagedCredentialStructure.php) | the managed source: the name of a key the site manages | 12 |
+| [`modules/surface_examples/src/Structure/PastedCredentialStructure.php`](src/Structure/PastedCredentialStructure.php) | the pasted source: a key, a secret | 13 |
+| [`modules/surface_examples/src/Structure/ManagedCredentialStructure.php`](src/Structure/ManagedCredentialStructure.php) | the managed source: the name of a key the site manages | 13 |
 | [`modules/surface_examples/src/Storage/MailerStorage.php`](src/Storage/MailerStorage.php) | its storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step14` | the mailer's route | 8 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.mailer` | the mailer's config schema, generated from the class | 18 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.mailer.credential.pasted` | the pasted source's config schema | 10 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.mailer.credential.managed` | the managed source's config schema, with the pasted key it keeps | 13 |
 | [`modules/surface_examples/config/install/surface_examples.mailer.yml`](config/install/surface_examples.mailer.yml) | the mailer's shipped settings | 5 |
-| [`modules/surface_examples/src/Resource/WebhookResource.php`](src/Resource/WebhookResource.php) | the alter's way: an endpoint and a pasted key, and nothing of managed keys | 15 |
+| [`modules/surface_examples/src/Resource/WebhookResource.php`](src/Resource/WebhookResource.php) | the alter's way: an endpoint and a pasted key, and nothing of managed keys | 18 |
 | [`modules/surface_examples/src/Storage/WebhookStorage.php`](src/Storage/WebhookStorage.php) | its storage: names the config object | 3 |
 | [`modules/surface_examples/src/WebhookSigner.php`](src/WebhookSigner.php) | the webhook's code: signs a post with the key the webhook's values hold where it is used | 16 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step14_webhook` | the webhook's route | 8 |
@@ -3674,7 +3674,7 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraint.php`](../surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraint.php) | the constraint a key naming a managed key declares | 15 |
 | [`modules/surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraintValidator.php`](../surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraintValidator.php) | its validator: refuses a name the site does not manage | 19 |
 | [`modules/surface_examples_keys/src/Plugin/SurfaceOptionsResolver/ManagedKeyOptions.php`](../surface_examples_keys/src/Plugin/SurfaceOptionsResolver/ManagedKeyOptions.php) | the resolver that reads the constraint as the list of keys | 28 |
-| [`modules/surface_examples_keys/src/Alter/WebhookKeyAlter.php`](../surface_examples_keys/src/Alter/WebhookKeyAlter.php) | the alter: mounts a managed key on the webhook, rules the pasted key out once one is chosen, and resolves it to the managed key's value at use | 17 |
+| [`modules/surface_examples_keys/src/Alter/WebhookKeyAlter.php`](../surface_examples_keys/src/Alter/WebhookKeyAlter.php) | the alter: mounts a managed key on the webhook, rules the pasted key out once one is chosen, and resolves it to the managed key's value at use | 18 |
 | [`modules/surface_examples_keys/src/Compute/ManagedKeyValue.php`](../surface_examples_keys/src/Compute/ManagedKeyValue.php) | a managed key's value, for the name the webhook stores | 6 |
 | [`modules/surface_examples_keys/config/schema/surface_examples_keys.schema.yml`](../surface_examples_keys/config/schema/surface_examples_keys.schema.yml), entry `surface_examples_keys.keys` | the keys' config schema, written by hand | 20 |
 | [`modules/surface_examples_keys/config/schema/surface_examples_keys.schema.yml`](../surface_examples_keys/config/schema/surface_examples_keys.schema.yml), entry `surface_examples.webhook.third_party.surface_examples_keys` | the config schema of what it stores on the webhook | 11 |
@@ -4676,12 +4676,12 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples/src/Entity/EventVenue.php`](src/Entity/EventVenue.php) | the entity type: its declaration, its keys and the properties it exports, and no form, list builder or link | 47 |
-| [`modules/surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, computed from its name unless one is given, added, edited and removed, and the venues listed and reordered; its slug a computed key | 78 |
+| [`modules/surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, computed from its name unless one is given, added, edited and removed, and the venues listed and reordered; its slug a computed key | 104 |
 | [`modules/surface_examples/src/Slugify.php`](src/Slugify.php) | the slug's deriver: a pure function of the name, run when a venue is added | 6 |
-| [`modules/surface_examples/src/Structure/VenueRoomStructure.php`](src/Structure/VenueRoomStructure.php) | a room: an item of the venue's rooms | 18 |
-| [`modules/surface_examples/src/Structure/VenueListingStructure.php`](src/Structure/VenueListingStructure.php) | what the listing takes, a page and a filter, and what it answers, the page and the total | 27 |
-| [`modules/surface_examples/src/Structure/VenueReorderStructure.php`](src/Structure/VenueReorderStructure.php) | what the reorder takes: a list of venues and their weights | 8 |
-| [`modules/surface_examples/src/Structure/VenueOrderStructure.php`](src/Structure/VenueOrderStructure.php) | an item of that list: a venue and its new weight | 12 |
+| [`modules/surface_examples/src/Structure/VenueRoomStructure.php`](src/Structure/VenueRoomStructure.php) | a room: an item of the venue's rooms | 22 |
+| [`modules/surface_examples/src/Structure/VenueListingStructure.php`](src/Structure/VenueListingStructure.php) | what the listing takes, a page and a filter, and what it answers, the page and the total | 35 |
+| [`modules/surface_examples/src/Structure/VenueReorderStructure.php`](src/Structure/VenueReorderStructure.php) | what the reorder takes: a list of venues and their weights | 13 |
+| [`modules/surface_examples/src/Structure/VenueOrderStructure.php`](src/Structure/VenueOrderStructure.php) | an item of that list: a venue and its new weight | 15 |
 | [`modules/surface_examples/src/Storage/VenueStorage.php`](src/Storage/VenueStorage.php) | the storage: a ConfigEntityStorage, which reads the listing, writes the reorder in one commit, and holds a slug to one venue | 151 |
 | [`modules/surface_examples/src/Access/VenueAccess.php`](src/Access/VenueAccess.php) | the access class: a disabled venue is only for an account that administers the venues | 17 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.event_venue.*` | the entity type's config schema, generated from the resource | 82 |
@@ -4878,8 +4878,8 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples_references/surface_examples_references.info.yml`](../surface_examples_references/surface_examples_references.info.yml) | the module: a second one, which needs node for the article the announcement is | 11 |
-| [`modules/surface_examples_references/src/Resource/SponsorshipResource.php`](../surface_examples_references/src/Resource/SponsorshipResource.php) | the resource: three keys of the id's type with the constraint naming the entity type they refer to, and three of any entity type, each a structure attached | 26 |
-| [`modules/surface_examples_references/src/Structure/AnyEntityStructure.php`](../surface_examples_references/src/Structure/AnyEntityStructure.php) | a reference to an entity of any type: its entity type, then its id, and the refiner that narrows the id to the entity type chosen | 29 |
+| [`modules/surface_examples_references/src/Resource/SponsorshipResource.php`](../surface_examples_references/src/Resource/SponsorshipResource.php) | the resource: three keys of the id's type with the constraint naming the entity type they refer to, and three of any entity type, each a structure attached | 42 |
+| [`modules/surface_examples_references/src/Structure/AnyEntityStructure.php`](../surface_examples_references/src/Structure/AnyEntityStructure.php) | a reference to an entity of any type: its entity type, then its id, and the refiner that narrows the id to the entity type chosen | 31 |
 | [`modules/surface_examples_references/src/Structure/ThingStructure.php`](../surface_examples_references/src/Structure/ThingStructure.php) | content of any type, the entity types it names in its own declaration | 4 |
 | [`modules/surface_examples_references/src/Structure/SettingStructure.php`](../surface_examples_references/src/Structure/SettingStructure.php) | a venue or a role: config entities among three | 7 |
 | [`modules/surface_examples_references/src/Structure/CreditStructure.php`](../surface_examples_references/src/Structure/CreditStructure.php) | an article or a user | 6 |
@@ -5212,8 +5212,8 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples_retitle/surface_examples_retitle.info.yml`](../surface_examples_retitle/surface_examples_retitle.info.yml) | the module: a third one, which needs node for the pages it retitles | 11 |
-| [`modules/surface_examples_retitle/src/Resource/RetitleResource.php`](../surface_examples_retitle/src/Resource/RetitleResource.php) | the resource: a list of nodes and a style, its own permission, and two gates borrowed from core, a node's update and its title's edit | 27 |
-| [`modules/surface_examples_retitle/src/Structure/RetitleItemStructure.php`](../surface_examples_retitle/src/Structure/RetitleItemStructure.php) | an item: the node, which the gates ask about, and the new title, if one is sent | 12 |
+| [`modules/surface_examples_retitle/src/Resource/RetitleResource.php`](../surface_examples_retitle/src/Resource/RetitleResource.php) | the resource: a list of nodes and a style, its own permission, and two gates borrowed from core, a node's update and its title's edit | 34 |
+| [`modules/surface_examples_retitle/src/Structure/RetitleItemStructure.php`](../surface_examples_retitle/src/Structure/RetitleItemStructure.php) | an item: the node, which the gates ask about, and the new title, if one is sent | 14 |
 | [`modules/surface_examples_retitle/src/TitleRewriter.php`](../surface_examples_retitle/src/TitleRewriter.php) | the rewriter: title case, sentence case or a prefix, the same every time, where a model would suggest a title | 38 |
 | [`modules/surface_examples_retitle/src/Storage/RetitleStorage.php`](../surface_examples_retitle/src/Storage/RetitleStorage.php) | the storage: works out each title, then saves each node, and answers the titles before and after | 46 |
 | [`modules/surface_examples_retitle/surface_examples_retitle.routing.yml`](../surface_examples_retitle/surface_examples_retitle.routing.yml), entry `surface_examples.step17` | the route: the generic operation form, with the examples' panels | 8 |
@@ -5460,7 +5460,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/CateringByMethodResource.php`](src/Resource/CateringByMethodResource.php) | the before: the same keys with defineInputs(), as examples 1 to 17 write them | 49 |
+| [`modules/surface_examples/src/Resource/CateringByMethodResource.php`](src/Resource/CateringByMethodResource.php) | the before: the same keys with defineInputs(), as examples 1 to 17 write them | 56 |
 | [`modules/surface_examples/src/Resource/CateringResource.php`](src/Resource/CateringResource.php) | the after, the resource: eight keys as properties, a type, a default and presence read from PHP, the rest from one attribute per verb, and the person attached with its port wired | 53 |
 | [`modules/surface_examples/src/Storage/CateringStorage.php`](src/Storage/CateringStorage.php) | the storage both save through: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step18` | the route of the properties | 8 |
@@ -5710,8 +5710,8 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/EventSetupResource.php`](src/Resource/EventSetupResource.php) | the resource of steps 1 and 2: stock keys in no group, which the flow splits | 28 |
-| [`modules/surface_examples/src/Resource/EventNoticesResource.php`](src/Resource/EventNoticesResource.php) | the resource of step 3: another resource, drawn whole | 14 |
+| [`modules/surface_examples/src/Resource/EventSetupResource.php`](src/Resource/EventSetupResource.php) | the resource of steps 1 and 2: stock keys in no group, which the flow splits | 40 |
+| [`modules/surface_examples/src/Resource/EventNoticesResource.php`](src/Resource/EventNoticesResource.php) | the resource of step 3: another resource, drawn whole | 18 |
 | [`modules/surface_examples/src/Storage/EventSetupStorage.php`](src/Storage/EventSetupStorage.php) | the setup's storage: names its config object | 3 |
 | [`modules/surface_examples/src/Storage/EventNoticesStorage.php`](src/Storage/EventNoticesStorage.php) | the notices' storage: names a config object of their own | 3 |
 | [`modules/surface_examples/src/Flow/EventSetupFlow.php`](src/Flow/EventSetupFlow.php) | the flow: its three steps, the keys each draws, its label and how long its stage lives, the condition on the third step and the check before Save | 26 |
