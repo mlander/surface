@@ -260,7 +260,7 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
    * Each item is a map that names no keys: an object, never null, an
    * object inside it refused as anywhere.
    */
-  public function testListOfOpenObjectsIsAListOfOpenMaps(): void {
+  public function testListOfOpenObjectsIsListOfOpenMaps(): void {
     $builder = new SurfaceBuilder();
     (new ResourceBlueprint($builder, $this->container->get('typed_data_manager'), TRUE))->add('rows', Schema::list(Schema::object()));
     $surface = $builder->seal();
@@ -279,9 +279,13 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
    * allows null on the items of a list of maps is refused at the part not
    * read as written, rather than served without null.
    */
-  public function testNullableItemsOfAListOfMapsAreRefused(): void {
+  public function testNullItemsInListOfMapsAreRefused(): void {
     $typed = $this->container->get('typed_data_manager');
-    foreach (['a map' => Schema::object(['id' => Schema::string()->required()]), 'an open map' => Schema::object()] as $what => $item) {
+    $items = [
+      'a map' => Schema::object(['id' => Schema::string()->required()]),
+      'an open map' => Schema::object(),
+    ];
+    foreach ($items as $what => $item) {
       try {
         (new ResourceBlueprint(new SurfaceBuilder(), $typed, TRUE))->add('rows', Schema::list($item->with('type', ['object', 'null'])));
         $this->fail(sprintf('Null items of %s are refused.', $what));
