@@ -16843,3 +16843,74 @@ so the part not read as written is refused instead. Keeping it would need
 a fact on the item that the built schema and the emitter carry
 (`PropertySchema::neverNull()`). A list of nullable scalars is still read
 without null at both sides, as before. (`SchemaReader::value()`)
+
+## Slice 32.9, the whole review's fixes (2026-11-18)
+
+### compute() takes its label from the schema
+
+`compute()` takes a `Schema` alone, its `title()` the key's label, since
+every verb returns the blueprint (C1). A label handed beside the schema,
+which the key dropped before, is now a `TypeError`: the string stands
+where the sources are. (`ResourceBlueprint::compute()`,
+`AuthorSpellingRefusalsTest`)
+
+### A port reads its type and nothing else
+
+`reads()` takes the port's type, `required()` and a `$ref` (a shape,
+`Schema::of(Sku::class)`, or a type of the library). Any other keyword
+(a bound, an option list, a title, a default) is refused, naming each,
+where it was dropped: `reads('cap', Schema::integer()->minimum(3))`
+let 100 through. The key wired to the port holds its own rules.
+(`ResourceBlueprint::reads()`)
+
+### Options of whole numbers state their type
+
+PHP turns an array key such as `'1'` into the integer 1, so
+`Schema::options(['1' => 'One'])` offers the number 1 and the text
+`"1"` was refused. Options whose every value is a whole number and that
+state no type are refused, naming `->type('string')` and
+`->type('integer')`; no shipped resource, example or test module
+declares that spelling. With `->type('string')` the text `"1"` is the
+value. ([Options](options.md#how-to-write-one), `KeywordReader::types()`)
+
+### An author's list is optional unless marked
+
+An author's list of objects, read as a collection, is held as
+`attachList()` holds one: `required()` decides, and an optional one may
+be left out, where it was refused with `cannot_clear`. A served
+document's list that is not nullable is still one its storage always
+holds. No corpus row moved. (`SchemaReader::collection()`)
+
+### `x-surface` is refused in an author's schema
+
+`x-surface` is what a served document says of a key. In a schema handed
+to `add()`, at any depth, it is refused naming `x-surface-settings`,
+where it was dropped. A setting no keyword says is
+`->annotation('x-surface-settings', ['format' => 'color'])`.
+(`KeywordReader::refuseExtension()`)
+
+### A bound given twice keeps the stricter
+
+`Rule::constrain()` and `OperationContext::withConstraint()` merge a
+bound given as a keyword and as its check
+(`maximum(10)->check('drupal:Range', ['max' => 5])`, in either order) to
+the stricter one, the larger minimum and the smaller maximum, as the
+authored reader does. Before, the first spelling won in one order and
+the keyword in the other. (`ConstraintKeywords::stricter()`)
+
+### Refusals name the schema spelling
+
+The refusal of an entity type as a key's type and the gate's refusal
+of a reference no key names say `add('<key>', Schema::integer()
+->check('drupal:SurfaceValidReference', [...]))`, not `addConstraint()`
+and a type string. No door corpus row moved. (`LeafTypes::meant()`,
+`Gating`)
+
+### A rule's constrain: names what to write
+
+`#[Rule(constrain: ['Length' => ['max' => 4]])]`, or a misspelled
+keyword, is refused with the class, the property and the name, and the
+keywords to write: `constrain: ['maxLength' => 4]` for a constraint the
+table writes as keywords, the list of keywords a rule states otherwise.
+Before, the package's message named none of them.
+(`PropertyDeclaration::constrained()`)
