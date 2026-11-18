@@ -104,7 +104,7 @@ class AddDefinitionListTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the opening hours' lists, as the recipes page quotes them.
+   * Tests the opening hours' lists, as the how-to page quotes them.
    *
    * Declared into a blueprint of their own: what the lists are is the
    * declaration's, and HowToTest holds the built resource to the page.

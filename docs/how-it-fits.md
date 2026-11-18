@@ -160,7 +160,7 @@ refine($values)                                  Surface::refine()
   for each key whose watched siblings all hold values (a key an alter
   mounted, which only that alter watches, is read at its path and not
   waited for): its chain of
-  RefinesInputRefiner links (owner's, then alters'), each answer applied
+  RefinesInputRefiner links (the declaring class's, then alters'), each answer applied
   to a copy of the key's schema, the stricter rule standing; a key's
   DeclaredRefiner links run whether
   or not its siblings hold values, reading them as they stand; each child refined in its own frame
