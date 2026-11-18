@@ -176,14 +176,16 @@ class WatchedValueAnswersParityTest extends SurfaceKernelTestBase {
     $counts = WatchedValueParityCheck::$counts;
     $this->assertSame([], WatchedValueParityCheck::$differences);
     // The walk reached watched keys, kept answers were used, values were
-    // refused, from kept answers too, and TRUE at a string key was
-    // admitted.
+    // refused, from kept answers too, and TRUE at a string key was refused:
+    // slice 35 removed the leniency that read it as its text (the check
+    // refuses with type, as validate() does).
     $this->assertGreaterThan(40, count($surfaces));
     $this->assertGreaterThan(500, $sets);
     $this->assertGreaterThan(1000, $counts['checks'] ?? 0);
     $this->assertGreaterThan($counts['asked of the validator'] ?? 0, $counts['answered from kept'] ?? 0);
     $this->assertGreaterThan(50, $counts['refused, answered from kept'] ?? 0);
-    $this->assertGreaterThan(0, $counts['TRUE at a string key, admitted'] ?? 0);
+    $this->assertGreaterThan(0, $counts['TRUE at a string key, refused'] ?? 0);
+    $this->assertSame(0, $counts['TRUE at a string key, admitted'] ?? 0);
   }
 
 }
