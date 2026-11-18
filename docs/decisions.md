@@ -16918,3 +16918,22 @@ from schemas; `DefinitionMetadata` is read there no more.
 - **`Computed::of()` and `Resolve::of()` are gone.** A schema answers
   through `SchemaFacts::compute()` and `resolve()`; the read of a
   definition asks `DefinitionMetadata::computedOf()`.
+
+### A value's kind comes from a table by row
+
+The config schema check compares the kind of value a key holds with a
+config schema type's (string, integer, float, boolean). A key's kind is
+its data type's row of `LeafTypes::KINDS`; only a class its definition
+names, a schema read from a class other than `DataDefinition`, or a
+data type with no row asks for a class. `DefaultConstraintsTest` holds
+each row to the class the typed data manager gives the type.
+
+### The inverse compares only a constraint list the read wrote down
+
+`DefinitionFromSchema::of()` refuses a schema whose derived definition
+gives other constraints only where the schema holds the `constraints`
+member. Where it holds none, the list is the table's
+(`LeafTypes::DEFAULT_CONSTRAINTS`), which is the model's; core adds the
+site's defaults to the definition it derives, as it does for any
+definition. `DefaultConstraintsTest` stays the alarm for a site whose
+module changes a type's defaults.

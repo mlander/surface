@@ -67,6 +67,25 @@ final class LeafTypes {
   ];
 
   /**
+   * The kind of value each type holds, by type.
+   *
+   * What the config schema check compares a key's value with a config
+   * schema type's by (HeldToConfigSchemaTrait::valueKind()): the interface
+   * of core's class for the type. DefaultConstraintsTest holds each row
+   * to the class the typed data manager gives the type.
+   */
+  public const KINDS = [
+    'string' => 'string',
+    'email' => 'string',
+    'uri' => 'string',
+    'datetime_iso8601' => 'string',
+    'integer' => 'integer',
+    'timestamp' => 'integer',
+    'float' => 'float',
+    'boolean' => 'boolean',
+  ];
+
+  /**
    * The JSON Schema a `datetime_iso8601` key holding DateOnly is written with.
    *
    * Its value is a date alone, `Y-m-d`, which `date-time` would refuse.
