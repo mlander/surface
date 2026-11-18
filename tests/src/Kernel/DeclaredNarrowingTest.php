@@ -398,7 +398,11 @@ class DeclaredNarrowingTest extends SurfaceKernelTestBase {
         'which a rule cannot state',
       ],
       'an option outside it' => [
-        static fn () => (new Rule('count'))->constrain(Schema::any()->check('drupal:Range', ['max' => 5, 'maxMessage' => 'No.', 'minMessage' => 'No.'])),
+        static fn () => (new Rule('count'))->constrain(Schema::any()->check('drupal:Range', [
+          'max' => 5,
+          'maxMessage' => 'No.',
+          'minMessage' => 'No.',
+        ])),
         'takes min, max and message, and was given max, maxMessage, minMessage',
       ],
       'a pattern no schema states exactly' => [

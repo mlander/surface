@@ -114,7 +114,7 @@ final class ExampleBlockStructure implements StructureInterface {
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-That is `ExampleBlockStructure` in `surface_examples_plugins`, docblocks
+That is `ExampleBlockStructure` in `surface_examples_plugins`, doc comments
 shortened: a structure, since the block that names it holds it and
 stores it. Each
 part of a resource or structure has one home:
@@ -1477,8 +1477,8 @@ it is optional, whether or not it has a default.
 
 > **Requiredness appears only when it says something.** Write
 > `required()` on the keys that must be configured, and write nothing on
-> the keys that need not be. Nothing unmarks a schema, so there is no
-> call that repeats the default.
+> the keys that need not be. No call takes a mark off a schema, so
+> there is no call that repeats the default.
 
 The verbs that attach take the same answer as a named argument where a
 structure's key may be required: `attachList(..., required: TRUE)`. The

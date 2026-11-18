@@ -51,8 +51,8 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * `arguments:`, and implements BoundSiteListInterface.
    *
    * `storedAs: Variants::FLAT` has a config storage keep the chosen
-   * variant's keys beside $by and nothing at $key, while every door asks for them under $key
-   * (FlatVariantsLayout), as the test module's kit does
+   * variant's keys beside $by and nothing at $key, while every door asks
+   * for them under $key (FlatVariantsLayout), as the test module's kit does
    * (tests/modules/surface_resource_test/src/Resource/Kit/KitResource.php).
    *
    * @code
@@ -103,10 +103,11 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * checkbox per form the site has), so a provider lists them, and each
    * entry becomes a key in the map at $key, declared as add() declares
    * one: of $type, labeled with the entry's label, starting from the
-   * entry's default or else the schema's `default`, held to what is stored when the
-   * entry is locked; an entry that names a schema or a structure is
-   * refused, since a key per thing reads neither. $type is a type or a
-   * definition, as addList() takes its item: an entry with constraints of
+   * entry's default or else the schema's `default`, held to what is
+   * stored when the entry is locked; an entry that names a schema or a
+   * structure is refused, since a key per thing reads neither. $type is
+   * its schema, or a type or a definition, as addList() takes its item
+   * (the old spelling): an entry with constraints of
    * its own is a definition, and an entry that refers to an entity is the
    * id's type with the SurfaceValidReference constraint, as any reference
    * key is, its type checked against the entity type's id at the build
