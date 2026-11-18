@@ -18,7 +18,7 @@ use Drupal\surface\SurfaceInterface;
  * For a test that asks every place of every shipped example under the
  * values that choose each variant and hold an item in each list: the
  * value sets (valueSets()), the places they hold (places()), and a walk of
- * a served document's nodes (walk()).
+ * a served document's schemas (walk()).
  */
 trait ExampleValueSetsTrait {
 
@@ -45,31 +45,31 @@ trait ExampleValueSetsTrait {
     $sets = ['defaults' => $defaults, 'one item each' => static::withItems($surface, $defaults)];
     $builder = $this->container->get('surface.form_builder');
     $document = json_decode((string) json_encode($builder->envelope($surface, $defaults)->document['schema']), TRUE);
-    $nodes = [];
+    $schemas = [];
     $sources = [];
-    foreach (static::walk($document, $document) as [$path, $node]) {
-      $nodes[implode('/', $path)] ??= $node;
+    foreach (static::walk($document, $document) as [$path, $schema]) {
+      $schemas[implode('/', $path)] ??= $schema;
       $frame = array_slice($path, 0, -1);
-      foreach ((array) ($node['x-surface']['dependsOn'] ?? []) as $watched) {
+      foreach ((array) ($schema['x-surface']['dependsOn'] ?? []) as $watched) {
         if (is_string($watched)) {
           $sources[implode('/', [...$frame, $watched])] = [...$frame, $watched];
         }
       }
-      if (is_string($node['x-surface']['by'] ?? NULL)) {
-        $sources[implode('/', [...$frame, $node['x-surface']['by']])] = [...$frame, $node['x-surface']['by']];
+      if (is_string($schema['x-surface']['by'] ?? NULL)) {
+        $sources[implode('/', [...$frame, $schema['x-surface']['by']])] = [...$frame, $schema['x-surface']['by']];
       }
     }
     foreach ($sources as $key => $path) {
-      if (!is_array($nodes[$key] ?? NULL)) {
+      if (!is_array($schemas[$key] ?? NULL)) {
         continue;
       }
       $current = NestedArray::getValue($defaults, $path);
-      $alternatives = static::alternatives($nodes[$key], $current);
-      foreach ($nodes as $at => $node) {
+      $alternatives = static::alternatives($schemas[$key], $current);
+      foreach ($schemas as $at => $schema) {
         // A key with variants that this key decides: each of its choices.
-        $deciding = [...array_slice(explode('/', (string) $at), 0, -1), $node['x-surface']['by'] ?? NULL];
-        if (is_string($node['x-surface']['by'] ?? NULL) && implode('/', $deciding) === $key) {
-          foreach (array_keys((array) ($node['x-surface']['variants'] ?? [])) as $variant) {
+        $deciding = [...array_slice(explode('/', (string) $at), 0, -1), $schema['x-surface']['by'] ?? NULL];
+        if (is_string($schema['x-surface']['by'] ?? NULL) && implode('/', $deciding) === $key) {
+          foreach (array_keys((array) ($schema['x-surface']['variants'] ?? [])) as $variant) {
             if ((string) $variant !== $current) {
               $alternatives[] = (string) $variant;
             }
@@ -124,38 +124,38 @@ trait ExampleValueSetsTrait {
   }
 
   /**
-   * Walks a served document's nodes, through its defs and branches.
+   * Walks a served document's schemas, through its defs and branches.
    *
    * @param array $document
    *   The document's schema.
-   * @param mixed $node
-   *   The node walked from.
+   * @param mixed $schema
+   *   The schema walked from.
    * @param array $path
    *   Its path: names, and 0 for an item.
    * @param int $depth
    *   How deep the walk is.
    *
    * @return \Generator<int, array{0: array, 1: array}>
-   *   Each node's path and the node, its def's keywords merged in.
+   *   Each schema's path and the schema, its def's keywords merged in.
    */
-  protected static function walk(array $document, mixed $node, array $path = [], int $depth = 0): \Generator {
-    for ($hops = 0; is_array($node) && is_string($node['$ref'] ?? NULL) && str_starts_with($node['$ref'], '#/$defs/') && $hops < 20; $hops++) {
-      $def = $document['$defs'][substr($node['$ref'], 8)] ?? NULL;
-      unset($node['$ref']);
-      $node = is_array($def) ? $node + $def : $node;
+  protected static function walk(array $document, mixed $schema, array $path = [], int $depth = 0): \Generator {
+    for ($hops = 0; is_array($schema) && is_string($schema['$ref'] ?? NULL) && str_starts_with($schema['$ref'], '#/$defs/') && $hops < 20; $hops++) {
+      $def = $document['$defs'][substr($schema['$ref'], 8)] ?? NULL;
+      unset($schema['$ref']);
+      $schema = is_array($def) ? $schema + $def : $schema;
     }
-    if (!is_array($node) || $depth > 8) {
+    if (!is_array($schema) || $depth > 8) {
       return;
     }
-    yield [$path, $node];
-    foreach ($node['properties'] ?? [] as $name => $property) {
+    yield [$path, $schema];
+    foreach ($schema['properties'] ?? [] as $name => $property) {
       yield from static::walk($document, $property, [...$path, (string) $name], $depth + 1);
     }
-    if (is_array($node['items'] ?? NULL)) {
-      yield from static::walk($document, $node['items'], [...$path, 0], $depth + 1);
+    if (is_array($schema['items'] ?? NULL)) {
+      yield from static::walk($document, $schema['items'], [...$path, 0], $depth + 1);
     }
     foreach (['anyOf', 'oneOf'] as $keyword) {
-      foreach ($node[$keyword] ?? [] as $branch) {
+      foreach ($schema[$keyword] ?? [] as $branch) {
         if (is_array($branch) && (isset($branch['$ref']) || isset($branch['properties']))) {
           foreach (static::walk($document, $branch, $path, $depth + 1) as [$below, $inside]) {
             if ($below !== $path) {
@@ -170,8 +170,8 @@ trait ExampleValueSetsTrait {
   /**
    * Lists the other values a watched key may take.
    *
-   * @param array $node
-   *   The key's node.
+   * @param array $schema
+   *   The key's schema.
    * @param mixed $current
    *   What it holds.
    *
@@ -179,26 +179,26 @@ trait ExampleValueSetsTrait {
    *   At most six values: each option of its list, TRUE and FALSE for a
    *   boolean, its bounds and 1 for a number, NULL where it takes null.
    */
-  protected static function alternatives(array $node, mixed $current): array {
+  protected static function alternatives(array $schema, mixed $current): array {
     $alternatives = [];
-    foreach ($node['oneOf'] ?? [] as $branch) {
+    foreach ($schema['oneOf'] ?? [] as $branch) {
       if (is_array($branch) && array_key_exists('const', $branch)) {
         $alternatives[] = $branch['const'];
       }
     }
-    foreach ($node['items']['oneOf'] ?? [] as $branch) {
+    foreach ($schema['items']['oneOf'] ?? [] as $branch) {
       if (is_array($branch) && array_key_exists('const', $branch)) {
         $alternatives[] = [$branch['const']];
       }
     }
-    $type = (array) ($node['type'] ?? []);
+    $type = (array) ($schema['type'] ?? []);
     if (in_array('boolean', $type, TRUE)) {
       array_push($alternatives, TRUE, FALSE);
     }
     if (array_intersect(['integer', 'number'], $type) !== []) {
       foreach (['minimum', 'maximum'] as $bound) {
-        if (isset($node[$bound])) {
-          $alternatives[] = $node[$bound];
+        if (isset($schema[$bound])) {
+          $alternatives[] = $schema[$bound];
         }
       }
       $alternatives[] = 1;

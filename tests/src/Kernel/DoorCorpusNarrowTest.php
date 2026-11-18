@@ -14,7 +14,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * The `narrow` surface of the hand corpus, as DoorCorpusTest runs the
  * others. It is the largest, so it runs in a class of its own.
  *
- * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+ * Decision: see docs/decisions.md#the-remaining-readers-read-schemas.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]

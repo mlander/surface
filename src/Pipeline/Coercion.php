@@ -28,8 +28,8 @@ namespace Drupal\surface\Pipeline;
  * as a cleared key, which a required key refuses (docs/semantics.md).
  *
  * It takes no definition: a caller hands it the facts it reads, the data
- * type and whether the key holds a date alone, from the key's node
- * (NodeFacts::dataType(), DefinitionSchema::declares() for DateOnly), or
+ * type and whether the key holds a date alone, from the key's schema
+ * (SchemaFacts::dataType(), DefinitionSchema::declares() for DateOnly), or
  * from a definition where the caller holds only that (KeyPaths).
  *
  * @see \Drupal\tool\EventSubscriber\InputTypeCoercionSubscriber

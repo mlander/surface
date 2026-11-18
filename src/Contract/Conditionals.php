@@ -407,7 +407,7 @@ final class Conditionals {
   protected static function appliedAt(Schema $key, string $below, Rule $rule, string $name): Schema {
     if ($below === '') {
       $applied = Answer::apply($key, $rule->answer($key), $name, 'the rule', TRUE);
-      if ($rule->description() !== NULL && is_a(DefinitionSchema::classOf($applied), DataDefinition::class, TRUE) && !NodeFacts::doesNotApply($applied)) {
+      if ($rule->description() !== NULL && is_a(DefinitionSchema::classOf($applied), DataDefinition::class, TRUE) && !SchemaFacts::doesNotApply($applied)) {
         $applied = Answer::apply($applied, Schema::any()->description($rule->description()), $name, 'the rule', TRUE);
       }
       return $applied;
@@ -416,7 +416,7 @@ final class Conditionals {
       return $key;
     }
     [$first, $rest] = array_pad(explode('.', $below, 2), 2, '');
-    $inner = DefinitionSchema::propertyNode($key, $first);
+    $inner = DefinitionSchema::propertyOf($key, $first);
     $properties = $key->get('properties');
     if ($inner === NULL || !is_array($properties)) {
       return $key;
@@ -638,7 +638,7 @@ final class Conditionals {
    */
   protected function answer(Entry $entry, Entry $holder, Emission $emission, bool $applicability = FALSE): Schema|false {
     $schema = $holder->schema();
-    if (NodeFacts::doesNotApply($schema)) {
+    if (SchemaFacts::doesNotApply($schema)) {
       return FALSE;
     }
     return $applicability ? Schema::any() : $this->stated($entry, $schema, $emission);
@@ -778,7 +778,7 @@ final class Conditionals {
    */
   public function stated(Entry $entry, Schema $schema, Emission $emission): Schema {
     if ($entry->list !== NULL) {
-      return $this->propertySchema->listKeywords($this->propertySchema->listNode($schema))[0];
+      return $this->propertySchema->listKeywords($this->propertySchema->listSchema($schema))[0];
     }
     return $this->propertySchema->property($schema, NULL, NULL, $emission->at($entry->name), FALSE, [], $emission->withoutStale())[0];
   }
@@ -786,9 +786,9 @@ final class Conditionals {
   /**
    * Answers whether a key is in its object's `required`, for one answer.
    *
-   * Read from the key's node (PropertySchema::required()), a key that
-   * holds a child frame's too: its node is composed of the child's
-   * entries' nodes.
+   * Read from the key's schema (PropertySchema::required()), a key that
+   * holds a child frame's too: its schema is composed of the child's
+   * entries' schemas.
    *
    * @param \Drupal\surface\Entry $holder
    *   The key's entry, as declared or refined for a combination.
@@ -919,24 +919,24 @@ final class Conditionals {
    */
   protected function domain(SurfaceInterface $surface, string $key, array $values, CacheableMetadata $cacheability): ?array {
     $entry = $surface->getDefinitions()->entry($key);
-    // A collection's node would be its child's whole tree: it is told
+    // A collection's schema would be its child's whole tree: it is told
     // apart by its entry.
     if ($entry === NULL || $entry->isNested() || $entry->list !== NULL) {
       return NULL;
     }
-    $node = $entry->schema();
-    if (DefinitionSchema::isList($node)) {
+    $schema = $entry->schema();
+    if (DefinitionSchema::isList($schema)) {
       return NULL;
     }
     $value = $values[$key] ?? NULL;
     if (ValueState::isConfigured($value)) {
-      return [is_int($value) || is_string($value) ? $this->propertySchema->cast($value, $node) : $value];
+      return [is_int($value) || is_string($value) ? $this->propertySchema->cast($value, $schema) : $value];
     }
-    $set = $this->propertySchema->optionSet($node, $cacheability);
+    $set = $this->propertySchema->optionSet($schema, $cacheability);
     if ($set === NULL || count($set->options) > ContractEmitter::ENUMERATION_CAP) {
       return NULL;
     }
-    return array_map(fn (int|string $option): int|float|string|bool => $this->propertySchema->cast($option, $node), array_keys($set->options));
+    return array_map(fn (int|string $option): int|float|string|bool => $this->propertySchema->cast($option, $schema), array_keys($set->options));
   }
 
   /**
@@ -1030,18 +1030,18 @@ final class Conditionals {
    *   and no `options` where nothing else was said.
    */
   public function withoutPresent(Schema $schema): Schema {
-    return Schemas::map($schema, static function (Schema $node): Schema {
-      $extension = $node->get(self::EXTENSION);
+    return Schemas::map($schema, static function (Schema $subschema): Schema {
+      $extension = $subschema->get(self::EXTENSION);
       if (is_array($extension)) {
         $extension = array_diff_key($extension, array_flip(['refined', 'stale', 'chosen', 'locked']));
-        $node = $extension === [] ? $node->without(self::EXTENSION) : $node->with(self::EXTENSION, $extension);
+        $subschema = $extension === [] ? $subschema->without(self::EXTENSION) : $subschema->with(self::EXTENSION, $extension);
       }
-      $ui = $node->get(PortableKeywords::UI);
+      $ui = $subschema->get(PortableKeywords::UI);
       if (is_array($ui)) {
         $ui = PortableUi::without($ui, ['emptyOption']);
-        $node = $ui === [] ? $node->without(PortableKeywords::UI) : $node->with(PortableKeywords::UI, $ui);
+        $subschema = $ui === [] ? $subschema->without(PortableKeywords::UI) : $subschema->with(PortableKeywords::UI, $ui);
       }
-      return $node;
+      return $subschema;
     });
   }
 

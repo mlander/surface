@@ -20,7 +20,7 @@ use PortableSchema\Builder\Schema;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * A details holding one element per property of an object node.
+ * A details holding one element per property of an object schema.
  *
  * Children are keyed by property name directly, with no wrapper nesting,
  * and each property's value reaches its child, so stored nested values
@@ -79,16 +79,16 @@ final class MapWidget extends SurfaceWidgetBase implements ContainerFactoryPlugi
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return static::type($node) === 'object' || $node->has('properties');
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    return static::type($schema) === 'object' || $schema->has('properties');
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    $properties = $node->get('properties');
-    $extension = static::extension($node);
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    $properties = $schema->get('properties');
+    $extension = static::extension($schema);
     if (!is_array($properties) || ($properties === [] && !isset($extension['doesNotApply']))) {
       // Nothing to fill in, so nothing to draw; the container is still
       // there for a rebuild to replace when another variant is chosen.
@@ -99,10 +99,10 @@ final class MapWidget extends SurfaceWidgetBase implements ContainerFactoryPlugi
     // around them.
     $element = !empty($extension['group']) ? ['#type' => 'container'] : [
       '#type' => 'details',
-      '#title' => static::text($node->get('title')),
+      '#title' => static::text($schema->get('title')),
       '#open' => TRUE,
     ];
-    $description = static::text($node->get('description'));
+    $description = static::text($schema->get('description'));
     if ($element['#type'] === 'details' && $description !== NULL) {
       $element['#description'] = $description;
     }
@@ -117,7 +117,7 @@ final class MapWidget extends SurfaceWidgetBase implements ContainerFactoryPlugi
       // required is the pipeline's validate().
       $element['#required'] = TRUE;
     }
-    return $element + $context->properties($node, is_array($value) ? $value : []);
+    return $element + $context->properties($schema, is_array($value) ? $value : []);
   }
 
   /**
@@ -129,11 +129,11 @@ final class MapWidget extends SurfaceWidgetBase implements ContainerFactoryPlugi
    * whatever the level already holds for it. A rendered property is
    * collected empty or not: what an empty submission means is the
    * pipeline's rule, not the widget's. Each child is read back by the
-   * widget that drew it (`#surface_widget`), through its property's node.
+   * widget that drew it (`#surface_widget`), through its property's schema.
    */
-  public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed {
+  public function extractValue(array $element, FormStateInterface $form_state, Schema $schema): mixed {
     $values = [];
-    $properties = (array) ($node->get('properties') ?? []);
+    $properties = (array) ($schema->get('properties') ?? []);
     foreach (Element::children($element) as $name) {
       $child = $element[$name];
       if (!is_array($child) || !empty($child[SurfaceFormBuilderInterface::PLACEHOLDER_KEY]) || !isset($child[SurfaceFormBuilderInterface::WIDGET_KEY])) {

@@ -21,10 +21,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * a reference to a user whose field names core's user selection handler
  * with settings of its own, the anonymous account left out and only the
  * accounts of one role. The lookup, asked of the controller, reads the
- * handler and its settings off the key's node and finds only that role's
+ * handler and its settings off the key's schema and finds only that role's
  * account; the default handler with no settings would find every account.
  *
- * @see docs/decisions.md#the-remaining-readers-read-nodes
+ * @see docs/decisions.md#the-remaining-readers-read-schemas
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\HandCorpus;
 
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\PortableKeywords;
 use PortableSchema\Builder\Schema;
 use Drupal\surface\Reference\References;
@@ -27,7 +27,7 @@ final class AnyTypeRefiner implements SurfaceRefinerInterface {
     if (!is_string($type) || $type === '') {
       return [];
     }
-    $bundles = (array) (NodeFacts::setting($key, References::TARGETS)[$type] ?? []);
+    $bundles = (array) (SchemaFacts::setting($key, References::TARGETS)[$type] ?? []);
     $options = array_filter(['entityTypeId' => $type, 'bundles' => array_values($bundles)]);
     return [Schema::any()->with(PortableKeywords::CHECK, [PortableKeywords::PROVIDER . References::CONSTRAINT => $options])];
   }

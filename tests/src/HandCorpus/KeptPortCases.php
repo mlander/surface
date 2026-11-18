@@ -13,7 +13,7 @@ use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Port;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 
@@ -21,7 +21,7 @@ use Drupal\surface\SurfaceInterface;
  * Ports wired to a key of a class no schema derives a definition of.
  *
  * A child reads a port its container wires to a key of a class outside
- * NodeDefinition::DERIVED (the hand corpus's NotAMapDefinition, core's
+ * DefinitionFromSchema::DERIVED (the hand corpus's NotAMapDefinition, core's
  * BaseFieldDefinition), or to an integer key; a refiner of the child's `v`
  * watches the port, and the watched-value check is sealed in at both
  * levels. The port's key is held as its schema alone, and the check is
@@ -119,7 +119,7 @@ final class KeptPortCases {
               'accepted' => $accepted,
               'refusals' => $refusals,
               'withheld' => array_keys($child->refine($child->getDefaultValues())->withheldValues()),
-              'port' => [DefinitionSchema::classOf($schema), (string) NodeFacts::label($schema)],
+              'port' => [DefinitionSchema::classOf($schema), (string) SchemaFacts::label($schema)],
             ];
           }
           catch (\Throwable $e) {

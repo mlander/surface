@@ -282,9 +282,9 @@ class EntryPortsTest extends SurfaceKernelTestBase {
   /**
    * Tests a copy bound to its ports has the sealed entry's source.
    *
-   * A sealed entry is node-first and derives its definition on the first
+   * A sealed entry is schema-first and derives its definition on the first
    * ask. A copy bound to its container's values (Entry::readingFrom())
-   * holds the entry's very node, so it has the entry's source
+   * holds the entry's very schema, so it has the entry's source
    * (Entry::sameSource()), which is what the emitter tells a key a
    * refinement moved by, and making it derives nothing; a definition the
    * entry derived already is the copy's too. Then the document served for
@@ -304,13 +304,13 @@ class EntryPortsTest extends SurfaceKernelTestBase {
     // The copy first, nothing asked before.
     $limits = $fresh()->getDefinitions()->entry('limits');
     $this->assertNotNull($limits);
-    $this->assertTrue($limits->isNodeFirst());
+    $this->assertTrue($limits->isSchemaFirst());
     $this->assertNull($derived->getValue($limits), 'Nothing asked the sealed entry yet.');
     $copy = $limits->readingFrom($values);
     $this->assertNotNull($copy, 'limits reads a port.');
     $this->assertNull($derived->getValue($limits), 'Making the copy derives nothing.');
     $this->assertNull($derived->getValue($copy), 'Nor does the copy hold a definition.');
-    $this->assertSame($limits->schema(), $copy->schema(), 'The copy holds the entry\'s very node.');
+    $this->assertSame($limits->schema(), $copy->schema(), 'The copy holds the entry\'s very schema.');
     $this->assertTrue($copy->sameSource($limits), 'The copy has the entry\'s source.');
     $this->assertTrue($limits->sameSource($copy), 'Either way round.');
 

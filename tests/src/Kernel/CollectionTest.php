@@ -235,7 +235,7 @@ class CollectionTest extends SurfaceKernelTestBase {
    *
    * The full schema states the parent's Count per value of what it watches
    * (Conditionals::enumerate()); whether the list is required there is
-   * read from its node, composed of its item's keys, as a plain key's is.
+   * read from its schema, composed of its item's keys, as a plain key's is.
    */
   public function testRequiredCollectionStaysRequiredWhenEnumerated(): void {
     $rack = (new SurfaceBuilder())->setDefinition('label', DataDefinition::create('string')->setLabel('Label'))->seal();
@@ -258,7 +258,7 @@ class CollectionTest extends SurfaceKernelTestBase {
     });
     $full = $this->container->get('surface.contract_emitter')->emitFull($builder->seal(), 'resource_test.cellar', 'update')->document['schema'];
     $this->assertTrue($full['properties']['racks']['x-surface']['enumerated'] ?? FALSE, 'The list is stated per size.');
-    $this->assertContains('racks', $full['required'] ?? [], 'And it is required, as its node says.');
+    $this->assertContains('racks', $full['required'] ?? [], 'And it is required, as its schema says.');
   }
 
   /**
@@ -266,7 +266,7 @@ class CollectionTest extends SurfaceKernelTestBase {
    *
    * What a collection read from a schema whose list is not nullable is
    * (SchemaReader::collection()): that it is always held is read from its
-   * node, composed of its item's keys, as a plain key's is.
+   * schema, composed of its item's keys, as a plain key's is.
    */
   public function testAnAlwaysHeldCollectionCannotBeCleared(): void {
     $rack = (new SurfaceBuilder())->setDefinition('label', DataDefinition::create('string')->setLabel('Label'))->seal();

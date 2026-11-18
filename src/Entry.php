@@ -11,7 +11,7 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeDefinition;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Refinement\ApplicabilityInterface;
 use Drupal\surface\Refinement\DeclaredRefiner;
 use Drupal\surface\Refinement\RuntimeRefiner;
@@ -36,14 +36,14 @@ use PortableSchema\Builder\Schema;
  *
  * An entry holds one form of its key as the source of truth: the
  * definition its source gave (the constructor, withDefinition()), or the
- * built node its source gave (ofSchema(), withSchema()). Both answers
+ * built schema its source gave (ofSchema(), withSchema()). Both answers
  * are always given: schema() and definition(). The rules:
- * - Definition-first: schema() reads the node from the definition on the
+ * - Definition-first: schema() reads the schema from the definition on the
  *   first ask (DefinitionSchema::of()) and keeps it, so every consumer
- *   that has the entry reads one node, with no service.
- * - Node-first: definition() derives the definition from the node on the
- *   first ask (NodeDefinition::of()) and keeps it. The derive refuses a
- *   node of a class other than the three it derives, of a data type
+ *   that has the entry reads one schema, with no service.
+ * - Schema-first: definition() derives the definition from the schema on the
+ *   first ask (DefinitionFromSchema::of()) and keeps it. The derive refuses a
+ *   schema of a class other than the three it derives, of a data type
  *   core's typed data manager does not define, or whose derived
  *   constraints differ from its own; ofSchema() does not check, so the
  *   refusal is thrown at the first definition() call, with the key's name.
@@ -53,7 +53,7 @@ use PortableSchema\Builder\Schema;
  *   schema() call, never at build.
  * - An entry made with the same source object keeps the other form with
  *   it (readingFrom(), withDefinition() handed the definition it holds,
- *   withSchema() handed the node it holds); one made with another source
+ *   withSchema() handed the schema it holds); one made with another source
  *   starts with that form alone.
  * - Only the form given is serialized: a build cache row is the same
  *   whether or not the other form was read, and an entry read back from
@@ -62,24 +62,24 @@ use PortableSchema\Builder\Schema;
  *   the definitions, and a refiner writes a deep copy
  *   (Surface::deepClone()). With assertions on, every later ask of the
  *   form that was not given checks it still says what the source says.
- *   EntryNodeIsNeverStaleTest proves it for every example surface and
- *   value set. A definition a node-first entry hands out is for reading:
+ *   EntrySchemaIsNeverStaleTest proves it for every example surface and
+ *   value set. A definition a schema-first entry hands out is for reading:
  *   written, it is refused at the next ask, and with assertions off the
- *   write changes that derived copy alone, never the node.
- * The seal makes every entry node-first (sealed()): every source still
- * gives a definition, and the seal reads it into the node, or composes
- * the node of a key that holds a child frame, and drops it. An entry the
- * seal keeps for a class no node derives a definition of is
+ *   write changes that derived copy alone, never the schema.
+ * The seal makes every entry schema-first (sealed()): every source still
+ * gives a definition, and the seal reads it into the schema, or composes
+ * the schema of a key that holds a child frame, and drops it. An entry the
+ * seal keeps for a class no schema derives a definition of is
  * definition-first (whole()). A refinement makes:
  * - for a key that holds a child frame refined by its child (an
- *   attachment, chosen variants, a structure at a mount), a node-first
- *   entry whose node is composed of the shell's own node and the refined
- *   child's entries' nodes (withSchema(), DefinitionSchema::withProperties());
- *   it keeps the definition built as before, handed with that node
- *   (withDefinition($definition, $node)), where the node holds a class no
- *   node derives a definition of, where a deciding key is locked, where a
- *   mount's own refiners ran, and where a key a refinement made is refined
- *   again;
+ *   attachment, chosen variants, a structure at a mount), a schema-first
+ *   entry whose schema is composed of the shell's own schema and the refined
+ *   child's entries' schemas (withSchema(),
+ *   DefinitionSchema::withProperties()); it keeps the definition built as
+ *   before, handed with that schema (withDefinition($definition, $schema)),
+ *   where the schema holds a class no schema derives a definition of, where a
+ *   deciding key is locked, where a mount's own refiners ran, and where a key a
+ *   refinement made is refined again;
  * - for a key whose refiner chain ran, a definition-first entry: the
  *   refiner's answer is its source, read whole on the first ask
  *   (withDefinition()).
@@ -87,9 +87,9 @@ use PortableSchema\Builder\Schema;
  * (sameSource()).
  *
  * Decisions: see
- * docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone,
+ * docs/decisions.md#an-entry-holds-its-schema-the-memo-is-gone,
  * docs/decisions.md#an-entry-holds-the-form-its-source-gave and
- * docs/decisions.md#a-sealed-entry-holds-its-node.
+ * docs/decisions.md#a-sealed-entry-holds-its-schema.
  *
  * @see \Drupal\surface\DefinitionMap
  *   The ordered collection of entries a data surface is sealed with.
@@ -97,25 +97,25 @@ use PortableSchema\Builder\Schema;
 final class Entry {
 
   /**
-   * The key's Typed Data definition: given, or derived from the node.
+   * The key's Typed Data definition: given, or derived from the schema.
    *
-   * NULL on a node-first entry until definition() derives it. Serialized
+   * NULL on a schema-first entry until definition() derives it. Serialized
    * only on a definition-first entry (__sleep()).
    */
   private ?DataDefinitionInterface $definition = NULL;
 
   /**
-   * The key's built node: given, or read from the definition.
+   * The key's built schema: given, or read from the definition.
    *
    * NULL on a definition-first entry until schema() reads it. Serialized
-   * only on a node-first entry (__sleep()).
+   * only on a schema-first entry (__sleep()).
    */
-  private ?Schema $node = NULL;
+  private ?Schema $schema = NULL;
 
   /**
-   * Whether the node is the source of truth, the definition derived.
+   * Whether the schema is the source of truth, the definition derived.
    */
-  private bool $nodeFirst = FALSE;
+  private bool $schemaFirst = FALSE;
 
   /**
    * Whether a refinement made this entry's source.
@@ -124,11 +124,11 @@ final class Entry {
    * (withDefinition()) and for a refined shell it composed
    * (withSchema() handed $refined), and for every copy of such an entry
    * (readingFrom(), the same source handed back). Two readers:
-   * - a definition-first entry with it reads its node from its definition
+   * - a definition-first entry with it reads its schema from its definition
    *   whole (DefinitionSchema::of()) on the first ask: a refiner's answer,
    *   whose properties are its own copies and none of them a child's key,
-   *   where a sealed definition-first shell composes its node of its
-   *   child's entries' nodes (composed());
+   *   where a sealed definition-first shell composes its schema of its
+   *   child's entries' schemas (composed());
    * - a key that holds a child frame with it, refined again, is held to
    *   the narrowing check of the whole shell on the definition built as
    *   before (Surface::refineNested(), refineMounted()): its child is the
@@ -140,10 +140,10 @@ final class Entry {
   private bool $madeByRefinement = FALSE;
 
   /**
-   * What a node-first entry is constructed with, then drops.
+   * What a schema-first entry is constructed with, then drops.
    *
    * The constructor takes a definition, as every caller hands one;
-   * ofSchema() and the copies of a node-first entry hand it this, and
+   * ofSchema() and the copies of a schema-first entry hand it this, and
    * nothing reads it.
    */
   private static ?DataDefinitionInterface $unread = NULL;
@@ -244,16 +244,16 @@ final class Entry {
   }
 
   /**
-   * Makes an entry whose source gave its built node: node-first.
+   * Makes an entry whose source gave its built schema: schema-first.
    *
-   * Its definition is derived from the node on the first definition()
-   * call (NodeDefinition::of()) and kept. Nothing is checked here: a node
-   * no definition derives from is refused at that call.
+   * Its definition is derived from the schema on the first definition()
+   * call (DefinitionFromSchema::of()) and kept. Nothing is checked here: a
+   * schema no definition derives from is refused at that call.
    *
    * @param string $name
    *   The definition key.
-   * @param \PortableSchema\Builder\Schema $node
-   *   What the key accepts, as a built node (DefinitionSchema::of()).
+   * @param \PortableSchema\Builder\Schema $schema
+   *   What the key accepts, as a built schema (DefinitionSchema::of()).
    * @param string $contributor
    *   Who introduced the key; see the constructor for this and the rest.
    * @param bool $locked
@@ -292,7 +292,7 @@ final class Entry {
    */
   public static function ofSchema(
     string $name,
-    Schema $node,
+    Schema $schema,
     string $contributor = SurfaceInterface::OWNER,
     bool $locked = FALSE,
     array $dependencies = [],
@@ -311,8 +311,8 @@ final class Entry {
   ): static {
     $entry = new static($name, self::$unread ??= new DataDefinition(), $contributor, $locked, $dependencies, $refiners, $contributions, $attachment, $variants, $paths, $runtimeOnly, $list, $watchedBy, $mounted, $held, $runtimeAccess, $lockedBecause);
     $entry->definition = NULL;
-    $entry->node = $node;
-    $entry->nodeFirst = TRUE;
+    $entry->schema = $schema;
+    $entry->schemaFirst = TRUE;
     return $entry;
   }
 
@@ -324,60 +324,60 @@ final class Entry {
    * values it carries) is settled at build time and survives
    * narrowing untouched. Handed the definition it holds, the new entry
    * is this one again, its source and its other form kept; handed
-   * another, it is definition-first, and its node is read from it whole
-   * on the first ask ($madeByRefinement), or is the node handed with it.
+   * another, it is definition-first, and its schema is read from it whole
+   * on the first ask ($madeByRefinement), or is the schema handed with it.
    *
    * A key that holds a child frame whose refinement built its definition
-   * from the refined child (a node of a class no node derives a
+   * from the refined child (a schema of a class no schema derives a
    * definition of, a chosen variant the narrowing check is kept for, a
-   * mount its own refiners refined too) is handed the node composed of
-   * the refined child's entries' nodes with it (Surface::refineNested(),
+   * mount its own refiners refined too) is handed the schema composed of
+   * the refined child's entries' schemas with it (Surface::refineNested(),
    * refineMounted()), so nothing below the key is read again.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The narrowed definition.
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The node composed for it, or NULL to read it on the first ask.
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   The schema composed for it, or NULL to read it on the first ask.
    *
    * @return static
    *   The new entry.
    */
-  public function withDefinition(DataDefinitionInterface $definition, ?Schema $node = NULL): static {
+  public function withDefinition(DataDefinitionInterface $definition, ?Schema $schema = NULL): static {
     return $definition === $this->definition
-      ? $this->remade($this->definition, $this->node, $this->nodeFirst, madeByRefinement: $this->madeByRefinement)
-      : $this->remade($definition, $node, FALSE, madeByRefinement: TRUE);
+      ? $this->remade($this->definition, $this->schema, $this->schemaFirst, madeByRefinement: $this->madeByRefinement)
+      : $this->remade($definition, $schema, FALSE, madeByRefinement: TRUE);
   }
 
   /**
-   * Returns the same entry with another built node: node-first.
+   * Returns the same entry with another built schema: schema-first.
    *
-   * The twin of withDefinition(). Handed the node it holds, the new entry
-   * is node-first and keeps the definition it holds, which reads as that
-   * node; handed another, it starts with the node alone.
+   * The twin of withDefinition(). Handed the schema it holds, the new entry
+   * is schema-first and keeps the definition it holds, which reads as that
+   * schema; handed another, it starts with the schema alone.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    * @param bool $refined
-   *   Whether a refinement composed the node (Surface::refineNested(),
+   *   Whether a refinement composed the schema (Surface::refineNested(),
    *   refineMounted()): the new entry is then madeByRefinement().
    *
    * @return static
    *   The new entry.
    */
-  public function withSchema(Schema $node, bool $refined = FALSE): static {
-    return $node === $this->node
-      ? $this->remade($this->definition, $this->node, TRUE, madeByRefinement: $this->madeByRefinement || $refined)
-      : $this->remade(NULL, $node, TRUE, madeByRefinement: $refined);
+  public function withSchema(Schema $schema, bool $refined = FALSE): static {
+    return $schema === $this->schema
+      ? $this->remade($this->definition, $this->schema, TRUE, madeByRefinement: $this->madeByRefinement || $refined)
+      : $this->remade(NULL, $schema, TRUE, madeByRefinement: $refined);
   }
 
   /**
    * Answers whether a refinement made this entry's source.
    *
-   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-nodes.
+   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-schemas.
    *
    * @return bool
    *   TRUE for an entry a refinement made (withDefinition() handed another
-   *   definition, withSchema() handed a node it composed) and its copies;
+   *   definition, withSchema() handed a schema it composed) and its copies;
    *   FALSE for a sealed entry and one a refinement left as it was.
    */
   public function madeByRefinement(): bool {
@@ -385,11 +385,11 @@ final class Entry {
   }
 
   /**
-   * Returns the same entry node-first, as the seal makes it.
+   * Returns the same entry schema-first, as the seal makes it.
    *
-   * The node is the source; the definition is dropped and derived from
-   * the node on the first ask. A key that holds a child frame composes
-   * its node of its own facts around the nodes its child's entries hold
+   * The schema is the source; the definition is dropped and derived from
+   * the schema on the first ask. A key that holds a child frame composes
+   * its schema of its own facts around the schemas its child's entries hold
    * (composed()): the seal hands such a key its own facts alone (an
    * attachment's or chosen variants' empty map, a collection's list of an
    * empty map; SurfaceBuilder::seal()), and the child's keys are placed in
@@ -397,9 +397,9 @@ final class Entry {
    * refined: the child's entries are the very keys the key holds. A
    * definition that holds the child's keys already has each taken from
    * the child's entry where it is that entry's definition, as schema()
-   * does. Any other key's node is read from its definition.
+   * does. Any other key's schema is read from its definition.
    *
-   * Decision: see docs/decisions.md#a-sealed-entry-holds-its-node.
+   * Decision: see docs/decisions.md#a-sealed-entry-holds-its-schema.
    *
    * @param string|null $chosen
    *   For a key with variants whose deciding key is locked, the variant
@@ -410,10 +410,10 @@ final class Entry {
    *
    * @internal
    *   The seal's alone, through DefinitionMap::fromArrays() with
-   *   nodeFirst.
+   *   schemaFirst.
    */
   public function sealed(?string $chosen = NULL): static {
-    assert(!$this->nodeFirst && $this->definition !== NULL);
+    assert(!$this->schemaFirst && $this->definition !== NULL);
     if (!$this->isShell()) {
       return $this->remade(NULL, $this->schema(), TRUE);
     }
@@ -430,7 +430,7 @@ final class Entry {
    * Returns the same entry definition-first, its definition made whole.
    *
    * For an entry the seal keeps definition-first (a key of a class no
-   * node derives a definition of): a key that holds a child frame was
+   * schema derives a definition of): a key that holds a child frame was
    * handed its own facts alone (sealed()), and its definition is made of
    * them and its child's definitions as refinement makes it
    * (Attachment::mapOf(), Collection::listOf(), Variants::definitionFor()).
@@ -444,7 +444,7 @@ final class Entry {
    *
    * @internal
    *   The seal's alone, through DefinitionMap::fromArrays() with
-   *   nodeFirst.
+   *   schemaFirst.
    */
   public function whole(?string $chosen = NULL): static {
     $definition = $this->definition;
@@ -461,11 +461,11 @@ final class Entry {
    * Makes a copy of this entry with the forms and the source given.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
-   *   The definition, or NULL for a node-first entry not derived yet.
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The node, or NULL for a definition-first entry not read yet.
-   * @param bool $nodeFirst
-   *   Whether the node is the source.
+   *   The definition, or NULL for a schema-first entry not derived yet.
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   The schema, or NULL for a definition-first entry not read yet.
+   * @param bool $schemaFirst
+   *   Whether the schema is the source.
    * @param \Drupal\surface\Attachment|null $attachment
    *   The attachment, NULL for this entry's.
    * @param array<string, \Drupal\surface\Attachment> $mounted
@@ -476,7 +476,7 @@ final class Entry {
    * @return static
    *   The copy.
    */
-  private function remade(?DataDefinitionInterface $definition, ?Schema $node, bool $nodeFirst, ?Attachment $attachment = NULL, array $mounted = [], bool $madeByRefinement = FALSE): static {
+  private function remade(?DataDefinitionInterface $definition, ?Schema $schema, bool $schemaFirst, ?Attachment $attachment = NULL, array $mounted = [], bool $madeByRefinement = FALSE): static {
     $entry = new static(
       $this->name,
       $definition ?? (self::$unread ??= new DataDefinition()),
@@ -497,8 +497,8 @@ final class Entry {
       $this->lockedBecause,
     );
     $entry->definition = $definition;
-    $entry->node = $node;
-    $entry->nodeFirst = $nodeFirst;
+    $entry->schema = $schema;
+    $entry->schemaFirst = $schemaFirst;
     $entry->madeByRefinement = $madeByRefinement;
     return $entry;
   }
@@ -507,23 +507,23 @@ final class Entry {
    * Answers which form the entry holds as its source.
    *
    * For the build's widget walk, which walks a definition-first entry by
-   * its definition and a node-first one by its node; for a place in the
+   * its definition and a schema-first one by its schema; for a place in the
    * values (Location), which walks a definition its source gave beside
-   * the node and derives none; and for the watched-value walks
+   * the schema and derives none; and for the watched-value walks
    * (Surface::ruledOutWatchedValues(), refusedWatchedValues(), through
-   * watchedPlaces()), which walk a definition its source gave and a node
-   * otherwise. Every other reader reads a fact from the key's node.
+   * watchedPlaces()), which walk a definition its source gave and a schema
+   * otherwise. Every other reader reads a fact from the key's schema.
    *
    * Decision: see
    * docs/decisions.md#nothing-asks-for-a-definition-it-does-not-need and
-   * docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node.
+   * docs/decisions.md#a-fact-is-read-from-the-schema-and-the-options-service-takes-a-schema.
    *
    * @return bool
-   *   TRUE when its source gave the node (node-first), FALSE when its
+   *   TRUE when its source gave the schema (schema-first), FALSE when its
    *   source gave the definition.
    */
-  public function isNodeFirst(): bool {
-    return $this->nodeFirst;
+  public function isSchemaFirst(): bool {
+    return $this->schemaFirst;
   }
 
   /**
@@ -531,12 +531,12 @@ final class Entry {
    *
    * Asked for only where an edge needs a definition: a refiner,
    * ConstraintRunner, a caller of the options service that holds no
-   * node. A key's facts are read from its node (schema()),
+   * schema. A key's facts are read from its schema (schema()),
    * a key that holds a child frame's too, and the options service is
-   * handed the node.
+   * handed the schema.
    *
-   * On a node-first entry it is derived from the node on the first call
-   * (NodeDefinition::of(), which asks core's typed data manager whether
+   * On a schema-first entry it is derived from the schema on the first call
+   * (DefinitionFromSchema::of(), which asks core's typed data manager whether
    * the type is defined) and kept: every later call returns the same
    * object.
    *
@@ -546,76 +546,76 @@ final class Entry {
    *   The definition.
    *
    * @throws \LogicException
-   *   On a node-first entry, when no definition derives from its node.
+   *   On a schema-first entry, when no definition derives from its schema.
    * @throws \AssertionError
-   *   With assertions on, on a node-first entry, when the derived
+   *   With assertions on, on a schema-first entry, when the derived
    *   definition was written after it was derived.
    */
   public function definition(): DataDefinitionInterface {
     if ($this->definition === NULL) {
-      assert($this->node !== NULL);
+      assert($this->schema !== NULL);
       try {
-        return $this->definition = NodeDefinition::of($this->node);
+        return $this->definition = DefinitionFromSchema::of($this->schema);
       }
       catch (\LogicException $e) {
-        throw new \LogicException(sprintf('The "%s" key\'s source gave a node, and no definition derives from it: %s', $this->name, $e->getMessage()), 0, $e);
+        throw new \LogicException(sprintf('The "%s" key\'s source gave a schema, and no definition derives from it: %s', $this->name, $e->getMessage()), 0, $e);
       }
     }
-    // With assertions on, each later ask of a node-first entry reads the
+    // With assertions on, each later ask of a schema-first entry reads the
     // derived definition again: the two differ only where an edge wrote
     // the definition it was handed, which no code may do.
-    assert(!$this->nodeFirst || DefinitionSchema::same($this->node, DefinitionSchema::of($this->definition)), sprintf('The definition of the "%s" key, derived from the node its source gave, was written after it was derived. A definition an entry gives is never written: write a copy and make an entry of it (withDefinition()).', $this->name));
+    assert(!$this->schemaFirst || DefinitionSchema::same($this->schema, DefinitionSchema::of($this->definition)), sprintf('The definition of the "%s" key, derived from the schema its source gave, was written after it was derived. A definition an entry gives is never written: write a copy and make an entry of it (withDefinition()).', $this->name));
     return $this->definition;
   }
 
   /**
-   * Gets the key's built node.
+   * Gets the key's built schema.
    *
    * On a definition-first entry, read from the definition on the first
    * call (DefinitionSchema::of()) and kept: every later call returns the
    * same object. A key that holds a child frame (isShell()) the seal kept
    * definition-first composes it instead (composed()): its own facts read
-   * once, around the nodes its child's entries hold, so no node below it
+   * once, around the schemas its child's entries hold, so no schema below it
    * is read twice; a refinement's definition is read whole ($madeByRefinement).
-   * On a node-first entry, the node its source gave; on an entry a
-   * refinement handed a node with its definition, that node. It asks no
+   * On a schema-first entry, the schema its source gave; on an entry a
+   * refinement handed a schema with its definition, that schema. It asks no
    * service.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The built node.
+   *   The built schema.
    *
    * @throws \LogicException
-   *   When the definition holds itself, which no node can be read from.
+   *   When the definition holds itself, which no schema can be read from.
    * @throws \AssertionError
    *   With assertions on, on a definition-first entry, when the
-   *   definition was written after its node was read, or when a shell's
-   *   node was composed of other children than its definition holds.
+   *   definition was written after its schema was read, or when a shell's
+   *   schema was composed of other children than its definition holds.
    */
   public function schema(): Schema {
-    if ($this->nodeFirst) {
-      assert($this->node !== NULL);
-      return $this->node;
+    if ($this->schemaFirst) {
+      assert($this->schema !== NULL);
+      return $this->schema;
     }
     // With assertions on, each later ask reads the definition again: the
     // two differ only where the definition was written after the entry
     // was made, which no code may do (a refiner writes a copy).
     assert($this->definition !== NULL);
-    assert($this->node === NULL || DefinitionSchema::same($this->node, DefinitionSchema::of($this->definition)), sprintf('The definition of the "%s" key, its source, was written after its node was read. An entry\'s definition is never written: write a copy and make an entry of it (withDefinition()).', $this->name));
-    if ($this->node === NULL && $this->isShell() && !$this->madeByRefinement) {
-      $this->node = $this->composed($this->definition);
+    assert($this->schema === NULL || DefinitionSchema::same($this->schema, DefinitionSchema::of($this->definition)), sprintf('The definition of the "%s" key, its source, was written after its schema was read. An entry\'s definition is never written: write a copy and make an entry of it (withDefinition()).', $this->name));
+    if ($this->schema === NULL && $this->isShell() && !$this->madeByRefinement) {
+      $this->schema = $this->composed($this->definition);
       // With assertions on, the first ask of a shell reads the definition
-      // too: the two differ where the node was composed of children that
+      // too: the two differ where the schema was composed of children that
       // are not the ones the definition holds.
-      assert(DefinitionSchema::same($this->node, DefinitionSchema::of($this->definition)), sprintf('The node of the "%s" key was composed of children that are not the ones its definition holds.', $this->name));
-      return $this->node;
+      assert(DefinitionSchema::same($this->schema, DefinitionSchema::of($this->definition)), sprintf('The schema of the "%s" key was composed of children that are not the ones its definition holds.', $this->name));
+      return $this->schema;
     }
-    return $this->node ??= DefinitionSchema::of($this->definition);
+    return $this->schema ??= DefinitionSchema::of($this->definition);
   }
 
   /**
-   * Composes a shell's node: its own facts around its children's nodes.
+   * Composes a shell's schema: its own facts around its children's schemas.
    *
-   * The node DefinitionSchema::of() reads from the definition, each
+   * The schema DefinitionSchema::of() reads from the definition, each
    * property that is a child's key taken from that key's entry
    * (DefinitionSchema::around()):
    * - an attachment: the child's keys, the map's properties;
@@ -632,12 +632,12 @@ final class Entry {
    * key holds its own facts alone, and its child's keys are placed in it
    * by name from the child given (sealed()). Only the seal's entries and
    * those it keeps definition-first compose; a refinement composes its
-   * shells' nodes itself (Surface::refineNested(), refineMounted()) and
+   * shells' schemas itself (Surface::refineNested(), refineMounted()) and
    * hands them on, and reads a refiner's answer whole ($madeByRefinement).
    *
    * Decision: see
-   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own
-   * and docs/decisions.md#a-sealed-entry-holds-its-node.
+   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-schema-of-its-own
+   * and docs/decisions.md#a-sealed-entry-holds-its-schema.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key's definition.
@@ -646,7 +646,7 @@ final class Entry {
    *   otherwise.
    *
    * @return \PortableSchema\Builder\Schema
-   *   Its node.
+   *   Its schema.
    */
   private function composed(DataDefinitionInterface $definition, ?SurfaceInterface $sealed = NULL): Schema {
     if ($this->list !== NULL) {
@@ -683,33 +683,33 @@ final class Entry {
   }
 
   /**
-   * Reads a map around the nodes of the children's keys it holds.
+   * Reads a map around the schemas of the children's keys it holds.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $map
    *   The map.
    * @param \Drupal\surface\SurfaceInterface[] $children
    *   The children whose entries' definitions may be its properties.
    * @param \Drupal\surface\SurfaceInterface|null $byName
-   *   A child whose entries' nodes are taken by name: a structure at a
+   *   A child whose entries' schemas are taken by name: a structure at a
    *   sealed mount.
    * @param \Drupal\surface\SurfaceInterface|null $sealed
    *   At the seal, the child whose keys the map holds: each of its
    *   entries the map does not hold as a property is placed after the
-   *   map's own properties, by name, its entry's node
+   *   map's own properties, by name, its entry's schema
    *   (DefinitionSchema::around()).
    *
    * @return \PortableSchema\Builder\Schema
-   *   The map's node.
+   *   The map's schema.
    */
   private static function framed(DataDefinitionInterface $map, array $children, ?SurfaceInterface $byName = NULL, ?SurfaceInterface $sealed = NULL): Schema {
-    $nodes = [];
+    $schemas = [];
     // The seal's shell holds no property: it is a map all the same once
     // its child's keys are placed in it.
     if ($map instanceof ComplexDataDefinitionInterface && !$map instanceof ListDataDefinitionInterface && (DefinitionSchema::isMap($map) || $sealed !== NULL)) {
       $held = $map->getPropertyDefinitions();
       foreach ($sealed?->getDefinitions()->entries() ?? [] as $name => $entry) {
         if (!isset($held[$name])) {
-          $nodes[(string) $name] = $entry->schema();
+          $schemas[(string) $name] = $entry->schema();
         }
       }
       foreach ($held as $name => $property) {
@@ -717,48 +717,48 @@ final class Entry {
         foreach ($children as $child) {
           $entry = $child->getDefinitions()->entry($name);
           if ($entry !== NULL && $entry->definition() === $property) {
-            $nodes[$name] = $entry->schema();
+            $schemas[$name] = $entry->schema();
             continue 2;
           }
         }
         $entry = $byName?->getDefinitions()->entry($name);
         if ($entry !== NULL) {
-          $nodes[$name] = $entry->schema();
+          $schemas[$name] = $entry->schema();
         }
       }
     }
-    return DefinitionSchema::around($map, $nodes);
+    return DefinitionSchema::around($map, $schemas);
   }
 
   /**
    * Names what an entry serializes: every member but the form not given.
    *
-   * A definition-first entry serializes its definition, never its node; a
-   * node-first one its node and the mark, never the derived definition.
+   * A definition-first entry serializes its definition, never its schema; a
+   * schema-first one its schema and the mark, never the derived definition.
    * So the serialized entry is the same whether or not the other form was
    * read, and a build cache row does not depend on what a consumer asked
    * before it was written. A definition-first entry serializes the same
-   * members in the same order as before node-first entries existed. A
+   * members in the same order as before schema-first entries existed. A
    * private member serializes under the class's name: a row written
    * while the definition was a public member does not match the class,
    * and the cache is rebuilt, as after any change to a serialized class.
    * An entry a refinement made serializes that mark as well
    * ($madeByRefinement), last; any other entry the same members as
    * before. Without it, a definition-first one that holds a child frame
-   * would wake composing its node of its sealed child's keys, and a
+   * would wake composing its schema of its sealed child's keys, and a
    * woken refined shell refined again would skip the narrowing check of
-   * the whole shell. A refined shell's node-first entry serializes its node,
-   * which holds its refined child's entries' nodes: one serialized graph
-   * keeps object identity, so they wake as one, read once.
+   * the whole shell. A refined shell's schema-first entry serializes its
+   * schema, which holds its refined child's entries' schemas: one serialized
+   * graph keeps object identity, so they wake as one, read once.
    *
    * @return string[]
    *   The constructor's members, in their order, the given form second,
    *   and the mark last where it is set.
    */
   public function __sleep(): array {
-    $forms = ['definition' => TRUE, 'node' => TRUE, 'nodeFirst' => TRUE, 'madeByRefinement' => TRUE];
+    $forms = ['definition' => TRUE, 'schema' => TRUE, 'schemaFirst' => TRUE, 'madeByRefinement' => TRUE];
     $members = array_keys(array_diff_key(get_object_vars($this), $forms));
-    array_splice($members, 1, 0, $this->nodeFirst ? ['node', 'nodeFirst'] : ['definition']);
+    array_splice($members, 1, 0, $this->schemaFirst ? ['schema', 'schemaFirst'] : ['definition']);
     if ($this->madeByRefinement) {
       $members[] = 'madeByRefinement';
     }
@@ -1026,22 +1026,22 @@ final class Entry {
     // whose ports it only rebound by that. The other form read or derived
     // already is its own; one not read or derived yet is read or derived
     // by the copy on its own first ask.
-    return $this->remade($this->definition, $this->node, $this->nodeFirst, $attachment, $mounted, $this->madeByRefinement);
+    return $this->remade($this->definition, $this->schema, $this->schemaFirst, $attachment, $mounted, $this->madeByRefinement);
   }
 
   /**
    * Answers whether another entry holds this entry's source.
    *
-   * The same form, and the very object that form is: the node of a
-   * node-first entry, the definition of a definition-first one. A copy of
+   * The same form, and the very object that form is: the schema of a
+   * schema-first entry, the definition of a definition-first one. A copy of
    * an entry (readingFrom(), withDefinition() handed the definition it
-   * holds, withSchema() handed the node it holds) has its source; an
+   * holds, withSchema() handed the schema it holds) has its source; an
    * entry a refinement made has a source of its own, even where it says
    * what the entry says. What the served contract tells a key a
    * refinement moved by (ContractEmitter::frame(), collection()). Nothing
    * is read or derived to answer.
    *
-   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-nodes.
+   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-schemas.
    *
    * @param \Drupal\surface\Entry $other
    *   The other entry.
@@ -1050,8 +1050,8 @@ final class Entry {
    *   TRUE when the two hold one source.
    */
   public function sameSource(Entry $other): bool {
-    return $this->nodeFirst === $other->nodeFirst
-      && ($this->nodeFirst ? $this->node === $other->node : $this->definition === $other->definition);
+    return $this->schemaFirst === $other->schemaFirst
+      && ($this->schemaFirst ? $this->schema === $other->schema : $this->definition === $other->definition);
   }
 
   /**
@@ -1069,16 +1069,16 @@ final class Entry {
   }
 
   /**
-   * Answers whether this key holds a child frame, so its node is composed.
+   * Answers whether this key holds a child frame, so its schema is composed.
    *
    * An attached child, variants, a collection or a mount: the key's
    * definition holds the child's keys, which the child's own entries hold
-   * the nodes of. schema() composes the key's node of its own facts and
-   * those nodes (composed()), so nothing below the key is read twice, and
-   * every reader reads the key's facts from its node as any key's.
+   * the schemas of. schema() composes the key's schema of its own facts and
+   * those schemas (composed()), so nothing below the key is read twice, and
+   * every reader reads the key's facts from its schema as any key's.
    *
    * Decision: see
-   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-node-of-its-own.
+   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-schema-of-its-own.
    *
    * @return bool
    *   TRUE for a key that holds a child frame.

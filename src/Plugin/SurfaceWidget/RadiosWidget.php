@@ -7,7 +7,7 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Pipeline\ValueState;
@@ -54,7 +54,7 @@ final class RadiosWidget extends ChoiceWidgetBase implements SchemaWidgetInterfa
    *   TRUE when it is one value and asks for radios.
    */
   public static function drawsOne(Schema $schema): bool {
-    return !DefinitionSchema::isList($schema) && NodeFacts::setting($schema, 'widget') === 'radios';
+    return !DefinitionSchema::isList($schema) && SchemaFacts::setting($schema, 'widget') === 'radios';
   }
 
   /**
@@ -70,8 +70,8 @@ final class RadiosWidget extends ChoiceWidgetBase implements SchemaWidgetInterfa
    * One value that offers a list; drawn as radios only where the
    * document's word says so, since the select is asked first.
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return static::type($node) !== 'array' && static::offers($node);
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    return static::type($schema) !== 'array' && static::offers($schema);
   }
 
   /**
@@ -79,16 +79,16 @@ final class RadiosWidget extends ChoiceWidgetBase implements SchemaWidgetInterfa
    *
    * Decision: see docs/decisions.md#the-empty-option-rule.
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    [$options, $descriptions] = static::choices($node);
-    $stale = $context->stale || !empty(static::extension($node)['stale']);
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    [$options, $descriptions] = static::choices($schema);
+    $stale = $context->stale || !empty(static::extension($schema)['stale']);
     $configured = ValueState::isConfigured($value);
     $chosen = !$stale && $configured && (is_int($value) || is_string($value)) && array_key_exists($value, $options);
-    $said = static::options($node)['emptyOption'] ?? NULL;
+    $said = static::options($schema)['emptyOption'] ?? NULL;
     $said = is_object($said) ? (array) $said : $said;
-    $holds = $context->required || !static::allowsNull($node);
+    $holds = $context->required || !static::allowsNull($schema);
     $none = is_array($said) && is_bool($said['show'] ?? NULL) ? $said['show'] : !$holds;
-    $element = $this->baseElement($node, $context) + ['#type' => 'radios'];
+    $element = $this->baseElement($schema, $context) + ['#type' => 'radios'];
     $element['#options'] = $none ? ['' => (string) (is_array($said) && is_string($said['label'] ?? NULL) ? $said['label'] : $this->t('- None -'))] + $options : $options;
     $element['#default_value'] = match (TRUE) {
       $chosen => $value,

@@ -9,7 +9,7 @@ use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
@@ -64,7 +64,7 @@ final class JsonWidget extends SurfaceWidgetBase implements SchemaWidgetInterfac
     if (DefinitionSchema::isList($schema)) {
       return TRUE;
     }
-    return NodeFacts::dataType($schema) === 'any' && NodeFacts::variantsBy($schema) === NULL;
+    return SchemaFacts::dataType($schema) === 'any' && SchemaFacts::variantsBy($schema) === NULL;
   }
 
   /**
@@ -79,20 +79,20 @@ final class JsonWidget extends SurfaceWidgetBase implements SchemaWidgetInterfac
    *
    * Whatever reaches it: it is asked last.
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
     return TRUE;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    $element = $this->baseElement($node, $context) + [
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    $element = $this->baseElement($schema, $context) + [
       '#type' => 'textarea',
       '#rows' => 5,
       '#default_value' => $value === NULL ? '' : (string) json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
     ];
-    $said = (string) $this->said($node);
+    $said = (string) $this->said($schema);
     $element['#description'] = isset($element['#description']) ? $element['#description'] . ' ' . $said : $said;
     return $element;
   }
@@ -104,7 +104,7 @@ final class JsonWidget extends SurfaceWidgetBase implements SchemaWidgetInterfac
    * is not JSON is an error on the element, and sends nothing. A value
    * that is not text (a payload's, handed in already decoded) passes.
    */
-  public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed {
+  public function extractValue(array $element, FormStateInterface $form_state, Schema $schema): mixed {
     $raw = $this->rawValue($element, $form_state);
     if (!is_string($raw)) {
       return $raw;
@@ -133,16 +133,16 @@ final class JsonWidget extends SurfaceWidgetBase implements SchemaWidgetInterfac
   /**
    * Says that the value is JSON, and what type it is, where that is known.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The sentence.
    */
-  protected function said(Schema $node): TranslatableMarkup {
-    $types = static::types($node);
+  protected function said(Schema $schema): TranslatableMarkup {
+    $types = static::types($schema);
     if ($types === ['array']) {
-      $items = $node->get('items');
+      $items = $schema->get('items');
       $item = $items instanceof Schema && !$items->isBoolean() ? static::type($items) : NULL;
       return match ($item) {
         'object' => $this->t('Enter JSON: a list of objects.'),
@@ -150,7 +150,7 @@ final class JsonWidget extends SurfaceWidgetBase implements SchemaWidgetInterfac
         default => $this->t('Enter JSON: a list.'),
       };
     }
-    $types = array_values(array_intersect(self::TYPES, static::statedTypes($node)));
+    $types = array_values(array_intersect(self::TYPES, static::statedTypes($schema)));
     if ($types === []) {
       return $this->t('Enter JSON.');
     }

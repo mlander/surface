@@ -73,7 +73,7 @@ final class ThemeRegionOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, Schema $node): OptionSet {
+  public function resolve(Constraint $constraint, Schema $schema): OptionSet {
     assert($constraint instanceof ThemeRegionConstraint);
     return new OptionSet($constraint->regions($this->themes), [], (new CacheableMetadata())->addCacheTags(['config:core.extension']));
   }

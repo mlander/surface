@@ -9,7 +9,7 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\surface\Contract\ServedContract;
-use Drupal\surface\Form\Document\DocumentNodes;
+use Drupal\surface\Form\Document\DocumentSchemas;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Widget\SurfaceWidgetBase;
@@ -651,7 +651,7 @@ class DocumentFormTest extends SurfaceKernelTestBase {
     $this->assertSame(['by' => 'pricing', 'for' => 'paid'], $paid['ticket'][SurfaceFormBuilderInterface::DRAWN_FOR_KEY]);
     $this->assertArrayHasKey('price', $paid['ticket'], 'The paid ticket\'s keys.');
     $this->assertContains('ticket', $paid['pricing'][SurfaceFormBuilderInterface::TRIGGER_KEY]['replaces']);
-    $this->assertNull(DocumentNodes::of($this->formBuilder()->envelope($surface, ['pricing' => 'free'] + $values))->at('/ticket')?->get('description'), 'The free ticket\'s def says what the structure is, not what the key is for.');
+    $this->assertNull(DocumentSchemas::of($this->formBuilder()->envelope($surface, ['pricing' => 'free'] + $values))->at('/ticket')?->get('description'), 'The free ticket\'s def says what the structure is, not what the key is for.');
   }
 
   /**
@@ -675,9 +675,9 @@ class DocumentFormTest extends SurfaceKernelTestBase {
    */
   public function testShippedVariantKeysShowNoDefDescription(): void {
     $mailer = $this->shipped(MailerResource::class);
-    $nodes = DocumentNodes::of($this->formBuilder()->envelope($mailer, $mailer->getDefaultValues()));
-    $this->assertNotNull($nodes->at('/credential'));
-    $this->assertNull($nodes->at('/credential')->get('description'));
+    $schemas = DocumentSchemas::of($this->formBuilder()->envelope($mailer, $mailer->getDefaultValues()));
+    $this->assertNotNull($schemas->at('/credential'));
+    $this->assertNull($schemas->at('/credential')->get('description'));
     $form = $this->formBuilder()->buildSurfaceForm($mailer, $mailer->getDefaultValues(), new FormState());
     $this->assertArrayNotHasKey('#description', $form['credential']);
   }

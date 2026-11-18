@@ -11,7 +11,7 @@ use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Schemas;
@@ -30,7 +30,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * candidates the options service does not list: there are more than the
  * site's limit. A key that asks for it by name, `autocomplete` (a
  * reference field whose form display draws it so), is drawn so however
- * many there are. The document names it `autocomplete`, and its node's
+ * many there are. The document names it `autocomplete`, and its schema's
  * `drupal:SurfaceValidReference` check says which entity type and which
  * bundles it may name; core's `entity_autocomplete` element draws it, its
  * route asking the same selection handler with the same settings
@@ -56,7 +56,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 final class AutocompleteWidget extends SurfaceWidgetBase implements ContainerFactoryPluginInterface, SchemaWidgetInterface {
 
   /**
-   * The check a reference's node names its entity type in.
+   * The check a reference's schema names its entity type in.
    */
   public const CHECK = 'drupal:SurfaceValidReference';
 
@@ -113,29 +113,29 @@ final class AutocompleteWidget extends SurfaceWidgetBase implements ContainerFac
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
     return static::draws($schema)
-      && (NodeFacts::setting($schema, 'widget') === 'autocomplete' || $choice->optionSet($schema) === NULL);
+      && (SchemaFacts::setting($schema, 'widget') === 'autocomplete' || $choice->optionSet($schema) === NULL);
   }
 
   /**
    * {@inheritdoc}
    *
-   * One value whose node names the entity type it refers to.
+   * One value whose schema names the entity type it refers to.
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return static::type($node) !== 'array' && static::target($node) !== NULL;
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    return static::type($schema) !== 'array' && static::target($schema) !== NULL;
   }
 
   /**
-   * Reads what a reference's node says it may name.
+   * Reads what a reference's schema says it may name.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return array{entityTypeId: string, bundles: string[], handler: string, handlerSettings: array}|null
-   *   The check's options, or NULL where the node names no entity type.
+   *   The check's options, or NULL where the schema names no entity type.
    */
-  public static function target(Schema $node): ?array {
-    $checks = Schemas::data($node->get(PortableKeywords::CHECK)) ?? [];
+  public static function target(Schema $schema): ?array {
+    $checks = Schemas::data($schema->get(PortableKeywords::CHECK)) ?? [];
     $options = Schemas::data($checks[self::CHECK] ?? NULL);
     if ($options === NULL || !is_string($options['entityTypeId'] ?? NULL) || $options['entityTypeId'] === '') {
       return NULL;
@@ -151,8 +151,8 @@ final class AutocompleteWidget extends SurfaceWidgetBase implements ContainerFac
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    $target = static::target($node);
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    $target = static::target($schema);
     assert($target !== NULL);
     if ($target['handler'] === '') {
       $selection = $context->selection($context->pointer);
@@ -163,7 +163,7 @@ final class AutocompleteWidget extends SurfaceWidgetBase implements ContainerFac
     }
     $handler = $target['handler'];
     $label = is_int($value) || (is_string($value) && $value !== '') ? $context->labelOf($target['entityTypeId'], $value) : NULL;
-    return $this->baseElement($node, $context) + [
+    return $this->baseElement($schema, $context) + [
       '#type' => 'entity_autocomplete',
       '#target_type' => $target['entityTypeId'],
       '#selection_handler' => $handler === '' ? 'default' : $handler,
@@ -186,7 +186,7 @@ final class AutocompleteWidget extends SurfaceWidgetBase implements ContainerFac
    * element writes a suggestion; an id typed alone is taken as it is, and
    * anything else is handed on as typed, for the key's rules to refuse.
    */
-  public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed {
+  public function extractValue(array $element, FormStateInterface $form_state, Schema $schema): mixed {
     $raw = $this->rawValue($element, $form_state);
     if (!is_string($raw)) {
       return $raw;

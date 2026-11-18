@@ -1416,11 +1416,11 @@ class ServedContractTest extends SurfaceKernelTestBase {
   public function testOneIdTwoDeclarationsKeepsBoth(): void {
     $leaf = new SurfaceBuilder();
     $leaf->setDefinition('depth', DataDefinition::create('integer'));
-    $node = new SurfaceBuilder();
-    $node->setDefinition('name', DataDefinition::create('string'));
-    $node->attach('next', new Attachment($leaf->seal(), NULL, 'loop.node'));
+    $middle = new SurfaceBuilder();
+    $middle->setDefinition('name', DataDefinition::create('string'));
+    $middle->attach('next', new Attachment($leaf->seal(), NULL, 'loop.schema'));
     $root = new SurfaceBuilder();
-    $root->attach('first', new Attachment($node->seal(), NULL, 'loop.node'));
+    $root->attach('first', new Attachment($middle->seal(), NULL, 'loop.schema'));
     $surface = $root->seal();
     $emitter = $this->container->get('surface.contract_emitter');
     foreach ([
@@ -1431,10 +1431,10 @@ class ServedContractTest extends SurfaceKernelTestBase {
       $this->assertWellFormed($schema);
       // A def is filed when it is finished, so the inner one, finished
       // first, keeps the id.
-      $this->assertSame(['loop.node', 'loop.node@2'], array_keys($schema['$defs']));
-      $this->assertSame(['depth'], array_keys($schema['$defs']['loop.node']['properties']));
-      $this->assertSame('#/$defs/loop.node', $schema['$defs']['loop.node@2']['properties']['next']['$ref']);
-      $this->assertSame('#/$defs/loop.node@2', $schema['properties']['first']['$ref']);
+      $this->assertSame(['loop.schema', 'loop.schema@2'], array_keys($schema['$defs']));
+      $this->assertSame(['depth'], array_keys($schema['$defs']['loop.schema']['properties']));
+      $this->assertSame('#/$defs/loop.schema', $schema['$defs']['loop.schema@2']['properties']['next']['$ref']);
+      $this->assertSame('#/$defs/loop.schema@2', $schema['properties']['first']['$ref']);
       $this->assertTrue($this->validates($schema, ['first' => ['name' => 'a', 'next' => ['depth' => 1]]]));
       $this->assertFalse($this->validates($schema, ['first' => ['name' => 'a', 'next' => ['name' => 'b']]]));
       $inline = Schemas::decoded(SchemaResolver::inline(Schema::from($schema)));

@@ -39,8 +39,8 @@ final class ColorPickerWidget extends SurfaceWidgetBase implements SchemaWidgetI
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return !Secrets::marked($node);
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    return !Secrets::marked($schema);
   }
 
   /**
@@ -53,12 +53,12 @@ final class ColorPickerWidget extends SurfaceWidgetBase implements SchemaWidgetI
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    $element = $this->baseElement($node, $context) + [
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    $element = $this->baseElement($schema, $context) + [
       '#type' => 'color',
       '#default_value' => $value ?? '#000000',
     ];
-    $palette = static::options($node)['palette'] ?? NULL;
+    $palette = static::options($schema)['palette'] ?? NULL;
     if (is_array($palette) && $palette !== []) {
       $element['#attributes']['data-palette'] = implode(' ', array_map('strval', $palette));
     }

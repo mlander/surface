@@ -40,7 +40,7 @@ final class MachineNameElement {
   public const SOURCE_KEY = '#surface_machine_name_source';
 
   /**
-   * The pattern a machine name's node states.
+   * The pattern a machine name's schema states.
    */
   public const PATTERN = '^[a-z0-9_]+$';
 

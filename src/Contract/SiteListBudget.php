@@ -119,7 +119,7 @@ final class SiteListBudget {
    *
    * @return bool
    *   TRUE for variants the site lists, and a map of keys from the site.
-   *   Whether an attached map is one is read from its node (`each`).
+   *   Whether an attached map is one is read from its schema (`each`).
    */
   public static function listedBySite(Entry $entry): bool {
     if ($entry->variants !== NULL) {
@@ -128,7 +128,7 @@ final class SiteListBudget {
     if ($entry->attachment === NULL) {
       return FALSE;
     }
-    return NodeFacts::each($entry->schema()) !== NULL;
+    return SchemaFacts::each($entry->schema()) !== NULL;
   }
 
   /**

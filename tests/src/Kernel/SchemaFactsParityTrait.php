@@ -9,7 +9,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Reference\References;
@@ -18,17 +18,17 @@ use Drupal\surface\Storage\ConfigObjectStorage;
 use PortableSchema\Builder\Schema;
 
 /**
- * Compares each reader of a node with the definition call it stands for.
+ * Compares each reader of a schema with the definition call it stands for.
  *
- * For a definition and its built node, at every depth the node holds a
- * node (a map's properties, a list's item, a shape's, a config type's and
- * `each`'s definition), each reader of a node answers what the call on
+ * For a definition and its built schema, at every depth the schema holds a
+ * schema (a map's properties, a list's item, a shape's, a config type's and
+ * `each`'s definition), each reader of a schema answers what the call on
  * the definition answers, by strict equality: an object is the same
  * object, except a message the keywords make new on each call, compared
- * by what it holds. Shared by NodeFactsParityTest and the development
+ * by what it holds. Shared by SchemaFactsParityTest and the development
  * site's parity script.
  */
-trait NodeFactsParityTrait {
+trait SchemaFactsParityTrait {
 
   /**
    * The readers compared, each with the definition call it stands for.
@@ -61,14 +61,14 @@ trait NodeFactsParityTrait {
     'doesNotApply' => 'DoesNotApply::marks()',
     'compute' => 'DefinitionMetadata::computedOf()',
     'resolve' => 'DefinitionMetadata::resolveOf()',
-    'each' => 'DefinitionMetadata::eachOf(), a definition as its node',
+    'each' => 'DefinitionMetadata::eachOf(), a definition as its schema',
     'variantsBy' => 'DefinitionMetadata::variantsBy()',
     'variantsFrom' => 'DefinitionMetadata::variantsFrom()',
     'readVariants' => 'DefinitionMetadata::variantsListedBySite()',
     'configType' => 'DefinitionMetadata::configTypeOf()',
-    'configTypeNode' => 'DefinitionMetadata::configTypeDefinition() !== NULL',
+    'configTypeOf' => 'DefinitionMetadata::configTypeDefinition() !== NULL',
     'shape' => 'DefinitionMetadata::shapeOf()',
-    'shapeNode' => 'DefinitionMetadata::shapeDefinition() !== NULL',
+    'shapeOf' => 'DefinitionMetadata::shapeDefinition() !== NULL',
     'isFixed' => 'DefinitionMetadata::isFixed()',
     'isOneVariant' => 'DefinitionMetadata::isOneVariant()',
     'isHeldWhole' => 'DefinitionMetadata::isHeldWhole()',
@@ -118,22 +118,22 @@ trait NodeFactsParityTrait {
   }
 
   /**
-   * Compares every reader on a definition and its node, at every depth.
+   * Compares every reader on a definition and its schema, at every depth.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
-   * @param \PortableSchema\Builder\Schema $node
-   *   Its built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   Its built schema.
    * @param string $at
    *   Where it is, for a difference.
    * @param array<string, int> $counts
    *   The comparisons made, by reader.
    * @param \SplObjectStorage<\PortableSchema\Builder\Schema, null>|null $seen
-   *   The nodes compared already; each is compared once. Counted by node,
-   *   not by definition: a node-first entry derives its definition, and a
+   *   The schemas compared already; each is compared once. Counted by schema,
+   *   not by definition: a schema-first entry derives its definition, and a
    *   key that holds a child frame derives one that holds its own copies
-   *   of the child's definitions, while its node holds the very nodes the
-   *   child's entries hold. One node is one key read once, in either form.
+   *   of the child's definitions, while its schema holds the very schemas the
+   *   child's entries hold. One schema is one key read once, in either form.
    * @param array<string, int> $stated
    *   The comparisons whose definition call states the fact (an answer
    *   that is not NULL, FALSE, empty or a setting nothing holds), by
@@ -142,100 +142,100 @@ trait NodeFactsParityTrait {
    * @return list<string>
    *   Each disagreement: where, the reader, both answers.
    */
-  protected static function parity(DataDefinitionInterface $definition, Schema $node, string $at, array &$counts, ?\SplObjectStorage $seen = NULL, array &$stated = []): array {
+  protected static function parity(DataDefinitionInterface $definition, Schema $schema, string $at, array &$counts, ?\SplObjectStorage $seen = NULL, array &$stated = []): array {
     $seen ??= new \SplObjectStorage();
-    if ($seen->contains($node)) {
+    if ($seen->contains($schema)) {
       return [];
     }
-    $seen->attach($node);
+    $seen->attach($schema);
     $differ = [];
     $holds = DefinitionMetadata::canHoldDefaultValue($definition);
     $complex = $definition instanceof ComplexDataDefinitionInterface;
     $list = $definition instanceof ListDataDefinitionInterface;
     $answers = [
-      'dataType' => [NodeFacts::dataType($node), $definition->getDataType()],
-      'hasConstraints' => [NodeFacts::hasConstraints($node), $definition->getConstraints() !== []],
-      'isRequired' => [NodeFacts::isRequired($node), (bool) $definition->isRequired()],
-      'isAlwaysHeld' => [NodeFacts::isAlwaysHeld($node), DefinitionMetadata::isAlwaysHeld($definition)],
-      'isGrouping' => [NodeFacts::isGrouping($node), DefinitionMetadata::isGrouping($definition)],
-      'holdsValue' => [NodeFacts::holdsValue($node), DefinitionMetadata::holdsValue($definition)],
+      'dataType' => [SchemaFacts::dataType($schema), $definition->getDataType()],
+      'hasConstraints' => [SchemaFacts::hasConstraints($schema), $definition->getConstraints() !== []],
+      'isRequired' => [SchemaFacts::isRequired($schema), (bool) $definition->isRequired()],
+      'isAlwaysHeld' => [SchemaFacts::isAlwaysHeld($schema), DefinitionMetadata::isAlwaysHeld($definition)],
+      'isGrouping' => [SchemaFacts::isGrouping($schema), DefinitionMetadata::isGrouping($definition)],
+      'holdsValue' => [SchemaFacts::holdsValue($schema), DefinitionMetadata::holdsValue($definition)],
       'isNullable' => [
-        NodeFacts::isNullable($node),
+        SchemaFacts::isNullable($schema),
         !DefinitionMetadata::holdsValue($definition) && !DefinitionMetadata::isSecret($definition),
       ],
-      'secret' => [Secrets::marked($node), DefinitionMetadata::isSecret($definition)],
-      'settings' => [NodeFacts::settings($node), $definition->getSettings()],
-      'label' => [NodeFacts::label($node), $definition->getLabel()],
-      'ownLabel' => [NodeFacts::ownLabel($node), DefinitionMetadata::ownLabel($definition)],
-      'hasDefault' => [NodeFacts::hasDefault($node), $holds && DefinitionMetadata::hasDefaultValue($definition)],
-      'default' => [NodeFacts::default($node), $holds ? DefinitionMetadata::getDefaultValue($definition) : NULL],
+      'secret' => [Secrets::marked($schema), DefinitionMetadata::isSecret($definition)],
+      'settings' => [SchemaFacts::settings($schema), $definition->getSettings()],
+      'label' => [SchemaFacts::label($schema), $definition->getLabel()],
+      'ownLabel' => [SchemaFacts::ownLabel($schema), DefinitionMetadata::ownLabel($definition)],
+      'hasDefault' => [SchemaFacts::hasDefault($schema), $holds && DefinitionMetadata::hasDefaultValue($definition)],
+      'default' => [SchemaFacts::default($schema), $holds ? DefinitionMetadata::getDefaultValue($definition) : NULL],
       'dateOnly' => [
-        DefinitionSchema::declares($node, 'DateOnly'),
+        DefinitionSchema::declares($schema, 'DateOnly'),
         array_key_exists('DateOnly', $definition->getConstraints()),
       ],
-      'isList' => [DefinitionSchema::isList($node), $list],
-      'isMap' => [DefinitionSchema::nodeIsMap($node), DefinitionSchema::isMap($definition)],
-      'isLeaf' => [DefinitionSchema::isLeaf($node), !$complex && !$list],
-      'isComplex' => [DefinitionSchema::isComplex($node), $complex],
+      'isList' => [DefinitionSchema::isList($schema), $list],
+      'isMap' => [DefinitionSchema::holdsProperties($schema), DefinitionSchema::isMap($definition)],
+      'isLeaf' => [DefinitionSchema::isLeaf($schema), !$complex && !$list],
+      'isComplex' => [DefinitionSchema::isComplex($schema), $complex],
       'properties' => [
-        array_keys(NodeFacts::properties($node)),
+        array_keys(SchemaFacts::properties($schema)),
         DefinitionSchema::isMap($definition) && $complex ? array_keys($definition->getPropertyDefinitions()) : [],
       ],
-      'description' => [NodeFacts::description($node), $definition->getDescription()],
-      'constraints' => [NodeFacts::constraints($node), $definition->getConstraints()],
-      'constraintsJson' => [json_encode(NodeFacts::constraints($node)), json_encode($definition->getConstraints())],
+      'description' => [SchemaFacts::description($schema), $definition->getDescription()],
+      'constraints' => [SchemaFacts::constraints($schema), $definition->getConstraints()],
+      'constraintsJson' => [json_encode(SchemaFacts::constraints($schema)), json_encode($definition->getConstraints())],
       'declaredConstraints' => [
-        NodeFacts::declaredConstraints($node),
+        SchemaFacts::declaredConstraints($schema),
         $definition instanceof DataDefinition ? $definition->toArray()['constraints'] ?? [] : [],
       ],
-      'doesNotApply' => [NodeFacts::doesNotApply($node), DoesNotApply::marks($definition)],
-      'compute' => [NodeFacts::compute($node), DefinitionMetadata::computedOf($definition)],
-      'resolve' => [NodeFacts::resolve($node), DefinitionMetadata::resolveOf($definition)],
+      'doesNotApply' => [SchemaFacts::doesNotApply($schema), DoesNotApply::marks($definition)],
+      'compute' => [SchemaFacts::compute($schema), DefinitionMetadata::computedOf($definition)],
+      'resolve' => [SchemaFacts::resolve($schema), DefinitionMetadata::resolveOf($definition)],
       'each' => [
-        static::eachAnswer(NodeFacts::each($node)),
+        static::eachAnswer(SchemaFacts::each($schema)),
         static::eachAnswer(DefinitionMetadata::eachOf($definition)),
       ],
-      'variantsBy' => [NodeFacts::variantsBy($node), DefinitionMetadata::variantsBy($definition)],
-      'variantsFrom' => [NodeFacts::variantsFrom($node), DefinitionMetadata::variantsFrom($definition)],
-      'readVariants' => [NodeFacts::readVariants($node), DefinitionMetadata::variantsListedBySite($definition)],
-      'configType' => [NodeFacts::configType($node), DefinitionMetadata::configTypeOf($definition)],
-      'configTypeNode' => [
-        NodeFacts::configTypeNode($node) !== NULL,
+      'variantsBy' => [SchemaFacts::variantsBy($schema), DefinitionMetadata::variantsBy($definition)],
+      'variantsFrom' => [SchemaFacts::variantsFrom($schema), DefinitionMetadata::variantsFrom($definition)],
+      'readVariants' => [SchemaFacts::readVariants($schema), DefinitionMetadata::variantsListedBySite($definition)],
+      'configType' => [SchemaFacts::configType($schema), DefinitionMetadata::configTypeOf($definition)],
+      'configTypeOf' => [
+        SchemaFacts::configTypeOf($schema) !== NULL,
         DefinitionMetadata::configTypeDefinition($definition) !== NULL,
       ],
-      'shape' => [NodeFacts::shape($node), DefinitionMetadata::shapeOf($definition)],
-      'shapeNode' => [
-        DefinitionSchema::shapeNode($node) !== NULL,
+      'shape' => [SchemaFacts::shape($schema), DefinitionMetadata::shapeOf($definition)],
+      'shapeOf' => [
+        DefinitionSchema::shapeOf($schema) !== NULL,
         DefinitionMetadata::shapeDefinition($definition) !== NULL,
       ],
-      'isFixed' => [NodeFacts::isFixed($node), DefinitionMetadata::isFixed($definition)],
-      'isOneVariant' => [NodeFacts::isOneVariant($node), DefinitionMetadata::isOneVariant($definition)],
-      'isHeldWhole' => [NodeFacts::isHeldWhole($node), DefinitionMetadata::isHeldWhole($definition)],
-      'placedAfter' => [NodeFacts::placedAfter($node), DefinitionMetadata::getPlacedAfter($definition)],
-      'arrangement' => [NodeFacts::arrangement($node), DefinitionMetadata::arrangementOf($definition)],
-      'isReadOnly' => [NodeFacts::isReadOnly($node), (bool) $definition->isReadOnly()],
-      'isComputed' => [NodeFacts::isComputed($node), (bool) $definition->isComputed()],
-      'setting' => static::settingAnswers($definition, $node),
-      'storedByUuid' => [References::storedByUuidIn($node), References::storedByUuid($definition)],
+      'isFixed' => [SchemaFacts::isFixed($schema), DefinitionMetadata::isFixed($definition)],
+      'isOneVariant' => [SchemaFacts::isOneVariant($schema), DefinitionMetadata::isOneVariant($definition)],
+      'isHeldWhole' => [SchemaFacts::isHeldWhole($schema), DefinitionMetadata::isHeldWhole($definition)],
+      'placedAfter' => [SchemaFacts::placedAfter($schema), DefinitionMetadata::getPlacedAfter($definition)],
+      'arrangement' => [SchemaFacts::arrangement($schema), DefinitionMetadata::arrangementOf($definition)],
+      'isReadOnly' => [SchemaFacts::isReadOnly($schema), (bool) $definition->isReadOnly()],
+      'isComputed' => [SchemaFacts::isComputed($schema), (bool) $definition->isComputed()],
+      'setting' => static::settingAnswers($definition, $schema),
+      'storedByUuid' => [References::storedByUuidIn($schema), References::storedByUuid($definition)],
       'valueClass' => [
-        ConfigObjectStorage::valueClass($node, static fn (): DataDefinitionInterface => $definition),
+        ConfigObjectStorage::valueClass($schema, static fn (): DataDefinitionInterface => $definition),
         (string) $definition->getClass(),
       ],
     ];
     // The type a leaf states and the keywords its checks state, read from
-    // the node as the document's classes read them.
+    // the schema as the document's classes read them.
     $type = static::answered(static fn (): array => DefinitionSchema::type($definition));
-    $answers['typeOf'] = [static::answered(static fn (): array => DefinitionSchema::typeOf($node)), $type];
+    $answers['typeOf'] = [static::answered(static fn (): array => DefinitionSchema::typeOf($schema)), $type];
     $given = isset($type['threw']) ? [] : $type;
     // A message is made new on each call: compared by what it holds.
     $answers['keywordsOf'] = [
-      static::messagesHeld(static::answered(static fn (): array => DefinitionSchema::keywordsOf($node, $given['type'] ?? NULL, $given))),
+      static::messagesHeld(static::answered(static fn (): array => DefinitionSchema::keywordsOf($schema, $given['type'] ?? NULL, $given))),
       static::messagesHeld(static::answered(static fn (): array => DefinitionSchema::keywords($definition, $given['type'] ?? NULL, $given))),
     ];
     // defaultOf() reads every property's default, which a definition with
     // no place for one cannot answer: compared where each can.
     if (static::holdsDefaults($definition)) {
-      $answers['defaultOf'] = [NodeFacts::defaultOf($node), DefinitionMetadata::defaultOf($definition)];
+      $answers['defaultOf'] = [SchemaFacts::defaultOf($schema), DefinitionMetadata::defaultOf($definition)];
     }
     foreach ($answers as $reader => [$read, $called]) {
       $counts[$reader] = ($counts[$reader] ?? 0) + 1;
@@ -243,43 +243,43 @@ trait NodeFactsParityTrait {
         $stated[$reader] = ($stated[$reader] ?? 0) + 1;
       }
       if ($read !== $called) {
-        $differ[] = sprintf('%s %s: node %s, definition %s', $at, $reader, var_export($read, TRUE), var_export($called, TRUE));
+        $differ[] = sprintf('%s %s: schema %s, definition %s', $at, $reader, var_export($read, TRUE), var_export($called, TRUE));
       }
     }
     $below = [];
     if ($list) {
-      $below['items'] = [$definition->getItemDefinition(), DefinitionSchema::itemNode($node)];
+      $below['items'] = [$definition->getItemDefinition(), DefinitionSchema::itemOf($schema)];
     }
     elseif ($complex) {
       foreach ($definition->getPropertyDefinitions() as $name => $property) {
-        $below["properties/$name"] = [$property, DefinitionSchema::propertyNode($node, (string) $name)];
+        $below["properties/$name"] = [$property, DefinitionSchema::propertyOf($schema, (string) $name)];
       }
     }
-    $below['shape'] = [DefinitionMetadata::shapeDefinition($definition), DefinitionSchema::shapeNode($node)];
-    $below['configType'] = [DefinitionMetadata::configTypeDefinition($definition), NodeFacts::configTypeNode($node)];
+    $below['shape'] = [DefinitionMetadata::shapeDefinition($definition), DefinitionSchema::shapeOf($schema)];
+    $below['configType'] = [DefinitionMetadata::configTypeDefinition($definition), SchemaFacts::configTypeOf($schema)];
     $each = DefinitionMetadata::eachOf($definition);
-    $below['each'] = [$each instanceof DataDefinitionInterface ? $each : NULL, NodeFacts::each($node)];
-    foreach ($below as $where => [$inner, $inner_node]) {
+    $below['each'] = [$each instanceof DataDefinitionInterface ? $each : NULL, SchemaFacts::each($schema)];
+    foreach ($below as $where => [$inner, $inner_schema]) {
       if (!$inner instanceof DataDefinitionInterface) {
         continue;
       }
-      if (!$inner_node instanceof Schema) {
-        $differ[] = "$at/$where: the definition holds one, the node none";
+      if (!$inner_schema instanceof Schema) {
+        $differ[] = "$at/$where: the definition holds one, the schema none";
         continue;
       }
-      array_push($differ, ...static::parity($inner, $inner_node, "$at/$where", $counts, $seen, $stated));
+      array_push($differ, ...static::parity($inner, $inner_schema, "$at/$where", $counts, $seen, $stated));
     }
     return $differ;
   }
 
   /**
-   * Says what `each` holds, so a definition and its node compare alike.
+   * Says what `each` holds, so a definition and its schema compare alike.
    *
    * @param mixed $each
-   *   What eachOf() or NodeFacts::each() gives.
+   *   What eachOf() or SchemaFacts::each() gives.
    *
    * @return string|null
-   *   The class every entry is; 'definition' for a definition or a node,
+   *   The class every entry is; 'definition' for a definition or a schema,
    *   whose own facts the walk compares below; NULL for none.
    */
   protected static function eachAnswer(mixed $each): ?string {
@@ -291,16 +291,16 @@ trait NodeFactsParityTrait {
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
-   * @param \PortableSchema\Builder\Schema $node
-   *   Its built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   Its built schema.
    *
    * @return array{0: array, 1: array}
-   *   NodeFacts::setting() and getSetting(), by setting name.
+   *   SchemaFacts::setting() and getSetting(), by setting name.
    */
-  protected static function settingAnswers(DataDefinitionInterface $definition, Schema $node): array {
+  protected static function settingAnswers(DataDefinitionInterface $definition, Schema $schema): array {
     $answers = [[], []];
     foreach ([...array_keys($definition->getSettings()), 'surface_parity_unset'] as $name) {
-      $answers[0][$name] = NodeFacts::setting($node, (string) $name);
+      $answers[0][$name] = SchemaFacts::setting($schema, (string) $name);
       $answers[1][$name] = $definition->getSetting((string) $name);
     }
     return $answers;

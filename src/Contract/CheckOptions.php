@@ -9,7 +9,7 @@ use Drupal\surface\Reference\References;
 /**
  * Says what a document publishes of a check's options, plugin by plugin.
  *
- * The rule: a built node holds each check's options as the definition
+ * The rule: a built schema holds each check's options as the definition
  * holds them, the ones the check provider runs; a document says only what
  * a client needs of them, one row per plugin:
  * - SurfaceValidReference: what the key refers to, `{entityTypeId,
@@ -24,7 +24,7 @@ use Drupal\surface\Reference\References;
  * A new plugin whose options a client needs is one row here.
  *
  * Decision: see
- * docs/decisions.md#a-definition-is-read-once-into-a-built-node,
+ * docs/decisions.md#a-definition-is-read-once-into-a-built-schema,
  * docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
  *
  * @internal

@@ -27,16 +27,16 @@ interface SurfaceOptionsResolverInterface {
    *
    * @param \Symfony\Component\Validator\Constraint $constraint
    *   The constraint, instantiated from the key's constraints.
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node of the key the constraint was declared on, for a resolver
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema of the key the constraint was declared on, for a resolver
    *   that needs the surrounding context. What it promises is the
    *   standard keywords, read through get(): its title, its type, its
-   *   bounds. What Surface keeps on a node beyond them is not promised
+   *   bounds. What Surface keeps on a schema beyond them is not promised
    *   and may change.
    *
    * @return \Drupal\surface\Options\OptionSet
    *   The allowed values with their labels and cacheability.
    */
-  public function resolve(Constraint $constraint, Schema $node): OptionSet;
+  public function resolve(Constraint $constraint, Schema $schema): OptionSet;
 
 }

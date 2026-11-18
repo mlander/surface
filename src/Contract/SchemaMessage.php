@@ -7,9 +7,9 @@ namespace Drupal\surface\Contract;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 
 /**
- * A message a built node holds: translated each time it is rendered.
+ * A message a built schema holds: translated each time it is rendered.
  *
- * The rule: a built node is kept by its entry for as long as the entry
+ * The rule: a built schema is kept by its entry for as long as the entry
  * lives (Entry::schema()), which can be the process, and
  * a TranslatableMarkup keeps the first translation it renders, so a
  * message the reader writes (a Regex's or a check's own sentence, what a
@@ -20,11 +20,11 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
  * the message is rendered.
  *
  * Decision: see
- * docs/decisions.md#a-definition-is-read-once-into-a-built-node.
+ * docs/decisions.md#a-definition-is-read-once-into-a-built-schema.
  *
  * @internal
  */
-final class NodeMessage extends TranslatableMarkup {
+final class SchemaMessage extends TranslatableMarkup {
 
   /**
    * {@inheritdoc}

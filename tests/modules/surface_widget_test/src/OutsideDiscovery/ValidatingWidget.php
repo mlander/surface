@@ -19,15 +19,15 @@ final class ValidatingWidget extends SurfaceWidgetBase {
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
     return TRUE;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    return $this->baseElement($node, $context) + [
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    return $this->baseElement($schema, $context) + [
       '#type' => 'textfield',
       '#default_value' => $value,
       '#element_validate' => [[static::class, 'validate']],

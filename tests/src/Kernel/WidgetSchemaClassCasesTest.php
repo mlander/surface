@@ -21,9 +21,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests every stock widget answers for the schemas a class test once decided.
  *
  * A widget used to tell a list or a map by the definition's class; it now
- * reads the schema (DefinitionSchema::isList(), isComplex(), itemNode()).
+ * reads the schema (DefinitionSchema::isList(), isComplex(), itemOf()).
  * Each case is a schema whose answer hangs on that: one read from a class
- * outside the three NodeDefinition derives, the variants' placeholder, a
+ * outside the three DefinitionFromSchema derives, the variants' placeholder, a
  * list of maps, a list a refiner narrowed (the refined entry's schema), and
  * a secret. The answers are the ones every stock widget gave the
  * definitions before the flip, recorded on the base by the parity

@@ -6,7 +6,7 @@ draw, or to find which element a key gets.
 [Rules on a key](introduction/06-rules-on-a-key.md) introduce what a
 widget reads.
 
-A widget maps one node of the served document to a form element, and
+A widget maps one schema of the served document to a form element, and
 reads the submitted value back. It is a plugin type: classes live in
 `Plugin/SurfaceWidget` and are declared with the `#[SurfaceWidget]`
 attribute.
@@ -14,7 +14,7 @@ attribute.
 The form is drawn from the document the data surface serves for its
 values, emitted with the widget hints, as the HTTP door serves it to the
 React app ([Forms](forms.md#the-form-is-drawn-from-the-document)). A
-widget reads one node of it and **nothing else**: the key's schema with
+widget reads one schema of it and **nothing else**: the key's schema with
 its `$ref`s followed and its compositions merged, its hints under
 `x-portable-ui`, and Surface's markers under `x-surface`. It never sees
 the data surface, a definition, the host or the storage. What it needs
@@ -26,31 +26,31 @@ the React app read the same document by the same rules.
 ## The API
 
 ```php
-public function isApplicable(Schema $node, WidgetContext $context): bool;
-public function buildElement(Schema $node, mixed $value, WidgetContext $context): array;
-public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed;
+public function isApplicable(Schema $schema, WidgetContext $context): bool;
+public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array;
+public function extractValue(array $element, FormStateInterface $form_state, Schema $schema): mixed;
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-`Schema` is Portable Schema's (`PortableSchema\Builder\Schema`), the node
-inline. `WidgetContext` says what the node does not say of itself: its
+`Schema` is Portable Schema's (`PortableSchema\Builder\Schema`), the schema
+inline. `WidgetContext` says what the schema does not say of itself: its
 JSON Pointer in the values, whether the object holding it lists it in
 `required`, whether the envelope lists its value as stale, whether an
 element around it is locked, whether it is drawn inside a collection's
 item (`item`); and it carries the host's answers (`labelOf()`,
-`selection()`) and the drawer, which draws the nodes inside a node
-(`properties()`, `node()`).
+`selection()`) and the drawer, which draws the schemas inside a schema
+(`properties()`, `draw()`).
 
-Plain values in, a render element out, plain values back. A node's
+Plain values in, a render element out, plain values back. A schema's
 element **is** its input, or a container of named children for an
 object. There is no wrapper nesting, so a submitted value tree is
-already in the node's shape.
+already in the schema's shape.
 
 ## The word names the widget
 
 The emitter chooses each key's widget from its definition, and writes
-its word into the node, `x-portable-ui.widget`. The drawer draws the node
+its word into the schema, `x-portable-ui.widget`. The drawer draws the schema
 with the widget that word names (`SurfaceWidgetManager::widgetFor()`),
 so the choice is made once and a client never makes it again. There is
 one table, word to plugin ID (`SurfaceWidgetManager::words()`): each
@@ -65,18 +65,18 @@ maps to it, and the words for a value's shape by
 `variants` names no widget: the drawer draws a key with variants itself.
 
 A word no widget answers to (a module's widget the site does not have),
-a word whose widget's `isApplicable()` refuses the node, and a node with
+a word whose widget's `isApplicable()` refuses the schema, and a schema with
 no word (a timestamp, a date and time, a key with variants) fall to the
-stock word for the node's shape, in the order of the React app's
+stock word for the schema's shape, in the order of the React app's
 `stockWidget()` (`SurfaceWidgetManager::stockWord()`): a list whose
-items offer choices a multiple select, any other list `list`, a node
+items offer choices a multiple select, any other list `list`, a schema
 offering choices a select, an object a fieldset, a boolean a checkbox,
 an integer or a number a number input, a string whose `format` is
-`email` an email input, any other string a text input. A node that
+`email` an email input, any other string a text input. A schema that
 states no one type (a value of any type) is drawn by the module's own
 widgets in weight order, the first whose `isApplicable()` says yes, the
 JSON widget last. The weights decide only among widgets answering to
-the same word. `isApplicable()` reads the node alone (`type`, `format`,
+the same word. `isApplicable()` reads the schema alone (`type`, `format`,
 `oneOf`, `items`, a check, a hint), never a live collaborator. A
 module's widget is drawn only where the document names it.
 
@@ -116,7 +116,7 @@ function my_module_surface_widget_info_alter(array &$definitions): void {
 ## The stock widgets
 
 The second column is what the emitter chooses the widget for, from the
-definition; the drawer draws the node its word names.
+definition; the drawer draws the schema its word names.
 
 | Widget | Weight | Chosen for | Element |
 | --- | --- | --- | --- |
@@ -133,7 +133,7 @@ definition; the drawer draws the node its word names.
 | `checkbox` | 10 | `boolean`. | `checkbox`, never `#required` |
 | `datetime` | 10 | `datetime_iso8601`. | core's `datetime`, a date and a time input in the site's time zone; read back as the ISO 8601 string, its offset kept |
 | `not_drawn` | 10 | `language`, `language_reference`, `entity_reference`, and a list of any of them: a value nobody types, which no blueprint declares, so only a definition handed to the engine by hand reaches it. | `item`: "This is not drawn on this form; what it holds is kept.", posting nothing |
-| `scalars` | 999 | A key of type `any` read from a schema whose `type` lists two or more of string, integer, number and boolean, and nothing else but null (`ScalarsWidget::stated()`, from the schema `SchemaReader::statedTypes()` reads off its JsonSchema constraint); on the drawer's side, a node whose `type` lists them (`ScalarsWidget::scalars()`). | `textfield`, its description naming the types; read as the first stated type the text spells, in this order: integer, number, `true` or `false`, string; empty sends nothing |
+| `scalars` | 999 | A key of type `any` read from a schema whose `type` lists two or more of string, integer, number and boolean, and nothing else but null (`ScalarsWidget::stated()`, from the schema `SchemaReader::statedTypes()` reads off its JsonSchema constraint); on the drawer's side, a schema whose `type` lists them (`ScalarsWidget::scalars()`). | `textfield`, its description naming the types; read as the first stated type the text spells, in this order: integer, number, `true` or `false`, string; empty sends nothing |
 | `json` | 1000 | What every other widget refused: a key of type `any` that holds no variants and is no union of scalars (its types include an object or a list, or it states none), and a list the list widget refuses, its items lists or `any`. | `textarea` of pretty-printed JSON, its description naming the type; empty sends nothing, text that is not JSON is an error on the element |
 
 The weights say the selection rule out loud: the checkboxes and radios
@@ -286,7 +286,7 @@ those is missing is in
 ## Extraction returns raw shapes
 
 A widget **does not coerce**. `extractValue()` hands back the raw
-submitted value in the node's shape (a scalar for one value, an array
+submitted value in the schema's shape (a scalar for one value, an array
 keyed by property name for an object), and the pipeline's `accept()`
 casts it.
 
@@ -299,12 +299,12 @@ values. The rules are in [Value semantics](semantics.md).
 
 Each element drawn for a value carries its JSON Pointer
 (`#surface_path`) and the plugin ID of the widget that drew it
-(`#surface_widget`), and no node: extraction finds the node at that
-pointer in the envelope drawn (`Form\Document\DocumentNodes::at()`), the
+(`#surface_widget`), and no schema: extraction finds the schema at that
+pointer in the envelope drawn (`Form\Document\DocumentSchemas::at()`), the
 one the request drew or, for a form read from the form cache, the one
 emitted again for the values the container keeps (`#surface_values`), so
 the form reads each value back with the widget that built it, through
-that node. The base class reads an element that holds one value at its
+that schema. The base class reads an element that holds one value at its
 own place in the form, and checkboxes, which post every option with its
 value or `0`, as the list of the values checked. A widget that renders
 several elements, as the map and list widgets do, overrides
@@ -341,16 +341,16 @@ pointer, relative to the state handed over.
 final class ColorWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    return NodeFacts::dataType($schema) === 'string'
-      && NodeFacts::setting($schema, 'my_module_color') === TRUE;
+    return SchemaFacts::dataType($schema) === 'string'
+      && SchemaFacts::setting($schema, 'my_module_color') === TRUE;
   }
 
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return static::types($node) === ['string'];
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    return static::types($schema) === ['string'];
   }
 
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    return $this->baseElement($node, $context) + [
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    return $this->baseElement($schema, $context) + [
       '#type' => 'color',
       '#default_value' => $value ?? '#000000',
     ];
@@ -363,11 +363,11 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 `drawsSchema()` is the emitter's question: it is asked in weight
 order, about the key's schema (the data type and settings the key
-was declared with, `NodeFacts::dataType()` and `NodeFacts::setting()`),
+was declared with, `SchemaFacts::dataType()` and `SchemaFacts::setting()`),
 and the widget that says yes first is the word the document
-carries. `isApplicable()` is the drawer's, asked only of a node whose word
+carries. `isApplicable()` is the drawer's, asked only of a schema whose word
 names no widget that draws it. `baseElement()` supplies what every
-element wants from a node (`#title` from `title`, `#description` from
+element wants from a schema (`#title` from `title`, `#description` from
 `description`, `#required` from the owner's `required`), so a widget
 only adds the part that is its own. `#required` draws the marker and the
 browser's `required` attribute and is never checked by core: the form
@@ -381,8 +381,8 @@ Three things to hold to:
 1. **Declare a weight that says where you belong.** Lower than 10 to
    undercut a per-type widget, lower than -10 to undercut the options
    widget, lower than -15 to undercut the checkboxes and radios.
-2. **Do not coerce.** Give back what was submitted, in the node's shape.
-3. **Read nothing but the node.** If you find yourself wanting the data
+2. **Do not coerce.** Give back what was submitted, in the schema's shape.
+3. **Read nothing but the schema.** If you find yourself wanting the data
    surface or the host, the thing you want is probably a keyword the
    emitter writes, a setting your widget publishes
    ([below](#a-widget-may-publish-its-settings)), or the context's
@@ -395,7 +395,7 @@ how it is drawn: a palette, a number of columns. Those it lists in
 `publishedSettings()` reach the document: the emitter writes each the
 definition holds under `x-portable-ui.options`, its name in lowerCamel
 (`swatch_columns` as `swatchColumns`), as a hint, and the widget's
-`buildElement()` reads it there (`static::options($node)`). The reader
+`buildElement()` reads it there (`static::options($schema)`). The reader
 reads each back into the setting it was written from, where the widget
 the word names publishes one of that name, and notes it otherwise. A
 setting that says what the key accepts is a constraint, never a
@@ -422,8 +422,8 @@ final class ColorWidget extends SurfaceWidgetBase implements SchemaWidgetInterfa
     return $schema->get('writeOnly') !== TRUE;
   }
 
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return $node->get('writeOnly') !== TRUE;
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    return $schema->get('writeOnly') !== TRUE;
   }
 
   // buildElement() as above.

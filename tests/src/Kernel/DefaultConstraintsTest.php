@@ -11,8 +11,8 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\Plugin\DataType\StringData;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\LeafTypes;
-use Drupal\surface\Contract\NodeDefinition;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\DefinitionFromSchema;
+use Drupal\surface\Contract\SchemaFacts;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -21,10 +21,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * Each row of LeafTypes::DEFAULT_CONSTRAINTS is what the typed data
  * manager gives a definition of its type, so a module that changes a
- * type's defaults fails here with the type's name. A node's merged list
- * (NodeFacts::constraints()) is getConstraints() of the definition it was
+ * type's defaults fails here with the type's name. A schema's merged list
+ * (SchemaFacts::constraints()) is getConstraints() of the definition it was
  * read from, `===`; the read writes the `constraints` member only where
- * NodeFacts::derived() does not give that list, and the inverse derives a
+ * SchemaFacts::derived() does not give that list, and the inverse derives a
  * definition that gives it again.
  *
  * @see docs/decisions.md#the-merged-constraint-list-is-derived
@@ -62,20 +62,20 @@ class DefaultConstraintsTest extends SurfaceKernelTestBase {
    */
   public function testTheMergedListIsGetConstraints(): void {
     foreach ($this->cases() as $case => [$definition, $member]) {
-      $node = DefinitionSchema::of($definition);
-      $this->assertSame($definition->getConstraints(), NodeFacts::constraints($node), "$case: the merged list is getConstraints().");
-      $this->assertSame($member, array_key_exists('constraints', DefinitionSchema::model($node)), "$case: whether the node holds the constraints member.");
+      $schema = DefinitionSchema::of($definition);
+      $this->assertSame($definition->getConstraints(), SchemaFacts::constraints($schema), "$case: the merged list is getConstraints().");
+      $this->assertSame($member, array_key_exists('constraints', DefinitionSchema::model($schema)), "$case: whether the schema holds the constraints member.");
       if ($member) {
-        $this->assertNotSame($definition->getConstraints(), NodeFacts::derived(DefinitionSchema::model($node)), "$case: the member is written only where the derivation does not give the list.");
+        $this->assertNotSame($definition->getConstraints(), SchemaFacts::derived(DefinitionSchema::model($schema)), "$case: the member is written only where the derivation does not give the list.");
       }
-      $this->assertSame($definition->getConstraints(), NodeDefinition::of($node)->getConstraints(), "$case: the derived definition gives the list again.");
+      $this->assertSame($definition->getConstraints(), DefinitionFromSchema::of($schema)->getConstraints(), "$case: the derived definition gives the list again.");
     }
   }
 
   /**
-   * Tests the nodes below a list and a map hold no member either.
+   * Tests the schemas below a list and a map hold no member either.
    */
-  public function testNodesBelowHoldNoMember(): void {
+  public function testSchemasBelowHoldNoMember(): void {
     $list = ListDataDefinition::create('string')->setLabel('Tags');
     $list->getItemDefinition()->addConstraint('Length', ['max' => 9]);
     $map = MapDataDefinition::create()->setLabel('Pair')
@@ -84,15 +84,15 @@ class DefaultConstraintsTest extends SurfaceKernelTestBase {
     $items = DefinitionSchema::of($list)->get('items');
     $properties = DefinitionSchema::of($map)->get('properties');
     $this->assertArrayNotHasKey('constraints', DefinitionSchema::model($items), 'A list\'s item.');
-    $this->assertSame($list->getItemDefinition()->getConstraints(), NodeFacts::constraints($items));
+    $this->assertSame($list->getItemDefinition()->getConstraints(), SchemaFacts::constraints($items));
     foreach (['a', 'b'] as $name) {
       $this->assertArrayNotHasKey('constraints', DefinitionSchema::model($properties[$name]), "Property $name.");
-      $this->assertSame($map->getPropertyDefinition($name)->getConstraints(), NodeFacts::constraints($properties[$name]));
+      $this->assertSame($map->getPropertyDefinition($name)->getConstraints(), SchemaFacts::constraints($properties[$name]));
     }
   }
 
   /**
-   * Builds the cases: a definition, and whether its node holds the member.
+   * Builds the cases: a definition, and whether its schema holds the member.
    *
    * @return array<string, array{0: \Drupal\Core\TypedData\DataDefinitionInterface, 1: bool}>
    *   The cases, by name.
@@ -139,10 +139,10 @@ class DefaultConstraintsTest extends SurfaceKernelTestBase {
   public function testAnEmptyListIsKeptWhereItIsNotDerived(): void {
     $definition = DataDefinition::create('language_reference')->setLabel('Language');
     $this->assertSame([], $definition->getConstraints());
-    $node = DefinitionSchema::of($definition);
-    $this->assertNull(NodeFacts::derived(DefinitionSchema::model($node)), 'No row: no derivation.');
-    $this->assertSame([], DefinitionSchema::model($node)['constraints'] ?? NULL, 'The member holds the empty list.');
-    $this->assertInstanceOf(DataDefinitionInterface::class, NodeDefinition::of($node));
+    $schema = DefinitionSchema::of($definition);
+    $this->assertNull(SchemaFacts::derived(DefinitionSchema::model($schema)), 'No row: no derivation.');
+    $this->assertSame([], DefinitionSchema::model($schema)['constraints'] ?? NULL, 'The member holds the empty list.');
+    $this->assertInstanceOf(DataDefinitionInterface::class, DefinitionFromSchema::of($schema));
   }
 
 }

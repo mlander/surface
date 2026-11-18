@@ -171,9 +171,9 @@ final class PortableValidator {
    *   The provider, for validate().
    */
   public function provider(SurfaceInterface $surface, array $values, SurfacePipelineInterface $pipeline): DrupalCheckProvider {
-    // The provider reads the node at a check's place from the entry that
+    // The provider reads the schema at a check's place from the entry that
     // holds the key (Location::definitionAt()), so a key the document
-    // described already has its node read.
+    // described already has its schema read.
     return new DrupalCheckProvider($this->runner, $this->constraints, $pipeline, $this->translation, $this->options, $surface, $values);
   }
 
@@ -214,13 +214,13 @@ final class PortableValidator {
    */
   public function held(Schema $schema, mixed $data, ?DrupalCheckProvider $provider = NULL): array {
     [$validator, $id, $names, $registry, $decoded] = $this->compiled($schema);
-    $nodes = new Nodes($decoded, $data);
+    $schemas = new ApplicableSchemas($decoded, $data);
     if ($provider !== NULL) {
       foreach ($names as $name) {
         $validator = $validator->withProvider($name, $provider);
       }
     }
-    $provider?->start($nodes);
+    $provider?->start($schemas);
     $result = $validator->validate($data, $id);
     if ($provider?->failure() !== NULL) {
       throw $provider->failure();
@@ -234,7 +234,7 @@ final class PortableValidator {
         throw $provider->failure();
       }
     }
-    return $this->found($result, $provider, $registry, $nodes);
+    return $this->found($result, $provider, $registry, $schemas);
   }
 
   /**
@@ -327,14 +327,14 @@ final class PortableValidator {
    *
    * @return bool
    *   TRUE when the validator refused each by one of the keywords
-   *   Nodes::BEFORE_CHECKS names, by a `format`, or by the `anyOf` or
-   *   `allOf` a composite check is written as
-   *   (Nodes::refusedByComposite()).
+   *   ApplicableSchemas::BEFORE_CHECKS names, by a `format`, or by the `anyOf`
+   *   or `allOf` a composite check is written as
+   *   (ApplicableSchemas::refusedByComposite()).
    */
   private static function refusedWhereUnasked(Result $result, array $unasked): bool {
     $refused = [];
     foreach ($result->errors as $error) {
-      if (in_array($error->code, [...Nodes::BEFORE_CHECKS, 'anyOf', 'allOf'], TRUE) || str_starts_with($error->code, 'format.')) {
+      if (in_array($error->code, [...ApplicableSchemas::BEFORE_CHECKS, 'anyOf', 'allOf'], TRUE) || str_starts_with($error->code, 'format.')) {
         $refused[$error->instanceLocation] = TRUE;
       }
     }
@@ -350,13 +350,13 @@ final class PortableValidator {
    *   The provider that answered its checks, if any.
    * @param \PortableSchema\Registry $registry
    *   The registry holding the document.
-   * @param \Drupal\surface\Validation\Nodes $nodes
-   *   The document's nodes at each place.
+   * @param \Drupal\surface\Validation\ApplicableSchemas $schemas
+   *   The document's schemas at each place.
    *
    * @return \Drupal\surface\Validation\Found[]
    *   The refusals.
    */
-  private function found(Result $result, ?DrupalCheckProvider $provider, Registry $registry, Nodes $nodes): array {
+  private function found(Result $result, ?DrupalCheckProvider $provider, Registry $registry, ApplicableSchemas $schemas): array {
     $found = [];
     // The places a check refused.
     $checked = [];
@@ -392,7 +392,7 @@ final class PortableValidator {
       }
       // A locked key's `const` is the value the operation knows; what is
       // held there is never the request's, so it is never refused.
-      if ($error->code === 'const' && $nodes->readOnly($location)) {
+      if ($error->code === 'const' && $schemas->readOnly($location)) {
         continue;
       }
       $found[] = $this->said($location, $error->code, $error->params, $this->message($error, $result, $provider, $registry), $provider);
@@ -492,10 +492,10 @@ final class PortableValidator {
     if (in_array($error->code, ['minimum', 'maximum'], TRUE)) {
       // Bounded on both sides, said as one range.
       $parent = substr($error->absoluteKeywordLocation, 0, (int) strrpos($error->absoluteKeywordLocation, '/'));
-      [, $node] = $registry->resolve($parent);
-      if ($node instanceof \stdClass && isset($node->minimum, $node->maximum)) {
-        $context['min'] = $node->minimum;
-        $context['max'] = $node->maximum;
+      [, $schema] = $registry->resolve($parent);
+      if ($schema instanceof \stdClass && isset($schema->minimum, $schema->maximum)) {
+        $context['min'] = $schema->minimum;
+        $context['max'] = $schema->maximum;
       }
     }
     return Sentences::ofError($error->code, $error->params, $context, $this->translation);
@@ -573,7 +573,7 @@ final class PortableValidator {
    * Lists the names of every check a document holds.
    *
    * @param mixed $schema
-   *   The document, decoded, or a node of it.
+   *   The document, decoded, or a schema of it.
    *
    * @return string[]
    *   The names under every `portable-check`, once each.

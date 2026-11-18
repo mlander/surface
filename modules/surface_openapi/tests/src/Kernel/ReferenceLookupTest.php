@@ -16,7 +16,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Tests what the lookup and its OpenAPI path read off a reference key's node.
+ * Tests what the lookup and its OpenAPI path read off a reference key's schema.
  *
  * Example 16's sponsorship. The lookup, asked of the controller, writes
  * each id in its key's type: `page` is an integer key, so a node's id is a
@@ -26,7 +26,7 @@ use Symfony\Component\HttpFoundation\Request;
  * refers to an entity: a plain key by its reference constraint or its
  * targets, and the structure an id of any entity type is in.
  *
- * @see docs/decisions.md#the-remaining-readers-read-nodes
+ * @see docs/decisions.md#the-remaining-readers-read-schemas
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]

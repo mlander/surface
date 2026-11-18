@@ -48,7 +48,7 @@
       "fs": "c360b6c2b2f0",
       "fh": "e352461fc82a"
     },
-    "plain | nodes": {
+    "plain | schemas": {
       "nope": "85cf5ad1bdc5",
       "nope.deeper": "85cf5ad1bdc5",
       "gate": "85cf5ad1bdc5",
@@ -97,7 +97,7 @@
       "nope.deeper": "ed8a9f9798ca",
       "fb": "dea3f8f03b2d"
     },
-    "booleans | nodes": {
+    "booleans | schemas": {
       "nope": "85cf5ad1bdc5",
       "nope.deeper": "85cf5ad1bdc5",
       "fb": "85cf5ad1bdc5"

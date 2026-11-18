@@ -7,9 +7,9 @@ namespace Drupal\surface\Widget;
 use PortableSchema\Builder\Schema;
 
 /**
- * Where a node is drawn, and what the host answers about it.
+ * Where a schema is drawn, and what the host answers about it.
  *
- * What a node does not say of itself: its JSON Pointer in the values,
+ * What a schema does not say of itself: its JSON Pointer in the values,
  * whether the object that holds it requires it (the owner's `required`),
  * whether the value shown stands for a stale one (the envelope's
  * `stale`), and whether an element around it is locked, which it then
@@ -20,7 +20,7 @@ use PortableSchema\Builder\Schema;
  * key's chosen document, a full schema), whose frames are narrowed by
  * their conditionals as they are drawn. Beside
  * those, the host's answers (WidgetHostInterface) and the drawer, which
- * draws the nodes inside a node.
+ * draws the schemas inside a schema.
  *
  * Decision: see docs/decisions.md#the-form-is-drawn-from-the-document.
  */
@@ -30,23 +30,23 @@ final class WidgetContext {
    * Constructs a WidgetContext.
    *
    * @param string $pointer
-   *   The JSON Pointer of the node's value, '' for the whole.
+   *   The JSON Pointer of the schema's value, '' for the whole.
    * @param bool $required
-   *   Whether the object holding the node lists it in `required`.
+   *   Whether the object holding the schema lists it in `required`.
    * @param bool $stale
-   *   Whether the envelope lists the node's pointer in `stale`.
+   *   Whether the envelope lists the schema's pointer in `stale`.
    * @param bool $locked
-   *   Whether an element around the node is drawn locked.
+   *   Whether an element around the schema is drawn locked.
    * @param \Drupal\surface\Widget\WidgetHostInterface|null $host
    *   The host's answers, or NULL where there is no host.
-   * @param \Drupal\surface\Widget\NodeDrawerInterface|null $drawer
-   *   The drawer, or NULL where nothing draws the nodes inside.
+   * @param \Drupal\surface\Widget\SchemaDrawerInterface|null $drawer
+   *   The drawer, or NULL where nothing draws the schemas inside.
    * @param string[] $stalePointers
-   *   Every stale pointer of the envelope, for the nodes inside.
+   *   Every stale pointer of the envelope, for the schemas inside.
    * @param bool $item
-   *   Whether the node is drawn inside a collection's item.
+   *   Whether the schema is drawn inside a collection's item.
    * @param bool $narrows
-   *   Whether the node comes from a document not narrowed for the values,
+   *   Whether the schema comes from a document not narrowed for the values,
    *   whose frames are narrowed as they are drawn.
    */
   public function __construct(
@@ -55,19 +55,19 @@ final class WidgetContext {
     public readonly bool $stale = FALSE,
     public readonly bool $locked = FALSE,
     protected readonly ?WidgetHostInterface $host = NULL,
-    protected readonly ?NodeDrawerInterface $drawer = NULL,
+    protected readonly ?SchemaDrawerInterface $drawer = NULL,
     protected readonly array $stalePointers = [],
     public readonly bool $item = FALSE,
     public readonly bool $narrows = FALSE,
   ) {}
 
   /**
-   * Gets the context of a node inside this one.
+   * Gets the context of a schema inside this one.
    *
    * @param string|int $name
    *   The property name, or a list item's index.
    * @param bool $required
-   *   Whether this node requires it.
+   *   Whether this schema requires it.
    * @param bool $locked
    *   Whether it is drawn inside a locked element.
    *
@@ -110,7 +110,7 @@ final class WidgetContext {
   }
 
   /**
-   * Gets the name of the node: the last step of its pointer.
+   * Gets the name of the schema: the last step of its pointer.
    *
    * @return string
    *   The name, '' for the whole.
@@ -139,21 +139,21 @@ final class WidgetContext {
   }
 
   /**
-   * Draws the properties of an object node, as the drawer draws a frame.
+   * Draws the properties of an object schema, as the drawer draws a frame.
    *
-   * @see \Drupal\surface\Widget\NodeDrawerInterface::drawProperties()
+   * @see \Drupal\surface\Widget\SchemaDrawerInterface::drawProperties()
    */
   public function properties(Schema $object, mixed $value): array {
     return $this->drawer?->drawProperties($object, $value, $this) ?? [];
   }
 
   /**
-   * Draws one node whole, as the drawer draws a key.
+   * Draws one schema whole, as the drawer draws a key.
    *
-   * @see \Drupal\surface\Widget\NodeDrawerInterface::drawNode()
+   * @see \Drupal\surface\Widget\SchemaDrawerInterface::drawSchema()
    */
-  public function node(Schema $node, mixed $value): array {
-    return $this->drawer?->drawNode($node, $value, $this) ?? [];
+  public function draw(Schema $schema, mixed $value): array {
+    return $this->drawer?->drawSchema($schema, $value, $this) ?? [];
   }
 
   /**

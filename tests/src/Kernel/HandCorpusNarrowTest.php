@@ -16,7 +16,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * five, so it runs in a class of its own.
  *
  * Decision: see
- * docs/decisions.md#the-validators-checks-and-the-document-read-nodes.
+ * docs/decisions.md#the-validators-checks-and-the-document-read-schemas.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]

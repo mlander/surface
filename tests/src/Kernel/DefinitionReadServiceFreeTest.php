@@ -37,7 +37,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   plugin definition is read.
  * The read renders no text the definitions hold: the texts with a
  *   rendering afterwards are the ones the build rendered before it
- *   (RENDERED_AT_BUILD). Projecting the same nodes through the same
+ *   (RENDERED_AT_BUILD). Projecting the same schemas through the same
  *   decorators and the recording container moves every counter, so each
  *   count of zero is a read that asked nothing.
  *
@@ -95,7 +95,7 @@ class DefinitionReadServiceFreeTest extends SurfaceKernelTestBase {
   protected const ASKED = ['typed_data_manager'];
 
   /**
-   * The texts the build renders before anything reads a node.
+   * The texts the build renders before anything reads a schema.
    *
    * The label of the catering example's `details` group: two declarations
    * of one group are compared by their rendered labels when the
@@ -147,11 +147,11 @@ class DefinitionReadServiceFreeTest extends SurfaceKernelTestBase {
     $container = \Drupal::getContainer();
     $asked = [];
     $recording = static::recording($container, $asked);
-    $nodes = [];
+    $schemas = [];
     \Drupal::setContainer($recording);
     try {
       foreach ($definitions as $definition) {
-        $nodes[] = DefinitionSchema::of($definition);
+        $schemas[] = DefinitionSchema::of($definition);
       }
     }
     finally {
@@ -162,7 +162,7 @@ class DefinitionReadServiceFreeTest extends SurfaceKernelTestBase {
     $rendered = array_filter($texts, static fn (TranslatableMarkup $text): bool => static::rendering($text) !== NULL);
     $this->assertSame($before, array_keys($rendered), 'The read rendered no text the definitions hold.');
     $this->assertSame(self::RENDERED_AT_BUILD, array_values(array_map(static fn (TranslatableMarkup $text): string => $text->getUntranslatedString(), $rendered)), 'What the build itself rendered before the read.');
-    $this->assertSame(self::READ, [count($nodes), count($texts)], 'Every entry is read, and the texts are found.');
+    $this->assertSame(self::READ, [count($schemas), count($texts)], 'Every entry is read, and the texts are found.');
 
     // The projection asks the decorators and the container, so a count
     // of zero is a read that asked nothing.
@@ -170,8 +170,8 @@ class DefinitionReadServiceFreeTest extends SurfaceKernelTestBase {
     \Drupal::setContainer($recording);
     try {
       $projection = new DefinitionSchema(\Drupal::service('surface.options'), $constraints);
-      foreach ($nodes as $node) {
-        $projection->published($node);
+      foreach ($schemas as $schema) {
+        $projection->published($schema);
       }
     }
     finally {

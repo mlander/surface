@@ -12,15 +12,15 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests no entry's node goes stale while a request runs.
+ * Tests no entry's schema goes stale while a request runs.
  *
- * An entry reads its node once and keeps it (Entry::schema()), so the
+ * An entry reads its schema once and keeps it (Entry::schema()), so the
  * rule it rests on is that a definition an entry holds is never written
  * after the entry is made: the builder seals the definitions, and a
  * refiner writes a deep copy. Nothing checks that at run time. This test
  * is the proof instead: for every pinned example (ExampleSurfacesTrait),
  * built for the account and for no account, and every value set of it
- * (ExampleValueSetsTrait), the node of every entry it can reach is read
+ * (ExampleValueSetsTrait), the schema of every entry it can reach is read
  * first: the data surface's own keys and outputs, the children that are
  * settled (attached, variants, a collection's item, a mounted structure),
  * and the same of the data surface refined against the values by each kind
@@ -29,14 +29,14 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * widget hints, emitFull() with and without them, the narrowed document),
  * the form's envelope, and the tool definitions. Then every entry read is
  * read afresh: DefinitionSchema::of() of its definition says what its
- * kept node says (nodeDifferences()). A refiner or a consumer that wrote
+ * kept schema says (schemaDifferences()). A refiner or a consumer that wrote
  * a definition it was handed instead of a copy fails here.
  *
- * Decision: see docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone.
+ * Decision: see docs/decisions.md#an-entry-holds-its-schema-the-memo-is-gone.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class EntryNodeIsNeverStaleTest extends SurfaceKernelTestBase {
+class EntrySchemaIsNeverStaleTest extends SurfaceKernelTestBase {
 
   use DefinitionEqualityTrait;
   use ExampleSurfacesTrait;
@@ -48,7 +48,7 @@ class EntryNodeIsNeverStaleTest extends SurfaceKernelTestBase {
    *
    * The examples built for the account and for no account, the value sets
    * of the former, those the accept refuses, and the distinct entries
-   * whose nodes were read and read again.
+   * whose schemas were read and read again.
    */
   protected const COUNTS = [90, 199, 5, 1369];
 
@@ -100,9 +100,9 @@ class EntryNodeIsNeverStaleTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests every entry's kept node says what its definition says, after all.
+   * Tests every entry's kept schema says what its definition says, after all.
    */
-  public function testNoNodeGoesStale(): void {
+  public function testNoSchemaGoesStale(): void {
     $entries = new \SplObjectStorage();
     $surfaces = 0;
     $sets = 0;
@@ -115,19 +115,19 @@ class EntryNodeIsNeverStaleTest extends SurfaceKernelTestBase {
     foreach ($this->examples(TRUE) as [$id, $operation, $surface]) {
       $surfaces++;
       $declared[] = [$id, $operation, $surface];
-      static::readEveryNode($surface, $entries);
+      static::readEverySchema($surface, $entries);
     }
     foreach ($this->examples() as [$id, $operation, $surface]) {
       $surfaces++;
-      static::readEveryNode($surface, $entries);
+      static::readEverySchema($surface, $entries);
       $sets_of = $this->valueSets($surface);
       foreach ($sets_of as $values) {
         $sets++;
         foreach (self::KINDS as $kind) {
-          static::readEveryNode($surface->refine($values, $kind), $entries);
+          static::readEverySchema($surface->refine($values, $kind), $entries);
         }
       }
-      // What a request runs, after the nodes were read.
+      // What a request runs, after the schemas were read.
       $defaults = $surface->getDefaultValues();
       foreach ($sets_of as $name => $values) {
         try {
@@ -160,14 +160,14 @@ class EntryNodeIsNeverStaleTest extends SurfaceKernelTestBase {
     $stale = [];
     foreach ($entries as $entry) {
       assert($entry instanceof Entry);
-      array_push($stale, ...static::nodeDifferences(DefinitionSchema::of($entry->definition()), $entry->schema(), $entries[$entry]));
+      array_push($stale, ...static::schemaDifferences(DefinitionSchema::of($entry->definition()), $entry->schema(), $entries[$entry]));
     }
-    $this->assertSame([], array_slice($stale, 0, 20), 'Every kept node says what its definition says now.');
+    $this->assertSame([], array_slice($stale, 0, 20), 'Every kept schema says what its definition says now.');
     $this->assertSame(self::COUNTS, [$surfaces, $sets, $refused, count($entries)], 'The data surfaces built, the value sets run, those the accept refuses, and the entries read.');
   }
 
   /**
-   * Reads the node of every entry a data surface reaches.
+   * Reads the schema of every entry a data surface reaches.
    *
    * Its keys and outputs, and the same of each settled child: attached,
    * each variant, a collection's item, a mounted structure.
@@ -181,7 +181,7 @@ class EntryNodeIsNeverStaleTest extends SurfaceKernelTestBase {
    * @param array<int, true> $seen
    *   The data surfaces walked, by object id.
    */
-  protected static function readEveryNode(SurfaceInterface $surface, \SplObjectStorage $entries, string $at = '', array &$seen = []): void {
+  protected static function readEverySchema(SurfaceInterface $surface, \SplObjectStorage $entries, string $at = '', array &$seen = []): void {
     if (isset($seen[spl_object_id($surface)])) {
       return;
     }
@@ -204,7 +204,7 @@ class EntryNodeIsNeverStaleTest extends SurfaceKernelTestBase {
           $children["mounted $path"] = $attachment->settledChild();
         }
         foreach (array_filter($children) as $what => $child) {
-          static::readEveryNode($child, $entries, "$here $what", $seen);
+          static::readEverySchema($child, $entries, "$here $what", $seen);
         }
       }
     }

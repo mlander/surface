@@ -91,15 +91,15 @@ class NamedChecksTest extends SurfaceKernelTestBase {
     ]);
     $checked = ['drupal:Callback' => []];
     $messages = ['check.drupal:Callback' => 'Callback'];
-    $nodes = [
+    $schemas = [
       'map' => $properties['map'],
       'outer.inner' => $properties['outer']['properties']['inner'],
       'lines.*' => $properties['lines']['items'],
     ];
-    foreach ($nodes as $at => $node) {
-      $this->assertSame($checked, $node['portable-check'], $at);
-      $this->assertSame($messages, $node['x-portable-messages'], $at . ': the plugin label, as every check with no message of its own.');
-      $keys = array_keys($node);
+    foreach ($schemas as $at => $schema) {
+      $this->assertSame($checked, $schema['portable-check'], $at);
+      $this->assertSame($messages, $schema['x-portable-messages'], $at . ': the plugin label, as every check with no message of its own.');
+      $keys = array_keys($schema);
       $this->assertSame(['additionalProperties', 'portable-check', 'x-portable-messages'], array_slice($keys, (int) array_search('additionalProperties', $keys, TRUE)), $at . ': after the standard keywords.');
     }
     $this->assertArrayNotHasKey('portable-check', $properties['outer'], 'A map with no constraint of its own names none.');
@@ -144,16 +144,16 @@ class NamedChecksTest extends SurfaceKernelTestBase {
       'v4' => DataDefinition::create('string')->setLabel('V4')->addConstraint('Uuid', ['versions' => [4]]),
       'loose' => DataDefinition::create('string')->setLabel('Loose')->addConstraint('Uuid', ['strict' => FALSE]),
     ]);
-    $node = static fn (string $title, string $format, string $check): array => [
+    $schema = static fn (string $title, string $format, string $check): array => [
       'title' => $title,
       'type' => ['string', 'null'],
       'format' => $format,
       'portable-check' => ['drupal:' . $check => []],
     ];
-    $this->assertSame($node('Mail', 'email', 'Email'), $properties['mail']);
-    $this->assertSame($node('Address', 'email', 'Email'), $properties['address']);
-    $this->assertSame($node('Id', 'uuid', 'Uuid'), $properties['id']);
-    $this->assertSame($node('V4', 'uuid', 'Uuid'), $properties['v4'], 'Its versions are the server\'s.');
+    $this->assertSame($schema('Mail', 'email', 'Email'), $properties['mail']);
+    $this->assertSame($schema('Address', 'email', 'Email'), $properties['address']);
+    $this->assertSame($schema('Id', 'uuid', 'Uuid'), $properties['id']);
+    $this->assertSame($schema('V4', 'uuid', 'Uuid'), $properties['v4'], 'Its versions are the server\'s.');
     // No format states a Uuid that is not strict: a check like any other.
     $this->assertSame(['drupal:Uuid' => []], $properties['loose']['portable-check']);
     $this->assertArrayNotHasKey('format', $properties['loose']);

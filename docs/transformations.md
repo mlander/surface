@@ -219,7 +219,7 @@ takes an entity type and an id.
 
 The tool bridge declares no entity input. An operation's parameter is a
 value, never an object, so a parameter named for a key of the resource
-is converted from that key's own node, the id typed as the key holds
+is converted from that key's own schema, the id typed as the key holds
 it, for every connector:
 
 <!-- excerpt: src/Tool/OperationInputs.php -->
@@ -482,10 +482,10 @@ and both documents state it. Three choices settle it
   refiner runs under, and the PHPStan rule flags `\Drupal::` in it, so
   the narrowing (`POST .../schema`) can run it ahead of a write and
   answer the value it would compute for the values in progress. It is
-  handed the values `from:` names and the key's own node, `$key`, which
+  handed the values `from:` names and the key's own schema, `$key`, which
   is declaration, not site state. What it promises is its standard
   keywords, read with `get()`: `MachineName` cuts to `maxLength`. What
-  Surface keeps on a node beyond them is not promised. A changed time reads the clock:
+  Surface keeps on a schema beyond them is not promised. A changed time reads the clock:
   it stays a storage's to add in `prepare()`.
 - **When it runs.** Once the other keys are accepted, from their
   accepted values: while storage holds nothing for it, which is when the

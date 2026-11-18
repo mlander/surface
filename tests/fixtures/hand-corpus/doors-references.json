@@ -80,7 +80,7 @@
       "anyref": "bde8add8a33d",
       "anyref.nope": "f867a9b500c2"
     },
-    "plain | nodes": {
+    "plain | schemas": {
       "nope": "85cf5ad1bdc5",
       "nope.deeper": "85cf5ad1bdc5",
       "child.author": "5a96729420cc",

@@ -179,7 +179,7 @@ final class DocumentHead {
   /**
    * Lays out one schema that is not below an applicator, and inside it.
    *
-   * @param \PortableSchema\Builder\Schema $node
+   * @param \PortableSchema\Builder\Schema $schema
    *   The schema.
    * @param \PortableSchema\Builder\Schema $root
    *   The document's root, which holds `$defs`.
@@ -187,18 +187,18 @@ final class DocumentHead {
    * @return \PortableSchema\Builder\Schema
    *   The schema, its applicators carrying no `x-surface`.
    */
-  protected function owning(Schema $node, Schema $root): Schema {
+  protected function owning(Schema $schema, Schema $root): Schema {
     $within = [];
     $rules = [];
-    $known = $node->has('type');
-    foreach ($node->all() as $keyword => $value) {
+    $known = $schema->has('type');
+    foreach ($schema->all() as $keyword => $value) {
       if (in_array($keyword, self::DATA, TRUE)) {
         continue;
       }
       if (in_array($keyword, self::APPLICATORS, TRUE)) {
         if ($value instanceof Schema) {
           if (!$value->isBoolean()) {
-            $node = $node->with($keyword, $this->below($value, '/' . $keyword, $known, [$node], $root, $within));
+            $schema = $schema->with($keyword, $this->below($value, '/' . $keyword, $known, [$schema], $root, $within));
           }
           continue;
         }
@@ -217,9 +217,9 @@ final class DocumentHead {
             unset($extension['declared']);
             $member = $extension === [] ? $member->without(self::EXTENSION) : $member->with(self::EXTENSION, $extension);
           }
-          $value[$i] = $this->below($member, '/' . $keyword . '/' . $i, $known, [$node], $root, $within);
+          $value[$i] = $this->below($member, '/' . $keyword . '/' . $i, $known, [$schema], $root, $within);
         }
-        $node = $node->with($keyword, $value);
+        $schema = $schema->with($keyword, $value);
         continue;
       }
       if (in_array($keyword, ['properties', '$defs', 'patternProperties'], TRUE) && is_array($value)) {
@@ -228,30 +228,30 @@ final class DocumentHead {
             $value[$name] = $this->owning($child, $root);
           }
         }
-        $node = $node->with($keyword, $value);
+        $schema = $schema->with($keyword, $value);
         continue;
       }
       if (in_array($keyword, ['items', 'additionalProperties', 'unevaluatedProperties', 'contains', 'propertyNames'], TRUE) && $value instanceof Schema && !$value->isBoolean()) {
-        $node = $node->with($keyword, $this->owning($value, $root));
+        $schema = $schema->with($keyword, $this->owning($value, $root));
       }
     }
     if ($rules === [] && $within === []) {
-      return $node;
+      return $schema;
     }
-    $extension = (array) $node->get(self::EXTENSION);
+    $extension = (array) $schema->get(self::EXTENSION);
     if ($rules !== []) {
       $extension['rules'] = $rules;
     }
     if ($within !== []) {
       $extension['within'] = $within;
     }
-    return $node->with(self::EXTENSION, $extension);
+    return $schema->with(self::EXTENSION, $extension);
   }
 
   /**
    * Lays out a schema below an applicator, and everything inside it.
    *
-   * @param \PortableSchema\Builder\Schema $node
+   * @param \PortableSchema\Builder\Schema $schema
    *   The schema.
    * @param string $pointer
    *   Its JSON pointer from the owning object.
@@ -272,25 +272,25 @@ final class DocumentHead {
    *   it holds), which is still a schema, and one every JSON reader reads
    *   back as itself. A schema empty from the start is kept as `{}`.
    */
-  protected function below(Schema $node, string $pointer, bool $known, array $sources, Schema $root, array &$within): Schema|bool {
-    if ($node->all() === []) {
+  protected function below(Schema $schema, string $pointer, bool $known, array $sources, Schema $root, array &$within): Schema|bool {
+    if ($schema->all() === []) {
       // An empty schema is written as given, `{}`.
-      return $node;
+      return $schema;
     }
-    if ($node->has(self::EXTENSION)) {
-      $within[$pointer] = $node->get(self::EXTENSION);
-      $node = $node->without(self::EXTENSION);
+    if ($schema->has(self::EXTENSION)) {
+      $within[$pointer] = $schema->get(self::EXTENSION);
+      $schema = $schema->without(self::EXTENSION);
     }
-    $sources = [$node, ...$sources];
-    $here = $known || $node->has('type');
-    foreach ($node->all() as $keyword => $value) {
+    $sources = [$schema, ...$sources];
+    $here = $known || $schema->has('type');
+    foreach ($schema->all() as $keyword => $value) {
       if (in_array($keyword, self::DATA, TRUE)) {
         continue;
       }
       if (in_array($keyword, self::APPLICATORS, TRUE)) {
         if ($value instanceof Schema) {
           if (!$value->isBoolean()) {
-            $node = $node->with($keyword, $this->below($value, $pointer . '/' . $keyword, $here, $sources, $root, $within));
+            $schema = $schema->with($keyword, $this->below($value, $pointer . '/' . $keyword, $here, $sources, $root, $within));
           }
           continue;
         }
@@ -300,7 +300,7 @@ final class DocumentHead {
               $value[$i] = $this->below($member, $pointer . '/' . $keyword . '/' . $i, $here, $sources, $root, $within);
             }
           }
-          $node = $node->with($keyword, $value);
+          $schema = $schema->with($keyword, $value);
         }
       }
       elseif ($keyword === 'properties' && is_array($value)) {
@@ -318,25 +318,25 @@ final class DocumentHead {
             $value[$name] = $child;
           }
         }
-        $node = $value === [] ? $node->without($keyword) : $node->with($keyword, $value);
+        $schema = $value === [] ? $schema->without($keyword) : $schema->with($keyword, $value);
       }
       elseif ($keyword === 'items' && $value instanceof Schema && !$value->isBoolean()) {
-        $node = $node->with($keyword, $this->below($value, $pointer . '/items', FALSE, $this->declaredAt($sources, 'items', NULL, $root), $root, $within));
+        $schema = $schema->with($keyword, $this->below($value, $pointer . '/items', FALSE, $this->declaredAt($sources, 'items', NULL, $root), $root, $within));
       }
       elseif (in_array($keyword, ['additionalProperties', 'unevaluatedProperties', 'contains', 'propertyNames'], TRUE) && $value instanceof Schema && !$value->isBoolean()) {
-        $node = $node->with($keyword, $this->below($value, $pointer . '/' . $keyword, FALSE, [], $root, $within));
+        $schema = $schema->with($keyword, $this->below($value, $pointer . '/' . $keyword, FALSE, [], $root, $within));
       }
     }
-    if ($node->all() === []) {
+    if ($schema->all() === []) {
       return TRUE;
     }
-    if (!$known && !$node->has('type') && array_intersect_key($node->all(), self::TYPED) !== []) {
+    if (!$known && !$schema->has('type') && array_intersect_key($schema->all(), self::TYPED) !== []) {
       $type = $this->declaredType($sources, $root);
       if ($type !== NULL) {
-        $node = Schemas::first($node, ['type' => $type]);
+        $schema = Schemas::first($schema, ['type' => $type]);
       }
     }
-    return $node;
+    return $schema;
   }
 
   /**

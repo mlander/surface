@@ -128,7 +128,7 @@ use PortableSchema\Builder\Schema;
  * contract's own (CONTRACT, stated as `x-surface.contract`), distinct
  * from a resource's version. In contract 2 no `x-surface` sits below an
  * applicator (`allOf`, `anyOf`, `oneOf`, `if`, `then`, `else`, `not`):
- * below an applicator a node keeps the dialect's three keywords
+ * below an applicator a schema keeps the dialect's three keywords
  * (`portable-check`, `x-portable-messages`, `x-portable-ui`), which a
  * plain validator ignores. The object owning the applicator says which
  * of its conditionals are declared rules (`x-surface.rules`) and what a
@@ -266,7 +266,7 @@ final class ContractEmitter {
   protected array $site = ['pointer' => '', 'steps' => [], 'reached' => TRUE];
 
   /**
-   * Projects each built node to the document form.
+   * Projects each built schema to the document form.
    */
   protected readonly DefinitionSchema $definitions;
 
@@ -311,7 +311,7 @@ final class ContractEmitter {
    *   on a site that serves no API (surface_http is not installed), whose
    *   documents carry no lookup link.
    * @param \Drupal\surface\Contract\DefinitionSchema|null $definitions
-   *   The projection of a built node to a document; without it, one of
+   *   The projection of a built schema to a document; without it, one of
    *   its own.
    */
   public function __construct(
@@ -662,7 +662,7 @@ final class ContractEmitter {
         $stated = $entry;
         $answered = FALSE;
       }
-      if (NodeFacts::doesNotApply($current->schema())) {
+      if (SchemaFacts::doesNotApply($current->schema())) {
         // Ruled out for these values: not a property, not required, no
         // value; the frame says what it depends on, so a client refines
         // when that changes. Decision: see
@@ -677,7 +677,7 @@ final class ContractEmitter {
       // describes the child in its own frame. Decision: see
       // docs/decisions.md#the-document-is-written-from-schemas.
       $own = $current->schema();
-      $node = $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL ? $own : NULL;
+      $plain_schema = $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL ? $own : NULL;
       $requires = PropertySchema::required($own);
       $depends = $advertised->dependencies($name);
       // Whether a static refiner has something to refine the key against
@@ -733,9 +733,9 @@ final class ContractEmitter {
         }
         $entries = [];
         foreach ($entry->attachment->child->getDefinitions()->entries() as $id => $each) {
-          $entries[] = ['id' => (string) $id, 'label' => (string) NodeFacts::label($each->schema())];
+          $entries[] = ['id' => (string) $id, 'label' => (string) SchemaFacts::label($each->schema())];
         }
-        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write('fieldset'), NodeFacts::arrangement($entry->schema())));
+        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write('fieldset'), SchemaFacts::arrangement($entry->schema())));
         // The fetch is a link, `{value}` an entry's id, which the entries
         // list gives; written at the site, never in a def, which several
         // sites share.
@@ -773,7 +773,7 @@ final class ContractEmitter {
         if ($locked) {
           $properties[$name] = $properties[$name]->with('readOnly', TRUE);
         }
-        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write($this->propertySchema->asked(NodeFacts::setting($own, 'widget')) ?? 'fieldset'), NodeFacts::arrangement($entry->schema())));
+        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write($this->propertySchema->asked(SchemaFacts::setting($own, 'widget')) ?? 'fieldset'), SchemaFacts::arrangement($entry->schema())));
         $properties[$name] = $properties[$name]->with(self::EXTENSION, (array) $instance->get(self::EXTENSION) + $this->propertySchema->extension($depends, $this->propertySchema->anyRefined($instance)));
         if ($ahead_of_time) {
           $enumerated = $this->conditionals->enumerate($declared, $static, $entry, $values, $properties[$name], $emission, TRUE);
@@ -809,7 +809,7 @@ final class ContractEmitter {
         if ($locked) {
           $properties[$name] = $properties[$name]->with('readOnly', TRUE);
         }
-        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write($this->propertySchema->asked(NodeFacts::setting($own, 'widget')) ?? 'fieldset'), NodeFacts::arrangement($entry->schema())));
+        $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write($this->propertySchema->asked(SchemaFacts::setting($own, 'widget')) ?? 'fieldset'), SchemaFacts::arrangement($entry->schema())));
         $properties[$name] = $properties[$name]->with(self::EXTENSION, $this->propertySchema->extension($depends, $this->propertySchema->anyRefined($instance)));
         if ($ahead_of_time) {
           // A parent's refiner of an attached key says only whether it
@@ -839,8 +839,8 @@ final class ContractEmitter {
         // def has no operation), an orphan the stored value it stands
         // for, and anything else what it was given or failing that its
         // default.
-        assert($node !== NULL);
-        $secret = Secrets::marked($node);
+        assert($plain_schema !== NULL);
+        $secret = Secrets::marked($plain_schema);
         $orphan = !$secret && !$locked && array_key_exists($prefix . $name, $standing);
         $value = match (TRUE) {
           $secret, $declaring && $entry->locked => NULL,
@@ -857,10 +857,10 @@ final class ContractEmitter {
         };
         // A key as advertised is compared with what it is now only where
         // a refinement moved it (Entry::sameSource()): one source has one
-        // signature, and the advertised node is not read for nothing.
+        // signature, and the advertised schema is not read for nothing.
         $moved = !$entry->sameSource($current);
-        [$properties[$name], $shown[$name]] = $this->propertySchema->property($node, $moved ? $entry->schema() : NULL, $value, $prefix . $name, $locked, $depends, $emission);
-        $properties[$name] = $this->linked($properties[$name], $node, $name, $declaring);
+        [$properties[$name], $shown[$name]] = $this->propertySchema->property($plain_schema, $moved ? $entry->schema() : NULL, $value, $prefix . $name, $locked, $depends, $emission);
+        $properties[$name] = $this->linked($properties[$name], $plain_schema, $name, $declaring);
         if ($declaring && $entry->locked) {
           // What the context fixed it to is the instance's, not the
           // declaration's: the reference site says it.
@@ -881,7 +881,7 @@ final class ContractEmitter {
             // Refused by the save that moved what it refines against, not
             // kept: its empty option does not say "keep".
             // Decision: see docs/decisions.md#the-empty-option-rule.
-            $ui['options']['emptyOption']['label'] = (string) (NodeFacts::holdsValue($node) ? $this->t('- Select -') : $this->t('- None -'));
+            $ui['options']['emptyOption']['label'] = (string) (SchemaFacts::holdsValue($plain_schema) ? $this->t('- Select -') : $this->t('- None -'));
             $properties[$name] = $properties[$name]->with(PortableUi::KEYWORD, $ui);
           }
           $shown[$name] = NULL;
@@ -892,7 +892,7 @@ final class ContractEmitter {
           // Decision: see docs/decisions.md#the-empty-option-rule.
           $ui = $properties[$name]->get(PortableUi::KEYWORD);
           if (isset($ui['options']['emptyOption']) && ($ui['widget'] ?? NULL) !== 'radios') {
-            $ui['options']['emptyOption']['label'] = (string) (NodeFacts::holdsValue($node) ? $this->t('- Select -') : $this->t('- None -'));
+            $ui['options']['emptyOption']['label'] = (string) (SchemaFacts::holdsValue($plain_schema) ? $this->t('- Select -') : $this->t('- None -'));
             $properties[$name] = $properties[$name]->with(PortableUi::KEYWORD, $ui);
           }
         }
@@ -1521,7 +1521,7 @@ final class ContractEmitter {
       }
       // The mount's title and description, from the schema the key that
       // holds the mounts holds for it: a list's holds none.
-      $map = DefinitionSchema::propertyNode($holder, $module);
+      $map = DefinitionSchema::propertyOf($holder, $module);
       $site = Schemas::first($this->propertySchema->reference($key, $instance, $subschemas), $map === NULL ? [] : $this->propertySchema->describe($map)->all());
       if ($inline->get('readOnly') !== NULL) {
         $site = $site->with('readOnly', $inline->get('readOnly'));
@@ -1627,10 +1627,10 @@ final class ContractEmitter {
     // The list's schema, as the parent refined it; its own keywords are
     // stated without its items, which are the child's.
     $list_schema = $current->schema();
-    [$schema, $checks] = $this->propertySchema->listKeywords($this->propertySchema->listNode($list_schema));
+    [$schema, $checks] = $this->propertySchema->listKeywords($this->propertySchema->listSchema($list_schema));
     $schema = $schema->with('items', $items);
-    if (NodeFacts::hasDefault($list_schema) && !$declaring) {
-      $schema = $schema->with('default', NodeFacts::default($list_schema));
+    if (SchemaFacts::hasDefault($list_schema) && !$declaring) {
+      $schema = $schema->with('default', SchemaFacts::default($list_schema));
     }
     if ($locked) {
       $schema = $schema->with('readOnly', TRUE);
@@ -1640,7 +1640,7 @@ final class ContractEmitter {
     // (Entry::sameSource()), and compared only there.
     $moved = !$entry->sameSource($current);
     $advertised = $moved ? $entry->schema() : $list_schema;
-    $schema = PortableUi::set($schema, $this->propertySchema->hints(PortableUi::write('list'), NodeFacts::arrangement($advertised)));
+    $schema = PortableUi::set($schema, $this->propertySchema->hints(PortableUi::write('list'), SchemaFacts::arrangement($advertised)));
     $refined = $moved && $this->propertySchema->signature($advertised) !== $this->propertySchema->signature($list_schema);
     $schema = $schema->with(self::EXTENSION, $this->propertySchema->extension($depends, $refined) + ['collection' => TRUE]);
 
@@ -1872,7 +1872,7 @@ final class ContractEmitter {
   /**
    * Answers whether a key refers to an entity type, or one a sibling names.
    *
-   * Read from the key's node, a key that holds a child frame's too.
+   * Read from the key's schema, a key that holds a child frame's too.
    *
    * @param \Drupal\surface\Entry $entry
    *   The key.
@@ -1881,8 +1881,8 @@ final class ContractEmitter {
    *   TRUE for a reference key, or the id of a reference to any type.
    */
   protected static function refers(Entry $entry): bool {
-    $node = $entry->schema();
-    return References::targetIn($node) !== NULL || NodeFacts::setting($node, References::TARGETS) !== NULL;
+    $schema = $entry->schema();
+    return References::targetIn($schema) !== NULL || SchemaFacts::setting($schema, References::TARGETS) !== NULL;
   }
 
   /**
@@ -1951,8 +1951,8 @@ final class ContractEmitter {
    *
    * @param \PortableSchema\Builder\Schema $property
    *   The key's schema.
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's built node, as it stands.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's built schema, as it stands.
    * @param string $name
    *   The key.
    * @param bool $declaring
@@ -1961,14 +1961,14 @@ final class ContractEmitter {
    * @return \PortableSchema\Builder\Schema
    *   The schema, with the link where it has one.
    */
-  protected function linked(Schema $property, Schema $node, string $name, bool $declaring): Schema {
+  protected function linked(Schema $property, Schema $schema, string $name, bool $declaring): Schema {
     if ($this->lookup === NULL || !$this->site['reached'] || $declaring) {
       return $property;
     }
     $pointer = $this->site['pointer'] . '/' . Choices::escape($name);
     return match (TRUE) {
-      NodeFacts::setting($node, References::TARGETS) !== NULL => PortableLinks::set($property, PortableLinks::lookup($this->lookup, $pointer, References::TYPE_KEY)),
-      References::targetIn($node) !== NULL => PortableLinks::set($property, PortableLinks::lookup($this->lookup, $pointer)),
+      SchemaFacts::setting($schema, References::TARGETS) !== NULL => PortableLinks::set($property, PortableLinks::lookup($this->lookup, $pointer, References::TYPE_KEY)),
+      References::targetIn($schema) !== NULL => PortableLinks::set($property, PortableLinks::lookup($this->lookup, $pointer)),
       default => $property,
     };
   }
@@ -2054,18 +2054,18 @@ final class ContractEmitter {
   }
 
   /**
-   * Adds members to a node's `x-surface`: each replaces one of its name.
+   * Adds members to a schema's `x-surface`: each replaces one of its name.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    * @param array $members
    *   The members.
    *
    * @return \PortableSchema\Builder\Schema
-   *   The node; a member it had keeps its place, a new one goes last.
+   *   The schema; a member it had keeps its place, a new one goes last.
    */
-  protected static function extended(Schema $node, array $members): Schema {
-    return $node->with(self::EXTENSION, array_replace((array) $node->get(self::EXTENSION), $members));
+  protected static function extended(Schema $schema, array $members): Schema {
+    return $schema->with(self::EXTENSION, array_replace((array) $schema->get(self::EXTENSION), $members));
   }
 
   /**
@@ -2120,20 +2120,20 @@ final class ContractEmitter {
     $blank = $emission->blank;
     $variants = $entry->variants;
     assert($variants !== NULL);
-    // The deciding key's node, asked once, for the type each variant's
+    // The deciding key's schema, asked once, for the type each variant's
     // value is said in.
     $by = $declared->getDefinitions()->entry($variants->by)?->schema();
     $deciding = $values[$variants->by] ?? ($declaring && $declared->isLocked($variants->by) ? NULL : $declared->getDefault($variants->by));
     $chosen = $variants->chosen($deciding);
     $held = $values[$entry->name] ?? NULL;
-    // The shell is no entry's definition, so no node is read of it.
+    // The shell is no entry's definition, so no schema is read of it.
     $shell = $this->propertySchema->describe(DefinitionSchema::describe($variants->shell));
     $property = $shell->with('type', DefinitionSchema::nullable('object', $variants->shell));
     $depends = array_values(array_unique([$variants->by, ...$entry->dependencies]));
     if ($locked) {
       $property = $property->with('readOnly', TRUE);
     }
-    $property = PortableUi::set($property, $this->propertySchema->hints(PortableUi::write('variants'), NodeFacts::arrangement($entry->schema())));
+    $property = PortableUi::set($property, $this->propertySchema->hints(PortableUi::write('variants'), SchemaFacts::arrangement($entry->schema())));
     $property = $property->with(self::EXTENSION, $this->propertySchema->extension($depends, $chosen !== NULL) + [
       'by' => $variants->by,
       'variants' => [],
@@ -2277,7 +2277,7 @@ final class ContractEmitter {
    */
   public function describeKey(Entry $entry, ?DataDefinitionInterface $definition = NULL): array|false {
     $schema = $definition === NULL ? $entry->schema() : DefinitionSchema::of($definition);
-    if (NodeFacts::doesNotApply($schema)) {
+    if (SchemaFacts::doesNotApply($schema)) {
       return FALSE;
     }
     $described = Schemas::arrayed($this->propertySchema->withoutExtension($this->conditionals->stated($entry, $schema, Emission::detached())));
@@ -2293,7 +2293,7 @@ final class ContractEmitter {
    * Names the JSON type of a key that holds a child frame, by its schema.
    *
    * An object; with null beside it where the key may be cleared
-   * (NodeFacts::isNullable()), as DefinitionSchema::nullable() says it of
+   * (SchemaFacts::isNullable()), as DefinitionSchema::nullable() says it of
    * a definition: neither a key its storage always holds nor a secret.
    *
    * @param \PortableSchema\Builder\Schema $schema
@@ -2303,7 +2303,7 @@ final class ContractEmitter {
    *   `object`, or `object` and `null`.
    */
   protected static function objectType(Schema $schema): string|array {
-    return NodeFacts::isNullable($schema) ? ['object', 'null'] : 'object';
+    return SchemaFacts::isNullable($schema) ? ['object', 'null'] : 'object';
   }
 
   /**
@@ -2350,12 +2350,12 @@ final class ContractEmitter {
    *   The string translation service.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
-   *   The message a built node holds (DefinitionSchema::heldTo()), which
+   *   The message a built schema holds (DefinitionSchema::heldTo()), which
    *   this service translates.
    */
   public static function foreignMessage(array $schema, TranslationInterface $translation): TranslatableMarkup {
     $held = DefinitionSchema::heldTo($schema);
-    return new NodeMessage($held->getUntranslatedString(), $held->getArguments(), $held->getOptions(), $translation);
+    return new SchemaMessage($held->getUntranslatedString(), $held->getArguments(), $held->getOptions(), $translation);
   }
 
 }

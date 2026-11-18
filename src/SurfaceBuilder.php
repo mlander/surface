@@ -12,8 +12,8 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeDefinition;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\DefinitionFromSchema;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\ValueSchema;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\Narrowing;
@@ -276,7 +276,7 @@ final class SurfaceBuilder {
       // A key held as its schema is asked for a definition by a caller
       // that has not moved to schemas: derived once, and held from then
       // on, so what the caller writes to it is the key's.
-      $held = $this->definitions[$name] = NodeDefinition::of($held);
+      $held = $this->definitions[$name] = DefinitionFromSchema::of($held);
     }
     return $held;
   }
@@ -1210,7 +1210,7 @@ final class SurfaceBuilder {
       // alter writes the mounted keys by path. A key of a class no schema
       // derives keeps a copy of its own definition, as the entry does.
       $this->thirdParty[$provider][(string) $name] = DefinitionMap::derivedClasses($entry->schema())
-        ? NodeDefinition::of($entry->schema())
+        ? DefinitionFromSchema::of($entry->schema())
         : Surface::deepClone($entry->definition());
     }
     $this->mounted[$provider] = $attachment;
@@ -1448,8 +1448,8 @@ final class SurfaceBuilder {
     }
     $definitions = $this->definitions;
     // A key that holds a child frame is handed its own facts alone, a copy
-    // of the shell its author described: its node is composed of them
-    // around the nodes its child's entries hold (Entry::sealed()), so no
+    // of the shell its author described: its schema is composed of them
+    // around the schemas its child's entries hold (Entry::sealed()), so no
     // definition of the child's keys is built for it.
     foreach (array_keys($this->attachments) as $key) {
       $definitions[$key] = clone $this->assertShell((string) $key);
@@ -1532,11 +1532,11 @@ final class SurfaceBuilder {
         runtimeAccess: $this->runtimeAccessWhole ? array_map('strval', array_keys($definitions)) : array_values(array_intersect($this->runtimeAccess, array_keys($definitions))),
         lockReasons: array_intersect_key($this->lockReasons, $definitions),
         frameConstraints: $this->frameConstraints,
-        nodeFirst: TRUE,
+        schemaFirst: TRUE,
         chosen: $picked,
       ),
       $this->cacheability,
-      DefinitionMap::fromArrays(definitions: $outputs, nodeFirst: TRUE),
+      DefinitionMap::fromArrays(definitions: $outputs, schemaFirst: TRUE),
       $this->thirdPartyLayouts,
       $this->watchedValueCheck,
       lockedWhole: $this->lockedWhole,
@@ -1839,7 +1839,7 @@ final class SurfaceBuilder {
     $groups = [];
     foreach ($definitions as $name => $definition) {
       $name = (string) $name;
-      $group = ($definition instanceof Schema ? NodeFacts::arrangement($definition) : DefinitionMetadata::arrangementOf($definition))?->group;
+      $group = ($definition instanceof Schema ? SchemaFacts::arrangement($definition) : DefinitionMetadata::arrangementOf($definition))?->group;
       if ($group !== NULL) {
         if (isset($groups[$group->id]) && !$groups[$group->id][1]->sameAs($group)) {
           throw new \LogicException(sprintf(

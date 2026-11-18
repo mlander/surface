@@ -10,13 +10,13 @@ use Drupal\surface\Resource\Arrangement;
 use PortableSchema\Builder\Schema;
 
 /**
- * Reads the facts of a key from the key's node.
+ * Reads the facts of a key from the key's schema.
  *
  * For the value pipeline, the validator's own checks and the document's
- * classes, and for the readers still to move to nodes.
+ * classes, and for the readers still to move to schemas.
  *
- * Each method takes a built node (DefinitionSchema::of(), an entry's
- * schema()) and answers what one call on the definition the node was read
+ * Each method takes a built schema (DefinitionSchema::of(), an entry's
+ * schema()) and answers what one call on the definition the schema was read
  * from answers; its docblock names that call. "The metadata getter" is
  * the module's static getter of what a definition stores, by that name;
  * the decisions entry's table names its class. The members of the model
@@ -24,52 +24,52 @@ use PortableSchema\Builder\Schema;
  * pipeline names none of them. Static and pure: no service, no request,
  * nothing rendered, nothing kept.
  *
- * The other readers of a node the pipeline uses stay where they are:
- * DefinitionSchema::isList(), isComplex(), nodeIsMap(), isLeaf(),
- * declares() (the DateOnly flag), propertyNode() and itemNode();
+ * The other readers of a schema the pipeline uses stay where they are:
+ * DefinitionSchema::isList(), isComplex(), holdsProperties(), isLeaf(),
+ * declares() (the DateOnly flag), propertyOf() and itemOf();
  * Secrets::marked() (a secret).
  *
- * Every answer holds for the three classes a node holds every fact of
- * (DataDefinition, ListDataDefinition, MapDataDefinition). A node read from
+ * Every answer holds for the three classes a schema holds every fact of
+ * (DataDefinition, ListDataDefinition, MapDataDefinition). A schema read from
  * another class (a configurable field) has no `required` or `settings`
  * member, so isRequired() and settings() answer as for none.
  *
- * Decision: see docs/decisions.md#the-value-pipeline-reads-nodes,
- * docs/decisions.md#the-validators-checks-and-the-document-read-nodes.
+ * Decision: see docs/decisions.md#the-value-pipeline-reads-schemas,
+ * docs/decisions.md#the-validators-checks-and-the-document-read-schemas.
  *
  * @internal
  */
-final class NodeFacts {
+final class SchemaFacts {
 
   /**
-   * Names the data type a node was read with.
+   * Names the data type a schema was read with.
    *
    * Stands for getDataType().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return string
-   *   The `type` member; '' for a node no definition was read into.
+   *   The `type` member; '' for a schema no definition was read into.
    */
-  public static function dataType(Schema $node): string {
-    $type = DefinitionSchema::model($node)['type'] ?? '';
+  public static function dataType(Schema $schema): string {
+    $type = DefinitionSchema::model($schema)['type'] ?? '';
     return is_string($type) ? $type : '';
   }
 
   /**
-   * Answers whether a node's definition declares any constraint.
+   * Answers whether a schema's definition declares any constraint.
    *
    * Stands for `getConstraints() !== []`.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where constraints() gives one.
    */
-  public static function hasConstraints(Schema $node): bool {
-    return static::constraints($node) !== [];
+  public static function hasConstraints(Schema $schema): bool {
+    return static::constraints($schema) !== [];
   }
 
   /**
@@ -78,14 +78,14 @@ final class NodeFacts {
    * Stands for isRequired(). The key's own flag, not the parent's
    * `required` keyword, which leaves out a secret and a computed key.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where the `required` member is set.
    */
-  public static function isRequired(Schema $node): bool {
-    return !empty(DefinitionSchema::model($node)['required']);
+  public static function isRequired(Schema $schema): bool {
+    return !empty(DefinitionSchema::model($schema)['required']);
   }
 
   /**
@@ -93,14 +93,14 @@ final class NodeFacts {
    *
    * Stands for the metadata getter isAlwaysHeld().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where the `alwaysHeld` member is set.
    */
-  public static function isAlwaysHeld(Schema $node): bool {
-    return !empty(DefinitionSchema::model($node)['alwaysHeld']);
+  public static function isAlwaysHeld(Schema $schema): bool {
+    return !empty(DefinitionSchema::model($schema)['alwaysHeld']);
   }
 
   /**
@@ -108,14 +108,14 @@ final class NodeFacts {
    *
    * Stands for the metadata getter isGrouping().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where the `grouping` member is set.
    */
-  public static function isGrouping(Schema $node): bool {
-    return !empty(DefinitionSchema::model($node)['grouping']);
+  public static function isGrouping(Schema $schema): bool {
+    return !empty(DefinitionSchema::model($schema)['grouping']);
   }
 
   /**
@@ -123,14 +123,14 @@ final class NodeFacts {
    *
    * Stands for the metadata getter holdsValue(): required, or always held.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE when null cannot clear it.
    */
-  public static function holdsValue(Schema $node): bool {
-    return static::isRequired($node) || static::isAlwaysHeld($node);
+  public static function holdsValue(Schema $schema): bool {
+    return static::isRequired($schema) || static::isAlwaysHeld($schema);
   }
 
   /**
@@ -140,14 +140,14 @@ final class NodeFacts {
    * optional key a caller may clear, never one that must hold a value,
    * nor a secret.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE when it does.
    */
-  public static function isNullable(Schema $node): bool {
-    return !static::holdsValue($node) && !Secrets::marked($node);
+  public static function isNullable(Schema $schema): bool {
+    return !static::holdsValue($schema) && !Secrets::marked($schema);
   }
 
   /**
@@ -155,14 +155,14 @@ final class NodeFacts {
    *
    * Stands for getSettings().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return array
    *   The `settings` member; empty where it holds none.
    */
-  public static function settings(Schema $node): array {
-    $settings = DefinitionSchema::model($node)['settings'] ?? [];
+  public static function settings(Schema $schema): array {
+    $settings = DefinitionSchema::model($schema)['settings'] ?? [];
     return is_array($settings) ? $settings : [];
   }
 
@@ -175,16 +175,16 @@ final class NodeFacts {
    * name for NULL alone keeps doing so. A label that is no text (a number
    * an array stores) is handed back as it is, as getLabel() hands it.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return mixed
    *   The label as the definition holds it, a string or a text object
    *   in every definition the module makes; NULL where it holds none.
    */
-  public static function label(Schema $node): mixed {
-    $title = $node->isBoolean() ? NULL : $node->get('title');
-    return $title ?? DefinitionSchema::model($node)['label'] ?? NULL;
+  public static function label(Schema $schema): mixed {
+    $title = $schema->isBoolean() ? NULL : $schema->get('title');
+    return $title ?? DefinitionSchema::model($schema)['label'] ?? NULL;
   }
 
   /**
@@ -194,18 +194,18 @@ final class NodeFacts {
    * the definition stores one (NULL for a value that is no text), else
    * the label (label()).
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return string|\Stringable|null
    *   The owner's label; the label it has, when none was kept.
    */
-  public static function ownLabel(Schema $node): string|\Stringable|null {
-    $model = DefinitionSchema::model($node);
+  public static function ownLabel(Schema $schema): string|\Stringable|null {
+    $model = DefinitionSchema::model($schema);
     if (array_key_exists('ownLabel', $model)) {
       return is_string($model['ownLabel']) || $model['ownLabel'] instanceof \Stringable ? $model['ownLabel'] : NULL;
     }
-    return static::label($node);
+    return static::label($schema);
   }
 
   /**
@@ -214,14 +214,14 @@ final class NodeFacts {
    * Stands for the metadata getter hasDefaultValue(). An explicit NULL is
    * one.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where the `default` member or keyword is present.
    */
-  public static function hasDefault(Schema $node): bool {
-    return array_key_exists('default', DefinitionSchema::model($node)) || (!$node->isBoolean() && $node->has('default'));
+  public static function hasDefault(Schema $schema): bool {
+    return array_key_exists('default', DefinitionSchema::model($schema)) || (!$schema->isBoolean() && $schema->has('default'));
   }
 
   /**
@@ -229,18 +229,18 @@ final class NodeFacts {
    *
    * Stands for the metadata getter getDefaultValue().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return mixed
    *   The `default` member where present, else the keyword; NULL for none.
    */
-  public static function default(Schema $node): mixed {
-    $model = DefinitionSchema::model($node);
+  public static function default(Schema $schema): mixed {
+    $model = DefinitionSchema::model($schema);
     if (array_key_exists('default', $model)) {
       return $model['default'];
     }
-    return $node->isBoolean() ? NULL : $node->get('default');
+    return $schema->isBoolean() ? NULL : $schema->get('default');
   }
 
   /**
@@ -252,19 +252,19 @@ final class NodeFacts {
    * map's own default merges over that assembly; a default that is not an
    * array stands on its own.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return mixed
    *   The default value, or NULL when none is declared.
    */
-  public static function defaultOf(Schema $node): mixed {
-    $declared = static::hasDefault($node);
-    if (DefinitionSchema::isLeaf($node) || DefinitionSchema::isList($node)) {
-      return $declared ? static::default($node) : NULL;
+  public static function defaultOf(Schema $schema): mixed {
+    $declared = static::hasDefault($schema);
+    if (DefinitionSchema::isLeaf($schema) || DefinitionSchema::isList($schema)) {
+      return $declared ? static::default($schema) : NULL;
     }
     $values = [];
-    foreach (static::properties($node) as $name => $property) {
+    foreach (static::properties($schema) as $name => $property) {
       $nested = static::defaultOf($property);
       if ($nested !== NULL || static::hasDefault($property)) {
         $values[$name] = $nested;
@@ -273,7 +273,7 @@ final class NodeFacts {
     if (!$declared) {
       return $values === [] ? NULL : $values;
     }
-    $own = static::default($node);
+    $own = static::default($schema);
     if (!is_array($own) || $values === []) {
       return $own;
     }
@@ -281,21 +281,21 @@ final class NodeFacts {
   }
 
   /**
-   * Gets the nodes of a map's properties.
+   * Gets the schemas of a map's properties.
    *
    * Stands for getPropertyDefinitions() of a map that has properties: a
-   * built map's node holds a node for every property, a marked one
+   * built map's schema holds a schema for every property, a marked one
    * included, in the definition's order.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return array<string|int, \PortableSchema\Builder\Schema>
-   *   The property nodes by name; empty for a node that is no map (a list,
+   *   The property schemas by name; empty for a schema that is no map (a list,
    *   one value, a map with no properties).
    */
-  public static function properties(Schema $node): array {
-    $properties = $node->isBoolean() ? NULL : $node->get('properties');
+  public static function properties(Schema $schema): array {
+    $properties = $schema->isBoolean() ? NULL : $schema->get('properties');
     return is_array($properties) ? array_filter($properties, static fn (mixed $property): bool => $property instanceof Schema) : [];
   }
 
@@ -306,36 +306,36 @@ final class NodeFacts {
    * NULL nor '', and the `description` member the one that is, as label()
    * reads `title` and `label`.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return mixed
    *   The description as the definition holds it; NULL where it holds none.
    */
-  public static function description(Schema $node): mixed {
-    $description = $node->isBoolean() ? NULL : $node->get('description');
-    return $description ?? DefinitionSchema::model($node)['description'] ?? NULL;
+  public static function description(Schema $schema): mixed {
+    $description = $schema->isBoolean() ? NULL : $schema->get('description');
+    return $description ?? DefinitionSchema::model($schema)['description'] ?? NULL;
   }
 
   /**
    * Gets every constraint a definition runs, its type's defaults included.
    *
-   * Stands for getConstraints(). The `constraints` member where the node
+   * Stands for getConstraints(). The `constraints` member where the schema
    * holds one, which the read writes only where derived() does not give
    * getConstraints() exactly; derived() where it holds none. The one
    * reader of the member.
    *
    * Decision: see docs/decisions.md#the-merged-constraint-list-is-derived.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return array
    *   Options by plugin id, as held, in getConstraints()'s order; empty
-   *   where there are none, or for a node no definition was read into.
+   *   where there are none, or for a schema no definition was read into.
    */
-  public static function constraints(Schema $node): array {
-    $model = DefinitionSchema::model($node);
+  public static function constraints(Schema $schema): array {
+    $model = DefinitionSchema::model($schema);
     if (array_key_exists('constraints', $model)) {
       return is_array($model['constraints']) ? $model['constraints'] : [];
     }
@@ -343,7 +343,7 @@ final class NodeFacts {
   }
 
   /**
-   * Derives the merged constraint list from a node's other members.
+   * Derives the merged constraint list from a schema's other members.
    *
    * What DataDefinition::getConstraints() gives, merged as core merges it:
    * the constraints the definition declares (`declared`), then each of
@@ -356,7 +356,7 @@ final class NodeFacts {
    * those (DefinitionSchema::of()). Static and pure.
    *
    * @param array<string, mixed> $model
-   *   A node's MODEL members (DefinitionSchema::model()).
+   *   A schema's MODEL members (DefinitionSchema::model()).
    *
    * @return array|null
    *   Options by plugin id; NULL where the members cannot say it.
@@ -386,14 +386,14 @@ final class NodeFacts {
    * its array holds, without its type's defaults. A definition of another
    * class declares none here.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return array
    *   The `declared` member, as stored; empty where it holds none.
    */
-  public static function declaredConstraints(Schema $node): array {
-    $declared = DefinitionSchema::model($node)['declared'] ?? [];
+  public static function declaredConstraints(Schema $schema): array {
+    $declared = DefinitionSchema::model($schema)['declared'] ?? [];
     return is_array($declared) ? $declared : [];
   }
 
@@ -402,14 +402,14 @@ final class NodeFacts {
    *
    * Stands for DoesNotApply::marks().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where the `doesNotApply` member is set.
    */
-  public static function doesNotApply(Schema $node): bool {
-    return !empty(DefinitionSchema::model($node)['doesNotApply']);
+  public static function doesNotApply(Schema $schema): bool {
+    return !empty(DefinitionSchema::model($schema)['doesNotApply']);
   }
 
   /**
@@ -422,24 +422,24 @@ final class NodeFacts {
    * inside the map rather than at the top of the frame. A property ruled
    * out is listed and not walked into.
    *
-   * It reads each node's `properties` and its MODEL's mark alone. A node
+   * It reads each schema's `properties` and its MODEL's mark alone. A schema
    * that holds `properties` was read from a complex definition and never
    * from a list's: DefinitionSchema::build() writes `properties` only in
    * its branch for a complex definition that is no list, and a list's
-   * node holds `items`. So a list's, a value's and a boolean node give
+   * schema holds `items`. So a list's, a value's and a boolean schema give
    * none, as the walk on definitions it replaces gave none.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A key's node, as refined.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A key's schema, as refined.
    * @param string $path
    *   The path so far, with its trailing dot.
    *
    * @return string[]
    *   The dotted paths below the key, in the order of its properties;
-   *   none for a node that holds no `properties`.
+   *   none for a schema that holds no `properties`.
    */
-  public static function ruledOutInside(Schema $node, string $path = ''): array {
-    $properties = $node->isBoolean() ? NULL : $node->get('properties');
+  public static function ruledOutInside(Schema $schema, string $path = ''): array {
+    $properties = $schema->isBoolean() ? NULL : $schema->get('properties');
     $paths = [];
     foreach (is_array($properties) ? $properties : [] as $name => $property) {
       if (!$property instanceof Schema) {
@@ -460,14 +460,14 @@ final class NodeFacts {
    *
    * Stands for Computed::of(), the metadata getter computedOf().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return \Drupal\surface\Computed|null
    *   The `compute` member, the object the definition holds; NULL for none.
    */
-  public static function compute(Schema $node): ?Computed {
-    $computed = DefinitionSchema::model($node)['compute'] ?? NULL;
+  public static function compute(Schema $schema): ?Computed {
+    $computed = DefinitionSchema::model($schema)['compute'] ?? NULL;
     return $computed instanceof Computed ? $computed : NULL;
   }
 
@@ -476,14 +476,14 @@ final class NodeFacts {
    *
    * Stands for the metadata getter resolveOf().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return \Drupal\surface\Resolve|null
    *   The `resolve` member, the object the definition holds; NULL for none.
    */
-  public static function resolve(Schema $node): ?Resolve {
-    $resolve = DefinitionSchema::model($node)['resolve'] ?? NULL;
+  public static function resolve(Schema $schema): ?Resolve {
+    $resolve = DefinitionSchema::model($schema)['resolve'] ?? NULL;
     return $resolve instanceof Resolve ? $resolve : NULL;
   }
 
@@ -491,17 +491,17 @@ final class NodeFacts {
    * Gets what every entry of a map of keys from the site is.
    *
    * Stands for the metadata getter eachOf(), its definition given as the
-   * node read from it.
+   * schema read from it.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return \PortableSchema\Builder\Schema|string|null
-   *   The node of the definition every entry has, or the class every entry
+   *   The schema of the definition every entry has, or the class every entry
    *   is; NULL for none.
    */
-  public static function each(Schema $node): Schema|string|null {
-    $each = DefinitionSchema::model($node)['each'] ?? NULL;
+  public static function each(Schema $schema): Schema|string|null {
+    $each = DefinitionSchema::model($schema)['each'] ?? NULL;
     return $each instanceof Schema || is_string($each) ? $each : NULL;
   }
 
@@ -510,14 +510,14 @@ final class NodeFacts {
    *
    * Stands for the metadata getter variantsBy().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return string|null
    *   The `variantsBy` member; NULL where it is no text.
    */
-  public static function variantsBy(Schema $node): ?string {
-    $by = DefinitionSchema::model($node)['variantsBy'] ?? NULL;
+  public static function variantsBy(Schema $schema): ?string {
+    $by = DefinitionSchema::model($schema)['variantsBy'] ?? NULL;
     return is_string($by) ? $by : NULL;
   }
 
@@ -526,14 +526,14 @@ final class NodeFacts {
    *
    * Stands for the metadata getter variantsFrom().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return string|null
    *   The `variantsFrom` member; NULL where it is no text.
    */
-  public static function variantsFrom(Schema $node): ?string {
-    $from = DefinitionSchema::model($node)['variantsFrom'] ?? NULL;
+  public static function variantsFrom(Schema $schema): ?string {
+    $from = DefinitionSchema::model($schema)['variantsFrom'] ?? NULL;
     return is_string($from) ? $from : NULL;
   }
 
@@ -543,14 +543,14 @@ final class NodeFacts {
    * Stands for the metadata getter variantsListedBySite(): variants read
    * from the site, or the `readVariants` member set and not NULL.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where it does.
    */
-  public static function readVariants(Schema $node): bool {
-    return static::variantsFrom($node) !== NULL || isset(DefinitionSchema::model($node)['readVariants']);
+  public static function readVariants(Schema $schema): bool {
+    return static::variantsFrom($schema) !== NULL || isset(DefinitionSchema::model($schema)['readVariants']);
   }
 
   /**
@@ -558,48 +558,48 @@ final class NodeFacts {
    *
    * Stands for the metadata getter configTypeOf().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return string|null
    *   The type of the `configType` member; NULL for none.
    */
-  public static function configType(Schema $node): ?string {
-    $type = DefinitionSchema::model($node)['configType']['type'] ?? NULL;
+  public static function configType(Schema $schema): ?string {
+    $type = DefinitionSchema::model($schema)['configType']['type'] ?? NULL;
     return is_string($type) ? $type : NULL;
   }
 
   /**
-   * Gets the node of the definition a config schema type declares.
+   * Gets the schema of the definition a config schema type declares.
    *
    * Stands for the metadata getter configTypeDefinition(), given as the
-   * node read from it.
+   * schema read from it.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return \PortableSchema\Builder\Schema|null
-   *   The node of the `configType` member; NULL for none.
+   *   The schema of the `configType` member; NULL for none.
    */
-  public static function configTypeNode(Schema $node): ?Schema {
-    $type = DefinitionSchema::model($node)['configType']['node'] ?? NULL;
+  public static function configTypeOf(Schema $schema): ?Schema {
+    $type = DefinitionSchema::model($schema)['configType']['schema'] ?? NULL;
     return $type instanceof Schema ? $type : NULL;
   }
 
   /**
    * Names the shape a key is declared with.
    *
-   * Stands for the metadata getter shapeOf(). Its node is
-   * DefinitionSchema::shapeNode().
+   * Stands for the metadata getter shapeOf(). Its schema is
+   * DefinitionSchema::shapeOf().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return string|null
    *   The id of the `shape` member; NULL for none.
    */
-  public static function shape(Schema $node): ?string {
-    $id = DefinitionSchema::model($node)['shape']['id'] ?? NULL;
+  public static function shape(Schema $schema): ?string {
+    $id = DefinitionSchema::model($schema)['shape']['id'] ?? NULL;
     return is_string($id) ? $id : NULL;
   }
 
@@ -608,14 +608,14 @@ final class NodeFacts {
    *
    * Stands for the metadata getter isFixed().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where the `fixed` member is set.
    */
-  public static function isFixed(Schema $node): bool {
-    return !empty(DefinitionSchema::model($node)['fixed']);
+  public static function isFixed(Schema $schema): bool {
+    return !empty(DefinitionSchema::model($schema)['fixed']);
   }
 
   /**
@@ -623,14 +623,14 @@ final class NodeFacts {
    *
    * Stands for the metadata getter isOneVariant().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where the `oneVariant` member is set.
    */
-  public static function isOneVariant(Schema $node): bool {
-    return !empty(DefinitionSchema::model($node)['oneVariant']);
+  public static function isOneVariant(Schema $schema): bool {
+    return !empty(DefinitionSchema::model($schema)['oneVariant']);
   }
 
   /**
@@ -639,14 +639,14 @@ final class NodeFacts {
    * Stands for the metadata getter isHeldWhole(): the `heldWhole` member
    * set and not NULL.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where it is.
    */
-  public static function isHeldWhole(Schema $node): bool {
-    return isset(DefinitionSchema::model($node)['heldWhole']);
+  public static function isHeldWhole(Schema $schema): bool {
+    return isset(DefinitionSchema::model($schema)['heldWhole']);
   }
 
   /**
@@ -654,14 +654,14 @@ final class NodeFacts {
    *
    * Stands for the metadata getter getPlacedAfter().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return string|null
    *   The `placedAfter` member; NULL where it is no text.
    */
-  public static function placedAfter(Schema $node): ?string {
-    $after = DefinitionSchema::model($node)['placedAfter'] ?? NULL;
+  public static function placedAfter(Schema $schema): ?string {
+    $after = DefinitionSchema::model($schema)['placedAfter'] ?? NULL;
     return is_string($after) ? $after : NULL;
   }
 
@@ -670,15 +670,15 @@ final class NodeFacts {
    *
    * Stands for the metadata getter arrangementOf().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return \Drupal\surface\Resource\Arrangement|null
    *   The `arrangement` member, the object the definition holds; NULL for
    *   none.
    */
-  public static function arrangement(Schema $node): ?Arrangement {
-    $arrangement = DefinitionSchema::model($node)['arrangement'] ?? NULL;
+  public static function arrangement(Schema $schema): ?Arrangement {
+    $arrangement = DefinitionSchema::model($schema)['arrangement'] ?? NULL;
     return $arrangement instanceof Arrangement ? $arrangement : NULL;
   }
 
@@ -688,15 +688,15 @@ final class NodeFacts {
    * Stands for isReadOnly(): the `readOnly` member where it is set and not
    * NULL, else whether the value is computed (isComputed()).
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where it is.
    */
-  public static function isReadOnly(Schema $node): bool {
-    $model = DefinitionSchema::model($node);
-    return isset($model['readOnly']) ? !empty($model['readOnly']) : static::isComputed($node);
+  public static function isReadOnly(Schema $schema): bool {
+    $model = DefinitionSchema::model($schema);
+    return isset($model['readOnly']) ? !empty($model['readOnly']) : static::isComputed($schema);
   }
 
   /**
@@ -705,14 +705,14 @@ final class NodeFacts {
    * Stands for isComputed(); not the module's own computed key
    * (compute()).
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    *
    * @return bool
    *   TRUE where the `computed` member is set.
    */
-  public static function isComputed(Schema $node): bool {
-    return !empty(DefinitionSchema::model($node)['computed']);
+  public static function isComputed(Schema $schema): bool {
+    return !empty(DefinitionSchema::model($schema)['computed']);
   }
 
   /**
@@ -720,16 +720,16 @@ final class NodeFacts {
    *
    * Stands for getSetting().
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema.
    * @param string $name
    *   The setting's name.
    *
    * @return mixed
    *   The setting; NULL where it is not set.
    */
-  public static function setting(Schema $node, string $name): mixed {
-    return static::settings($node)[$name] ?? NULL;
+  public static function setting(Schema $schema, string $name): mixed {
+    return static::settings($schema)[$name] ?? NULL;
   }
 
 }

@@ -100,7 +100,7 @@ final class CountryOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, Schema $node): OptionSet {
+  public function resolve(Constraint $constraint, Schema $schema): OptionSet {
     // The constraint class is the address module's, and nothing here
     // names it: applies() has already established that this constraint
     // is one, and reading the option it declares needs no more than

@@ -165,7 +165,7 @@ class RetitleExampleTest extends SurfaceKernelTestBase {
    * Tests the run command says what the retitle takes, its list too.
    *
    * The nodes to retitle are a collection the operation requires: its type
-   * and its flag are read from its node, as a plain key's are.
+   * and its flag are read from its schema, as a plain key's are.
    */
   public function testTheRunCommandSaysWhatItTakes(): void {
     $command = new RunCommand(

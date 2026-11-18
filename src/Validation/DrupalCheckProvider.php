@@ -16,7 +16,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Contract\ConstraintKeywords;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Options\SurfaceOptions;
@@ -39,14 +39,14 @@ use Symfony\Component\Validator\ConstraintViolationInterface;
  * Answers every `drupal:<plugin id>` check of one validation.
  *
  * The rule: a request is read back to the place it is about, and to the
- * built node there (Location::definitionAt(), on the data surface refined
- * against the values, once per level (KeepsRefines): the node its entry
- * holds), never a node of the served document; the constraint of that
- * plugin id the node declares runs, with the options the definition holds
- * (storage, key, handler, theme, ...), read from the node
+ * built schema there (Location::definitionAt(), on the data surface refined
+ * against the values, once per level (KeepsRefines): the schema its entry
+ * holds), never a schema of the served document; the constraint of that
+ * plugin id the schema declares runs, with the options the definition holds
+ * (storage, key, handler, theme, ...), read from the schema
  * (DefinitionSchema::options()), alone, by ConstraintRunner::check() with
- * the definition the node was read from, which the place hands out beside
- * the node. The options the document publishes describe the check; they
+ * the definition the schema was read from, which the place hands out beside
+ * the schema. The options the document publishes describe the check; they
  * are never what runs. A frame's
  * `drupal:JsonSchema` is each schema read into that frame, held to the
  * frame's values as the pipeline writes them
@@ -73,8 +73,8 @@ use Symfony\Component\Validator\ConstraintViolationInterface;
  *
  * A place holding no value (ValueState::isConfigured()) passes: whether
  * it must hold one is the module's to say. A place whose value a keyword
- * of the document already refuses (Nodes::refusedByKeyword()) is not
- * asked: that refusal stands alone, and a check is never run on a value
+ * of the document already refuses (ApplicableSchemas::refusedByKeyword()) is
+ * not asked: that refusal stands alone, and a check is never run on a value
  * of the wrong type or shape, in a branch (a block's settings for its
  * plugin) as at the top. DateTime and DateOnly, which state the
  * same rule as the `date-time` or `date` format beside them, are still
@@ -135,9 +135,9 @@ final class DrupalCheckProvider implements CheckProvider {
   private ?\Throwable $failure = NULL;
 
   /**
-   * The document's nodes at each place, for the validation under way.
+   * The document's schemas at each place, for the validation under way.
    */
-  private ?Nodes $nodes = NULL;
+  private ?ApplicableSchemas $schemas = NULL;
 
   /**
    * The places whose check was not asked, a keyword refusing the value.
@@ -149,7 +149,7 @@ final class DrupalCheckProvider implements CheckProvider {
   /**
    * What is at each place, by its JSON Pointer.
    *
-   * @var array<string, array{node: ?\PortableSchema\Builder\Schema, definition: ?\Drupal\Core\TypedData\DataDefinitionInterface, frame: ?\Drupal\surface\SurfaceInterface, value: mixed}|null>
+   * @var array<string, array{schema: ?\PortableSchema\Builder\Schema, definition: ?\Drupal\Core\TypedData\DataDefinitionInterface, frame: ?\Drupal\surface\SurfaceInterface, value: mixed}|null>
    */
   private array $places = [];
 
@@ -210,16 +210,16 @@ final class DrupalCheckProvider implements CheckProvider {
   }
 
   /**
-   * Starts a validation over the nodes of its document.
+   * Starts a validation over the schemas of its document.
    *
-   * A check whose value a keyword of those nodes refuses is left unasked.
+   * A check whose value a keyword of those schemas refuses is left unasked.
    *
-   * @param \Drupal\surface\Validation\Nodes|null $nodes
-   *   The nodes of the document at each place of its data; NULL to ask
+   * @param \Drupal\surface\Validation\ApplicableSchemas|null $schemas
+   *   The schemas of the document at each place of its data; NULL to ask
    *   every check.
    */
-  public function start(?Nodes $nodes): void {
-    $this->nodes = $nodes;
+  public function start(?ApplicableSchemas $schemas): void {
+    $this->schemas = $schemas;
     $this->unasked = [];
     $this->failure = NULL;
   }
@@ -240,8 +240,8 @@ final class DrupalCheckProvider implements CheckProvider {
    * @param string $pointer
    *   The place's JSON Pointer.
    *
-   * @return array{node: ?\PortableSchema\Builder\Schema, location: \Drupal\surface\ResourceBuild\Location, frame: ?\Drupal\surface\SurfaceInterface, value: mixed}|null
-   *   The built node there, the place itself, whose definition is derived
+   * @return array{schema: ?\PortableSchema\Builder\Schema, location: \Drupal\surface\ResourceBuild\Location, frame: ?\Drupal\surface\SurfaceInterface, value: mixed}|null
+   *   The built schema there, the place itself, whose definition is derived
    *   only when a check is run on it (Location::definition()), the frame
    *   there, and the value there (Location::definitionAt()); NULL where
    *   nothing declares it.
@@ -250,7 +250,7 @@ final class DrupalCheckProvider implements CheckProvider {
     if (!array_key_exists($pointer, $this->places)) {
       $location = Location::definitionAt($this->surface, $this->values, $pointer, $this->refine(...));
       $this->places[$pointer] = $location === NULL ? NULL : [
-        'node' => $location->node,
+        'schema' => $location->schema,
         'location' => $location,
         'frame' => $location->frame,
         'value' => $location->value,
@@ -260,9 +260,9 @@ final class DrupalCheckProvider implements CheckProvider {
   }
 
   /**
-   * Answers whether the place is a secret, as its built node says.
+   * Answers whether the place is a secret, as its built schema says.
    *
-   * The node's own `writeOnly` (Secrets::marked()): the node of a secret
+   * The schema's own `writeOnly` (Secrets::marked()): the schema of a secret
    * definition says it.
    *
    * @param string $pointer
@@ -272,8 +272,8 @@ final class DrupalCheckProvider implements CheckProvider {
    *   TRUE when it is.
    */
   public function isSecret(string $pointer): bool {
-    $node = $this->at($pointer)['node'] ?? NULL;
-    return $node !== NULL && Secrets::marked($node);
+    $schema = $this->at($pointer)['schema'] ?? NULL;
+    return $schema !== NULL && Secrets::marked($schema);
   }
 
   /**
@@ -291,8 +291,8 @@ final class DrupalCheckProvider implements CheckProvider {
    */
   public function isListedByChecks(string $pointer): bool {
     $listed = FALSE;
-    $node = $this->at($pointer)['node'] ?? NULL;
-    foreach ($node instanceof Schema ? NodeFacts::constraints($node) : [] as $id => $options) {
+    $schema = $this->at($pointer)['schema'] ?? NULL;
+    foreach ($schema instanceof Schema ? SchemaFacts::constraints($schema) : [] as $id => $options) {
       if (!$this->options->readsAsList((string) $id, $options)) {
         continue;
       }
@@ -404,15 +404,15 @@ final class DrupalCheckProvider implements CheckProvider {
    */
   public function constraintMessage(string $location, array $ids, ?array $others = NULL): string|\Stringable|null {
     $place = $this->at($location);
-    $node = $place['node'] ?? NULL;
-    // A place has a definition where it has a node: a key's or a
+    $schema = $place['schema'] ?? NULL;
+    // A place has a definition where it has a schema: a key's or a
     // property's.
-    if ($place === NULL || $node === NULL) {
+    if ($place === NULL || $schema === NULL) {
       return NULL;
     }
     // Every constraint the place declares, the ones its keywords state
     // among them: a keyword's refusal is worded by its constraint.
-    $constraints = NodeFacts::constraints($node);
+    $constraints = SchemaFacts::constraints($schema);
     $definition = NULL;
     $named = [];
     if ($others !== NULL) {
@@ -424,7 +424,7 @@ final class DrupalCheckProvider implements CheckProvider {
       if (!array_key_exists($id, $constraints)) {
         continue;
       }
-      if (in_array($id, $named, TRUE) && $this->nodes?->refusedByKeyword($location, $place['value'], !in_array($id, self::FORMAT_CHECKS, TRUE), self::PREFIX . $id)) {
+      if (in_array($id, $named, TRUE) && $this->schemas?->refusedByKeyword($location, $place['value'], !in_array($id, self::FORMAT_CHECKS, TRUE), self::PREFIX . $id)) {
         // A check the document names, whose value a keyword refuses: it is
         // not run on that value here either.
         continue;
@@ -469,19 +469,19 @@ final class DrupalCheckProvider implements CheckProvider {
       return new CheckResult();
     }
     $formats = !in_array($id, self::FORMAT_CHECKS, TRUE);
-    if ($this->nodes?->refusedByKeyword($request->location, $request->value, $formats, $name)) {
+    if ($this->schemas?->refusedByKeyword($request->location, $request->value, $formats, $name)) {
       // A keyword refuses the value: that refusal stands alone. Only a
       // refusal by a schema that holds in every case is one the validator
       // must file at the place, and so one PortableValidator::held() runs
       // again for when it is not filed; a refusal in a branch is not filed
       // where another branch takes the value.
-      if ($this->nodes->refusedByKeyword($request->location, $request->value, $formats)) {
+      if ($this->schemas->refusedByKeyword($request->location, $request->value, $formats)) {
         $this->unasked[$request->location] = TRUE;
       }
       return new CheckResult();
     }
     $composite = array_intersect(ConstraintKeywords::row($id)?->keywords() ?? [], ['allOf', 'anyOf']);
-    if ($composite !== [] && $this->nodes?->refusedByComposite($request->location, $request->value, $name, reset($composite))) {
+    if ($composite !== [] && $this->schemas?->refusedByComposite($request->location, $request->value, $name, reset($composite))) {
       // The parts the composite is written as refuse the value: their
       // refusal stands alone.
       $this->unasked[$request->location] = TRUE;
@@ -489,12 +489,12 @@ final class DrupalCheckProvider implements CheckProvider {
     }
     $ran = FALSE;
     $errors = [];
-    $node = $location['node'];
+    $schema = $location['schema'];
     $frame = $location['frame'];
-    // A place has a definition where it has a node, derived here, for the
+    // A place has a definition where it has a schema, derived here, for the
     // check alone.
-    if ($node !== NULL && DefinitionSchema::declares($node, $id)) {
-      $options = DefinitionSchema::options($node, $id);
+    if ($schema !== NULL && DefinitionSchema::declares($schema, $id)) {
+      $options = DefinitionSchema::options($schema, $id);
       if ($id === 'JsonSchema' && is_array($options['schema'] ?? NULL)) {
         $foreign = self::foreignChecks($options['schema']);
         if ($foreign !== []) {
@@ -515,17 +515,17 @@ final class DrupalCheckProvider implements CheckProvider {
     if ($frame !== NULL && $id === 'JsonSchema' && $frame->getDefinitions()->frameConstraints() !== []) {
       $ran = TRUE;
       $document = $this->pipeline->document($frame, is_array($location['value']) ? $location['value'] : []);
-      foreach ($frame->getDefinitions()->frameConstraints() as $schema) {
-        if (self::namesChecksOnly($schema)) {
+      foreach ($frame->getDefinitions()->frameConstraints() as $json_schema) {
+        if (self::namesChecksOnly($json_schema)) {
           // Named in the document as those checks, each asked on its own.
           continue;
         }
-        $foreign = self::foreignChecks($schema);
+        $foreign = self::foreignChecks($json_schema);
         if ($foreign !== []) {
           $this->foreign[$request->location] = $foreign;
           return CheckResult::unchecked('noProvider');
         }
-        $verdict = JsonSchemaConstraintValidator::verdict($document, $schema);
+        $verdict = JsonSchemaConstraintValidator::verdict($document, $json_schema);
         if ($verdict === NULL) {
           continue;
         }
@@ -541,12 +541,12 @@ final class DrupalCheckProvider implements CheckProvider {
         $errors[] = $error;
       }
     }
-    if (!$ran && $node === NULL && $frame !== NULL && $request->location !== '' && $id !== 'JsonSchema') {
+    if (!$ran && $schema === NULL && $frame !== NULL && $request->location !== '' && $id !== 'JsonSchema') {
       // An item of a collection, whose structure names the check on its
       // whole: run on the item as a map of the structure's keys.
-      foreach ($frame->getDefinitions()->frameConstraints() as $schema) {
-        $checks = $schema[PortableKeywords::CHECK] ?? NULL;
-        if (!self::namesChecksOnly($schema) || !is_array($checks) || !array_key_exists($name, $checks)) {
+      foreach ($frame->getDefinitions()->frameConstraints() as $json_schema) {
+        $checks = $json_schema[PortableKeywords::CHECK] ?? NULL;
+        if (!self::namesChecksOnly($json_schema) || !is_array($checks) || !array_key_exists($name, $checks)) {
           continue;
         }
         $ran = TRUE;

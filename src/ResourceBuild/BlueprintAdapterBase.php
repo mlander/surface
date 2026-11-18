@@ -14,7 +14,7 @@ use Drupal\surface\SurfaceBuilder;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\LeafTypes;
-use Drupal\surface\Contract\NodeDefinition;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Contract\ValueSchema;
 use Drupal\surface\Reference\References;
@@ -531,7 +531,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    */
   public function declareRead(string $key, Schema $schema): void {
     if (!$this->holdsSchemas()) {
-      $this->addKey($key, NodeDefinition::of($schema), ValueSchema::factsOf($schema)['default_value'] ?? NULL);
+      $this->addKey($key, DefinitionFromSchema::of($schema), ValueSchema::factsOf($schema)['default_value'] ?? NULL);
       return;
     }
     $this->assertNewKey($key);
@@ -605,7 +605,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     foreach ($this->definitions as $key => $definition) {
       if ($definition === NULL) {
         $schema = $this->builder->heldSchema((string) $key);
-        $item = $schema === NULL ? NULL : DefinitionSchema::itemNode($schema);
+        $item = $schema === NULL ? NULL : DefinitionSchema::itemOf($schema);
         if ($schema !== NULL && !DefinitionSchema::declares($item ?? $schema, References::CONSTRAINT)) {
           continue;
         }

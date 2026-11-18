@@ -26,7 +26,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * door serves of it today: the stored defaults of `withStored` and of an
  * update's `values` hold it.
  *
- * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+ * Decision: see docs/decisions.md#the-remaining-readers-read-schemas.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]

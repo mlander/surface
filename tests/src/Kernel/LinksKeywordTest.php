@@ -295,7 +295,7 @@ class LinksKeywordTest extends SurfaceKernelTestBase {
    *   Its pointer.
    *
    * @return array<string, string>
-   *   Each lookup link's href, by the pointer of the node carrying it.
+   *   Each lookup link's href, by the pointer of the schema carrying it.
    */
   protected static function lookups(mixed $schema, string $at = ''): array {
     if (!is_array($schema)) {

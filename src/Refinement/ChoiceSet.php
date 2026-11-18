@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface\Refinement;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -84,7 +84,7 @@ final class ChoiceSet {
    * Reads the choice constraint a key's schema holds, if it holds one.
    *
    * What of() and ofConstraint() read, from the key's schema: its
-   * constraints as NodeFacts::constraints() gives them.
+   * constraints as SchemaFacts::constraints() gives them.
    *
    * @param \PortableSchema\Builder\Schema $schema
    *   The key's schema.
@@ -95,7 +95,7 @@ final class ChoiceSet {
    *   The set, or NULL when the schema holds no such list.
    */
   public static function ofSchema(Schema $schema, ?string $name = NULL): ?ChoiceSet {
-    $constraints = NodeFacts::constraints($schema);
+    $constraints = SchemaFacts::constraints($schema);
     if ($name === NULL) {
       return static::fromConstraints($constraints);
     }
@@ -106,7 +106,7 @@ final class ChoiceSet {
    * Reads the choice constraint a list of constraints holds, if it holds one.
    *
    * What of() reads, for a reader that holds a key's constraints as its
-   * node holds them (NodeFacts::constraints()).
+   * schema holds them (SchemaFacts::constraints()).
    *
    * @param array $constraints
    *   The constraints, options by plugin id.

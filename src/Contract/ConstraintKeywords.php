@@ -80,12 +80,12 @@ final class ConstraintKeywords {
   ];
 
   /**
-   * Answers whether a check is the host's twin of a node's format.
+   * Answers whether a check is the host's twin of a schema's format.
    *
    * @param string $constraint
    *   The check's constraint plugin id.
    * @param mixed $format
-   *   The node's `format`.
+   *   The schema's `format`.
    *
    * @return bool
    *   TRUE for Email beside `format: email` and Uuid beside `format: uuid`.

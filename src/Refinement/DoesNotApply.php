@@ -6,7 +6,7 @@ namespace Drupal\surface\Refinement;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\SurfaceInterface;
 
 /**
@@ -140,9 +140,9 @@ final class DoesNotApply {
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
       // The mark and what is ruled out below it are read from the refined
-      // key's node.
-      $node = $refined->getDefinitions()->entry($name)?->schema();
-      if ($node !== NULL && NodeFacts::doesNotApply($node)) {
+      // key's schema.
+      $schema = $refined->getDefinitions()->entry($name)?->schema();
+      if ($schema !== NULL && SchemaFacts::doesNotApply($schema)) {
         unset($values[$name]);
         continue;
       }
@@ -154,7 +154,7 @@ final class DoesNotApply {
         $values[$name] = self::leftOut($child, $values[$name]);
         continue;
       }
-      foreach ($node === NULL ? [] : NodeFacts::ruledOutInside($node) as $path) {
+      foreach ($schema === NULL ? [] : SchemaFacts::ruledOutInside($schema) as $path) {
         NestedArray::unsetValue($values[$name], explode('.', $path));
       }
     }

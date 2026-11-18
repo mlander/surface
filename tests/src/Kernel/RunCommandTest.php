@@ -299,7 +299,7 @@ class RunCommandTest extends SurfaceKernelTestBase {
     $this->assertSame(0, $status);
     $this->assertTrue($document['prepared']);
     $this->assertSame(['type' => 'string', 'required' => TRUE], $document['takes']['title']);
-    // Each key's own type, read off its node: the tags are a list.
+    // Each key's own type, read off its schema: the tags are a list.
     $this->assertSame([
       'id' => ['type' => 'string', 'required' => TRUE],
       'title' => ['type' => 'string', 'required' => TRUE],

@@ -8,7 +8,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Widget\SurfaceWidgetBase;
@@ -48,25 +48,25 @@ final class CommaSeparatedListWidget extends SurfaceWidgetBase implements Schema
    * {@inheritdoc}
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    $item = DefinitionSchema::itemNode($schema);
+    $item = DefinitionSchema::itemOf($schema);
     return DefinitionSchema::isList($schema)
-      && NodeFacts::setting($schema, self::SETTING) === TRUE
-      && $item !== NULL && NodeFacts::dataType($item) === 'string';
+      && SchemaFacts::setting($schema, self::SETTING) === TRUE
+      && $item !== NULL && SchemaFacts::dataType($item) === 'string';
   }
 
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    $items = $node->get('items');
-    return static::type($node) === 'array' && $items instanceof Schema && !$items->isBoolean() && static::types($items) === ['string'];
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    $items = $schema->get('items');
+    return static::type($schema) === 'array' && $items instanceof Schema && !$items->isBoolean() && static::types($items) === ['string'];
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    return $this->baseElement($node, $context) + [
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    return $this->baseElement($schema, $context) + [
       '#type' => 'textfield',
       '#default_value' => is_array($value) ? implode(', ', array_map('strval', $value)) : '',
       '#maxlength' => 1024,
@@ -79,7 +79,7 @@ final class CommaSeparatedListWidget extends SurfaceWidgetBase implements Schema
    * An empty field is the empty list, which is an answer: the field was
    * rendered, and a person who cleared it meant no items.
    */
-  public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed {
+  public function extractValue(array $element, FormStateInterface $form_state, Schema $schema): mixed {
     $raw = $this->rawValue($element, $form_state);
     if (!is_string($raw)) {
       return $raw;

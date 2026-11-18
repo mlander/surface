@@ -14,9 +14,9 @@ use PortableSchema\Builder\Schema;
 use PortableSchema\Registry;
 
 /**
- * Tests what Secrets reads as secret, from a node and from a document.
+ * Tests what Secrets reads as secret, from a schema and from a document.
  *
- * The rules: a node is secret where it says `writeOnly: true`; a place in
+ * The rules: a schema is secret where it says `writeOnly: true`; a place in
  * a document is secret where any schema that applies there is, through
  * `$ref` (any pointer into the document, or an id of the registry),
  * `allOf`, `anyOf`, `oneOf`, `then`, `else` and `dependentSchemas`,
@@ -27,7 +27,7 @@ use PortableSchema\Registry;
  * nothing is secret. absent() answers with a margin, for a door that need
  * not build what holds no secret.
  *
- * @see docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-node
+ * @see docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-schema
  */
 #[Group('surface')]
 class SecretsTest extends UnitTestCase {
@@ -57,14 +57,14 @@ class SecretsTest extends UnitTestCase {
   }
 
   /**
-   * Tests a node says it is secret by its own `writeOnly` alone.
+   * Tests a schema says it is secret by its own `writeOnly` alone.
    */
   public function testMarked(): void {
     $this->assertTrue(Secrets::marked(static::secret()));
     $this->assertFalse(Secrets::marked(Schema::string()));
     $this->assertFalse(Secrets::marked(Schema::string()->writeOnly(FALSE)));
     $this->assertFalse(Secrets::marked(Schema::boolean(TRUE)));
-    $this->assertFalse(Secrets::marked(Schema::object(['pin' => static::secret()])), 'What is inside is not the node.');
+    $this->assertFalse(Secrets::marked(Schema::object(['pin' => static::secret()])), 'What is inside is not the schema.');
   }
 
   /**

@@ -10,7 +10,7 @@ use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Field\FormatterInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\SurfaceHostTrait;
@@ -304,13 +304,13 @@ trait SurfaceFormatterTrait {
   /**
    * Appends the lines of one frame's keys, in the frame's order.
    *
-   * A key's facts, and the keys of a map below it, are read from its node.
+   * A key's facts, and the keys of a map below it, are read from its schema.
    * A key that holds an attached child or a chosen variant has its keys
-   * read from the child's entries, each with its own node. A mount is a
+   * read from the child's entries, each with its own schema. A mount is a
    * plain map, read as one. A collection, and variants nothing has
    * chosen, hold no keys of their own here: a value there is one line.
    *
-   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+   * Decision: see docs/decisions.md#the-remaining-readers-read-schemas.
    *
    * @param array $summary
    *   The summary lines, appended to by reference.
@@ -322,10 +322,10 @@ trait SurfaceFormatterTrait {
   protected function appendFrameSummary(array &$summary, SurfaceInterface $surface, array $values): void {
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $value = $values[$name] ?? NULL;
-      $node = $entry->schema();
-      $label = NodeFacts::label($node) ?? $name;
+      $schema = $entry->schema();
+      $label = SchemaFacts::label($schema) ?? $name;
       if (!$entry->isNested() && $entry->list === NULL) {
-        $this->appendSettingSummary($summary, $node, $label, $value);
+        $this->appendSettingSummary($summary, $schema, $label, $value);
         continue;
       }
       if ($value === NULL || $value === '' || $value === []) {
@@ -335,11 +335,11 @@ trait SurfaceFormatterTrait {
       if ($entry->attachment !== NULL) {
         $child = $entry->attachment->child;
       }
-      elseif ($entry->variants !== NULL && NodeFacts::dataType($node) !== 'any') {
+      elseif ($entry->variants !== NULL && SchemaFacts::dataType($schema) !== 'any') {
         // Variants chosen when the data surface was sealed (a locked
         // deciding key): the key is that variant's map.
         $by = $surface->getDefinitions()->entry($entry->variants->by);
-        $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? ($by === NULL ? NULL : NodeFacts::defaultOf($by->schema())));
+        $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? ($by === NULL ? NULL : SchemaFacts::defaultOf($by->schema())));
         $child = $chosen === NULL ? NULL : $entry->variants->variant($chosen)->child;
       }
       if ($child !== NULL && is_array($value)) {
@@ -359,31 +359,31 @@ trait SurfaceFormatterTrait {
    *
    * @param array $summary
    *   The summary lines, appended to by reference.
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node of the key the value belongs to.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema of the key the value belongs to.
    * @param string|\Stringable $label
    *   The label to print for this value, still the definition's own
    *   object so the row is translated rather than assembled.
    * @param mixed $value
    *   The stored value.
    */
-  protected function appendSettingSummary(array &$summary, Schema $node, string|\Stringable $label, mixed $value): void {
+  protected function appendSettingSummary(array &$summary, Schema $schema, string|\Stringable $label, mixed $value): void {
     if ($value === NULL || $value === '' || $value === []) {
       return;
     }
     // A secret is never printed: the summary says nothing of it, at the
     // top or inside a map, as a read leaves it out.
     // Decision: see docs/decisions.md#a-secret-is-not-served-at-any-depth.
-    if (Secrets::marked($node)) {
+    if (Secrets::marked($schema)) {
       return;
     }
-    if (is_array($value) && DefinitionSchema::isComplex($node)) {
-      foreach (NodeFacts::properties($node) as $property_name => $property) {
+    if (is_array($value) && DefinitionSchema::isComplex($schema)) {
+      foreach (SchemaFacts::properties($schema) as $property_name => $property) {
         if (array_key_exists($property_name, $value)) {
           $this->appendSettingSummary(
             $summary,
             $property,
-            NodeFacts::label($property) ?? $property_name,
+            SchemaFacts::label($property) ?? $property_name,
             $value[$property_name],
           );
         }

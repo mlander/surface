@@ -6,7 +6,7 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Attribute\SurfaceWidget;
@@ -45,15 +45,15 @@ final class NotDrawnWidget extends SurfaceWidgetBase implements SchemaWidgetInte
    * {@inheritdoc}
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    $value = DefinitionSchema::isList($schema) ? DefinitionSchema::itemNode($schema) : $schema;
-    return $value !== NULL && in_array(NodeFacts::dataType($value), self::TYPES, TRUE);
+    $value = DefinitionSchema::isList($schema) ? DefinitionSchema::itemOf($schema) : $schema;
+    return $value !== NULL && in_array(SchemaFacts::dataType($value), self::TYPES, TRUE);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    // Named by its word alone: a node says no data type the form does
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    // Named by its word alone: a schema says no data type the form does
     // not draw.
     return FALSE;
   }
@@ -61,8 +61,8 @@ final class NotDrawnWidget extends SurfaceWidgetBase implements SchemaWidgetInte
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    return static::notDrawn($node);
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    return static::notDrawn($schema);
   }
 
 }

@@ -23,7 +23,7 @@ use Drupal\surface\Widget\WidgetHostInterface;
  * label of an entity a reference holds is loaded here, as core's
  * autocomplete element shows it, the account's access to its label
  * asked; a reference key's selection handler and settings are read from
- * the options of its reference check on its built node at its place
+ * the options of its reference check on its built schema at its place
  * (Location::definitionAt(), References::handlerFrom()); and a deferred
  * key's chosen document is the narrowing service's
  * (NarrowsDocumentsInterface::chosen()). Each level is refined once for
@@ -83,13 +83,13 @@ final class FormWidgetHost implements WidgetHostInterface {
   public function selection(string $pointer): ?array {
     $values = $this->values;
     unset($values[SurfaceFormBuilderInterface::STANDING_KEY]);
-    // Each level is refined once for the host, so a lookup finds the node
+    // Each level is refined once for the host, so a lookup finds the schema
     // an earlier one read (KeepsRefines).
-    $node = Location::definitionAt($this->surface, $values, $pointer, $this->refine(...))?->node;
-    if ($node === NULL) {
+    $schema = Location::definitionAt($this->surface, $values, $pointer, $this->refine(...))?->schema;
+    if ($schema === NULL) {
       return NULL;
     }
-    [$handler, $settings] = References::handlerFrom(DefinitionSchema::options($node, References::CONSTRAINT));
+    [$handler, $settings] = References::handlerFrom(DefinitionSchema::options($schema, References::CONSTRAINT));
     return $handler === '' ? NULL : ['handler' => $handler, 'handlerSettings' => $settings];
   }
 

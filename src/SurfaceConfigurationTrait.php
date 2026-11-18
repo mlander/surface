@@ -153,7 +153,7 @@ trait SurfaceConfigurationTrait {
     // from inside a plugin constructor with the configuration the site
     // saved. So a key whose stored value has fallen outside the list it
     // now offers is stale by definition, and stale never blocks — which
-    // is the whole of the bug this closes. A block configured for a node
+    // is the whole of the bug this closes. A block configured for a schema
     // bundle that was later deleted threw out of the plugin manager, so
     // the block's own configuration form, the block listing, and every
     // page the block rendered on died with it: the one page that could

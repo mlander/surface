@@ -38,20 +38,20 @@ final class PairWidget extends SurfaceWidgetBase implements SchemaWidgetInterfac
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return static::type($node) === 'object';
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    return static::type($schema) === 'object';
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
     $element = [
       '#type' => 'container',
       '#attributes' => ['class' => ['widget-test-pair']],
       '#element_validate' => [],
     ];
-    foreach ((array) ($node->get('properties') ?? []) as $name => $property) {
+    foreach ((array) ($schema->get('properties') ?? []) as $name => $property) {
       $element[$name] = [
         '#type' => 'textfield',
         '#title' => $property instanceof Schema ? static::text($property->get('title')) : NULL,
@@ -65,9 +65,9 @@ final class PairWidget extends SurfaceWidgetBase implements SchemaWidgetInterfac
   /**
    * {@inheritdoc}
    */
-  public function extractValue(array $element, FormStateInterface $form_state, Schema $node): mixed {
+  public function extractValue(array $element, FormStateInterface $form_state, Schema $schema): mixed {
     $values = [];
-    foreach (array_keys((array) ($node->get('properties') ?? [])) as $name) {
+    foreach (array_keys((array) ($schema->get('properties') ?? [])) as $name) {
       $values[$name] = is_array($element[$name] ?? NULL) ? $this->rawValue($element[$name], $form_state) : NULL;
     }
     return $values;

@@ -84,7 +84,7 @@ final class OutputsDocument {
       $schema = $entry->schema();
       [$written] = $this->propertySchema->property($schema, NULL, NULL, (string) $name, FALSE, [], $walk);
       $properties[(string) $name] = self::held(self::typed($schema, $written));
-      if (NodeFacts::isRequired($schema)) {
+      if (SchemaFacts::isRequired($schema)) {
         $required[] = (string) $name;
       }
     }
@@ -126,14 +126,14 @@ final class OutputsDocument {
       return $written;
     }
     if (DefinitionSchema::isList($built)) {
-      $item = DefinitionSchema::itemNode($built);
+      $item = DefinitionSchema::itemOf($built);
       $items = $written->get('items');
       return $item !== NULL && $items instanceof Schema ? $written->with('items', self::typed($item, $items)) : $written;
     }
-    $properties = NodeFacts::properties($built);
+    $properties = SchemaFacts::properties($built);
     if ($properties === []) {
-      if (NodeFacts::dataType($built) === 'map' && !$written->has('type')) {
-        return $written->with('type', NodeFacts::isRequired($built) ? 'object' : ['object', 'null']);
+      if (SchemaFacts::dataType($built) === 'map' && !$written->has('type')) {
+        return $written->with('type', SchemaFacts::isRequired($built) ? 'object' : ['object', 'null']);
       }
       return $written;
     }

@@ -18,7 +18,7 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\ServedContract;
 use Drupal\surface\Form\Document\DocumentDrawer;
-use Drupal\surface\Form\Document\DocumentNodes;
+use Drupal\surface\Form\Document\DocumentSchemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Widget\SurfaceWidgetBase;
@@ -95,12 +95,12 @@ class SurfaceFormBuilder implements SurfaceFormBuilderInterface, TrustedCallback
   protected const DRAWN_KEPT = 8;
 
   /**
-   * The nodes of each envelope drawn in this request, by container id.
+   * The schemas of each envelope drawn in this request, by container id.
    *
    * Extraction in the request that drew the form reads them here; one
    * that reads a form from the form cache emits the envelope again.
    *
-   * @var array<string, \Drupal\surface\Form\Document\DocumentNodes>
+   * @var array<string, \Drupal\surface\Form\Document\DocumentSchemas>
    */
   protected array $drawn = [];
 
@@ -153,7 +153,7 @@ class SurfaceFormBuilder implements SurfaceFormBuilderInterface, TrustedCallback
     $this->refreshing = new Refreshing($elementInfo);
     $this->drawer = new DocumentDrawer($widgetManager, $this->refreshing);
     $this->narrowing = new DocumentNarrowing($this, $emitter);
-    $this->extracting = new Extracting($widgetManager, $pipeline, $messenger, $options, $moduleHandler, $stringTranslation, $this->nodesFor(...));
+    $this->extracting = new Extracting($widgetManager, $pipeline, $messenger, $options, $moduleHandler, $stringTranslation, $this->schemasFor(...));
   }
 
   /**
@@ -201,17 +201,17 @@ class SurfaceFormBuilder implements SurfaceFormBuilderInterface, TrustedCallback
    * {@inheritdoc}
    */
   public function drawDocument(ServedContract $contract, FormStateInterface $form_state, ?WidgetHostInterface $host = NULL, string $wrapper_key = 'surface', array $keys = []): array {
-    $nodes = DocumentNodes::of($contract, $host);
-    $container = $this->drawer->draw($contract, $form_state, $host, $wrapper_key, $keys, $nodes);
+    $schemas = DocumentSchemas::of($contract, $host);
+    $container = $this->drawer->draw($contract, $form_state, $host, $wrapper_key, $keys, $schemas);
     $id = (string) ($container[Refreshing::WRAPPER_KEY] ?? '');
     unset($this->drawn[$id]);
-    $this->drawn[$id] = $nodes;
+    $this->drawn[$id] = $schemas;
     $this->drawn = array_slice($this->drawn, -self::DRAWN_KEPT, NULL, TRUE);
     return $container;
   }
 
   /**
-   * Gets the nodes of the envelope a container was drawn from.
+   * Gets the schemas of the envelope a container was drawn from.
    *
    * Those this request drew for the container, when it drew it for the
    * values the container keeps; else the envelope emitted for those
@@ -223,16 +223,16 @@ class SurfaceFormBuilder implements SurfaceFormBuilderInterface, TrustedCallback
    * @param array $container
    *   The container.
    *
-   * @return \Drupal\surface\Form\Document\DocumentNodes
-   *   The nodes.
+   * @return \Drupal\surface\Form\Document\DocumentSchemas
+   *   The schemas.
    */
-  protected function nodesFor(SurfaceInterface $surface, array $container): DocumentNodes {
+  protected function schemasFor(SurfaceInterface $surface, array $container): DocumentSchemas {
     $values = is_array($container[self::VALUES_KEY] ?? NULL) ? $container[self::VALUES_KEY] : [];
     $kept = $this->drawn[(string) ($container[Refreshing::WRAPPER_KEY] ?? '')] ?? NULL;
     if ($kept !== NULL && $kept->values === $values) {
       return $kept;
     }
-    return DocumentNodes::of($this->envelope($surface, $values), $this->host($surface, $values));
+    return DocumentSchemas::of($this->envelope($surface, $values), $this->host($surface, $values));
   }
 
   /**

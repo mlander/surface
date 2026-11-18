@@ -16,7 +16,7 @@ use Drupal\Core\TypedData\Type\FloatInterface;
 use Drupal\Core\TypedData\Type\IntegerInterface;
 use Drupal\Core\TypedData\Type\StringInterface;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMap;
@@ -125,7 +125,7 @@ trait HeldToConfigSchemaTrait {
   protected static function mountedLayouts(SurfaceInterface $built): array {
     $mount = $built->getDefinitions()->entry(RefinesInputRefiner::MOUNT)?->schema();
     $keys = [];
-    foreach ($mount !== NULL && DefinitionSchema::isComplex($mount) ? array_keys(NodeFacts::properties($mount)) : [] as $module) {
+    foreach ($mount !== NULL && DefinitionSchema::isComplex($mount) ? array_keys(SchemaFacts::properties($mount)) : [] as $module) {
       $layout = $built->getThirdPartyLayout((string) $module);
       foreach ($layout instanceof StoredSchemaInterface ? $layout->storedSchema() : [] as $path => $schema) {
         $keys[RefinesInputRefiner::path((string) $module, (string) $path)] = $schema;
@@ -184,7 +184,7 @@ trait HeldToConfigSchemaTrait {
         continue;
       }
       $at = $paths[$key] ?? $this->storedPath($key);
-      $this->entryWider($entry, $this->schemaAt($root, $at), $key, static::fullyValidatable($root), $wider);
+      $this->entryWider($entry, $this->configSchemaAt($root, $at), $key, static::fullyValidatable($root), $wider);
     }
     return array_filter($wider, static function (string $path) use ($translated): bool {
       foreach ($translated as $skipped) {
@@ -208,7 +208,7 @@ trait HeldToConfigSchemaTrait {
    *   The property, as written there; NULL when the schema describes
    *   nothing at the path.
    */
-  protected function schemaAt(array $root, string $at): ?array {
+  protected function configSchemaAt(array $root, string $at): ?array {
     $property = $root;
     foreach (explode('.', $at) as $depth => $segment) {
       $mapping = $depth === 0 ? $property : $this->merged($property);
@@ -269,7 +269,7 @@ trait HeldToConfigSchemaTrait {
       // The map other modules mount their keys in: each module's part
       // has the type its own key names.
       $item = (string) ($property['sequence']['type'] ?? '');
-      foreach (NodeFacts::properties($entry->schema()) as $module => $part_node) {
+      foreach (SchemaFacts::properties($entry->schema()) as $module => $part_schema) {
         $resolved = str_replace('[%key]', (string) $module, $item);
         if ($resolved === '' || str_contains($resolved, ']') || !$this->typedConfig->hasConfigSchema($resolved)) {
           $wider[$path . '.' . $module] = 'no config schema describes what this module mounts here';
@@ -281,9 +281,9 @@ trait HeldToConfigSchemaTrait {
           $this->mapWider($mounted->child->getDefinitions(), $definition, $path . '.' . $module, static::fullyValidatable($definition), $wider);
         }
         else {
-          // A module's plain part: its node is the one the mount's node
+          // A module's plain part: its schema is the one the mount's schema
           // holds.
-          $this->definitionWider($part_node, static::propertyOf(static fn (): DataDefinitionInterface => $entry->definition(), (string) $module), $definition, $path . '.' . $module, static::fullyValidatable($definition), $wider);
+          $this->definitionWider($part_schema, static::propertyOf(static fn (): DataDefinitionInterface => $entry->definition(), (string) $module), $definition, $path . '.' . $module, static::fullyValidatable($definition), $wider);
         }
       }
       return;
@@ -303,7 +303,7 @@ trait HeldToConfigSchemaTrait {
       return;
     }
     if ($entry->attachment !== NULL) {
-      if (NodeFacts::each($entry->schema()) !== NULL) {
+      if (SchemaFacts::each($entry->schema()) !== NULL) {
         if (!$this->isA($schema, Sequence::class)) {
           $wider[$path] = sprintf('it holds a key per thing the site has, which the schema types %s', $type);
           return;
@@ -372,19 +372,19 @@ trait HeldToConfigSchemaTrait {
   /**
    * Compares one key with its schema, a map's or a list's too.
    *
-   * Its facts are read from its node, the PHP class a value's data type
+   * Its facts are read from its schema, the PHP class a value's data type
    * maps to too (valueClass()). Its definition is asked only for the
-   * class of a value whose node was read from a class other than
+   * class of a value whose schema was read from a class other than
    * DataDefinition.
    *
-   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes and
-   * docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node.
+   * Decision: see docs/decisions.md#the-remaining-readers-read-schemas and
+   * docs/decisions.md#a-fact-is-read-from-the-schema-and-the-options-service-takes-a-schema.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    * @param \Closure $definition
    *   Gives the key's definition, called only where valueClass() needs it.
-   * @param array $schema
+   * @param array $config_schema
    *   Its schema, merged with its type.
    * @param string $path
    *   Its dotted path.
@@ -395,42 +395,42 @@ trait HeldToConfigSchemaTrait {
    * @param bool $item
    *   TRUE for a list's item, which is never null.
    */
-  protected function definitionWider(Schema $node, \Closure $definition, array $schema, string $path, bool $strict, array &$wider, bool $item = FALSE): void {
-    $type = (string) ($schema['type'] ?? 'undefined');
-    if (DefinitionSchema::isList($node)) {
-      if (!$this->isA($schema, Sequence::class)) {
+  protected function definitionWider(Schema $schema, \Closure $definition, array $config_schema, string $path, bool $strict, array &$wider, bool $item = FALSE): void {
+    $type = (string) ($config_schema['type'] ?? 'undefined');
+    if (DefinitionSchema::isList($schema)) {
+      if (!$this->isA($config_schema, Sequence::class)) {
         $wider[$path] = sprintf('it is a list, which the schema types %s', $type);
         return;
       }
-      $this->constraintsWider($node, $schema, $path, $wider);
-      $items = DefinitionSchema::itemNode($node) ?? throw new \LogicException('A list\'s node holds no node of its item: a built node holds one.');
+      $this->constraintsWider($schema, $config_schema, $path, $wider);
+      $items = DefinitionSchema::itemOf($schema) ?? throw new \LogicException('A list\'s schema holds no schema of its item: a built schema holds one.');
       $item_definition = static function () use ($definition): DataDefinitionInterface {
         $list = $definition();
         assert($list instanceof ListDataDefinitionInterface);
         return $list->getItemDefinition();
       };
-      $this->definitionWider($items, $item_definition, $this->merged($schema['sequence'] ?? []), $path, $strict, $wider, TRUE);
+      $this->definitionWider($items, $item_definition, $this->merged($config_schema['sequence'] ?? []), $path, $strict, $wider, TRUE);
       return;
     }
-    if (DefinitionSchema::isComplex($node)) {
-      if (!$this->isA($schema, Mapping::class)) {
+    if (DefinitionSchema::isComplex($schema)) {
+      if (!$this->isA($config_schema, Mapping::class)) {
         $wider[$path] = sprintf('it is a group of keys, which the schema types %s', $type);
         return;
       }
-      foreach (NodeFacts::properties($node) as $name => $property_node) {
-        if (!isset($schema['mapping'][$name])) {
+      foreach (SchemaFacts::properties($schema) as $name => $property_schema) {
+        if (!isset($config_schema['mapping'][$name])) {
           $wider[$path . '.' . $name] = 'the schema does not describe it';
           continue;
         }
-        $this->definitionWider($property_node, static::propertyOf($definition, (string) $name), $this->merged($schema['mapping'][$name]), $path . '.' . $name, $strict, $wider);
+        $this->definitionWider($property_schema, static::propertyOf($definition, (string) $name), $this->merged($config_schema['mapping'][$name]), $path . '.' . $name, $strict, $wider);
       }
       return;
     }
-    if (NodeFacts::dataType($node) === 'any') {
+    if (SchemaFacts::dataType($schema) === 'any') {
       return;
     }
-    $mine = static::kind(static::valueClass($node, $definition));
-    $theirs = static::kind((string) ($schema['class'] ?? ''));
+    $mine = static::kind(static::valueClass($schema, $definition));
+    $theirs = static::kind((string) ($config_schema['class'] ?? ''));
     if ($theirs === 'mapping' || $theirs === 'sequence') {
       $wider[$path] = sprintf('it is one value, which the schema types %s, a %s', $type, $theirs);
       return;
@@ -440,11 +440,11 @@ trait HeldToConfigSchemaTrait {
       $wider[$path] = sprintf('it is %s, which the schema types %s, %s', $a($mine), $type, $a($theirs));
       return;
     }
-    if (!$item && $strict && empty($schema['nullable']) && !NodeFacts::holdsValue($node) && !Secrets::marked($node)) {
+    if (!$item && $strict && empty($config_schema['nullable']) && !SchemaFacts::holdsValue($schema) && !Secrets::marked($schema)) {
       $wider[$path] = sprintf('it may be cleared, which the schema refuses: %s is not nullable', $type);
       return;
     }
-    $this->constraintsWider($node, $schema, $path, $wider);
+    $this->constraintsWider($schema, $config_schema, $path, $wider);
   }
 
   /**
@@ -453,7 +453,7 @@ trait HeldToConfigSchemaTrait {
    * @param \Closure $definition
    *   Gives the map's definition.
    * @param string $name
-   *   The property, as the map's node names it.
+   *   The property, as the map's schema names it.
    *
    * @return \Closure
    *   Gives the property's definition.
@@ -462,21 +462,21 @@ trait HeldToConfigSchemaTrait {
     return static function () use ($definition, $name): DataDefinitionInterface {
       $map = $definition();
       $property = $map instanceof ComplexDataDefinitionInterface ? $map->getPropertyDefinition($name) : NULL;
-      return $property ?? throw new \LogicException(sprintf('The definition holds no property "%s" where its node holds one: the two are out of step.', $name));
+      return $property ?? throw new \LogicException(sprintf('The definition holds no property "%s" where its schema holds one: the two are out of step.', $name));
     };
   }
 
   /**
-   * Gives the PHP class a value's data type maps to, from its node.
+   * Gives the PHP class a value's data type maps to, from its schema.
    *
    * What DataDefinition::getClass() answers: the class its definition
-   * names (under the node's `stored` member), else the class the typed
-   * data manager gives its data type. A node read from another class
+   * names (under the schema's `stored` member), else the class the typed
+   * data manager gives its data type. A schema read from another class
    * (DefinitionSchema::classOf()) may answer otherwise, so its definition
    * is asked.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The value's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The value's schema.
    * @param \Closure $definition
    *   Gives its definition.
    *
@@ -484,37 +484,37 @@ trait HeldToConfigSchemaTrait {
    *   The class; '' where the data type names none.
    *
    * @internal
-   *   Public for NodeFactsParityTest, which holds it to getClass().
+   *   Public for SchemaFactsParityTest, which holds it to getClass().
    */
-  public static function valueClass(Schema $node, \Closure $definition): string {
-    if (DefinitionSchema::classOf($node) !== DataDefinition::class) {
+  public static function valueClass(Schema $schema, \Closure $definition): string {
+    if (DefinitionSchema::classOf($schema) !== DataDefinition::class) {
       return (string) $definition()->getClass();
     }
-    $class = DefinitionSchema::model($node)['stored']['class'] ?? NULL;
+    $class = DefinitionSchema::model($schema)['stored']['class'] ?? NULL;
     if (is_string($class)) {
       return $class;
     }
-    $type = \Drupal::typedDataManager()->getDefinition(NodeFacts::dataType($node), FALSE);
+    $type = \Drupal::typedDataManager()->getDefinition(SchemaFacts::dataType($schema), FALSE);
     return is_array($type) && is_string($type['class'] ?? NULL) ? $type['class'] : '';
   }
 
   /**
    * Holds a key to each constraint its schema states.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's node, whose facts are read.
-   * @param array $schema
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema, whose facts are read.
+   * @param array $config_schema
    *   Its schema, merged with its type.
    * @param string $path
    *   Its dotted path.
    * @param array<string, string> $wider
    *   Where the resource is wider, added to.
    */
-  protected function constraintsWider(Schema $node, array $schema, string $path, array &$wider): void {
-    $mine = NodeFacts::constraints($node);
+  protected function constraintsWider(Schema $schema, array $config_schema, string $path, array &$wider): void {
+    $mine = SchemaFacts::constraints($schema);
     $choices = ChoiceSet::fromConstraints($mine)?->values;
-    $holds = NodeFacts::holdsValue($node);
-    foreach ((array) ($schema['constraints'] ?? []) as $name => $options) {
+    $holds = SchemaFacts::holdsValue($schema);
+    foreach ((array) ($config_schema['constraints'] ?? []) as $name => $options) {
       $options = is_array($options) ? $options : [];
       $why = match ((string) $name) {
         'Regex' => static::regexWider($options, $mine['Regex'] ?? NULL, $choices),

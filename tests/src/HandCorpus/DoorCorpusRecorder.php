@@ -7,7 +7,7 @@ namespace Drupal\Tests\surface\HandCorpus;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Form\CompiledFlow;
 use Drupal\surface\Form\ContractPanel;
 use Drupal\surface\Reference\References;
@@ -55,14 +55,14 @@ use Drupal\surface\Tool\OperationInputs;
  *   raw values in both verbs, and References::definitionAt() for no
  *   entity type and for three, with target(), handlerOf(), storedByUuid()
  *   and the data type of what it gives.
- * - `nodes`: References::nodeAt() at each path, with targetIn(),
- *   handlerIn() and the node's data type, which readers older than slice
+ * - `schemas`: References::schemaAt() at each path, with targetIn(),
+ *   handlerIn() and the schema's data type, which readers older than slice
  *   31b do not have.
  *
  * A definition's tree holds its array (toArray()) with its top-level keys
  * sorted, and a `type` key left out where it holds what getDataType()
  * gives without it (typeWithout()). Every array below the top keeps its
- * order. A definition derived from a node differs from the one its author
+ * order. A definition derived from a schema differs from the one its author
  * built only there: the order of its array's top-level keys, and a
  * `type: list` key on a list (4,669 door rows measured, 2026-11-15).
  * Neither is a fact of the definition.
@@ -245,18 +245,18 @@ final class DoorCorpusRecorder {
     ];
     $keys = array_keys($surface->getDefinitions()->toArray());
     $kept_otherwise = ['type' => 'string', 'label' => 'T'];
-    $schema = static::attempt(fn (): mixed => $this->configSchema->describeBuilt($surface, $this->owner, 'hand.settings', [], [], []));
+    $config_schema = static::attempt(fn (): mixed => $this->configSchema->describeBuilt($surface, $this->owner, 'hand.settings', [], [], []));
     $door += [
-      'config schema' => static::plain($schema),
+      'config schema' => static::plain($config_schema),
       'config schema held+install' => static::attempt(fn (): mixed => static::plain($this->configSchema->describeBuilt($surface, $this->owner, 'hand.settings', array_slice($keys, 0, 6), ['hand.settings' => ['label' => 'Hand']], $stored))),
       'config schema installed empty' => static::attempt(fn (): mixed => static::plain($this->configSchema->describeBuilt($surface, $this->owner, 'hand.settings', [], [], array_fill_keys($keys, NULL)))),
       'config schema translated' => static::attempt(fn (): mixed => static::plain($this->configSchema->describeBuilt($surface, $this->owner, 'hand.settings', [], [], [], array_fill_keys($keys, $kept_otherwise)))),
     ];
-    if (is_array($schema)) {
-      $door['wider generated'] = static::attempt(function () use ($surface, $schema): mixed {
+    if (is_array($config_schema)) {
+      $door['wider generated'] = static::attempt(function () use ($surface, $config_schema): mixed {
         $wider = [];
         foreach ($surface->getDefinitions()->entries() as $name => $entry) {
-          $wider[$name] = $this->probe->wider($entry, $schema['entries'][0]['schema']['mapping'][$name] ?? NULL, (string) $name, TRUE);
+          $wider[$name] = $this->probe->wider($entry, $config_schema['entries'][0]['schema']['mapping'][$name] ?? NULL, (string) $name, TRUE);
         }
         return static::plain($wider);
       });
@@ -295,9 +295,9 @@ final class DoorCorpusRecorder {
       }
       $record['held builder'] = $held;
       $wider = [];
-      foreach (self::SCHEMAS as $schema_name => $schema) {
+      foreach (self::SCHEMAS as $schema_name => $config_schema) {
         foreach ([TRUE, FALSE] as $strict) {
-          $wider["$schema_name " . (int) $strict] = static::attempt(fn (): mixed => $this->probe->wider($entry, $schema, (string) $name, $strict));
+          $wider["$schema_name " . (int) $strict] = static::attempt(fn (): mixed => $this->probe->wider($entry, $config_schema, (string) $name, $strict));
         }
       }
       $record['wider'] = static::plain($wider);
@@ -331,18 +331,18 @@ final class DoorCorpusRecorder {
         'heldOn raws' => $raws,
         'definitionAt' => $at,
       ];
-      $nodes = [];
+      $schemas = [];
       foreach ($types as $type) {
-        $nodes[var_export($type, TRUE)] = static::attempt(function () use ($surface, $path, $type): mixed {
-          $node = $this->references->nodeAt($surface, explode('.', $path), $type);
-          return $node === NULL ? NULL : static::plain([
-            'target' => References::targetIn($node),
-            'handler' => static::attempt(fn (): mixed => References::handlerIn($node)),
-            'type' => NodeFacts::dataType($node),
+        $schemas[var_export($type, TRUE)] = static::attempt(function () use ($surface, $path, $type): mixed {
+          $schema = $this->references->schemaAt($surface, explode('.', $path), $type);
+          return $schema === NULL ? NULL : static::plain([
+            'target' => References::targetIn($schema),
+            'handler' => static::attempt(fn (): mixed => References::handlerIn($schema)),
+            'type' => SchemaFacts::dataType($schema),
           ]);
         });
       }
-      yield "$form | nodes | $path" => $nodes;
+      yield "$form | schemas | $path" => $schemas;
     }
   }
 

@@ -16,7 +16,7 @@ use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\NodeType;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\LeafTypes;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Contract\Schemas;
@@ -34,21 +34,21 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PortableSchema\Builder\Schema;
 
 /**
- * Tests the built node of a definition, and its projection to a document.
+ * Tests the built schema of a definition, and its projection to a document.
  *
- * The rules: a built node holds each check's options as the definition
+ * The rules: a built schema holds each check's options as the definition
  * holds them and text as the definition holds it, a TranslatableMarkup
  * kept; it is the same whether or not the key offers a list of values, a
  * property that does not apply is on it, and a value of any data type is
  * read; published() of it says what the served document says of the key
  * (the committed baselines, for every plain key the examples ship, listed
  * or not) and refuses a type no row is for; of() keeps nothing, an
- * entry reads its node once, and a refined key's, a new definition, is
+ * entry reads its schema once, and a refined key's, a new definition, is
  * read for its own entry.
  *
- * @see docs/decisions.md#a-definition-is-read-once-into-a-built-node
+ * @see docs/decisions.md#a-definition-is-read-once-into-a-built-schema
  * @see docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request
- * @see docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone
+ * @see docs/decisions.md#an-entry-holds-its-schema-the-memo-is-gone
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -85,7 +85,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
   ];
 
   /**
-   * What the emitter adds to a key for the request, which no node holds.
+   * What the emitter adds to a key for the request, which no schema holds.
    */
   protected const DECORATION = ['oneOf', 'const', 'readOnly', 'x-portable-ui', 'x-portable-links', 'x-surface'];
 
@@ -95,7 +95,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
   protected const MAP_PROPERTIES = [6, 1];
 
   /**
-   * The nodes compared with the baselines, and how many offer a list.
+   * The schemas compared with the baselines, and how many offer a list.
    */
   protected const COMPARED = [130, 31];
 
@@ -143,16 +143,16 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Writes a node as the document's JSON.
+   * Writes a schema as the document's JSON.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return array
-   *   The node decoded.
+   *   The schema decoded.
    */
-  protected static function json(Schema $node): array {
-    return json_decode((string) json_encode(Schemas::arrayed($node)), TRUE);
+  protected static function json(Schema $schema): array {
+    return json_decode((string) json_encode(Schemas::arrayed($schema)), TRUE);
   }
 
   /**
@@ -177,10 +177,10 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $model = DefinitionSchema::model($built);
     $this->assertSame(['type', 'declared'], array_keys($model), 'MODEL holds the members its definition states, in the order of MEMBERS: the merged constraint list is derived, so no `constraints` member.');
     $this->assertSame('string', $model['type'], 'MODEL holds the data type.');
-    $this->assertFalse(Secrets::marked($built), 'A node says it is secret by writeOnly alone.');
-    $this->assertStringNotContainsString('DataDefinition', serialize($model), 'A node holds no reference to its definition.');
-    $this->assertSame($leaf->getConstraints(), NodeFacts::constraints($built), 'Every declared constraint, the ones keywords state among them, and the type\'s default.');
-    $this->assertSame(['max' => 2], NodeFacts::constraints($built)['Length']);
+    $this->assertFalse(Secrets::marked($built), 'A schema says it is secret by writeOnly alone.');
+    $this->assertStringNotContainsString('DataDefinition', serialize($model), 'A schema holds no reference to its definition.');
+    $this->assertSame($leaf->getConstraints(), SchemaFacts::constraints($built), 'Every declared constraint, the ones keywords state among them, and the type\'s default.');
+    $this->assertSame(['max' => 2], SchemaFacts::constraints($built)['Length']);
     $this->assertSame($held['SurfaceUnique'], DefinitionSchema::options($built, 'SurfaceUnique'));
     $this->assertSame(['max' => 2], DefinitionSchema::options($built, 'Length'), 'A keyword-stated constraint runs with its own options.');
 
@@ -210,9 +210,9 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $built = DefinitionSchema::of($tags);
     $this->assertSame([PortableKeywords::PROVIDER . 'LanguageExists' => []], $built->get(PortableKeywords::CHECK));
     $this->assertNull($built->get(PortableKeywords::MESSAGES), 'A check given no message holds none: its label is the projection\'s.');
-    $this->assertSame(['type' => ['string', 'null']], static::json($this->definitions()->published($built->get('items'))), 'The item is a node of its own.');
+    $this->assertSame(['type' => ['string', 'null']], static::json($this->definitions()->published($built->get('items'))), 'The item is a schema of its own.');
     $this->assertSame(['type'], array_keys(DefinitionSchema::model($built->get('items'))), 'The item states its data type alone: its type\'s constraints are derived from it.');
-    $this->assertSame(['PrimitiveType' => []], NodeFacts::constraints($built->get('items')));
+    $this->assertSame(['PrimitiveType' => []], SchemaFacts::constraints($built->get('items')));
     $this->assertSame([
       'title' => 'Tags',
       'type' => ['array', 'null'],
@@ -233,8 +233,8 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
       ->addConstraint('JsonSchema', ['schema' => $schema]);
     $built = DefinitionSchema::of($map);
     $this->assertSame([PortableKeywords::PROVIDER . 'JsonSchema' => ['schema' => $schema]], $built->get(PortableKeywords::CHECK));
-    $this->assertSame(['name', 'gone', 'where'], array_keys($built->get('properties')), 'A key ruled out is on the node: the mark is the definition\'s.');
-    $this->assertSame(static::json($this->definitions()->published(DefinitionSchema::of($inner))), static::json($this->definitions()->published($built->get('properties')['where'])), 'The nested map is a node of its own.');
+    $this->assertSame(['name', 'gone', 'where'], array_keys($built->get('properties')), 'A key ruled out is on the schema: the mark is the definition\'s.');
+    $this->assertSame(static::json($this->definitions()->published(DefinitionSchema::of($inner))), static::json($this->definitions()->published($built->get('properties')['where'])), 'The nested map is a schema of its own.');
     $published = static::json($this->definitions()->published($built));
     $this->assertSame([
       'title' => 'Person',
@@ -291,7 +291,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     ];
     $reference = DataDefinition::create('string')->setLabel('Article')->addConstraint('SurfaceValidReference', $target);
     $built = DefinitionSchema::of($reference);
-    $this->assertSame($target, DefinitionSchema::options($built, 'SurfaceValidReference'), 'The handler and its settings are on the node.');
+    $this->assertSame($target, DefinitionSchema::options($built, 'SurfaceValidReference'), 'The handler and its settings are on the schema.');
     $this->assertSame(['entityTypeId' => 'node', 'bundles' => ['article']], static::json($this->definitions()->published($built))['portable-check']['drupal:SurfaceValidReference']);
   }
 
@@ -301,7 +301,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
    * Every data type the typed data manager knows is read, an entity
    * bundle with a configurable field (a FieldConfig, which offers neither
    * the core methods for a default nor array access) among them, and a
-   * hand definition with no array access: each has a node, with no
+   * hand definition with no array access: each has a schema, with no
    * default and no examples where it has no place for them. A value of a
    * type no row is for has no `type` keyword and MODEL holds the data
    * type; the document refuses it where it is made, with the leaf table's
@@ -333,8 +333,8 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $field = $bundle instanceof ComplexDataDefinitionInterface ? ($bundle->getPropertyDefinitions()['field_read'] ?? NULL) : NULL;
     $this->assertInstanceOf(FieldConfig::class, $field, 'A configurable field is among them.');
     $this->assertFalse(DefinitionMetadata::canHoldDefaultValue($field) || DefinitionMetadata::canHoldExamples($field), 'It has no place for a default or examples.');
-    $node = DefinitionSchema::of($field);
-    $this->assertFalse($node->has('default') || $node->has('examples'), 'It has none.');
+    $schema = DefinitionSchema::of($field);
+    $this->assertFalse($schema->has('default') || $schema->has('examples'), 'It has none.');
     $this->assertContains('entity:node:surface_read', $types);
 
     $bare = new class() implements DataDefinitionInterface {
@@ -457,9 +457,9 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
 
     foreach (['decimal', 'binary', 'any'] as $type) {
       $definition = DataDefinition::create($type)->setLabel('Amount');
-      $node = DefinitionSchema::of($definition);
-      $this->assertFalse($node->has('type'), "$type: no type keyword.");
-      $this->assertSame($type, DefinitionSchema::model($node)['type'] ?? NULL, "$type: MODEL holds the data type.");
+      $schema = DefinitionSchema::of($definition);
+      $this->assertFalse($schema->has('type'), "$type: no type keyword.");
+      $this->assertSame($type, DefinitionSchema::model($schema)['type'] ?? NULL, "$type: MODEL holds the data type.");
       $expected = NULL;
       try {
         LeafTypes::spelling($definition);
@@ -469,7 +469,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
       }
       $this->assertNotNull($expected, "$type: the leaf table has no row for it.");
       try {
-        $this->definitions()->published($node);
+        $this->definitions()->published($schema);
         $this->fail("$type: the projection refuses it.");
       }
       catch (\LogicException $refusal) {
@@ -488,7 +488,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
         $this->fail('A definition that holds itself is refused.');
       }
       catch (\LogicException $refusal) {
-        $this->assertSame('The definition of the map type at "' . $above . '/properties/again" holds itself: it is met again inside itself, so no node can be read from it.', $refusal->getMessage());
+        $this->assertSame('The definition of the map type at "' . $above . '/properties/again" holds itself: it is met again inside itself, so no schema can be read from it.', $refusal->getMessage());
       }
     }
 
@@ -501,8 +501,8 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $each = MapDataDefinition::create()->setLabel('Each');
     DefinitionMetadata::setEach($each, $each);
     $members = [
-      'shape' => [$shaped, 'string', '/' . DefinitionSchema::MODEL . '/shape/node'],
-      'config type' => [$typed, 'string', '/' . DefinitionSchema::MODEL . '/configType/node'],
+      'shape' => [$shaped, 'string', '/' . DefinitionSchema::MODEL . '/shape/schema'],
+      'config type' => [$typed, 'string', '/' . DefinitionSchema::MODEL . '/configType/schema'],
       'each' => [$each, 'map', '/' . DefinitionSchema::MODEL . '/each'],
     ];
     foreach ($members as $member => [$definition, $type, $at]) {
@@ -511,7 +511,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
         $this->fail("A definition held as its own $member is refused.");
       }
       catch (\LogicException $refusal) {
-        $this->assertSame('The definition of the ' . $type . ' type at "' . $at . '" holds itself: it is met again inside itself, so no node can be read from it.', $refusal->getMessage(), $member);
+        $this->assertSame('The definition of the ' . $type . ' type at "' . $at . '" holds itself: it is met again inside itself, so no schema can be read from it.', $refusal->getMessage(), $member);
       }
     }
   }
@@ -519,14 +519,14 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
   /**
    * Tests a map that offers a list of values, of each kind, said as one value.
    *
-   * The projection makes the one value from the map's node (its title,
+   * The projection makes the one value from the map's schema (its title,
    * description and MODEL `constraints`), and reads of the definition only
-   * whether it offers a list; whether it is a map comes from the node.
+   * whether it offers a list; whether it is a map comes from the schema.
    * Each kind: its own checks, required, with a default, nullable, always
    * held, the item of a list, with a property ruled out, holding a shaped
    * property, and a variant's member. The expected documents are the ones
    * the module served before the projection made the one value from the
-   * node.
+   * schema.
    */
   public function testListedMaps(): void {
     $map = static fn (string $label): MapDataDefinition => MapDataDefinition::create()->setLabel($label)
@@ -609,7 +609,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
   /**
    * Tests published() strips MODEL at every keyword position.
    *
-   * A property and an item are projected beside their definitions; a node
+   * A property and an item are projected beside their definitions; a schema
    * placed under any other keyword (`allOf`, `$defs`, `patternProperties`,
    * `not`) loses MODEL, at every depth, and keeps all else.
    */
@@ -618,12 +618,12 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $inner = DefinitionSchema::of($leaf);
     $deep = Schema::any()->with('allOf', [$inner]);
     $map = MapDataDefinition::create()->setLabel('Map')->setPropertyDefinition('leaf', $leaf);
-    $node = DefinitionSchema::of($map)
+    $schema = DefinitionSchema::of($map)
       ->with('allOf', [$inner, $deep])
       ->with('$defs', ['leaf' => $inner])
       ->with('patternProperties', ['^x' => $inner])
       ->with('not', $inner);
-    $published = static::json($this->definitions()->published($node));
+    $published = static::json($this->definitions()->published($schema));
     $this->assertStringNotContainsString(DefinitionSchema::MODEL, (string) json_encode($published));
     $kept = ['title' => 'Leaf', 'type' => ['string', 'null']];
     $this->assertSame([$kept, ['allOf' => [$kept]]], $published['allOf']);
@@ -634,13 +634,13 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests of() keeps nothing, and an entry's node steps with its definition.
+   * Tests of() keeps nothing, and an entry's schema steps with its definition.
    *
    * The read, of(), reads the definition each time it is called: two
-   * reads are two objects that say the same. A key's node is its entry's
-   * (schema(), the same object on every call), and a map's node holds the
-   * node of each property, listed or not, which says what a read of that
-   * property says (propertyNode()).
+   * reads are two objects that say the same. A key's schema is its entry's
+   * (schema(), the same object on every call), and a map's schema holds the
+   * schema of each property, listed or not, which says what a read of that
+   * property says (propertyOf()).
    */
   public function testOfKeepsNothing(): void {
     $definitions = $this->definitions();
@@ -657,12 +657,12 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
       }
     }
     $this->assertNotNull($label, 'An example holds a string key.');
-    $node = $label->schema();
-    $this->assertSame($node, $label->schema(), 'An entry reads its node once.');
+    $schema = $label->schema();
+    $this->assertSame($schema, $label->schema(), 'An entry reads its schema once.');
     $refined = Surface::deepClone($label->definition());
     $again = $label->withDefinition($refined)->schema();
-    $this->assertNotSame($node, $again, 'A refined key is a definition of its own, read for its own entry.');
-    $this->assertSame(static::json($definitions->published($node)), static::json($definitions->published($again)));
+    $this->assertNotSame($schema, $again, 'A refined key is a definition of its own, read for its own entry.');
+    $this->assertSame(static::json($definitions->published($schema)), static::json($definitions->published($again)));
     $properties = 0;
     $listed = 0;
     foreach ($this->examples() as [, , $surface]) {
@@ -672,14 +672,14 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
           continue;
         }
         $built = $entry->schema();
-        $this->assertSame(array_keys($map->getPropertyDefinitions()), array_keys($built->get('properties')), 'Every property is on the node.');
+        $this->assertSame(array_keys($map->getPropertyDefinitions()), array_keys($built->get('properties')), 'Every property is on the schema.');
         foreach ($map->getPropertyDefinitions() as $name => $property) {
           $properties++;
           if ($definitions->listed($property)) {
             $listed++;
           }
-          $this->assertSame($built->get('properties')[$name], DefinitionSchema::propertyNode($built, (string) $name), "The map's property $name is the node under its properties.");
-          $this->assertSame(static::json(DefinitionSchema::of($property)), static::json(DefinitionSchema::propertyNode($built, (string) $name)), "The map's property $name says what a read of it says, listed or not.");
+          $this->assertSame($built->get('properties')[$name], DefinitionSchema::propertyOf($built, (string) $name), "The map's property $name is the schema under its properties.");
+          $this->assertSame(static::json(DefinitionSchema::of($property)), static::json(DefinitionSchema::propertyOf($built, (string) $name)), "The map's property $name says what a read of it says, listed or not.");
         }
       }
     }
@@ -696,7 +696,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
       if ($definitions->listed($property)) {
         $listed++;
       }
-      $this->assertSame(static::json(DefinitionSchema::of($property)), static::json(DefinitionSchema::propertyNode($built, (string) $name)), "The hand-built map's property $name says what a read of it says, listed or not.");
+      $this->assertSame(static::json(DefinitionSchema::of($property)), static::json(DefinitionSchema::propertyOf($built, (string) $name)), "The hand-built map's property $name says what a read of it says, listed or not.");
     }
     $this->assertSame(self::MAP_PROPERTIES, [$properties, $listed], 'The properties of the maps, and how many of them offer a list.');
   }
@@ -749,37 +749,37 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Compares a definition's projected node with what a baseline serves.
+   * Compares a definition's projected schema with what a baseline serves.
    *
    * @param \Drupal\surface\Contract\DefinitionSchema $definitions
    *   The reader.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    * @param array $served
-   *   The key's node in the baseline.
+   *   The key's schema in the baseline.
    * @param string $at
    *   Where, for the message.
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The built node to compare; NULL for the definition's own, as the
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   The built schema to compare; NULL for the definition's own, as the
    *   emitter reads it.
    * @param string[] $theirs
    *   Keywords the emitter writes for this key beside DECORATION.
    *
    * @return int
-   *   How many nodes were compared: 0 for one the request decorates past
-   *   what a node holds (a shape's reference, variants, a key refined or
+   *   How many schemas were compared: 0 for one the request decorates past
+   *   what a schema holds (a shape's reference, variants, a key refined or
    *   grouped).
    */
-  protected function compare(DefinitionSchema $definitions, DataDefinitionInterface $definition, array $served, string $at, ?Schema $node = NULL, array $theirs = []): int {
+  protected function compare(DefinitionSchema $definitions, DataDefinitionInterface $definition, array $served, string $at, ?Schema $schema = NULL, array $theirs = []): int {
     $extension = $served['x-surface'] ?? [];
     if (isset($served['$ref']) || isset($served['allOf']) || isset($served['anyOf']) || !empty($extension['refined']) || !empty($extension['group'])) {
       return 0;
     }
-    // One node whether or not the key offers a list; the projection says
+    // One schema whether or not the key offers a list; the projection says
     // what the list states.
     $listed = $definitions->listed($definition);
-    $this->listedCompared += $node === NULL && $listed ? 1 : 0;
-    $published = static::json($definitions->published($node ?? DefinitionSchema::of($definition), $node === NULL ? $listed : FALSE));
+    $this->listedCompared += $schema === NULL && $listed ? 1 : 0;
+    $published = static::json($definitions->published($schema ?? DefinitionSchema::of($definition), $schema === NULL ? $listed : FALSE));
     $static = array_diff_key($served, array_flip([...self::DECORATION, ...$theirs]));
     $this->assertSame(array_keys($static), array_keys($published), $at . ': the same keywords, in order.');
     $compared = 1;

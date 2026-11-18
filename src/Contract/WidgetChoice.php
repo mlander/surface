@@ -70,7 +70,7 @@ final class WidgetChoice {
    *   whose schema holds no item.
    */
   public function optionSet(Schema $schema): ?OptionSet {
-    $key = DefinitionSchema::isList($schema) ? DefinitionSchema::itemNode($schema) : $schema;
+    $key = DefinitionSchema::isList($schema) ? DefinitionSchema::itemOf($schema) : $schema;
     return $key === NULL ? NULL : $this->options->resolve($key);
   }
 
@@ -100,7 +100,7 @@ final class WidgetChoice {
     if ($claimed !== NULL) {
       return $claimed;
     }
-    $asked = NodeFacts::setting($schema, 'widget');
+    $asked = SchemaFacts::setting($schema, 'widget');
     if (is_string($asked)) {
       foreach ($this->widgets->instances() as $widget) {
         if ($widget instanceof SurfaceWidgetBase && in_array($asked, $widget->answersTo(), TRUE) && $this->draws($widget, $schema)) {
@@ -116,7 +116,7 @@ final class WidgetChoice {
         return $this->asked($schema, $widget);
       }
     }
-    throw new \InvalidArgumentException(sprintf('No data surface widget serves the "%s" data type.', NodeFacts::dataType($schema)));
+    throw new \InvalidArgumentException(sprintf('No data surface widget serves the "%s" data type.', SchemaFacts::dataType($schema)));
   }
 
   /**
@@ -195,12 +195,12 @@ final class WidgetChoice {
    *   NULL when no stock widget is named for the type.
    */
   public static function valueWord(Schema $schema): ?string {
-    $type = NodeFacts::dataType($schema);
+    $type = SchemaFacts::dataType($schema);
     return match (TRUE) {
       TimeWidget::draws($schema) => 'time',
       DateWidget::draws($schema) => 'date',
       in_array($type, ['string', 'email', 'uri'], TRUE) => match (TRUE) {
-        (bool) NodeFacts::setting($schema, 'multiline') => 'textarea',
+        (bool) SchemaFacts::setting($schema, 'multiline') => 'textarea',
         $type === 'email' => 'email',
         default => 'text',
       },
@@ -229,14 +229,14 @@ final class WidgetChoice {
    *   The widget, or NULL when none claims it.
    */
   public function claimed(Schema $schema): ?SurfaceWidgetInterface {
-    if (NodeFacts::setting($schema, 'widget') !== NULL) {
+    if (SchemaFacts::setting($schema, 'widget') !== NULL) {
       return NULL;
     }
     foreach ($this->widgets->claimants() as $plugin_id => $claims) {
       foreach ($claims as $claim) {
         $matches = isset($claim['shape'])
-          ? NodeFacts::shape($schema) === $claim['shape']
-          : NodeFacts::dataType($schema) === $claim['type'] && (!isset($claim['format']) || NodeFacts::setting($schema, 'format') === $claim['format']);
+          ? SchemaFacts::shape($schema) === $claim['shape']
+          : SchemaFacts::dataType($schema) === $claim['type'] && (!isset($claim['format']) || SchemaFacts::setting($schema, 'format') === $claim['format']);
         if ($matches) {
           $widget = $this->widgets->widget((string) $plugin_id);
           if ($this->draws($widget, $schema)) {
@@ -267,7 +267,7 @@ final class WidgetChoice {
     if ($claimed !== NULL) {
       return $claimed;
     }
-    if (NodeFacts::setting($schema, 'widget') !== NULL) {
+    if (SchemaFacts::setting($schema, 'widget') !== NULL) {
       return NULL;
     }
     // In weight order, as forSchema() asks: a stock widget that draws it
@@ -345,16 +345,16 @@ final class WidgetChoice {
    *   When the key asked for another.
    */
   protected function asked(Schema $schema, SurfaceWidgetInterface $widget): SurfaceWidgetInterface {
-    $asked = NodeFacts::setting($schema, 'widget');
+    $asked = SchemaFacts::setting($schema, 'widget');
     if (!is_string($asked) || !$widget instanceof SurfaceWidgetBase || in_array($asked, $widget->answersTo(), TRUE)) {
       return $widget;
     }
-    $item = DefinitionSchema::isList($schema) ? DefinitionSchema::itemNode($schema) : NULL;
+    $item = DefinitionSchema::isList($schema) ? DefinitionSchema::itemOf($schema) : NULL;
     throw new \InvalidArgumentException(sprintf(
       '"%s" asks for the %s widget, which does not draw a key of type %s; the %s widget does. Ask for a widget that draws it, or for none.',
-      NodeFacts::label($schema) ?? NodeFacts::dataType($schema),
+      SchemaFacts::label($schema) ?? SchemaFacts::dataType($schema),
       $asked,
-      DefinitionSchema::isList($schema) ? 'list of ' . ($item === NULL ? '' : NodeFacts::dataType($item)) : NodeFacts::dataType($schema),
+      DefinitionSchema::isList($schema) ? 'list of ' . ($item === NULL ? '' : SchemaFacts::dataType($item)) : SchemaFacts::dataType($schema),
       $widget->answersTo()[0] ?? $widget->getPluginId(),
     ));
   }

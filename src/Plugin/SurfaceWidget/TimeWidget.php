@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Attribute\SurfaceWidget;
@@ -45,7 +45,7 @@ final class TimeWidget extends SurfaceWidgetBase implements SchemaWidgetInterfac
    *   TRUE for a string that asks for one.
    */
   public static function draws(Schema $schema): bool {
-    return NodeFacts::dataType($schema) === 'string' && NodeFacts::setting($schema, 'widget') === 'time';
+    return SchemaFacts::dataType($schema) === 'string' && SchemaFacts::setting($schema, 'widget') === 'time';
   }
 
   /**
@@ -58,15 +58,15 @@ final class TimeWidget extends SurfaceWidgetBase implements SchemaWidgetInterfac
   /**
    * {@inheritdoc}
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return static::types($node) === ['string'] && (static::ui($node)['widget'] ?? NULL) === 'time';
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    return static::types($schema) === ['string'] && (static::ui($schema)['widget'] ?? NULL) === 'time';
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    return $this->baseElement($node, $context) + [
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    return $this->baseElement($schema, $context) + [
       '#type' => 'date',
       '#attributes' => ['type' => 'time'],
       '#default_value' => $value,

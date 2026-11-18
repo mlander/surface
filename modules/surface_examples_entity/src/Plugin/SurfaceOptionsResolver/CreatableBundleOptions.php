@@ -72,7 +72,7 @@ final class CreatableBundleOptions extends SurfaceOptionsResolverBase {
   /**
    * {@inheritdoc}
    */
-  public function resolve(Constraint $constraint, Schema $node): OptionSet {
+  public function resolve(Constraint $constraint, Schema $schema): OptionSet {
     assert($constraint instanceof CreatableBundleConstraint);
     [$creatable, $cacheability] = $this->derivation->creatableBundles($constraint->entityTypeId);
     return new OptionSet(array_map('strval', $creatable), [], $cacheability);

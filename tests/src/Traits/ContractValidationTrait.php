@@ -65,7 +65,7 @@ trait ContractValidationTrait {
    * of `properties` and `$defs`, are objects in the document as served.
    *
    * @param mixed $schema
-   *   The document, or a node of it.
+   *   The document, or a schema of it.
    *
    * @return mixed
    *   The same, each such empty map an object.

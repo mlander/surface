@@ -25,7 +25,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Entry;
 use Drupal\surface\SurfaceInterface;
 use PortableSchema\Builder\Schema;
@@ -442,22 +442,22 @@ final class References {
   }
 
   /**
-   * Answers whether a config storage stores a key by its uuid, from its node.
+   * Answers whether a config storage stores a key by its uuid, from its schema.
    *
-   * As storedByUuid() answers it, from the key's node: its two settings
-   * (NodeFacts::setting()).
+   * As storedByUuid() answers it, from the key's schema: its two settings
+   * (SchemaFacts::setting()).
    *
    * Decision: see
-   * docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node.
+   * docs/decisions.md#a-fact-is-read-from-the-schema-and-the-options-service-takes-a-schema.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's built schema.
    *
    * @return bool
    *   As storedByUuid() answers.
    */
-  public static function storedByUuidIn(Schema $node): bool {
-    return NodeFacts::setting($node, self::CONTENT) === TRUE && NodeFacts::setting($node, self::STORED_AS) !== self::BY_ID;
+  public static function storedByUuidIn(Schema $schema): bool {
+    return SchemaFacts::setting($schema, self::CONTENT) === TRUE && SchemaFacts::setting($schema, self::STORED_AS) !== self::BY_ID;
   }
 
   /**
@@ -560,21 +560,21 @@ final class References {
   }
 
   /**
-   * Reads which entity type and bundles a key refers to, from its node.
+   * Reads which entity type and bundles a key refers to, from its schema.
    *
-   * As target() reads it, from the key's node: the options of its
+   * As target() reads it, from the key's schema: the options of its
    * CONSTRAINT.
    *
-   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+   * Decision: see docs/decisions.md#the-remaining-readers-read-schemas.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's built schema.
    *
    * @return array{entityType: string, bundles: string[]}|null
    *   As target() answers.
    */
-  public static function targetIn(Schema $node): ?array {
-    $options = NodeFacts::constraints($node)[self::CONSTRAINT] ?? NULL;
+  public static function targetIn(Schema $schema): ?array {
+    $options = SchemaFacts::constraints($schema)[self::CONSTRAINT] ?? NULL;
     return is_array($options) ? static::targetOf($options) : NULL;
   }
 
@@ -617,18 +617,18 @@ final class References {
   }
 
   /**
-   * Reads which selection handler a key's candidates are, from its node.
+   * Reads which selection handler a key's candidates are, from its schema.
    *
-   * As handlerOf() reads it, from the key's node.
+   * As handlerOf() reads it, from the key's schema.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's built node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's built schema.
    *
    * @return array{0: string, 1: array}
    *   As handlerOf() answers.
    */
-  public static function handlerIn(Schema $node): array {
-    return static::handlerFrom(NodeFacts::constraints($node)[self::CONSTRAINT] ?? NULL);
+  public static function handlerIn(Schema $schema): array {
+    return static::handlerFrom(SchemaFacts::constraints($schema)[self::CONSTRAINT] ?? NULL);
   }
 
   /**
@@ -676,12 +676,12 @@ final class References {
   }
 
   /**
-   * Finds the node of what a key of a built resource refers to, by its path.
+   * Finds the schema of what a key of a built resource refers to, by its path.
    *
-   * As definitionAt() finds the key, giving its node, which targetIn() and
+   * As definitionAt() finds the key, giving its schema, which targetIn() and
    * handlerIn() read.
    *
-   * Decision: see docs/decisions.md#the-remaining-readers-read-nodes.
+   * Decision: see docs/decisions.md#the-remaining-readers-read-schemas.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource, built.
@@ -692,17 +692,17 @@ final class References {
    *   of.
    *
    * @return \PortableSchema\Builder\Schema|null
-   *   The key's node, as definitionAt() finds the key; NULL where it finds
+   *   The key's schema, as definitionAt() finds the key; NULL where it finds
    *   none.
    */
-  public function nodeAt(SurfaceInterface $surface, array $path, ?string $entity_type_id = NULL): ?Schema {
+  public function schemaAt(SurfaceInterface $surface, array $path, ?string $entity_type_id = NULL): ?Schema {
     return $this->placeAt($surface, $path, $entity_type_id)?->schema();
   }
 
   /**
    * Finds the entry of a key that refers to one type.
    *
-   * The key's facts are read from its entry's node (Entry::schema()), a
+   * The key's facts are read from its entry's schema (Entry::schema()), a
    * key that holds a child frame's too; its definition is asked of the
    * entry only by definitionAt().
    *
@@ -736,11 +736,11 @@ final class References {
     if ($found !== NULL) {
       return $found;
     }
-    if (NodeFacts::setting($entry->schema(), self::TARGETS) === NULL) {
+    if (SchemaFacts::setting($entry->schema(), self::TARGETS) === NULL) {
       return NULL;
     }
     $types = $surface->getDefinitions()->entry(self::TYPE_KEY);
-    $type = $types === NULL ? NULL : NodeFacts::constraints($types->schema())[self::TYPE_CONSTRAINT] ?? NULL;
+    $type = $types === NULL ? NULL : SchemaFacts::constraints($types->schema())[self::TYPE_CONSTRAINT] ?? NULL;
     if ($entity_type_id === NULL || !is_array($type)) {
       return NULL;
     }
@@ -755,7 +755,7 @@ final class References {
   /**
    * Gives a key's entry, if it refers to one entity type.
    *
-   * Read from the key's node; nothing asks the entry for its definition.
+   * Read from the key's schema; nothing asks the entry for its definition.
    *
    * @param \Drupal\surface\Entry $entry
    *   The key.

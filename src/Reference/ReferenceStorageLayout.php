@@ -8,7 +8,7 @@ use Drupal\Component\Uuid\Uuid;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMap;
 use Drupal\surface\DefinitionMetadata;
@@ -19,8 +19,8 @@ use PortableSchema\Builder\Schema;
 /**
  * Stores a reference to a content entity by its uuid, in config.
  *
- * A content entity's id differs between sites: node 7 here is another
- * node, or none, on the site a config export is imported into. Its uuid
+ * A content entity's id differs between sites: schema 7 here is another
+ * schema, or none, on the site a config export is imported into. Its uuid
  * is the same on both, which is why core names content by uuid in a
  * config entity's dependencies. A config entity's id is its machine name,
  * the same everywhere, so a reference to one stays its id.
@@ -31,7 +31,7 @@ use PortableSchema\Builder\Schema;
  * for: every door sends and answers the id, and only the config holds the
  * uuid.
  *
- * - A key that refers to one content entity type (a user, or a node of
+ * - A key that refers to one content entity type (a user, or a schema of
  *   the article bundle) is stored as the entity's uuid, its config schema
  *   type `uuid`.
  * - A reference to any entity type, a structure of an `entity_type` and
@@ -58,7 +58,7 @@ use PortableSchema\Builder\Schema;
  * Unlike an author's layout, this one reads the site: a uuid's entity is
  * site state by definition. It reads it the same way for every door.
  *
- * Every fact of a key is read from its node (Entry::schema()), walked
+ * Every fact of a key is read from its schema (Entry::schema()), walked
  * down a plain map's properties: whether it is stored by uuid
  * (References::storedByUuidIn()), the entity type it refers to
  * (References::targetIn()), its data type and what every entry of a map
@@ -66,7 +66,7 @@ use PortableSchema\Builder\Schema;
  *
  * Decision: see docs/decisions.md#a-config-object-stores-a-reference-by-uuid
  * and
- * docs/decisions.md#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node.
+ * docs/decisions.md#a-fact-is-read-from-the-schema-and-the-options-service-takes-a-schema.
  *
  * @see \Drupal\surface\ResourceBuild\StorageAdapter
  */
@@ -247,7 +247,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
           return TRUE;
         }
       }
-      if (static::nodeHolds($entry->schema())) {
+      if (static::schemaHolds($entry->schema())) {
         return TRUE;
       }
     }
@@ -255,21 +255,21 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   }
 
   /**
-   * Answers whether a plain map holds a key stored by uuid, by its node.
+   * Answers whether a plain map holds a key stored by uuid, by its schema.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    *
    * @return bool
    *   TRUE when it is one that is not a map, or when one of its
    *   properties, at any depth, is.
    */
-  protected static function nodeHolds(Schema $node): bool {
-    if (!DefinitionSchema::isComplex($node)) {
-      return References::storedByUuidIn($node);
+  protected static function schemaHolds(Schema $schema): bool {
+    if (!DefinitionSchema::isComplex($schema)) {
+      return References::storedByUuidIn($schema);
     }
-    foreach (NodeFacts::properties($node) as $property) {
-      if (static::nodeHolds($property)) {
+    foreach (SchemaFacts::properties($schema) as $property) {
+      if (static::schemaHolds($property)) {
         return TRUE;
       }
     }
@@ -319,7 +319,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    *   The key.
    *
    * @return \PortableSchema\Builder\Schema|null
-   *   The id part's node, unless its author kept the id; NULL for any
+   *   The id part's schema, unless its author kept the id; NULL for any
    *   other key.
    */
   protected static function bare(Entry $entry): ?Schema {
@@ -329,7 +329,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
     // The author keeps the id on the key the structure is attached at, or
     // the structure on its own id.
     $id = $entry->attachment->child->getDefinitions()->entry(self::ID)?->schema();
-    if ($id === NULL || NodeFacts::setting($id, References::TARGETS) === NULL || NodeFacts::setting($entry->schema(), References::STORED_AS) === References::BY_ID || NodeFacts::setting($id, References::STORED_AS) === References::BY_ID) {
+    if ($id === NULL || SchemaFacts::setting($id, References::TARGETS) === NULL || SchemaFacts::setting($entry->schema(), References::STORED_AS) === References::BY_ID || SchemaFacts::setting($id, References::STORED_AS) === References::BY_ID) {
       return NULL;
     }
     return $id;
@@ -342,44 +342,44 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    *   The keys.
    * @param string $prefix
    *   Their path, a dotted path and a dot; empty at the top.
-   * @param array<string, array> $schema
+   * @param array<string, array> $config_schema
    *   The keys found, added to.
    */
-  protected static function listUuidKeys(DefinitionMap $map, string $prefix, array &$schema): void {
+  protected static function listUuidKeys(DefinitionMap $map, string $prefix, array &$config_schema): void {
     foreach ($map->entries() as $name => $entry) {
       $path = $prefix . $name;
-      $node = $entry->schema();
-      if (References::storedByUuidIn($node)) {
-        $schema[$path] = self::UUID_SCHEMA;
+      $schema = $entry->schema();
+      if (References::storedByUuidIn($schema)) {
+        $config_schema[$path] = self::UUID_SCHEMA;
         continue;
       }
-      $each = $entry->attachment === NULL ? NULL : NodeFacts::each($node);
+      $each = $entry->attachment === NULL ? NULL : SchemaFacts::each($schema);
       if ($each !== NULL) {
-        static::listEachKeys($entry, $each, $path, $schema);
+        static::listEachKeys($entry, $each, $path, $config_schema);
         continue;
       }
       $children = static::children($entry);
       if ($entry->attachment !== NULL || $entry->list !== NULL || $entry->variants !== NULL) {
         // An item's keys, and a variant's, sit under the key itself.
         foreach ($children as $child) {
-          static::listUuidKeys($child, $path . '.', $schema);
+          static::listUuidKeys($child, $path . '.', $config_schema);
         }
         continue;
       }
       // A plain map, and the structures other modules mounted in it, each
       // under the module's name.
       foreach ($children as $module => $child) {
-        static::listUuidKeys($child, $path . '.' . $module . '.', $schema);
+        static::listUuidKeys($child, $path . '.' . $module . '.', $config_schema);
       }
-      foreach (NodeFacts::properties($node) as $part => $property) {
+      foreach (SchemaFacts::properties($schema) as $part => $property) {
         if (isset($children[(string) $part])) {
           continue;
         }
         if (References::storedByUuidIn($property)) {
-          $schema[$path . '.' . $part] = self::UUID_SCHEMA;
+          $config_schema[$path . '.' . $part] = self::UUID_SCHEMA;
         }
         else {
-          static::listProperties($property, $path . '.' . $part, $schema);
+          static::listProperties($property, $path . '.' . $part, $config_schema);
         }
       }
     }
@@ -396,7 +396,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * @param \Drupal\surface\Entry $entry
    *   The map.
    * @param \PortableSchema\Builder\Schema|string $each
-   *   What each entry is, as NodeFacts::each() reads it.
+   *   What each entry is, as SchemaFacts::each() reads it.
    * @param string $path
    *   The map's dotted path.
    * @param array<string, array> $schema
@@ -419,20 +419,20 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Lists the properties of a plain map stored as a uuid.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The map's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The map's schema.
    * @param string $path
    *   Its dotted path.
-   * @param array<string, array> $schema
+   * @param array<string, array> $config_schema
    *   The keys found, added to.
    */
-  protected static function listProperties(Schema $node, string $path, array &$schema): void {
-    foreach (NodeFacts::properties($node) as $name => $property) {
+  protected static function listProperties(Schema $schema, string $path, array &$config_schema): void {
+    foreach (SchemaFacts::properties($schema) as $name => $property) {
       if (References::storedByUuidIn($property)) {
-        $schema[$path . '.' . $name] = self::UUID_SCHEMA;
+        $config_schema[$path . '.' . $name] = self::UUID_SCHEMA;
       }
       else {
-        static::listProperties($property, $path . '.' . $name, $schema);
+        static::listProperties($property, $path . '.' . $name, $config_schema);
       }
     }
   }
@@ -459,9 +459,9 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
         continue;
       }
       $value = $values[$name];
-      $node = $entry->schema();
-      if (References::storedByUuidIn($node)) {
-        $values[$name] = $this->one($node, $value, $to);
+      $schema = $entry->schema();
+      if (References::storedByUuidIn($schema)) {
+        $values[$name] = $this->one($schema, $value, $to);
         continue;
       }
       if (!is_array($value)) {
@@ -503,7 +503,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
             $values[$name][$part] = $this->map($mounted[(string) $part], $settings, $to);
           }
         }
-        elseif (($property = DefinitionSchema::propertyNode($node, (string) $part)) !== NULL) {
+        elseif (($property = DefinitionSchema::propertyOf($schema, (string) $part)) !== NULL) {
           $values[$name][$part] = $this->plain($property, $settings, $to);
         }
       }
@@ -514,8 +514,8 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Translates the references in a plain map's value.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The map's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The map's schema.
    * @param mixed $value
    *   Its value.
    * @param bool $to
@@ -524,14 +524,14 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * @return mixed
    *   The value, translated.
    */
-  protected function plain(Schema $node, mixed $value, bool $to): mixed {
-    if (References::storedByUuidIn($node)) {
-      return $this->one($node, $value, $to);
+  protected function plain(Schema $schema, mixed $value, bool $to): mixed {
+    if (References::storedByUuidIn($schema)) {
+      return $this->one($schema, $value, $to);
     }
-    if (!DefinitionSchema::isComplex($node) || !is_array($value)) {
+    if (!DefinitionSchema::isComplex($schema) || !is_array($value)) {
       return $value;
     }
-    foreach (NodeFacts::properties($node) as $name => $property) {
+    foreach (SchemaFacts::properties($schema) as $name => $property) {
       if (array_key_exists($name, $value)) {
         $value[$name] = $this->plain($property, $value[$name], $to);
       }
@@ -542,8 +542,8 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Translates one key that refers to one content entity type.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    * @param mixed $value
    *   An id to store, or a stored uuid to read.
    * @param bool $to
@@ -552,8 +552,8 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * @return mixed
    *   The uuid, or the id typed as the key holds it; NULL for nothing.
    */
-  protected function one(Schema $node, mixed $value, bool $to): mixed {
-    $type = References::targetIn($node)['entityType'] ?? NULL;
+  protected function one(Schema $schema, mixed $value, bool $to): mixed {
+    $type = References::targetIn($schema)['entityType'] ?? NULL;
     if ($type === NULL || $value === NULL || $value === '') {
       return $to ? $value : NULL;
     }
@@ -561,7 +561,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
       return $this->references->uuidOf($type, $value) ?? $value;
     }
     $entity = $this->references->stored($type, $value);
-    return $entity === NULL ? NULL : static::typed($entity, NodeFacts::dataType($node));
+    return $entity === NULL ? NULL : static::typed($entity, SchemaFacts::dataType($schema));
   }
 
   /**
@@ -684,7 +684,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
         continue;
       }
       $id = $entry->attachment?->child->getDefinitions()->entry(self::ID)?->schema();
-      if ($entry->list === NULL && $id !== NULL && NodeFacts::setting($id, References::TARGETS) !== NULL) {
+      if ($entry->list === NULL && $id !== NULL && SchemaFacts::setting($id, References::TARGETS) !== NULL) {
         if (is_string($value[self::TYPE] ?? NULL) && isset($value[self::ID]) && $value[self::ID] !== '') {
           $entity = $this->entity($value[self::TYPE], $value[self::ID]);
           if ($entity !== NULL) {

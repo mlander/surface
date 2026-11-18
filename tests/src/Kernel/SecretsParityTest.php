@@ -42,7 +42,7 @@ use PortableSchema\Builder\Schema;
  * member of either family; testEachFamilyHasMember() builds one of
  * each, so the rule is shown and not only its absence.
  *
- * @see docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-node
+ * @see docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-schema
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -57,7 +57,7 @@ class SecretsParityTest extends SurfaceKernelTestBase {
    */
   public const FAMILIES = [
     'another variant' => 'A key with variants: the chosen variant declares the key plain, another variant of the same name declares it secret, and the document says secret in any branch.',
-    'not in the document' => 'A deferred variant, or one a document narrowed to the chosen variant leaves out: the definition is secret in its own data surface, and the document does not carry it. Kept secrets, outbound projection and storage read built nodes for this reason, never a served document.',
+    'not in the document' => 'A deferred variant, or one a document narrowed to the chosen variant leaves out: the definition is secret in its own data surface, and the document does not carry it. Kept secrets, outbound projection and storage read built schemas for this reason, never a served document.',
   ];
 
   /**

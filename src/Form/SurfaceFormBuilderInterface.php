@@ -269,10 +269,10 @@ interface SurfaceFormBuilderInterface {
    * Render key on the container: the values its envelope was emitted for.
    *
    * The envelope's own `values`, which hold no secret. Extraction finds
-   * each element's node at its pointer in the envelope drawn
-   * (DocumentNodes::at()): the one this request drew, or the one emitted
+   * each element's schema at its pointer in the envelope drawn
+   * (DocumentSchemas::at()): the one this request drew, or the one emitted
    * for these values again where the form came from the form cache. No
-   * element carries its node.
+   * element carries its schema.
    */
   public const VALUES_KEY = '#surface_values';
 

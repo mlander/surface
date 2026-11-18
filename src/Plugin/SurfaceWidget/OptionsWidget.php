@@ -7,7 +7,7 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Options\OptionSet;
@@ -17,9 +17,9 @@ use Drupal\surface\Widget\WidgetContext;
 use PortableSchema\Builder\Schema;
 
 /**
- * Select list for a key whose node offers a list of values.
+ * Select list for a key whose schema offers a list of values.
  *
- * The node's `oneOf` is what it offers, each entry's `const` an option
+ * The schema's `oneOf` is what it offers, each entry's `const` an option
  * and its `title` the option's label; a list's `items` say it for one
  * item, and the list is drawn as a multiple select (`options.multiple`)
  * when the checkboxes widget leaves it: a list of more options than a
@@ -58,12 +58,12 @@ final class OptionsWidget extends ChoiceWidgetBase implements SchemaWidgetInterf
   /**
    * {@inheritdoc}
    *
-   * A node that offers values, its own or its items', and the one value a
-   * key may hold, which its node states as `const` beside the label it
+   * A schema that offers values, its own or its items', and the one value a
+   * key may hold, which its schema states as `const` beside the label it
    * is offered under (`x-surface.fixed`).
    */
-  public function isApplicable(Schema $node, WidgetContext $context): bool {
-    return static::offers(static::offering($node)) || static::isFixed($node);
+  public function isApplicable(Schema $schema, WidgetContext $context): bool {
+    return static::offers(static::offering($schema)) || static::isFixed($schema);
   }
 
   /**
@@ -76,16 +76,16 @@ final class OptionsWidget extends ChoiceWidgetBase implements SchemaWidgetInterf
    * that may be cleared keeps it besides. A value not among the choices
    * comes up on the empty option, selected.
    */
-  public function buildElement(Schema $node, mixed $value, WidgetContext $context): array {
-    if (static::isFixed($node)) {
-      return static::fixed($this->baseElement($node, $context), $node);
+  public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+    if (static::isFixed($schema)) {
+      return static::fixed($this->baseElement($schema, $context), $schema);
     }
-    [$options] = static::choices(static::offering($node));
-    $element = $this->baseElement($node, $context) + [
+    [$options] = static::choices(static::offering($schema));
+    $element = $this->baseElement($schema, $context) + [
       '#type' => 'select',
       '#options' => $options,
     ];
-    if (static::type($node) === 'array') {
+    if (static::type($schema) === 'array') {
       // A list offers every value at once and needs no empty choice:
       // choosing nothing is the empty list. Never #required, as the
       // checkboxes are not: a required list must hold a value, and the
@@ -96,7 +96,7 @@ final class OptionsWidget extends ChoiceWidgetBase implements SchemaWidgetInterf
       $element['#required'] = FALSE;
       return $element;
     }
-    return $this->singleSelect($element, $node, $options, $value, $context);
+    return $this->singleSelect($element, $schema, $options, $value, $context);
   }
 
   /**
@@ -123,23 +123,23 @@ final class OptionsWidget extends ChoiceWidgetBase implements SchemaWidgetInterf
    */
   public static function drawsFixed(Schema $schema, OptionSet $set, mixed $value): bool {
     return !DefinitionSchema::isList($schema)
-      && (NodeFacts::isOneVariant($schema) || NodeFacts::isFixed($schema))
-      && NodeFacts::holdsValue($schema)
+      && (SchemaFacts::isOneVariant($schema) || SchemaFacts::isFixed($schema))
+      && SchemaFacts::holdsValue($schema)
       && count($set->options) === 1
       && (!ValueState::isConfigured($value) || $set->allows($value));
   }
 
   /**
-   * Answers whether a node is the one value a key may hold.
+   * Answers whether a schema is the one value a key may hold.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return bool
    *   TRUE for a `const` beside the label `x-surface.fixed` gives it.
    */
-  protected static function isFixed(Schema $node): bool {
-    return $node->has('const') && is_string(static::extension($node)['fixed'] ?? NULL);
+  protected static function isFixed(Schema $schema): bool {
+    return $schema->has('const') && is_string(static::extension($schema)['fixed'] ?? NULL);
   }
 
   /**
@@ -147,17 +147,17 @@ final class OptionsWidget extends ChoiceWidgetBase implements SchemaWidgetInterf
    *
    * @param array $element
    *   The element so far.
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node: its `const`, and its label in `x-surface.fixed`.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema: its `const`, and its label in `x-surface.fixed`.
    *
    * @return array
    *   An item showing the value's label, whose value is that value.
    */
-  protected static function fixed(array $element, Schema $node): array {
+  protected static function fixed(array $element, Schema $schema): array {
     return [
       '#type' => 'item',
-      '#plain_text' => (string) static::extension($node)['fixed'],
-      '#value' => $node->get('const'),
+      '#plain_text' => (string) static::extension($schema)['fixed'],
+      '#value' => $schema->get('const'),
       // Nothing to answer, so nothing to mark as required.
       '#required' => FALSE,
     ] + $element;
@@ -177,8 +177,8 @@ final class OptionsWidget extends ChoiceWidgetBase implements SchemaWidgetInterf
    *
    * @param array $element
    *   The select element so far.
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node it draws.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema it draws.
    * @param array<int|string, string> $options
    *   The values it offers.
    * @param mixed $value
@@ -190,14 +190,14 @@ final class OptionsWidget extends ChoiceWidgetBase implements SchemaWidgetInterf
    *   The element, with its default value and, when the rule calls for
    *   one, its empty option.
    */
-  protected function singleSelect(array $element, Schema $node, array $options, mixed $value, WidgetContext $context): array {
+  protected function singleSelect(array $element, Schema $schema, array $options, mixed $value, WidgetContext $context): array {
     // Decision: see docs/decisions.md#the-empty-option-rule.
-    $stale = $context->stale || !empty(static::extension($node)['stale']);
+    $stale = $context->stale || !empty(static::extension($schema)['stale']);
     $chosen = !$stale && ValueState::isConfigured($value) && (is_int($value) || is_string($value)) && array_key_exists($value, $options);
     // Inside a collection's item the document's answer is the shared
     // items' schema's, for an item holding nothing: an item holding a
     // value is answered for its own.
-    $empty = static::emptyOption($node, $context->required, $chosen, $context->item && ValueState::isConfigured($value));
+    $empty = static::emptyOption($schema, $context->required, $chosen, $context->item && ValueState::isConfigured($value));
     if (!$empty['show']) {
       // A valid choice is selected and emptiness is not an answer: no
       // empty option. Core adds none either, since a default is set.
@@ -236,8 +236,8 @@ final class OptionsWidget extends ChoiceWidgetBase implements SchemaWidgetInterf
    * an item holding nothing: whether it shows is read from the item's own
    * value by the same rule, and only its label is the document's.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    * @param bool $required
    *   Whether its owner requires it.
    * @param bool $chosen
@@ -249,10 +249,10 @@ final class OptionsWidget extends ChoiceWidgetBase implements SchemaWidgetInterf
    * @return array{show: bool, label: string}
    *   The empty option.
    */
-  public static function emptyOption(Schema $node, bool $required, bool $chosen, bool $own = FALSE): array {
-    $said = static::options($node)['emptyOption'] ?? NULL;
+  public static function emptyOption(Schema $schema, bool $required, bool $chosen, bool $own = FALSE): array {
+    $said = static::options($schema)['emptyOption'] ?? NULL;
     $said = is_array($said) ? $said : (is_object($said) ? (array) $said : NULL);
-    $holds = $required || !static::allowsNull($node);
+    $holds = $required || !static::allowsNull($schema);
     if ($said !== NULL && is_bool($said['show'] ?? NULL) && is_string($said['label'] ?? NULL)) {
       return ['show' => ($own ? !$holds : $said['show']) || !$chosen, 'label' => $said['label']];
     }

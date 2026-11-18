@@ -100,7 +100,7 @@ class KeyPathsCoercionTest extends SurfaceKernelTestBase {
    * Tests a path inside keys from the site is refused by what they are.
    *
    * The gallery attaches one room per thing the site has (attachEach());
-   * that the key holds such entries is read from its node.
+   * that the key holds such entries is read from its schema.
    */
   public function testKeysFromTheSiteAreNotReached(): void {
     $this->installEntitySchema('user');

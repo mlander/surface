@@ -9,7 +9,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\SurfaceRefinerInterface;
 use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\ApplicabilityInterface;
@@ -162,7 +162,7 @@ final class RefinesInputRefiner implements SurfaceRefinerInterface, Applicabilit
     $answers = [];
     $schema = $key;
     foreach ($this->bindings[$name] ?? [] as $refiner) {
-      if (NodeFacts::doesNotApply($schema)) {
+      if (SchemaFacts::doesNotApply($schema)) {
         break;
       }
       $answer = $this->answerOf($refiner, $schema, $values, $name);
@@ -236,16 +236,16 @@ final class RefinesInputRefiner implements SurfaceRefinerInterface, Applicabilit
    */
   protected function refineMounted(Schema $mount, array $values): array {
     $module = (string) $this->module;
-    $own = DefinitionSchema::propertyNode($mount, $module);
+    $own = DefinitionSchema::propertyOf($mount, $module);
     if ($own === NULL || !is_a(DefinitionSchema::classOf($own), MapDataDefinition::class, TRUE)) {
       return [];
     }
     $answers = [];
     $schema = $mount;
     foreach ($this->bindings[self::MOUNT] ?? [] as $refiner) {
-      $own = DefinitionSchema::propertyNode($schema, $module);
-      $key = $own === NULL ? NULL : DefinitionSchema::propertyNode($own, $refiner->key);
-      if ($key === NULL || NodeFacts::doesNotApply($key)) {
+      $own = DefinitionSchema::propertyOf($schema, $module);
+      $key = $own === NULL ? NULL : DefinitionSchema::propertyOf($own, $refiner->key);
+      if ($key === NULL || SchemaFacts::doesNotApply($key)) {
         continue;
       }
       $answer = $this->answerOf($refiner, $key, $values, $refiner->key);

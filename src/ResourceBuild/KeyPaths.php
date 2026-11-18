@@ -11,7 +11,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Computed;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\LeafTypes;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
@@ -53,8 +53,8 @@ use PortableSchema\Builder\Schema;
  * with the same reach, a map with keys of its own named key by key, and
  * the same holding: it never enters a build.
  *
- * A key's facts are read from its node. On the sealed resource that is the
- * entry's node (Entry::schema()), stepped down in step with the
+ * A key's facts are read from its schema. On the sealed resource that is the
+ * entry's schema (Entry::schema()), stepped down in step with the
  * definition; a key that holds a child frame's too. What the build writes
  * (writeDefaults(), resolve(), setDefault()) is a builder's definitions
  * before sealing, which no entry holds: held() reads such a definition's
@@ -64,7 +64,7 @@ use PortableSchema\Builder\Schema;
  * Decision: see docs/decisions.md#a-site-sets-a-default-in-configuration.
  * Decision: see
  * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for,
- * and docs/decisions.md#the-remaining-readers-read-nodes.
+ * and docs/decisions.md#the-remaining-readers-read-schemas.
  *
  * @internal
  */
@@ -268,7 +268,7 @@ final class KeyPaths {
    * Reads a value through the coercion table and holds it to its key.
    *
    * The key's facts (a secret, computed, a list or a map, its data type and
-   * whether it holds a date alone) are read from its node, or from the
+   * whether it holds a date alone) are read from its schema, or from the
    * definition where no entry holds one. The value handed back is the value
    * held (violation()).
    *
@@ -280,8 +280,8 @@ final class KeyPaths {
    *   Where the value comes from, for the refusal.
    * @param string $path
    *   The path, for the refusal.
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The key's node, stepped down to with the definition from its entry's
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   The key's schema, stepped down to with the definition from its entry's
    *   (heldOn()); NULL for a definition no entry holds (a builder's, before
    *   sealing), whose facts are read from the definition itself, as the
    *   build reads what it writes.
@@ -296,23 +296,23 @@ final class KeyPaths {
    * @throws \Drupal\surface\ResourceBuild\ValueNotAcceptedException
    *   When the value does not fit the key.
    */
-  public function held(DataDefinitionInterface $definition, mixed $raw, array $where, string $path, ?Schema $node = NULL): mixed {
+  public function held(DataDefinitionInterface $definition, mixed $raw, array $where, string $path, ?Schema $schema = NULL): mixed {
     $fixing = $where['verb'] === 'fixes';
-    if ($node === NULL ? DefinitionMetadata::isSecret($definition) : Secrets::marked($node)) {
+    if ($schema === NULL ? DefinitionMetadata::isSecret($definition) : Secrets::marked($schema)) {
       throw $fixing
         ? $this->refusal('%s: "%s" on %s is a secret: both documents state a fixed value as `const`, and a secret is never read back, so it cannot be fixed.', $where['source'], $where['at'] . $path, $where['resource'])
         : $this->refusal('%s: "%s" on %s is a secret: both documents state a default, and a secret is never read back, so it takes none.', $where['source'], $where['at'] . $path, $where['resource']);
     }
-    $computed = $node === NULL ? Computed::of($definition) : NodeFacts::compute($node);
+    $computed = $schema === NULL ? Computed::of($definition) : SchemaFacts::compute($schema);
     if ($computed !== NULL) {
       throw $this->refusal('%s: "%s" on %s is computed from %s, so it takes no %s.', $where['source'], $where['at'] . $path, $where['resource'], implode(', ', $computed->from), $fixing ? 'fixed value' : 'default');
     }
-    $list = $node === NULL ? $definition instanceof ListDataDefinitionInterface : DefinitionSchema::isList($node);
-    $complex = $node === NULL ? $definition instanceof ComplexDataDefinitionInterface : DefinitionSchema::isComplex($node);
+    $list = $schema === NULL ? $definition instanceof ListDataDefinitionInterface : DefinitionSchema::isList($schema);
+    $complex = $schema === NULL ? $definition instanceof ComplexDataDefinitionInterface : DefinitionSchema::isComplex($schema);
     if ($fixing && ($list || $complex)) {
       throw $this->refusal('%s: "%s" on %s holds %s, and a fixed value is one value of a key that holds one: fix each key %s.', $where['source'], $where['at'] . $path, $where['resource'], $list ? 'a list' : 'a map', $list ? 'of a key that holds one' : 'inside it by its path');
     }
-    if (!$list && !$complex && ($node === NULL ? $definition->getDataType() : NodeFacts::dataType($node)) === LeafTypes::ANY && !($node === NULL ? LeafTypes::heldAsAny($definition) : DefinitionSchema::heldAsAny($node)) && ValueState::isConfigured($raw)) {
+    if (!$list && !$complex && ($schema === NULL ? $definition->getDataType() : SchemaFacts::dataType($schema)) === LeafTypes::ANY && !($schema === NULL ? LeafTypes::heldAsAny($definition) : DefinitionSchema::heldAsAny($schema)) && ValueState::isConfigured($raw)) {
       // No document is written for such a key, at inputs or here, so no
       // value can be held to it; validate() throws for it the same way.
       throw $this->refusal('%s: "%s" on %s is of the any type, which no JSON Schema type is written for, so no value can be held to it.', $where['source'], $where['at'] . $path, $where['resource']);
@@ -320,8 +320,8 @@ final class KeyPaths {
     $value = NULL;
     $problem = NULL;
     try {
-      $value = $this->accepted($node, $definition, $raw);
-      $problem = $this->violation($node, $definition, $value);
+      $value = $this->accepted($schema, $definition, $raw);
+      $problem = $this->violation($schema, $definition, $value);
     }
     catch (\InvalidArgumentException $e) {
       $problem = $e->getMessage();
@@ -382,11 +382,11 @@ final class KeyPaths {
   }
 
   /**
-   * Finds the node and the definition of the key a path names.
+   * Finds the schema and the definition of the key a path names.
    *
-   * As reachedOn() finds it: the key's facts are read from the node, the
+   * As reachedOn() finds it: the key's facts are read from the schema, the
    * entry's (Entry::schema()) stepped down in step with the definition, a
-   * key that holds a child frame's too; the mount's node is stepped into,
+   * key that holds a child frame's too; the mount's schema is stepped into,
    * since a mounted key is a property of the mount.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
@@ -399,11 +399,11 @@ final class KeyPaths {
    *   The resource's identity keys its context knows.
    *
    * @return array{0: \PortableSchema\Builder\Schema, 1: \Drupal\Core\TypedData\DataDefinitionInterface}|null
-   *   The key's node and definition; NULL as reachedOn() answers NULL.
+   *   The key's schema and definition; NULL as reachedOn() answers NULL.
    *
    * @throws \LogicException
    *   As reachedOn() throws; and where the definition holds a property the
-   *   node does not, since a built node holds one for every property.
+   *   schema does not, since a built schema holds one for every property.
    */
   protected function reached(SurfaceInterface $surface, string $path, array $where, array $identity): ?array {
     $segments = explode('.', $path);
@@ -411,7 +411,7 @@ final class KeyPaths {
     $depth = 0;
     $settled = FALSE;
     $definition = NULL;
-    $node = NULL;
+    $schema = NULL;
     while ($definition === NULL) {
       $settled = $settled || $frame->lockedWhole() !== NULL;
       $first = $segments[$depth];
@@ -422,7 +422,7 @@ final class KeyPaths {
       $kind = match (TRUE) {
         $entry->variants !== NULL => 'variants',
         $entry->list !== NULL => 'collection',
-        NodeFacts::each($entry->schema()) !== NULL => 'site',
+        SchemaFacts::each($entry->schema()) !== NULL => 'site',
         $entry->attachment !== NULL => 'child',
         default => NULL,
       };
@@ -462,31 +462,31 @@ final class KeyPaths {
         }
       }
       $at = $entry->definition();
-      $node = $entry->schema();
+      $schema = $entry->schema();
       foreach (array_slice($segments, $depth + 1) as $segment) {
-        if (DefinitionSchema::isList($node)) {
+        if (DefinitionSchema::isList($schema)) {
           throw $this->refusal('%s: "%s" on %s is inside a list, which a %s does not reach.', $where['source'], $where['at'] . $path, $where['resource'], $where['noun']);
         }
         $at = $at instanceof ComplexDataDefinitionInterface ? $at->getPropertyDefinition($segment) : NULL;
         if ($at === NULL) {
           throw $this->noKey($where, $path);
         }
-        $node = DefinitionSchema::propertyNode($node, $segment) ?? throw new \LogicException(sprintf('The node of the "%s" key holds no node at "%s" where its definition holds one: a built node holds one for every property.', $first, $segment));
+        $schema = DefinitionSchema::propertyOf($schema, $segment) ?? throw new \LogicException(sprintf('The schema of the "%s" key holds no schema at "%s" where its definition holds one: a built schema holds one for every property.', $first, $segment));
       }
       $definition = $at;
     }
-    assert($node instanceof Schema);
-    if (Secrets::marked($node)) {
+    assert($schema instanceof Schema);
+    if (Secrets::marked($schema)) {
       throw $this->refusal('%s: "%s" on %s is a secret, which no form draws, so no %s starts it.', $where['source'], $where['at'] . $path, $where['resource'], $where['noun']);
     }
-    $computed = NodeFacts::compute($node);
+    $computed = SchemaFacts::compute($schema);
     if ($computed !== NULL) {
       throw $this->refusal('%s: "%s" on %s is computed from %s, so no %s starts it.', $where['source'], $where['at'] . $path, $where['resource'], implode(', ', $computed->from), $where['noun']);
     }
-    if (NodeFacts::properties($node) !== []) {
+    if (SchemaFacts::properties($schema) !== []) {
       throw $this->refusal('%s: "%s" on %s holds a map: name each of its keys, as "%s.<key>".', $where['source'], $where['at'] . $path, $where['resource'], $where['at'] . $path);
     }
-    return $settled || NodeFacts::isFixed($node) ? NULL : [$node, $definition];
+    return $settled || SchemaFacts::isFixed($schema) ? NULL : [$schema, $definition];
   }
 
   /**
@@ -559,7 +559,7 @@ final class KeyPaths {
       $entry = $surface->getDefinitions()->entry($key);
       $child = $entry !== NULL && $entry->variants === NULL && $entry->list === NULL && DefinitionMetadata::eachOf($entry->definition()) === NULL ? $entry->attachment : NULL;
       $paths += match (TRUE) {
-        // A value that is no array is held whole: no node is read for it.
+        // A value that is no array is held whole: no schema is read for it.
         !is_array($value) => [$prefix . $key => $value],
         $child !== NULL => static::pathsOf($child->child, $value, $prefix . $key . '.'),
         $entry !== NULL && $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL => static::mapPaths($entry->schema(), $value, $prefix . $key),
@@ -572,8 +572,8 @@ final class KeyPaths {
   /**
    * Names the key path of each value a map's value holds, by its keys.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The key's node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
    * @param mixed $value
    *   Its value.
    * @param string $path
@@ -583,8 +583,8 @@ final class KeyPaths {
    *   The value whole, by the path, for a key with no keys of its own or a
    *   value that is no array; else each value inside, by its path.
    */
-  protected static function mapPaths(Schema $node, mixed $value, string $path): array {
-    $properties = NodeFacts::properties($node);
+  protected static function mapPaths(Schema $schema, mixed $value, string $path): array {
+    $properties = SchemaFacts::properties($schema);
     if ($properties === [] || !is_array($value)) {
       return [$path => $value];
     }
@@ -599,8 +599,8 @@ final class KeyPaths {
   /**
    * Reads a value in its key's shape, by the coercion table.
    *
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The key's node, whose facts are read; NULL for a builder's
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   The key's schema, whose facts are read; NULL for a builder's
    *   definition, whose facts are read from it (held()).
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key's definition, stepped down in step with the schema.
@@ -614,13 +614,13 @@ final class KeyPaths {
    *   When a map is not an object, or names a key it does not declare, or
    *   a list or a map is given for a key that holds one value.
    */
-  protected function accepted(?Schema $node, DataDefinitionInterface $definition, mixed $raw): mixed {
+  protected function accepted(?Schema $schema, DataDefinitionInterface $definition, mixed $raw): mixed {
     if (!ValueState::isConfigured($raw)) {
       return NULL;
     }
-    if ($node === NULL ? $definition instanceof ListDataDefinitionInterface : DefinitionSchema::isList($node)) {
+    if ($schema === NULL ? $definition instanceof ListDataDefinitionInterface : DefinitionSchema::isList($schema)) {
       assert($definition instanceof ListDataDefinitionInterface);
-      $item = $node === NULL ? NULL : DefinitionSchema::itemNode($node) ?? throw new \LogicException('A list\'s node holds no node of its item: a built node holds one.');
+      $item = $schema === NULL ? NULL : DefinitionSchema::itemOf($schema) ?? throw new \LogicException('A list\'s schema holds no schema of its item: a built schema holds one.');
       $items = Coercion::decoded($raw, TRUE);
       $values = [];
       foreach (is_array($items) ? $items : [$items] as $one) {
@@ -630,9 +630,9 @@ final class KeyPaths {
       }
       return $values;
     }
-    $properties = static::propertiesOf($node, $definition);
+    $properties = static::propertiesOf($schema, $definition);
     if ($properties === []) {
-      $type = $node === NULL ? $definition->getDataType() : NodeFacts::dataType($node);
+      $type = $schema === NULL ? $definition->getDataType() : SchemaFacts::dataType($schema);
       if (is_array($raw) && in_array($type, SurfacePipeline::SCALAR_TYPES, TRUE)) {
         // Refused before any constraint reads it, as the pipeline refuses
         // it (Accepting::coerce()): a validator that reads one value
@@ -642,9 +642,9 @@ final class KeyPaths {
       if (is_array($raw)) {
         return $raw;
       }
-      // The two facts the table reads, from the node: its data type, and
+      // The two facts the table reads, from the schema: its data type, and
       // whether it holds a date alone; a builder's from its definition.
-      $date_only = $node === NULL ? array_key_exists('DateOnly', $definition->getConstraints()) : DefinitionSchema::declares($node, 'DateOnly');
+      $date_only = $schema === NULL ? array_key_exists('DateOnly', $definition->getConstraints()) : DefinitionSchema::declares($schema, 'DateOnly');
       return Coercion::scalar($type, $type === 'datetime_iso8601' && $date_only, $raw);
     }
     $map = Coercion::decoded($raw, FALSE);
@@ -675,7 +675,7 @@ final class KeyPaths {
    * nothing never reaches the validator: it is refused where the key is
    * required, the module's own rule, and taken otherwise.
    *
-   * @param \PortableSchema\Builder\Schema|null $node
+   * @param \PortableSchema\Builder\Schema|null $schema
    *   The key's schema; NULL for a builder's definition, whose schema is
    *   read from it (held()).
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -686,8 +686,8 @@ final class KeyPaths {
    * @return string|null
    *   The first refusal's message, or NULL when the value fits.
    */
-  protected function violation(?Schema $node, DataDefinitionInterface $definition, mixed $value): ?string {
-    $properties = static::propertiesOf($node, $definition);
+  protected function violation(?Schema $schema, DataDefinitionInterface $definition, mixed $value): ?string {
+    $properties = static::propertiesOf($schema, $definition);
     if ($properties !== [] && is_array($value)) {
       assert($definition instanceof ComplexDataDefinitionInterface);
       // A map is held key by key: what it leaves out starts from its
@@ -702,12 +702,12 @@ final class KeyPaths {
     }
     if (!ValueState::isConfigured($value)) {
       $label = (string) ($definition->getLabel() ?? '');
-      return ($node === NULL ? $definition->isRequired() : NodeFacts::isRequired($node))
+      return ($schema === NULL ? $definition->isRequired() : SchemaFacts::isRequired($schema))
         ? sprintf('%s is required.', $label === '' ? 'A value' : $label)
         : NULL;
     }
-    $schema = $node ?? DefinitionSchema::of($definition);
-    foreach ($this->pipeline->conformOutput(Surface::holding($schema), ['value' => WatchedValueCheck::spelled($schema, $value)]) as $violation) {
+    $checked = $schema ?? DefinitionSchema::of($definition);
+    foreach ($this->pipeline->conformOutput(Surface::holding($checked), ['value' => WatchedValueCheck::spelled($checked, $value)]) as $violation) {
       $at = $violation->path;
       return ($at === '' ? '' : $at . ': ') . strip_tags((string) $violation->message);
     }
@@ -715,41 +715,41 @@ final class KeyPaths {
   }
 
   /**
-   * Gets the properties of a map, by name, with their nodes.
+   * Gets the properties of a map, by name, with their schemas.
    *
-   * @param \PortableSchema\Builder\Schema|null $node
-   *   The map's node; NULL for a builder's definition, read from it.
+   * @param \PortableSchema\Builder\Schema|null $schema
+   *   The map's schema; NULL for a builder's definition, read from it.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The map's definition.
    *
    * @return array<string|int, \PortableSchema\Builder\Schema|false>
-   *   Each property's node, or FALSE for one read from its definition;
+   *   Each property's schema, or FALSE for one read from its definition;
    *   empty for a key that is no map with properties.
    */
-  protected static function propertiesOf(?Schema $node, DataDefinitionInterface $definition): array {
-    if ($node !== NULL) {
-      return NodeFacts::properties($node);
+  protected static function propertiesOf(?Schema $schema, DataDefinitionInterface $definition): array {
+    if ($schema !== NULL) {
+      return SchemaFacts::properties($schema);
     }
     $properties = $definition instanceof ComplexDataDefinitionInterface && !$definition instanceof ListDataDefinitionInterface ? $definition->getPropertyDefinitions() : [];
     return array_map(static fn (): bool => FALSE, $properties);
   }
 
   /**
-   * Gets a map's property definition, in step with its node.
+   * Gets a map's property definition, in step with its schema.
    *
    * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $map
    *   The map's definition.
    * @param string $name
-   *   A property its node holds.
+   *   A property its schema holds.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
    *   The property's definition.
    *
    * @throws \LogicException
-   *   Where the node holds a property the definition does not.
+   *   Where the schema holds a property the definition does not.
    */
   protected static function propertyOf(ComplexDataDefinitionInterface $map, string $name): DataDefinitionInterface {
-    return $map->getPropertyDefinition($name) ?? throw new \LogicException(sprintf('The node holds a property "%s" its definition does not.', $name));
+    return $map->getPropertyDefinition($name) ?? throw new \LogicException(sprintf('The schema holds a property "%s" its definition does not.', $name));
   }
 
   /**

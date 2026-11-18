@@ -357,8 +357,8 @@ PHP, $resource, 'A labeled choice is its labels alone, unless a value is a numer
    * Tests a collection and an attached map are written with their own facts.
    *
    * A collection's Count, and the description and required flag of a key
-   * that holds a child frame, are read from its node, composed of the
-   * child's entries' nodes.
+   * that holds a child frame, are read from its schema, composed of the
+   * child's entries' schemas.
    */
   public function testKeysThatHoldChildFrames(): void {
     $schema = $this->sandbox . '/booking.schema.json';

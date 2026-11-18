@@ -10,8 +10,8 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Contract\ContractBaselines;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
-use Drupal\surface\Contract\NodeMessage;
+use Drupal\surface\Contract\SchemaFacts;
+use Drupal\surface\Contract\SchemaMessage;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Contract\Secrets;
@@ -30,30 +30,30 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PortableSchema\Builder\Schema;
 
 /**
- * Tests the node at a place is its entry's, and that no node is served.
+ * Tests the schema at a place is its entry's, and that no schema is served.
  *
- * The rules: the node Location::definitionAt() gives beside the
- * definition at a place is the node of the entry that holds the key
- * (Entry::schema()), and below a plain key that node walked in step with
- * the definition (a property's node under `properties`, an item's under
+ * The rules: the schema Location::definitionAt() gives beside the
+ * definition at a place is the schema of the entry that holds the key
+ * (Entry::schema()), and below a plain key that schema walked in step with
+ * the definition (a property's schema under `properties`, an item's under
  * `items`); it says what a fresh read of the place's definition says, with
  * every constraint the definition declares and the options each runs
  * with; projected as a key that offers a list and as one that does not,
  * it differs only in what a list states; a place nothing declares, and a
- * frame of its own, has none. A built node never reaches a served
- * document: no node of any shipped example's documents, as served or as
+ * frame of its own, has none. A built schema never reaches a served
+ * document: no schema of any shipped example's documents, as served or as
  * the Schema the validator reads, holds DefinitionSchema::MODEL, no served
  * document holds an object a client could not read as JSON, and neither a
- * data surface nor a row of the build cache holds a node, a row written
- * after every node of its build was read included.
+ * data surface nor a row of the build cache holds a schema, a row written
+ * after every schema of its build was read included.
  *
- * @see docs/decisions.md#a-definition-is-read-once-into-a-built-node
+ * @see docs/decisions.md#a-definition-is-read-once-into-a-built-schema
  * @see docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request
- * @see docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone
+ * @see docs/decisions.md#an-entry-holds-its-schema-the-memo-is-gone
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class LocationNodeTest extends SurfaceKernelTestBase {
+class LocationSchemaTest extends SurfaceKernelTestBase {
 
   use DefinitionEqualityTrait;
   use ExampleSurfacesTrait;
@@ -135,26 +135,26 @@ class LocationNodeTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the node at a place is its entry's node, walked in step.
+   * Tests the schema at a place is its entry's schema, walked in step.
    *
    * At every place of every value set (valueSets(), places()) of every
    * pinned example, with SurfaceInterface::refine() and with the check
-   * provider's own refine closure: a place with a definition has a node,
-   * a frame of its own and a place nothing declares have none. The node
-   * says what a fresh read of the definition says (nodeDifferences()). At a
-   * key of a frame, it says what that frame's entry's node says; below a
-   * plain key, what the node under its parent place's `properties` or
+   * provider's own refine closure: a place with a definition has a schema,
+   * a frame of its own and a place nothing declares have none. The schema
+   * says what a fresh read of the definition says (schemaDifferences()). At a
+   * key of a frame, it says what that frame's entry's schema says; below a
+   * plain key, what the schema under its parent place's `properties` or
    * `items` says. Through the provider's closure, which refines each level
-   * once, it is the very object: the entry's node, the node under its
+   * once, it is the very object: the entry's schema, the schema under its
    * parent's, and the same on a second ask, so nothing reads it again.
    * Through refine() itself each call refines afresh, and a key that two
    * refined entries share is read for each.
-   * The node declares every constraint of the definition with the options
+   * The schema declares every constraint of the definition with the options
    * it holds, so a reader of a place need never ask whether a key offers a
    * list, and its projection as listed differs from its projection as
    * unlisted only in what a list states.
    */
-  public function testTheNodeAtPlaceIsTheEntryNode(): void {
+  public function testTheSchemaAtPlaceIsTheEntrySchema(): void {
     $definitions = $this->container->get('surface.definition_schema');
     $asked = 0;
     $stated = 0;
@@ -176,27 +176,27 @@ class LocationNodeTest extends SurfaceKernelTestBase {
               continue;
             }
             if ($location->definition() === NULL) {
-              $this->assertNull($location->node, "$at, $how: a frame of its own has no node.");
+              $this->assertNull($location->schema, "$at, $how: a frame of its own has no schema.");
               continue;
             }
-            $node = $location->node;
-            $this->assertNotNull($node, "$at, $how: a place with a definition has a node.");
-            $this->assertSame([], array_diff(array_keys(DefinitionSchema::model($node)), DefinitionSchema::MEMBERS), "$at, $how: MODEL holds its members alone.");
-            $this->assertSame(DefinitionMetadata::isSecret($location->definition()), Secrets::marked($node), "$at, $how: the node says it is secret where its definition is.");
-            $this->assertSame([], static::nodeDifferences(DefinitionSchema::of($location->definition()), $node, "$at, $how"), "$at, $how: the node says what a read of the definition says.");
+            $schema = $location->schema;
+            $this->assertNotNull($schema, "$at, $how: a place with a definition has a schema.");
+            $this->assertSame([], array_diff(array_keys(DefinitionSchema::model($schema)), DefinitionSchema::MEMBERS), "$at, $how: MODEL holds its members alone.");
+            $this->assertSame(DefinitionMetadata::isSecret($location->definition()), Secrets::marked($schema), "$at, $how: the schema says it is secret where its definition is.");
+            $this->assertSame([], static::schemaDifferences(DefinitionSchema::of($location->definition()), $schema, "$at, $how"), "$at, $how: the schema says what a read of the definition says.");
             $segments = Location::segments($pointer);
             $last = (string) array_pop($segments);
             $parentPointer = implode('', array_map(static fn (string $segment): string => Location::append('', $segment), $segments));
             $parent = Location::definitionAt($surface, $values, $parentPointer, $closure);
             $this->assertNotNull($parent, "$at, $how: its parent place is declared.");
             if ($parent->frame !== NULL) {
-              // A key of a frame: that frame's entry holds the node.
+              // A key of a frame: that frame's entry holds the schema.
               $entry = $parent->frame->getDefinitions()->entry($last);
               $this->assertNotNull($entry, "$at, $how");
-              $this->assertSame(static::json($entry->schema()), static::json($node), "$at, $how: the node of the entry at the key.");
+              $this->assertSame(static::json($entry->schema()), static::json($schema), "$at, $how: the schema of the entry at the key.");
               if ($closure !== NULL && $entry->definition() === $location->definition()) {
-                // The same level, refined once: the very node.
-                $this->assertSame($entry->schema(), $node, "$at, $how: the very node of the entry at the key.");
+                // The same level, refined once: the very schema.
+                $this->assertSame($entry->schema(), $schema, "$at, $how: the very schema of the entry at the key.");
                 $shared++;
               }
               elseif ($closure !== NULL) {
@@ -207,15 +207,15 @@ class LocationNodeTest extends SurfaceKernelTestBase {
               $atKeys++;
             }
             else {
-              // Below a plain key: the node under its parent's node.
-              $this->assertNotNull($parent->node, "$at, $how");
-              $below = ctype_digit($last) && DefinitionSchema::itemNode($parent->node) !== NULL ? DefinitionSchema::itemNode($parent->node) : DefinitionSchema::propertyNode($parent->node, $last);
-              $this->assertNotNull($below, "$at, $how: its parent's node holds it.");
-              $this->assertSame(static::json($below), static::json($node), "$at, $how: the node under its parent's node.");
+              // Below a plain key: the schema under its parent's schema.
+              $this->assertNotNull($parent->schema, "$at, $how");
+              $below = ctype_digit($last) && DefinitionSchema::itemOf($parent->schema) !== NULL ? DefinitionSchema::itemOf($parent->schema) : DefinitionSchema::propertyOf($parent->schema, $last);
+              $this->assertNotNull($below, "$at, $how: its parent's schema holds it.");
+              $this->assertSame(static::json($below), static::json($schema), "$at, $how: the schema under its parent's schema.");
               $parentDefinition = $parent->definition();
               $stepped = $parentDefinition instanceof ListDataDefinitionInterface ? $parentDefinition->getItemDefinition() : ($parentDefinition instanceof ComplexDataDefinitionInterface ? $parentDefinition->getPropertyDefinition($last) : NULL);
               if ($closure !== NULL && $stepped === $location->definition()) {
-                $this->assertSame($below, $node, "$at, $how: the very node under its parent's node.");
+                $this->assertSame($below, $schema, "$at, $how: the very schema under its parent's schema.");
                 $shared++;
               }
               elseif ($closure !== NULL) {
@@ -225,10 +225,10 @@ class LocationNodeTest extends SurfaceKernelTestBase {
             }
             $again = Location::definitionAt($surface, $values, $pointer, $closure);
             if ($closure !== NULL && $again->definition() === $location->definition()) {
-              $this->assertSame($node, $again->node, "$at, $how: asked again, the same node.");
+              $this->assertSame($schema, $again->schema, "$at, $how: asked again, the same schema.");
             }
-            $this->assertDeclaresTheDefinitionsConstraints($location->definition(), $node, "$at, $how");
-            if ($this->assertListedDiffersOnlyInWhatItsListStates($definitions, $location->definition(), $node, "$at, $how")) {
+            $this->assertDeclaresTheDefinitionsConstraints($location->definition(), $schema, "$at, $how");
+            if ($this->assertListedDiffersOnlyInWhatItsListStates($definitions, $location->definition(), $schema, "$at, $how")) {
               $stated++;
             }
           }
@@ -239,34 +239,34 @@ class LocationNodeTest extends SurfaceKernelTestBase {
     $this->assertGreaterThan(1000, $asked, 'Every place of every value set is asked.');
     $this->assertGreaterThan(1000, $atKeys, 'Places at a key of a frame are asked.');
     $this->assertGreaterThan(10, $inStep, 'Places below a plain key are asked.');
-    $this->assertGreaterThan($copies, $shared, 'Through the provider\'s closure, most places are the very node of the entry Location reads.');
+    $this->assertGreaterThan($copies, $shared, 'Through the provider\'s closure, most places are the very schema of the entry Location reads.');
     $this->assertGreaterThan(0, $stated, 'Some place holds a check a list states, so the comparison of the two projections can differ.');
   }
 
   /**
-   * Asserts a place's node declares every constraint its definition does.
+   * Asserts a place's schema declares every constraint its definition does.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition at the place.
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node at the place.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema at the place.
    * @param string $at
    *   Where, for the message.
    */
-  protected function assertDeclaresTheDefinitionsConstraints(DataDefinitionInterface $definition, Schema $node, string $at): void {
+  protected function assertDeclaresTheDefinitionsConstraints(DataDefinitionInterface $definition, Schema $schema, string $at): void {
     $constraints = $definition->getConstraints();
-    $this->assertSame(array_keys($constraints), array_keys(NodeFacts::constraints($node)), "$at: every constraint the definition declares.");
+    $this->assertSame(array_keys($constraints), array_keys(SchemaFacts::constraints($schema)), "$at: every constraint the definition declares.");
     foreach ($constraints as $constraint => $options) {
       $constraint = (string) $constraint;
-      $this->assertTrue(DefinitionSchema::declares($node, $constraint), "$at: $constraint");
-      $this->assertSame(serialize($options), serialize(DefinitionSchema::options($node, $constraint)), "$at: $constraint runs with the options the definition holds.");
+      $this->assertTrue(DefinitionSchema::declares($schema, $constraint), "$at: $constraint");
+      $this->assertSame(serialize($options), serialize(DefinitionSchema::options($schema, $constraint)), "$at: $constraint runs with the options the definition holds.");
     }
   }
 
   /**
-   * Asserts a node projected as listed differs only in what a list states.
+   * Asserts a schema projected as listed differs only in what a list states.
    *
-   * The node projected for a key that offers a list of values and for one
+   * The schema projected for a key that offers a list of values and for one
    * that does not: a map that offers one is one value (no `properties`,
    * `type`, `required` or `additionalProperties`, the same title and
    * description); anything else differs only in the list constraints
@@ -277,17 +277,17 @@ class LocationNodeTest extends SurfaceKernelTestBase {
    *   The projection.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition at the place.
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node at the place.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema at the place.
    * @param string $at
    *   Where, for the message.
    *
    * @return bool
    *   TRUE where the two differ.
    */
-  protected function assertListedDiffersOnlyInWhatItsListStates(DefinitionSchema $definitions, DataDefinitionInterface $definition, Schema $node, string $at): bool {
-    $unlisted = json_decode(static::json($definitions->publishedNode($node, FALSE)), TRUE);
-    $listed = json_decode(static::json($definitions->publishedNode($node, TRUE)), TRUE);
+  protected function assertListedDiffersOnlyInWhatItsListStates(DefinitionSchema $definitions, DataDefinitionInterface $definition, Schema $schema, string $at): bool {
+    $unlisted = json_decode(static::json($definitions->publishedSchema($schema, FALSE)), TRUE);
+    $listed = json_decode(static::json($definitions->publishedSchema($schema, TRUE)), TRUE);
     if (DefinitionSchema::isMap($definition)) {
       foreach (['properties', 'type', 'required', 'additionalProperties'] as $keyword) {
         $this->assertArrayNotHasKey($keyword, $listed, "$at: a map that offers a list is one value.");
@@ -322,20 +322,20 @@ class LocationNodeTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Writes a node as JSON, MODEL and the text it holds included.
+   * Writes a schema as JSON, MODEL and the text it holds included.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   The node.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
    *
    * @return string
    *   Its JSON: each piece of text as plain text, MODEL as data.
    */
-  protected static function json(Schema $node): string {
-    return (string) json_encode(Schemas::arrayed($node), JSON_PARTIAL_OUTPUT_ON_ERROR);
+  protected static function json(Schema $schema): string {
+    return (string) json_encode(Schemas::arrayed($schema), JSON_PARTIAL_OUTPUT_ON_ERROR);
   }
 
   /**
-   * Tests no built node reaches a served document or the build cache.
+   * Tests no built schema reaches a served document or the build cache.
    *
    * Every pinned example's documents: emitFull() with the widget hints
    * and without, emit() with its defaults with the hints and without,
@@ -347,14 +347,14 @@ class LocationNodeTest extends SurfaceKernelTestBase {
    * JSON. Then each build the build cache keeps (built for no account),
    * emitted in full and with its defaults and the hints; and every row the
    * build cache holds after those emits, and each data surface,
-   * serialized: no MODEL, no NodeMessage, and no Schema holding an object
+   * serialized: no MODEL, no SchemaMessage, and no Schema holding an object
    * other than a plain JSON object. Then the OpenAPI document and the
    * tool definitions hold no MODEL. Every document and the OpenAPI
    * document are also decoded and walked: the `x-` keywords they hold, at
    * every depth, are the pinned list (X_KEYWORDS), so a member served
    * under a keyword of its own is seen.
    */
-  public function testNoNodeIsServed(): void {
+  public function testNoSchemaIsServed(): void {
     $emitter = $this->container->get('surface.contract_emitter');
     $narrowing = $this->container->get('surface.document_narrowing');
     $served = 0;
@@ -384,15 +384,15 @@ class LocationNodeTest extends SurfaceKernelTestBase {
           static::xKeywords(json_decode($json, TRUE), $keywords);
           $this->assertSame([], static::objects($contract->document), $at . ': the document holds plain data alone.');
           $held = [];
-          Schemas::map($contract->schema(), static function (Schema $node) use (&$held): Schema {
-            if ($node->has(DefinitionSchema::MODEL)) {
-              $held[] = $node;
+          Schemas::map($contract->schema(), static function (Schema $schema) use (&$held): Schema {
+            if ($schema->has(DefinitionSchema::MODEL)) {
+              $held[] = $schema;
             }
-            return $node;
+            return $schema;
           });
-          $this->assertSame([], $held, $at . ': the validator reads no node.');
+          $this->assertSame([], $held, $at . ': the validator reads no schema.');
         }
-        $this->assertKeepsNoNode(serialize($surface), "$who, $id: the data surface");
+        $this->assertKeepsNoSchema(serialize($surface), "$who, $id: the data surface");
       }
     }
     // The builds the build cache keeps, emitted too, then every row it holds.
@@ -400,14 +400,14 @@ class LocationNodeTest extends SurfaceKernelTestBase {
     $keep = new \ReflectionMethod($resources, 'keep');
     $kept = 0;
     foreach ($this->examples(TRUE) as [$id, $operation, $surface]) {
-      // A row written after every node of the build was read is the row
-      // of one whose nodes were never read.
+      // A row written after every schema of the build was read is the row
+      // of one whose schemas were never read.
       $before = serialize($surface);
-      $read = static::readEveryNode($surface);
-      $this->assertGreaterThan(0, $read, "$id: its entries' nodes are read.");
-      $this->assertSame($before, serialize($surface), "$id: reading its nodes leaves the data surface's bytes as they were.");
+      $read = static::readEverySchema($surface);
+      $this->assertGreaterThan(0, $read, "$id: its entries' schemas are read.");
+      $this->assertSame($before, serialize($surface), "$id: reading its schemas leaves the data surface's bytes as they were.");
       $context = $operation === NULL ? new OperationContext(ContractBaselines::ALONE) : $resources->operation($this->container->get('surface.resource_registry')->getDefinition($id)->name(), $operation);
-      $keep->invoke($resources, 'declared:read-nodes:' . $kept++, $id, $context, $surface, []);
+      $keep->invoke($resources, 'declared:read-schemas:' . $kept++, $id, $context, $surface, []);
       $contracts = [
         $emitter->emitFull($surface, $id, $operation),
         $emitter->emit($surface, $surface->getDefaultValues(), $id, $operation, NULL, TRUE),
@@ -433,16 +433,16 @@ class LocationNodeTest extends SurfaceKernelTestBase {
     $this->assertSame(self::X_KEYWORDS, array_keys($keywords), 'The x- keywords the documents hold.');
     $rows = $this->buildCacheRows();
     foreach ($rows as $cid => $data) {
-      $this->assertKeepsNoNode($data, "the build cache's row $cid");
+      $this->assertKeepsNoSchema($data, "the build cache's row $cid");
     }
     $this->assertGreaterThan(400, $served);
     $this->assertGreaterThan(50, $narrowed, 'The narrowed documents are covered.');
     $this->assertNotEmpty($rows, 'The build cache holds rows.');
-    $this->assertGreaterThan(0, count(array_filter(array_keys($rows), static fn (string $cid): bool => str_starts_with($cid, 'declared:read-nodes:'))), 'A row written after its nodes were read is covered.');
+    $this->assertGreaterThan(0, count(array_filter(array_keys($rows), static fn (string $cid): bool => str_starts_with($cid, 'declared:read-schemas:'))), 'A row written after its schemas were read is covered.');
   }
 
   /**
-   * Reads the node of every entry of a data surface and the children in it.
+   * Reads the schema of every entry of a data surface and the children in it.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
@@ -450,9 +450,9 @@ class LocationNodeTest extends SurfaceKernelTestBase {
    *   The data surfaces walked, by object id.
    *
    * @return int
-   *   How many entries' nodes were read.
+   *   How many entries' schemas were read.
    */
-  protected static function readEveryNode(SurfaceInterface $surface, array &$seen = []): int {
+  protected static function readEverySchema(SurfaceInterface $surface, array &$seen = []): int {
     if (isset($seen[spl_object_id($surface)])) {
       return 0;
     }
@@ -468,7 +468,7 @@ class LocationNodeTest extends SurfaceKernelTestBase {
           ...array_map(static fn ($variant) => $variant->settledChild(), array_values($entry->variants->variants ?? [])),
         ];
         foreach (array_filter($children) as $child) {
-          $read += static::readEveryNode($child, $seen);
+          $read += static::readEverySchema($child, $seen);
         }
       }
     }
@@ -496,28 +496,28 @@ class LocationNodeTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Asserts a serialized value keeps no built node but an entry's own.
+   * Asserts a serialized value keeps no built schema but an entry's own.
    *
-   * A node-first entry serializes the node it holds as its source
-   * (Entry::__sleep()), and that node alone. Outside such nodes the value
-   * holds no node at all: a definition-first entry serializes its
-   * definition, never its node, and nothing else keeps one. Where the
-   * value holds no node-first entry, its bytes name no MODEL and no
-   * NodeMessage, as before any entry held a node.
+   * A schema-first entry serializes the schema it holds as its source
+   * (Entry::__sleep()), and that schema alone. Outside such schemas the value
+   * holds no schema at all: a definition-first entry serializes its
+   * definition, never its schema, and nothing else keeps one. Where the
+   * value holds no schema-first entry, its bytes name no MODEL and no
+   * SchemaMessage, as before any entry held a schema.
    *
    * @param string $serialized
    *   The value, serialized.
    * @param string $what
    *   What it is, for the message.
    */
-  protected function assertKeepsNoNode(string $serialized, string $what): void {
+  protected function assertKeepsNoSchema(string $serialized, string $what): void {
     $objects = [];
     // Every class allowed, as the build cache restores a build.
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
     $value = unserialize($serialized);
     // A service the value holds wakes as the container's live instance,
     // which the bytes do not hold: the walk does not enter one. Entries
-    // other builds of this request hold keep their read nodes there.
+    // other builds of this request hold keep their read schemas there.
     $seen = [];
     foreach ($this->container->getServiceIds() as $service) {
       if ($this->container->initialized($service)) {
@@ -528,23 +528,23 @@ class LocationNodeTest extends SurfaceKernelTestBase {
     $sources = 0;
     $kept = [];
     static::schemaObjects($value, $objects, $seen, $sources, $kept);
-    $this->assertSame([], array_unique($kept), "$what keeps no node but the one a node-first entry holds as its source.");
-    $this->assertSame([], array_unique($objects), "$what: a Schema outside an entry's own node holds plain JSON objects alone.");
+    $this->assertSame([], array_unique($kept), "$what keeps no schema but the one a schema-first entry holds as its source.");
+    $this->assertSame([], array_unique($objects), "$what: a Schema outside an entry's own schema holds plain JSON objects alone.");
     if ($sources === 0) {
       $this->assertStringNotContainsString(DefinitionSchema::MODEL, $serialized, "$what holds no MODEL.");
-      $this->assertStringNotContainsString(NodeMessage::class, $serialized, "$what holds no NodeMessage.");
+      $this->assertStringNotContainsString(SchemaMessage::class, $serialized, "$what holds no SchemaMessage.");
     }
   }
 
   /**
-   * Lists the nodes a value keeps outside an entry's own node.
+   * Lists the schemas a value keeps outside an entry's own schema.
    *
-   * A node-first entry's own node is its source and is not walked; the
+   * A schema-first entry's own schema is its source and is not walked; the
    * rest of the entry is. A port's key is held as its schema, by the
    * attachment that wires it (Attachment::$wired) and by the data surface
    * it is bound to (Surface::$portSchemas), since 2026-11-16: a port has
    * no entry, so those are sources too and are not walked. Any other
-   * Schema holding MODEL is a kept node,
+   * Schema holding MODEL is a kept schema,
    * and a Schema holding an object other than a plain JSON object is
    * listed by that object's class.
    *
@@ -555,9 +555,9 @@ class LocationNodeTest extends SurfaceKernelTestBase {
    * @param array<int, true> $seen
    *   The objects walked, by id.
    * @param int $sources
-   *   The node-first entries met; gains these.
+   *   The schema-first entries met; gains these.
    * @param string[] $kept
-   *   What keeps a node outside an entry's own; gains these.
+   *   What keeps a schema outside an entry's own; gains these.
    * @param string $in
    *   The class of the object the value is a member of.
    */
@@ -569,7 +569,7 @@ class LocationNodeTest extends SurfaceKernelTestBase {
       $seen[spl_object_id($value)] = TRUE;
       if ($value instanceof Schema) {
         if ($value->has(DefinitionSchema::MODEL)) {
-          $kept[] = "a node held by $in";
+          $kept[] = "a schema held by $in";
         }
         if (!$value->isBoolean()) {
           array_push($found, ...static::objects(Schemas::arrayed($value)));
@@ -578,9 +578,9 @@ class LocationNodeTest extends SurfaceKernelTestBase {
       }
       $in = $value::class;
       $members = (array) $value;
-      if ($value instanceof Entry && $value->isNodeFirst()) {
+      if ($value instanceof Entry && $value->isSchemaFirst()) {
         $sources++;
-        unset($members["\0" . Entry::class . "\0node"]);
+        unset($members["\0" . Entry::class . "\0schema"]);
       }
       if ($value instanceof Attachment && $value->wired !== []) {
         $sources++;

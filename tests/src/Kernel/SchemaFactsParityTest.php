@@ -23,38 +23,38 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests each reader of a node against the definition call it stands for.
+ * Tests each reader of a schema against the definition call it stands for.
  *
  * The pipeline, the validator's own checks and the document's classes
- * read a key's facts from its node (NodeFacts, and the node readers of
+ * read a key's facts from its schema (SchemaFacts, and the schema readers of
  * DefinitionSchema and Secrets). For every entry of every data
  * surface of the 19 example modules and of `surface_values_test`
  * (HandBuiltSurfaces included), declared and refined by each of its value
  * sets, and for every definition below an entry at every depth (a
  * property, an item, a shape's, a config type's and `each`'s definition),
- * each reader on the node answers what the definition call it stands for
- * answers (NodeFactsParityTrait::READERS), by strict equality. The counts
+ * each reader on the schema answers what the definition call it stands for
+ * answers (SchemaFactsParityTrait::READERS), by strict equality. The counts
  * are pinned as literals, so a walk that finds nothing fails.
  *
- * Since the seal makes every entry node-first (2026-11-15), a sealed
- * example's definition is derived from the very node it is compared with
- * (NodeDefinition::of()). So the example walk proves the inverse says what
- * the node says. It no longer proves that DefinitionSchema::of() reads an
- * authored definition faithfully: a reading fault the derivation mirrors
+ * Since the seal makes every entry schema-first (2026-11-15), a sealed
+ * example's definition is derived from the very schema it is compared with
+ * (DefinitionFromSchema::of()). So the example walk proves the inverse says
+ * what the schema says. It no longer proves that DefinitionSchema::of() reads
+ * an authored definition faithfully: a reading fault the derivation mirrors
  * would pass it. That is proven by the hand cases (testHandCases()):
  * definitions built by hand and read with of(), at least one of which
  * states each reader's fact.
  *
- * Decision: see docs/decisions.md#the-value-pipeline-reads-nodes,
- * docs/decisions.md#the-validators-checks-and-the-document-read-nodes.
+ * Decision: see docs/decisions.md#the-value-pipeline-reads-schemas,
+ * docs/decisions.md#the-validators-checks-and-the-document-read-schemas.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class NodeFactsParityTest extends SurfaceKernelTestBase {
+class SchemaFactsParityTest extends SurfaceKernelTestBase {
 
   use ExampleSurfacesTrait;
   use ExampleValueSetsTrait;
-  use NodeFactsParityTrait;
+  use SchemaFactsParityTrait;
   use UserCreationTrait;
 
   /**
@@ -93,12 +93,12 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
   /**
    * The comparisons made, by reader, over the examples.
    *
-   * Each distinct node is compared once, wherever it is first met
+   * Each distinct schema is compared once, wherever it is first met
    * (parity()), against the definition derived from it (see the class
    * docblock). 1,067 while each distinct definition was: the two keys of
    * example 3's compliance mount, license and stewards, were compared
    * twice, as the mount's deep copy and as the structure's own entry (or
-   * its refined copy), which hold one node. Since 2026-11-15 they are
+   * its refined copy), which hold one schema. Since 2026-11-15 they are
    * compared once, in either form. 1,065 until refiners answered with
    * schemas (2026-11-16): an answer is applied to the key's schema, so the
    * parts of a refined key it leaves as they were are the key's own
@@ -108,7 +108,7 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
     'arrangement' => 1029,
     'compute' => 1029,
     'configType' => 1029,
-    'configTypeNode' => 1029,
+    'configTypeOf' => 1029,
     'constraints' => 1029,
     'constraintsJson' => 1029,
     'dataType' => 1029,
@@ -146,7 +146,7 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
     'setting' => 1029,
     'settings' => 1029,
     'shape' => 1029,
-    'shapeNode' => 1029,
+    'shapeOf' => 1029,
     'storedByUuid' => 1029,
     'typeOf' => 1029,
     'valueClass' => 1029,
@@ -157,7 +157,7 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
   /**
    * The comparisons whose definition states the fact, by reader.
    *
-   * Over the examples, whose definitions are derived from their nodes.
+   * Over the examples, whose definitions are derived from their schemas.
    * Every reader also has a definition built by hand that states its
    * fact (testHandCases()). Lower since 2026-11-16 for the reason READS
    * is.
@@ -166,7 +166,7 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
     'arrangement' => 43,
     'compute' => 5,
     'configType' => 4,
-    'configTypeNode' => 4,
+    'configTypeOf' => 4,
     'constraints' => 666,
     'constraintsJson' => 666,
     'dataType' => 1029,
@@ -199,7 +199,7 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
     'setting' => 82,
     'settings' => 82,
     'shape' => 10,
-    'shapeNode' => 10,
+    'shapeOf' => 10,
     'storedByUuid' => 4,
     'typeOf' => 638,
     'valueClass' => 1029,
@@ -304,7 +304,7 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
       $differ = static::parity($definition, DefinitionSchema::of($definition), $case, $counts, NULL, $stated);
       $this->assertSame([], $differ, $case);
     }
-    // The examples' definitions are derived from the very nodes they are
+    // The examples' definitions are derived from the very schemas they are
     // compared with: only a definition built by hand shows the read says
     // what an author's definition says. Each reader has one that states
     // its fact.
@@ -324,7 +324,7 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
    * @param \SplObjectStorage<\Drupal\surface\SurfaceInterface, true> $walked
    *   The surfaces walked.
    * @param \SplObjectStorage<\PortableSchema\Builder\Schema, null> $seen
-   *   The nodes compared.
+   *   The schemas compared.
    * @param array<string, int> $counts
    *   The comparisons made, by reader.
    * @param list<string> $differ
@@ -489,9 +489,9 @@ class NodeFactsParityTest extends SurfaceKernelTestBase {
     DefinitionMetadata::setHeldWhole($whole);
     $cases['an any held whole'] = $whole;
 
-    // An authored definition for each fact the node-first examples no
+    // An authored definition for each fact the schema-first examples no
     // longer compare with one an author built (testHandCases()): the
-    // examples' definitions are now derived from the node they are read
+    // examples' definitions are now derived from the schema they are read
     // against.
     $cases['a description'] = DataDefinition::create('string')->setLabel('Said')->setDescription('What it says.');
     $placed = DataDefinition::create('string')->setLabel('Placed');

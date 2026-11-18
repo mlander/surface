@@ -35,7 +35,7 @@ use PortableSchema\Builder\Schema;
  * is said in. What is tested is the reader, not how long a text that was
  * rendered keeps its language.
  *
- * @see docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-node
+ * @see docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-schema
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -163,7 +163,7 @@ class ShapeTextsTest extends SurfaceKernelTestBase {
    *   The definition.
    *
    * @return array
-   *   The node, as JSON reads it, in the language set now.
+   *   The schema, as JSON reads it, in the language set now.
    */
   protected function said(DataDefinitionInterface $definition): array {
     return (array) Schemas::decoded($this->container->get('surface.definition_schema')->published(DefinitionSchema::of($definition), FALSE));

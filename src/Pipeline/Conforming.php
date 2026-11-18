@@ -8,7 +8,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\OutputsDocument;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Surface;
@@ -110,10 +110,10 @@ final class Conforming {
     foreach ($outputs->entries() as $name => $entry) {
       $name = (string) $name;
       $schema = $entry->schema();
-      if (!array_key_exists($name, $output) && NodeFacts::isRequired($schema)) {
+      if (!array_key_exists($name, $output) && SchemaFacts::isRequired($schema)) {
         // Absent, which only an output that is not required may be. NULL
         // is a value, held below like any other.
-        $errors[] = new Violation($name, '', $this->notEmitted(NodeFacts::label($schema) ?? $name), Violation::REQUIRED);
+        $errors[] = new Violation($name, '', $this->notEmitted(SchemaFacts::label($schema) ?? $name), Violation::REQUIRED);
       }
     }
     if ($document === NULL || $data === []) {
@@ -135,7 +135,7 @@ final class Conforming {
         $full = $path . '.' . $property;
         [$key, $below] = self::split($full);
         $schema = self::schemaAt($surface, $full);
-        $errors[] = new Violation($key, $below, $this->notEmitted(($schema === NULL ? NULL : NodeFacts::label($schema)) ?? $property), Violation::REQUIRED);
+        $errors[] = new Violation($key, $below, $this->notEmitted(($schema === NULL ? NULL : SchemaFacts::label($schema)) ?? $property), Violation::REQUIRED);
         continue;
       }
       [$key, $below] = self::split($path);
@@ -191,14 +191,14 @@ final class Conforming {
         // A map for a list: the validator says so, whole.
         return $this->plain($value, $key, $path, $errors, $objects);
       }
-      $item = DefinitionSchema::itemNode($schema);
+      $item = DefinitionSchema::itemOf($schema);
       $walked = [];
       foreach ($value as $delta => $one) {
         $walked[] = $this->walked($item, $one, $key, Accepting::joinPath($path, (string) $delta), $written['items'] ?? NULL, $errors, $objects);
       }
       return $walked;
     }
-    $properties = $schema === NULL ? [] : NodeFacts::properties($schema);
+    $properties = $schema === NULL ? [] : SchemaFacts::properties($schema);
     if ($properties === [] || ($value !== [] && array_is_list($value))) {
       // A value no keys describe, or a list for a map, which the validator
       // says whole: only objects are looked for inside.
@@ -341,8 +341,8 @@ final class Conforming {
         return NULL;
       }
       $schema = match (TRUE) {
-        DefinitionSchema::isList($schema) => ctype_digit($segment) ? DefinitionSchema::itemNode($schema) : NULL,
-        DefinitionSchema::isComplex($schema) => DefinitionSchema::propertyNode($schema, $segment),
+        DefinitionSchema::isList($schema) => ctype_digit($segment) ? DefinitionSchema::itemOf($schema) : NULL,
+        DefinitionSchema::isComplex($schema) => DefinitionSchema::propertyOf($schema, $segment),
         default => NULL,
       };
     }

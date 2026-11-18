@@ -6,7 +6,7 @@ namespace Drupal\surface\Pipeline;
 
 use Drupal\surface\Attachment;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Entry;
@@ -77,7 +77,7 @@ final class Outbound {
    *   The declared keys of the values, in the order they were in, a
    *   datetime key's with its offset (Coercion::served()): one an entry
    *   holds, never one inside a plain map or a plain list of maps. What a
-   *   key is comes from its entry's node.
+   *   key is comes from its entry's schema.
    */
   public static function declared(SurfaceInterface $surface, array $values): array {
     $definitions = $surface->getDefinitions();
@@ -94,11 +94,11 @@ final class Outbound {
       elseif (is_array($value) && ($child = $entry->childFor($values)) !== NULL) {
         $value = static::declared($child, $value);
       }
-      elseif (NodeFacts::dataType($node = $entry->schema()) === 'datetime_iso8601') {
+      elseif (SchemaFacts::dataType($schema = $entry->schema()) === 'datetime_iso8601') {
         // Served with its offset.
         // Decision: see
         // docs/decisions.md#validation-runs-through-the-dialects-validator.
-        $value = Coercion::served($value, DefinitionSchema::declares($node, 'DateOnly'));
+        $value = Coercion::served($value, DefinitionSchema::declares($schema, 'DateOnly'));
       }
       $declared[$name] = $value;
     }
@@ -189,10 +189,10 @@ final class Outbound {
   }
 
   /**
-   * Finds the secrets inside one key's node.
+   * Finds the secrets inside one key's schema.
    *
-   * @param \PortableSchema\Builder\Schema $node
-   *   A built node: an entry's (Entry::schema()), or one below it.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   A built schema: an entry's (Entry::schema()), or one below it.
    *
    * @return true|array
    *   TRUE when it is secret, or a list whose items are; the secrets
@@ -200,22 +200,22 @@ final class Outbound {
    *   list's items; empty when none.
    *
    * @throws \LogicException
-   *   When a list's node holds no node for its item: a built node holds
+   *   When a list's schema holds no schema for its item: a built schema holds
    *   one, and a missing one would answer "no secret" for one that may be.
    */
-  public static function secretsOf(Schema $node): true|array {
-    if (Secrets::marked($node)) {
+  public static function secretsOf(Schema $schema): true|array {
+    if (Secrets::marked($schema)) {
       return TRUE;
     }
-    if (DefinitionSchema::isList($node)) {
+    if (DefinitionSchema::isList($schema)) {
       // A list of secrets is secret; a list of maps keeps each item's
       // secrets under EACH, and the rest of every item is read.
-      $item_node = DefinitionSchema::itemNode($node) ?? throw new \LogicException('A list\'s node holds no node for its item: a built node holds one.');
-      $item = static::secretsOf($item_node);
+      $item_schema = DefinitionSchema::itemOf($schema) ?? throw new \LogicException('A list\'s schema holds no schema for its item: a built schema holds one.');
+      $item = static::secretsOf($item_schema);
       return $item === [] || $item === TRUE ? $item : [self::EACH => $item];
     }
     $secrets = [];
-    foreach (NodeFacts::properties($node) as $name => $property) {
+    foreach (SchemaFacts::properties($schema) as $name => $property) {
       $found = static::secretsOf($property);
       if ($found !== []) {
         $secrets[(string) $name] = $found;

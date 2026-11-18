@@ -7,7 +7,7 @@ namespace Drupal\surface;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Pipeline\PipelineGuard;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\ResourceBuild\RefinesInputRefiner;
@@ -206,7 +206,7 @@ final class Resolve {
         }
       }
       elseif ($entry->attachment !== NULL) {
-        $at = NodeFacts::each($entry->schema()) === NULL ? $name . '.' : $name . '.*.';
+        $at = SchemaFacts::each($entry->schema()) === NULL ? $name . '.' : $name . '.*.';
         $children[] = [$at, static::entryChild($entry)];
       }
       foreach ($children as [$at, $child]) {
@@ -234,7 +234,7 @@ final class Resolve {
    */
   protected static function entryChild(Entry $entry): ?SurfaceInterface {
     $child = $entry->attachment?->child;
-    if ($child === NULL || NodeFacts::each($entry->schema()) === NULL) {
+    if ($child === NULL || SchemaFacts::each($entry->schema()) === NULL) {
       return $child;
     }
     $entries = $child->getDefinitions()->entries();
@@ -258,12 +258,12 @@ final class Resolve {
     foreach ($map->entries() as $name => $entry) {
       $schema = $entry->schema();
       if ($name === RefinesInputRefiner::MOUNT && DefinitionSchema::isComplex($schema)) {
-        foreach (NodeFacts::properties($schema) as $module => $mount) {
+        foreach (SchemaFacts::properties($schema) as $module => $mount) {
           if (!DefinitionSchema::isComplex($mount) || isset($entry->mounted[$module])) {
             continue;
           }
-          foreach (NodeFacts::properties($mount) as $key => $property) {
-            $resolve = NodeFacts::resolve($property);
+          foreach (SchemaFacts::properties($mount) as $key => $property) {
+            $resolve = SchemaFacts::resolve($property);
             if ($resolve !== NULL) {
               $declared[RefinesInputRefiner::path((string) $module, (string) $key)] = [$resolve, $property];
             }
@@ -271,7 +271,7 @@ final class Resolve {
         }
         continue;
       }
-      $resolve = NodeFacts::resolve($schema);
+      $resolve = SchemaFacts::resolve($schema);
       if ($resolve !== NULL) {
         $declared[(string) $name] = [$resolve, $schema];
       }

@@ -161,7 +161,7 @@ grep:
 - `ContractEmitter::slot()` → `ContractEmitter::variants()`;
 - `DerivedVariantsInterface::slot()` → `DerivedVariantsInterface::variantsAt()`;
 - `DefinitionMetadata::setSlot()`, `slotOf()` → `setVariantsBy()`, `variantsBy()`;
-- `DefinitionMap::withSlotsResolved()` → `withVariantsResolved()` (deleted 2026-11-16, part 32.8: no caller; see [A refined shell is composed of nodes](#a-refined-shell-is-composed-of-nodes));
+- `DefinitionMap::withSlotsResolved()` → `withVariantsResolved()` (deleted 2026-11-16, part 32.8: no caller; see [A refined shell is composed of schemas](#a-refined-shell-is-composed-of-schemas));
 - `InputDefinitions::fromSlot()` → `InputDefinitions::fromVariants()`;
 - the glossary's Slot → Variants ([Variants, not slots](#variants-not-slots));
 - the decisions "A slot nothing fills" and "No OpenAPI discriminator on a slot" → [Variants nothing declares](#variants-nothing-declares) and [No OpenAPI discriminator for variants](#no-openapi-discriminator-for-variants), and the served contract's "A slot is a conditional" → [Variants are conditionals](served-contract.md#variants-are-conditionals);
@@ -262,7 +262,7 @@ there are. The pins below are 27 attributes and 112 arguments since.
 
 *Changed 2026-11-12,* with no count moved: `ShapeInterface` declares
 `schema(): Schema` in place of `define(): DataDefinition`
-([A shape is a Schema; secrecy is read from a node](#a-shape-is-a-schema-secrecy-is-read-from-a-node)).
+([A shape is a Schema; secrecy is read from a schema](#a-shape-is-a-schema-secrecy-is-read-from-a-schema)).
 `PublicSurfaceTest` pins the shape's contract by method and return type
 from this date.
 
@@ -584,7 +584,7 @@ code names the third, `#[Shape]`. (`ResourceBlueprint`,
 
 Since 2026-11-12 a shape declares `schema()`, the `Schema` of its value,
 in place of `define()`: [A shape is a Schema; secrecy is read from a
-node](#a-shape-is-a-schema-secrecy-is-read-from-a-node). The rules
+schema](#a-shape-is-a-schema-secrecy-is-read-from-a-schema). The rules
 below hold as written for the definition the schema reads into.
 
 A scalar asked for at many keys (a license, a stock code) was written
@@ -1808,7 +1808,7 @@ code computes it at request time. The choices, and why:
 - **An operation with no permission tells no one what a value names.** A
   derived content entity operation declares no permission: entity access
   decides per entity, once the thing is loaded. Nothing then lets an
-  account in before a value of the URL is read, so a node of another
+  account in before a value of the URL is read, so a schema of another
   bundle is refused to every account at every door, as is an id no node
   has wherever no converter answers it first, with no reason at the
   form's route and the one fixed refusal at the React page, the API and
@@ -2527,8 +2527,8 @@ document, refusal or stored value changed.
 
 Later: a build format in the build cache's id. Surface's own
 constraints run on plain values and the check provider runs from the
-built node since [A definition is read once, into a built
-node](#a-definition-is-read-once-into-a-built-node).
+built schema since [A definition is read once, into a built
+schema](#a-definition-is-read-once-into-a-built-schema).
 
 (`Validation\ConstraintRunner`, `DrupalCheckProvider`,
 `PortableValidator`, `Pipeline\Conforming`,
@@ -2536,11 +2536,11 @@ node](#a-definition-is-read-once-into-a-built-node).
 `UniqueItemsConstraintValidator`, `ConstraintRunnerTest`,
 `ValueOnlyConstraintsTest`, `TypedDataFootprintTest`)
 
-### A definition is read once, into a built node
+### A definition is read once, into a built schema
 
 Decided 2026-11-12. One function reads a definition into a `Schema`,
-the result holds what a node knows beyond its document form, and the
-check provider reads that node instead of a definition. No served
+the result holds what a schema knows beyond its document form, and the
+check provider reads that schema instead of a definition. No served
 document, refusal or stored value changed.
 
 - **One read.** `Contract\DefinitionSchema::of($definition, $listed)`
@@ -2549,92 +2549,92 @@ document, refusal or stored value changed.
   a pure function; the projection holds the
   request](#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request))
   is the one read of a definition into a
-  `Schema`: the built node of the definition at one site. It holds what
+  `Schema`: the built schema of the definition at one site. It holds what
   the definition says whatever the request: the title and description,
   the type and the keywords its constraints state, a map's properties
-  and a list's items (each the built node of that definition), what only
+  and a list's items (each the built schema of that definition), what only
   the server checks and the messages. What depends on the request is
   the emitter's and decorates the projection: an option set's `oneOf`
   and empty option, a stale value, a lock, links, the widget hints, what
-  a key depends on, sharing a node as a def, naming it.
-  `PropertySchema::property()` is `publishedNode(of($definition,
-  $listed))` (since 2026-11-13 `publishedNode(of($definition),
+  a key depends on, sharing a schema as a def, naming it.
+  `PropertySchema::property()` is `publishedSchema(of($definition,
+  $listed))` (since 2026-11-13 `publishedSchema(of($definition),
   $definition, $listed)` on the service, the list decided by the
   projection: see [A definition is read by a pure
   function](#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request))
   with that decoration placed where each keyword always stood; a
   collection's own keywords are `head()`.
-- **What a node holds.** `portable-check` holds each named check's
+- **What a schema holds.** `portable-check` holds each named check's
   options as the definition holds them (an array, NULL or a scalar), the
   options the check provider runs, where the document publishes fewer.
   Titles, descriptions and messages are held as the definition holds
   them: a `TranslatableMarkup` stays one. A message the reader writes
   itself (a Regex's or a check's own sentence, what a JsonSchema check
-  holds a value to) is a `NodeMessage`, which is translated each time it
-  is rendered, so a node kept for the process says each document's
-  language. `x-surface-model` holds what a node knows that no document
+  holds a value to) is a `SchemaMessage`, which is translated each time it
+  is rendered, so a schema kept for the process says each document's
+  language. `x-surface-model` holds what a schema knows that no document
   says, a closed list of members, each added for the reader that reads
   it: `constraints`, every declared constraint with its options, the ones
   a keyword states included, read by the check provider (a bridge until
   the model is the source); since 2026-11-13 also `type`, the data type
-  of every node, read by the projection ([A definition is read by a pure
+  of every schema, read by the projection ([A definition is read by a pure
   function](#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request)).
   Since 2026-11-13 the members hold every fact of the definition, a
-  closed list of 32 (see [A node holds every fact of its
-  definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)).
+  closed list of 32 (see [A schema holds every fact of its
+  definition](#a-schema-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)).
   It held a second member, `secret`, until
   [A shape is a Schema; secrecy is read from a
-  node](#a-shape-is-a-schema-secrecy-is-read-from-a-node): the node's own
+  schema](#a-shape-is-a-schema-secrecy-is-read-from-a-schema): the schema's own
   `writeOnly` says it. A
-  node holds no reference to its definition: a reader that needs the
-  definition takes it from the place it found the node at. The data
+  schema holds no reference to its definition: a reader that needs the
+  definition takes it from the place it found the schema at. The data
   type was no member, since no reader read it (it is one since
   2026-11-13). The emitter's transient keywords for checks and pattern
-  messages are gone: the node holds `portable-check` and
+  messages are gone: the schema holds `portable-check` and
   `x-portable-messages` from the start. The shape marker stays the
   emitter's, since a shape's def is described with the request.
-- **One projection.** `DefinitionSchema::published()`, a node at a time
-  (`publishedNode()`; since 2026-11-13 methods of the service that take
-  the definition beside the node and hold what needs the request, and
+- **One projection.** `DefinitionSchema::published()`, a schema at a time
+  (`publishedSchema()`; since 2026-11-13 methods of the service that take
+  the definition beside the schema and hold what needs the request, and
   `published()` projects a property or an item beside its definition and
   strips `x-surface-model` at every other keyword position: see [A
   definition is read by a pure
   function](#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request)),
-  is the one place a built node becomes a document
-  node: each check's options through one table, `CheckOptions::published()`
+  is the one place a built schema becomes a document
+  schema: each check's options through one table, `CheckOptions::published()`
   (`{entityTypeId, bundles?}` for `SurfaceValidReference`, `{schema}` for
   `JsonSchema`, `{}` for every other plugin), the title, the description
   and each message as plain text (`PlainText::of()`, which `toDocument()`
   is not), a message empty as plain text left out, and `x-surface-model`
-  stripped. A node is projected before anything compares it, so every
+  stripped. A schema is projected before anything compares it, so every
   `Schemas::same()` of the walk sees the published form, and two sites
   whose checks differ only in their options still share one def.
 - **Built once per definition.** (Since 2026-11-13 the memo, `seal()`
-  and `hold()` are gone: the entry holds its key's node and `of()` keeps
+  and `hold()` are gone: the entry holds its key's schema and `of()` keeps
   nothing; see
-  [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone).) The node of a definition a sealed data
+  [An entry holds its schema; the memo is gone](#an-entry-holds-its-schema-the-memo-is-gone).) The schema of a definition a sealed data
   surface holds is kept per definition object and `$listed`, in a
   `WeakMap` (since 2026-11-13 per definition object alone, in a static
-  `WeakMap`: there is one node per definition; see [A definition is read
+  `WeakMap`: there is one schema per definition; see [A definition is read
   by a pure
   function](#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request)). The code knows a definition is held by one because it was
   handed one: the emitter seals each frame's data surface
   (`DefinitionSchema::seal()`), `hold()` marks a definition `Location`
-  hands out, and a node built for such a definition marks its
+  hands out, and a schema built for such a definition marks its
   properties and items. Any other definition (a copy a conditional
   narrows, one a test builds and changes) is read afresh. A refined key
-  is a new definition, so its node is built again; an unrefined key
-  keeps its node across refinements. A built node never reaches the
+  is a new definition, so its schema is built again; an unrefined key
+  keeps its schema across refinements. A built schema never reaches the
   build cache, a served document, `ServedContract`, a log or an
   exception message: it is held in memory only.
 - **The memo's precondition.** (Since 2026-11-13 the fingerprint
   assertion is gone; the rule stands, proven by a test instead: see
-  [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone).) A definition a sealed data surface holds,
-  and one `Location` hands out, is never written after its node is
+  [An entry holds its schema; the memo is gone](#an-entry-holds-its-schema-the-memo-is-gone).) A definition a sealed data surface holds,
+  and one `Location` hands out, is never written after its schema is
   built; code that changes a definition works on a copy
   (`Surface::deepClone()`), as refiners and conditionals do. Where
-  assertions run, each read of a kept node compares the definition's
-  fingerprint with the one taken when its node was built, and a
+  assertions run, each read of a kept schema compares the definition's
+  fingerprint with the one taken when its schema was built, and a
   difference fails the assertion, naming the definition's label and
   data type. The fingerprint is taken and compared only inside
   `assert()`, so production pays nothing. It reads the definition array
@@ -2643,32 +2643,32 @@ document, refusal or stored value changed.
   arguments and options; any other object, a closure among them, by its
   class and identity, so an object replaced is seen and one changed in
   place is not. Why: nothing in production writes a held definition, but
-  the next slices move more readers onto kept nodes, and a stale node
+  the next slices move more readers onto kept schemas, and a stale schema
   would serve the old key and raise no error.
-- **The provider reads the node.** (Since 2026-11-13 `BuiltNodes` is
-  gone: `Location::definitionAt()` gives the node beside the definition,
-  the node of the entry that holds the key walked in step; see
-  [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone).) `Contract\BuiltNodes::place()` finds
-  the built node at a place as `Location::definitionAt()` finds the
+- **The provider reads the schema.** (Since 2026-11-13 `BuiltNodes` is
+  gone: `Location::definitionAt()` gives the schema beside the definition,
+  the schema of the entry that holds the key walked in step; see
+  [An entry holds its schema; the memo is gone](#an-entry-holds-its-schema-the-memo-is-gone).) `Contract\BuiltNodes::place()` finds
+  the built schema at a place as `Location::definitionAt()` finds the
   definition (each level refined against its own values, a chosen
   variant, an item of a collection, a property or an item below a plain
-  key), never a node of the served document, so two sites one def stands
-  for each keep their own options. The node is the definition's own
+  key), never a schema of the served document, so two sites one def stands
+  for each keep their own options. The schema is the definition's own
   statement, its unlisted form (`of($definition, FALSE)`; since
   2026-11-13 `of($definition)`, the one form there is): whether a key
   offers a list of values is a fact of the request the emitter adds, so
   no options resolver is asked for the place, and a reader of a place
-  reads checks, options and the model from this node, which say the same
+  reads checks, options and the model from this schema, which say the same
   on the listed form (`BuiltNodesTest`), never an option set. Why:
   asking the resolver for the place was most of what `validate()` paid
   over HEAD for a refined key, for an answer no reader read.
-  `place()` hands out the definition beside the node, the frame and the
-  value; `at()` is the node alone. `DrupalCheckProvider` takes the
+  `place()` hands out the definition beside the schema, the frame and the
+  value; `at()` is the schema alone. `DrupalCheckProvider` takes the
   check's options (`DefinitionSchema::options()`: the check's own under
   `portable-check`, else the declared list), whether it is secret (its
-  `writeOnly`) and the declared list from the node, and hands `ConstraintRunner::check()` the
+  `writeOnly`) and the declared list from the schema, and hands `ConstraintRunner::check()` the
   definition from the place; `FormWidgetHost::selection()` reads a
-  reference's handler from the node the same way. Neither calls
+  reference's handler from the schema the same way. Neither calls
   `Location::definitionAt()`, and the provider calls no
   `getConstraints()`. Two cases stay the frame's and read its entries: a
   frame's `drupal:JsonSchema`, held to the frame's values as the
@@ -2690,27 +2690,27 @@ document, refusal or stored value changed.
   as an `edge`: the edge list gained one file by decision, the one read
   of a definition into a `Schema`, which stays the host readers' shared
   reader after the flip. `OUTSIDE_THE_EDGES` stays 156, so the list
-  still only shrinks. `BuiltNodes`, `CheckOptions` and `NodeMessage`
+  still only shrinks. `BuiltNodes`, `CheckOptions` and `SchemaMessage`
   name no Typed Data; `BuiltNodes` types the definition it hands out
   through `DefinitionSchema`'s type alias (`BuiltNodes` was deleted
   2026-11-13).
 
 Later: lazy text read by the consumers that render it themselves; a
-frame's own node, built from its entries' nodes, holding the frame's
+frame's own schema, built from its entries' schemas, holding the frame's
 checks; the member list growing one member per consumer that reads it;
 the declared constraint list going when the model is the source.
 
 (`Contract\DefinitionSchema`, `Contract\CheckOptions`,
-`Contract\BuiltNodes`, `Contract\NodeMessage`, `PropertySchema`,
+`Contract\BuiltNodes`, `Contract\SchemaMessage`, `PropertySchema`,
 `DrupalCheckProvider`, `ConstraintRunner`, `FormWidgetHost`,
 `DefinitionSchemaTest`, `BuiltNodesTest`, `CheckOptionsTest`,
 `ValueOnlyConstraintsTest`)
 
-### A shape is a Schema; secrecy is read from a node
+### A shape is a Schema; secrecy is read from a schema
 
 Decided 2026-11-12. Two public contracts take their final form: a shape
 is declared as the `Schema` of its one value, and whether a value is
-secret is read from a node by one class that holds no definition.
+secret is read from a schema by one class that holds no definition.
 Within one language no served document, refusal or stored value changed
 against 20ef965. Across languages an `addSchema()` text now says the
 served language, and two spellings are read that were refused: a
@@ -2744,7 +2744,7 @@ check's message made with `t()` on `addSchema()`, and a shape's
   another key's. `Shapes::dataType()` reads the kept one. A kept
   definition is never held by a data surface, so the memo's
   precondition (a definition a surface holds is not written after its
-  node is built) is untouched.
+  schema is built) is untouched.
 - **What a shape may say, checked where it is first read.** A shape is
   one scalar value: a schema of type object or array, or one holding
   properties or items, is refused before it is read, and so is one that
@@ -2817,9 +2817,9 @@ check's message made with `t()` on `addSchema()`, and a shape's
   the wrong cause; it is read now.
 - **A shape's alters stay a definition in, a definition out.** An alter
   narrows and rewords the definition the shape's schema reads into. Its
-  `Schema` form comes when rules and narrowing work on nodes.
+  `Schema` form comes when rules and narrowing work on schemas.
 - **One class answers what is secret.** `Contract\Secrets` reads
-  schemas only. `marked()`: a node says `writeOnly: true`. `at()`: a
+  schemas only. `marked()`: a schema says `writeOnly: true`. `at()`: a
   place in a document is secret where any schema that applies there is
   marked, through `$ref` (any JSON pointer into the document, such as
   a def inside a def, or a type of the library), `allOf`, `anyOf`,
@@ -2843,14 +2843,14 @@ check's message made with `t()` on `addSchema()`, and a shape's
   to it, so for such a `$ref` it answers no secret where `at()` answers
   secret. Secret in any branch is the rule, since a client that reads
   the document cannot know which branch a server will choose.
-- **The built node says it.** A secret definition's built node carries
+- **The built schema says it.** A secret definition's built schema carries
   `writeOnly: true`, so the check provider asks `Secrets::marked()` of
-  the node at the place, and the model annotation's `secret` member is
+  the schema at the place, and the model annotation's `secret` member is
   gone: `x-surface-model` holds `constraints` alone (since 2026-11-13 it
   holds every fact of a definition, `secret` as stored among them where
-  `writeOnly` does not state it: see [A node holds every fact of its
-  definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)). The reader marks a
-  definition secret where `Secrets::marked()` says so of the node it
+  `writeOnly` does not state it: see [A schema holds every fact of its
+  definition](#a-schema-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)). The reader marks a
+  definition secret where `Secrets::marked()` says so of the schema it
   reads, and the string widget and a widget that declines secrets ask
   the same.
 - **A served document cannot answer for what it does not carry.** A
@@ -2865,7 +2865,7 @@ check's message made with `t()` on `addSchema()`, and a shape's
   It lists the two families as the only ones a disagreement may be in;
   the shipped examples hold none, and the test builds one member of
   each. So kept secrets, outbound projection and storage read built
-  nodes, never a served document.
+  schemas, never a served document.
 - **`writeOnly` beside a reference to a shape is not read.** A key
   declared with a shape is secret only where the shape is. An author's
   schema that says `writeOnly` beside the `$ref` is refused, as every
@@ -2880,12 +2880,12 @@ check's message made with `t()` on `addSchema()`, and a shape's
 
 Later, by slice: `Outbound`'s secret trees, `Accepting`'s secret reads,
 `SurfacePipeline`'s, `Validating`'s, `Variants::keptSecrets()` and the
-stage's kept secrets read built nodes through `Secrets` in slice 26
+stage's kept secrets read built schemas through `Secrets` in slice 26
 (2026-11-13: done for all but `Validating`'s, which slice 31 takes; the
 stage's kept secrets follow `Outbound::secrets()`. See [The value
-pipeline reads nodes](#the-value-pipeline-reads-nodes). `Validating`'s
+pipeline reads schemas](#the-value-pipeline-reads-schemas). `Validating`'s
 too since 2026-11-13: see [The validator's checks and the document read
-nodes](#the-validators-checks-and-the-document-read-nodes).);
+schemas](#the-validators-checks-and-the-document-read-schemas).);
 `EncryptedStorageLayout`, `ConfigSchemaGenerator`,
 `HeldToConfigSchemaTrait`, `InputDefinitions`, `ResourceCode`,
 `SiteCatalog` and `FlatVariantsLayout` in slice 27; `KeyPaths`,
@@ -3026,7 +3026,7 @@ built on the untouched tree. No file under `src` changed.
   - Four branches have no case. Two datetime input formats never parse
     first: an earlier format reads every value they read. (2026-11-13:
     the two formats are removed, see [The value pipeline reads
-    nodes](#the-value-pipeline-reads-nodes).) A float that is
+    schemas](#the-value-pipeline-reads-schemas).) A float that is
     not finite is never sent: JSON has none, and a form posts strings.
     `document()`'s arm for a key no entry declares is never reached:
     `accept()` answers declared keys only.
@@ -3062,12 +3062,12 @@ baseline unedited and the probe against its base commit.
 
 ### A definition is read by a pure function; the projection holds the request
 
-Decided 2026-11-13. Reading a definition into its built node needed the
+Decided 2026-11-13. Reading a definition into its built schema needed the
 options service, the constraint plugins and the translation service,
-and ran option resolvers to decide how each child was read. So a node
+and ran option resolvers to decide how each child was read. So a schema
 could not be read where a data surface is built (`SurfaceBuilder::seal()`
 and `DefinitionMap::fromArrays()` are static and hold no service), and
-what a node said depended on a request. The class is now split by what
+what a schema said depended on a request. The class is now split by what
 each half needs. No served document, refusal or value changed.
 
 - **The read is a pure function.**
@@ -3096,61 +3096,61 @@ each half needs. No served document, refusal or value changed.
   read asks `typed_data_manager` alone, in core's `getConstraints()`) and
   counting stand-ins for the options resolver manager and the constraint
   manager count no call, and no text the read rendered.
-- **The node is the definition's own statement at every depth.** Every
+- **The schema is the definition's own statement at every depth.** Every
   property of a map and the item of a list are on it, each read by
   `of()`; no child is read "listed". Every declared check is under
   `portable-check` with its options, including a list of values
   (`Choice`, `LabeledChoice`, `AllowedValues`) and one a resolver says
   its list states. A property a refinement marked as not applying is on
-  the node and in its `required`; the mark stays on the property's
+  the schema and in its `required`; the mark stays on the property's
   definition (`DoesNotApply`), where the projection reads it, until a
   member holds it (since 2026-11-13 the `doesNotApply` member holds it
-  and the projection reads the member: see [A node holds every fact of its
-  definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)). A
+  and the projection reads the member: see [A schema holds every fact of its
+  definition](#a-schema-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)). A
   check the definition gives no message holds none.
 - **Every data type is read; a definition that holds itself is refused.**
   MODEL's members are `constraints` and `type` (`getDataType()`, on every
-  node; since 2026-11-13 a closed list of 32, one place for every fact:
-  see [A node holds every fact of its
-  definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)). A data
+  schema; since 2026-11-13 a closed list of 32, one place for every fact:
+  see [A schema holds every fact of its
+  definition](#a-schema-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)). A data
   type the leaf table has no row for (`decimal`, `binary`, a bare `any`)
-  gets a node with no `type` keyword. A definition with no
+  gets a schema with no `type` keyword. A definition with no
   place for a default or examples (a configurable field, `FieldConfig`,
   which offers neither the proposed core methods nor array access) has
   none: the read asks `DefinitionMetadata::canHoldDefaultValue()` and
   `canHoldExamples()` first. The read's one refusal: a definition met
   again inside itself (a map that holds itself) is refused with a
   `LogicException` naming its data type and where it is met again (a
-  JSON Pointer into the node), before the read runs out of memory. Every
+  JSON Pointer into the schema), before the read runs out of memory. Every
   one of the 252 data types the dev site knows is read.
-- **The unknown-type refusal is the projection's, one node at a time.**
-  `publishedNode()` refuses a value of a type no row is for, with the leaf
+- **The unknown-type refusal is the projection's, one schema at a time.**
+  `publishedSchema()` refuses a value of a type no row is for, with the leaf
   table's exception and message (`LeafTypes::unwritten()`), naming the
   type by MODEL's `type` alone, so a hand-built surface with such a type
   still fails where its document is made and no longer fails where its
-  node is read. A reader that takes a node and does not project it
+  schema is read. A reader that takes a schema and does not project it
   (`BuiltNodes::place()`; since 2026-11-13 `Location::definitionAt()`)
-  gets a node with no `type` keyword, the type in
+  gets a schema with no `type` keyword, the type in
   MODEL, and no refusal. `type` is a bridge: it goes before the series
   closes.
 - **Reading never renders.** A title or description is kept when the
   definition holds one that is not NULL and not the literal `''`, as the
-  object it holds. A message the reader writes is a `NodeMessage` built
+  object it holds. A message the reader writes is a `SchemaMessage` built
   with no translation service (`heldMessage()`, `heldTo()`).
 - **The projection holds what needs a service or the request.**
-  `published()` and `publishedNode()` on the service
-  `surface.definition_schema` take the node and the definition it was
+  `published()` and `publishedSchema()` on the service
+  `surface.definition_schema` take the schema and the definition it was
   read from, walked together, and whether the key offers a list
   (computed when not given). They decide: whether a key offers a list,
   so the check its list states and that check's message leave
   `portable-check`, and a map that offers one is said as one value, made
-  from its node (`oneValue()`: its title, description and MODEL
+  from its schema (`oneValue()`: its title, description and MODEL
   `constraints`; no properties, `type`, `required` or
   `additionalProperties`), so of a listed map's definition the
   projection reads only whether it is a map and whether it offers a
-  list (since 2026-11-13 whether it is a map comes from its node: see
-  [A node holds every fact of its
-  definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)); whether a list states a check (`SurfaceOptions::isStatedByList()`
+  list (since 2026-11-13 whether it is a map comes from its schema: see
+  [A schema holds every fact of its
+  definition](#a-schema-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)); whether a list states a check (`SurfaceOptions::isStatedByList()`
   kept per plugin id, `SurfaceOptions::readsAsList()` kept per plugin id
   and serialized options); a check's label as its sentence where the
   definition gives no message or one that renders empty (the label kept
@@ -3158,24 +3158,24 @@ each half needs. No served document, refusal or value changed.
   a property that does not apply is left out, with its place in
   `required`; the refusal above; text rendered as plain text, a text
   that renders empty left out, MODEL stripped. `published()` also strips
-  MODEL from a node at any other keyword position (`allOf`, `$defs`,
+  MODEL from a schema at any other keyword position (`allOf`, `$defs`,
   `patternProperties` and the rest), at every depth. The definition
-  parameter goes when the options resolvers take a node.
-  `PropertySchema::property()` is `publishedNode(of($definition),
+  parameter goes when the options resolvers take a schema.
+  `PropertySchema::property()` is `publishedSchema(of($definition),
   $definition, $listed)` plus the request's decoration;
   `publishedTexts()` is the static projection of a title and a
   description alone; `publishedKeywords()` projects what `keywords()`
   read for `PropertySchema::signature()` (since 2026-11-13 what
-  `keywordsOf()` reads of a node: see [The validator's checks and the
-  document read nodes](#the-validators-checks-and-the-document-read-nodes)).
+  `keywordsOf()` reads of a schema: see [The validator's checks and the
+  document read schemas](#the-validators-checks-and-the-document-read-schemas)).
 - **The memo stays, static.** (Gone since 2026-11-13, with `seal()`,
   `hold()`, the fingerprint assertion and `BuiltNodes`: see
-  [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone).) `seal()`, `hold()`, the memo and the
+  [An entry holds its schema; the memo is gone](#an-entry-holds-its-schema-the-memo-is-gone).) `seal()`, `hold()`, the memo and the
   fingerprint assertion work as before (since 2026-11-13 the fingerprint
   also hashes the class, a map's main property name and every definition
-  the array holds: see [A node holds every fact of its
-  definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)), in static `WeakMap`s keyed by the
-  definition object, one node per definition (there is no listed form).
+  the array holds: see [A schema holds every fact of its
+  definition](#a-schema-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it)), in static `WeakMap`s keyed by the
+  definition object, one schema per definition (there is no listed form).
   That is safe across kernel tests in one process: an entry lives only
   while its definition object does, a test builds its own definitions,
   and a read depends on the definition alone. The assertion names the
@@ -3188,7 +3188,7 @@ Where the first plan was wrong: a map that offers a list did not differ
 from its unlisted read only in its properties. It had no `type`,
 `additionalProperties` or `required` either, and its own constraints
 were read as a value's. So the projection says it as one value, made
-from what the node holds (`oneValue()`), rather than dropping the
+from what the schema holds (`oneValue()`), rather than dropping the
 properties. The claim "the read is total" was false at first: a
 configurable field refused a read of its default, and a map that holds
 itself recursed until memory ran out.
@@ -3197,29 +3197,29 @@ Later: reading a leaf type's spelling from core's `#[JsonSchema]`
 attribute on its data type class (it would spell `decimal`, durations
 and contrib types without a table, but the blueprint refuses those
 types at declaration and the pipeline has no cast for them, so it
-belongs where host readers produce nodes); the rest of the members, one
+belongs where host readers produce schemas); the rest of the members, one
 for every fact a definition carries, the mark of a key that does not
-apply among them (done 2026-11-13: see [A node holds every fact of its
-definition](#a-node-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it));
+apply among them (done 2026-11-13: see [A schema holds every fact of its
+definition](#a-schema-holds-every-fact-of-its-definition-and-a-definition-is-derived-back-from-it));
 the memo, `seal()`, `hold()` and the fingerprint
-assertion go when an `Entry` holds its node (done 2026-11-13: see
-[An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone)).
+assertion go when an `Entry` holds its schema (done 2026-11-13: see
+[An entry holds its schema; the memo is gone](#an-entry-holds-its-schema-the-memo-is-gone)).
 
 (`Contract\DefinitionSchema`, `Contract\LeafTypes`, `Contract\BuiltNodes`,
 `DefinitionMetadata`, `PropertySchema`, `ContractEmitter`,
 `DefinitionSchemaTest`, `DefinitionReadIsPureTest`,
 `DefinitionReadServiceFreeTest`, `BuiltNodesTest`)
 
-### A node holds every fact of its definition, and a definition is derived back from it
+### A schema holds every fact of its definition, and a definition is derived back from it
 
-Decided 2026-11-13. A built node said what a document says and two
+Decided 2026-11-13. A built schema said what a document says and two
 model-only members; the rest of what a definition carries (its settings,
 its stored `required`, a NULL default, what `DefinitionMetadata` stores,
 a `Computed`, a `Resolve`, a shape's definition) was on the definition
 only, so every consumer still read the definition. Now every fact of a
 `DataDefinition`, a `ListDataDefinition` or a `MapDataDefinition` has a
-place on the node, such a definition is derived back from the node
-alone, and the round trip proves the node lacks nothing. No served
+place on the schema, such a definition is derived back from the schema
+alone, and the round trip proves the schema lacks nothing. No served
 document, refusal or value changed, and no consumer moved.
 
 - **One place for each fact.** Where the document reads a fact, its
@@ -3227,9 +3227,9 @@ document, refusal or value changed, and no consumer moved.
   `items`, `properties`, `additionalProperties`, `required` on the
   parent, `default`, `examples`, `writeOnly`, `portable-check`,
   `x-portable-messages`. Every other fact is a member of
-  `x-surface-model`. A member is on a node only where the definition
+  `x-surface-model`. A member is on a schema only where the definition
   states the fact and no keyword holds the value as stored; `type` is on
-  every node. The members are a closed list of 32,
+  every schema. The members are a closed list of 32,
   `DefinitionSchema::MEMBERS`, whose docblock says what each holds and
   who reads it; `DefinitionSchema::PLACES` names, for each key of a
   definition array, its member and the keyword that may hold it, the
@@ -3247,7 +3247,7 @@ document, refusal or value changed, and no consumer moved.
   `stored`.
 - **The three classes, and what other classes keep.** A definition of
   any other class is read as before: its keywords from its getters, its
-  class in `definitionClass`. Its node does not hold what the class keeps
+  class in `definitionClass`. Its schema does not hold what the class keeps
   outside the definition array, and the inverse refuses it. The known
   cases: a `DataReferenceDefinition`'s target, a
   `FieldItemDataDefinition`'s field definition, an
@@ -3255,7 +3255,7 @@ document, refusal or value changed, and no consumer moved.
   `FieldConfig`'s and a `BaseFieldDefinition`'s `required` and settings
   (a `FieldConfig` answers `isRequired()` TRUE with no `required` member;
   a `BaseFieldDefinition`'s `getSettings()` reads its item definition, so
-  48 of the 275 host definitions on the dev site say settings the node
+  48 of the 275 host definitions on the dev site say settings the schema
   does not hold).
 - **Bridges.** `DefinitionSchema::BRIDGES` lists the members that exist
   only so a Typed Data definition can be derived back or because a
@@ -3267,32 +3267,32 @@ document, refusal or value changed, and no consumer moved.
   `declared` (the definition's own constraints), `mainProperty` and
   `stored` (every key the module has no name for, as stored), read by the
   inverse alone (slice 35); `constraints` (the merged list, read by the
-  check provider and `oneValue()` until they read the node's own facts in
+  check provider and `oneValue()` until they read the schema's own facts in
   slice 32, and by the inverse's refusal; slice 35). The proof of the
   last slice greps for these names. Every other member is a fact of
   Surface's own model and stays.
 - **Text stays the author's.** Wherever the definition holds a text
   (label, description, own label, an arrangement's texts, a constraint's
-  message option, a `Computed` or `Resolve` field), the node holds the
+  message option, a `Computed` or `Resolve` field), the schema holds the
   same object. Reading renders none of them; the purity scan and the
   counting test reach every new method of the read (60 methods and
   constructors).
-- **Nested definitions are nodes.** A shape is `{id, node}`, a config
-  type `{type, node}`, `each` a node or the class every entry is. Each
-  node is read by the same function, through the guard against a
+- **Nested definitions are schemas.** A shape is `{id, schema}`, a config
+  type `{type, schema}`, `each` a schema or the class every entry is. Each
+  schema is read by the same function, through the guard against a
   definition that holds itself (which covers a definition held as its
   own shape, config type or `each`), so the recursion ends where the
   definitions held end.
-- **The inverse is an edge.** `Contract\NodeDefinition::of(Schema $node)`
-  is static and reads the node alone. It derives three classes, by exact
+- **The inverse is an edge.** `Contract\DefinitionFromSchema::of(Schema $schema)`
+  is static and reads the schema alone. It derives three classes, by exact
   class, with their constructors: `DataDefinition`, `ListDataDefinition`,
-  `MapDataDefinition`. A node of any other class (the cases above, a
+  `MapDataDefinition`. A schema of any other class (the cases above, a
   subclass of the three) is refused with a `LogicException` naming the
-  class. A node of a data type core's typed data manager does not define
+  class. A schema of a data type core's typed data manager does not define
   is refused with a `LogicException` naming the type: the definition was
   read from another manager's definition (typed config's `label`,
-  `uuid`, `mapping`). So is a node whose derived definition does not give
-  the constraints the node was read with: on the dev site a typed config
+  `uuid`, `mapping`). So is a schema whose derived definition does not give
+  the constraints the schema was read with: on the dev site a typed config
   `text` key whose own constraints replace the type's, where the tool
   module defines a typed data `text`, so the type is core's but its
   defaults were typed config's. Its one service call is
@@ -3302,27 +3302,27 @@ document, refusal or value changed, and no consumer moved.
   entry of `TypedDataFootprintTest` (153 files outside the edges,
   unchanged).
 - **What a derived definition shares.** The inverse makes a new
-  definition wherever the node holds a node: properties, items, a shape,
-  a config type, `each`. Every other value is the object the node holds,
+  definition wherever the schema holds a schema: properties, items, a shape,
+  a config type, `each`. Every other value is the object the schema holds,
   which is the object the definition holds. Nothing is cloned. A value
   under a setting or a key the module has no name for is opaque to the
-  read: a definition object there stays a definition object, in the node
+  read: a definition object there stays a definition object, in the schema
   and in the derived definition, and a write through it is a write to
   the original's. No refusal: no example, test module or dev-site surface
   holds one, and a deep scan of settings on every read would cost every
   read for none.
 - **The round trip is the full one.** For a definition `$d` of the three
-  classes, `NodeDefinition::of(DefinitionSchema::of($d))` has the same
+  classes, `DefinitionFromSchema::of(DefinitionSchema::of($d))` has the same
   class, `toArray()` equal as a map at the top and in order below it,
   the same `getDataType()`, `getClass()`, `isRequired()`, `isReadOnly()`,
   `isComputed()`, `getSettings()` and `getConstraints()` (`===`), equal
   properties, main property and item, and an equal answer from every
   public static getter of `DefinitionMetadata` (found by reflection);
-  every object but a `NodeMessage` is the same object. At every depth the
-  node's `constraints` member is `getConstraints()`. The node read from
-  the derived definition equals the node it was derived from. A
-  `NodeMessage`, which the read makes anew on each read, is equal by
-  class and content. A node serialized and unserialized derives an equal
+  every object but a `SchemaMessage` is the same object. At every depth the
+  schema's `constraints` member is `getConstraints()`. The schema read from
+  the derived definition equals the schema it was derived from. A
+  `SchemaMessage`, which the read makes anew on each read, is equal by
+  class and content. A schema serialized and unserialized derives an equal
   definition, objects equal by class and content. The comparator
   (`DefinitionEqualityTrait`) does not compare the typed data manager a
   definition holds; `DefinitionEqualityTest` pins one pair for each
@@ -3332,17 +3332,17 @@ document, refusal or value changed, and no consumer moved.
   value set, and every definition reachable from an entry at every
   depth, with counts pinned as literals, then one hand case for each
   fact the examples do not state, and the refusals.
-- **The projection reads the node.** Whether a definition is a map, a
+- **The projection reads the schema.** Whether a definition is a map, a
   list or one value, whether an `any` is held as one, the mark of a key
   that does not apply (`doesNotApply`) and the label its refusal names
-  come from the node. The projection walks the definitions only to hand
+  come from the schema. The projection walks the definitions only to hand
   each to the options resolvers (`listed()`).
 - **What does not change.** `published()` strips MODEL at every depth,
-  and so every member, including the nodes a shape, a config type and
+  and so every member, including the schemas a shape, a config type and
   `each` hold. No consumer but the projection reads a new member. The
   memo, `seal()`, `hold()` and the fingerprint assertion stay (until
   2026-11-13, when they went and `BuiltNodes` with them: see
-  [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone)); the
+  [An entry holds its schema; the memo is gone](#an-entry-holds-its-schema-the-memo-is-gone)); the
   fingerprint hashes what the read reads: the class, the definition
   array or the getters, a map's main property name, every property and
   item, and every definition the array holds. It does not see an object
@@ -3352,7 +3352,7 @@ document, refusal or value changed, and no consumer moved.
   tool definitions are swept for MODEL.
 
 What stays Typed Data: the read (`DefinitionSchema`) and the inverse
-(`NodeDefinition`), both edges.
+(`DefinitionFromSchema`), both edges.
 
 "Written when": where the definition states the fact and no keyword
 holds the value as stored.
@@ -3360,7 +3360,7 @@ holds the value as stored.
 | Member | Holds | Bridge | Written when | Read by |
 |---|---|---|---|---|
 | `type` | the data type, `getDataType()` | yes | always | the projection, the inverse |
-| `definitionClass` | the PHP class | yes | the class is not the one the node implies (a list, a map with properties, else `DataDefinition`) | the projection, the inverse |
+| `definitionClass` | the PHP class | yes | the class is not the one the schema implies (a list, a map with properties, else `DataDefinition`) | the projection, the inverse |
 | `label`, `description` | the stored label or description | no | the key is stored and `title` or `description` does not hold it: the literal `''` or NULL | the inverse; `label` the projection's refusal |
 | `required` | the stored `required` | no | the key is stored | the inverse |
 | `readOnly`, `computed` | core's `read-only` and `computed`, as stored | yes | the key is stored | the inverse |
@@ -3371,8 +3371,8 @@ holds the value as stored.
 | `secret` | the stored secret flag | no | `writeOnly` does not hold it as stored: FALSE, NULL, or a truthy value other than TRUE (beside `writeOnly`, which says TRUE) | the inverse |
 | `variantsBy`, `heldWhole`, `readVariants`, `oneVariant`, `fixed`, `grouping`, `alwaysHeld`, `placedAfter`, `variantsFrom`, `ownLabel`, `arrangement` | what `DefinitionMetadata` stores, as stored | no | the key is stored | the inverse; `variantsBy` and `heldWhole` the projection |
 | `compute`, `resolve` | the `Computed` and the `Resolve`, the objects held | no | the key is stored | the inverse |
-| `shape`, `configType` | `{id, node}`, `{type, node}` | no | the key holds the form the setter writes | the inverse |
-| `each` | a node, or the class every entry is | no | the key holds a definition or a string | the inverse |
+| `shape`, `configType` | `{id, schema}`, `{type, schema}` | no | the key holds the form the setter writes | the inverse |
+| `each` | a schema, or the class every entry is | no | the key holds a definition or a string | the inverse |
 | `doesNotApply` | the mark of a key ruled out | no | the key is stored | the projection |
 | `mainProperty` | a `MapDataDefinition`'s main property name | yes | an exact `MapDataDefinition` with one set | the inverse |
 | `stored` | the keys the module has no name for, as stored; a value a member cannot hold | yes | there is one | the inverse |
@@ -3381,111 +3381,111 @@ Row notes. A reader of the own label falls back to `title`, then to the
 `label` member (`ownLabel` ?? `title` ?? `label`: a label of `''` has no
 `title`). A default merged from a map's properties
 (`DefinitionMetadata::defaultOf()`) is no member: it is made from the
-properties' nodes.
+properties' schemas.
 
-Later: the `Entry` holds either form, the definition or the node, and
+Later: the `Entry` holds either form, the definition or the schema, and
 derives the other on first read, and the memo, `seal()`, the fingerprint
 and `BuiltNodes` go (slice 29; done 2026-11-13 for the definition-first
-direction, see [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone)); the consumers read members in place of
+direction, see [An entry holds its schema; the memo is gone](#an-entry-holds-its-schema-the-memo-is-gone)); the consumers read members in place of
 `DefinitionMetadata` calls (slices 30 and 31); the bridges go
 (slice 35).
 
-(`Contract\DefinitionSchema`, `Contract\NodeDefinition`,
+(`Contract\DefinitionSchema`, `Contract\DefinitionFromSchema`,
 `DefinitionRoundTripTest`, `DefinitionEqualityTrait`,
 `DefinitionEqualityTest`, `ModelMembersTest`, `DefinitionSchemaTest`,
 `BuiltNodesTest`, `DefinitionReadIsPureTest`, `TypedDataFootprintTest`)
 
-### An entry holds its node; the memo is gone
+### An entry holds its schema; the memo is gone
 
-Decided 2026-11-13. A built node was read from a definition by
+Decided 2026-11-13. A built schema was read from a definition by
 `DefinitionSchema::of()` and kept in four static `WeakMap`s keyed by the
 definition object, with `seal()` and `hold()` to say which definitions
 to keep, a fingerprint assertion to notice a definition written after
-its node was read, and `BuiltNodes` to find the node at a place. All of
-it existed because nothing owned the node. The `Entry` owns it now, and
+its schema was read, and `BuiltNodes` to find the schema at a place. All of
+it existed because nothing owned the schema. The `Entry` owns it now, and
 that code is deleted. No served document, refusal or value changed.
 
-- **The entry holds its node.** `Entry::schema()` returns the built node
+- **The entry holds its schema.** `Entry::schema()` returns the built schema
   of the entry's definition: `DefinitionSchema::of($this->definition)`,
   read on the first call and kept on the entry, so a second call returns
   the same object. It asks no service. The read is lazy: an entry a
   refinement makes and nothing describes reads nothing. The read's one
   refusal, a definition that holds itself, is thrown at the first
   `schema()` call, never at build. `definition` stays the public
-  constructor member, and `Entry` stays `final`; the node is a private
+  constructor member, and `Entry` stays `final`; the schema is a private
   member that no constructor takes. (Since 2026-11-14 the definition is
   a private member read through `Entry::definition()`: see
   [The definition of an entry is asked for](#the-definition-of-an-entry-is-asked-for).)
 - **One direction only.** Every source gives a definition today, so the
-  entry reads its node from its definition. Nothing in `src/` calls
-  `NodeDefinition::of()`. The entry that holds a node a source gave and
-  derives its definition comes when a source produces a node (slice 32).
+  entry reads its schema from its definition. Nothing in `src/` calls
+  `DefinitionFromSchema::of()`. The entry that holds a schema a source gave and
+  derives its definition comes when a source produces a schema (slice 32).
   (Since 2026-11-14 an entry can: see
   [An entry holds the form its source gave](#an-entry-holds-the-form-its-source-gave).)
-- **The node travels with the definition.** An entry made with the same
-  definition object keeps the node: `readingFrom()`, and
+- **The schema travels with the definition.** An entry made with the same
+  definition object keeps the schema: `readingFrom()`, and
   `withDefinition()` handed the definition it holds. One made with
   another definition starts unread.
-- **The node is never serialized.** `Entry::__sleep()` names every member
-  but the node, so a serialized entry is the same bytes whether or not
-  its node was read, and the same bytes as before this change: a build
+- **The schema is never serialized.** `Entry::__sleep()` names every member
+  but the schema, so a serialized entry is the same bytes whether or not
+  its schema was read, and the same bytes as before this change: a build
   cache row does not depend on what was asked before it was written. An
-  unserialized entry reads its node again on the first ask.
-  `SerializedMaps` walks an entry as before (a node is no class it walks
+  unserialized entry reads its schema again on the first ask.
+  `SerializedMaps` walks an entry as before (a schema is no class it walks
   into).
-- **Readers walk the node in step.** A reader that walks down from an
-  entry's definition walks the entry's node beside it: a property's node
+- **Readers walk the schema in step.** A reader that walks down from an
+  entry's definition walks the entry's schema beside it: a property's schema
   is the one under the parent's `properties`, an item's the one under
   `items`, a shape's the one MODEL's `shape` holds
-  (`DefinitionSchema::propertyNode()`, `itemNode()`, `shapeNode()`, static
-  and pure). `PropertySchema::property()` takes the node beside the
+  (`DefinitionSchema::propertyOf()`, `itemOf()`, `shapeOf()`, static
+  and pure). `PropertySchema::property()` takes the schema beside the
   definition, reads nothing itself, and hands each property and item its
-  node; a property or item with no node below its parent's is a fault and
+  schema; a property or item with no schema below its parent's is a fault and
   throws. The emitter hands
-  it each entry's node, and `Conditionals` the node of the entry that
+  it each entry's schema, and `Conditionals` the schema of the entry that
   holds the definition it states (the key in a refined data surface, the
   static one a site reads, a combination's). `Location::definitionAt()`
-  gives the node beside the definition: the node of the entry that holds
+  gives the schema beside the definition: the schema of the entry that holds
   the key, walked in step below a plain key, asked only of the entry at
   the place, never a level it passes through. A place with a definition
-  and no node throws: a missing node would answer "no secret, no check"
+  and no schema throws: a missing schema would answer "no secret, no check"
   for a key that may have both. The check provider and the form's widget
-  host read the node there; `BuiltNodes` is gone and their constructors
+  host read the schema there; `BuiltNodes` is gone and their constructors
   lost it. Both refine each level once for their own life
   (`KeepsRefines`): a refine makes new entries, which have read nothing,
-  so a reader that refined per lookup would read each node again per
+  so a reader that refined per lookup would read each schema again per
   lookup.
-- **What still reads a definition into a node.** `of()` and `head()`
+- **What still reads a definition into a schema.** `of()` and `head()`
   keep nothing: each call reads. Their callers are pinned by file and
   count (`DefinitionReadCallersTest`): the entry itself;
   `Conditionals::stated()` for a definition no entry holds (a declared
   rule's answer, written on a copy; a key described by its definition
-  alone); `PropertySchema::property()` for a shape whose node its key's
-  node does not hold; and `PropertySchema::listKeywords()`, a
+  alone); `PropertySchema::property()` for a shape whose schema its key's
+  schema does not hold; and `PropertySchema::listKeywords()`, a
   collection's own keywords without its items (`head()`), which no
-  entry's node is (since 2026-11-13 `PropertySchema::listNode()`, and
-  `Validating` reads a port's node: see [The validator's checks and the
-  document read nodes](#the-validators-checks-and-the-document-read-nodes)).
+  entry's schema is (since 2026-11-13 `PropertySchema::listSchema()`, and
+  `Validating` reads a port's schema: see [The validator's checks and the
+  document read schemas](#the-validators-checks-and-the-document-read-schemas)).
   Since `property()` reads nothing, a caller that stops
-  handing an entry's node on has to call `of()` itself, and the list
+  handing an entry's schema on has to call `of()` itself, and the list
   shows it.
 - **Staleness is asserted and tested.** The rule is unchanged: a
   definition an entry holds is never written after the entry is made
   (the builder seals the definitions; refiners write deep copies). With
   assertions on, every ask of `schema()` after the first reads the
-  definition again and compares it with the kept node, so a write is
+  definition again and compares it with the kept schema, so a write is
   seen on whatever path makes it, in every test and on a development
   site; with assertions off nothing is read twice. The comparison
   (`DefinitionSchema::same()`) holds every object to be the same object
   on both sides, except the messages the read itself makes, which are
   compared by what they say and never rendered.
-  `EntryNodeIsNeverStaleTest` reads the node of every entry of every
+  `EntrySchemaIsNeverStaleTest` reads the schema of every entry of every
   pinned example, built for the account and for no account, and of each
   refined by every kind of refiner for every value set, at every depth
   the walk reaches; runs the accept, the validation, every kind of
   document, the narrowed document, the form's envelope and the tool
   definitions; then reads each definition afresh and compares it with
-  the kept node. A consumer planted to write a definition it was handed
+  the kept schema. A consumer planted to write a definition it was handed
   fails it.
 - **What it costs.** Without the memo, a definition two entries share is
   read once per entry: on the development site 184 definitions are
@@ -3494,24 +3494,24 @@ that code is deleted. No served document, refusal or value changed.
   declared map (an alter's mount, refined one property at a time), so
   each refinement reads them again where the memo had kept them: two
   definitions more per emit of `registration.step3:configure` (its
-  compliance mount's `license` and the node its shape holds). A lookup
-  of one place below a refined map reads the map's whole node where the
-  memo gave the one node asked for, once per reader since a reader
+  compliance mount's `license` and the schema its shape holds). A lookup
+  of one place below a refined map reads the map's whole schema where the
+  memo gave the one schema asked for, once per reader since a reader
   keeps its refines: 57 definitions for one form build of
   `entity.content:media:create`. Over every operation of the development
   site, as two accounts, the reads are 2334 against 2316 for every
   document of every value set, 1267 against 1131 for every form build
   and 273 against 267 for every validation. Nothing reads a definition
-  again at each depth: that is what walking the node in step prevents.
+  again at each depth: that is what walking the schema in step prevents.
   Measured there with assertions off, no operation is slower by minimum
   by more than 2 percent; building every data surface and reading every
-  entry's node holds 10.8 MB where the memo held 8.1 MB. Both costs end
-  when a source gives a node and a request keeps one refine.
+  entry's schema holds 10.8 MB where the memo held 8.1 MB. Both costs end
+  when a source gives a schema and a request keeps one refine.
 
 Earlier entries name `BuiltNodes::place()` and `BuiltNodesTest`: the
-first is `Location::definitionAt()` now, the second `LocationNodeTest`.
+first is `Location::definitionAt()` now, the second `LocationSchemaTest`.
 
-Later: the node-first entry, for a source that produces a node
+Later: the schema-first entry, for a source that produces a schema
 (slice 32); the compiled form of an entry in the build cache (slice 33);
 `definition` stays a member until its readers are gone.
 
@@ -3520,7 +3520,7 @@ Later: the node-first entry, for a source that produces a node
 `Contract\DocumentHead`, `ResourceBuild\Location`,
 `ResourceBuild\KeepsRefines`, `Validation\DrupalCheckProvider`,
 `Form\FormWidgetHost`, `EntryTest`,
-`LocationNodeTest`, `EntryNodeIsNeverStaleTest`,
+`LocationSchemaTest`, `EntrySchemaIsNeverStaleTest`,
 `DefinitionReadCallersTest`, `DefinitionSchemaTest`,
 `DefinitionReadIsPureTest`)
 
@@ -3532,15 +3532,15 @@ private member now, read through `Entry::definition()`. Nothing else
 changed: every reader was changed one for one, and no served document,
 refusal or value moved.
 
-- **Why.** The next step lets an entry hold the node its source gave and
+- **Why.** The next step lets an entry hold the schema its source gave and
   derive a definition only when something asks. A property cannot be
   derived on demand at the module's PHP floor (8.3 has no property
   hooks); a method can.
 - **Who asks.** A definition is asked for only where an edge needs one:
   the option resolver, a computed value, a refiner, a widget's claim,
   `ConstraintRunner`, and the own facts of a key that holds a child
-  frame. A key's facts are read from its node (`Entry::schema()`).
-  Since 2026-11-15 a resolver and a computed value take the key's node
+  frame. A key's facts are read from its schema (`Entry::schema()`).
+  Since 2026-11-15 a resolver and a computed value take the key's schema
   ([Nothing asks for a definition it does not need](#nothing-asks-for-a-definition-it-does-not-need)).
 - **One reader was not one for one.** `DefinitionMap::get()` read the
   property of an entry that may be missing and let `??` answer NULL; a
@@ -3558,53 +3558,53 @@ refusal or value moved.
 ### An entry holds the form its source gave
 
 Decided 2026-11-14. An entry held the definition its source gave and
-read its node from it. It can now hold either form as its source of
-truth: the definition, or the built node. The other form is made on the
+read its schema from it. It can now hold either form as its source of
+truth: the definition, or the built schema. The other form is made on the
 first ask and kept. Every source still gives a definition. A switch for
-tests and probes makes every built entry node-first, and with it on the
+tests and probes makes every built entry schema-first, and with it on the
 module answers as it does with it off: the proof that sources can start
-producing nodes. No served byte, refusal or value changed.
+producing schemas. No served byte, refusal or value changed.
 
 - **One source of truth.** `Entry::schema()` and `Entry::definition()`
   both always answer. A definition-first entry (the constructor,
-  `withDefinition()`) reads its node on the first `schema()` ask
-  (`DefinitionSchema::of()`) and keeps it, as before. A node-first entry
+  `withDefinition()`) reads its schema on the first `schema()` ask
+  (`DefinitionSchema::of()`) and keeps it, as before. A schema-first entry
   (`Entry::ofSchema()`, `withSchema()`) derives its definition on the
-  first `definition()` ask (`NodeDefinition::of()`) and keeps it: a
+  first `definition()` ask (`DefinitionFromSchema::of()`) and keeps it: a
   second ask returns the same object. These are the first callers of
-  `NodeDefinition::of()` in `src/`.
+  `DefinitionFromSchema::of()` in `src/`.
 - **Making one.** The constructor keeps its shape: every `new Entry(...)`
   and named argument works as before. `Entry::ofSchema(string $name,
-  Schema $node, ...)` takes the node and the same other members.
-  `withSchema(Schema $node)` is the twin of `withDefinition()`. Handed
+  Schema $schema, ...)` takes the schema and the same other members.
+  `withSchema(Schema $schema)` is the twin of `withDefinition()`. Handed
   the form the entry holds, either keeps the other form and the source;
   handed another, the new entry starts with that form alone.
   `readingFrom()` keeps the source and the other form.
-- **What derives.** `NodeDefinition::of()` derives the three exact
+- **What derives.** `DefinitionFromSchema::of()` derives the three exact
   classes and refuses another class, a data type core's typed data
-  manager does not define, and a node whose derived constraints differ
+  manager does not define, and a schema whose derived constraints differ
   from its `constraints` member. `ofSchema()` checks nothing: the refusal
   is thrown at the first `definition()` call, with the key's name added.
 - **Serialized.** Only the form given is serialized (`__sleep()`). A
   definition-first entry serializes the same members in the same order
-  as before, so its bytes are unchanged; a node-first entry serializes
-  its node and the mark, never the derived definition. A row does not
+  as before, so its bytes are unchanged; a schema-first entry serializes
+  its schema and the mark, never the derived definition. A row does not
   depend on what was asked before it was written.
 - **Staleness, both ways.** With assertions on, each later `schema()`
   ask of a definition-first entry reads the definition again and
-  compares it with the kept node, as before. Each later `definition()`
-  ask of a node-first entry reads the kept derived definition and
-  compares it with the node (`DefinitionSchema::same()`), so an edge that
+  compares it with the kept schema, as before. Each later `definition()`
+  ask of a schema-first entry reads the kept derived definition and
+  compares it with the schema (`DefinitionSchema::same()`), so an edge that
   writes the definition it was handed is seen. Each message says which
   form is the source.
-- **The mode that proves it.** `DefinitionMap::$nodeFirst`, a static
+- **The mode that proves it.** `DefinitionMap::$schemaFirst`, a static
   member that is `@internal` and off by default, is the switch. With it
   on, `DefinitionMap::fromArrays()`, the one place a built data
   surface's entries are made, reads each definition it is handed into
-  its node and makes the entry node-first from that node, the definition
-  dropped. A definition whose node holds a node of a class other than
+  its schema and makes the entry schema-first from that schema, the definition
+  dropped. A definition whose schema holds a schema of a class other than
   the three, at any depth, stays definition-first;
-  `DefinitionMap::$madeNodeFirst` and `$keptDefinitionFirst` count both.
+  `DefinitionMap::$madeSchemaFirst` and `$keptDefinitionFirst` count both.
   The other entries made in `src/` are not covered: a refinement's
   copies (`withDefinition()`, definition-first by rule) and two entries
   that are never sealed (`ContractEmitter`'s for a declared rule's
@@ -3618,14 +3618,14 @@ producing nodes. No served byte, refusal or value changed.
   answer (accept, validate, the document with and without the widget
   hints, the full schema, the envelope, the form build, every tool's
   serialized inputs), so the lanes pin the mode in their default run.
-  Since 2026-11-15 the seal makes every entry node-first and the mode is
-  gone: see [A sealed entry holds its node](#a-sealed-entry-holds-its-node).
+  Since 2026-11-15 the seal makes every entry schema-first and the mode is
+  gone: see [A sealed entry holds its schema](#a-sealed-entry-holds-its-schema).
 - **What the mode showed.** With it on, unedited: the four
   `ValueBaseline*` classes, `PipelineHandCasesTest`, `HandCorpusTest`,
   `HandCorpusNarrowTest`, `ContractBaselineTest` and the other fixture
   families (block placement, component block, config schema drift,
   React fixtures, reference keys, retitle, venue), `NestedSecretsTest`,
-  `BuildCacheTest` and `EntryNodeIsNeverStaleTest` pass. On the
+  `BuildCacheTest` and `EntrySchemaIsNeverStaleTest` pass. On the
   development site the value probe (42,846 cases as two accounts), every
   document and narrowed document, the validation corpus and the 8,344
   door digests show no difference from the default mode, the digests
@@ -3633,7 +3633,7 @@ producing nodes. No served byte, refusal or value changed.
   the mode fails 12 tests in 7 classes, and none is a reader that relies
   on a shared definition object or a fault in the inverse:
   - Tests that count or record the definition object itself, not a
-    fact. `NodeFactsParityTest` (comparisons 1067 against 1272) and
+    fact. `SchemaFactsParityTest` (comparisons 1067 against 1272) and
     `DefinitionRoundTripTest` (reachable 1097 against 1302) count
     definitions by object, and an entry's derived definition is a new
     object where two entries shared one; neither reports a
@@ -3644,11 +3644,11 @@ producing nodes. No served byte, refusal or value changed.
   - Tests that write a definition an entry gives.
     `PortableServedContractTest::testKeptFragmentIsServedAsGiven` adds a
     constraint to `->definition()` of a built entry, which the
-    node-first assertion refuses; `SurfaceTest::testNestedMapDefaults`
+    schema-first assertion refuses; `SurfaceTest::testNestedMapDefaults`
     sets a default on a definition after the data surface was made and
     expects the surface to see it.
-  - A default-mode rule. `LocationNodeTest::testNoNodeIsServed` asserts a
-    build cache row holds no MODEL; a node-first row holds the nodes.
+  - A default-mode rule. `LocationSchemaTest::testNoSchemaIsServed` asserts a
+    build cache row holds no MODEL; a schema-first row holds the schemas.
   - Definitions of another class: the hand corpus's `NotAMapDefinition`
     inside a map. Kept definition-first by the class rule at every depth;
     with it the hand corpus passes.
@@ -3656,21 +3656,21 @@ producing nodes. No served byte, refusal or value changed.
   definitions by identity): every comparison the scout listed compares
   the definitions of entries, and an entry keeps the definition it
   derived, so two asks of one entry give one object.
-- **The build cache.** A node-first row holds the nodes: their texts,
+- **The build cache.** A schema-first row holds the schemas: their texts,
   `Computed`, `Resolve` and `Arrangement` objects serialize, and the
   cache's two refusals (a closure, a container name) do not fire on any
   row of the development site. Over its 55 declared builds the rows
   measure 1,578,148 bytes against 1,278,405 (1.23 times; from 0.84 to
   2.09 per build). Unserialized, every entry answers `schema()` with an
-  equal node and `definition()` with an equal definition. `SerializedMaps`
-  finds no map on a node-first entry, whose definition is not
-  serialized; a node keeps a map's properties without it. What the cache
+  equal schema and `definition()` with an equal definition. `SerializedMaps`
+  finds no map on a schema-first entry, whose definition is not
+  serialized; a schema keeps a map's properties without it. What the cache
   would need is slice 33's to decide.
 - **The price list.** Measured on the development site with assertions
   off, the mode against the default mode on the same tree, as the sum
   over 171 operations of each one's minimum: building costs 26 percent
   more (67.2 ms against 84.7 ms), since every definition is read into
-  its node at build (5,646 reads, 7,722 nodes) and
+  its schema at build (5,646 reads, 7,722 schemas) and
   `Resources::assertWidgetsDraw()` then asks every entry for its
   definition, which derives it (5,448 of the 5,520 definitions derived in
   fresh builds). What follows is cheaper or the same: the first accept 23
@@ -3686,41 +3686,41 @@ producing nodes. No served byte, refusal or value changed.
   readers that still ask for a definition, and the parts that follow
   move them.
 
-(`Entry`, `DefinitionMap`, `Contract\NodeDefinition`,
+(`Entry`, `DefinitionMap`, `Contract\DefinitionFromSchema`,
 `SurfaceKernelTestBase`, `EntryTest`, `NodeFirstModeTest`,
 `DefinitionReadCallersTest`)
 
-### The value pipeline reads nodes
+### The value pipeline reads schemas
 
 Decided 2026-11-13. The pipeline (what takes a submitted value in,
 decides what is kept, what the validator is handed and what goes out)
 read every fact about a key from its Typed Data definition. Each entry
-now gives its node with no service (`Entry::schema()`), and the node
+now gives its schema with no service (`Entry::schema()`), and the schema
 holds every fact of its definition, so the pipeline reads the facts from
-the node. No value, refusal or served byte changed.
+the schema. No value, refusal or served byte changed.
 
-- **Who reads nodes.** `Pipeline\Coercion`, `Pipeline\Accepting`,
+- **Who reads schemas.** `Pipeline\Coercion`, `Pipeline\Accepting`,
   `Pipeline\SurfacePipeline` (`document()`, `documentValue()`,
   `kept()`, `keptInMap()`, `heldAlike()`), `Pipeline\Outbound`
   (`declared()`, `secretsOf()`) and `Variants::keptSecrets()` and
   `ownSecrets()`. `Violation::typeMismatch()` and
   `TypeMismatchException` took a type's name, never a definition, and
   are unchanged.
-- **How a walk gets its node.** Where the pipeline has an entry it asks
+- **How a walk gets its schema.** Where the pipeline has an entry it asks
   `$entry->schema()`. Where it walks down a map's properties or a
-  list's item it walks the node (`NodeFacts::properties()`,
-  `DefinitionSchema::itemNode()`); a list's node with no node for its
-  item throws, since a missing node would answer "no secret". A walk
+  list's item it walks the schema (`SchemaFacts::properties()`,
+  `DefinitionSchema::itemOf()`); a list's schema with no schema for its
+  item throws, since a missing schema would answer "no secret". A walk
   into a child frame, a collection item or a variant takes that child's
   entries, as before. Nothing in the pipeline calls
   `DefinitionSchema::of()`; `DefinitionReadCallersTest` is unchanged.
-- **The definition beside the node, and why.** Two contracts still take
+- **The definition beside the schema, and why.** Two contracts still take
   a definition until slice 32: the options service
   (`SurfaceOptions::resolve()`), which gives a key's choices for a near
   miss to snap onto, and a computed key's `Computed::of()` and
   `Computed::value()`. So `Accepting::acceptValue()`, `acceptList()`,
   `acceptSecret()` and `coerce()`, and `SurfacePipeline::keptInMap()`
-  and `heldAlike()`, take the node and the definition it was read from,
+  and `heldAlike()`, take the schema and the definition it was read from,
   walked in step (`Accepting::propertyDefinition()`, which throws when
   the two are out of step); the definition is read for the options
   service alone, and each docblock says so. `documentValue()` and
@@ -3728,57 +3728,57 @@ the node. No value, refusal or served byte changed.
 - **One table, handed facts.** `Coercion` takes no definition:
   `scalar($type, $dateOnly, $value, $choices)` and
   `served($value, $dateOnly)`. The pipeline hands it the data type and
-  the DateOnly flag from the node; `KeyPaths`, which holds only a
+  the DateOnly flag from the schema; `KeyPaths`, which holds only a
   definition (slice 31), reads the two from its definition and reads no
-  node. `Coercion::isDateOnly()` is gone. The two datetime input formats
+  schema. `Coercion::isDateOnly()` is gone. The two datetime input formats
   that could never parse first (`Y-m-d\TH:i:sO` and `Y-m-d H:i:sO`; PHP
   reads `O` and `P` alike) are removed; the value baseline stayed at
   zero differences.
-- **One class reads the facts.** `Contract\NodeFacts` (static, pure,
+- **One class reads the facts.** `Contract\SchemaFacts` (static, pure,
   internal) has one method per fact the pipeline needs, each naming the
   call it stands for. It reaches the members through
   `DefinitionSchema::model()`, so pipeline code names no member. The
-  node readers already on `DefinitionSchema` (`model()`, `declares()`,
-  `options()`, `isList()`, `nodeIsMap()`, `isLeaf()`, `heldAsAny()`,
-  `classOf()`, `propertyNode()`, `itemNode()`, `shapeNode()`) and
+  schema readers already on `DefinitionSchema` (`model()`, `declares()`,
+  `options()`, `isList()`, `holdsProperties()`, `isLeaf()`, `heldAsAny()`,
+  `classOf()`, `propertyOf()`, `itemOf()`, `shapeOf()`) and
   `Secrets::marked()` stay where they are; none moved.
-  `DefinitionReadIsPureTest` scans every public method of `NodeFacts`
+  `DefinitionReadIsPureTest` scans every public method of `SchemaFacts`
   (20 methods reached, nothing refused).
 
 | Reader | Stands for |
 |---|---|
-| `NodeFacts::dataType()` | `getDataType()` |
-| `NodeFacts::hasConstraints()` | `getConstraints() !== []` |
-| `NodeFacts::isRequired()` | `isRequired()`, the key's own stored flag |
-| `NodeFacts::isAlwaysHeld()` | `DefinitionMetadata::isAlwaysHeld()` |
-| `NodeFacts::isGrouping()` | `DefinitionMetadata::isGrouping()` |
-| `NodeFacts::holdsValue()` | `DefinitionMetadata::holdsValue()` |
-| `NodeFacts::isNullable()` | `!holdsValue() && !isSecret()` (`Accepting::isNullable()`, gone) |
-| `NodeFacts::settings()` | `getSettings()` |
-| `NodeFacts::label()` | `getLabel()` |
-| `NodeFacts::ownLabel()` | `DefinitionMetadata::ownLabel()` |
-| `NodeFacts::hasDefault()` | `DefinitionMetadata::hasDefaultValue()` |
-| `NodeFacts::default()` | `DefinitionMetadata::getDefaultValue()` |
-| `NodeFacts::defaultOf()` | `DefinitionMetadata::defaultOf()` |
-| `NodeFacts::properties()` | `getPropertyDefinitions()` of a map |
+| `SchemaFacts::dataType()` | `getDataType()` |
+| `SchemaFacts::hasConstraints()` | `getConstraints() !== []` |
+| `SchemaFacts::isRequired()` | `isRequired()`, the key's own stored flag |
+| `SchemaFacts::isAlwaysHeld()` | `DefinitionMetadata::isAlwaysHeld()` |
+| `SchemaFacts::isGrouping()` | `DefinitionMetadata::isGrouping()` |
+| `SchemaFacts::holdsValue()` | `DefinitionMetadata::holdsValue()` |
+| `SchemaFacts::isNullable()` | `!holdsValue() && !isSecret()` (`Accepting::isNullable()`, gone) |
+| `SchemaFacts::settings()` | `getSettings()` |
+| `SchemaFacts::label()` | `getLabel()` |
+| `SchemaFacts::ownLabel()` | `DefinitionMetadata::ownLabel()` |
+| `SchemaFacts::hasDefault()` | `DefinitionMetadata::hasDefaultValue()` |
+| `SchemaFacts::default()` | `DefinitionMetadata::getDefaultValue()` |
+| `SchemaFacts::defaultOf()` | `DefinitionMetadata::defaultOf()` |
+| `SchemaFacts::properties()` | `getPropertyDefinitions()` of a map |
 | `Secrets::marked()` | `DefinitionMetadata::isSecret()` |
-| `DefinitionSchema::declares($node, 'DateOnly')` | `array_key_exists('DateOnly', getConstraints())` (`Coercion::isDateOnly()`, gone) |
+| `DefinitionSchema::declares($schema, 'DateOnly')` | `array_key_exists('DateOnly', getConstraints())` (`Coercion::isDateOnly()`, gone) |
 | `DefinitionSchema::isList()` | `instanceof ListDataDefinitionInterface` |
-| `DefinitionSchema::nodeIsMap()` | `DefinitionSchema::isMap()` |
+| `DefinitionSchema::holdsProperties()` | `DefinitionSchema::isMap()` |
 | `DefinitionSchema::isLeaf()` | neither complex nor a list |
-| `DefinitionSchema::itemNode()`, `propertyNode()` | `getItemDefinition()`, `getPropertyDefinition()` |
+| `DefinitionSchema::itemOf()`, `propertyOf()` | `getItemDefinition()`, `getPropertyDefinition()` |
 
 - **Behavior kept, each pinned by the value baseline.** A datetime is
   served with its offset only where an entry holds it (at the top, in a
   child frame, in a collection item), never inside a plain map or a
   plain list of maps (`Outbound::declared()`); the validator's
   document (`documentValue()`) adds it at every depth, as before.
-  Choices are the options service's option keys, never a node's
+  Choices are the options service's option keys, never a schema's
   `oneOf` or `enum`. `required` is the key's own flag, not its parent's
   `required` keyword, which leaves out secrets and computed keys. A
   type refusal names the data type id and its params the JSON types. A
   bare `any`, a `decimal` and a `binary` are accepted as before. A
-  label of `''` reads as `''` (`NodeFacts::label()`), so a sentence
+  label of `''` reads as `''` (`SchemaFacts::label()`), so a sentence
   that falls back to the key's name for no label keeps saying `''`
   where it did. `Secrets::absent()` still answers "no secret" for a
   `$ref` it cannot resolve where `at()` answers secret: changing it
@@ -3789,19 +3789,19 @@ the node. No value, refusal or served byte changed.
   (slice 32, the public contracts); the refinement's marker in
   `withoutWhatDoesNotApply()` and `Outbound::project()`
   (`DoesNotApply::marks()`, `inside()`, `leftOut()`): a refined entry
-  is new and has read nothing, so reading its node for one flag would
-  read a node per refined key per refine (slice 33, when a request
+  is new and has read nothing, so reading its schema for one flag would
+  read a schema per refined key per refine (slice 33, when a request
   keeps one refine); the label of a secret inside a collection item in
   `Accepting::unmatchedSecret()`, found through
   `Validating::definitionAt()` (slice 31). `Validating`'s own checks,
   `Conforming`, `KeyPaths`, the storage layouts, the tool door's inputs,
   the form and the config schema writer read definitions until slices
-  31 and 34; `Validating` hands `acceptValue()` the entry's node beside
+  31 and 34; `Validating` hands `acceptValue()` the entry's schema beside
   its definition. (2026-11-13: `Validating`'s own checks and the label
-  in `unmatchedSecret()`, through `Validating::nodeAt()`, read nodes,
+  in `unmatchedSecret()`, through `Validating::schemaAt()`, read schemas,
   and so do the document's classes: see [The validator's checks and the
-  document read nodes](#the-validators-checks-and-the-document-read-nodes).)
-- **Proof.** `NodeFactsParityTest` holds each reader to its call, by
+  document read schemas](#the-validators-checks-and-the-document-read-schemas).)
+- **Proof.** `SchemaFactsParityTest` holds each reader to its call, by
   strict equality, for every entry of every example data surface,
   declared and refined by each value set, and every definition below it
   at every depth (1,067 definitions), and for hand cases of what no
@@ -3811,15 +3811,15 @@ the node. No value, refusal or served byte changed.
   `KeyPathsCoercionTest` pins the table where a site default or a fixed
   value is read, which the value baseline does not reach.
   `SurfacePipelineCastingTest` hands each casting row to the table too,
-  with the facts read from the row's node.
+  with the facts read from the row's schema.
 - **The footprint.** `Pipeline/Coercion.php` and `Pipeline/Outbound.php`
   name no Typed Data and left the list: `OUTSIDE_THE_EDGES` is 151.
-  `NodeFacts` names none.
+  `SchemaFacts` names none.
 - **What it costs.** A request that makes a document reads no more
-  than before: an entry keeps its node, so accept and the document
+  than before: an entry keeps its schema, so accept and the document
   share it, and accept plus validate is 0.5 percent slower by minimum.
-  A request that makes no document now reads nodes the base never
-  read, one per key, because the node is still read from the
+  A request that makes no document now reads schemas the base never
+  read, one per key, because the schema is still read from the
   definition. Measured over 171 operations of the development site on
   fresh builds with assertions off, by the sum of each operation's
   minimum: a first accept 25.3 ms against 17.0; a read (`outbound()`
@@ -3828,18 +3828,18 @@ the node. No value, refusal or served byte changed.
   (accept, validate, kept, what goes out) 428.6 ms against 420.2, 2
   percent. The largest single rise is 0.7 ms, for a read of
   `entity.content:media:create`. A second accept on the same build is
-  4 percent slower. In nodes read over 262 builds: a write request
+  4 percent slower. In schemas read over 262 builds: a write request
   2,220 against 1,348, a first read 1,593 against none. Two things in
   it are waste, known and left: a key that holds a child frame is read
   whole for one flag (`isGrouping`) or for its secrets, and the child's
-  keys are then read again by the child's own entries (432 nodes read
+  keys are then read again by the child's own entries (432 schemas read
   twice over 51 operations). The tool definitions' rebuild reads 468
-  more nodes (`InputDefinitions::secrets()` asks `Outbound::secrets()`
-  over declared builds, whose nodes nothing else reads there): 4 ms on
+  more schemas (`InputDefinitions::secrets()` asks `Outbound::secrets()`
+  over declared builds, whose schemas nothing else reads there): 4 ms on
   a 71 ms rebuild. With assertions on, every later `schema()` ask reads
   the definition again, so a write request is 13 percent slower there.
-  All of it is the cost of reading a node from a definition, and it
-  ends when a source gives the node (slice 32) and a request reads a
+  All of it is the cost of reading a schema from a definition, and it
+  ends when a source gives the schema (slice 32) and a request reads a
   compiled surface (slice 33): no cache or memo is added to hide it
   before then.
 - **What pins it.** The value baseline has no datetime in a list, no
@@ -3851,56 +3851,56 @@ the node. No value, refusal or served byte changed.
   planted fault no other test saw. A label is handed back as the
   definition holds it, a number included: the locked note names it.
 
-(`PipelineHandCasesTest`, `Contract\NodeFacts`, `Pipeline\Coercion`,
+(`PipelineHandCasesTest`, `Contract\SchemaFacts`, `Pipeline\Coercion`,
 `Pipeline\Accepting`,
 `Pipeline\SurfacePipeline`, `Pipeline\Outbound`, `Variants`,
-`ResourceBuild\KeyPaths`, `NodeFactsParityTest`, `NodeFactsParityTrait`,
+`ResourceBuild\KeyPaths`, `SchemaFactsParityTest`, `SchemaFactsParityTrait`,
 `KeyPathsCoercionTest`, `SurfacePipelineCastingTest`,
 `DefinitionReadIsPureTest`, `TypedDataFootprintTest`)
 
-### The validator's checks and the document read nodes
+### The validator's checks and the document read schemas
 
 Decided 2026-11-13. The validator's own checks (a key computed, a key
 that does not apply, required, always held, a required property of a
 plain map, a stale value, and the labels its refusals name) and what the
-document's classes still took from a definition beside the node they
-held read a key's facts from its node now. No served byte, refusal or
+document's classes still took from a definition beside the schema they
+held read a key's facts from its schema now. No served byte, refusal or
 value changed.
 
 - **The validator.** `Pipeline\Validating` works on the refined data
-  surface, so it reads the nodes of the refined entries: each plain key
-  is asked for its node once per `validateLevel()` (`Entry::schema()`;
-  with assertions on, each ask reads the definition again), and the node
+  surface, so it reads the schemas of the refined entries: each plain key
+  is asked for its schema once per `validateLevel()` (`Entry::schema()`;
+  with assertions on, each ask reads the definition again), and the schema
   is handed to what the level calls (`notComputed()`,
   `cannotBeCleared()`, `isStale()`, `staleViolation()`,
-  `missingInMap()`). The mark of a key that does not apply is the node's
-  member, since the node is read there anyway; `ruledOut()` lists the
+  `missingInMap()`). The mark of a key that does not apply is the schema's
+  member, since the schema is read there anyway; `ruledOut()` lists the
   marks below a key as `DoesNotApply::inside()` lists them.
-  `namingSources()` reads the node of the plain key a violation is filed
+  `namingSources()` reads the schema of the plain key a violation is filed
   under.
 - **One rule for a key that holds a child frame.** An attached child,
   variants, a collection and a mount (`Validating::isShell()`, since
   2026-11-14 `Entry::isShell()`: see [The remaining readers read
-  nodes](#the-remaining-readers-read-nodes)) are
-  shells: the key's definition holds the child's keys, so its node is
+  schemas](#the-remaining-readers-read-schemas)) are
+  shells: the key's definition holds the child's keys, so its schema is
   the child's whole tree, which the child's own entries then read
   again. A shell's own facts are read from its definition until a source
-  gives the node (slice 32): `Computed::of()`, the mark, `isRequired()`,
+  gives the schema (slice 32): `Computed::of()`, the mark, `isRequired()`,
   always held, its label and whether null clears it
-  (`validateChild()` and `validateCollection()` take no node). A plain
-  key's facts are read from its node. The document's classes keep the
-  same rule (below). What still reads a shell's node: a mount's, for the
+  (`validateChild()` and `validateCollection()` take no schema). A plain
+  key's facts are read from its schema. The document's classes keep the
+  same rule (below). What still reads a shell's schema: a mount's, for the
   walk of what is required and ruled out inside it (`missingInMap()`,
   `ruledOut()`), since a mounted key is a property of the mount and the
   walk needs the tree itself; an attachment's or variants' marks below
   the key are read from the definition (`DoesNotApply::inside()`), as
-  before the node was. A computed shell, and an always-held shell sent
-  null, read the node in that refusal alone (`notComputed()`,
+  before the schema was. A computed shell, and an always-held shell sent
+  null, read the schema in that refusal alone (`notComputed()`,
   `cannotBeCleared()`), since the accept and the refusal's default take
-  one. (2026-11-14: the rule is gone. Such a key composes its node of
-  its own facts and its child's entries' nodes, and `Validating` reads
-  every key's facts from its node: see [A key that holds a child frame
-  has a node of its own](#a-key-that-holds-a-child-frame-has-a-node-of-its-own).
+  one. (2026-11-14: the rule is gone. Such a key composes its schema of
+  its own facts and its child's entries' schemas, and `Validating` reads
+  every key's facts from its schema: see [A key that holds a child frame
+  has a schema of its own](#a-key-that-holds-a-child-frame-has-a-schema-of-its-own).
   2026-11-15: no declaration makes a computed shell, since `compute()`
   declares a value through `add()`, which refuses a map; a hand-built
   `SurfaceBuilder` does not refuse one, and no module builds one. An
@@ -3916,19 +3916,19 @@ value changed.
   changes. A label that is a number in the definition itself still
   makes the validator's document invalid ("Invalid schema ... /title");
   that is recorded, not fixed.
-- **A key path gives a node.** `Validating::definitionAt()` is
-  `nodeAt()`, the node at a key path, and `placeAt()`, the node and the
+- **A key path gives a schema.** `Validating::definitionAt()` is
+  `schemaAt()`, the schema at a key path, and `placeAt()`, the schema and the
   definition beside it, stepped as `Location` steps them (the entry's
-  node, then `itemNode()` and `propertyNode()` in step with the
-  definition); a place with a definition and no node throws. The
+  schema, then `itemOf()` and `propertyOf()` in step with the
+  definition); a place with a definition and no schema throws. The
   definition is read there for the options service alone (a watched
   key's labeled value, a refused key's choices). A port has no entry: the
   container hands the child a bare definition
-  (`SurfaceInterface::getPortDefinition()`), so its node is read there
+  (`SurfaceInterface::getPortDefinition()`), so its schema is read there
   with `DefinitionSchema::of()`, the one caller this adds to
   `DefinitionReadCallersTest`. (2026-11-16: a port's key is held as its
-  schema, which `nodeAt()` reads: see [The document is written from schemas](#the-document-is-written-from-schemas).) `Accepting::unmatchedSecret()` names the
-  secret through `nodeAt()`.
+  schema, which `schemaAt()` reads: see [The document is written from schemas](#the-document-is-written-from-schemas).) `Accepting::unmatchedSecret()` names the
+  secret through `schemaAt()`.
 - **The copy is gone.** `withoutRuledOut()` cloned a map's definition
   without the properties a refinement ruled out. Its readers were
   `missingInMap()`, the key's own flags and label (which the copy did not
@@ -3939,43 +3939,43 @@ value changed.
   definition, since a resolver reads a key's constraints and settings,
   which the copy shared, and no resolver reads a property.
 - **Three label rules, kept apart.** A refusal that names a key by its
-  label or its name keeps a label of `''` (`NodeFacts::label() ?? $name`);
+  label or its name keeps a label of `''` (`SchemaFacts::label() ?? $name`);
   a condition and a holder's label read `''` as none
   (`Validating::labelOf()`); a label that is no text is handed on as the
-  definition holds it. `NodeFacts::label()` hands back what the
+  definition holds it. `SchemaFacts::label()` hands back what the
   definition holds; each site applies its own rule.
 - **The narrowed twin.** `sayingWhatIsAllowed()` compares a declared
   key's constraints with its narrowed twin's by the JSON of the two
-  lists, now read from the two nodes (`NodeFacts::constraints()`); the
-  JSON of the node's list is byte-equal to that of `getConstraints()`
-  for every definition of every example (`NodeFactsParityTest`,
+  lists, now read from the two schemas (`SchemaFacts::constraints()`); the
+  JSON of the schema's list is byte-equal to that of `getConstraints()`
+  for every definition of every example (`SchemaFactsParityTest`,
   `constraintsJson`).
 - **The document's classes.** `PropertySchema::property()` reads every
-  fact of a key from its node and walks the definition beside it, in
+  fact of a key from its schema and walks the definition beside it, in
   step, only for the options service and the widget claims (slice 32
-  and 31b): its title and description (`describe()` takes a node),
-  `required()`, `nullable()`, `cast()` and `signature()` take a node,
+  and 31b): its title and description (`describe()` takes a schema),
+  `required()`, `nullable()`, `cast()` and `signature()` take a schema,
   and so do the settings a widget publishes, the `widget` and reference
   settings, `isGrouping`, `placedAfter`, `compute`, `arrangement`
   (`hints()` takes one), and the shape's id. `DefinitionSchema::typeOf()`
-  and `keywordsOf()` stand for `type()` and `keywords()`: the node's own
+  and `keywordsOf()` stand for `type()` and `keywords()`: the schema's own
   `type` keyword says the type with null where the key may be cleared,
   and its keywords were stated for that type, so a cast and a signature,
   which need the type's row, read the row and the constraints from the
-  node's facts. `ContractEmitter` reads a plain key's node, the one
+  schema's facts. `ContractEmitter` reads a plain key's schema, the one
   `property()` is handed, for `required`, the secret, `holdsValue` and
-  the lookup link's setting; a collection through its own node without
-  its items (`PropertySchema::listNode()`, the one `head()` call), for its
+  the lookup link's setting; a collection through its own schema without
+  its items (`PropertySchema::listSchema()`, the one `head()` call), for its
   keywords, default, arrangement and signature; a mount's title from
-  the node of the key that holds it. `Conditionals` reads `required`
-  and a watched sibling's type from the node; `DocumentHead` an output's
+  the schema of the key that holds it. `Conditionals` reads `required`
+  and a watched sibling's type from the schema; `DocumentHead` an output's
   `required`. (2026-11-16: every key, a key that holds a child too, is
   read from its schema, and no definition is walked beside it; a
   collection's own keywords are its schema's without its items: see
   [The document is written from schemas](#the-document-is-written-from-schemas).)
 - **Compared only where the definition moved.** Whether a key is
   narrowed now is its signature against the advertised key's. Read from
-  nodes, that would read the advertised entry's node besides the
+  schemas, that would read the advertised entry's schema besides the
   refined one for every key of a refined frame (a refined entry starts
   unread). One definition has one signature, so `ContractEmitter` hands
   `property()` the advertised key only where its definition is another
@@ -3985,33 +3985,33 @@ value changed.
   one until slice 32: the options service and its resolvers,
   `Computed::value()`, the refiners, the widget claims and `WidgetChoice`
   (31b), `References::target()`, `ConstraintRunner`. (2026-11-14: the
-  lookup link reads `References::targetIn()` from the node; the widget
+  lookup link reads `References::targetIn()` from the schema; the widget
   claims and `WidgetChoice` stay for slice 32, since their interface is
   public: see [The remaining readers read
-  nodes](#the-remaining-readers-read-nodes).) A key that holds a
+  schemas](#the-remaining-readers-read-schemas).) A key that holds a
   child, variants or a list of children: its definition holds the
-  child's keys (`Attachment::mapOf()`), so its node would be the
+  child's keys (`Attachment::mapOf()`), so its schema would be the
   child's whole tree, read for a title or a flag; the emitter's deferred,
   anonymous, attached and variants sites, `Conditionals::requires()` for
   such a key, and the variants' shell read their definitions.
-  (2026-11-14: `Conditionals::requires()` reads the key's composed node;
+  (2026-11-14: `Conditionals::requires()` reads the key's composed schema;
   the emitter's sites keep their definitions: see [A key that holds a
-  child frame has a node of its own](#a-key-that-holds-a-child-frame-has-a-node-of-its-own).) The marks
-  a walk meets before it holds a node (`ContractEmitter::frame()` before
+  child frame has a schema of its own](#a-key-that-holds-a-child-frame-has-a-schema-of-its-own).) The marks
+  a walk meets before it holds a schema (`ContractEmitter::frame()` before
   a key is described, `Conditionals::answer()`, `describeKey()`), as
   `Accepting::withoutWhatDoesNotApply()` and `Outbound::project()` read
-  theirs: a node is not read for one flag. A rule applied to a copy
+  theirs: a schema is not read for one flag. A rule applied to a copy
   (`Conditionals::appliedAt()`), which writes a definition. The deferred
   list's entry labels, one per entry of a list too long to describe;
   `linksBelow()`, which asks whether a lookup link is below before any
-  node of the frame is held.
+  schema of the frame is held.
 - **A definition of another class.** The readers were shown complete
-  for the three classes a node is read from in full: `DataDefinition`,
+  for the three classes a schema is read from in full: `DataDefinition`,
   `ListDataDefinition` and `MapDataDefinition` (slice 28). A definition
   of another class is read by what its array stores, not by its getters.
   A subclass whose `isRequired()` answers TRUE with nothing stored was
   refused as required before this slice and is not now, and is missing
-  from the document's `required`, since `NodeFacts::isRequired()` reads
+  from the document's `required`, since `SchemaFacts::isRequired()` reads
   the stored member; overrides of `getLabel()`, `getDescription()` and
   `getSettings()` showed no difference, and `BaseFieldDefinition` and
   `FieldItemDataDefinition` compute their settings. Where that matters
@@ -4021,26 +4021,26 @@ value changed.
 
 | Reader | Stands for |
 |---|---|
-| `NodeFacts::description()` | `getDescription()` |
-| `NodeFacts::constraints()` | `getConstraints()` |
-| `NodeFacts::declaredConstraints()` | `toArray()['constraints'] ?? []` of a DataDefinition |
-| `NodeFacts::doesNotApply()` | `DoesNotApply::marks()` |
-| `NodeFacts::compute()` | `Computed::of()`, `DefinitionMetadata::computedOf()` |
-| `NodeFacts::resolve()` | `DefinitionMetadata::resolveOf()` |
-| `NodeFacts::each()` | `DefinitionMetadata::eachOf()`, a definition as its node |
-| `NodeFacts::variantsBy()`, `variantsFrom()` | `DefinitionMetadata::variantsBy()`, `variantsFrom()` |
-| `NodeFacts::readVariants()` | `DefinitionMetadata::variantsListedBySite()` |
-| `NodeFacts::configType()`, `configTypeNode()` | `DefinitionMetadata::configTypeOf()`, `configTypeDefinition()` as its node |
-| `NodeFacts::shape()` | `DefinitionMetadata::shapeOf()` (its node: `DefinitionSchema::shapeNode()`) |
-| `NodeFacts::isFixed()`, `isOneVariant()`, `isHeldWhole()` | the metadata getters of the same names |
-| `NodeFacts::placedAfter()` | `DefinitionMetadata::getPlacedAfter()` |
-| `NodeFacts::arrangement()` | `DefinitionMetadata::arrangementOf()` |
-| `NodeFacts::isReadOnly()`, `isComputed()` | core's `isReadOnly()`, `isComputed()` |
-| `NodeFacts::setting()` | `getSetting()` |
+| `SchemaFacts::description()` | `getDescription()` |
+| `SchemaFacts::constraints()` | `getConstraints()` |
+| `SchemaFacts::declaredConstraints()` | `toArray()['constraints'] ?? []` of a DataDefinition |
+| `SchemaFacts::doesNotApply()` | `DoesNotApply::marks()` |
+| `SchemaFacts::compute()` | `Computed::of()`, `DefinitionMetadata::computedOf()` |
+| `SchemaFacts::resolve()` | `DefinitionMetadata::resolveOf()` |
+| `SchemaFacts::each()` | `DefinitionMetadata::eachOf()`, a definition as its schema |
+| `SchemaFacts::variantsBy()`, `variantsFrom()` | `DefinitionMetadata::variantsBy()`, `variantsFrom()` |
+| `SchemaFacts::readVariants()` | `DefinitionMetadata::variantsListedBySite()` |
+| `SchemaFacts::configType()`, `configTypeOf()` | `DefinitionMetadata::configTypeOf()`, `configTypeDefinition()` as its schema |
+| `SchemaFacts::shape()` | `DefinitionMetadata::shapeOf()` (its schema: `DefinitionSchema::shapeOf()`) |
+| `SchemaFacts::isFixed()`, `isOneVariant()`, `isHeldWhole()` | the metadata getters of the same names |
+| `SchemaFacts::placedAfter()` | `DefinitionMetadata::getPlacedAfter()` |
+| `SchemaFacts::arrangement()` | `DefinitionMetadata::arrangementOf()` |
+| `SchemaFacts::isReadOnly()`, `isComputed()` | core's `isReadOnly()`, `isComputed()` |
+| `SchemaFacts::setting()` | `getSetting()` |
 | `DefinitionSchema::typeOf()` | `DefinitionSchema::type()` |
 | `DefinitionSchema::keywordsOf()` | `DefinitionSchema::keywords()` |
 
-- **Proof.** `NodeFactsParityTest` holds every reader to its call, by
+- **Proof.** `SchemaFactsParityTest` holds every reader to its call, by
   strict equality, over the 1,067 definitions of the examples, with a
   hand case for each fact no example states (core's `read-only` and
   `computed`, `fixed`, one variant, an `any` held whole, a string drawn
@@ -4082,155 +4082,155 @@ value changed.
   on fresh builds with assertions off, alternating base and tree
   processes, by the sum of each operation's minimum: a document is
   cheaper, `emit()` 228.2 ms against 247.4 (7.8 percent) and
-  `emitFull()` 224.4 against 238.8 (6.0 percent), since a node holds
+  `emitFull()` 224.4 against 238.8 (6.0 percent), since a schema holds
   what a definition's getters computed on every call; validate 268.2
   against 288.1, the form 471.7 against 512.9, a whole write request
   408.8 against 428.7; a first accept, what goes out after a commit and
   a read move by under 0.3 percent, the tool definitions' rebuild by 1.3
-  percent. In nodes read over 262 builds, validate reads 728 against
-  641: the node of each refined plain key (77), and the two mounts whose
+  percent. In schemas read over 262 builds, validate reads 728 against
+  641: the schema of each refined plain key (77), and the two mounts whose
   tree the walk of what is required and ruled out inside them needs
   (10); a key that holds a child reads its own facts from its
-  definition, so its node, the child's whole tree, is not read for them.
+  definition, so its schema, the child's whole tree, is not read for them.
   The form, which validates, reads 1,519 against 1,460, and a write
   request reads no definition twice that the base did not (394). A
   document reads 1,113 against 1,065 for `emit()` and 1,195 against
-  1,191 for `emitFull()`: the advertised node of a key whose definition
+  1,191 for `emitFull()`: the advertised schema of a key whose definition
   a refinement moved, read for its signature (40 over 262 builds),
   which was computed from definitions. All of it ends as the value
-  pipeline's does, when a source gives the node (slice 32) and a request
+  pipeline's does, when a source gives the schema (slice 32) and a request
   reads a compiled surface (slice 33); no memo or cache is added.
 
-(`Pipeline\Validating`, `Pipeline\Accepting`, `Contract\NodeFacts`,
+(`Pipeline\Validating`, `Pipeline\Accepting`, `Contract\SchemaFacts`,
 `Contract\DefinitionSchema`, `Contract\PropertySchema`,
 `Contract\ContractEmitter`, `Contract\Conditionals`,
-`Contract\DocumentHead`, `NodeFactsParityTest`, `NodeFactsParityTrait`,
+`Contract\DocumentHead`, `SchemaFactsParityTest`, `SchemaFactsParityTrait`,
 `DefinitionReadCallersTest`, `DefinitionReadIsPureTest`,
 `HandCorpusTest`, `HandCorpusNarrowTest`)
 
-### The remaining readers read nodes
+### The remaining readers read schemas
 
 Decided 2026-11-14. What still read a key's facts from its definition
-and is no public contract reads them from the key's node: key paths,
+and is no public contract reads them from the key's schema: key paths,
 the secret keys a storage encrypts, references, the tool door's inputs
 and outputs, the config schema writer and its check, the code
 generator, `drush surface:run`, the contract panel, a compiled flow and
 the formatter's summary. No served byte, refusal or value changed but
 the two faults below, fixed on purpose.
 
-- **One rule, as before.** A fact is read from the node where the walk
+- **One rule, as before.** A fact is read from the schema where the walk
   holds one; a walk that steps down a map's properties or a list's item
-  steps the node in step (`DefinitionSchema::propertyNode()`,
-  `itemNode()`). The definition is carried beside the node only for
+  steps the schema in step (`DefinitionSchema::propertyOf()`,
+  `itemOf()`). The definition is carried beside the schema only for
   what takes one: the options service, the constraint runner, the PHP
   class a data type maps to. A key that holds a child frame is a shell
   (`Entry::isShell()`, moved from `Validating`, one place): its own
   facts are read from its definition until slice 32. (2026-11-14: they
-  are read from its composed node: see [A key that holds a child frame
-  has a node of its own](#a-key-that-holds-a-child-frame-has-a-node-of-its-own).) A mount (the map
+  are read from its composed schema: see [A key that holds a child frame
+  has a schema of its own](#a-key-that-holds-a-child-frame-has-a-schema-of-its-own).) A mount (the map
   other modules' keys sit in) is one too for its own facts, but it is a
-  plain map whose node is its own tree: a walk into a module's part
-  reads the mount's node, which is right (`KeyPaths::reached()`,
+  plain map whose schema is its own tree: a walk into a module's part
+  reads the mount's schema, which is right (`KeyPaths::reached()`,
   `HeldToConfigSchemaTrait`, `ConfigSchemaGenerator::thirdParty()`, the
   formatter).
-- **Key paths.** `KeyPaths::reachedOn()` finds the key's node and
+- **Key paths.** `KeyPaths::reachedOn()` finds the key's schema and
   definition together (`reached()`), and its checks (a secret, computed,
-  a map, fixed, `each`) read the node; `heldOn()` hands the node to
+  a map, fixed, `each`) read the schema; `heldOn()` hands the schema to
   `held()`, which reads the type and the DateOnly flag from it and walks
   a list's item and a map's properties in step (`accepted()`,
   `violation()`; the definition goes to `ConstraintRunner::conforms()`
   alone; since slice 34 the value is held to the key's schema by the
   dialect's validator and the runner is not asked).
-  `pathsOf()` reads a map's properties from its node, and reads
-  no node for a value that is no array, which it names whole. What a
+  `pathsOf()` reads a map's properties from its schema, and reads
+  no schema for a value that is no array, which it names whole. What a
   build writes (`writeDefaults()`, `resolve()`, `setDefault()`, and a
   context's fixed value in `Declaring`) is a builder's definitions before
-  sealing, which no entry holds: such a caller hands `held()` no node,
+  sealing, which no entry holds: such a caller hands `held()` no schema,
   and `held()` reads that definition's own facts (the data type, the
   DateOnly flag, a secret, computed, a list's item, a map's properties)
-  from the definition, as the build did before, and reads no node.
+  from the definition, as the build did before, and reads no schema.
 - **Storage.** `EncryptedStorageLayout::secretKeys()` reads
-  `Secrets::marked()` on each plain key's node. `FlatVariantsLayout`
+  `Secrets::marked()` on each plain key's schema. `FlatVariantsLayout`
   reads `each` only for a key that holds an attachment, a shell: it
   stays on the definition. `ReferenceStorageLayout` walks definitions
   through properties, items and `each` for the stored layout; it is the
   storage side of references and stays for slice 32, listed below.
 - **References.** `References::targetIn()` and `handlerIn()` read a
-  key's reference check from its node, beside `target()` and
-  `handlerOf()`; `nodeAt()` gives the node at a place, as
+  key's reference check from its schema, beside `target()` and
+  `handlerOf()`; `schemaAt()` gives the schema at a place, as
   `definitionAt()` gives the definition, both through one walk
-  (`placeAt()`) that reads each plain key's node. The lookup
+  (`placeAt()`) that reads each plain key's schema. The lookup
   (`ResourceApiController::lookup()`), the emitter's lookup link
   (`ContractEmitter::linked()` no longer takes a definition;
   `linksBelow()` asks `refers()`), the OpenAPI document's reference keys
-  and the tool door's lookup note read the node. A shell's reference
-  check is read from its definition; its node is read only to hand
-  `nodeAt()` what it gives when that definition has one, which no shell
+  and the tool door's lookup note read the schema. A shell's reference
+  check is read from its definition; its schema is read only to hand
+  `schemaAt()` what it gives when that definition has one, which no shell
   the module builds does (a reference is one value). `settle()` writes
   builder definitions: it stays. `Gating` reads a builder's definitions:
   it stays.
-- **The tool door.** `InputDefinitions::fromNode()` converts a plain key
-  from its node: label, description, data type, required, secret,
+- **The tool door.** `InputDefinitions::fromSchema()` converts a plain key
+  from its schema: label, description, data type, required, secret,
   default, constraints, items and properties; the definition beside it
   goes to the options service alone. A shell is never asked for its
-  node: its own facts are read from its definition (`headOf()`), and
+  schema: its own facts are read from its definition (`headOf()`), and
   what lies below it is converted from the child's entries, each from
-  its own node (`fromChild()`, `whole()`, `wholeMap()`), the node
+  its own schema (`fromChild()`, `whole()`, `wholeMap()`), the schema
   `withLookups()`, `withStored()` and `secrets()` read too. A child's key
   advertised with another definition than its entry's, which no entry
   holds, goes through the public `fromDefinition()`. Variants advertised
   as one map no longer copy a plain key's definition: `fromVariants()`
-  hands each such key's entry node with the sentence naming its
-  variants, and `fromNode()` says the key optional, with no default and
+  hands each such key's entry schema with the sentence naming its
+  variants, and `fromSchema()` says the key optional, with no default and
   the sentence appended, as the copy said it; the `NotNull` typed data
   adds for a required key is left out, as `getConstraints()` leaves it
   out of a copy that is not required (a data type whose own constraints
   hold NotNull would differ; none exists). A shell among them keeps the
   copy. A deferred key and the variants' own placeholder keep their
   definitions. The public
-  `fromDefinition()` and `outputFromDefinition()` take an optional node
+  `fromDefinition()` and `outputFromDefinition()` take an optional schema
   and read one only for a definition handed alone; every caller in the
-  module hands the entry's node (`OperationInputs::parameterInput()`).
-  `OperationInputs` reads a computed key from its node. A tool's
-  definitions read the entries' nodes that `secrets()` reads already.
+  module hands the entry's schema (`OperationInputs::parameterInput()`).
+  `OperationInputs` reads a computed key from its schema. A tool's
+  definitions read the entries' schemas that `secrets()` reads already.
 - **The config schema writer and its check.**
   `ConfigSchemaGenerator::definition()`, `plainMapping()`,
   `translated()`, `clearable()`, `constraints()` and `carried()` read
-  nodes (`carried()` reads the constraints a key declares,
-  `NodeFacts::declaredConstraints()`); the variants' deciding key is
-  handed as its node (`ChoiceSet::fromConstraints()`). A collection's
-  declared constraints come from its own node without items (`head()`,
+  schemas (`carried()` reads the constraints a key declares,
+  `SchemaFacts::declaredConstraints()`); the variants' deciding key is
+  handed as its schema (`ChoiceSet::fromConstraints()`). A collection's
+  declared constraints come from its own schema without items (`head()`,
   the one call this adds), its required and secret flags from its
-  definition. A shell's node is not read: a key its storage keeps
+  definition. A shell's schema is not read: a key its storage keeps
   otherwise is written from the shell's definition (`translated()`
   takes it, and `shellClearable()` answers the three-way rule from it);
   what every entry of a map of entries from the site is, a definition
-  set on the shell that no entry holds, is read into its own node
+  set on the shell that no entry holds, is read into its own schema
   (`DefinitionSchema::of()`, listed in `DefinitionReadCallersTest`);
   another variant's secret kept beside a variant's keys takes a shell's
   label from its definition, and a shell is a secret there only where
   its definition was marked other than through `setSecret()`, which
   refuses a map and a list. `HeldToConfigSchemaTrait::definitionWider()` and
-  `constraintsWider()` read nodes. The PHP class a data type maps to
+  `constraintsWider()` read schemas. The PHP class a data type maps to
   (`getClass()`, in `type()` and `definitionWider()`) has no member and
   takes the typed data manager: the definition is walked in step for it.
 - **The generator and the forms.** `ResourceCode` reads a plain key's
   label, description, type, default, required, secret, always held,
-  constraints and settings from its node, and a map's properties and a
+  constraints and settings from its schema, and a map's properties and a
   list's item below it; a shell keeps its definition. `RunCommand`,
   `CompiledFlow`, the plain rows of `ContractPanel` and
-  `SurfaceFormatterTrait` read nodes; the formatter's summary takes a
+  `SurfaceFormatterTrait` read schemas; the formatter's summary takes a
   shell's label from its definition and the keys below an attached
   child or a chosen variant from the child's entries
-  (`appendFrameSummary()`), a mount from its node; the panel's shells and their
+  (`appendFrameSummary()`), a mount from its schema; the panel's shells and their
   properties, and a variant's definition made per call
   (`Variants::definitionFor()`), keep their definitions.
   `Extracting::definitionAt()` stays: its one fact, whether a place is a
-  list, would read a node off a refined entry for one flag.
+  list, would read a schema off a refined entry for one flag.
 - **Readers added.** `DefinitionSchema::isComplex()` (`instanceof
-  ComplexDataDefinitionInterface`, by the class the node was read from;
-  in `NodeFactsParityTest`), `References::targetIn()`, `handlerIn()`
-  and `nodeAt()`, `ChoiceSet::fromConstraints()`. `mainProperty`,
+  ComplexDataDefinitionInterface`, by the class the schema was read from;
+  in `SchemaFactsParityTest`), `References::targetIn()`, `handlerIn()`
+  and `schemaAt()`, `ChoiceSet::fromConstraints()`. `mainProperty`,
   `examples` and the stored secret got no reader: nothing moved here
   reads them. `PropertySchema::nullable()`, which had no caller, is
   gone.
@@ -4260,9 +4260,9 @@ the two faults below, fixed on purpose.
   `tests/fixtures/hand-corpus/doors-*.json` (written with
   `SURFACE_HAND_CORPUS_WRITE=1`; `DoorCorpusRecorder` says what each row
   holds). Run with the slice's base sources, every row but the
-  `nodes` rows, whose readers the base does not have, is equal. Kernel
+  `schemas` rows, whose readers the base does not have, is equal. Kernel
   tests cover the rest: the lookup's handler, settings and id type read
-  off the key's node (`LookupHandlerSettingsTest`,
+  off the key's schema (`LookupHandlerSettingsTest`,
   `ReferenceLookupTest`, which also holds the OpenAPI lookup path's
   keys), `drush surface:run`'s types (`RunCommandTest`) and a computed
   key a create's first step need not draw (`FlowFormTest`).
@@ -4294,32 +4294,32 @@ the two faults below, fixed on purpose.
   unchanged.
 - **What it costs.** Counted over the development site's operations on
   fresh builds, a build, a write request, a read, the form and the
-  documents read no node they did not read before. Two phases read
-  more, each for a walk that now reads its own facts from a node: what
-  a save lays out reads 476 nodes as user 1 and 96 as anonymous, the
-  top-level nodes `EncryptedStorageLayout::secretKeys()` reads where
+  documents read no schema they did not read before. Two phases read
+  more, each for a walk that now reads its own facts from a schema: what
+  a save lays out reads 476 schemas as user 1 and 96 as anonymous, the
+  top-level schemas `EncryptedStorageLayout::secretKeys()` reads where
   nothing read them yet on that build (about 30 microseconds an
-  operation); and one tool definitions' rebuild reads 799 nodes where
+  operation); and one tool definitions' rebuild reads 799 schemas where
   it read 468 (3,995 against 2,340 over five rebuilds), 78.6 ms against
-  73.3 at the minimum (7 percent). At the base a rebuild read nodes only
+  73.3 at the minimum (7 percent). At the base a rebuild read schemas only
   in `secrets()`, for the read tools' outputs (468); now `secrets()`
   reads 205 of those, the inputs of every tool 464 and the read tools'
   shared rest, the outputs 71 and the parameters 50. The write tools'
   inputs and outputs are listing surfaces built for them alone, which
   no other reader asks, so each of their keys is read once to be said.
-  No shell is read, and no node twice. Measured again after the door
+  No shell is read, and no schema twice. Measured again after the door
   corpus (8 rounds, assertions off): the rebuild is 6 percent slower by
   the minimum (74.1 ms against 78.5). A form's query values,
-  `pathsOf()` then `heldOn()` per path, read 563 nodes where the base
+  `pathsOf()` then `heldOn()` per path, read 563 schemas where the base
   read none: `pathsOf()` reads 16 now (a map's value only), and
   `heldOn()` reads the rest, each key's own facts (a secret, computed,
   fixed, its type), about 36 microseconds an operation (5.4 ms against
-  11.5 over the operations). What a save lays out reads 572 nodes,
+  11.5 over the operations). What a save lays out reads 572 schemas,
   which the same request's accept has read, and the config schema
   command 687 a run where it read none, 2 percent slower, and reads
   three definitions twice a run, against none at the base: one more
   than before `entry()` read what every entry of a map of entries is
-  into a node of its own. Every read of a shell's node happens in the
+  into a schema of its own. Every read of a shell's schema happens in the
   phases that read one at the base, and the same number of times.
 
 **The definition reads left, by edge (the slice 32 work list).** In
@@ -4327,13 +4327,13 @@ the two faults below, fixed on purpose.
 
 - *The options service and its resolvers*
   (`SurfaceOptions::resolve()`, `SurfaceOptionsResolverInterface`, 15
-  resolvers): every caller that holds a node hands the definition beside
+  resolvers): every caller that holds a schema hands the definition beside
   it (`Validating`, `Accepting`, `InputDefinitions::constraints()` and
   `withLookups()`, `ContractPanel::allows()`, `Extracting`,
   `PropertySchema`, `WidgetChoice::optionSet()`).
 - *`Computed::value()` and `ComputesValueInterface::compute()`* (15
   implementers), and `Computed::of()` on a shell. Both take the key's
-  node since 2026-11-15, as a resolver does
+  schema since 2026-11-15, as a resolver does
   ([Nothing asks for a definition it does not need](#nothing-asks-for-a-definition-it-does-not-need)).
 - *The refiners* (`SurfaceRefinerInterface`, 13 implementers) and what a
   refinement writes (`Surface::refine()`, `DoesNotApply`, `Narrowing`,
@@ -4365,7 +4365,7 @@ the two faults below, fixed on purpose.
   `HeldToConfigSchemaTrait::mountedLayouts()`, the `getClass()` reads.
 - *Shells*: every site that reads a key holding a child frame from its
   definition, named above and in [The validator's checks and the
-  document read nodes](#the-validators-checks-and-the-document-read-nodes).
+  document read schemas](#the-validators-checks-and-the-document-read-schemas).
 - *The tool door's reads of the write tools' listing surfaces* (see
   What it costs), and the shells' own facts everywhere above.
 - *Walks of their own, not moved*: `ReferenceStorageLayout` (25 reads),
@@ -4390,22 +4390,22 @@ takes a surface), `StorageLayoutInterface` (values only).
 (2026-11-16: the widget contract is `SchemaWidgetInterface` and takes
 the key's schema: [A widget is chosen by the key's schema](#a-widget-is-chosen-by-the-keys-schema).)
 
-### A key that holds a child frame has a node of its own
+### A key that holds a child frame has a schema of its own
 
 Decided 2026-11-14. A key that holds a child frame (an attachment,
 variants, a collection, a mount: `Entry::isShell()`) has a definition
-that repeats the child's keys, so reading its node read the child's
+that repeats the child's keys, so reading its schema read the child's
 whole tree a second time. Slices 31a and 31b therefore read such a key's
-own facts from its definition. Its node is now composed of its own facts
-and the nodes its child's entries hold, and every reader reads its facts
-from that node as it reads any key's. No served byte, refusal or value
+own facts from its definition. Its schema is now composed of its own facts
+and the schemas its child's entries hold, and every reader reads its facts
+from that schema as it reads any key's. No served byte, refusal or value
 changed.
 
-- **The composition.** `Entry::schema()` for a shell composes its node
+- **The composition.** `Entry::schema()` for a shell composes its schema
   on the first ask and keeps it (`composed()`). The shell's own facts
-  are read once, with `DefinitionSchema::around()`, around the nodes
+  are read once, with `DefinitionSchema::around()`, around the schemas
   below it, each asked of its own entry:
-  - an attachment: the child's entries' nodes, the map's properties;
+  - an attachment: the child's entries' schemas, the map's properties;
   - variants: the placeholder (`any`) holds none; a chosen variant's map
     holds that variant's keys (only a variant already built is looked
     at: a variant the site lists and nothing read is not built for it);
@@ -4421,17 +4421,17 @@ changed.
   `required` is read from the properties' own flags, as `of()` reads it.
 - **The own-facts read.** `DefinitionSchema::around($definition,
   $properties, $items)`, static and pure, beside `head()`. It is the read
-  `of()` makes, with each node given placed where `of()` would read one:
-  the same keywords in the same order, so the two are the same node
-  (`DefinitionSchema::same()`) when each node given is the one `of()`
+  `of()` makes, with each schema given placed where `of()` would read one:
+  the same keywords in the same order, so the two are the same schema
+  (`DefinitionSchema::same()`) when each schema given is the one `of()`
   reads. `head()` is not that read: it gives a collection's own keywords
   with no items at all, in its own order, and no default. A shell's own
   facts and the place of its children cannot be read apart without
-  changing that order, so `around()` takes the children's nodes.
+  changing that order, so `around()` takes the children's schemas.
 - **A refined shell.** `Surface::refineNested()` and `refineMounted()`
   hand the refined child they built the definition from to the entry
-  (`Entry::withDefinition($definition, $frames)`), and its node is
-  composed of that child's entries' nodes. A shell a parent refiner
+  (`Entry::withDefinition($definition, $frames)`), and its schema is
+  composed of that child's entries' schemas. A shell a parent refiner
   ruled out, or a collection its Count narrowed, is a deep copy: its
   properties are read. A refined entry serializes the children it holds
   (`Entry::__sleep()` names them only when there are any, so a sealed
@@ -4439,108 +4439,108 @@ changed.
   of the development site); one serialized graph keeps object identity,
   so a woken refined shell still finds its child's keys by identity.
   Without them it woke as a sealed one, and a mount took its keys by
-  name from the sealed structure: a stale node, with assertions off.
+  name from the sealed structure: a stale schema, with assertions off.
   (2026-11-16: superseded by [A refined shell is composed of
-  nodes](#a-refined-shell-is-composed-of-nodes). A refined shell is
-  node-first, its node composed of the refined child's entries' nodes;
-  it holds no children and serializes its node, which holds those nodes,
-  so a woken shell holds its woken child's very nodes. A refiner's answer
+  schemas](#a-refined-shell-is-composed-of-schemas). A refined shell is
+  schema-first, its schema composed of the refined child's entries' schemas;
+  it holds no children and serializes its schema, which holds those schemas,
+  so a woken shell holds its woken child's very schemas. A refiner's answer
   is read whole.)
 - **A wrong composition is caught at once.** With assertions on, the
   first ask of a shell reads its definition too and asserts the two the
   same, naming the cause (children other than the ones the definition
   holds). It costs nothing with assertions off.
-- **The proof.** `ShellNodeCompositionTest` reads the node of every shell
+- **The proof.** `ShellSchemaCompositionTest` reads the schema of every shell
   of every pinned example, built for the account and for no account,
   and of every hand and door surface and their other forms, then of each
   refined against its value sets by each kind of refiner and with its
-  variants resolved: the composed node is the read of the definition for
-  each, and a sealed shell holds the very nodes of its child's entries,
-  and a refined one the very nodes of the refined child it was built
+  variants resolved: the composed schema is the read of the definition for
+  each, and a sealed shell holds the very schemas of its child's entries,
+  and a refined one the very schemas of the refined child it was built
   from (1,010 shells), never a sealed structure's by name at a refined
   mount. The same holds for every refined example woken from
   `serialize()`.
   It reads 1,497 distinct shells: 59 attachments, 30 collections, 2
   mounts and 43 variants with none chosen as sealed; 106 attachments,
   108 collections, 75 mounts, 978 chosen variants and 96 variants with
-  none chosen as refined; the same with the node-first switch on. On the
+  none chosen as refined; the same with the schema-first switch on. On the
   development site, every operation built as user 1 and as anonymous
   and refined against what storage holds, 272 shells, none differs, in
   either mode.
 - **The shell rule is gone.** Every reader that chose between a shell's
-  definition and its node reads the node: `Validating`, `CompiledFlow`,
+  definition and its schema reads the schema: `Validating`, `CompiledFlow`,
   `RunCommand`, `OperationInputs`, the contract panel's rows,
   `ResourceCode`, the formatter's summary, `ContractEmitter::refers()`,
   the OpenAPI document's reference keys, `KeyPaths`, `References`, the
   tool door
-  (`InputDefinitions::headOf()` takes the node; `fromVariants()` says a
-  shell from its node, as a plain key), `ConfigSchemaGenerator` (its
+  (`InputDefinitions::headOf()` takes the schema; `fromVariants()` says a
+  shell from its schema, as a plain key), `ConfigSchemaGenerator` (its
   `head()` and `of()` calls go: a collection's constraints and `each`
-  are in the key's node), `HeldToConfigSchemaTrait` and
+  are in the key's schema), `HeldToConfigSchemaTrait` and
   `Conditionals::requires()`. The tool door finds a child's key
-  advertised as its entry says by its node, the very object, so a
-  node-first child no longer derives its definition for the comparison.
+  advertised as its entry says by its schema, the very object, so a
+  schema-first child no longer derives its definition for the comparison.
   The emitter's own sites for a key holding a child, variants or a list
   of children (`describe()`, the nullable type, the widget and the
   arrangement hints, the mount's title) keep their definitions: the
-  refined key's node is composed of the refined child's entries, and
+  refined key's schema is composed of the refined child's entries, and
   the document refines the child again in its own frame and reads
-  those, so moving them read 347 more nodes in `emit()`, 297 in
+  those, so moving them read 347 more schemas in `emit()`, 297 in
   `emitFull()`, 272 in the form and 220 in validation. A collection's
   own keywords in the document stay on `head()`
-  (`PropertySchema::listNode()`): the composed node holds the items, a
+  (`PropertySchema::listSchema()`): the composed schema holds the items, a
   default and the keywords in another order. The two storage layouts
   keep a shell's definition for their one fact of it
   (`EncryptedStorageLayout::secretKeys()`'s secret flag,
   `FlatVariantsLayout`'s `each`): a layout reads no child key, so the
-  node read 315 more nodes laying out a save (41 percent slower by the
+  schema read 315 more schemas laying out a save (41 percent slower by the
   minimum) and 95 loading one (74 percent). `Entry::isShell()` stays:
   `Entry::schema()` asks it to choose between the composition and the
   plain read, and `EncryptedStorageLayout` to keep a shell's secret flag
   on its definition.
-- **The node-first mode.** `DefinitionMap::fromArrays()` makes each
-  entry node-first from the node the entry reads (`Entry::nodeFirst()`),
+- **The schema-first mode.** `DefinitionMap::fromArrays()` makes each
+  entry schema-first from the schema the entry reads (`Entry::schemaFirst()`),
   a shell's composed, and derives its definition from it on demand. The
   seal does so since 2026-11-15, with the shell handed its own facts
   alone (`Entry::sealed()`; see
-  [A sealed entry holds its node](#a-sealed-entry-holds-its-node)).
+  [A sealed entry holds its schema](#a-sealed-entry-holds-its-schema)).
 - **What it costs.** Counted over 262 operations of the development
-  site as two accounts on fresh builds, nodes read per phase fall where a
-  shell's node was read whole before: what goes out after a commit 545
+  site as two accounts on fresh builds, schemas read per phase fall where a
+  shell's schema was read whole before: what goes out after a commit 545
   to 128, a read 1,593 to 1,241, `emit()` 1,273 to 1,212, `emitFull()`
   1,195 to 1,145, the first accept 789 to 781. Three rise: validation 967
   to 1,111 and the form 1,665 to 1,753, since `Validating` reads a
-  refined shell's node, composed of the refined child's entries' nodes,
+  refined shell's schema, composed of the refined child's entries' schemas,
   and validates the child by refining it again in its own frame; the
   tool definitions 3,995 to 4,000. Timed over 171 operations, 8 rounds,
   assertions off, by the sum of minimums: from 12.1 percent faster (what
   goes out after a commit) to 1.1 percent slower (validation), a write
   request 0.1 percent slower, the tool definitions' rebuild 1.8 percent
-  faster. With the node-first switch on, the tool door no longer derives
+  faster. With the schema-first switch on, the tool door no longer derives
   a child's definition to compare it: `InputDefinitions::fromChild()`
   asks 30 derivations where it asked 1,320 (1,075 of them in a tool
-  rebuild). A shell made definition-first from a node-first child's key
+  rebuild). A shell made definition-first from a schema-first child's key
   (the tool door's collection copy, `withDefinition()`) derives each of
   its child's definitions once to compare it with its property (162,
   under `withLookups()`). In all 12,145 derivations against 13,285.
 
 ### Nothing asks for a definition it does not need
 
-Decided 2026-11-15. A node-first entry (the test mode of
+Decided 2026-11-15. A schema-first entry (the test mode of
 [An entry holds the form its source gave](#an-entry-holds-the-form-its-source-gave);
 every sealed entry since the later part
-[A sealed entry holds its node](#a-sealed-entry-holds-its-node))
+[A sealed entry holds its schema](#a-sealed-entry-holds-its-schema))
 derived its definition 12,145 times over 262 operations of the
 development site as two accounts. Most of the askers did not need a
 definition: they wanted the key names, one flag, or a walk that looks
-for one setting. Once sources give nodes, each such derivation is paid
+for one setting. Once sources give schemas, each such derivation is paid
 in production. They now ask for what they want, and two contracts that
-were handed a definition nobody read take the key's node. No served
+were handed a definition nobody read take the key's schema. No served
 byte, refusal or value changed.
 
 - **Key names are asked for as key names.** `DefinitionMap::keys()`
   answers the keys, each mapped to TRUE, and asks no entry for its
-  definition or its node, so an `array_intersect_key()` or an
+  definition or its schema, so an `array_intersect_key()` or an
   `array_diff_key()` stays one expression. The callers that read keys
   alone ask it: `SurfaceHostTrait` (twice), `SurfaceConfigurationTrait`,
   `PluginConfigurationStorage` (twice), `SurfaceHostFormTrait`,
@@ -4554,26 +4554,26 @@ byte, refusal or value changed.
   rows for a chosen variant (`ContractPanel`, whose status compares
   each declared definition with the refined one) and
   `StagedStorage::outputs()` (an output's data type casts a staged id;
-  reading the output's node would be a read the phase does not make).
+  reading the output's schema would be a read the phase does not make).
 - **One flag is read from the form the entry holds.**
-  `Entry::isNodeFirst()` says which form the entry's source gave. A
+  `Entry::isSchemaFirst()` says which form the entry's source gave. A
   reader that needs one fact reads it from that form: off a
-  definition-first entry from its definition, as before, so no node is
-  read; off a node-first entry from its node, so no definition is
+  definition-first entry from its definition, as before, so no schema is
+  read; off a schema-first entry from its schema, so no definition is
   derived. `SiteListBudget::listedBySite()` reads whether an attached
   map is one of keys from the site (`each`) so, and the tool door's
   `InputDefinitions::deferred()` whether variants are chosen by a key
   (`variantsBy`). Replaced on 2026-11-15: a fact of a key is read from
-  its node, whatever form the entry holds
-  ([A fact is read from the node, and the options service takes a node](#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node)).
+  its schema, whatever form the entry holds
+  ([A fact is read from the schema, and the options service takes a schema](#a-fact-is-read-from-the-schema-and-the-options-service-takes-a-schema)).
 - **The widget walk walks the form the entry holds.**
   `Resources::assertWidgetsDraw()` looks at every key, at any depth, for
   a `widget` setting. One walk reads either form through one reader
-  (`keyAsked()`): a node-first entry is walked by its node, and its
+  (`keyAsked()`): a schema-first entry is walked by its schema, and its
   definition is derived only when a key in it asks for a widget, since
   the widget's claim takes a definition (`WidgetChoice::forDefinition()`
   is handed the definition at the key's path). A definition-first entry
-  is walked by its definition: reading its node would be a read the
+  is walked by its definition: reading its schema would be a read the
   build does not make now. The definition branch goes when no source
   makes a definition (parts 32.7 and 32.9). The refusal is the same in
   either form, at any depth (`WidgetAskTest`). (2026-11-16: the walk
@@ -4583,39 +4583,39 @@ byte, refusal or value changed.
   definitions, Typed Data by that API's contract. Its conversion
   (`fromEntry()`, `fromChild()`, `fromVariants()`, `outputsFromSurface()`,
   `OperationInputs::parameterInput()`) reads each key's facts from its
-  node and walks the definition in step only to hand each key's
+  schema and walks the definition in step only to hand each key's
   definition to the options service, which takes one. That is the edge
-  doing its job and stays until the options service takes a node (it
+  doing its job and stays until the options service takes a schema (it
   does since 2026-11-15, and the walk is gone: see
-  [A fact is read from the node, and the options service takes a node](#a-fact-is-read-from-the-node-and-the-options-service-takes-a-node)). What
+  [A fact is read from the schema, and the options service takes a schema](#a-fact-is-read-from-the-schema-and-the-options-service-takes-a-schema)). What
   moved: `deferred()` (one flag, above), and `withLookups()`, which
   derived the definition of each key of an attached child to ask the
   options service whether a reference key lists its candidates. It now
   asks with the very definition the conversion handed the service for
   that key (the attached map's property, `$held`), so the service's
   identity memo answers it and no child's key derives a definition.
-- **The options service hands a resolver the key's node.**
+- **The options service hands a resolver the key's schema.**
   `SurfaceOptionsResolverInterface::resolve(Constraint $constraint,
-  Schema $node)`: one signature, and every resolver changed with it
+  Schema $schema)`: one signature, and every resolver changed with it
   (the nine stock ones and the five of the example modules). No
   resolver read the definition it was handed. `SurfaceOptions::resolve()`
-  takes the key's node beside the definition where its caller holds it
+  takes the key's schema beside the definition where its caller holds it
   (`Validating`, `Accepting`, the tool door's `constraintsOf()` and
-  `withLookups()`), and hands that node on. Where a caller holds the
+  `withLookups()`), and hands that schema on. Where a caller holds the
   definition alone (the widget claims, core's options provider, the
-  form's extraction, the validator's sentences), the node is read from
+  form's extraction, the validator's sentences), the schema is read from
   the definition where a resolver is about to be called
   (`DefinitionSchema::of()`): a definition no resolver answers for reads
   none, and the service's memo by definition reads it once per
   definition. The document's `listed()`, `optionSet()` and
-  `signature()` and the contract panel hand the node they hold.
-- **A computed key's class is handed the key's node.**
+  `signature()` and the contract panel hand the schema they hold.
+- **A computed key's class is handed the key's schema.**
   `ComputesValueInterface::compute(array $from, ?Schema $key = NULL)`,
-  and `Computed::value()` and `compute()` take the node where they took
-  the definition. Every caller holds the entry and hands its node
+  and `Computed::value()` and `compute()` take the schema where they took
+  the definition. Every caller holds the entry and hands its schema
   (`Computed::apply()`, `Validating`, `Accepting`). A resolved key's
   class, called through the same interface by `Resolve`, is handed the
-  node read from the key's definition (`DefinitionSchema::of()`): a key
+  schema read from the key's definition (`DefinitionSchema::of()`): a key
   a mount holds has no entry of its own. Every computing
   class changed: `MachineName`, the examples' `Slugify` and
   `ManagedKeyValue`, and the seven of the test modules. `MachineName`
@@ -4623,10 +4623,10 @@ byte, refusal or value changed.
   Length declared on the definition. The phpstan fixture
   `tests/fixtures/phpstan/ComputeFixture.php` keeps the old signature:
   fixtures are not edited, and the rule test analyses only its rule.
-- **What a node promises.** A resolver and a computing class may read
-  the node's standard keywords through `get()`: its title, its type,
+- **What a schema promises.** A resolver and a computing class may read
+  the schema's standard keywords through `get()`: its title, its type,
   its bounds, the keywords JSON Schema names. What Surface keeps on a
-  node beyond them is not promised and may change. Part 32.9 promises a
+  schema beyond them is not promised and may change. Part 32.9 promises a
   refiner the same.
 - **What names Typed Data.** The two interfaces, the nine stock
   resolvers, `MachineName`, the five example resolvers and the
@@ -4640,7 +4640,7 @@ byte, refusal or value changed.
   definition from its child's (`Attachment::mapOf()`, parts 32.6 and
   32.7); the copy a map of keys from the site keeps of the sibling key a
   port reads (`Attaching::assertEachWiring()`, the ports edge).
-- **The first ask moves.** A node-first entry derives its definition on
+- **The first ask moves.** A schema-first entry derives its definition on
   the first ask and keeps it, so the instrument counts each derivation
   against the first asker in a phase. The build's widget walk asked
   first for nearly every entry, so the base table hid every asker behind
@@ -4659,33 +4659,33 @@ byte, refusal or value changed.
   the tree): 39,109 and 3,737 value cases, 684 and 364 documents, the
   narrowed, anonymous and corpus records, and 8,344 door digests, none
   differs; the value cases also equal the base recorded before the first
-  edit. Nodes read per phase are the same in the default mode but in
+  edit. Schemas read per phase are the same in the default mode but in
   three: the build 0 to 12, boot and other one more each, every one the
-  options service reading a key's node for a resolver where a widget's
+  options service reading a key's schema for a resolver where a widget's
   claim held the definition alone (`WidgetChoice::optionSet()`). By sum
   of minimums over 171 operations, 12 alternating rounds, assertions
   off, every phase was within -2.4 and +1.2 percent, and the tool
-  definitions' rebuild +1.6 percent, before the node was read at the
-  resolver's call. In the node-first mode against
+  definitions' rebuild +1.6 percent, before the schema was read at the
+  resolver's call. In the schema-first mode against
   the default mode, the build is 16.6 percent slower (26.2 before this
   part) and the tool definitions' rebuild 8.2 percent faster (40 percent
-  slower before). The node-first mode's test classes give the same
+  slower before). The schema-first mode's test classes give the same
   results as before. `DefinitionMapTest` proves `keys()` derives
   nothing; `WidgetAskTest` refuses a widget asked for below a key alike
-  in either form, and shows a node-first build derives a definition only
+  in either form, and shows a schema-first build derives a definition only
   for the keys that ask; `SurfaceOptionsResolverTest` and
-  `ComputedKeysTest` show the node handed over is the key's: its title
+  `ComputedKeysTest` show the schema handed over is the key's: its title
   and its keywords.
 
 ### The merged constraint list is derived
 
-Decided 2026-11-15. A node read from a definition held two lists of
+Decided 2026-11-15. A schema read from a definition held two lists of
 constraints in `x-surface-model`: `declared` (the definition's own, as
 stored) and `constraints` (what `getConstraints()` gives: the declared
 ones merged with the data type's defaults, which core's typed data
-manager supplies). The next parts build nodes from an authored `Schema`,
+manager supplies). The next parts build schemas from an authored `Schema`,
 with no definition and no service to ask for the defaults, so nothing
-could write `constraints` there. A scout over 145,560 nodes found the
+could write `constraints` there. A scout over 145,560 schemas found the
 merged list is not read back from keywords alone (a bound's messages,
 numeric strings, order), but it is exactly the declared list, the
 type's defaults and `NotNull` where the key is required. So the merged
@@ -4703,131 +4703,131 @@ does not give it. No served byte, refusal, message or value changed.
   derivation needs no service. `DefaultConstraintsTest` holds every row
   to the test site's typed data manager and fails with the type's name
   when core or a module changes a type's defaults.
-- **One derivation, one reader.** `NodeFacts::derived()` merges as
+- **One derivation, one reader.** `SchemaFacts::derived()` merges as
   `DataDefinition::getConstraints()` and `getDefaultConstraints()` do:
   the declared list first, then each default and `NotNull` (where the
   `required` member is set) whose id is not declared, so a declared
   constraint wins and keeps its place; where the key is required, a
   `NotBlank` among them allows NULL. It gives no answer for a type with
   no row, or for a definition with a `class` key, whose class may add
-  `AllowedValues`. `NodeFacts::constraints()` answers the member where
-  the node holds it and the derivation where it does not, and it is the
+  `AllowedValues`. `SchemaFacts::constraints()` answers the member where
+  the schema holds it and the derivation where it does not, and it is the
   one reader of the member: the check provider's two sites
   (`isListedByChecks()`, `constraintMessage()`), `declares()`,
   `options()`, `oneValue()`, `keywordsOf()`, `hasConstraints()` and the
   inverse ask it.
 - **Where the member stays.** `DefinitionSchema::of()` writes
-  `constraints` only where `NodeFacts::derived()` of the node's other
+  `constraints` only where `SchemaFacts::derived()` of the schema's other
   members is not `getConstraints()` exactly, an empty list included:
   a type with no row, a `class` key, a class whose `getConstraints()`
   is its own, a typed data manager that gives a type other defaults
   (a unit test's mock). This is the rule every member follows: a member
-  is on a node only where no other fact of the node holds it. Counts at
-  this part: none of 4,563 nodes of the development site (as user 1 and
+  is on a schema only where no other fact of the schema holds it. Counts at
+  this part: none of 4,563 schemas of the development site (as user 1 and
   anonymous, built and refined), none of 49,660 of the hand corpus and
   of 1,665 of the door corpus, 1 of 19 of `HandBuiltSurfaces` (its
-  `decimal`), and 1 of the nodes `DefinitionRoundTripTest` reaches over
+  `decimal`), and 1 of the schemas `DefinitionRoundTripTest` reaches over
   every example (1,105 before; the same `decimal`).
-- **The inverse.** `NodeDefinition::of()` still refuses a node whose
-  derived definition gives other constraints than the node was read
-  with. Where the member is on the node, the check is unchanged. Where
+- **The inverse.** `DefinitionFromSchema::of()` still refuses a schema whose
+  derived definition gives other constraints than the schema was read
+  with. Where the member is on the schema, the check is unchanged. Where
   it is not, it compares the table's row with what the site's typed
   data manager gives the type: the check `DefaultConstraintsTest` makes
   on the test site, made on the site where the definition is derived.
 - **Not in this part.** Reading the merged list from an authored
-  node's keywords, and what an authored node's `declared` is; a bound's
+  schema's keywords, and what an authored schema's `declared` is; a bound's
   own messages and a Regex message with a placeholder; numeric-string
   bounds; a declared `NotNull` on an optional key; the order where a
   mapped and an unmapped constraint interleave. `type` and
   `definitionClass` stay members: they hold facts no keyword holds
   (`timestamp` against `integer`, an empty map, a plain `any`).
 
-### A fact is read from the node, and the options service takes a node
+### A fact is read from the schema, and the options service takes a schema
 
-Decided 2026-11-15. The next part makes production node-first (done:
-[A sealed entry holds its node](#a-sealed-entry-holds-its-node)): every
-sealed entry holds its node, and its definition is derived only where an
-edge asks for one. A node read off such an entry is free; a definition
-costs a derivation. In the node-first test mode the instrument's run
+Decided 2026-11-15. The next part makes production schema-first (done:
+[A sealed entry holds its schema](#a-sealed-entry-holds-its-schema)): every
+sealed entry holds its schema, and its definition is derived only where an
+edge asks for one. A schema read off such an entry is free; a definition
+costs a derivation. In the schema-first test mode the instrument's run
 still derived 11,308 definitions, and most of the askers wanted one fact
-a node reader answers, or a definition only to hand it to the options
-service. Both now read the node. No served byte, refusal, message or
+a schema reader answers, or a definition only to hand it to the options
+service. Both now read the schema. No served byte, refusal, message or
 value changed.
 
-- **One rule.** A fact of a key is read from its node (`Entry::schema()`),
+- **One rule.** A fact of a key is read from its schema (`Entry::schema()`),
   whatever form the entry holds. It replaces "one fact is read from the
   form the entry holds" of
   [Nothing asks for a definition it does not need](#nothing-asks-for-a-definition-it-does-not-need).
-  `Entry::isNodeFirst()` is left for the build's widget walk alone. In
-  the default mode these readers now read a node where they read a
-  definition, so nodes read rise there until the flip; the cost is
+  `Entry::isSchemaFirst()` is left for the build's widget walk alone. In
+  the default mode these readers now read a schema where they read a
+  definition, so schemas read rise there until the flip; the cost is
   proven once, at the end of slice 32.
 - **The readers moved.** The accept's computed flag
   (`Accepting::acceptLevel()`, `acceptComputed()`) and
-  `Computed::apply()` read `NodeFacts::compute()`; `Surface::defaultOf()`
-  reads `NodeFacts::defaultOf()`; `SiteListBudget::listedBySite()` reads
-  `NodeFacts::each()` and the tool door's `deferred()`
-  `NodeFacts::variantsBy()`, with no ternary on the entry's form; the
+  `Computed::apply()` read `SchemaFacts::compute()`; `Surface::defaultOf()`
+  reads `SchemaFacts::defaultOf()`; `SiteListBudget::listedBySite()` reads
+  `SchemaFacts::each()` and the tool door's `deferred()`
+  `SchemaFacts::variantsBy()`, with no ternary on the entry's form; the
   flat variants layout reads `each`, and the encrypted layout a shell's
-  secret flag (`Secrets::marked()`), from the key's node. The reference
-  layout reads every fact from nodes, walked down a plain map's
+  secret flag (`Secrets::marked()`), from the key's schema. The reference
+  layout reads every fact from schemas, walked down a plain map's
   properties: whether a key is stored by uuid (a new reader,
   `References::storedByUuidIn()`, beside `storedByUuid()`), the entity
   type (`targetIn()`), a bare key's parts, the data type, `each`. The
   config schema check (`HeldToConfigSchemaTrait`) reads the mount's
-  parts, a map's properties and a key's constraints from nodes, and a
+  parts, a map's properties and a key's constraints from schemas, and a
   value's PHP class too (`valueClass()`: the class its definition names,
-  under the node's `stored` member, else the one the typed data manager
+  under the schema's `stored` member, else the one the typed data manager
   gives its data type, as `DataDefinition::getClass()` answers); its
-  definition is asked only for a node read from another class.
-  `NodeFactsParityTest` holds the two new readers to `storedByUuid()`
+  definition is asked only for a schema read from another class.
+  `SchemaFactsParityTest` holds the two new readers to `storedByUuid()`
   and `getClass()` over every example and two hand cases.
 - **The options service takes the key.** `SurfaceOptions::resolve(Schema|DataDefinitionInterface $key)`,
-  one parameter. Handed a node, the constraints are the node's
-  (`NodeFacts::constraints()`) and each resolver is handed that node.
-  Handed a definition, by a caller that holds no node, the constraints
-  are the definition's and the node is read from it where a resolver is
+  one parameter. Handed a schema, the constraints are the schema's
+  (`SchemaFacts::constraints()`) and each resolver is handed that schema.
+  Handed a definition, by a caller that holds no schema, the constraints
+  are the definition's and the schema is read from it where a resolver is
   about to be called. One loop serves both, and the memo is keyed by the
   object handed. A refined entry holds the refined definition and reads
-  its node from it, or composes it around the refined child, so a
+  its schema from it, or composes it around the refined child, so a
   refined key is another object than the declared key in both forms, and
   narrowing is never served a stale list. An answer is read from the
-  node alone (its constraints, and what a resolver reads of it) and the
-  site, and a node is never written once built, so two places that hold
-  one node object are served one right answer: a shell composes its node
-  of the very nodes its child's entries hold, so the shell's property
+  schema alone (its constraints, and what a resolver reads of it) and the
+  site, and a schema is never written once built, so two places that hold
+  one schema object are served one right answer: a shell composes its schema
+  of the very schemas its child's entries hold, so the shell's property
   and the child's key are one key with one list. `invalidateTags()` forgets an answer under
   either kind of key; `provider()` and core's `OptionsProvider` keep
   handing definitions, core's edge.
-- **Who hands what.** The node: the accept (`coerce()`, so the accept,
+- **Who hands what.** The schema: the accept (`coerce()`, so the accept,
   the kept walk and the validator's computed checks carry no definition
-  beside the node), `Validating` (always held, stale, and the two
-  watched-key sentences, whose node is the place's: `optionsKeyAt()`, a
+  beside the schema), `Validating` (always held, stale, and the two
+  watched-key sentences, whose schema is the place's: `optionsKeyAt()`, a
   port's definition for a port, which has no entry; 2026-11-16: a port's
-  schema, through `nodeAt()`, see [The document is written from schemas](#the-document-is-written-from-schemas)), the tool door
+  schema, through `schemaAt()`, see [The document is written from schemas](#the-document-is-written-from-schemas)), the tool door
   (`constraintsOf()`, `withLookups()`), `DefinitionSchema::listed()` and
-  the projection (`publishedNode()`, `published()` take no definition),
+  the projection (`publishedSchema()`, `published()` take no definition),
   `PropertySchema::optionSet()` and `signature()` (a collection's own
-  node holds no item, so its signature still asks the item's
+  schema holds no item, so its signature still asks the item's
   definition; 2026-11-16: a collection is signed by its whole schema,
   whose item it holds), `ContractPanel::allows()`,
   `Conditionals::domain()`. A
-  definition, where no node is held without a new read: the widget
+  definition, where no schema is held without a new read: the widget
   claims (`WidgetChoice::optionSet()`, until slice 32's public
   contracts), the form's extraction (`Extracting::isOrphaned()` and
   `fits()` walk a refined surface's definitions; its entries are
-  definition-first, so their nodes would be reads), core's options
+  definition-first, so their schemas would be reads), core's options
   provider, and the contract panel's rows for a property of a key that
   holds a child.
 - **The tool door and the accept derive nothing.** `fromEntry()`,
   `fromChild()`, `whole()`, `fromVariants()`, `outputsFromSurface()` and
-  `OperationInputs::parameterInput()` walk the node alone; label,
+  `OperationInputs::parameterInput()` walk the schema alone; label,
   description, required, list or map and `variantsBy` are read from it.
   `fromDefinition()` and `outputFromDefinition()`, for a definition no
-  entry holds, stay as edges; `fromSchema()` converts a node.
-  `fromVariants()` takes the placeholder's node, or a definition from a
-  caller that holds no node. `acceptValue()` takes the node alone.
-- **The proof.** In the node-first mode the instrument's run (262
+  entry holds, stay as edges; `fromSchema()` converts a schema.
+  `fromVariants()` takes the placeholder's schema, or a definition from a
+  caller that holds no schema. `acceptValue()` takes the schema alone.
+- **The proof.** In the schema-first mode the instrument's run (262
   operations as two accounts) derives 6,477 definitions, from 11,308:
   the tool door none (from 3,318, with `parameterInput()`), the defaults
   none (from 846), the reference layout none (from 841), the accept's
@@ -4847,11 +4847,11 @@ value changed.
   part, loaded over the tree): 39,109 and 3,737 value cases, 684 and 364
   documents, the narrowed, anonymous and corpus records, and 8,344 door
   digests, none differs. `SurfaceOptionsResolverTest` shows a resolver
-  handed the node it was given, a refined key and its declared key
+  handed the schema it was given, a refined key and its declared key
   resolved apart (by hand and through example 3's room), and
-  `invalidateTags()` forgetting an answer under a node; `ExamplesToolTest`,
+  `invalidateTags()` forgetting an answer under a schema; `ExamplesToolTest`,
   `ReferenceStoredByUuidTest`, `FlatVariantsLayoutTest` and
-  `EncryptedStorageLayoutTest` build a node-first resource and show its
+  `EncryptedStorageLayoutTest` build a schema-first resource and show its
   tool definitions, its storage layouts and its config schema check
   derive no definition; each fails against the file it covers as it was
   before this part.
@@ -4859,15 +4859,15 @@ value changed.
   `Pipeline/SurfacePipeline.php` no longer do (`TypedDataFootprintTest`,
   131 to 129).
 
-### A sealed entry holds its node
+### A sealed entry holds its schema
 
-Decided 2026-11-15. The seal makes every entry node-first: its node is
-its source, and its definition is derived from the node only where an
+Decided 2026-11-15. The seal makes every entry schema-first: its schema is
+its source, and its definition is derived from the schema only where an
 edge still asks for one (the emitter's widget claims, refinement, the
 ports, the public `getDefinition()`). Until now an entry held its
-definition and read its node on the first ask, and the node-first form
+definition and read its schema on the first ask, and the schema-first form
 was a test mode. The seal also stops building a definition of each key
-that holds a child frame only to read a node from it. No served byte,
+that holds a child frame only to read a schema from it. No served byte,
 refusal, message or value changed.
 
 - **The seal composes shells.** An attachment, a collection and variants
@@ -4875,51 +4875,51 @@ refusal, message or value changed.
   with their own facts alone: a copy of the shell the author described
   (`SurfaceBuilder::assertShell()`, `assertListShell()`, with a
   collection's item an empty map, as `Collection::listOf()` makes it).
-  `Entry::sealed()` composes the key's node of those facts around the
-  nodes its child's entries hold (`composed()`, `framed()`,
+  `Entry::sealed()` composes the key's schema of those facts around the
+  schemas its child's entries hold (`composed()`, `framed()`,
   `DefinitionSchema::around()`), by name: at the seal nothing is
   refined, so the child's entries are the keys the key holds. One way
   composes, used by the seal and by a refined shell, which still takes
-  its child's nodes by identity. `around()` places a node given for a
-  property the map does not hold after the ones it holds, and its node
+  its child's schemas by identity. `around()` places a schema given for a
+  property the map does not hold after the ones it holds, and its schema
   says whether it is required (`PropertySchema::required()`, rule for
   rule `DefinitionSchema::required()`). `Attachment::mapOf()`,
   `Collection::listOf()` and `Variants::definitionFor()` are no longer
   called by the seal; refinement keeps them (`Surface::refineNested()`).
   Variants nothing has chosen keep their placeholder
-  (`Variants::placeholder()`, read with `of()`): a node made without it
+  (`Variants::placeholder()`, read with `of()`): a schema made without it
   would state the placeholder's facts a second way. The mount does not
   change: `mountedMap()` and `mountStructure()` build the mounted map, as
   alters write mounted keys by path. `ConstraintMessages::sources()` and
-  `assertGroupsAgree()` run before any node is read, on the definitions
+  `assertGroupsAgree()` run before any schema is read, on the definitions
   the seal holds: each child's definitions passed `sources()` when the
   child was sealed (every data surface is sealed by `seal()`, and the
   rewrite is the same when run twice), and `assertGroupsAgree()` reads a
   frame's own keys and each mount's keys alone.
-- **The flip.** `seal()` passes `nodeFirst: TRUE` to both calls of
+- **The flip.** `seal()` passes `schemaFirst: TRUE` to both calls of
   `fromArrays()`, inputs and outputs, and names the variant chosen at
   each locked deciding key (`chosen:`). `fromArrays()` called without it
   makes entries from definitions as before, which tests and any direct
   caller keep. An entry whose definition is of a class other than the
-  three `NodeDefinition` derives, or whose node holds a node of another
+  three `DefinitionFromSchema` derives, or whose schema holds a schema of another
   class at any depth, stays definition-first; a key that holds a child
   frame with such a key in it is then made whole (`Entry::whole()`) with
   the builders above. No example and no test module keeps one; the hand
   corpus keeps one on purpose (`ruled`'s `m1`, a `NotAMapDefinition`).
-- **No mode remains.** `DefinitionMap::$nodeFirst`, its counters,
+- **No mode remains.** `DefinitionMap::$schemaFirst`, its counters,
   `SURFACE_NODE_FIRST` and its read in `SurfaceKernelTestBase` are gone,
   and no definition-first mode replaces them: the seal has one path, the
   comparison of both sides in one sitting proves the flip changed
   nothing, and definition-first entry code stays exercised by refined
   entries (`withDefinition()`) and by the tests that call `fromArrays()`
   and `new Entry()` with definitions. `NodeFirstModeTest` is replaced by
-  `SealedEntryHoldsItsNodeTest`.
+  `SealedEntryHoldsItsSchemaTest`.
 - **A definition a sealed surface hands out is for reading.** Before
   this part a write to it changed the sealed surface for the rest of the
   request. Now it writes a derived copy, kept on that entry for the
-  request and never stored: the node, the source, is not changed, and
+  request and never stored: the schema, the source, is not changed, and
   nothing served from it changes. With assertions on, every later ask of
-  a node-first entry's definition reads it again and refuses one that was
+  a schema-first entry's definition reads it again and refuses one that was
   written (`Entry::definition()`), a shell's derived definition too, at
   any depth. A test that needs another definition builds it before the
   seal, or makes an entry of a copy (`withDefinition()`).
@@ -4928,24 +4928,24 @@ refusal, message or value changed.
   `Surface::refineNested()` builds a refined shell of its child's
   definitions, `Variants::definitionFor()` does at refine time, and the
   accept and `DoesNotApply` ask `$refined->getDefinition()` of every key.
-  These go when refinement reads nodes (part 32.8). The emitter's
+  These go when refinement reads schemas (part 32.8). The emitter's
   `frame()` and the widget claims ask for definitions, and so do the
   ports; these go with the public contracts (part 32.9). A copy of an
   entry made for its ports (`readingFrom()`) holds the very definition
   the sealed entry derived, which it derives first: the emitter tells a
   definition a refinement moved from a child whose ports were only
-  rebound by identity, until it compares nodes (part 32.9).
+  rebound by identity, until it compares schemas (part 32.9).
   (2026-11-16: superseded by [A refined shell is composed of
-  nodes](#a-refined-shell-is-composed-of-nodes). Refinement builds no
+  schemas](#a-refined-shell-is-composed-of-schemas). Refinement builds no
   refined shell's definition and its readers ask none; the emitter
   compares sources (`Entry::sameSource()`), so a port copy derives
   nothing first. 2026-11-16: the emitter and the ports ask for no
-  definition, but a rule's key's: see [The document is written from schemas](#the-document-is-written-from-schemas).) A node-first entry serializes its
-  node, which is larger than its definition, so a cached operation build
+  definition, but a rule's key's: see [The document is written from schemas](#the-document-is-written-from-schemas).) A schema-first entry serializes its
+  schema, which is larger than its definition, so a cached operation build
   is larger: 1.23 times over the development site's 171 operation builds.
   That is a matter for the build cache (slice 33).
 - **The door recorder reads a definition's array without its top-level
-  order.** A definition derived from a node differs from the one its
+  order.** A definition derived from a schema differs from the one its
   author built only in the order of its array's top-level keys and in a
   `type: list` key on a list: over the 4,669 door rows, every difference
   is at the top level of the array, none deeper. Neither is a fact.
@@ -4962,8 +4962,8 @@ refusal, message or value changed.
   shell (an attachment and a collection with defaults of their own,
   variants chosen and open, a shell inside a shell and inside a
   collection's item, a mount whose structure holds a shell), and for any
-  variants, `ShellNodeCompositionTest` holds each sealed shell's node
-  `DefinitionSchema::same()` as the node of the definition the old seal
+  variants, `ShellSchemaCompositionTest` holds each sealed shell's schema
+  `DefinitionSchema::same()` as the schema of the definition the old seal
   built from the builder's own shell. For an example's attachment or
   collection the seal keeps no copy of the author's shell, so the test's
   reference is rebuilt from the shell's derived definition and proves
@@ -4971,12 +4971,12 @@ refusal, message or value changed.
   collections, 3 mounts, 1 chosen and 30 open variants in all). That the
   examples' shells say what they said is proven against the code before
   this part: the comparison above, and eight hand cases of the
-  adversarial review run against that code (462 members: nodes,
+  adversarial review run against that code (462 members: schemas,
   definition trees, documents, accept and validate, the tool door, the
   form and refinement, fresh, woken and woken twice; none differs). The door corpus
   under the new rule: HEAD in the default mode against this tree, 4,669
   rows, none differs. Over the instrument's run (262 operations as two
-  accounts) the definitions derived fall from 6,477 (the node-first mode
+  accounts) the definitions derived fall from 6,477 (the schema-first mode
   before this part) to 5,601: the seal's shells from 2,177 to none. What
   remains: the emitter for the widget claims (3,484, part 32.9; it rises
   because the counter counts each entry's first ask, which the seal made
@@ -4990,58 +4990,58 @@ refusal, message or value changed.
   1,940 and 1,943 microseconds (median of 20). Timed against the base
   in one sitting (8 rounds, sum of minimums over 171 operations), a
   fresh build is 17.2 percent slower: about three quarters of the extra
-  is the leaf nodes the seal now reads, moved from their first ask to
+  is the leaf schemas the seal now reads, moved from their first ask to
   the seal, about a sixth is the composition of shells, and the rest the
-  walk that checks every node's class. A request after a cache hit is
+  walk that checks every schema's class. A request after a cache hit is
   faster in every phase by sum, by minimum: the accept 36 percent,
   validation 40, a read 79, the form 31, the emit 34. The cost is
   accepted for this part and measured again at the end of slice 32, when
-  sources give nodes and the seal reads none.
+  sources give schemas and the seal reads none.
 - **One order changed.** A deferred variant's child that fails to settle
   is now reported after a disagreement about a group in the same frame,
   where it was reported first before: the seal settles it when it
   composes the chosen key, after `assertGroupsAgree()`. Each error alone
   is unchanged.
 
-### A refined shell is composed of nodes
+### A refined shell is composed of schemas
 
 Decided 2026-11-16. A refinement no longer builds the definition of a key
-that holds a child frame only to read a node from it, and the readers of
-a refined surface read nodes. Until now each refine pass built a map
+that holds a child frame only to read a schema from it, and the readers of
+a refined surface read schemas. Until now each refine pass built a map
 definition for every such key (`Attachment::mapOf()`,
 `Variants::definitionFor()`), which derived the definition of each of its
-child's entries, and the node was composed later by matching definitions
+child's entries, and the schema was composed later by matching definitions
 by identity (`Entry::$frames`, `framed()`). No served byte, refusal,
 message or value changed: the review found two refusals the first build
 of this part had lost (a refined surface refined again, and a watched
-key that a definition answers for and its node does not hold), and both
+key that a definition answers for and its schema does not hold), and both
 are restored; none known differs. Public shapes changed (below).
 
 - **What composes.** An attachment, chosen variants and a structure at a
-  mount, refined by their child, are node-first: the key's node is
-  composed of its own node and the refined child's entries' nodes by one
-  composer, `DefinitionSchema::withProperties()`. It replaces the node's
-  `properties` by the nodes given, in their order, and rewrites the map's
+  mount, refined by their child, are schema-first: the key's schema is
+  composed of its own schema and the refined child's entries' schemas by one
+  composer, `DefinitionSchema::withProperties()`. It replaces the schema's
+  `properties` by the schemas given, in their order, and rewrites the map's
   `required` list from each of them (`requiredOf()`, the rule
-  `around()` places a given node by, stated once); everything else the
-  node holds, its own keywords, checks and MODEL, is left as it is. It
+  `around()` places a given schema by, stated once); everything else the
+  schema holds, its own keywords, checks and MODEL, is left as it is. It
   writes a map's `properties` and `required` list alone: no `declared`,
   no `constraints` member, no key's own `required`, no description,
-  default or mark. An attachment's node is composed over the sealed
-  entry's node; chosen variants over the node of the variants' shell,
+  default or mark. An attachment's schema is composed over the sealed
+  entry's schema; chosen variants over the schema of the variants' shell,
   read once from `Variants::$shell` and kept on `Variants`
-  (`shellNode()`, `DefinitionSchema::shell()`, never serialized); a
-  structure at a mount over the node at its path, put back in place by
+  (`shellSchema()`, `DefinitionSchema::shell()`, never serialized); a
+  structure at a mount over the schema at its path, put back in place by
   `DefinitionSchema::withPropertyAt()`. The refined entry holds no
   `frames`: `Entry::$frames`, its member in `__sleep()` and the identity
   matching that served refined shells are gone. `composed()` and
   `framed()` serve the seal and the entries it keeps definition-first
   (`whole()`).
-- **The class rule.** A composed node that holds, at any depth, a node
-  of a class outside `NodeDefinition::DERIVED` cannot give a
+- **The class rule.** A composed schema that holds, at any depth, a schema
+  of a class outside `DefinitionFromSchema::DERIVED` cannot give a
   definition. Such a shell keeps the definition built as before and is
-  handed the composed node with it (`Entry::withDefinition($definition,
-  $node)`), so it needs no identity matching either.
+  handed the composed schema with it (`Entry::withDefinition($definition,
+  $schema)`), so it needs no identity matching either.
   `DefinitionMap::derivedClasses()` is the one test, shared with the
   seal. `RefinedShellTest::testTheClassRule` exercises it for an
   attachment, chosen variants (open and locked), a shell inside a shell
@@ -5050,23 +5050,23 @@ are restored; none known differs. Public shapes changed (below).
   handed a definition and returns one, by a public contract that flips in
   part 32.9. Its answer is the refined entry's source ("an entry holds
   the form its source gave"), so the entry is definition-first and its
-  node is read from that answer whole on the first ask, as before
+  schema is read from that answer whole on the first ask, as before
   (`withDefinition()`; the entry marks that a refinement made its source,
   `Entry::madeByRefinement()`, so a key that holds a child frame does not
   compose of its sealed child). Reading the
-  answer back to call the entry node-first would only relabel it. That
+  answer back to call the entry schema-first would only relabel it. That
   holds for a parent's answer that a key does not apply, for a
   collection's Count and for a mount's own refiners; a mount whose own
   refiners and a structure in it both refined keeps the definition built
-  as before, handed with the node composed of the refiners' answer's own
-  facts and the structures' refined entries' nodes (`around()`), so no
+  as before, handed with the schema composed of the refiners' answer's own
+  facts and the structures' refined entries' schemas (`around()`), so no
   key is read twice.
 - **The same source, and why a new source even for an unchanged child.**
   The emitter tells a key a refinement moved from one it left alone
   (`ContractEmitter::frame()`'s `$answered`, `$moved` and the two
   `$ahead_of_time` tests, and `collection()`'s `$moved`). It compared
   definition objects; it now asks `Entry::sameSource()`: the same form
-  and the very source object, the node of a node-first entry, the
+  and the very source object, the schema of a schema-first entry, the
   definition of a definition-first one. Wherever the code before made a
   new definition object for a key, the refinement makes a new entry with
   a new source object, even where the result says the same: before,
@@ -5074,13 +5074,13 @@ are restored; none known differs. Public shapes changed (below).
   variants even when the child was the very child. Keeping the sealed
   entry where the result is `same()` would flip those answers and change
   documents with no value change. A copy made for ports
-  (`readingFrom()`) holds its original's node, so it has the same source
+  (`readingFrom()`) holds its original's schema, so it has the same source
   with no definition derived: the eager derive of part 32.7 is gone.
 - **The narrowing check of a whole shell.** Before, the refined map was
   held to `Narrowing::assertNarrows()` against the sealed one
   (`refineNested()`, `refineMounted()`). For a composed shell it cannot
   fire, case by case:
-  - An attachment: its own facts are the sealed node's, unchanged. Its
+  - An attachment: its own facts are the sealed schema's, unchanged. Its
     child is `Attachment::readFrom()->bound()`, the sealed child with
     its ports bound (`withPorts()`, `throughPorts()`), whose refinement
     replaces entries by name and never adds or drops one (`with()`), so
@@ -5098,13 +5098,13 @@ are restored; none known differs. Public shapes changed (below).
     required flag and constraints alone, which the placeholder takes
     from the shell (`placeholder()`). It cannot refuse anything the
     child's own checks do not.
-  - Variants whose deciding key is locked: the sealed node is the locked
+  - Variants whose deciding key is locked: the sealed schema is the locked
     variant's map, and values naming another variant would make the key
     gain and lose keys, which only the whole-shell check refuses. Not
     redundant: such a key keeps the definition built as before and the
     check on it (`RefinedShellTest::testLockedVariantIsNotSwapped`).
   - A structure at a mount with no refiner of the mount's own: the rest
-    of the mount is the sealed node's, the structure's own facts are
+    of the mount is the sealed schema's, the structure's own facts are
     the sealed part's, and its keys were checked when the structure
     refined them, as above. Where the mount's own refiners ran, their
     answer was held to the check at `runChain()` and the whole-shell
@@ -5116,7 +5116,7 @@ are restored; none known differs. Public shapes changed (below).
     refinement made of them, and only the whole-shell check sees a
     second refinement give back what the first narrowed. A refined shell
     therefore carries the same mark a refiner's answer carries
-    (`Entry::madeByRefinement()`, set by `withSchema($node, TRUE)` from
+    (`Entry::madeByRefinement()`, set by `withSchema($schema, TRUE)` from
     `refineNested()` and `refineMounted()`, copied by `readingFrom()`,
     serialized only when set, so a sealed entry serializes as before and
     a woken refined surface still refuses), and such a key takes the
@@ -5134,25 +5134,25 @@ are restored; none known differs. Public shapes changed (below).
   refused with the child's own message, the one the code before gave,
   since the child's check fired first there too
   (`RefinedShellTest::testWideningIsRefusedByTheChild`).
-- **Readers read nodes.** The accept's and the read tool's marks
+- **Readers read schemas.** The accept's and the read tool's marks
   (`Accepting::withoutWhatDoesNotApply()`, `DoesNotApply::leftOut()`)
-  read the refined key's node and walk below it with one walk,
-  `NodeFacts::ruledOutInside()`, which the validator uses too and which
-  reads each node's `properties` and its mark alone. The watched-value
+  read the refined key's schema and walk below it with one walk,
+  `SchemaFacts::ruledOutInside()`, which the validator uses too and which
+  reads each schema's `properties` and its mark alone. The watched-value
   walks (`Surface::ruledOutWatchedValues()`, `refusedWatchedValues()`)
   find a watched place one way (`Surface::watchedPlaces()`): a
-  node-first key by its node, its definition asked only where
+  schema-first key by its schema, its definition asked only where
   `WatchedValueCheckInterface::admits()` is handed one; a key whose
   source is a definition by that definition, part by part, as before
   and as `Location::below()` walks it, so a class that answers for a
-  property its node does not hold is marked and judged as before. The form's
-  extraction (`Extracting::nodeAt()`, `isOrphaned()`, `stillStands()`)
-  reads the node and hands it to the options service. A reference's
+  property its schema does not hold is marked and judged as before. The form's
+  extraction (`Extracting::schemaAt()`, `isOrphaned()`, `stillStands()`)
+  reads the schema and hands it to the options service. A reference's
   place (`References::placeAt()`) is an entry, its definition asked only
   by `definitionAt()`. A place in the values (`Location`) holds its
   entry and derives its definition when asked (`definition()`, for the
-  check provider). The contract panel's plain keys read their nodes.
-  The emitter's mark reads the node. `DefinitionMap::withVariantsResolved()`
+  check provider). The contract panel's plain keys read their schemas.
+  The emitter's mark reads the schema. `DefinitionMap::withVariantsResolved()`
   had no caller and is deleted; `Variants::definitionFor()` is called by
   the definition-first arm above and by the contract panel's rows.
 - **Public shapes changed.** `Location::$definition`, a public readonly
@@ -5160,9 +5160,9 @@ are restored; none known differs. Public shapes changed (below).
   constructor takes the holding entry and the path below it in place of
   a definition; `Location` is now marked `@internal` (the check
   provider's and the module's own readers'). `DoesNotApply::inside()`
-  (`@internal`) is deleted: its two callers read the node now.
+  (`@internal`) is deleted: its two callers read the schema now.
   `DefinitionMap::withVariantsResolved()` is deleted (no caller).
-  `Entry::withDefinition()`'s second parameter is `?Schema $node` in
+  `Entry::withDefinition()`'s second parameter is `?Schema $schema` in
   place of `array $frames`, and `Entry::withSchema()` gains `bool
   $refined`. `DefinitionMap::derivedClasses()` is public (`@internal`).
   `Entry::madeByRefinement()` and `Entry::sameSource()` are new. Nothing
@@ -5176,12 +5176,12 @@ are restored; none known differs. Public shapes changed (below).
   surfaces: 288,689 answers, none differs (13,313 at `$answered`,
   13,464 and 38 at `$moved`, 7,076 and 4,134 the same source at the
   two `$ahead_of_time` tests, a port copy of a mount among them).
-  `ShellNodeCompositionTest` builds again, for every refined shell the
+  `ShellSchemaCompositionTest` builds again, for every refined shell the
   refinement made anew (76 attachments, 39 mounts, 815 chosen variants
   composed, and 80 chosen variants with no keys, built as before), the
   definition the refinement built before from the advertised entry and
-  the child refined again, and holds the node to it; and a woken
-  refined surface's composed shells hold again the very node of each
+  the child refined again, and holds the schema to it; and a woken
+  refined surface's composed shells hold again the very schema of each
   key their child left as it was (36, 134 and 13 keys, the ones a woken
   refined shell read again before). Over the instrument's run (262
   operations as two accounts) the definitions derived fall from 5,601 to
@@ -5189,10 +5189,10 @@ are restored; none known differs. Public shapes changed (below).
   (281 to 4, chosen variants with no keys) and the port copies (38) to
   none or nearly, refinement and the watched-value check from 613 to
   434; the emitter's first asks rise from 3,484 to 4,397, since it now
-  derives the definition of a node-first refined shell where it reads
+  derives the definition of a schema-first refined shell where it reads
   its `required` flag and its widget (`frame()`, part 32.9), which the
   refined shell held before. On `event.sales:read` a second read
-  derives nothing (A8.1); on the node operations the accept, the read
+  derives nothing (A8.1); on the schema operations the accept, the read
   tool, `Variants::definitionFor()` and the refinement of shells derive
   nothing (234 before). Timed against the base in one sitting (sum of
   minimums over 171 operations, 8 rounds of fresh builds, after the fix
@@ -5203,12 +5203,12 @@ are restored; none known differs. Public shapes changed (below).
   1.5, 1.4 and 1.6 milliseconds in sums of 7.4, 5.9 and 25 milliseconds
   over the 171 operations (about 24, 25 and 6 percent, 1.7, 1.5 and 1.5
   milliseconds, in the first run). What is read: each refiner's answer's
-  node, `DefinitionSchema::of()` through `Entry::schema()` on the entry
+  schema, `DefinitionSchema::of()` through `Entry::schema()` on the entry
   `withDefinition()` made, on the first ask, which the code before never
   read, since its readers asked `getDefinition()`; the accept's and the
-  read tool's marks and the composer (`nodesOf()`) ask every refined
-  key's node. No node is read twice. It ends when a refiner returns a
-  node (part 32.9). Woken builds are within 2.5 percent by minimum in
+  read tool's marks and the composer (`schemasOf()`) ask every refined
+  key's schema. No schema is read twice. It ends when a refiner returns a
+  schema (part 32.9). Woken builds are within 2.5 percent by minimum in
   every phase, and the cache rows are the same size, byte for byte (no
   refined surface is stored; a sealed row is unchanged). Accepted for
   this part, nothing tuned; the cost proof at the end of slice 32
@@ -5249,21 +5249,21 @@ changed. One public contract changed, by decision.
   `RadiosWidget::drawsOne()`, `ScalarsWidget::stated()`,
   `OptionsWidget::drawsFixed()`, and `SchemaReader::statedTypes()`,
   which reads the JsonSchema check's options from
-  `NodeFacts::constraints()`.
-- **How each fact is read.** The data type with `NodeFacts::dataType()`,
-  a setting with `NodeFacts::setting()`, the shape with
-  `NodeFacts::shape()`, variants with `NodeFacts::variantsBy()`, the
+  `SchemaFacts::constraints()`.
+- **How each fact is read.** The data type with `SchemaFacts::dataType()`,
+  a setting with `SchemaFacts::setting()`, the shape with
+  `SchemaFacts::shape()`, variants with `SchemaFacts::variantsBy()`, the
   fixed and one-variant marks and whether a key holds a value with their
-  `NodeFacts` readers, a secret with `Secrets::marked()`, the entity
+  `SchemaFacts` readers, a secret with `Secrets::marked()`, the entity
   type a reference names with `References::targetIn()`. A list and a
   map are told by the class the schema was read from
   (`DefinitionSchema::isList()`, `isComplex()`), which answers what
-  `instanceof` answered, for a class outside the three `NodeDefinition`
-  derives too; a list's item is `DefinitionSchema::itemNode()`. No reader
+  `instanceof` answered, for a class outside the three `DefinitionFromSchema`
+  derives too; a list's item is `DefinitionSchema::itemOf()`. No reader
   was added. A list's schema that holds no item, which no read makes,
   offers no options and is drawn by none of the list widgets.
 - **The hosts hand the schema they hold.** `PropertySchema::property()`
-  hands its node to every claim. The build's widget walk
+  hands its schema to every claim. The build's widget walk
   (`Resources::assertWidgetsDraw()`) walks each entry's schema and asks
   `forSchema()`; its definition branch and `definitionAt()` are gone,
   and an entry kept definition-first (a class outside the three) is
@@ -5272,7 +5272,7 @@ changed. One public contract changed, by decision.
   `widget` setting itself where it asked `DateWidget::draws()`.
 - **What still hands a definition to nobody.** `PropertySchema::property()`
   still takes the key's definition and the advertised one and walks them
-  beside the node; nothing reads them now. The emitter still derives a
+  beside the schema; nothing reads them now. The emitter still derives a
   definition per key it describes to hand them on. The emitter's own
   reads of definitions are the next part. (2026-11-16: `property()`
   takes schemas alone and the emitter derives none but a rule's key's:
@@ -5312,14 +5312,14 @@ changed. One public contract changed, by decision.
   and 24 by refinement, so the emitter's count rises from 4,397 to
   4,705. The calls of `SurfaceOptions::resolve()` that reach a resolver
   fall from 3,282 to 2,106: a claim handed a definition, another memo key
-  than the node the emitter resolves for the same key, ran the resolver
+  than the schema the emitter resolves for the same key, ran the resolver
   again (1,181 calls); a claim now hands the very same object.
 - **What names Typed Data.** The 15 stock widgets, the extras' widget
   and `WidgetChoice` no longer do, and `DefinitionWidgetInterface` is
   gone (`TypedDataFootprintTest`, 128 to 110).
 - **A widget outside the module reads internal readers.** The extras'
   widget and the test module's widgets read the key's schema through
-  `NodeFacts` and `DefinitionSchema`, both `@internal`: the data type
+  `SchemaFacts` and `DefinitionSchema`, both `@internal`: the data type
   and a setting have no keyword a public reader gives. Where a keyword
   says the fact, a widget reads the keyword (`writeOnly` for a secret,
   as [the claiming widget](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)
@@ -5340,9 +5340,9 @@ served byte, refusal, message, stored value or drawn form changed.
   ?Schema $advertised, ...)` takes the key's schema and the advertised
   key's, where it took a definition beside each. Below the key
   it describes each property, its item and its shape from the schema
-  its own holds: a property's schema is `NodeFacts::properties()`, an
-  item's `DefinitionSchema::itemNode()`, a shape's
-  `DefinitionSchema::shapeNode()`, the schema its key's own holds beside
+  its own holds: a property's schema is `SchemaFacts::properties()`, an
+  item's `DefinitionSchema::itemOf()`, a shape's
+  `DefinitionSchema::shapeOf()`, the schema its key's own holds beside
   the shape's id. The definition walk beside the schema
   (`itemDefinition()`, `propertyDefinition()`,
   `DefinitionMetadata::shapeDefinition()`) is gone, with the read of a
@@ -5351,7 +5351,7 @@ served byte, refusal, message, stored value or drawn form changed.
   a list's item from the list's schema. `optionSet()` takes a schema.
 - **A collection is read from its whole schema.** Its entry's schema
   holds its item, composed of the child's entries' schemas.
-  `listNode(Schema $list)` gives the list's own keywords: the schema
+  `listSchema(Schema $list)` gives the list's own keywords: the schema
   without `items`, and without `default`, `examples` and `writeOnly`,
   which `DefinitionSchema::head()` did not state of a list's definition
   either, so its title, description, `type`, keywords and checks are the
@@ -5363,10 +5363,10 @@ served byte, refusal, message, stored value or drawn form changed.
   of children has its own facts read from its schema, as every other
   key's: `required` (`PropertySchema::required()`), its title and
   description (`describe()`), whether null clears it
-  (`NodeFacts::isNullable()`, where `DefinitionSchema::nullable()` read
-  the definition), the `widget` it asks for (`NodeFacts::setting()`),
-  its arrangement (`NodeFacts::arrangement()`), an entry's label in a
-  deferred list (`NodeFacts::label()`), a mount's title from the schema
+  (`SchemaFacts::isNullable()`, where `DefinitionSchema::nullable()` read
+  the definition), the `widget` it asks for (`SchemaFacts::setting()`),
+  its arrangement (`SchemaFacts::arrangement()`), an entry's label in a
+  deferred list (`SchemaFacts::label()`), a mount's title from the schema
   the key's own holds for it, for a key that holds a child too.
   `DocumentHead::outputs()` hands an output's schema. `describeKey()`
   reads its entry's schema, or a definition handed to it with
@@ -5385,7 +5385,7 @@ served byte, refusal, message, stored value or drawn form changed.
   refined shell and a key of a class outside the three each hand their
   own entry's schema, as the identity test chose. `answer()` reads
   whether a key does not apply from the holder's schema
-  (`NodeFacts::doesNotApply()`).
+  (`SchemaFacts::doesNotApply()`).
 - **What the emitter still derives: a rule's key.** A declared rule is
   applied to a definition (`Rule::apply()`) until a rule is applied to
   a schema. `Conditionals::rules()` takes the key's holder and derives
@@ -5402,7 +5402,7 @@ served byte, refusal, message, stored value or drawn form changed.
   `Attachment::$wired` hold the schema of the container's key each port
   reads. `SurfaceInterface::getPortSchema(string $name)` gives it;
   `getPortDefinition()` derives a definition from it on each ask
-  (`NodeDefinition::of()`) for a key of the three derived classes, until
+  (`DefinitionFromSchema::of()`) for a key of the three derived classes, until
   the definition accessors go.
   `withPorts(array $values, array $definitions)` keeps its signature:
   a definition handed is read into its schema once, there, and a
@@ -5412,12 +5412,12 @@ served byte, refusal, message, stored value or drawn form changed.
   (`Attaching::wiredKeys()`, through `Attachment::withReads()`), and a
   port of an entry of a map of keys from the site holds the sibling
   entry's own schema, or the definition a sibling entry kept
-  definition-first holds (`Attaching::assertEachWiring()`). `Validating::nodeAt()` reads a
+  definition-first holds (`Attaching::assertEachWiring()`). `Validating::schemaAt()` reads a
   port's schema, and the options service is handed it
   (`optionsKeyAt()` is gone). The watched-value check takes a
   definition, so `Surface::refusedWatchedValues()` derives one from a
   port's schema of the three derived classes where it asks the check. A port wired to a key of a
-  class outside `NodeDefinition::DERIVED` (a `BaseFieldDefinition`, the
+  class outside `DefinitionFromSchema::DERIVED` (a `BaseFieldDefinition`, the
   hand corpus's `NotAMapDefinition`) keeps the definition it was handed
   beside its schema (`Attachment::$wiredDefinitions`,
   `Surface::$portDefinitions`): the check is handed that definition and
@@ -5429,7 +5429,7 @@ served byte, refusal, message, stored value or drawn form changed.
   2026-11-16 (slice 34):* `admits()` takes the port's schema, so those
   members and `withPortKeys()` are gone, and `getPortDefinition()`
   derives a definition of the three classes alone, as
-  `NodeDefinition::of()` does. A wired key is
+  `DefinitionFromSchema::of()` does. A wired key is
   still read twice at build: `Attaching::wiredKeys()` hands the
   builder's definition to `withReads()`, and the key's own entry reads it
   again at the seal; the second read goes when the builder holds schemas.
@@ -5441,9 +5441,9 @@ served byte, refusal, message, stored value or drawn form changed.
   the seal.
 - **The small readers.** `Surface::mapWithDefaults()` walks a map's
   schema; `Resolve` reads what a key is resolved from with
-  `NodeFacts::resolve()`, walks a mount by its schema and hands a
+  `SchemaFacts::resolve()`, walks a mount by its schema and hands a
   resolving class the schema it holds; `Choices` and `Resolve` read
-  `each` with `NodeFacts::each()`; `Location::below()` walks the key's
+  `each` with `SchemaFacts::each()`; `Location::below()` walks the key's
   schema alone, whichever form its source gave (`Location::definition()`
   still derives, for the check provider). A place a definition's class
   answers for and does not list, which its schema never holds, is now no
@@ -7281,7 +7281,7 @@ guard admits `transliteration` to `MachineName` by name, a function of a
 string and a language code that reads no site state, and refuses every
 other service to every class as before
 ([A machine name is a computed identity](#a-machine-name-is-a-computed-identity)).
-Since 2026-11-15 the class is handed the key's node,
+Since 2026-11-15 the class is handed the key's schema,
 `compute(array $from, ?Schema $key = NULL)`, its standard keywords read
 with `get()`
 ([Nothing asks for a definition it does not need](#nothing-asks-for-a-definition-it-does-not-need)).
@@ -7345,7 +7345,7 @@ Five parts, each an existing mechanism:
   the name the server computes for a call that leaves the key out are
   one name. "Café Déjà Vu" is `cafe_deja_vu`. It reads the key's Length
   from the key's own definition, which `compute()` is handed (since
-  2026-11-15 the key's node, whose `maxLength` it reads). The guard
+  2026-11-15 the key's schema, whose `maxLength` it reads). The guard
   admits one service to this one class by name, `transliteration`
   (`PipelineGuard::COMPUTE_ALLOWED`, and the same list in the PHPStan
   rule): transliteration is a function of a string and a language code
@@ -10685,10 +10685,10 @@ document echoed one the caller sent):
 What a caller may do stays: send a new value for a secret below the
 top, clear it with the clear marker, or leave it out to keep what is
 stored. The fix serves less and accepts the same. Where the secrets are
-is read from built nodes, one way: `Outbound::secrets()`, `secretsAt()`
+is read from built schemas, one way: `Outbound::secrets()`, `secretsAt()`
 and `secretsOf()` give the tree a door holding a whole value applies
 with `Outbound::withoutSecrets()`, and a door that walks values beside
-their nodes asks `Secrets::marked()` of each.
+their schemas asks `Secrets::marked()` of each.
 
 *Known gap, open:* storage. `EncryptedStorageLayout::secretKeys()`
 encrypts secret keys at the top level only, so a secret below the top
@@ -11100,7 +11100,7 @@ uses; the build sets it on the key wherever the structure is attached,
 unless the owner set one there. A shape's `define()` already sets the
 setting on its definition. *Changed 2026-11-12:* a shape declares
 `schema()`, whose `x-portable-ui` sets it ([A shape is a Schema; secrecy
-is read from a node](#a-shape-is-a-schema-secrecy-is-read-from-a-node)). A module's claim on a structure by its
+is read from a schema](#a-shape-is-a-schema-secrecy-is-read-from-a-schema)). A module's claim on a structure by its
 class, beside the claim on a shape, is not built: the structure asking
 covers the case, and a claim is a second place to look.
 
@@ -13688,8 +13688,8 @@ required secret never set is still refused by the pipeline as missing.
 Before 2026-10-18 a required secret
 was in `required` and its type refused the `null` its own `values`
 carried. (`PropertySchema::required()`, `InputDefinitions::fromDefinition()`;
-since 2026-11-14 `fromNode()`, which reads the key's node: see [The
-remaining readers read nodes](#the-remaining-readers-read-nodes).)
+since 2026-11-14 `fromSchema()`, which reads the key's schema: see [The
+remaining readers read schemas](#the-remaining-readers-read-schemas).)
 
 ### One coercion table, the Tool API's
 
@@ -13767,7 +13767,7 @@ holds the frame each path and label is read from. `Validating` calls
 `Accepting` for a computed key's value and sources and for the sentence
 about a key of another variant, and calls the pipeline for `document()`;
 `Accepting` reads only the static `Validating::definitionAt()` (since
-2026-11-13 `Validating::nodeAt()`). None of
+2026-11-13 `Validating::schemaAt()`). None of
 the three holds a door-specific service. Nothing changed in what is
 accepted, refused or written: the method bodies moved as they were, no
 test changed, and the examples' documents and tool definitions are byte
@@ -14574,7 +14574,7 @@ nothing else moves, and no path.
   constraint back. Surface's own constraints are named the same way
   (`drupal:SurfaceValidReference`): the dialect's Drupal provider maps
   `drupal:<Name>` to the plugin `<Name>`. A constraint named twice on
-  one node is one check, its first options and its first message
+  one schema is one check, its first options and its first message
   standing; none of the baselines names one twice. A frame read from a
   schema can hold several JsonSchema constraints (what its root left
   over, and its own `portable-check`): they are one check, their
@@ -14582,23 +14582,23 @@ nothing else moves, and no path.
   keywords of all of them (`ContractEmitter::foreign()`), so the
   document read back reads that one check and writes the same message.
   On a property, a collection, a frame and a def, as `checkedOnServer`
-  was; 14 nodes of the 42 baselines carry it.
+  was; 14 schemas of the 42 baselines carry it.
 - **`x-portable-messages` for a message.** The dialect keys a message
   by the error code it is for. A Regex's own message is said under the
   code of the keyword it goes with, `pattern`, or `not` for
   `not: {pattern}`; it was `x-surface.patternMessage`. Each check's
   message, what `checkedOnServer` carried beside the id, is said under
   `check.drupal:<id>`, the code the dialect's validator reports the
-  check's error with. One map per node, the pattern's message first; an
+  check's error with. One map per schema, the pattern's message first; an
   empty message is left out. A Regex no keyword states has no code of
-  its own: its message is the check's. 38 nodes of the baselines carry
+  its own: its message is the check's. 38 schemas of the baselines carry
   it.
 - **Why the dialect's and not `x-surface`'s.** Both say something a
   validator acts on: that the document is not the whole check, and
   what a person is told when a value fails. The dialect has the words,
   and a client that knows the dialect and nothing of Surface reads
   them. They are standard keywords of the dialect, so they come after
-  the standard keywords and before `x-surface` on their node, and stay
+  the standard keywords and before `x-surface` on their schema, and stay
   there below an applicator, where `x-surface` moves to `within`
   (`DocumentHead::owning()` treats them as data and descends into
   neither; `SchemaResolver::restored()` and the React app's
@@ -14691,7 +14691,7 @@ nothing else moves, and no path.
 ### The UI hints are `x-portable-ui`
 
 Decided 2026-11-10. The widget hints a renderer asks for are the
-dialect's `x-portable-ui`, on the node they are about, after
+dialect's `x-portable-ui`, on the schema they are about, after
 `portable-check` and `x-portable-messages` and before `x-surface`.
 Contract 5 stays 5: one number for the series, and the baselines carry
 no hints, so none of them moved.
@@ -14740,7 +14740,7 @@ no hints, so none of them moved.
   whose widget is `null` over a def that has one can no longer say so:
   no `widget` is written for `null`. No shipped resource has such a site.
 - **Below an applicator, and at a site.** `x-portable-ui` is data
-  (`DocumentHead::DATA`): it stays on its node where `x-surface` moves
+  (`DocumentHead::DATA`): it stays on its schema where `x-surface` moves
   to `within`, so a site's narrowing whose key said nothing else than
   its hints and what moved to `within` is that key with its
   `x-portable-ui`, no longer left out. Such a key is now present in the
@@ -14797,7 +14797,7 @@ no hints, so none of them moved.
 Decided 2026-11-10. What a key that refers to an entity refers to is the
 options of its check, and where a client asks the server for what a
 document leaves out is a link of the dialect's `x-portable-links`.
-Contract 5 stays 5: the lint reports each moved node as a note, and
+Contract 5 stays 5: the lint reports each moved schema as a note, and
 nothing a value may be changed.
 
 - **A reference is its check's options.** The check already sat on every
@@ -14870,7 +14870,7 @@ nothing a value may be changed.
   the link has no `source`.
 - **Link relations.** `lookup` and `choose` are Surface's rel names: the
   vocabulary shapes a link as a JSON Hyper-Schema Link Description
-  Object and registers no rel. A node carries `lookup` before `choose`.
+  Object and registers no rel. A schema carries `lookup` before `choose`.
 - **Where the keyword stands.** After `x-portable-ui` and before
   `x-surface` (`PortableKeywords::LINKS`, `PortableLinks`). A link is
   never a widget hint: a document without the hints keeps it, and so
@@ -14879,7 +14879,7 @@ nothing a value may be changed.
 - **The lint.** `ContractDiff` compares `x-portable-links` as one
   keyword: changed, added or removed is a note. The check's options
   changed was a note already. The lint against the baselines pinned
-  before this change reported a note on each of the 12 reference nodes
+  before this change reported a note on each of the 12 reference schemas
   and on each new link, and nothing that breaks.
 - **The reader.** A link is noted and not read: the server writes its
   own; an entry with no `rel` and `href`, or a keyword that is no list,
@@ -15019,11 +15019,11 @@ arrays. Contract 5 stays 5.
   `x-surface` member inside a JSON Schema fragment a structure keeps
   under `portable-check` is served as given, with the widget hints or
   without, in both documents (`PortableServedContractTest`).
-- **Transients.** `x-surface-shape` is an `x-` keyword on a node while
+- **Transients.** `x-surface-shape` is an `x-` keyword on a schema while
   a key is described, removed when the key's description ends. The
-  checks and messages a key states are held by its built node from the
+  checks and messages a key states are held by its built schema from the
   start, since 2026-11-12
-  ([A definition is read once](#a-definition-is-read-once-into-a-built-node)),
+  ([A definition is read once](#a-definition-is-read-once-into-a-built-schema)),
   where `x-surface-checked` and `x-surface-pattern-message` held them
   before.
 - **Comparison is by JSON.** Two schemas, or two keyword values that
@@ -15245,8 +15245,8 @@ say is run by a check on the server.
   refusal stands alone, and no check runs on a value of the wrong type
   or shape (a SurfaceUnique lookup of an id too long to be one).
   DateTime and DateOnly, which state the rule of the format beside them,
-  are asked where only that format refuses. `Validation\Nodes` reads the
-  document's nodes that apply at each place; where it reads a keyword
+  are asked where only that format refuses. `Validation\ApplicableSchemas` reads the
+  document's schemas that apply at each place; where it reads a keyword
   otherwise than the validator does, the run is made again with every
   check asked; a check is counted for that only where a schema that holds
   in every case refuses, since a refusal in a branch is not filed where
@@ -15267,7 +15267,7 @@ say is run by a check on the server.
   provider, at any depth (`unwritten()`). Drupal's Email and Uuid are
   written as `format: email` and `format: uuid` alone, and each format
   admits what the constraint refuses (`a@b`, `x@localhost`, a quoted
-  local part, an address literal, the nil UUID): at each place a node
+  local part, an address literal, the nil UUID): at each place a schema
   writes either format and nothing refuses, the place's own constraint
   runs too, as `check.drupal:Email` or `check.drupal:Uuid` with its
   sub-code, never as the format's code (`unnamed()`). *Superseded
@@ -15363,16 +15363,16 @@ say is run by a check on the server.
   of the joining above. Manifests for the library's checks.
   *Done 2026-11-11 in [The checks the document names](#the-checks-the-document-names)*, but `iri` and the manifests,
   which stay in its Later.
-  `References::definitionAt()` (since 2026-11-14 beside `nodeAt()`,
-  which gives the node), `Validating::definitionAt()` (since
-  2026-11-13 `nodeAt()` and `placeAt()`, which give the node) and
+  `References::definitionAt()` (since 2026-11-14 beside `schemaAt()`,
+  which gives the schema), `Validating::definitionAt()` (since
+  2026-11-13 `schemaAt()` and `placeAt()`, which give the schema) and
   `Extracting::definitionAt()` answer other questions than
   `Location::definitionAt()` and stay their own: the first finds a
   reference target and refines by an entity type, not by the values;
   the other two read one level's definitions as handed in, never
   refining.
 
-(`PortableValidator`, `DrupalCheckProvider`, `Nodes`, `Found`,
+(`PortableValidator`, `DrupalCheckProvider`, `ApplicableSchemas`, `Found`,
 `Location`, `Sentences::ofError()`, `Coercion::served()`,
 `PortableValidationTest`, `PortableValidatorTest`)
 
@@ -15501,12 +15501,12 @@ app draws it, and reads nothing else to draw.
   Save. The host form keeps its own inputs: stored values, prefill, the
   fingerprint, the stage, the flow, the buttons, the confirm and delete
   pages, the operation's access gate, the cosmetic layer and the panel.
-- **An element carries its pointer, never its node.** Each element
+- **An element carries its pointer, never its schema.** Each element
   drawn for a value carries its JSON Pointer (`#surface_path`) and the
   widget that drew it (`#surface_widget`). The container keeps the
   envelope's `values` (`#surface_values`), which hold no secret.
-  Extraction finds each element's node by its pointer in the envelope
-  (`Form\Document\DocumentNodes::at()`): the schema inline once, then a
+  Extraction finds each element's schema by its pointer in the envelope
+  (`Form\Document\DocumentSchemas::at()`): the schema inline once, then a
   walk from the root as the drawer draws, a list's item by its index, a
   collection's item narrowed for its values, a key with variants by the
   variant its frame chooses. The envelope is kept once per form build in
@@ -15514,24 +15514,24 @@ app draws it, and reads nothing else to draw.
   again for the values the container keeps. Refusals are placed by the
   violation's dotted path, which names the same element; slice 19 files
   a check's refusal at the field it names.
-- **Widgets take a node.** `SurfaceWidgetInterface::isApplicable(Schema,
+- **Widgets take a schema.** `SurfaceWidgetInterface::isApplicable(Schema,
   WidgetContext)`, `buildElement(Schema, mixed, WidgetContext)` and
-  `extractValue(array, FormStateInterface, Schema)`. The node's
+  `extractValue(array, FormStateInterface, Schema)`. The schema's
   `x-portable-ui.widget` names the widget through one table, word to
   plugin ID (`SurfaceWidgetManager::words()`): each widget's own words,
   and `DOCUMENT_WORDS`, the consumer's mapping of `text`, `textarea`,
   `email` and `fixed` to the stock widgets they name. The emitter writes
   only words that table holds (`WidgetChoice::wordOf()`, `valueWord()`
   and `word()`). A word no widget answers to, one whose widget refuses
-  the node, and no word fall to the stock word for the node's shape, in
+  the schema, and no word fall to the stock word for the schema's shape, in
   the order of React's `stockWidget()` (`SurfaceWidgetManager::stockWord()`):
   a list whose items offer choices a multiple select, a list rows,
   choices a select, an object a fieldset, a boolean a checkbox, an
   integer or a number a number input, a string whose `format` is `email`
-  an email input, else a text input; a node that states no one type is
+  an email input, else a text input; a schema that states no one type is
   drawn by the module's own widgets in weight order, the JSON widget
   last. The weights decide only among widgets answering to the same
-  word. `isApplicable()` reads the node alone, never a live
+  word. `isApplicable()` reads the schema alone, never a live
   collaborator. The emitter's choice is the producer's side:
   `Contract\WidgetChoice`, the old definition rule moved out of the
   manager, each widget's own predicate `drawsDefinition()`
@@ -15608,7 +15608,7 @@ app draws it, and reads nothing else to draw.
   the frame's values by the JSON Schema validator, as the React app reads
   a declared rule (a slot's kind ruling out its other keys).
 - **Extraction stays one pipeline call.** Each element is read back by
-  the widget that drew it, through the envelope's node at its pointer,
+  the widget that drew it, through the envelope's schema at its pointer,
   an object a level at a time and a collection item by item; an element
   drawn for a variant its deciding key no longer chooses gives nothing;
   an element standing for a stale value, left alone, gives what is
@@ -15619,7 +15619,7 @@ app draws it, and reads nothing else to draw.
   with is drawn as its text. Form API's own words (Add another, Remove,
   "- Select -", "- None -") stay `t()`.
 - **Later.** The cosmetic and panel plugins take the envelope in place
-  of the data surface. The narrowing service as a public API. Per-node
+  of the data surface. The narrowing service as a public API. Per-schema
   cacheability in the document, so a drawer adds only what it drew. A
   per-item schema (`prefixItems`) in narrowed documents, a document
   decision, in place of narrowing items in the drawer. A `choose` link
@@ -15629,7 +15629,7 @@ app draws it, and reads nothing else to draw.
   lookup exists with `surface_http` alone, and core's element has its
   own route.
 
-(`DocumentDrawer`, `DocumentNodes`, `WidgetContext`,
+(`DocumentDrawer`, `DocumentSchemas`, `WidgetContext`,
 `WidgetHostInterface`, `FormWidgetHost`, `WidgetChoice`,
 `DocumentNarrowing`, `DocumentFormIsolationTest`, `WidgetAgreementTest`,
 `DocumentFormTest`, `DocumentFormEntityTest`, `ItemConditionalsTest`)
@@ -15783,7 +15783,7 @@ they served.
   document. A shape keeps `define(): DataDefinition`. *Changed
   2026-11-12:* a shape declares `schema(): Schema` ([A shape is a
   Schema; secrecy is read from a
-  node](#a-shape-is-a-schema-secrecy-is-read-from-a-node)).
+  schema](#a-shape-is-a-schema-secrecy-is-read-from-a-schema)).
 - **The provider contracts.** `EntrySchemasInterface::entrySchema()`
   answers `?Schema` and `entryDefs()` `array<string, Schema>`;
   `SiteList::add(..., ?Schema $schema)` and `addDefs(array<string,
@@ -15871,8 +15871,8 @@ accepted, and the bytes that change are the checks named.
   maps writes them at `items`. Each has the message every check has.
   The constraint table is not read here: no keyword states a map's
   constraint. The provider answers a `drupal:<id>` at a map as at a
-  key (the built node at the place, `BuiltNodes`; since 2026-11-13 the
-  node `Location` gives, see [An entry holds its node; the memo is gone](#an-entry-holds-its-node-the-memo-is-gone)), an empty map is checked, and a map
+  key (the built schema at the place, `BuiltNodes`; since 2026-11-13 the
+  schema `Location` gives, see [An entry holds its schema; the memo is gone](#an-entry-holds-its-schema-the-memo-is-gone)), an empty map is checked, and a map
   its `type` refuses is not asked. A shape is one scalar definition, so
   a shape's def holds no map. A check newly named at a map lints as
   NARROWS, as any check added does; no adopter holds a contract 5
@@ -15914,15 +15914,15 @@ accepted, and the bytes that change are the checks named.
   `check.drupal:Email` and `check.drupal:Uuid` and their messages are
   what they were; a composite's check stays unasked where the `allOf` or
   `anyOf` it is written as refuses at its place
-  (`Nodes::refusedByComposite()`), so one fault is one refusal. A
-  keyword refusal of another node there does not leave it unasked. The
+  (`ApplicableSchemas::refusedByComposite()`), so one fault is one refusal. A
+  keyword refusal of another schema there does not leave it unasked. The
   resource generator counts a twin written beside its format as carried
   (`ConfigSchemaDocument::constraints()`), so a class generated from a
   config schema says nothing of an Email or a Uuid it states by its type
   or format.
 - **Nothing runs unnamed.** `DrupalCheckProvider::unwritten()` and
   `unnamed()`, `PortableValidator::unwritten()` and its table of host
-  formats, `Nodes::formats()` and the block in `Validating` that merged
+  formats, `ApplicableSchemas::formats()` and the block in `Validating` that merged
   their refusals are gone. One place names a check, `checked()`, and the
   provider answers what the document names.
 - **Reading.** A plain map's `portable-check` is read as a key's is
@@ -15958,7 +15958,7 @@ accepted, and the bytes that change are the checks named.
   ASCII: it widens every `uri` key, and which keys take such hosts is a
   product decision. Per-item narrowing inside `items` (`prefixItems`, or
   a `choose` link): every reader of `items` changes, its own slice with
-  the drawer. Cacheability per node: no client reads it, and its shape
+  the drawer. Cacheability per schema: no client reads it, and its shape
   is undecided. A type of the library on the wire (`$ref:
   portable:...`): the React client and the OpenAPI document follow only
   local `$ref`s, the nullable spelling is open, nearly every leaf key's
@@ -15972,7 +15972,7 @@ accepted, and the bytes that change are the checks named.
 `PortableValidator::said()`, `DefinitionSchema::mapChecks()`,
 `DefinitionSchema::checked()`, `PropertySchema::narrowing()`,
 `PropertySchema::namedFrameChecks()`, `ConstraintKeywords::FORMAT_TWINS`,
-`ConfigSchemaDocument::constraints()`, `Nodes::refusedByComposite()`,
+`ConfigSchemaDocument::constraints()`, `ApplicableSchemas::refusedByComposite()`,
 `EmailRow`, `UuidRow`, `CompositeRow`, `SchemaReader::mapChecks()`,
 `ContractDiff::checks()`, `ReactFixturesTest`, `NamedChecksTest`,
 `PortableValidationTest`, `ResourceGeneratorTest`)

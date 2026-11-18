@@ -12,7 +12,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\ConstraintMessages;
 use Drupal\surface\Contract\KeywordReader;
-use Drupal\surface\Contract\NodeDefinition;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Surface;
 use Drupal\surface\DefinitionMetadata;
@@ -433,7 +433,7 @@ final class Shapes {
       throw new \LogicException(sprintf('The shape %s (%s) cannot be read from %s: %s', $id ?? static::idOf($shape), $shape, $what, $refused->getMessage()), 0, $refused);
     }
     if ($read !== NULL) {
-      $definition = NodeDefinition::of($read->schema);
+      $definition = DefinitionFromSchema::of($read->schema);
       assert($definition instanceof DataDefinition);
       $held = [
         'notes' => $read->notes,
@@ -605,7 +605,7 @@ final class Shapes {
    * A shape is authored, and an author's note is an error.
    *
    * Decision: see
-   * docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-node.
+   * docs/decisions.md#a-shape-is-a-schema-secrecy-is-read-from-a-schema.
    *
    * @param string $shape
    *   The shape's class.

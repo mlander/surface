@@ -11,13 +11,13 @@ use Drupal\surface\SurfaceInterface;
  *
  * A reader that looks up several places of one data surface for one set
  * of values (Location::definitionAt()) hands refine() as what refines a
- * level, so each level is refined once and its entries, with the nodes
+ * level, so each level is refined once and its entries, with the schemas
  * they have read (Entry::schema()), serve every lookup. A refine makes
  * new entries, which have read nothing; a reader that refined per lookup
- * would read each node again per lookup.
+ * would read each schema again per lookup.
  *
  * Decision: see
- * docs/decisions.md#an-entry-holds-its-node-the-memo-is-gone.
+ * docs/decisions.md#an-entry-holds-its-schema-the-memo-is-gone.
  *
  * @internal
  */

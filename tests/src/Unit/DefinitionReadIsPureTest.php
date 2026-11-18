@@ -12,7 +12,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -20,13 +20,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
- * Tests that reading a definition into a node is a pure function.
+ * Tests that reading a definition into a schema is a pure function.
  *
  * DefinitionSchema::of(), head(), around(), shell(), describe() and the
  * composer of a refined shell (withProperties(), withPropertyAt()), every
  * static method of the module they reach and the constructor of every
  * module class they make (`new X(`), are read from their source, and so
- * is every reader of a node (NodeFacts) and what it reaches. None may:
+ * is every reader of a schema (SchemaFacts) and what it reaches. None may:
  * - use `$this` (a constructor may), or be an instance method (but a
  *   constructor);
  * - take a service by its type;
@@ -43,7 +43,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * What the scan cannot see: a method called on an object (`$row->write()`,
  * `$definition->getConstraints()`), whose class the source does not name;
  * a method or constructor of a class outside the module (core's, the
- * package's: TranslatableMarkup's, which NodeMessage inherits, and
+ * package's: TranslatableMarkup's, which SchemaMessage inherits, and
  * Schema's), which is not followed; a callable passed as a value and
  * called by another function (`array_map($f, ...)`); a text made a string
  * by a function (`sprintf()`, `implode()`, `strtr()`), by a comparison
@@ -71,47 +71,47 @@ class DefinitionReadIsPureTest extends UnitTestCase {
     'withProperties',
     'withPropertyAt',
     'describe',
-    'propertyNode',
-    'itemNode',
-    'shapeNode',
+    'propertyOf',
+    'itemOf',
+    'shapeOf',
   ];
 
   /**
    * How many methods and constructors the read reaches, entry points too.
    *
-   * 56 on 2026-11-13; 60 since the node holds every fact of its
+   * 56 on 2026-11-13; 60 since the schema holds every fact of its
    * definition: stored(), nested(), nestedNode() and implied(); 55 since an
-   * entry holds its node and the memo is gone: fingerprinted(), unchanged(),
+   * entry holds its schema and the memo is gone: fingerprinted(), unchanged(),
    * fingerprint(), comparable() and nestedNode(); 59 with the three steps
-   * a reader takes on a node (propertyNode(), itemNode(), shapeNode()) and
+   * a reader takes on a schema (propertyOf(), itemOf(), shapeOf()) and
    * model(); 60 with around(), a shell's own facts around its children's
-   * nodes (2026-11-14); 61 with NodeFacts::derived(), which the read asks
+   * schemas (2026-11-14); 61 with SchemaFacts::derived(), which the read asks
    * whether the merged constraint list is derived or kept as a member
-   * (part 32.5); 65 since around() places a node given for a property the
-   * map does not hold, the seal's shells, and asks its node whether it is
-   * required (PropertySchema::required(), with NodeFacts::isRequired(),
-   * Secrets::marked() and NodeFacts::compute()), 2026-11-15; 70 with the
+   * (part 32.5); 65 since around() places a schema given for a property the
+   * map does not hold, the seal's shells, and asks its schema whether it is
+   * required (PropertySchema::required(), with SchemaFacts::isRequired(),
+   * Secrets::marked() and SchemaFacts::compute()), 2026-11-15; 70 with the
    * composer of a refined shell and what it asks (withProperties(),
    * withPropertyAt(), shell(), the requiredOf() it shares with around(),
-   * and nodeIsMap()), part 32.8; 69 since type() reads a key's `widget`
+   * and holdsProperties()), part 32.8; 69 since type() reads a key's `widget`
    * setting where it asked DateWidget::draws(), which takes a schema now
    * (part 32.9a).
    */
   protected const REACHED = 69;
 
   /**
-   * How many methods the node readers reach, their entry points too.
+   * How many methods the schema readers reach, their entry points too.
    *
-   * NodeFacts's 37 public methods, and the 6 readers of DefinitionSchema
+   * SchemaFacts's 37 public methods, and the 6 readers of DefinitionSchema
    * and Secrets they reach: model(), isLeaf(), isList(), classOf(),
    * implied() and Secrets::marked(). 20 before the validator's
-   * checks and the document's classes read nodes, with 14 public methods;
-   * 41 before NodeFacts::derived(), the merged constraint list (part
-   * 32.5); 42 before NodeFacts::ruledOutInside(), the one walk of what a
+   * checks and the document's classes read schemas, with 14 public methods;
+   * 41 before SchemaFacts::derived(), the merged constraint list (part
+   * 32.5); 42 before SchemaFacts::ruledOutInside(), the one walk of what a
    * refinement ruled out below a key, which reads `properties` and the
    * mark alone (part 32.8).
    */
-  protected const NODE_READERS_REACHED = 43;
+  protected const SCHEMA_READERS_REACHED = 43;
 
   /**
    * The types a reached method may not take: services and the request.
@@ -159,28 +159,28 @@ class DefinitionReadIsPureTest extends UnitTestCase {
   }
 
   /**
-   * Tests every reader of a node.
+   * Tests every reader of a schema.
    *
-   * Each public method of NodeFacts is an entry point.
+   * Each public method of SchemaFacts is an entry point.
    */
-  public function testTheNodeReadersReachNoServiceAndRenderNothing(): void {
+  public function testTheSchemaReadersReachNoServiceAndRenderNothing(): void {
     $entries = [];
-    foreach ((new \ReflectionClass(NodeFacts::class))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+    foreach ((new \ReflectionClass(SchemaFacts::class))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
       $entries[] = $method->getName();
     }
-    [$found, $seen] = static::scan($entries, NodeFacts::class);
-    $this->assertSame([], $found, 'The node readers use no service and render no text.');
-    $this->assertCount(self::NODE_READERS_REACHED, $seen, 'The scan follows the readers into the methods they call: ' . implode(', ', $seen));
+    [$found, $seen] = static::scan($entries, SchemaFacts::class);
+    $this->assertSame([], $found, 'The schema readers use no service and render no text.');
+    $this->assertCount(self::SCHEMA_READERS_REACHED, $seen, 'The scan follows the readers into the methods they call: ' . implode(', ', $seen));
   }
 
   /**
    * Tests the scan sees what the projection needs, so it is not blind.
    */
   public function testTheScanSeesTheProjection(): void {
-    [$found] = static::scan(['publishedNode', 'entry']);
-    $publishedNode = DefinitionSchema::class . '::publishedNode';
-    $this->assertContains("$publishedNode is not static", $found);
-    $this->assertContains("$publishedNode uses \$this", $found);
+    [$found] = static::scan(['publishedSchema', 'entry']);
+    $publishedSchema = DefinitionSchema::class . '::publishedSchema';
+    $this->assertContains("$publishedSchema is not static", $found);
+    $this->assertContains("$publishedSchema uses \$this", $found);
     $this->assertContains(DefinitionSchema::class . '::entry renders a text with PlainText::of()', $found);
     $this->assertContains(DefinitionSchema::class . '::publishedTexts casts a text to a string', $found);
   }
@@ -228,7 +228,7 @@ class DefinitionReadIsPureTest extends UnitTestCase {
    * @param string[] $entries
    *   The methods to start from.
    * @param string $class
-   *   Their class: DefinitionSchema, or NodeFacts.
+   *   Their class: DefinitionSchema, or SchemaFacts.
    *
    * @return array{0: list<string>, 1: list<string>}
    *   What each reached method does that the read may not, and the methods
