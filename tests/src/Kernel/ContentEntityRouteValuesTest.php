@@ -243,7 +243,7 @@ class ContentEntityRouteValuesTest extends SurfaceKernelTestBase {
     // Kernel tests keep every bin in memory, whose entries are read here.
     $cids = array_map('strval', array_keys((new \ReflectionProperty($bin, 'cache'))->getValue($bin)));
     foreach (['page', 'kitchen'] as $bundle) {
-      $this->assertCount(1, array_filter($cids, static fn (string $cid): bool => str_starts_with($cid, 'declared:entity.content:node.' . $bundle . ':')), $bundle);
+      $this->assertCount(1, array_filter($cids, static fn (string $cid): bool => str_starts_with($cid, 'declared:' . Resources::BUILD_FORMAT . ':entity.content:node.' . $bundle . ':')), $bundle);
     }
   }
 

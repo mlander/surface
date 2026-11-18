@@ -530,10 +530,9 @@ class AddressFieldResourceTest extends SurfaceKernelTestBase {
    * whole reason it can be.
    */
   public function testResourceIsDeclaredOnTheClass(): void {
-    $declared = $this->container->get('surface.resources')
+    $declared = DerivedDefinition::all($this->container->get('surface.resources')
       ->build(AddressFieldSettingsResource::class, new OperationContext('field_settings'))
-      ->entries()
-      ->toArray();
+      ->entries());
 
     $this->assertSame(
       ['available_countries', 'langcode_override', 'field_overrides'],
