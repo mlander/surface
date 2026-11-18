@@ -155,7 +155,9 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
     // checked; its tags' uniqueItems is the stock UniqueItems.
     $strip = $entry->variants->variants['strip']->child;
     $this->assertSame(['schema' => ['not' => ['const' => 'Untitled']]], $strip->getDefinition('caption')->getConstraint('JsonSchema'));
-    $this->assertSame([], $strip->getDefinition('tags')->getConstraint('UniqueItems'));
+    // Given no options, held as none (BlueprintAdapterBase::settleOptions()).
+    $this->assertArrayHasKey('UniqueItems', $strip->getDefinition('tags')->getConstraints());
+    $this->assertNull($strip->getDefinition('tags')->getConstraint('UniqueItems'));
     $this->assertArrayNotHasKey('JsonSchema', $strip->getDefinition('tags')->getConstraints());
   }
 
