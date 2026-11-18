@@ -84,8 +84,11 @@ class AuthorSpellingRefusalsTest extends SurfaceKernelTestBase {
   public function testComputeTakesNoLabelBesideTheSchema(): void {
     $inputs = $this->blueprint();
     $inputs->add('first', Schema::string());
+    // The review's call, made by reflection: the type checker refuses it
+    // as PHP does.
     $review = ['code', Schema::string(), 'Code', ['first'], BadgeCode::class];
-    $this->assertRefused(fn () => $inputs->compute(...$review), ['must be of type array, string given'], \TypeError::class);
+    $compute = new \ReflectionMethod($inputs, 'compute');
+    $this->assertRefused(fn () => $compute->invokeArgs($inputs, $review), ['must be of type array, string given'], \TypeError::class);
 
     $builder = new SurfaceBuilder();
     $inputs = $this->blueprint($builder);
@@ -102,9 +105,15 @@ class AuthorSpellingRefusalsTest extends SurfaceKernelTestBase {
    * its own rules.
    */
   public function testReadsRefusesKeywordsBesideTheType(): void {
-    $this->assertRefused(fn () => $this->blueprint()->reads('cap', Schema::integer()->minimum(3)->maximum(5)->required()), ['reads("cap")', '"minimum"', '"maximum"']);
+    $bound = Schema::integer()->minimum(3)->maximum(5)->required();
+    $this->assertRefused(fn () => $this->blueprint()->reads('cap', $bound), [
+      'reads("cap")',
+      '"minimum"',
+      '"maximum"',
+    ]);
     $this->assertRefused(fn () => $this->blueprint()->reads('p', Schema::enum(['a', 'b'])), ['reads("p")', '"enum"']);
-    $this->assertRefused(fn () => $this->blueprint()->reads('p', Schema::string()->title('T')->default('x')), ['"title"', '"default"']);
+    $titled = Schema::string()->title('T')->default('x');
+    $this->assertRefused(fn () => $this->blueprint()->reads('p', $titled), ['"title"', '"default"']);
 
     $inputs = $this->blueprint();
     $inputs->reads('cap', Schema::integer()->required());
@@ -124,8 +133,17 @@ class AuthorSpellingRefusalsTest extends SurfaceKernelTestBase {
    * is read as stated.
    */
   public function testOptionsOfIntegerKeysStateTheirType(): void {
-    $this->assertRefused(fn () => $this->blueprint()->add('k', Schema::options(['1' => 'One', '2' => 'Two'])->title('N')), ['/properties/k:', "->type('string')", "->type('integer')"], \InvalidArgumentException::class);
-    $this->assertRefused(fn () => $this->blueprint()->add('days', Schema::list(Schema::options([1 => 'Monday', 2 => 'Tuesday']))->title('Days')), ['/properties/days/items:', "->type('string')"], \InvalidArgumentException::class);
+    $numbers = Schema::options(['1' => 'One', '2' => 'Two'])->title('N');
+    $this->assertRefused(fn () => $this->blueprint()->add('k', $numbers), [
+      '/properties/k:',
+      "->type('string')",
+      "->type('integer')",
+    ], \InvalidArgumentException::class);
+    $days = Schema::list(Schema::options([1 => 'Monday', 2 => 'Tuesday']))->title('Days');
+    $this->assertRefused(fn () => $this->blueprint()->add('days', $days), [
+      '/properties/days/items:',
+      "->type('string')",
+    ], \InvalidArgumentException::class);
 
     $builder = new SurfaceBuilder();
     $inputs = $this->blueprint($builder);
@@ -140,8 +158,8 @@ class AuthorSpellingRefusalsTest extends SurfaceKernelTestBase {
   /**
    * Tests an author's optional list of objects may be left out.
    *
-   * required() decides, as for attachList(): the reader no longer marks
-   * an author's list as one its storage always holds.
+   * The mark required() decides, as for attachList(): the reader no longer
+   * marks an author's list as one its storage always holds.
    */
   public function testOptionalListOfObjectsMayBeLeftOut(): void {
     $builder = new SurfaceBuilder();
@@ -168,8 +186,16 @@ class AuthorSpellingRefusalsTest extends SurfaceKernelTestBase {
    * `x-surface-settings`.
    */
   public function testAuthorsExtensionIsRefused(): void {
-    $this->assertRefused(fn () => $this->blueprint()->add('k', Schema::string()->annotation('x-surface', ['format' => 'color'])), ['add("k")', '/properties/k/x-surface', 'x-surface-settings'], \InvalidArgumentException::class);
-    $this->assertRefused(fn () => $this->blueprint()->add('where', Schema::object()->property('city', Schema::string()->annotation('x-surface', ['format' => 'color']))), ['/properties/where/properties/city/x-surface', 'x-surface-settings'], \InvalidArgumentException::class);
+    $served = Schema::string()->annotation('x-surface', ['format' => 'color']);
+    $this->assertRefused(fn () => $this->blueprint()->add('k', $served), [
+      'add("k")',
+      '/properties/k/x-surface',
+      'x-surface-settings',
+    ], \InvalidArgumentException::class);
+    $this->assertRefused(fn () => $this->blueprint()->add('where', Schema::object()->property('city', $served)), [
+      '/properties/where/properties/city/x-surface',
+      'x-surface-settings',
+    ], \InvalidArgumentException::class);
 
     $builder = new SurfaceBuilder();
     $this->blueprint($builder)->add('k', Schema::string()->annotation('x-surface-settings', ['format' => 'color']));

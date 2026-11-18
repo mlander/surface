@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Input;
 use Drupal\surface\Resource\Attribute\Rule;
 use Drupal\surface\Resource\DeclaresByProperties;
 
+// cspell:ignore Lenght
 /**
  * A rule whose keyword is misspelled.
  *

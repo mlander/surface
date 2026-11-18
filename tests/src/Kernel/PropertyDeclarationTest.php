@@ -257,7 +257,12 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
    */
   public function testRuleConstrainNamesTheSpellingToWrite(): void {
     $refused = [
-      RuleNamesConstraint::class => [RuleNamesConstraint::class . '::$code', '"Length"', "constrain: ['maxLength' => 4]"],
+      RuleNamesConstraint::class => [
+        RuleNamesConstraint::class . '::$code',
+        '"Length"',
+        "constrain: ['maxLength' => 4]",
+      ],
+      // cspell:ignore Lenght
       RuleMisspellsKeyword::class => [RuleMisspellsKeyword::class . '::$code', '"maxLenght"', 'maxLength'],
     ];
     foreach ($refused as $class => $parts) {
