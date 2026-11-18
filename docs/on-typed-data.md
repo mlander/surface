@@ -1,14 +1,15 @@
-# Built on typed data
+# Typed Data at the edges
 
-Every key this module describes is a Portable Schema, and every value
-is validated by core's validation constraints, run on core's typed
-data. This page
-says what core gives, what a form, a tool and an HTTP API need that
-core has no object for, which three parts the module adds to supply
-it, and why each part is needed today. [How it fits](how-it-fits.md)
-follows the build in full; [The resource pattern](pattern.md) explains
-what an author writes; [Core gaps](core-gaps.md) says what core would
-change.
+Every key this module describes is a Portable Schema. The model, the
+build, the seal and the doors read schemas; Typed Data is used only at
+the edges, where core's own APIs take a definition or a typed value:
+reading a host's definitions, running core's validation constraints,
+typed config, and the Tool API. This page says what core gives, what a
+form, a tool and an HTTP API need that core has no object for, which
+three parts the module adds to supply it, and where Typed Data stays.
+[How it fits](how-it-fits.md) follows the build in full;
+[The resource pattern](pattern.md) explains what an author writes;
+[Core gaps](core-gaps.md) says what core would change.
 
 ## What core gives
 
@@ -79,10 +80,13 @@ the runtime ([decision](decisions.md#one-table-of-leaf-types-read-by-the-bluepri
 
 A Typed Data definition a host reader holds (a config schema type, a
 field's properties) is handed to `addDefinition()` and read into a
-schema at the call. What core's definition has no method for,
-`DefinitionMetadata` writes onto the same object under an array key,
-and each of its methods calls core's own method instead once core has
-one (`src/DefinitionMetadata.php`):
+schema at the call (`DefinitionSchema::of()`). What core's definition
+has no method for, `DefinitionMetadata` stores on the same object under
+an array key, and each of its methods calls core's own method instead
+once core has one (`src/DefinitionMetadata.php`). Only the edges read
+and write it: the read and its inverse, the host readers and the
+`addDefinition()` door. Everything else reads the same facts from the
+schema (`SchemaFacts`):
 
 ```php
 public static function setDefaultValue(DataDefinitionInterface $definition, mixed $value): void {
@@ -159,7 +163,11 @@ schema, never the sealed one. The form, the pipeline and the contract emitter
 | The seal | `DataDefinition` keeps public setters, so a group handed to a form can change before the values are validated, and nothing promises that a description is never stricter than validation. | [Step 4](core-gaps.md#step-4-a-served-contract) |
 | The JSON Schema | The serialization module's JSON Schema normalizers never read `getConstraints()`, and nothing describes what an operation accepts. | [1.2](core-gaps.md#12-constraints-as-json-schema-keywords), [step 4](core-gaps.md#step-4-a-served-contract) |
 
-## What stays Typed Data
+## What stays Typed Data, at the edges
+
+Each file that uses Typed Data on purpose is named, with its reason, in
+`TypedDataFootprintTest::EDGES`; the test fails when another file starts
+to use it. The edges are:
 
 - **Host definitions.** A definition a host reader holds is one value,
   handed to `addDefinition()`; a map or a list is built by the
@@ -190,6 +198,13 @@ schema, never the sealed one. The form, the pipeline and the contract emitter
   schema through typed config before it is saved
   (`ConfigObjectStorage::prepare()`, through
   `createFromNameAndData()->validate()`).
+- **The read and its inverse.** `DefinitionSchema::of()` reads a
+  definition into a schema; `DefinitionFromSchema::of()` derives a
+  definition back from a schema, for an edge that hands core one.
+- **The Tool API and the config schema writer.** The Tool API takes
+  input definitions (`src/Tool/InputDefinitions.php`); the config
+  schema a resource's storage is checked against is written from its
+  keys (`src/Storage/ConfigSchemaGenerator.php`).
 
 ## What the aim is
 

@@ -8,7 +8,7 @@ seals the data surface: no key can be added and no rule loosened after
 that. Every door reads that one sealed data surface. The build exists
 because several parties write into one group of keys, and nothing in
 core puts them in order or fixes the result
-([Built on typed data](../on-typed-data.md)).
+([Typed Data at the edges](../on-typed-data.md)).
 
 ![Six bands stacked inside one sealed data surface, in order: the owner, other modules, the site, the operation, the page, access; a lock on the frame marks the seal, and an arrow leads from the data surface to every door](images/16-sealed.svg)
 
