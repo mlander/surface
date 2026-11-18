@@ -567,7 +567,7 @@ final class Binding {
       $fits = match ($constraint) {
         'Range' => in_array($type, ['integer', 'float'], TRUE),
         'Count' => $advertised instanceof ListDataDefinitionInterface,
-        'Choice' => ChoiceSet::of($advertised) !== NULL,
+        'Choice' => ChoiceSet::fromConstraints($advertised->getConstraints()) !== NULL,
         default => !$advertised instanceof ComplexDataDefinitionInterface && !$advertised instanceof ListDataDefinitionInterface,
       };
       if (!$fits) {

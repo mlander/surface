@@ -9,6 +9,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Computed;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\Contract\SchemaFacts;
@@ -461,7 +462,7 @@ final class KeyPaths {
           continue;
         }
       }
-      $at = $entry->definition();
+      $at = DefinitionFromSchema::forEntry($entry);
       $schema = $entry->schema();
       foreach (array_slice($segments, $depth + 1) as $segment) {
         if (DefinitionSchema::isList($schema)) {
@@ -557,7 +558,7 @@ final class KeyPaths {
     foreach ($values as $key => $value) {
       $key = (string) $key;
       $entry = $surface->entries()->entry($key);
-      $child = $entry !== NULL && $entry->variants === NULL && $entry->list === NULL && DefinitionMetadata::eachOf($entry->definition()) === NULL ? $entry->attachment : NULL;
+      $child = $entry !== NULL && $entry->variants === NULL && $entry->list === NULL && SchemaFacts::each($entry->schema()) === NULL ? $entry->attachment : NULL;
       $paths += match (TRUE) {
         // A value that is no array is held whole: no schema is read for it.
         !is_array($value) => [$prefix . $key => $value],

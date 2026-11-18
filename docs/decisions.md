@@ -16777,12 +16777,47 @@ give each key's schema. `getPortDefinition()` is gone
 (`getPortSchema()` answers), and `withPorts()` takes the ports' schemas.
 
 - **The build cache names its format.** A cache id carries
-  `Resources::BUILD_FORMAT` (`entries`), so a row written before the
-  rename is never read.
-- **`Entries::toArray()` still gives definitions, for the edges.** The
-  value baseline's own walk reads it as definitions, and that class is
-  not edited in this stream. It yields schemas when an entry holds its
-  schema alone.
+  `Resources::BUILD_FORMAT`, so a row written in another format is
+  never read: `entries` for the rename, `schemas` since an entry holds
+  its schema alone.
+- **`Entries::toArray()` gives schemas.**
 - **Tests read a definition at the edge.** `Drupal\Tests\surface\
   DerivedDefinition` gives the definition of a data surface's key from
-  its entry, for the tests that hold a fact a definition states.
+  its entry (`DefinitionFromSchema::forEntry()`), for the tests that
+  hold a fact a definition states.
+
+### An entry holds a schema alone
+
+`Entry` holds its key's schema and nothing else: `definition()`,
+`withDefinition()`, `isSchemaFirst()`, `madeByRefinement()` and
+`ofSchema()` are gone; the constructor and `withSchema()` take a
+schema. An edge that hands Typed Data a definition asks
+`DefinitionFromSchema::forEntry()`, which derives it from the schema
+once per schema object.
+
+- **A definition no schema derives is kept, at the edge.** A key whose
+  source is a definition of a class other than the three
+  `DefinitionFromSchema` derives, or one holding such a class at any
+  depth, keeps it: `Entry::ofHost()`, read by `host()` alone. Its schema
+  is read on the first ask. A refinement writes what the answers say on
+  a copy of it (`Surface::writtenOn()`, `Entry::withHost()`).
+- **The seal composes the shells.** `SurfaceBuilder::seal()` hands
+  `Entries::fromArrays()` each key's schema; a key that holds a child
+  frame is composed of its own facts around its child's entries'
+  schemas there (`shellSchema()`). `fromArrays()` takes schemas, a host
+  definition where none derives one; `schemaFirst` and `chosen` are
+  gone, and so are `Entry::sealed()` and `whole()`.
+- **A shell always holds its schema alone.** A key that holds a child
+  frame keeps no definition, even where a key of its child is a host
+  key. An edge that derives the shell's definition then refuses it,
+  naming the key: no example or test module builds such a shell.
+- **The narrowing check of a shell runs on schemas.** A refined shell
+  is held to `Answer::narrowed()` against the key as the data surface
+  holds it (`Surface::assertShellNarrows()`), every time, with the words
+  the definition check used. It still refuses a refined surface refined
+  again into what the first refinement narrowed, which a child's own
+  checks cannot see. `Attachment::mapOf()`, `Collection::listOf()` and
+  `Variants::definitionFor()` are gone with the definition path.
+- **The watched values are walked by schema.** `Surface::watchedPlaces()`
+  walks every key by its schema, a host key's too: a property a host
+  definition answers for and its schema does not list is not checked.

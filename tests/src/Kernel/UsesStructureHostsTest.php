@@ -152,7 +152,7 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
    */
   protected function variants(?DataDefinitionInterface $variant): array {
     $this->assertNotNull($variant);
-    $values = ChoiceSet::of($variant)->values ?? [];
+    $values = ChoiceSet::fromConstraints($variant->getConstraints())->values ?? [];
     sort($values);
     return $values;
   }

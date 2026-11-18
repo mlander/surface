@@ -6,9 +6,7 @@ namespace Drupal\surface;
 
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Resource\OperationContext;
 
@@ -121,27 +119,6 @@ final class Collection {
    */
   public function contextFor(int $delta): ?OperationContext {
     return $this->context?->withKnown(['delta' => $delta]);
-  }
-
-  /**
-   * Builds the list definition a list key is advertised as.
-   *
-   * The shell the owner described, its label, description, required flag
-   * and Count, with the child's map as its item: what the parent says
-   * about the key, around what the child says about each item.
-   *
-   * @param \Drupal\Core\TypedData\ListDataDefinition $shell
-   *   The list describing the key itself. Not changed; a clone is filled.
-   * @param \Drupal\surface\SurfaceInterface $child
-   *   The child, advertised or refined.
-   *
-   * @return \Drupal\Core\TypedData\ListDataDefinition
-   *   The list.
-   */
-  public static function listOf(ListDataDefinition $shell, SurfaceInterface $child): ListDataDefinition {
-    $list = clone $shell;
-    $list->setItemDefinition(Attachment::mapOf(MapDataDefinition::create(), $child));
-    return $list;
   }
 
   /**

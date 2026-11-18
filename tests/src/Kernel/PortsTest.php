@@ -154,7 +154,7 @@ class PortsTest extends SurfaceKernelTestBase {
    */
   protected static function offered(SurfaceInterface $surface, string $path): array {
     $definition = self::at($surface, $path);
-    return $definition === NULL ? [] : (ChoiceSet::of($definition)->values ?? []);
+    return $definition === NULL ? [] : (ChoiceSet::fromConstraints($definition->getConstraints())->values ?? []);
   }
 
   /**

@@ -51,8 +51,6 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * `array_search()`, `array_unique()`, `sort()` over values that may be
  * text) or by a concatenation whose operand is no variable (a call's
  * result); and a service reached through an object the definition holds.
- * DefinitionReadServiceFreeTest runs the read and sees what it asks of
- * the container.
  *
  * Decision: see
  * docs/decisions.md#a-definition-is-read-by-a-pure-function-the-projection-holds-the-request.
@@ -156,6 +154,23 @@ class DefinitionReadIsPureTest extends UnitTestCase {
     [$found, $seen] = static::scan(self::ENTRIES);
     $this->assertSame([], $found, 'The read uses no service and renders no text.');
     $this->assertCount(self::REACHED, $seen, 'The scan follows the read into the methods it calls: ' . implode(', ', $seen));
+  }
+
+  /**
+   * Tests Entry::schema() asks no service.
+   *
+   * Entry's own code, its comments left out, names no `Drupal::` and no
+   * container.
+   */
+  public function testTheEntryAsksNoService(): void {
+    $code = '';
+    foreach (token_get_all((string) file_get_contents(dirname(__DIR__, 3) . '/src/Entry.php')) as $token) {
+      if (!is_array($token) || !in_array($token[0], [T_COMMENT, T_DOC_COMMENT], TRUE)) {
+        $code .= is_array($token) ? $token[1] : $token;
+      }
+    }
+    $this->assertStringContainsString('function schema(', $code);
+    $this->assertDoesNotMatchRegularExpression('/\bDrupal::|getContainer\s*\(|ContainerInterface/', $code);
   }
 
   /**

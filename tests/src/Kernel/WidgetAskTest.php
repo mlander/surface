@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
-use Drupal\surface\Entry;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Widget\SurfaceWidgetManager;
 use Drupal\surface_widget_test\OutsideDiscovery\ValidatingWidget;
@@ -13,7 +12,6 @@ use Drupal\surface_widget_test\Plugin\SurfaceWidget\PairWidget;
 use Drupal\surface_widget_test\Structure\DeepWrongWidgetStructure;
 use Drupal\surface_widget_test\Structure\MisfitHolderStructure;
 use Drupal\surface_widget_test\Structure\PairsStructure;
-use Drupal\surface_widget_test\Structure\PairStructure;
 use Drupal\surface_widget_test\Structure\WrongWidgetStructure;
 use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -124,34 +122,6 @@ class WidgetAskTest extends SurfaceKernelTestBase {
     }
     catch (\LogicException $e) {
       $this->assertStringContainsString('add("tags") reads the schema as the author\'s own, and these parts of it are not read as written (by JSON pointer into the object the key is laid in, the key at /properties/<key>): /properties/tags/items/x-portable-ui/widget: Not read: no widget of this site is named "no_such_widget"', $e->getMessage());
-    }
-  }
-
-  /**
-   * Tests a build derives no definition, where a widget is asked too.
-   *
-   * The pair's own keys ask for no widget, and its build derives no
-   * definition. The pairs ask for one at both keys that hold the pair;
-   * until 2026-11-16 those two entries derived a definition for the
-   * widget's claim, which now takes the key's schema, so they derive none
-   * either (docs/decisions.md#a-widget-is-chosen-by-the-keys-schema). The
-   * seal builds no map of the pair's keys for them, so the pair's keys
-   * derive none.
-   */
-  public function testSchemaFirstBuildDerivesNoDefinitionWhereWidgetsAreAsked(): void {
-    $derived = new \ReflectionProperty(Entry::class, 'definition');
-    $pair = $this->built(PairStructure::class);
-    foreach ($pair->entries()->entries() as $name => $entry) {
-      $this->assertTrue($entry->isSchemaFirst());
-      $this->assertNull($derived->getValue($entry), sprintf('The pair\'s "%s" asks for no widget and derives no definition at build.', $name));
-    }
-    $pairs = $this->built(PairsStructure::class);
-    foreach ($pairs->entries()->entries() as $name => $entry) {
-      $this->assertTrue($entry->isSchemaFirst());
-      $this->assertNull($derived->getValue($entry), sprintf('"%s" asks for a widget, whose claim takes the key\'s schema: no definition is derived.', $name));
-      foreach ($entry->attachment?->child->entries()->entries() ?? [] as $inside => $child_entry) {
-        $this->assertNull($derived->getValue($child_entry), sprintf('The pair\'s "%s" inside "%s" derives no definition.', $inside, $name));
-      }
     }
   }
 

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Entries;
 use Drupal\surface\Entry;
@@ -48,29 +47,6 @@ class EntriesTest extends UnitTestCase {
   }
 
   /**
-   * Tests the keys reader answers a schema-first map without a definition.
-   *
-   * A caller that reads the keys alone asks keys(): no entry of a
-   * schema-first map derives its definition (DefinitionFromSchema::of()) for
-   * it, and the keys come in declaration order, each TRUE.
-   */
-  public function testKeysDeriveNoDefinition(): void {
-    $map = new Entries([
-      Entry::ofSchema('zebra', Schema::keywords(['type' => 'string'])),
-      Entry::ofSchema('aardvark', Schema::keywords(['type' => 'integer'])),
-    ]);
-
-    $this->assertSame(['zebra' => TRUE, 'aardvark' => TRUE], $map->keys());
-    $this->assertSame(['moose' => 2], array_diff_key(['zebra' => 1, 'moose' => 2], $map->keys()), 'It serves array_diff_key() as the definitions did.');
-    $derived = new \ReflectionProperty(Entry::class, 'definition');
-    foreach ($map->entries() as $name => $entry) {
-      $this->assertTrue($entry->isSchemaFirst());
-      $this->assertNull($derived->getValue($entry), sprintf('The "%s" entry derived no definition.', $name));
-    }
-    $this->assertSame([], (new Entries([]))->keys());
-  }
-
-  /**
    * Tests that iterating hands back name => schema.
    */
   public function testIterationYieldsSchemas(): void {
@@ -95,8 +71,8 @@ class EntriesTest extends UnitTestCase {
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('The key "title" is declared twice.');
     new Entries([
-      new Entry('title', DataDefinition::create('string')),
-      new Entry('title', DataDefinition::create('integer')),
+      Entry::ofHost('title', DataDefinition::create('string')),
+      Entry::ofHost('title', DataDefinition::create('integer')),
     ]);
   }
 
@@ -107,7 +83,7 @@ class EntriesTest extends UnitTestCase {
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('Refinement dependency "kind" of "detail" is not a data surface definition.');
     new Entries([
-      new Entry('detail', DataDefinition::create('string'), dependencies: ['kind']),
+      Entry::ofHost('detail', DataDefinition::create('string'), dependencies: ['kind']),
     ]);
   }
 
@@ -118,7 +94,7 @@ class EntriesTest extends UnitTestCase {
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('Refinement target "detail" is not a data surface definition.');
     Entries::fromArrays(
-      definitions: ['kind' => DataDefinition::create('string')],
+      schemas: ['kind' => DataDefinition::create('string')],
       refinements: ['detail' => ['kind']],
     );
   }
@@ -130,7 +106,7 @@ class EntriesTest extends UnitTestCase {
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('"missing" is not a data surface definition.');
     Entries::fromArrays(
-      definitions: ['kind' => DataDefinition::create('string')],
+      schemas: ['kind' => DataDefinition::create('string')],
       locked: ['missing'],
     );
   }
@@ -140,7 +116,7 @@ class EntriesTest extends UnitTestCase {
    */
   public function testEntriesCarryWhatTheArraysHeld(): void {
     $map = Entries::fromArrays(
-      definitions: [
+      schemas: [
         'kind' => DataDefinition::create('string'),
         'detail' => DataDefinition::create('string'),
         'note' => DataDefinition::create('string'),
@@ -172,7 +148,7 @@ class EntriesTest extends UnitTestCase {
    */
   public function testRefinementDependenciesAreDeduplicated(): void {
     $map = Entries::fromArrays(
-      definitions: [
+      schemas: [
         'entity_type' => DataDefinition::create('string'),
         'bundle' => DataDefinition::create('string'),
         'field' => DataDefinition::create('string'),
@@ -191,13 +167,11 @@ class EntriesTest extends UnitTestCase {
    */
   public function testByContributor(): void {
     $map = new Entries([
-      new Entry('owned', DataDefinition::create('string')),
-      new Entry(
-        'extended',
-        DataDefinition::create('string'),
+      Entry::ofHost('owned', DataDefinition::create('string')),
+      Entry::ofHost('extended', DataDefinition::create('string'),
         contributions: ['other_module' => ['ribbon']],
       ),
-      new Entry('mounted', DataDefinition::create('string'), contributor: 'other_module'),
+      Entry::ofHost('mounted', DataDefinition::create('string'), contributor: 'other_module'),
     ]);
 
     $this->assertSame(
@@ -216,26 +190,26 @@ class EntriesTest extends UnitTestCase {
    */
   public function testWithReplacesInPlace(): void {
     $map = Entries::fromArrays(
-      definitions: [
-        'kind' => DataDefinition::create('string'),
-        'detail' => DataDefinition::create('string'),
-        'note' => DataDefinition::create('string'),
+      schemas: [
+        'kind' => Schema::string(),
+        'detail' => Schema::string(),
+        'note' => Schema::string(),
       ],
       refinements: ['detail' => ['kind']],
       locked: ['detail'],
     );
-    $narrowed = DataDefinition::create('string')->setLabel('Narrowed');
+    $narrowed = Schema::string()->title('Narrowed');
 
-    $next = $map->with($map->entry('detail')->withDefinition($narrowed));
+    $next = $map->with($map->entry('detail')->withSchema($narrowed));
 
     $this->assertNotSame($map, $next);
     $this->assertSame(['kind', 'detail', 'note'], $next->names());
-    $this->assertSame($narrowed, $next->entry('detail')->definition());
+    $this->assertSame($narrowed, $next->entry('detail')->schema());
     // Everything else about the key is settled at build time.
     $this->assertTrue($next->isLocked('detail'));
     $this->assertSame(['kind'], $next->dependencies('detail'));
     // And the map it came from is untouched.
-    $this->assertNotSame($narrowed, $map->entry('detail')->definition());
+    $this->assertNotSame($narrowed, $map->entry('detail')->schema());
   }
 
   /**
@@ -246,7 +220,7 @@ class EntriesTest extends UnitTestCase {
 
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('"extra" is not a data surface definition.');
-    $map->with(new Entry('extra', DataDefinition::create('string')));
+    $map->with(Entry::ofHost('extra', DataDefinition::create('string')));
   }
 
   /**
@@ -269,24 +243,6 @@ class EntriesTest extends UnitTestCase {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('The entries cannot be written to');
     unset($map['kind']);
-  }
-
-  /**
-   * Tests a chosen variant without schemaFirst is refused, with assertions on.
-   */
-  public function testChosenWithoutSchemaFirstIsRefused(): void {
-    $this->expectException(\AssertionError::class);
-    $this->expectExceptionMessage('A chosen variant is passed only with schemaFirst');
-    Entries::fromArrays(['pick' => MapDataDefinition::create()], chosen: ['pick' => 'x']);
-  }
-
-  /**
-   * Tests a chosen variant at a key with no variants is refused.
-   */
-  public function testChosenAtKeyWithoutVariantsIsRefused(): void {
-    $this->expectException(\AssertionError::class);
-    $this->expectExceptionMessage('A chosen variant is passed only at a key with variants, not at pick.');
-    Entries::fromArrays(['pick' => MapDataDefinition::create()], schemaFirst: TRUE, chosen: ['pick' => 'x']);
   }
 
 }

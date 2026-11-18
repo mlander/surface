@@ -180,7 +180,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
    * Tests the keyword codes no shipped resource says, on keys built here.
    */
   public function testKeywordCodesOfBuiltKeys(): void {
-    $surface = new Surface(Entries::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(schemas: [
       'code' => DataDefinition::create('string')->setLabel('Code')->addConstraint('Length', ['min' => 3]),
       'id' => DataDefinition::create('string')->setLabel('Id')->addConstraint('Uuid', []),
       'at' => DataDefinition::create('datetime_iso8601')->setLabel('At'),
@@ -269,7 +269,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
     $complex = MapDataDefinition::create()->setLabel('Bounded');
     $complex->setPropertyDefinition('n', DataDefinition::create('integer')->setLabel('N'));
     $complex->addConstraint('ComplexData', ['n' => ['Range' => ['max' => 5]]]);
-    $surface = new Surface(Entries::fromArrays(definitions: ['deadlines' => $list, 'cd' => $complex]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['deadlines' => $list, 'cd' => $complex]));
     $refused = $this->validated($surface, [
       'deadlines' => [['amount' => 1, 'unit' => 'days'], ['amount' => 90, 'unit' => 'days']],
       'cd' => ['n' => 9],
@@ -311,7 +311,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
     $vault->setPropertyDefinition('token', $token);
     $vault->addConstraint('Callback', ['callback' => [static::class, 'refuseTheToken']]);
     $definitions = ['ledger' => $ledger, 'ghost' => $ghost, 'vault' => $vault];
-    $surface = new Surface(Entries::fromArrays(definitions: $definitions));
+    $surface = new Surface(Entries::fromArrays(schemas: $definitions));
     $refused = $this->validated($surface, [
       'ledger' => ['items' => [['amount' => 1], ['amount' => 2], ['amount' => 3]]],
       'ghost' => ['n' => 1],
@@ -343,7 +343,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
     $secret = DataDefinition::create('string')->setLabel('Secret');
     $secret->addConstraint('Callback', ['callback' => [static::class, 'refuseBelowTheToken']]);
     DefinitionMetadata::setSecret($secret);
-    $surface = new Surface(Entries::fromArrays(definitions: ['secret' => $secret]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['secret' => $secret]));
     $refused = $this->validated($surface, ['secret' => 'hunter2-SECRET']);
     $this->assertSame(['/secret check.drupal:Callback'], array_keys($refused));
     $this->assertSame('This value is not accepted.', $refused['/secret check.drupal:Callback']['message']);
@@ -415,7 +415,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
       'callback' => [static::class, 'refuseAsThePayloadSays'],
       'payload' => [['n', 'First words.'], ['n', 'Second words.'], ['n', 'First words.']],
     ]);
-    $surface = new Surface(Entries::fromArrays(definitions: ['m' => $map]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['m' => $map]));
     $refused = $this->validated($surface, ['m' => ['n' => 1]]);
     $this->assertSame(['/m/n check.drupal:Callback'], array_keys($refused));
     $this->assertSame('First words. Second words.', $refused['/m/n check.drupal:Callback']['message']);
@@ -437,7 +437,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
       'callback' => [static::class, 'refuseAsThePayloadSays'],
       'payload' => [['x[1]', 'Bracketed key.'], ['a.b', 'Dotted key.'], ['x[0]', 'First item.']],
     ]);
-    $surface = new Surface(Entries::fromArrays(definitions: ['m' => $map]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['m' => $map]));
     $values = $this->pipeline()->accept($surface, ['m' => ['x[1]' => 'p', 'a.b' => 'q', 'x' => ['r'], 'a' => 's']]);
     $this->assertSame(['/x[1]', '/a.b', '/x/0'], array_column($this->answered($surface, $values, '/m'), 'location'));
     // On the wire a path is dotted, so the dotted key reads as two names
@@ -456,7 +456,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
    * refuses (`a@b`), the check refuses it.
    */
   public function testCompositesHoldingEmail(): void {
-    $surface = new Surface(Entries::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(schemas: [
       'one' => DataDefinition::create('string')->setLabel('One')->addConstraint('AtLeastOneOf', [
         'constraints' => [['Email' => []], ['Length' => ['max' => 2]]],
       ]),
@@ -568,7 +568,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
   public function testDottedNames(): void {
     $dotted = MapDataDefinition::create()->setLabel('Dotted');
     $dotted->setPropertyDefinition('a.b', DataDefinition::create('string')->setLabel('AB')->addConstraint('ExtensionExists', ['type' => 'module']));
-    $surface = new Surface(Entries::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(schemas: [
       'm' => $dotted,
       'x.y' => DataDefinition::create('string')->setLabel('XY')->addConstraint('ExtensionExists', ['type' => 'module']),
     ]));
@@ -589,7 +589,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
     }
     $this->assertSame([], $this->refused('first.newsletter', 'configure', ['sender_email' => 'news@example.com']));
 
-    $surface = new Surface(Entries::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(schemas: [
       'id' => DataDefinition::create('string')->setLabel('Id')->addConstraint('Uuid', []),
     ]));
     $refused = $this->validated($surface, ['id' => '00000000-0000-0000-0000-000000000000']);
@@ -607,7 +607,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
   public function testSecretRefusalCarriesNoValue(): void {
     $token = DataDefinition::create('string')->setLabel('Token')->addConstraint('ExtensionExists', ['type' => 'module']);
     DefinitionMetadata::setSecret($token);
-    $surface = new Surface(Entries::fromArrays(definitions: ['token' => $token]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['token' => $token]));
     $refused = $this->validated($surface, ['token' => 'hunter2-SECRET']);
     $this->assertCount(1, $refused);
     $entry = reset($refused);
@@ -620,7 +620,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
    * Tests an `enum` is said beside a check unless the check gave its list.
    */
   public function testEnumBesideCheck(): void {
-    $surface = new Surface(Entries::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(schemas: [
       'ext' => DataDefinition::create('string')->setLabel('Ext')
         ->addConstraint('Choice', ['choices' => ['node', 'user']])
         ->addConstraint('ExtensionExists', ['type' => 'module']),
@@ -628,7 +628,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
     $this->assertEqualsCanonicalizing(['/ext check.drupal:ExtensionExists', '/ext enum'], array_keys($this->validated($surface, ['ext' => 'zz'])), 'A list of its own, said beside the check.');
     $this->assertSame(['/ext enum'], array_keys($this->validated($surface, ['ext' => 'system'])), 'The check passes; the list refuses.');
 
-    $alone = new Surface(Entries::fromArrays(definitions: [
+    $alone = new Surface(Entries::fromArrays(schemas: [
       'ext' => DataDefinition::create('string')->setLabel('Ext')->addConstraint('ExtensionExists', ['type' => 'module']),
     ]));
     $this->assertSame(['/ext check.drupal:ExtensionExists'], array_keys($this->validated($alone, ['ext' => 'zz'])), 'The list the check gives is said by the check.');
@@ -638,7 +638,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
    * Tests `params.allowed` holds as many values as the sentence names.
    */
   public function testAllowedIsCapped(): void {
-    $surface = new Surface(Entries::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(schemas: [
       'big' => DataDefinition::create('string')->setLabel('Big')->addConstraint('Choice', ['choices' => array_map(static fn (int $i): string => 'option_' . $i, range(1, 50))]),
     ]));
     $params = $this->validated($surface, ['big' => 'zz'])['/big enum']['params'];
@@ -653,7 +653,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
   public function testDateAndTimeKeys(): void {
     $date = DataDefinition::create('datetime_iso8601')->setLabel('Day')->addConstraint('DateOnly', []);
     $at = DataDefinition::create('datetime_iso8601')->setLabel('At');
-    $surface = new Surface(Entries::fromArrays(definitions: ['day' => $date, 'at' => $at]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['day' => $date, 'at' => $at]));
     $schema = $this->container->get('surface.contract_emitter')->emit($surface, [], 'test')->document['schema'];
     $this->assertSame('date', $schema['properties']['day']['format']);
     $this->assertSame([], $this->validated($surface, ['day' => '2026-01-01']));
@@ -692,7 +692,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
     $rows->setItemDefinition($map);
     $fixed = DataDefinition::create('string')->setLabel('Fixed');
     DefinitionMetadata::setDefaultValue($fixed, 'a');
-    $surface = new Surface(Entries::fromArrays(definitions: ['contact' => $map, 'rows' => $rows]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['contact' => $map, 'rows' => $rows]));
     $refused = $this->validated($surface, ['contact' => ['phone' => '1'], 'rows' => [['phone' => '2']]]);
     $this->assertSame(['/contact/email required', '/rows/0/email type'], array_keys($refused));
     $this->assertSame('Contact email is required.', $refused['/contact/email required']['message']);
@@ -700,7 +700,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
 
     $pipeline = $this->pipeline();
     $stored = ['fixed' => 'b'];
-    $surface = new Surface(Entries::fromArrays(definitions: ['fixed' => $fixed], locked: ['fixed']));
+    $surface = new Surface(Entries::fromArrays(schemas: ['fixed' => $fixed], locked: ['fixed']));
     // A value sent for a locked key is not taken; the document states the
     // value the operation knows (the declared default here, which a built
     // resource seeds from storage), and the validator never says `const`
@@ -719,7 +719,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
     $inner->setPropertyDefinition('stewards', DataDefinition::create('integer')->setLabel('Stewards')->setRequired(TRUE));
     $outer = MapDataDefinition::create()->setLabel('Outer');
     $outer->setPropertyDefinition('inner', $inner);
-    $surface = new Surface(Entries::fromArrays(definitions: ['outer' => $outer]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['outer' => $outer]));
     $refused = $this->validated($surface, ['outer' => ['inner' => NULL]]);
     $this->assertSame(['/outer/inner/stewards required'], array_keys($refused));
   }
@@ -731,7 +731,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
    * as a refusal.
    */
   public function testUncheckedAndThrown(): void {
-    $foreign = new Surface(Entries::fromArrays(definitions: [
+    $foreign = new Surface(Entries::fromArrays(schemas: [
       'k' => DataDefinition::create('string')->setLabel('K')->addConstraint('JsonSchema', ['schema' => ['portable-check' => ['acme:Audit' => new \stdClass()]]]),
     ]));
     $refused = $this->validated($foreign, ['k' => 'x']);
@@ -739,13 +739,13 @@ class PortableValidationTest extends SurfaceKernelTestBase {
     $this->assertSame('acme:Audit', $refused['/k unchecked']['params']['check']);
     $this->assertStringContainsString('acme:Audit', $refused['/k unchecked']['message']);
 
-    $missing = new Surface(Entries::fromArrays(definitions: [
+    $missing = new Surface(Entries::fromArrays(schemas: [
       'k' => DataDefinition::create('string')->setLabel('K')->addConstraint('AuditRuleNobodyDeclares', []),
     ]));
     $this->assertSame(['/k unchecked'], array_keys($this->validated($missing, ['k' => 'x'])), 'A plugin the site lacks never passes.');
 
     // EntityBundleExists throws for a value that is no string.
-    $thrown = new Surface(Entries::fromArrays(definitions: [
+    $thrown = new Surface(Entries::fromArrays(schemas: [
       'k' => DataDefinition::create('integer')->setLabel('K')->addConstraint('EntityBundleExists', ['entityTypeId' => 'node']),
     ]));
     $this->expectException(UnexpectedTypeException::class);
@@ -760,7 +760,7 @@ class PortableValidationTest extends SurfaceKernelTestBase {
    * `x-portable-messages` holds the same message as plain text.
    */
   public function testConstraintMessageWins(): void {
-    $surface = new Surface(Entries::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(schemas: [
       'slug' => DataDefinition::create('string')->setLabel('Slug')->addConstraint('Regex', [
         'pattern' => '/^a+$/D',
         'message' => 'Use <em>only</em> the letter a.',

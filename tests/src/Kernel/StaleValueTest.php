@@ -97,7 +97,7 @@ class StaleValueTest extends SurfaceKernelTestBase {
     if ($default !== NULL) {
       DefinitionMetadata::setDefaultValue($pick, $default);
     }
-    return new Surface(Entries::fromArrays(definitions: [
+    return new Surface(Entries::fromArrays(schemas: [
       'pick' => $pick,
       'note' => DataDefinition::create('string')->setLabel('Note'),
     ]));
@@ -507,7 +507,7 @@ class StaleValueTest extends SurfaceKernelTestBase {
    * Tests that a refusal with no list behind it is never called stale.
    */
   public function testRefusalWithNoOptionListIsAnOrdinaryViolation(): void {
-    $surface = new Surface(Entries::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(schemas: [
       'pick' => DataDefinition::create('string')
         ->setLabel('Pick')
         ->addConstraint('Length', ['max' => 3]),
@@ -528,7 +528,7 @@ class StaleValueTest extends SurfaceKernelTestBase {
   public function testListsAreNeverStale(): void {
     $item = DataDefinition::create('string')
       ->addConstraint('Choice', ['choices' => ['keep', 'other']]);
-    $surface = new Surface(Entries::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(schemas: [
       'picks' => ListDataDefinition::create('string')
         ->setItemDefinition($item)
         ->setLabel('Picks'),

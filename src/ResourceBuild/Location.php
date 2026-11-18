@@ -7,6 +7,7 @@ namespace Drupal\surface\ResourceBuild;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Entry;
 use Drupal\surface\SurfaceInterface;
@@ -85,7 +86,7 @@ final class Location {
    *   holds a schema.
    */
   public function definition(): ?DataDefinitionInterface {
-    $definition = $this->holder?->definition();
+    $definition = $this->holder === NULL ? NULL : DefinitionFromSchema::forEntry($this->holder);
     foreach ($this->below as $segment) {
       $definition = static::step($definition, (string) $segment);
       if ($definition === NULL) {

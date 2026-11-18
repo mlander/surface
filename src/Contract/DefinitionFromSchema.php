@@ -8,6 +8,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Entry;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -74,6 +75,51 @@ final class DefinitionFromSchema {
     ListDataDefinition::class,
     MapDataDefinition::class,
   ];
+
+  /**
+   * The definition derived for each entry's schema, by the schema object.
+   *
+   * @var \WeakMap<\PortableSchema\Builder\Schema, \Drupal\Core\TypedData\DataDefinitionInterface>|null
+   */
+  private static ?\WeakMap $derived = NULL;
+
+  /**
+   * Gets the definition of an entry's key, for an edge that needs one.
+   *
+   * The host definition of an entry whose source gave one (Entry::host());
+   * for any other entry, the definition derived from its schema (of()),
+   * derived once per schema object and kept, so every edge that asks for
+   * one schema is handed the same definition. A definition handed out is
+   * for reading: an edge that changes one writes a copy.
+   *
+   * Decision: see docs/decisions.md#an-entry-holds-a-schema-alone.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The entry.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The definition.
+   *
+   * @throws \LogicException
+   *   When no definition derives from the entry's schema, naming the key.
+   */
+  public static function forEntry(Entry $entry): DataDefinitionInterface {
+    $host = $entry->host();
+    if ($host !== NULL) {
+      return $host;
+    }
+    $schema = $entry->schema();
+    self::$derived ??= new \WeakMap();
+    if (!isset(self::$derived[$schema])) {
+      try {
+        self::$derived[$schema] = static::of($schema);
+      }
+      catch (\LogicException $e) {
+        throw new \LogicException(sprintf('The "%s" key\'s source gave a schema, and no definition derives from it: %s', $entry->name, $e->getMessage()), 0, $e);
+      }
+    }
+    return self::$derived[$schema];
+  }
 
   /**
    * Derives the definition a built schema was read from.

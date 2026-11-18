@@ -170,7 +170,7 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
         $fits = match ($constraint) {
           'Range' => in_array($definition->getDataType(), ['integer', 'float'], TRUE),
           'Count' => FALSE,
-          'Choice' => ChoiceSet::of($definition) !== NULL,
+          'Choice' => ChoiceSet::fromConstraints($definition->getConstraints()) !== NULL,
           default => TRUE,
         };
         if (!$fits) {

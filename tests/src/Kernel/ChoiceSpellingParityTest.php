@@ -88,7 +88,7 @@ class ChoiceSpellingParityTest extends SurfaceKernelTestBase {
    * which is why this is where the spellings have to meet.
    */
   public function testChoiceSetReadsEverySpellingAsOneSet(): void {
-    $canonical = ChoiceSet::of($this->definition(self::CANONICAL));
+    $canonical = ChoiceSet::fromConstraints($this->definition(self::CANONICAL)->getConstraints());
     $this->assertNotNull($canonical);
     $this->assertSame(['star', 'flame'], $canonical->values);
     $this->assertSame(['star' => 'Star', 'flame' => 'Flame'], $canonical->labels);
@@ -96,7 +96,7 @@ class ChoiceSpellingParityTest extends SurfaceKernelTestBase {
     // spelling so that writing the set back cannot drop it.
     $this->assertSame(['descriptions' => ['flame' => 'It burns.']], $canonical->options);
     foreach (self::SPELLINGS as $spelling => $declared) {
-      $set = ChoiceSet::of($this->definition($declared));
+      $set = ChoiceSet::fromConstraints($this->definition($declared)->getConstraints());
       $this->assertNotNull($set);
       $this->assertSame($canonical->values, $set->values, $spelling);
       $this->assertSame($canonical->labels, $set->labels, $spelling);
@@ -287,7 +287,7 @@ class ChoiceSpellingParityTest extends SurfaceKernelTestBase {
    */
   protected function surface(array $options): SurfaceInterface {
     return new Surface(Entries::fromArrays(
-      definitions: ['badge' => $this->definition($options)],
+      schemas: ['badge' => $this->definition($options)],
     ));
   }
 

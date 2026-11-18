@@ -10,6 +10,7 @@ use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\surface\Collection;
 use Drupal\surface\Computed;
 use Drupal\surface\Contract\ContractBaselines;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\SiteListBudget;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
@@ -614,7 +615,7 @@ final class SiteCatalog {
     foreach ($surface->entries()->entries() as $name => $entry) {
       $name = (string) $name;
       $path = $prefix . $name;
-      $definition = $entry->definition();
+      $definition = DefinitionFromSchema::forEntry($entry);
       $computed = Computed::of($definition);
       // Variants the site lists past the budget are listed by value, and
       // their keys not walked: one structure a variant, at every depth, is

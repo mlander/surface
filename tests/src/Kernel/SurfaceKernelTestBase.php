@@ -131,7 +131,7 @@ abstract class SurfaceKernelTestBase extends KernelTestBase {
     ];
     return new Surface(
       Entries::fromArrays(
-        definitions: $definitions,
+        schemas: $definitions,
         refinements: ['variant' => ['casing']],
         locked: $locked,
         refiners: $refiners,

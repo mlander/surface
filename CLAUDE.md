@@ -720,53 +720,49 @@ the record of the rework that brought the module to the pattern.
   model stripped (at every keyword position); before anything compares it;
   the emitter decorates the projection with what the request adds.
   `of()` keeps nothing: the `Entry` holds its key's schema
-  (`Entry::schema()`). An entry holds one form as its source: the
-  definition (the constructor, `withDefinition()`) or the schema
-  (`Entry::ofSchema()`, `withSchema()`), the other made on the first ask
-  and kept, only the given form serialized; a schema-first entry's
-  `definition()` is derived by `DefinitionFromSchema::of()`, refused there with
-  the key's name, and asserted not written
-  (`docs/decisions.md#an-entry-holds-the-form-its-source-gave`). The seal
-  makes every entry schema-first (`Entries::fromArrays()` with
-  `schemaFirst: TRUE`, `Entry::sealed()`): a key that holds a child frame
-  is handed its own facts alone and its schema composed around its child's
-  entries' schemas, by name; an entry of a class `DefinitionFromSchema` does not
-  derive stays definition-first, made whole (`Entry::whole()`). There is
-  no definition-first mode. A definition a sealed entry hands out is for
-  reading: a write changes a derived copy alone and is refused at the
-  next ask with assertions on; build what a test needs before the seal,
-  or make an entry of a copy (`withDefinition()`)
-  (`docs/decisions.md#a-sealed-entry-holds-its-schema`). Ask for
-  what is needed: the keys alone are `Entries::keys()` (name to
-  TRUE) or `names()`, never `toArray()`
-  (`docs/decisions.md#nothing-asks-for-a-definition-it-does-not-need`),
-  and a fact of a key is read from its schema (`Entry::schema()`), never
-  from `definition()`. The options service takes the key:
+  (`Entry::schema()`), and nothing else. The one exception is a key whose
+  source is a definition no schema derives (a class outside
+  `DefinitionFromSchema::DERIVED`, or one holding such a class at any
+  depth): `Entry::ofHost()` keeps that definition (`host()`, read by edges
+  alone) and reads its schema on the first ask. An edge that needs a
+  definition asks `DefinitionFromSchema::forEntry($entry)`: the host, or
+  the definition derived from the schema, once per schema object
+  (`docs/decisions.md#an-entry-holds-a-schema-alone`). The seal
+  (`SurfaceBuilder::seal()`) gives `Entries::fromArrays()` each key's
+  schema: a key that holds a child frame is handed its own facts alone
+  and its schema composed around its child's entries' schemas, by name
+  (`shellSchema()`); a definition no schema derives is handed whole, the
+  entry's host (`docs/decisions.md#a-sealed-entry-holds-its-schema`). Ask
+  for what is needed: the keys alone are `Entries::keys()` (name to TRUE)
+  or `names()` (`docs/decisions.md#nothing-asks-for-a-definition-it-does-not-need`),
+  and a fact of a key is read from its schema (`Entry::schema()`). The
+  options service takes the key:
   `SurfaceOptions::resolve(Schema|DataDefinitionInterface $key)`, its schema
   wherever the caller holds it, a definition only where the caller holds
   none, the memo keyed by the object handed
   (`docs/decisions.md#a-fact-is-read-from-the-schema-and-the-options-service-takes-a-schema`).
-  `Entry::isSchemaFirst()` is for the build's widget walk, `Location` and
-  the watched-value walks in `Surface` (`watchedPlaces()`) alone. A key that holds a child frame (attached, variants, a
-  collection, a mount: `Entry::isShell()`) composes its schema: its own
-  facts read once (`DefinitionSchema::around()`) around the schemas its
-  child's entries hold, the very objects. A refined one is composed by
-  the refinement (`Surface::refineNested()`, `refineMounted()`) of the
-  shell's own schema and the refined child's entries' schemas
+  The watched-value walks in `Surface` (`watchedPlaces()`) and `Location`
+  walk the key's schema, a host entry's too. A key that holds a child
+  frame (attached, variants, a collection, a mount: `Entry::isShell()`) is
+  composed at the seal of its own facts read once
+  (`DefinitionSchema::around()`) around the schemas its child's entries
+  hold, the very objects. A refined one is composed by the refinement
+  (`Surface::refineNested()`, `refineMounted()`) of the shell's own schema
+  and the refined child's entries' schemas
   (`DefinitionSchema::withProperties()`; chosen variants over
   `Variants::shellSchema()`, a mount's part put back by `withPropertyAt()`)
-  and is schema-first (`withSchema()`); where its schema holds a class
-  `DefinitionFromSchema` does not derive (`Entries::derivedClasses()`), a
-  deciding key is locked, or a mount's own refiners refined it too, the
-  definition is built as before and handed with that schema
-  (`withDefinition($definition, $schema)`). A key whose refiner chain ran
-  is definition-first, its schema read from the refiner's answer whole. The
-  emitter tells a moved key by `Entry::sameSource()`, and a refinement
-  makes a new source wherever it made a new definition before, even for
-  an unchanged child; a port copy (`readingFrom()`) has its original's
-  source and derives nothing. `ShellSchemaCompositionTest` proves each schema
-  the read of its definition and of the definition the refinement built
-  before (`docs/decisions.md#a-key-that-holds-a-child-frame-has-a-schema-of-its-own`,
+  and held to the narrowing check on its schemas
+  (`Surface::assertShellNarrows()`), which refuses a refined surface
+  refined again into what the first refinement narrowed. A key whose
+  refiner chain ran holds the schema the answers gave; a host key keeps a
+  copy of its definition written with it (`Surface::writtenOn()`,
+  `Entry::withHost()`). The emitter tells a moved key by
+  `Entry::sameSource()` (the very schema, or a host entry's very
+  definition), and a refinement makes a new schema for every key it
+  refines, even for an unchanged child; a port copy (`readingFrom()`)
+  has its original's source. `ShellSchemaCompositionTest` proves a woken
+  refined shell holds its child's very schemas
+  (`docs/decisions.md#a-key-that-holds-a-child-frame-has-a-schema-of-its-own`,
   `docs/decisions.md#a-refined-shell-is-composed-of-schemas`). And
   a reader that walks down from an entry walks its schema in step
   (`DefinitionSchema::propertyOf()`, `itemOf()`, `shapeOf()`). The
@@ -833,9 +829,7 @@ the record of the rework that brought the module to the pattern.
   `Conditionals::stated()` takes the schema its caller means: the
   holder's, or the read of a rule's answer. The one definition the
   document derives is a rule's key's, where a declared rule narrows it:
-  a rule is applied to a definition (`Conditionals::rules()`). A refined
-  key whose refiner chain ran is definition-first, and its schema reads
-  the answer once. A port's key is held as its schema
+  a rule is applied to a definition (`Conditionals::rules()`). A port's key is held as its schema
   (`Surface::$portSchemas`, `Attachment::$wired`,
   `SurfaceInterface::getPortSchema()`), and the watched-value check is
   handed one, but for a key of a class outside `DefinitionFromSchema::DERIVED`, whose definition is

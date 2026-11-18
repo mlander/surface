@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\surface\Entry;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\SurfaceInterface;
@@ -278,61 +277,6 @@ class EntryPortsTest extends SurfaceKernelTestBase {
         $this->assertSame($message, $e->getMessage());
       }
     }
-  }
-
-  /**
-   * Tests a copy bound to its ports has the sealed entry's source.
-   *
-   * A sealed entry is schema-first and derives its definition on the first
-   * ask. A copy bound to its container's values (Entry::readingFrom())
-   * holds the entry's very schema, so it has the entry's source
-   * (Entry::sameSource()), which is what the emitter tells a key a
-   * refinement moved by, and making it derives nothing; a definition the
-   * entry derived already is the copy's too. Then the document served for
-   * the same values is the same whether the build's definitions were
-   * asked before or not.
-   */
-  public function testPortCopyHoldsTheSealedDefinition(): void {
-    $resources = $this->container->get('surface.resources');
-    $fresh = function () use ($resources): SurfaceInterface {
-      (new \ReflectionProperty($resources, 'builds'))->setValue($resources, []);
-      $this->container->get('cache.surface_build')->deleteAll();
-      return $resources->build(TicketSalesResource::class, $resources->operation(TicketSalesResource::class, 'configure'));
-    };
-    $derived = new \ReflectionProperty(Entry::class, 'definition');
-    $values = self::SHIPPED;
-
-    // The copy first, nothing asked before.
-    $limits = $fresh()->entries()->entry('limits');
-    $this->assertNotNull($limits);
-    $this->assertTrue($limits->isSchemaFirst());
-    $this->assertNull($derived->getValue($limits), 'Nothing asked the sealed entry yet.');
-    $copy = $limits->readingFrom($values);
-    $this->assertNotNull($copy, 'limits reads a port.');
-    $this->assertNull($derived->getValue($limits), 'Making the copy derives nothing.');
-    $this->assertNull($derived->getValue($copy), 'Nor does the copy hold a definition.');
-    $this->assertSame($limits->schema(), $copy->schema(), 'The copy holds the entry\'s very schema.');
-    $this->assertTrue($copy->sameSource($limits), 'The copy has the entry\'s source.');
-    $this->assertTrue($limits->sameSource($copy), 'Either way round.');
-
-    // The entry asked first.
-    $limits = $fresh()->entries()->entry('limits');
-    $this->assertNotNull($limits);
-    $definition = $limits->definition();
-    $this->assertSame($definition, $limits->readingFrom($values)?->definition());
-    $this->assertSame($definition, $limits->readingFrom(['on_sale' => ['standard' => TRUE]])?->definition(), 'Every copy, whatever its ports read.');
-
-    // The served document does not depend on what was asked before.
-    $emitter = $this->container->get('surface.contract_emitter');
-    $surface = $fresh();
-    $first = json_encode($emitter->emit($surface, array_replace($surface->getDefaultValues(), $values), 'event.sales', 'configure')->document);
-    $surface->entries()->entry('limits')?->definition();
-    $again = json_encode($emitter->emit($surface, array_replace($surface->getDefaultValues(), $values), 'event.sales', 'configure')->document);
-    $other = $fresh();
-    $other->entries()->entry('limits')?->definition();
-    $asked = json_encode($emitter->emit($other, array_replace($other->getDefaultValues(), $values), 'event.sales', 'configure')->document);
-    $this->assertSame($first, $again, 'A second read on the same build serves the same document.');
-    $this->assertSame($first, $asked, 'And so does a build whose definition was asked before it was read.');
   }
 
 }

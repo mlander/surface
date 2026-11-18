@@ -5,21 +5,16 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Cache\MemoryBackend;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Contract\ContractBaselines;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaMessage;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Schemas;
-use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Attachment;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface\ResourceBuild\Location;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -132,115 +127,6 @@ class LocationSchemaTest extends SurfaceKernelTestBase {
   protected function providerRefine(SurfaceInterface $surface, array $values): \Closure {
     $provider = $this->container->get('surface.portable_validator')->provider($surface, $values, $this->container->get('surface.pipeline'));
     return (new \ReflectionMethod($provider, 'refine'))->getClosure($provider);
-  }
-
-  /**
-   * Tests the schema at a place is its entry's schema, walked in step.
-   *
-   * At every place of every value set (valueSets(), places()) of every
-   * pinned example, with SurfaceInterface::refine() and with the check
-   * provider's own refine closure: a place with a definition has a schema,
-   * a frame of its own and a place nothing declares have none. The schema
-   * says what a fresh read of the definition says (schemaDifferences()). At a
-   * key of a frame, it says what that frame's entry's schema says; below a
-   * plain key, what the schema under its parent place's `properties` or
-   * `items` says. Through the provider's closure, which refines each level
-   * once, it is the very object: the entry's schema, the schema under its
-   * parent's, and the same on a second ask, so nothing reads it again.
-   * Through refine() itself each call refines afresh, and a key that two
-   * refined entries share is read for each.
-   * The schema declares every constraint of the definition with the options
-   * it holds, so a reader of a place need never ask whether a key offers a
-   * list, and its projection as listed differs from its projection as
-   * unlisted only in what a list states.
-   */
-  public function testTheSchemaAtPlaceIsTheEntrySchema(): void {
-    $definitions = $this->container->get('surface.definition_schema');
-    $asked = 0;
-    $stated = 0;
-    $sets = 0;
-    $atKeys = 0;
-    $inStep = 0;
-    $shared = 0;
-    $copies = 0;
-    foreach ($this->examples() as [$id, $operation, $surface]) {
-      foreach ($this->valueSets($surface) as $name => $values) {
-        $sets++;
-        $refine = $this->providerRefine($surface, $values);
-        foreach (static::places($surface, $values) as $pointer) {
-          $at = "$id:$operation [$name] $pointer";
-          $asked++;
-          foreach (['refine()' => NULL, 'the provider\'s refine' => $refine] as $how => $closure) {
-            $location = Location::definitionAt($surface, $values, $pointer, $closure);
-            if ($location === NULL) {
-              continue;
-            }
-            if ($location->definition() === NULL) {
-              $this->assertNull($location->schema, "$at, $how: a frame of its own has no schema.");
-              continue;
-            }
-            $schema = $location->schema;
-            $this->assertNotNull($schema, "$at, $how: a place with a definition has a schema.");
-            $this->assertSame([], array_diff(array_keys(DefinitionSchema::model($schema)), DefinitionSchema::MEMBERS), "$at, $how: MODEL holds its members alone.");
-            $this->assertSame(DefinitionMetadata::isSecret($location->definition()), Secrets::marked($schema), "$at, $how: the schema says it is secret where its definition is.");
-            $this->assertSame([], static::schemaDifferences(DefinitionSchema::of($location->definition()), $schema, "$at, $how"), "$at, $how: the schema says what a read of the definition says.");
-            $segments = Location::segments($pointer);
-            $last = (string) array_pop($segments);
-            $parentPointer = implode('', array_map(static fn (string $segment): string => Location::append('', $segment), $segments));
-            $parent = Location::definitionAt($surface, $values, $parentPointer, $closure);
-            $this->assertNotNull($parent, "$at, $how: its parent place is declared.");
-            if ($parent->frame !== NULL) {
-              // A key of a frame: that frame's entry holds the schema.
-              $entry = $parent->frame->entries()->entry($last);
-              $this->assertNotNull($entry, "$at, $how");
-              $this->assertSame(static::json($entry->schema()), static::json($schema), "$at, $how: the schema of the entry at the key.");
-              if ($closure !== NULL && $entry->definition() === $location->definition()) {
-                // The same level, refined once: the very schema.
-                $this->assertSame($entry->schema(), $schema, "$at, $how: the very schema of the entry at the key.");
-                $shared++;
-              }
-              elseif ($closure !== NULL) {
-                // A child bound afresh on each call holds a copy: the two
-                // say the same.
-                $copies++;
-              }
-              $atKeys++;
-            }
-            else {
-              // Below a plain key: the schema under its parent's schema.
-              $this->assertNotNull($parent->schema, "$at, $how");
-              $below = ctype_digit($last) && DefinitionSchema::itemOf($parent->schema) !== NULL ? DefinitionSchema::itemOf($parent->schema) : DefinitionSchema::propertyOf($parent->schema, $last);
-              $this->assertNotNull($below, "$at, $how: its parent's schema holds it.");
-              $this->assertSame(static::json($below), static::json($schema), "$at, $how: the schema under its parent's schema.");
-              $parentDefinition = $parent->definition();
-              $stepped = $parentDefinition instanceof ListDataDefinitionInterface ? $parentDefinition->getItemDefinition() : ($parentDefinition instanceof ComplexDataDefinitionInterface ? $parentDefinition->getPropertyDefinition($last) : NULL);
-              if ($closure !== NULL && $stepped === $location->definition()) {
-                $this->assertSame($below, $schema, "$at, $how: the very schema under its parent's schema.");
-                $shared++;
-              }
-              elseif ($closure !== NULL) {
-                $copies++;
-              }
-              $inStep++;
-            }
-            $again = Location::definitionAt($surface, $values, $pointer, $closure);
-            if ($closure !== NULL && $again->definition() === $location->definition()) {
-              $this->assertSame($schema, $again->schema, "$at, $how: asked again, the same schema.");
-            }
-            $this->assertDeclaresTheDefinitionsConstraints($location->definition(), $schema, "$at, $how");
-            if ($this->assertListedDiffersOnlyInWhatItsListStates($definitions, $location->definition(), $schema, "$at, $how")) {
-              $stated++;
-            }
-          }
-        }
-      }
-    }
-    $this->assertGreaterThan(100, $sets, 'Every example is asked at each of its value sets.');
-    $this->assertGreaterThan(1000, $asked, 'Every place of every value set is asked.');
-    $this->assertGreaterThan(1000, $atKeys, 'Places at a key of a frame are asked.');
-    $this->assertGreaterThan(10, $inStep, 'Places below a plain key are asked.');
-    $this->assertGreaterThan($copies, $shared, 'Through the provider\'s closure, most places are the very schema of the entry Location reads.');
-    $this->assertGreaterThan(0, $stated, 'Some place holds a check a list states, so the comparison of the two projections can differ.');
   }
 
   /**
@@ -578,7 +464,7 @@ class LocationSchemaTest extends SurfaceKernelTestBase {
       }
       $in = $value::class;
       $members = (array) $value;
-      if ($value instanceof Entry && $value->isSchemaFirst()) {
+      if ($value instanceof Entry && $value->host() === NULL) {
         $sources++;
         unset($members["\0" . Entry::class . "\0schema"]);
       }

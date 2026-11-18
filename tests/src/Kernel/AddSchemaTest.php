@@ -273,7 +273,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
     $definition = $blueprint->definitionOf('open');
     $this->assertInstanceOf(MapDataDefinition::class, $definition);
     $this->assertSame(['city'], array_keys($definition->getPropertyDefinitions()));
-    $surface = new Surface(Entries::fromArrays(definitions: ['open' => $definition]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['open' => $definition]));
     $schema = $this->container->get('surface.contract_emitter')->emit($surface, [], 'test')->document['schema'];
     $open = json_decode((string) json_encode($schema), TRUE)['properties']['open'];
     $this->assertFalse($open['additionalProperties']);

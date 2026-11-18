@@ -767,7 +767,7 @@ final class SurfaceBuilder {
   public function extendChoices(string $name, array $choices, string $contributor): static {
     $this->assertMutable();
     $definition = $this->named($name);
-    $set = ChoiceSet::of($definition);
+    $set = ChoiceSet::fromConstraints($definition->getConstraints());
     if ($set === NULL) {
       throw new \InvalidArgumentException(sprintf(
         'The "%s" definition declares no list of allowed values, so there is nothing to extend: giving it one would narrow what its owner deliberately left open.',
@@ -1013,7 +1013,7 @@ final class SurfaceBuilder {
       throw new \InvalidArgumentException(sprintf('%s are chosen by "%s", which is a %s: a deciding key holds one value.', $refused, $by, $deciding->getDataType()));
     }
     $before = Surface::deepClone($deciding);
-    $set = ChoiceSet::of($deciding);
+    $set = ChoiceSet::fromConstraints($deciding->getConstraints());
     if ($set === NULL) {
       if ($labels === []) {
         $deciding->addConstraint('Choice', ['choices' => $ids]);
@@ -1207,11 +1207,12 @@ final class SurfaceBuilder {
     $this->reserveThirdPartyMount($provider);
     foreach ($attachment->child->entries()->entries() as $name => $entry) {
       // A definition of its own, derived from the entry's schema: the
-      // alter writes the mounted keys by path. A key of a class no schema
-      // derives keeps a copy of its own definition, as the entry does.
-      $this->thirdParty[$provider][(string) $name] = Entries::derivedClasses($entry->schema())
+      // alter writes the mounted keys by path. A key whose source is a
+      // definition no schema derives keeps a copy of it, as the entry does.
+      $host = $entry->host();
+      $this->thirdParty[$provider][(string) $name] = $host === NULL
         ? DefinitionFromSchema::of($entry->schema())
-        : Surface::deepClone($entry->definition());
+        : Surface::deepClone($host);
     }
     $this->mounted[$provider] = $attachment;
     $this->cacheability->addCacheableDependency($attachment->child);
@@ -1449,7 +1450,7 @@ final class SurfaceBuilder {
     $definitions = $this->definitions;
     // A key that holds a child frame is handed its own facts alone, a copy
     // of the shell its author described: its schema is composed of them
-    // around the schemas its child's entries hold (Entry::sealed()), so no
+    // around the schemas its child's entries hold (shellSchema()), so no
     // definition of the child's keys is built for it.
     foreach (array_keys($this->attachments) as $key) {
       $definitions[$key] = clone $this->assertShell((string) $key);
@@ -1475,7 +1476,7 @@ final class SurfaceBuilder {
     }
     foreach (array_keys($this->lists) as $key) {
       // The list's own facts around an empty map, the item the child's
-      // keys fill, as Collection::listOf() makes it.
+      // keys fill.
       $shell = clone $this->assertListShell((string) $key);
       $shell->setItemDefinition(MapDataDefinition::create());
       $definitions[$key] = $shell;
@@ -1513,9 +1514,25 @@ final class SurfaceBuilder {
     foreach ($outputs as $name => $definition) {
       static::assertOutputDeclarable((string) $name, $definition);
     }
+    $schemas = [];
+    foreach ($definitions as $name => $definition) {
+      $name = (string) $name;
+      $child = match (TRUE) {
+        isset($this->attachments[$name]) => $this->attachments[$name]->child,
+        isset($this->lists[$name]) => $this->lists[$name]->item->child,
+        isset($picked[$name]) => $sealed[$name]->variant($picked[$name])->child,
+        default => NULL,
+      };
+      $mounted = $name === 'third_party_settings' ? $this->mounted : [];
+      $shell = $child !== NULL || isset($this->attachments[$name]) || isset($this->lists[$name]) || isset($sealed[$name]) || $mounted !== [];
+      $schemas[$name] = $definition instanceof Schema || !$shell
+        ? static::sealedSchema($definition)
+        : static::shellSchema($definition, $child, $mounted, isset($this->lists[$name]));
+    }
+    $outputs = array_map(static::sealedSchema(...), $outputs);
     return $this->sealed = new Surface(
       Entries::fromArrays(
-        definitions: $definitions,
+        schemas: $schemas,
         refinements: $this->refinements,
         locked: $locked,
         refiners: $this->refiners,
@@ -1532,11 +1549,9 @@ final class SurfaceBuilder {
         runtimeAccess: $this->runtimeAccessWhole ? array_map('strval', array_keys($definitions)) : array_values(array_intersect($this->runtimeAccess, array_keys($definitions))),
         lockReasons: array_intersect_key($this->lockReasons, $definitions),
         frameConstraints: $this->frameConstraints,
-        schemaFirst: TRUE,
-        chosen: $picked,
       ),
       $this->cacheability,
-      Entries::fromArrays(definitions: $outputs, schemaFirst: TRUE),
+      Entries::fromArrays(schemas: $outputs),
       $this->thirdPartyLayouts,
       $this->watchedValueCheck,
       lockedWhole: $this->lockedWhole,
@@ -1544,6 +1559,127 @@ final class SurfaceBuilder {
       version: $this->version,
       runtimeAccessOwn: $this->runtimeAccessWhole ? array_values(array_intersect($this->runtimeAccess, array_keys($definitions))) : NULL,
     );
+  }
+
+  /**
+   * Gives the seal a key's schema, or its definition where none derives one.
+   *
+   * A schema the builder holds is the key's. A definition is read into its
+   * schema (DefinitionSchema::of()) where it is of one of the three classes
+   * DefinitionFromSchema derives and its schema holds no other at any depth
+   * (Entries::derivedClasses()); any other is handed on whole, the entry's
+   * host definition (Entry::ofHost()), its schema read on the first ask.
+   *
+   * Decision: see docs/decisions.md#an-entry-holds-a-schema-alone.
+   *
+   * @param \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key as the builder holds it.
+   *
+   * @return \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface
+   *   Its schema, or the definition no schema derives.
+   */
+  protected static function sealedSchema(Schema|DataDefinitionInterface $definition): Schema|DataDefinitionInterface {
+    if ($definition instanceof Schema) {
+      return $definition;
+    }
+    if (in_array($definition::class, DefinitionFromSchema::DERIVED, TRUE)) {
+      $schema = DefinitionSchema::of($definition);
+      if (Entries::derivedClasses($schema)) {
+        return $schema;
+      }
+    }
+    return $definition;
+  }
+
+  /**
+   * Composes the schema of a key that holds a child frame, at the seal.
+   *
+   * The key's own facts, read from the definition the seal hands it, around
+   * the schemas its child's entries hold, placed by name
+   * (DefinitionSchema::around()):
+   * - an attachment, or variants whose locked deciding key chose one: the
+   *   child's keys, the map's properties;
+   * - variants nothing chose: the placeholder, which holds none;
+   * - a collection: its item, a map of the item child's keys;
+   * - a mount: each module's map, a structure's keys in it, by name.
+   * At the seal nothing is refined, so the child's entries are the very
+   * keys the key holds. A refinement composes its shells itself
+   * (Surface::refineNested(), refineMounted()).
+   *
+   * Decision: see
+   * docs/decisions.md#a-key-that-holds-a-child-frame-has-a-schema-of-its-own
+   * and docs/decisions.md#a-sealed-entry-holds-its-schema.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's own facts: the shell, or the mount's map.
+   * @param \Drupal\surface\SurfaceInterface|null $child
+   *   The child whose keys the key holds; NULL for a mount and for variants
+   *   nothing chose.
+   * @param array<string, \Drupal\surface\Attachment> $mounted
+   *   The structures at the key's mounts, by path; empty for any other key.
+   * @param bool $list
+   *   Whether the key is a collection.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   Its schema.
+   */
+  protected static function shellSchema(DataDefinitionInterface $definition, ?SurfaceInterface $child, array $mounted, bool $list): Schema {
+    if ($list) {
+      return $definition instanceof ListDataDefinitionInterface
+        ? DefinitionSchema::around($definition, items: static::filled($definition->getItemDefinition(), $child))
+        : DefinitionSchema::around($definition);
+    }
+    if ($mounted !== []) {
+      $parts = [];
+      if ($definition instanceof ComplexDataDefinitionInterface && DefinitionSchema::isMap($definition)) {
+        foreach ($definition->getPropertyDefinitions() as $path => $part) {
+          $attachment = $mounted[(string) $path] ?? NULL;
+          if ($attachment !== NULL) {
+            $parts[(string) $path] = static::filled($part, NULL, $attachment->child);
+          }
+        }
+      }
+      return DefinitionSchema::around($definition, $parts);
+    }
+    return static::filled($definition, $child);
+  }
+
+  /**
+   * Reads a map around the schemas of a child's keys.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $map
+   *   The map.
+   * @param \Drupal\surface\SurfaceInterface|null $child
+   *   The child whose keys the map holds: each of its entries the map does
+   *   not hold as a property is placed after the map's own properties, by
+   *   name, its entry's schema.
+   * @param \Drupal\surface\SurfaceInterface|null $byName
+   *   A child whose entries' schemas are taken for the properties the map
+   *   holds, by name: a structure at a mount, whose keys the builder
+   *   mounted as definitions derived from them (mountStructure()).
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The map's schema.
+   */
+  protected static function filled(DataDefinitionInterface $map, ?SurfaceInterface $child, ?SurfaceInterface $byName = NULL): Schema {
+    $schemas = [];
+    // The seal's shell holds no property: it is a map all the same once
+    // its child's keys are placed in it.
+    if ($map instanceof ComplexDataDefinitionInterface && !$map instanceof ListDataDefinitionInterface && (DefinitionSchema::isMap($map) || $child !== NULL)) {
+      $held = $map->getPropertyDefinitions();
+      foreach ($child?->entries()->entries() ?? [] as $name => $entry) {
+        if (!isset($held[$name])) {
+          $schemas[(string) $name] = $entry->schema();
+        }
+      }
+      foreach (array_keys($held) as $name) {
+        $entry = $byName?->entries()->entry((string) $name);
+        if ($entry !== NULL) {
+          $schemas[(string) $name] = $entry->schema();
+        }
+      }
+    }
+    return DefinitionSchema::around($map, $schemas);
   }
 
   /**

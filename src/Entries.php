@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface;
 
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\DefinitionFromSchema;
 use PortableSchema\Builder\Schema;
@@ -137,14 +136,17 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
    * Builds a map from the plain arrays an author writes.
    *
    * The boundary the roadmap's rule names: contracts are objects,
-   * payloads and authoring syntax are arrays. A declaration says
-   * definitions, a refinement map and a list of locked keys as plain
-   * arrays, and this is where they become one collection, so nothing
-   * about declaring a resource or structure changes.
+   * payloads and authoring syntax are arrays. The seal says each key's
+   * schema, a refinement map and a list of locked keys as plain arrays,
+   * and this is where they become one collection.
    *
-   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface|\PortableSchema\Builder\Schema> $definitions
-   *   The definitions, keyed by definition key, in declaration order; a
-   *   key the builder holds as its schema is given as the schema.
+   * @param array<string, \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface> $schemas
+   *   Each key's schema, keyed by key, in declaration order: a key that
+   *   holds a child frame composed of its own facts and its child's
+   *   entries' schemas already (SurfaceBuilder::seal()). A definition
+   *   given in place of a schema is kept as the entry's host definition
+   *   (Entry::ofHost()): the seal gives one only for a definition no
+   *   schema derives.
    * @param array<string, string[]> $refinements
    *   Refinement dependencies: target key => the sibling keys it
    *   refines against. A target may be a dotted path to one property
@@ -194,28 +196,15 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
    * @param array<int, array> $frameConstraints
    *   What the frame as a whole is held to beyond its keys, each a JSON
    *   Schema (frameConstraints()).
-   * @param bool $schemaFirst
-   *   Whether every entry is made schema-first, as the seal makes it
-   *   (Entry::sealed()): each key's schema read from its definition, a key
-   *   that holds a child frame composed of its own facts around its
-   *   child's entries' schemas, the definition dropped. A definition of a
-   *   class other than the three DefinitionFromSchema derives, or whose schema
-   *   holds a schema of another class at any depth, stays definition-first,
-   *   made whole (Entry::whole()). FALSE makes every entry from its
-   *   definition, definition-first, as any caller but the seal does.
-   * @param array<string, string> $chosen
-   *   With $schemaFirst, the variant chosen at each key whose variants'
-   *   deciding key is locked, by key: the key is handed the variants'
-   *   empty map and holds that variant's keys.
    *
    * @return static
    *   The map.
    *
    * @throws \InvalidArgumentException
-   *   When anything names a key the definitions do not declare.
+   *   When anything names a key the schemas do not declare.
    */
   public static function fromArrays(
-    array $definitions,
+    array $schemas,
     array $refinements = [],
     array $locked = [],
     string $contributor = SurfaceInterface::OWNER,
@@ -233,15 +222,9 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
     array $runtimeAccess = [],
     array $lockReasons = [],
     array $frameConstraints = [],
-    bool $schemaFirst = FALSE,
-    array $chosen = [],
   ): static {
-    // The seal alone passes these, and as it uses them: a chosen variant
-    // only for schema-first entries, and only at a key with variants.
-    assert($chosen === [] || $schemaFirst, 'A chosen variant is passed only with schemaFirst: the seal hands such a key its own facts alone.');
-    assert(array_diff_key($chosen, $variants) === [], sprintf('A chosen variant is passed only at a key with variants, not at %s.', implode(', ', array_keys(array_diff_key($chosen, $variants)))));
     foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($variants), array_keys($lists), array_keys($mounted)) as $key) {
-      if (!isset($definitions[$key])) {
+      if (!isset($schemas[$key])) {
         throw new \InvalidArgumentException(sprintf('"%s" is not a data surface definition.', $key));
       }
     }
@@ -249,7 +232,7 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
     $paths = [];
     foreach ($refinements as $target => $watched) {
       [$key, $path] = array_pad(explode('.', (string) $target, 2), 2, NULL);
-      if (!isset($definitions[$key])) {
+      if (!isset($schemas[$key])) {
         throw new \InvalidArgumentException(sprintf('Refinement target "%s" is not a data surface definition.', $target));
       }
       $watched = array_values(array_map('strval', $watched));
@@ -271,83 +254,32 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
       }
     }
     $entries = [];
-    foreach ($definitions as $name => $definition) {
-      if ($definition instanceof Schema) {
-        // A key the builder holds as its schema: schema-first from the
-        // start, as the seal makes a key of one value.
-        $entries[] = Entry::ofSchema(
-          name: (string) $name,
-          schema: $definition,
-          contributor: $contributor,
-          locked: in_array($name, $locked, TRUE),
-          dependencies: $dependencies[$name] ?? [],
-          refiners: $refiners[$name] ?? [],
-          contributions: $contributions[$name] ?? [],
-          attachment: $attachments[$name] ?? NULL,
-          variants: $variants[$name] ?? NULL,
-          paths: $paths[$name] ?? [],
-          runtimeOnly: array_values(array_diff($dependencies[$name] ?? [], $static[$name] ?? [])),
-          list: $lists[$name] ?? NULL,
-          watchedBy: $kinds[$name] ?? [],
-          mounted: $mounted[$name] ?? [],
-          held: in_array($name, $held, TRUE),
-          runtimeAccess: in_array($name, $runtimeAccess, TRUE),
-          lockedBecause: in_array($name, $locked, TRUE) ? ($lockReasons[$name] ?? NULL) : NULL,
-        );
-        continue;
-      }
-      $entries[] = new Entry(
-        name: (string) $name,
-        definition: $definition,
-        contributor: $contributor,
-        locked: in_array($name, $locked, TRUE),
-        dependencies: $dependencies[$name] ?? [],
-        refiners: $refiners[$name] ?? [],
-        contributions: $contributions[$name] ?? [],
-        attachment: $attachments[$name] ?? NULL,
-        variants: $variants[$name] ?? NULL,
-        paths: $paths[$name] ?? [],
-        runtimeOnly: array_values(array_diff($dependencies[$name] ?? [], $static[$name] ?? [])),
-        list: $lists[$name] ?? NULL,
-        watchedBy: $kinds[$name] ?? [],
-        mounted: $mounted[$name] ?? [],
-        held: in_array($name, $held, TRUE),
-        runtimeAccess: in_array($name, $runtimeAccess, TRUE),
-        lockedBecause: in_array($name, $locked, TRUE) ? ($lockReasons[$name] ?? NULL) : NULL,
-      );
-      if ($schemaFirst) {
-        $entries[] = static::sealed(array_pop($entries), $definition, $chosen[$name] ?? NULL);
-      }
+    foreach ($schemas as $name => $schema) {
+      $name = (string) $name;
+      $facts = [
+        'contributor' => $contributor,
+        'locked' => in_array($name, $locked, TRUE),
+        'dependencies' => $dependencies[$name] ?? [],
+        'refiners' => $refiners[$name] ?? [],
+        'contributions' => $contributions[$name] ?? [],
+        'attachment' => $attachments[$name] ?? NULL,
+        'variants' => $variants[$name] ?? NULL,
+        'paths' => $paths[$name] ?? [],
+        'runtimeOnly' => array_values(array_diff($dependencies[$name] ?? [], $static[$name] ?? [])),
+        'list' => $lists[$name] ?? NULL,
+        'watchedBy' => $kinds[$name] ?? [],
+        'mounted' => $mounted[$name] ?? [],
+        'held' => in_array($name, $held, TRUE),
+        'runtimeAccess' => in_array($name, $runtimeAccess, TRUE),
+        'lockedBecause' => in_array($name, $locked, TRUE) ? ($lockReasons[$name] ?? NULL) : NULL,
+      ];
+      $entries[] = $schema instanceof Schema
+        ? new Entry($name, $schema, ...$facts)
+        : Entry::ofHost($name, $schema, ...$facts);
     }
     $map = new static($entries, $ports, $mixins);
     $map->frameConstraints = array_values($frameConstraints);
     return $map;
-  }
-
-  /**
-   * Makes an entry schema-first, as the seal makes it.
-   *
-   * @param \Drupal\surface\Entry $entry
-   *   The entry, as made from its definition.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   Its definition: a key that holds a child frame its own facts alone,
-   *   or whole.
-   * @param string|null $chosen
-   *   The variant chosen at the key, if its deciding key is locked.
-   *
-   * @return \Drupal\surface\Entry
-   *   The entry, schema-first (Entry::sealed()); definition-first and made
-   *   whole (Entry::whole()) for a definition of a class the inverse does
-   *   not derive, at any depth its schema holds a schema.
-   */
-  private static function sealed(Entry $entry, DataDefinitionInterface $definition, ?string $chosen): Entry {
-    if (in_array($definition::class, DefinitionFromSchema::DERIVED, TRUE)) {
-      $sealed = $entry->sealed($chosen);
-      if (static::derivedClasses($sealed->schema())) {
-        return $sealed;
-      }
-    }
-    return $entry->whole($chosen);
   }
 
   /**
@@ -356,9 +288,8 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
    * The schema, its properties, its item, and the schemas a shape, a config
    * type and `each` hold, at every depth: what DefinitionFromSchema::of()
    * derives a definition from, and refuses for any other class. The one
-   * test of whether an entry may be schema-first: at the seal (sealed())
-   * and for a shell a refinement composes (Surface::refineNested(),
-   * refineMounted()).
+   * test of whether the seal keeps a key's definition as its host
+   * (SurfaceBuilder::seal()).
    *
    * @param \PortableSchema\Builder\Schema $schema
    *   A built schema.
@@ -703,17 +634,13 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
   }
 
   /**
-   * Gets the definitions as a plain array, keyed by key.
+   * Gets the schemas as a plain array, keyed by key.
    *
-   * For the edges that read the definitions themselves, until an entry
-   * holds its schema alone. Every other reader iterates the entries,
-   * which yields schemas, or asks keys().
-   *
-   * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
-   *   The definitions, in declaration order.
+   * @return array<string, \PortableSchema\Builder\Schema>
+   *   Each key's schema, in declaration order.
    */
   public function toArray(): array {
-    return array_map(static fn (Entry $entry): DataDefinitionInterface => $entry->definition(), $this->entries);
+    return array_map(static fn (Entry $entry): Schema => $entry->schema(), $this->entries);
   }
 
   /**

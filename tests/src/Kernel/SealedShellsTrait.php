@@ -5,13 +5,11 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Attachment;
 use Drupal\surface\Collection;
 use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceInterface;
 
 /**
  * Builds a data surface with every kind of shell, by hand.
@@ -22,9 +20,7 @@ use Drupal\surface\SurfaceInterface;
  * the seal) and variants nothing has chosen, and a mount whose structure
  * holds an attachment (a mounted key that is a shell); the attached shell
  * and the collection each hold a default of their own. The builder's own
- * shells are kept, so a test can build what the seal built from them
- * before 2026-11-15 (Attachment::mapOf(), Collection::listOf(),
- * Variants::definitionFor(), Variants::placeholder()).
+ * shells are kept beside the surface.
  */
 trait SealedShellsTrait {
 
@@ -73,29 +69,6 @@ trait SealedShellsTrait {
       $shells[$key] = $builder->getDefinition($key);
     }
     return [$builder->seal(), $shells, ['leaf' => $leaf, 'other' => $other, 'holder' => $holder]];
-  }
-
-  /**
-   * Builds what the seal built before 2026-11-15 for one shell.
-   *
-   * @param \Drupal\surface\SurfaceInterface $surface
-   *   The sealed surface.
-   * @param string $key
-   *   The shell's key.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $shell
-   *   The shell as the builder held it.
-   *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The definition.
-   */
-  protected static function oldSeal(SurfaceInterface $surface, string $key, DataDefinitionInterface $shell): DataDefinitionInterface {
-    $entry = $surface->entries()->entry($key);
-    return match (TRUE) {
-      $entry->attachment !== NULL && $shell instanceof MapDataDefinition => Attachment::mapOf($shell, $entry->attachment->child),
-      $entry->list !== NULL && $shell instanceof ListDataDefinition => Collection::listOf($shell, $entry->list->item->child),
-      $key === 'pick' => $entry->variants->definitionFor('x'),
-      default => $entry->variants->placeholder(),
-    };
   }
 
 }

@@ -56,7 +56,7 @@ class LabeledChoiceTest extends SurfaceKernelTestBase {
   protected function surface(): SurfaceInterface {
     return new Surface(
       Entries::fromArrays(
-        definitions: [
+        schemas: [
           'mode' => DataDefinition::create('integer')
             ->setLabel('Mode')
             ->addConstraint('LabeledChoice', [
@@ -175,7 +175,7 @@ class LabeledChoiceTest extends SurfaceKernelTestBase {
 
     $surface = new Surface(
       Entries::fromArrays(
-        definitions: [
+        schemas: [
           'mode' => DataDefinition::create('integer')
             ->setLabel('Mode')
             ->addConstraint('LabeledChoice', [

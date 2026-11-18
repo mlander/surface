@@ -77,7 +77,7 @@ class PipelineParityTest extends SurfaceKernelTestBase {
 
     return new Surface(
       Entries::fromArrays(
-        definitions: $definitions,
+        schemas: $definitions,
         locked: ['flavor'],
       ),
     );

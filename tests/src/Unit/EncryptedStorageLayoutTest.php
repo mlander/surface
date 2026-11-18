@@ -6,10 +6,7 @@ namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\surface\Attachment;
-use Drupal\surface\Entry;
 use Drupal\surface\Surface;
 use Drupal\surface\Entries;
 use Drupal\surface\DefinitionMetadata;
@@ -63,50 +60,10 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
   protected function surface(): Surface {
     $token = DataDefinition::create('string')->setLabel('API key');
     DefinitionMetadata::setSecret($token);
-    return new Surface(Entries::fromArrays(definitions: [
+    return new Surface(Entries::fromArrays(schemas: [
       'endpoint' => DataDefinition::create('string')->setLabel('Endpoint'),
       'token' => $token,
     ]));
-  }
-
-  /**
-   * Tests a schema-first surface's secret keys are read from its schemas.
-   *
-   * A key that holds a child frame has its secret flag read from its schema
-   * too, composed of its own facts around the child's entries' schemas (a
-   * map is never a secret), so the layout derives no definition; the keys
-   * are those the definitions say, in either form (fromArrays() with
-   * and without schemaFirst).
-   */
-  public function testSecretKeysOfSchemaFirstSurfaceDeriveNoDefinition(): void {
-    $derived = new \ReflectionProperty(Entry::class, 'definition');
-    $found = [];
-    foreach ([FALSE, TRUE] as $schema_first) {
-      // The child as a sealed child is, and the map of its keys the build
-      // makes of it; then the surface the layout reads, made in each form.
-      $child = new Surface(Entries::fromArrays(definitions: ['code' => DataDefinition::create('string')->setLabel('Code')]));
-      $place = Attachment::mapOf(MapDataDefinition::create()->setLabel('Place'), $child);
-      $token = DataDefinition::create('string')->setLabel('API key');
-      DefinitionMetadata::setSecret($token);
-      $surface = new Surface(Entries::fromArrays(
-        definitions: [
-          'endpoint' => DataDefinition::create('string')->setLabel('Endpoint'),
-          'token' => $token,
-          'place' => $place,
-        ],
-        attachments: ['place' => new Attachment($child)],
-        schemaFirst: $schema_first,
-      ));
-      $found[] = EncryptedStorageLayout::secretKeys($surface);
-      if ($schema_first) {
-        foreach ($surface->entries()->entries() as $name => $entry) {
-          $this->assertTrue($entry->isSchemaFirst());
-          $this->assertNull($derived->getValue($entry), sprintf('Reading whether "%s" is secret derives no definition.', $name));
-        }
-      }
-    }
-    $this->assertSame(['token'], $found[0]);
-    $this->assertSame($found[0], $found[1], 'The same keys in either form.');
   }
 
   /**
@@ -148,7 +105,7 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
    * types declare no secret must not grow a layer that does nothing.
    */
   public function testSurfaceWithoutSecretsIsNotWrapped(): void {
-    $surface = new Surface(Entries::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(schemas: [
       'endpoint' => DataDefinition::create('string'),
     ]));
     $inner = $this->passThroughLayout();

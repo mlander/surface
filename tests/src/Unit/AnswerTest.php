@@ -173,7 +173,7 @@ class AnswerTest extends UnitTestCase {
   public function testEnumFiltersInTheKeysOrder(): void {
     $definition = static::labeled();
     $expected = clone $definition;
-    ChoiceSet::of($definition)->withValues(['a', 'c'])->applyTo($expected);
+    ChoiceSet::fromConstraints($definition->getConstraints())->withValues(['a', 'c'])->applyTo($expected);
     $key = DefinitionSchema::of($definition);
     $this->assertSameSchema(DefinitionSchema::of($expected), Answer::apply($key, Schema::enum(['c', 'a', 'z']), 'k', 'the declaring class'));
     // A key with no list gains a Choice of the values.
@@ -211,7 +211,7 @@ class AnswerTest extends UnitTestCase {
   public function testEmptyListsAreTheEmptyList(): void {
     $definition = static::labeled();
     $expected = clone $definition;
-    ChoiceSet::of($definition)->withValues([])->applyTo($expected);
+    ChoiceSet::fromConstraints($definition->getConstraints())->withValues([])->applyTo($expected);
     $key = DefinitionSchema::of($definition);
     $this->assertSameSchema(DefinitionSchema::of($expected), Answer::apply($key, Schema::enum([]), 'k', 'the declaring class'));
     $this->assertSameSchema(DefinitionSchema::of($expected), Answer::apply($key, Schema::options([]), 'k', 'the declaring class'));
@@ -410,7 +410,7 @@ class AnswerTest extends UnitTestCase {
    */
   public function testWithChoices(): void {
     $definition = static::labeled();
-    $set = ChoiceSet::of($definition)->withValues(['b']);
+    $set = ChoiceSet::fromConstraints($definition->getConstraints())->withValues(['b']);
     $expected = $set->applyTo(clone $definition);
     $this->assertSameSchema(DefinitionSchema::of($expected), Answer::withChoices(DefinitionSchema::of($definition), $set));
   }

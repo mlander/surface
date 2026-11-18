@@ -120,7 +120,7 @@ class SurfacePipelineCastingTest extends UnitTestCase {
    *   The accepted value of the key.
    */
   protected function accept(DataDefinitionInterface $definition, mixed $input, array $current = []): mixed {
-    $surface = new Surface(Entries::fromArrays(definitions: ['value' => $definition]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['value' => $definition]));
     return $this->pipeline()->accept($surface, ['value' => $input], $current)['value'];
   }
 
@@ -510,7 +510,7 @@ class SurfacePipelineCastingTest extends UnitTestCase {
    */
   public function testAbsentKeepsNothingClearsValueReplaces(): void {
     foreach (['string' => 'kept', 'integer' => 3, 'float' => 1.5, 'boolean' => FALSE, 'email' => 'a@example.com'] as $type => $stored) {
-      $surface = new Surface(Entries::fromArrays(definitions: ['value' => DataDefinition::create($type)]));
+      $surface = new Surface(Entries::fromArrays(schemas: ['value' => DataDefinition::create($type)]));
       $this->assertSame($stored, $this->pipeline()->accept($surface, [], ['value' => $stored])['value'], $type . ' absent');
       foreach ([NULL, ''] as $nothing) {
         $this->assertNull($this->accept(DataDefinition::create($type), $nothing, ['value' => $stored]), $type);
@@ -555,7 +555,7 @@ class SurfacePipelineCastingTest extends UnitTestCase {
     DefinitionMetadata::setDefaultValue($definition, 'vanilla');
     $surface = new Surface(
       Entries::fromArrays(
-        definitions: ['value' => $definition],
+        schemas: ['value' => $definition],
         locked: ['value'],
       ),
     );
@@ -592,7 +592,7 @@ class SurfacePipelineCastingTest extends UnitTestCase {
   public function testSecretKeepsWhatItHolds(mixed $input, mixed $expected): void {
     $definition = DataDefinition::create('string')->setLabel('API key');
     DefinitionMetadata::setSecret($definition);
-    $surface = new Surface(Entries::fromArrays(definitions: ['value' => $definition]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['value' => $definition]));
 
     $this->assertSame(
       ['value' => $expected],
@@ -634,7 +634,7 @@ class SurfacePipelineCastingTest extends UnitTestCase {
   public function testSecretWithNothingStored(): void {
     $definition = DataDefinition::create('string')->setLabel('API key')->setRequired(TRUE);
     DefinitionMetadata::setSecret($definition);
-    $surface = new Surface(Entries::fromArrays(definitions: ['value' => $definition]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['value' => $definition]));
     $pipeline = $this->pipeline();
 
     $accepted = $pipeline->accept($surface, ['value' => '']);
@@ -662,7 +662,7 @@ class SurfacePipelineCastingTest extends UnitTestCase {
     $definition = DataDefinition::create('string')->setLabel('API key');
     DefinitionMetadata::setSecret($definition);
     $surface = new Surface(
-      Entries::fromArrays(definitions: ['value' => $definition], locked: ['value']),
+      Entries::fromArrays(schemas: ['value' => $definition], locked: ['value']),
     );
 
     $this->assertSame(
@@ -683,7 +683,7 @@ class SurfacePipelineCastingTest extends UnitTestCase {
    */
   public function testClearMarkerIsAnOrdinaryStringElsewhere(): void {
     $surface = new Surface(
-      Entries::fromArrays(definitions: ['value' => DataDefinition::create('string')]),
+      Entries::fromArrays(schemas: ['value' => DataDefinition::create('string')]),
     );
 
     $this->assertSame(
@@ -698,7 +698,7 @@ class SurfacePipelineCastingTest extends UnitTestCase {
   public function testAbsentKeyKeepsWhatItHeld(): void {
     $definition = DataDefinition::create('string');
     DefinitionMetadata::setDefaultValue($definition, 'vanilla');
-    $surface = new Surface(Entries::fromArrays(definitions: ['value' => $definition]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['value' => $definition]));
 
     $this->assertSame(['value' => 'vanilla'], $this->pipeline()->accept($surface, []));
     $this->assertSame(
@@ -720,7 +720,7 @@ class SurfacePipelineCastingTest extends UnitTestCase {
       is_int($value) => 'integer',
       default => 'string',
     }))->setLabel('Title')->setRequired(TRUE);
-    $surface = new Surface(Entries::fromArrays(definitions: ['value' => $definition]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['value' => $definition]));
     $errors = $pipeline->validate($surface, ['value' => $value]);
 
     if (!$violates) {
@@ -762,7 +762,7 @@ class SurfacePipelineCastingTest extends UnitTestCase {
    * Tests that the required message names the key when there is no label.
    */
   public function testRequiredMessageFallsBackToTheKey(): void {
-    $surface = new Surface(Entries::fromArrays(definitions: ['value' => DataDefinition::create('string')->setRequired(TRUE)]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['value' => DataDefinition::create('string')->setRequired(TRUE)]));
     $errors = $this->pipeline()->validate($surface, []);
     $message = $errors->byKey('value')[0]->message;
     $this->assertInstanceOf(TranslatableMarkup::class, $message);

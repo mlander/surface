@@ -70,7 +70,7 @@ class RefusalMessagesTest extends SurfaceKernelTestBase {
    *   The data surface.
    */
   protected function cappedSurface(): SurfaceInterface {
-    return new Surface(Entries::fromArrays(definitions: [
+    return new Surface(Entries::fromArrays(schemas: [
       'max_recipients' => DataDefinition::create('integer')
         ->setLabel('Maximum recipients per send')
         ->addConstraint('Range', ['min' => 1, 'max' => 1000, 'notInRangeMessage' => self::MESSAGE]),
@@ -115,7 +115,7 @@ class RefusalMessagesTest extends SurfaceKernelTestBase {
    * them as they are, with no warning from reading options they have not.
    */
   public function testAnOptionsLessConstraintCrosses(): void {
-    $surface = new Surface(Entries::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(schemas: [
       'name' => DataDefinition::create('string')->setLabel('Name')->addConstraint('NotNull'),
     ]));
     $map = $this->container->get('surface.input_definitions')->fromSurface($surface, 'Named', '');
@@ -284,7 +284,7 @@ class RefusalMessagesTest extends SurfaceKernelTestBase {
    */
   public function testChoicesAtPathNamingNoSchemaAreTheKeys(): void {
     $room = DataDefinition::create('string')->setLabel('Room')->addConstraint('Choice', ['choices' => ['east', 'west']]);
-    $surface = new Surface(Entries::fromArrays(definitions: ['room' => $room]));
+    $surface = new Surface(Entries::fromArrays(schemas: ['room' => $room]));
     $validating = (new \ReflectionProperty(SurfacePipeline::class, 'validating'))->getValue($this->pipeline());
     $choices = new \ReflectionMethod(Validating::class, 'choices');
     $own = $choices->invoke($validating, $surface, 'room', '');

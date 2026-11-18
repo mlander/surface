@@ -15,6 +15,7 @@ use Drupal\Core\TypedData\Type\BooleanInterface;
 use Drupal\Core\TypedData\Type\FloatInterface;
 use Drupal\Core\TypedData\Type\IntegerInterface;
 use Drupal\Core\TypedData\Type\StringInterface;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
@@ -283,7 +284,7 @@ trait HeldToConfigSchemaTrait {
         else {
           // A module's plain part: its schema is the one the mount's schema
           // holds.
-          $this->definitionWider($part_schema, static::propertyOf(static fn (): DataDefinitionInterface => $entry->definition(), (string) $module), $definition, $path . '.' . $module, static::fullyValidatable($definition), $wider);
+          $this->definitionWider($part_schema, static::propertyOf(static fn (): DataDefinitionInterface => DefinitionFromSchema::forEntry($entry), (string) $module), $definition, $path . '.' . $module, static::fullyValidatable($definition), $wider);
         }
       }
       return;
@@ -317,7 +318,7 @@ trait HeldToConfigSchemaTrait {
       $this->mapWider($entry->attachment->child->entries(), $schema, $path, $strict, $wider);
       return;
     }
-    $this->definitionWider($entry->schema(), static fn (): DataDefinitionInterface => $entry->definition(), $schema, $path, $strict, $wider);
+    $this->definitionWider($entry->schema(), static fn (): DataDefinitionInterface => DefinitionFromSchema::forEntry($entry), $schema, $path, $strict, $wider);
   }
 
   /**
@@ -482,11 +483,8 @@ trait HeldToConfigSchemaTrait {
    *
    * @return string
    *   The class; '' where the data type names none.
-   *
-   * @internal
-   *   Public for SchemaFactsParityTest, which holds it to getClass().
    */
-  public static function valueClass(Schema $schema, \Closure $definition): string {
+  protected static function valueClass(Schema $schema, \Closure $definition): string {
     if (DefinitionSchema::classOf($schema) !== DataDefinition::class) {
       return (string) $definition()->getClass();
     }

@@ -1335,7 +1335,7 @@ final class ContractEmitter {
       // The rules, on the key as its holder holds it: the holder's schema
       // states the base, and a rule is applied to its definition
       // (Conditionals::rules()).
-      $pseudo = Entry::ofSchema($entry->name, $holder->schema(), refiners: [SurfaceInterface::OWNER => $links]);
+      $pseudo = new Entry($entry->name, $holder->schema(), refiners: [SurfaceInterface::OWNER => $links]);
       [, $stated] = $this->conditionals->rules($pseudo, $base, [], FALSE, $emission, holder: $holder);
       array_push($branches, ...$stated);
     }

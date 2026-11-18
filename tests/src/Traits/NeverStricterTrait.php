@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Traits;
 
 use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
@@ -260,7 +261,7 @@ trait NeverStricterTrait {
       if (!property_exists($values, $name)) {
         continue;
       }
-      if ($values->{$name} === NULL && DefinitionMetadata::isSecret($entry->definition())) {
+      if ($values->{$name} === NULL && DefinitionMetadata::isSecret(DefinitionFromSchema::forEntry($entry))) {
         unset($values->{$name});
         continue;
       }

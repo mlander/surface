@@ -14,6 +14,7 @@ use Drupal\Core\TypedData\Plugin\DataType\StringData;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\NodeType;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\Contract\SchemaFacts;
@@ -552,7 +553,10 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     foreach ($this->examples() as [$id, , $surface]) {
       foreach ($surface->entries()->entries() as $entry) {
         if ($id === 'event.mailer' && $entry->name === 'credential' && $entry->variants !== NULL) {
-          $member = Surface::deepClone($entry->variants->definitionFor('pasted'));
+          $member = clone $entry->variants->shell;
+          foreach ($entry->variants->variant('pasted')->child->entries()->entries() as $name => $key) {
+            $member->setPropertyDefinition((string) $name, Surface::deepClone(DefinitionFromSchema::forEntry($key)));
+          }
           $member->addConstraint('Choice', ['choices' => ['x', 'y']]);
           $cases['variant_member'] = $member;
         }
@@ -631,121 +635,6 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $this->assertSame(['^x' => $kept], $published['patternProperties']);
     $this->assertSame($kept, $published['not']);
     $this->assertSame(['leaf' => ['title' => 'Leaf', 'type' => ['string', 'null']]], $published['properties']);
-  }
-
-  /**
-   * Tests of() keeps nothing, and an entry's schema steps with its definition.
-   *
-   * The read, of(), reads the definition each time it is called: two
-   * reads are two objects that say the same. A key's schema is its entry's
-   * (schema(), the same object on every call), and a map's schema holds the
-   * schema of each property, listed or not, which says what a read of that
-   * property says (propertyOf()).
-   */
-  public function testOfKeepsNothing(): void {
-    $definitions = $this->definitions();
-    $loose = DataDefinition::create('string')->setLabel('Loose');
-    $this->assertNotSame(DefinitionSchema::of($loose), DefinitionSchema::of($loose), 'A definition is read afresh on each call.');
-    $this->assertSame(static::json($definitions->published(DefinitionSchema::of($loose))), static::json($definitions->published(DefinitionSchema::of($loose))), 'Two reads say the same.');
-    $label = NULL;
-    foreach ($this->examples() as [, , $surface]) {
-      foreach ($surface->entries()->entries() as $entry) {
-        if (!$entry->isNested() && $entry->list === NULL && $entry->definition()->getDataType() === 'string') {
-          $label = $entry;
-          break 2;
-        }
-      }
-    }
-    $this->assertNotNull($label, 'An example holds a string key.');
-    $schema = $label->schema();
-    $this->assertSame($schema, $label->schema(), 'An entry reads its schema once.');
-    $refined = Surface::deepClone($label->definition());
-    $again = $label->withDefinition($refined)->schema();
-    $this->assertNotSame($schema, $again, 'A refined key is a definition of its own, read for its own entry.');
-    $this->assertSame(static::json($definitions->published($schema)), static::json($definitions->published($again)));
-    $properties = 0;
-    $listed = 0;
-    foreach ($this->examples() as [, , $surface]) {
-      foreach ($surface->entries()->entries() as $entry) {
-        $map = $entry->definition();
-        if ($entry->isNested() || $entry->list !== NULL || !$map instanceof MapDataDefinition || $map->getPropertyDefinitions() === []) {
-          continue;
-        }
-        $built = $entry->schema();
-        $this->assertSame(array_keys($map->getPropertyDefinitions()), array_keys($built->get('properties')), 'Every property is on the schema.');
-        foreach ($map->getPropertyDefinitions() as $name => $property) {
-          $properties++;
-          if ($definitions->listed($property)) {
-            $listed++;
-          }
-          $this->assertSame($built->get('properties')[$name], DefinitionSchema::propertyOf($built, (string) $name), "The map's property $name is the schema under its properties.");
-          $this->assertSame(static::json(DefinitionSchema::of($property)), static::json(DefinitionSchema::propertyOf($built, (string) $name)), "The map's property $name says what a read of it says, listed or not.");
-        }
-      }
-    }
-    // No example's map holds a key that offers a list; a hand-built one
-    // does.
-    $hand = MapDataDefinition::create()->setLabel('Hand')
-      ->setPropertyDefinition('size', DataDefinition::create('string')->addConstraint('Choice', [
-        'choices' => ['s', 'm'],
-      ]))
-      ->setPropertyDefinition('note', DataDefinition::create('string'));
-    $built = DefinitionSchema::of($hand);
-    foreach ($hand->getPropertyDefinitions() as $name => $property) {
-      $properties++;
-      if ($definitions->listed($property)) {
-        $listed++;
-      }
-      $this->assertSame(static::json(DefinitionSchema::of($property)), static::json(DefinitionSchema::propertyOf($built, (string) $name)), "The hand-built map's property $name says what a read of it says, listed or not.");
-    }
-    $this->assertSame(self::MAP_PROPERTIES, [$properties, $listed], 'The properties of the maps, and how many of them offer a list.');
-  }
-
-  /**
-   * Tests published() says what each shipped key's baseline states inline.
-   *
-   * Plain keys and the maps inside them, a collection's own keywords
-   * (head(); its items are the child's def, and its default the
-   * emitter's), and a key with an attached child where the baseline
-   * states it inline (no pinned baseline does today). Keys the baseline
-   * shares as `$defs` (a `$ref`, an `allOf` around one) or decorates per
-   * request (variants, a key refined or
-   * grouped) stay with the side-by-side comparison of every document.
-   */
-  public function testPublishedIsTheBaseline(): void {
-    $baselines = $this->container->get('surface.contract_baselines');
-    $committed = $baselines->read($baselines->directory('surface'));
-    $definitions = $this->definitions();
-    $compared = 0;
-    $collections = 0;
-    foreach ($this->examples() as [$id, $operation, $surface, $index]) {
-      $document = $committed[$id]['documents'][$index] ?? NULL;
-      $this->assertIsArray($document, $id);
-      $this->assertSame($operation, $document['operation'] ?? NULL, $id);
-      $properties = $document['schema']['properties'] ?? [];
-      foreach ($surface->entries()->entries() as $name => $entry) {
-        $served = $properties[$name] ?? NULL;
-        if (!is_array($served)) {
-          continue;
-        }
-        if ($entry->list !== NULL) {
-          // Its items are the child's def; its default is the emitter's.
-          $theirs = ['items', 'default'];
-          $head = DefinitionSchema::head($entry->definition());
-          $counted = $this->compare($definitions, $entry->definition(), $served, "$id:$operation/$name", $head, $theirs);
-          $collections += $counted;
-          $compared += $counted;
-          continue;
-        }
-        if ($entry->isNested() && !isset($served['properties'])) {
-          continue;
-        }
-        $compared += $this->compare($definitions, $entry->definition(), $served, "$id:$operation/$name");
-      }
-    }
-    $this->assertGreaterThan(100, $compared, 'The examples\' keys are compared.');
-    $this->assertGreaterThan(2, $collections, 'The collections\' own keywords are compared.');
-    $this->assertSame(self::COMPARED, [$compared, $this->listedCompared], 'The keys compared, and how many of them offer a list.');
   }
 
   /**

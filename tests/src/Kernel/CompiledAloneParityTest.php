@@ -40,7 +40,7 @@ class CompiledAloneParityTest extends SurfaceKernelTestBase {
   use UserCreationTrait;
 
   /**
-   * The example modules whose declarations are walked, SecretsParityTest's.
+   * The example modules whose declarations are walked.
    */
   protected const WALKED = [
     'surface_examples',

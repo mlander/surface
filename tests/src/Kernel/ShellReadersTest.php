@@ -235,7 +235,7 @@ class ShellReadersTest extends SurfaceKernelTestBase {
    *   What each answers, by reader.
    */
   protected function answers(SurfaceInterface $surface): array {
-    $entries = $surface->getDefinitions()->entries();
+    $entries = $surface->entries()->entries();
     $answers = [];
 
     $answers['shells'] = array_keys(array_filter($entries, static fn (Entry $entry): bool => $entry->isShell()));
@@ -266,7 +266,7 @@ class ShellReadersTest extends SurfaceKernelTestBase {
     $answers['CompiledFlow::placed groups'] = array_keys($placed($surface)[1]);
 
     $generator = $this->container->get('surface.config_schema');
-    $install = (fn (SurfaceInterface $surface): array => $this->installMap($surface->getDefinitions(), $surface, []))->call($generator, $surface);
+    $install = (fn (SurfaceInterface $surface): array => $this->installMap($surface->entries(), $surface, []))->call($generator, $surface);
     $answers['ConfigSchemaGenerator::installMap'] = $install;
 
     $answers['ResourceCode always held'] = (new ResourceCode('surface_shell_test', 'shell'))->write($surface)['always_held'];

@@ -12,7 +12,9 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\SurfaceInterface;
@@ -275,8 +277,8 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       );
       return;
     }
-    $definition = $entry->definition();
-    $declared ??= $declared_entry?->definition();
+    $definition = DefinitionFromSchema::forEntry($entry);
+    $declared ??= $declared_entry === NULL ? NULL : DefinitionFromSchema::forEntry($declared_entry);
     if ($entry->variants !== NULL) {
       $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? $refined->getDefault($entry->variants->by));
       $variants = [];
@@ -292,7 +294,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       if ($chosen !== NULL) {
         $child = $entry->variants->variant($chosen)->child;
         $held = is_array($values[$entry->name] ?? NULL) ? $values[$entry->name] : [];
-        $this->propertyRows($rows, $path, $entry->variants->definitionFor($chosen, $child->refine($held)), array_map(static fn (Entry $entry): DataDefinitionInterface => $entry->definition(), $child->entries()->entries()), []);
+        $this->propertyRows($rows, $path, static::mapOf($entry->variants->shell, $child->refine($held)), array_map(DefinitionFromSchema::forEntry(...), $child->entries()->entries()), []);
       }
       return;
     }
@@ -336,6 +338,25 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       $this->status($declared, $definition, $entry->locked, $entry->isRefinedAtRuntime(), $declared_schema, $schema),
       $schema,
     );
+  }
+
+  /**
+   * Builds the map a chosen variant's keys fill, for its rows.
+   *
+   * @param \Drupal\Core\TypedData\MapDataDefinition $shell
+   *   The variants' shell.
+   * @param \Drupal\surface\SurfaceInterface $child
+   *   The variant, refined.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   A copy of the shell holding each of the variant's keys' definitions.
+   */
+  protected static function mapOf(MapDataDefinition $shell, SurfaceInterface $child): MapDataDefinition {
+    $map = clone $shell;
+    foreach ($child->entries()->entries() as $name => $entry) {
+      $map->setPropertyDefinition((string) $name, DefinitionFromSchema::forEntry($entry));
+    }
+    return $map;
   }
 
   /**

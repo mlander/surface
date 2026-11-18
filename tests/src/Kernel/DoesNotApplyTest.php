@@ -414,7 +414,7 @@ class DoesNotApplyTest extends SurfaceKernelTestBase {
    * Tests a list narrowed to nothing is a select offering nothing.
    */
   public function testListOfNothingIsSelectOfNothing(): void {
-    $surface = new Surface(Entries::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(schemas: [
       'badge' => DataDefinition::create('string')->setLabel('Badge')->addConstraint('LabeledChoice', ['choices' => []]),
       'kind' => DataDefinition::create('string')->setLabel('Kind')->setRequired(TRUE)->addConstraint('Choice', ['choices' => []]),
     ]));
