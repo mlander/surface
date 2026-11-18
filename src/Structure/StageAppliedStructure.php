@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Drupal\surface\Structure;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * What applying a stage takes, nothing, and what it answers.
@@ -39,17 +39,19 @@ final class StageAppliedStructure implements StructureInterface, DefinesOutputsI
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $item = StageChangesStructure::write(t('Applied write'))
-      ->setPropertyDefinition('changed', DataDefinition::create('boolean')
-        ->setLabel(t('Changed'))
-        ->setDescription(t('Whether the write moved what is stored; false when the staged values were what is stored by then.'))
-        ->setRequired(TRUE))
-      ->setPropertyDefinition('id', DataDefinition::create('string')
-        ->setLabel(t('Id'))
-        ->setDescription(t('The id of the thing written, as text; for a create, the id storage gave it when the stage was applied, where `parameters` carry the local id the stage named it by; absent for a dry run, which writes nothing, and for a thing with no id, such as a settings object.')));
-    $outputs->addList('applied', $item, t('Applied writes'))
-      ->setDescription(t('Each staged write, in the order apply made them, or a dry run would.'))
-      ->setRequired(TRUE);
+    $outputs->addSchema('applied', Schema::list(StageChangesStructure::write(t('Applied write'))
+      ->properties([
+        'changed' => Schema::bool()
+          ->title(t('Changed'))
+          ->description(t('Whether the write moved what is stored; false when the staged values were what is stored by then.'))
+          ->required(),
+        'id' => Schema::string()
+          ->title(t('Id'))
+          ->description(t('The id of the thing written, as text; for a create, the id storage gave it when the stage was applied, where `parameters` carry the local id the stage named it by; absent for a dry run, which writes nothing, and for a thing with no id, such as a settings object.')),
+      ]))
+      ->title(t('Applied writes'))
+      ->description(t('Each staged write, in the order apply made them, or a dry run would.'))
+      ->required());
   }
 
 }

@@ -3699,7 +3699,7 @@ final class SchemaReader {
       return FALSE;
     }
     foreach ($schema->get('properties') as $property) {
-      if (!Schemas::isObjectSchema($property) || $property->get('$ref') !== NULL || $property->get('allOf') !== NULL || isset(static::extensionOf($property)['by']) || $property->has(self::TYPE_BY)) {
+      if (!Schemas::isObjectSchema($property) || ($property->get('$ref') !== NULL && !($this->outputs && isset(LeafTypes::LIBRARY[$property->get('$ref')]))) || $property->get('allOf') !== NULL || isset(static::extensionOf($property)['by']) || $property->has(self::TYPE_BY)) {
         return FALSE;
       }
       $types = array_values(array_diff((array) ($property->get('type') ?? []), ['null']));

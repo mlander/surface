@@ -15753,8 +15753,14 @@ they served.
   item a plain map, a list of plain objects inside it too. At an input it
   stays a collection of children (decided 2026-11-17, on the condition
   that the venue listing's served document stays byte-identical, which
-  `ContractBaselineTest` holds). A `portable:timestamp` property is no
-  plain map's yet, since the library's type adds a range.
+  `ContractBaselineTest` holds). A property that is a type of the
+  library (`Schema::of('portable:timestamp')`) is read in such a map as
+  that leaf, with the bound the library's type states. So the stage's
+  `changes` output (`StageChangesStructure::write()` returns a `Schema`
+  now, which `StageAppliedStructure` extends too) serves `staged` with
+  `minimum` and `maximum`, the library's timestamp range, where it
+  served neither; no fixture pins the stage's documents (decided
+  2026-11-17).
 - **Labels stay translatable.** The reader reads a `Schema` an author
   hands it as it is, never through JSON, so a title, description or
   option label made with `t()` stays a `TranslatableMarkup` in the
