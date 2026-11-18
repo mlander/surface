@@ -8,6 +8,8 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
 use Drupal\surface\SurfaceBuilder;
@@ -186,7 +188,8 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
    *
    * Each way one could be declared, refused at seal at the latest: the
    * builder's own, setSecret() on the definition a blueprint's add()
-   * returns, and add() with `writeOnly`, at the top and in a map.
+   * returns, and add() with `writeOnly`, at the top, in a map, on a list's
+   * items, in a list of maps and in a map in a map.
    */
   public function testSecretOutputIsRefused(): void {
     $typed = $this->container->get('typed_data_manager');
@@ -204,6 +207,15 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
       'schema' => static function (SurfaceBuilder $builder) use ($typed): void {
         (new ResourceBlueprint($builder, $typed, TRUE))->add('schema', Schema::string()->title('Token')->writeOnly(TRUE));
       },
+      'items.*' => static function (SurfaceBuilder $builder) use ($typed): void {
+        (new ResourceBlueprint($builder, $typed, TRUE))->add('items', Schema::list(Schema::string()->writeOnly(TRUE)));
+      },
+      'rows.*.token' => static function (SurfaceBuilder $builder) use ($typed): void {
+        (new ResourceBlueprint($builder, $typed, TRUE))->add('rows', Schema::list(Schema::object(['token' => Schema::string()->writeOnly(TRUE)])));
+      },
+      'outer.inner.token' => static function (SurfaceBuilder $builder) use ($typed): void {
+        (new ResourceBlueprint($builder, $typed, TRUE))->add('outer', Schema::object(['inner' => Schema::object(['token' => Schema::string()->writeOnly(TRUE)])]));
+      },
     ];
     foreach ($ways as $at => $declare) {
       try {
@@ -216,6 +228,13 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
         $this->assertSame(sprintf('The "%s" output is a secret. An output is served to whoever runs the operation, and a secret is never read back: a secret is an input alone.', $at), $e->getMessage());
       }
     }
+    // At an input, a list's secret items are each marked secret, so the
+    // input secrets path leaves them out of what is read back.
+    $builder = new SurfaceBuilder();
+    (new ResourceBlueprint($builder, $typed, FALSE))->add('items', Schema::list(Schema::string()->writeOnly(TRUE)));
+    $item = DefinitionSchema::itemOf($builder->seal()->getDefinitions()->entry('items')->schema());
+    $this->assertNotNull($item);
+    $this->assertTrue(Secrets::marked($item));
   }
 
   /**
