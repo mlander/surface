@@ -6,7 +6,6 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Entry;
 use Drupal\surface\SurfaceInterface;
 use Drupal\Tests\surface\HandCorpus\SchemaEmitCases;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -157,64 +156,6 @@ class DocumentFromSchemasTest extends SurfaceKernelTestBase {
       }
     }
     return $walked;
-  }
-
-  /**
-   * Tests emitting the four documents of the examples derives nothing.
-   */
-  public function testTheEmitterDerivesNoDefinition(): void {
-    $derived = new \ReflectionProperty(Entry::class, 'definition');
-    $emitter = $this->container->get('surface.contract_emitter');
-    $walked = 0;
-    $plain = 0;
-    $found = [];
-    $seen = [];
-    foreach ($this->examples() as [$id, $operation, $surface]) {
-      $entries = [];
-      $walked += static::walk($surface, $id . ':' . ($operation ?? '-'), $entries, $seen);
-      $before = [];
-      foreach ($entries as $here => [$entry]) {
-        $before[$here] = $derived->getValue($entry) !== NULL;
-      }
-      $values = $surface->getDefaultValues();
-      $emitter->emit($surface, $values, $id, $operation);
-      $emitter->emit($surface, $values, $id, $operation, NULL, TRUE);
-      $emitter->emitFull($surface, $id, $operation);
-      $emitter->emitFull($surface, $id, $operation, NULL, TRUE);
-      foreach ($entries as $here => [$entry, $refined]) {
-        if ($refined || !$entry->isSchemaFirst()) {
-          continue;
-        }
-        $plain++;
-        if (!$before[$here] && $derived->getValue($entry) !== NULL) {
-          $found[] = $here;
-        }
-      }
-    }
-    $this->assertSame([], $found, 'Emitting the four documents derives no definition of a key refinement does not read.');
-    $this->assertSame(self::WALKED, [$walked, $plain], 'The data surfaces walked and the entries refinement does not read.');
-  }
-
-  /**
-   * Tests emitting declared rules derives no definition.
-   *
-   * The full schema states each rule as written and runs none, so no
-   * refinement reads a key: what would be derived is the emitter's. A rule
-   * that narrows its key is applied to the key's schema (Rule::answer(),
-   * Answer::apply()); before, it was applied to a copy of the key's
-   * definition, and the two keys it narrows (`name`, `list`) derived one.
-   */
-  public function testRulesDeriveNothing(): void {
-    $derived = new \ReflectionProperty(Entry::class, 'definition');
-    $surface = SchemaEmitCases::rules();
-    $this->container->get('surface.contract_emitter')->emitFull($surface, 'hand', 'op', 'Op', TRUE);
-    $asked = [];
-    foreach ($surface->entries()->entries() as $name => $entry) {
-      if ($derived->getValue($entry) !== NULL) {
-        $asked[] = (string) $name;
-      }
-    }
-    $this->assertSame([], $asked, 'No key derives a definition.');
   }
 
   /**

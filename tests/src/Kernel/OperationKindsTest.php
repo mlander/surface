@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\OperationDefinition;
@@ -149,7 +150,7 @@ class OperationKindsTest extends SurfaceKernelTestBase {
       $built = $resources->buildStatic($resource->name(), $context);
       $requires = [];
       foreach ($built->entries()->entries() as $name => $entry) {
-        if ($values->getPropertyDefinition($name) !== NULL && $entry->definition()->isRequired() && !in_array('', $entry->mayNotApply(), TRUE) && !DefinitionMetadata::isSecret($entry->definition())) {
+        if ($values->getPropertyDefinition($name) !== NULL && DefinitionFromSchema::forEntry($entry)->isRequired() && !in_array('', $entry->mayNotApply(), TRUE) && !DefinitionMetadata::isSecret(DefinitionFromSchema::forEntry($entry))) {
           $requires[] = $name;
         }
       }

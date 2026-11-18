@@ -6,7 +6,6 @@ namespace Drupal\surface;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
 use PortableSchema\Builder\Schema;
 
@@ -233,30 +232,6 @@ final class Attachment {
       return $this->child;
     }
     return $this->child->withPorts($this->ports ?? $this->readFrom($values)->ports ?? [], $this->wired);
-  }
-
-  /**
-   * Builds the map an attached child is advertised as.
-   *
-   * The map's property definitions are the child's definitions, in the
-   * child's order: what the parent says about the key is what the child
-   * says about itself, under the label the parent gave the key.
-   *
-   * @param \Drupal\Core\TypedData\MapDataDefinition $shell
-   *   The map describing the key itself: its label, description and
-   *   required flag. Not changed; a clone is filled.
-   * @param \Drupal\surface\SurfaceInterface $child
-   *   The child, advertised or refined.
-   *
-   * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map.
-   */
-  public static function mapOf(MapDataDefinition $shell, SurfaceInterface $child): MapDataDefinition {
-    $map = clone $shell;
-    foreach ($child->entries()->entries() as $name => $entry) {
-      $map->setPropertyDefinition((string) $name, $entry->definition());
-    }
-    return $map;
   }
 
 }

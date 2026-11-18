@@ -6,6 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
 use Drupal\surface\ResourceBuild\ResourceBlueprintAdditions;
@@ -95,8 +96,8 @@ class AnonymousMapTest extends SurfaceKernelTestBase {
     $definitions = $this->built()->entries();
     $where = $definitions->entry('where');
     $this->assertNull($where->attachment, 'A map of plain keys is a map definition at the key.');
-    $this->assertInstanceOf(MapDataDefinition::class, $where->definition());
-    $this->assertSame(['row', 'point'], array_keys($where->definition()->getPropertyDefinitions()));
+    $this->assertInstanceOf(MapDataDefinition::class, DefinitionFromSchema::forEntry($where));
+    $this->assertSame(['row', 'point'], array_keys(DefinitionFromSchema::forEntry($where)->getPropertyDefinitions()));
     $this->assertSame(['row' => 'A'], $this->built()->getDefault('where'));
 
     $kit = $definitions->entry('kit')->attachment;

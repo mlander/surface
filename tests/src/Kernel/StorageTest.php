@@ -65,7 +65,7 @@ class StorageTest extends SurfaceKernelTestBase {
     ];
     DefinitionMetadata::setDefaultValue($definitions['name'], 'Drupal');
     DefinitionMetadata::setDefaultValue($definitions['slogan'], '');
-    return new Surface(Entries::fromArrays(definitions: $definitions));
+    return new Surface(Entries::fromArrays(schemas: $definitions));
   }
 
   /**

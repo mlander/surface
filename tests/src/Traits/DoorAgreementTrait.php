@@ -8,6 +8,7 @@ use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\SurfaceInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\SurfaceAccess;
@@ -148,7 +149,7 @@ trait DoorAgreementTrait {
     foreach ($surface->entries()->entries() as $name => $entry) {
       $name = (string) $name;
       $documents[$name . ' sent null'] = [$name => NULL] + $defaults;
-      $documents[$name . ' sent a value of another type'] = [$name => static::otherType($entry->definition(), $entry->attachment !== NULL || $entry->variants !== NULL)] + $defaults;
+      $documents[$name . ' sent a value of another type'] = [$name => static::otherType(DefinitionFromSchema::forEntry($entry), $entry->attachment !== NULL || $entry->variants !== NULL)] + $defaults;
     }
     return $documents;
   }

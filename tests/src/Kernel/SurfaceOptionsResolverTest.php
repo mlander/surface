@@ -7,9 +7,9 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Block\BlockPluginInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Entries;
-use Drupal\surface\Entry;
 use Drupal\surface\Options\OptionSet;
 use Drupal\surface\Options\SurfaceOptionsResolverInterface;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
@@ -309,15 +309,12 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
     $this->assertTrue(DefinitionSchema::same(DefinitionSchema::of($definition), $schema), 'Read, it is the definition\'s schema.');
 
     foreach ([FALSE, TRUE] as $schema_first) {
-      $derived = new \ReflectionProperty(Entry::class, 'definition');
-      $entry = Entries::fromArrays(['room' => (clone $definition)->setLabel('Hall')], schemaFirst: $schema_first)->entry('room');
+      $hall = (clone $definition)->setLabel('Hall');
+      $entry = Entries::fromArrays(['room' => $schema_first ? DefinitionSchema::of($hall) : $hall])->entry('room');
       $recorder->handed = [];
       $this->assertSame(['east' => 'east', 'west' => 'west'], $options->resolve($entry->schema())->options);
       $this->assertSame([$entry->schema()], $recorder->handed, 'Handed the key\'s schema, the service hands that very schema on.');
       $this->assertSame('Hall', (string) $entry->schema()->get('title'), 'The entry\'s own schema, its own title.');
-      if ($schema_first) {
-        $this->assertNull($derived->getValue($entry), 'Handed a schema, the service derives no definition.');
-      }
     }
 
     // The constraints read are the schema's: a schema that holds a list no
@@ -339,9 +336,10 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
     $options = $this->options();
     foreach ([FALSE, TRUE] as $schema_first) {
       $room = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['east', 'west', 'north']]);
-      $declared = Entries::fromArrays(['room' => $room], schemaFirst: $schema_first)->entry('room');
-      // What refinement makes of a key: a copy, narrowed, and an entry of it.
-      $refined = $declared->withDefinition((clone $declared->definition())->addConstraint('Choice', ['choices' => ['east']]));
+      $declared = Entries::fromArrays(['room' => $schema_first ? DefinitionSchema::of($room) : $room])->entry('room');
+      // What refinement makes of a key: a new schema, narrowed, and an entry
+      // of it.
+      $refined = $declared->withSchema(DefinitionSchema::of((clone DefinitionFromSchema::forEntry($declared))->addConstraint('Choice', ['choices' => ['east']])));
       $this->assertNotSame($declared->schema(), $refined->schema());
       $this->assertSame(['east', 'west', 'north'], array_keys($options->resolve($declared->schema())->options));
       $this->assertSame(['east'], array_keys($options->resolve($refined->schema())->options), 'The refined key is not served the declared list.');

@@ -6,9 +6,10 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Entries;
+use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\ChoiceSet;
-use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
@@ -88,7 +89,7 @@ class ChoiceSpellingParityTest extends SurfaceKernelTestBase {
    * which is why this is where the spellings have to meet.
    */
   public function testChoiceSetReadsEverySpellingAsOneSet(): void {
-    $canonical = ChoiceSet::of($this->definition(self::CANONICAL));
+    $canonical = ChoiceSet::fromConstraints($this->definition(self::CANONICAL)->getConstraints());
     $this->assertNotNull($canonical);
     $this->assertSame(['star', 'flame'], $canonical->values);
     $this->assertSame(['star' => 'Star', 'flame' => 'Flame'], $canonical->labels);
@@ -96,7 +97,7 @@ class ChoiceSpellingParityTest extends SurfaceKernelTestBase {
     // spelling so that writing the set back cannot drop it.
     $this->assertSame(['descriptions' => ['flame' => 'It burns.']], $canonical->options);
     foreach (self::SPELLINGS as $spelling => $declared) {
-      $set = ChoiceSet::of($this->definition($declared));
+      $set = ChoiceSet::fromConstraints($this->definition($declared)->getConstraints());
       $this->assertNotNull($set);
       $this->assertSame($canonical->values, $set->values, $spelling);
       $this->assertSame($canonical->labels, $set->labels, $spelling);
@@ -171,23 +172,13 @@ class ChoiceSpellingParityTest extends SurfaceKernelTestBase {
     foreach ($before as $before_spelling => $declared) {
       foreach ($narrower as $after_spelling => $after) {
         $pairing = $before_spelling . ' to ' . $after_spelling;
-        Narrowing::assertNarrows(
-          'badge',
-          'the test',
-          $this->definition($declared),
-          $this->definition($after),
-        );
+        Answer::assertNarrows('badge', 'the test', DefinitionSchema::of($this->definition($declared)), DefinitionSchema::of($this->definition($after)));
         $accepted[] = $pairing;
       }
       foreach ($wider as $after_spelling => $after) {
         $pairing = $before_spelling . ' to ' . $after_spelling;
         try {
-          Narrowing::assertNarrows(
-            'badge',
-            'the test',
-            $this->definition($declared),
-            $this->definition($after),
-          );
+          Answer::assertNarrows('badge', 'the test', DefinitionSchema::of($this->definition($declared)), DefinitionSchema::of($this->definition($after)));
           $this->fail(sprintf('Widening %s was accepted.', $pairing));
         }
         catch (\LogicException $e) {
@@ -287,7 +278,7 @@ class ChoiceSpellingParityTest extends SurfaceKernelTestBase {
    */
   protected function surface(array $options): SurfaceInterface {
     return new Surface(Entries::fromArrays(
-      definitions: ['badge' => $this->definition($options)],
+      schemas: ['badge' => $this->definition($options)],
     ));
   }
 

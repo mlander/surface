@@ -70,7 +70,7 @@ use Drupal\surface\SurfaceInterface;
  * the absence of a value look like the presence of one.
  *
  * @see \Drupal\surface\Storage\SecretCodecInterface
- * @see \Drupal\surface\DefinitionMetadata::setSecret()
+ * @see \Drupal\surface\Contract\Secrets::marked()
  * @see docs/storage.md
  */
 final class EncryptedStorageLayout implements StorageLayoutInterface {

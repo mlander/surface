@@ -15,6 +15,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Contract\ConstraintKeywords;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\PortableKeywords;
@@ -552,7 +553,7 @@ final class DrupalCheckProvider implements CheckProvider {
         $ran = TRUE;
         $map = MapDataDefinition::create();
         foreach ($frame->entries()->entries() as $key => $entry) {
-          $map->setPropertyDefinition((string) $key, $entry->definition());
+          $map->setPropertyDefinition((string) $key, DefinitionFromSchema::forEntry($entry));
         }
         $options = json_decode((string) json_encode($checks[$name]), TRUE);
         foreach ($this->runner->check($id, is_array($options) ? $options : [], $location['value'], $map) as $violation) {

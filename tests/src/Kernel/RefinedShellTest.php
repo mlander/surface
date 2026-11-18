@@ -8,6 +8,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Attachment;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Entries;
@@ -182,7 +183,7 @@ class RefinedShellTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests every refined shell is composed of schemas, schema-first.
+   * Tests every refined shell is composed of schemas, holding no definition.
    */
   public function testEachShellIsComposed(): void {
     $surface = static::shells(static::child());
@@ -191,13 +192,13 @@ class RefinedShellTest extends SurfaceKernelTestBase {
       foreach (['att', 'pick', 'deep', 'third_party_settings'] as $key) {
         $entry = $refined->entries()->entry($key);
         $this->assertNotNull($entry);
-        $this->assertTrue($entry->isSchemaFirst(), "$key ($mode) is schema-first.");
+        $this->assertNull($entry->host(), "$key ($mode) holds its schema alone.");
         $this->assertFalse($entry->sameSource($surface->entries()->entry($key)), "$key ($mode) has a source of its own, even where its child changed nothing.");
-        $this->assertTrue(DefinitionSchema::same($entry->schema(), DefinitionSchema::of($entry->definition())), "$key ($mode): its schema is what its definition reads.");
+        $this->assertTrue(DefinitionSchema::same($entry->schema(), DefinitionSchema::of(DefinitionFromSchema::forEntry($entry))), "$key ($mode): its schema is what its definition reads.");
       }
       $fixed = $refined->entries()->entry('fixed');
-      $this->assertFalse($fixed->isSchemaFirst(), "fixed ($mode): a locked deciding key keeps its definition and its narrowing check.");
-      $this->assertTrue(DefinitionSchema::same($fixed->schema(), DefinitionSchema::of($fixed->definition())));
+      $this->assertNull($fixed->host(), "fixed ($mode): a locked deciding key holds its schema alone, held to the narrowing check on schemas.");
+      $this->assertTrue(DefinitionSchema::same($fixed->schema(), DefinitionSchema::of(DefinitionFromSchema::forEntry($fixed))));
     }
     $out = $surface->refine(static::at('out'));
     $this->assertTrue(SchemaFacts::doesNotApply(DefinitionSchema::propertyOf($out->entries()->entry('att')->schema(), 'code')), 'A key the child ruled out is marked in the shell\'s schema.');
@@ -206,14 +207,11 @@ class RefinedShellTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a shell holding a class no schema derives keeps a definition.
+   * Tests a shell holding a class no schema derives holds its schema alone.
    *
-   * Before refiners answered with schemas, the child's refiner handed back
-   * a definition of a class no schema derives, and the shells built from
-   * the refined child were held to that. A refiner's answer names no
-   * class, so the class is the advertised key's here: the child's `code`
-   * is of a class outside the three, and narrowing it keeps the shells
-   * definition-first.
+   * The child's `code` is of a class outside the three, so its entry keeps
+   * its host definition; the shells composed of the refined child hold
+   * schemas alone, which name that class.
    */
   public function testTheClassRule(): void {
     $foreign = new class(['type' => 'string']) extends DataDefinition {};
@@ -223,12 +221,11 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     foreach (['att', 'pick', 'fixed', 'deep', 'third_party_settings'] as $key) {
       $entry = $refined->entries()->entry($key);
       $this->assertNotNull($entry);
-      $this->assertFalse($entry->isSchemaFirst(), "$key: definition-first.");
+      $this->assertNull($entry->host(), "$key: no host definition.");
       $this->assertFalse(Entries::derivedClasses($entry->schema()), "$key: its schema holds a class no schema derives.");
-      $this->assertTrue(DefinitionSchema::same($entry->schema(), DefinitionSchema::of($entry->definition())), "$key: its schema, composed, is what its definition, built as before, reads.");
     }
     $plain = static::shells(static::child())->refine(static::at('narrow'));
-    $this->assertTrue($plain->entries()->entry('att')->isSchemaFirst(), 'The same shell is schema-first where the child\'s keys are of the derived classes.');
+    $this->assertTrue(Entries::derivedClasses($plain->entries()->entry('att')->schema()), 'The same shell holds the derived classes alone where the child\'s keys are of them.');
   }
 
   /**
@@ -236,7 +233,7 @@ class RefinedShellTest extends SurfaceKernelTestBase {
    */
   public function testWideningIsRefusedByTheChild(): void {
     $surface = static::shells(static::child());
-    $message = 'Refining "code" for the declaring class widened what it was given: the max of the Length constraint moved from 8 to 20. Refinement may only narrow; widening is a build-time act, and the build is over.';
+    $message = 'Refining "code" for the declaring class widened what it was given: the maxLength moved from 8 to 20. Refinement may only narrow; widening is a build-time act, and the build is over.';
     $cases = [
       'attachment' => ['att' => ['mode' => 'widen']],
       'chosen variants' => ['kind' => 'x', 'pick' => ['mode' => 'widen']],
@@ -261,15 +258,14 @@ class RefinedShellTest extends SurfaceKernelTestBase {
    * Refined once with the child's code narrowed to 4, then refined again
    * with values that give the advertised 8 back: each shell refuses, as
    * the code before refused, fresh and woken from serialize(). Its child
-   * is the sealed one, so only the check of the whole shell, on the
-   * definition built as before, sees the widening
-   * (Entry::madeByRefinement()). Refined again with the same narrowing or
-   * a narrower one, it answers.
+   * is the sealed one, so only the check of the whole shell, on its
+   * schemas (Answer::assertNarrows()), sees the widening. Refined
+   * again with the same narrowing or a narrower one, it answers.
    */
   public function testRefinedAgainKeepsTheNarrowingCheck(): void {
     $surface = static::shells(static::child());
     $first = static::at('narrow');
-    $moved = 'the max of the Length constraint moved from 4 to 8.';
+    $moved = 'the maxLength moved from 4 to 8.';
     $child = 'for the child attached there widened what it was given:';
     $cases = [
       'att' => [
@@ -305,22 +301,17 @@ class RefinedShellTest extends SurfaceKernelTestBase {
       $same = $again->refine($first);
       $this->assertSame(4, DefinitionSchema::propertyOf($same->entries()->entry('att')->schema(), 'code')?->get('maxLength'), "The same narrowing again answers ($how).");
       $narrower = $again->refine(static::at('narrower'));
-      foreach (['att', 'pick', 'deep', 'third_party_settings'] as $key) {
-        $this->assertTrue($narrower->entries()->entry($key)->madeByRefinement(), "$key ($how): refined again, made by the refinement.");
-      }
       $this->assertSame(2, DefinitionSchema::propertyOf($narrower->entries()->entry('att')->schema(), 'code')?->get('maxLength'), "A narrower one answers ($how).");
     }
-    $this->assertFalse($surface->entries()->entry('att')->madeByRefinement(), 'A sealed entry is not made by a refinement.');
-    $this->assertTrue($refined->entries()->entry('att')->madeByRefinement(), 'A composed one is.');
-    $this->assertTrue($woken->entries()->entry('att')->madeByRefinement(), 'And it wakes so.');
   }
 
   /**
-   * Tests a watched key the refiner's answer holds is walked by it.
+   * Tests a watched key is walked by its schema, whatever its source.
    *
    * A key of a class no schema derives a definition of, whose definition
-   * answers for a property its properties do not list: the watched value
-   * there is judged by that definition, as before, not by the schema.
+   * answers for a property its properties do not list: the key's schema
+   * holds no such property, so the watched value there is not checked.
+   * Before 2026-11-18 it was judged by that definition.
    */
   public function testWatchedKeyOfGivenDefinitionIsWalkedByIt(): void {
     $cfg = new class(['type' => 'map']) extends MapDataDefinition {
@@ -342,8 +333,8 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $builder->addRefiner('target', new HandRefiner([]));
     $builder->setWatchedValueCheck($this->container->get('surface.watched_value_check'));
     $surface = $builder->seal();
-    $this->assertFalse($surface->entries()->entry('cfg')->isSchemaFirst());
-    $this->assertSame(['cfg.x' => 'word'], $surface->refine(['cfg' => ['x' => 'word']])->withheldValues());
+    $this->assertNotNull($surface->entries()->entry('cfg')->host());
+    $this->assertSame([], $surface->refine(['cfg' => ['x' => 'word']])->withheldValues());
     $this->assertSame([], $surface->refine(['cfg' => ['x' => 3]])->withheldValues());
   }
 
@@ -394,15 +385,15 @@ class RefinedShellTest extends SurfaceKernelTestBase {
   /**
    * Tests a watched place a definition rules out is withheld, as before.
    *
-   * A key whose source is a definition is walked by that definition, part
-   * by part, by both watched-value walks: where it rules `x` out, the
+   * A key whose source is a definition is walked by its schema, part by
+   * part, by both watched-value walks: where it rules `x` out, the
    * watcher is not handed `x`'s value and stays at its sealed bound, at
    * the top and inside an attachment's child; where it does not, the
    * watcher narrows.
    */
   public function testRuledOutPlaceOfGivenDefinitionIsWithheld(): void {
     $frame = $this->definitionWatchedFrame();
-    $this->assertFalse($frame->entries()->entry('cfg')->isSchemaFirst());
+    $this->assertNotNull($frame->entries()->entry('cfg')->host());
     $max = static fn (SurfaceInterface $refined): mixed => $refined->entries()->entry('target')->schema()->get('maxLength');
     $this->assertSame(9, $max($frame->refine(['cfg' => ['x' => 'a'], 'mode' => 'out'])), 'Ruled out: the watcher stays at its bound.');
     $this->assertSame(3, $max($frame->refine(['cfg' => ['x' => 'a']])), 'Not ruled out: the watcher narrows.');
@@ -441,9 +432,9 @@ class RefinedShellTest extends SurfaceKernelTestBase {
    * Tests a refined shell bound to a through port, refined again, refuses.
    *
    * A refined surface handed through-port values (withPorts()) copies its
-   * refined shell for the ports (Entry::readingFrom()); the copy carries
-   * the mark that a refinement made it, so a second refinement that gives
-   * back what the first narrowed is refused, as before.
+   * refined shell for the ports (Entry::readingFrom()); a second
+   * refinement that gives back what the first narrowed is refused, as
+   * before.
    */
   public function testThroughPortCopyRefinedAgainRefuses(): void {
     $child = new SurfaceBuilder([
@@ -462,9 +453,8 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $bound = $refined->withPorts([$through->name => ['x' => 'v']]);
     $entry = $bound->entries()->entry('e');
     $this->assertNotSame($refined->entries()->entry('e'), $entry, 'The through port copies the refined shell.');
-    $this->assertTrue($entry->madeByRefinement(), 'The copy carries the mark.');
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('Refining "e" for the child attached there widened what it was given: inside the code property, the max of the Length constraint moved from 4 to 8.');
+    $this->expectExceptionMessage('Refining "e" for the child attached there widened what it was given: inside the code property, the maxLength moved from 4 to 8.');
     $bound->refine(['e' => ['mode' => 'none']]);
   }
 
@@ -478,7 +468,7 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $surface = $builder->seal();
     $code = static fn (SurfaceInterface $refined, string $at): mixed => DefinitionSchema::propertyOf(DefinitionSchema::propertyOf($refined->entries()->entry('third_party_settings')->schema(), $at) ?? Schema::boolean(FALSE), 'code')?->get('maxLength');
     $one = $surface->refine(['third_party_settings' => ['user' => ['mode' => 'narrow']]]);
-    $this->assertTrue($one->entries()->entry('third_party_settings')->isSchemaFirst());
+    $this->assertNull($one->entries()->entry('third_party_settings')->host());
     $this->assertSame(4, $code($one, 'user'), 'The second structure refined, at its own path.');
     $this->assertSame(8, $code($one, 'surface'), 'The first left as sealed.');
     $mounts = ['surface' => ['mode' => 'narrower'], 'user' => ['mode' => 'narrow']];
@@ -617,7 +607,7 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $woken = unserialize(serialize($refined));
     $entry = $woken->entries()->entry('att');
     $this->assertInstanceOf(Entry::class, $entry);
-    $this->assertTrue($entry->isSchemaFirst());
+    $this->assertNull($entry->host());
     $sealed = $entry->attachment->child->entries();
     $this->assertSame($sealed->entry('note')?->schema(), DefinitionSchema::propertyOf($entry->schema(), 'note'), 'A key the child left as it was: the woken child\'s very schema.');
     $this->assertNotSame($sealed->entry('code')?->schema(), DefinitionSchema::propertyOf($entry->schema(), 'code'), 'A key the child refined: the shell\'s own.');

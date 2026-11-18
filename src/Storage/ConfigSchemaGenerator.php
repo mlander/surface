@@ -23,6 +23,7 @@ use Drupal\Core\TypedData\Type\FloatInterface;
 use Drupal\Core\TypedData\Type\IntegerInterface;
 use Drupal\Core\TypedData\Type\StringInterface;
 use Drupal\surface\Contract\ContractBaselines;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
@@ -678,7 +679,7 @@ final class ConfigSchemaGenerator {
    */
   protected function entry(Entry $entry, string $path, ResourceDefinition $owner, array &$entries, array $existing, ?Schema $deciding = NULL, ?array $installed = NULL, string $at = ''): array {
     $held = $installed === NULL ? NULL : ($installed[$entry->name] ?? NULL);
-    $definition = $entry->definition();
+    $definition = DefinitionFromSchema::forEntry($entry);
     // A key's facts are read from its schema, a key that holds a child
     // frame's too: its schema is composed of the child's entries' schemas.
     $schema = $entry->schema();
@@ -1016,7 +1017,7 @@ final class ConfigSchemaGenerator {
         $schema = $entry->schema();
         if (Secrets::marked($schema)) {
           $label = SchemaFacts::ownLabel($schema);
-          $kept[$name] = $this->definition($schema, $entry->definition(), static::label($label, $name)) + ['requiredKey' => FALSE];
+          $kept[$name] = $this->definition($schema, DefinitionFromSchema::forEntry($entry), static::label($label, $name)) + ['requiredKey' => FALSE];
         }
       }
     }
@@ -1041,7 +1042,7 @@ final class ConfigSchemaGenerator {
    *   The owner's sequence.
    */
   protected function thirdParty(Entry $entry, string $config, ResourceDefinition $owner, array &$entries, array $existing): array {
-    $definition = $entry->definition();
+    $definition = DefinitionFromSchema::forEntry($entry);
     $ruled = [];
     foreach ($entry->mayNotApply() as $path) {
       if (str_contains($path, '.')) {

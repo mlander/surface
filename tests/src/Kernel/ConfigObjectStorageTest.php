@@ -205,7 +205,7 @@ class ConfigObjectStorageTest extends SurfaceKernelTestBase {
     $this->assertFalse($storage->mayClear($this->context(), 'limit'), 'The schema at the path does not call it nullable.');
     $this->assertTrue($storage->mayClear($this->context(), 'title'));
 
-    $surface = static fn (int $max): Surface => new Surface(Entries::fromArrays(definitions: [
+    $surface = static fn (int $max): Surface => new Surface(Entries::fromArrays(schemas: [
       'limit' => DataDefinition::create('integer')
         ->setLabel('Limit')
         ->setRequired(TRUE)

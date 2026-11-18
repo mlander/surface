@@ -51,7 +51,7 @@ class PlainTextDocumentsTest extends SurfaceKernelTestBase {
    */
   protected function surface(): SurfaceInterface {
     return new Surface(Entries::fromArrays(
-      definitions: [
+      schemas: [
         'scope' => DataDefinition::create('string')
           ->setLabel($this->t('Double quotation marks (@value)', ['@value' => '"'])),
         'protect' => DataDefinition::create('boolean')

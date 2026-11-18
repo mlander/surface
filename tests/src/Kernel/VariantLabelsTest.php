@@ -17,6 +17,7 @@ use Drupal\surface_resource_test\Structure\Broken\UnofferedVariantStructure;
 use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests a union's tags live on its variants.
@@ -86,7 +87,7 @@ class VariantLabelsTest extends SurfaceKernelTestBase {
 
     $resources = $this->container->get('surface.resources');
     $surface = $resources->build(RegistrationStep3Resource::class, $resources->operation(RegistrationStep3Resource::class, 'configure'));
-    $set = ChoiceSet::of(DerivedDefinition::at($surface, 'pricing'));
+    $set = ChoiceSet::of($surface->getSchema('pricing') ?? Schema::any());
     $this->assertNotNull($set);
     $this->assertSame('LabeledChoice', $set->constraint);
     $this->assertSame(['free', 'paid'], $set->values);
@@ -109,7 +110,7 @@ class VariantLabelsTest extends SurfaceKernelTestBase {
     $this->assertSame(['choices' => ['jar', 'tin', 'pot']], DerivedDefinition::at($plain, 'kind')->getConstraints()['Choice'], 'No labels: the values alone.');
 
     $labeled = self::attached(DataDefinition::create('string'), ['jar' => 'Glass jar', 'tin' => 'Tin can']);
-    $set = ChoiceSet::of(DerivedDefinition::at($labeled, 'kind'));
+    $set = ChoiceSet::of($labeled->getSchema('kind') ?? Schema::any());
     $this->assertNotNull($set);
     $this->assertSame('LabeledChoice', $set->constraint);
     $this->assertSame(['jar', 'tin', 'pot'], $set->values);

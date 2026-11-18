@@ -8,6 +8,7 @@ use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\ResourceBuild\Location;
 use Drupal\surface\SurfaceInterface;
@@ -108,8 +109,8 @@ trait ExampleValueSetsTrait {
         $child = $entry->list->child();
         $values[$name] = [static::withItems($child, $child->getDefaultValues())];
       }
-      elseif (!$entry->isNested() && $entry->definition() instanceof ListDataDefinitionInterface) {
-        $item = $entry->definition()->getItemDefinition();
+      elseif (!$entry->isNested() && DefinitionFromSchema::forEntry($entry) instanceof ListDataDefinitionInterface) {
+        $item = DefinitionFromSchema::forEntry($entry)->getItemDefinition();
         $values[$name] = [
           match ($item->getDataType()) {
             'integer' => 1,
@@ -275,7 +276,7 @@ trait ExampleValueSetsTrait {
         }
         continue;
       }
-      $pointers = [...$pointers, ...static::below($entry->definition(), $value, $at)];
+      $pointers = [...$pointers, ...static::below(DefinitionFromSchema::forEntry($entry), $value, $at)];
     }
     return $pointers;
   }

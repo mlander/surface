@@ -142,7 +142,7 @@ final class ResourceLabelsTest extends SurfaceKernelTestBase {
    */
   public function testVariantIsOfferedByWhatItIsCalled(): void {
     $kind = DerivedDefinition::at($this->planters()->buildStatic(PlanterStructure::class, new OperationContext('configure')), 'kind');
-    $set = ChoiceSet::of($kind);
+    $set = ChoiceSet::fromConstraints($kind?->getConstraints() ?? []);
     $this->assertNotNull($set);
     $this->assertSame('LabeledChoice', $set->constraint);
     $this->assertSame(['clay' => 'Clay pot', 'stone' => 'Stone'], array_map('strval', $set->labels), 'The clay pot\'s own label, and the stone pot\'s #[Variant] label over its own.');

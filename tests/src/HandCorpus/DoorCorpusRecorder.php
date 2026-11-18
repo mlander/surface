@@ -7,6 +7,7 @@ namespace Drupal\Tests\surface\HandCorpus;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Form\CompiledFlow;
 use Drupal\surface\Form\ContractPanel;
@@ -280,8 +281,8 @@ final class DoorCorpusRecorder {
     }
     foreach ($surface->entries()->entries() as $name => $entry) {
       $record = [
-        'fromDefinition' => static::attempt(fn (): mixed => static::tree($defs->fromDefinition($entry->definition()))),
-        'outputFromDefinition' => static::attempt(fn (): mixed => static::tree($defs->outputFromDefinition($entry->definition()))),
+        'fromDefinition' => static::attempt(fn (): mixed => static::tree($defs->fromDefinition(DefinitionFromSchema::forEntry($entry)))),
+        'outputFromDefinition' => static::attempt(fn (): mixed => static::tree($defs->outputFromDefinition(DefinitionFromSchema::forEntry($entry)))),
       ];
       if ($entry->variants !== NULL) {
         $record['fromVariants'] = static::attempt(fn (): mixed => static::tree($defs->fromVariants($entry->variants, $entry->schema())));
@@ -289,8 +290,8 @@ final class DoorCorpusRecorder {
       $held = [];
       foreach (self::RAWS as $i => $raw) {
         $held[$i] = [
-          static::attempt(fn (): mixed => static::plain($this->keyPaths->held(clone $entry->definition(), $raw, self::WHERE, (string) $name))),
-          static::attempt(fn (): mixed => static::plain($this->keyPaths->held(clone $entry->definition(), $raw, ['verb' => 'fixes'] + self::WHERE, (string) $name))),
+          static::attempt(fn (): mixed => static::plain($this->keyPaths->held(clone DefinitionFromSchema::forEntry($entry), $raw, self::WHERE, (string) $name))),
+          static::attempt(fn (): mixed => static::plain($this->keyPaths->held(clone DefinitionFromSchema::forEntry($entry), $raw, ['verb' => 'fixes'] + self::WHERE, (string) $name))),
         ];
       }
       $record['held builder'] = $held;
@@ -400,7 +401,8 @@ final class DoorCorpusRecorder {
       $entry_rows = new \ReflectionMethod($this->panel, 'entryRows');
       foreach ($refined->entries()->entries() as $name => $entry) {
         $declared = $surface->entries()->entry((string) $name);
-        $arguments = [&$rows, (string) $name, $entry, $declared?->definition(), $refined, $value, $declared];
+        $definition = $declared === NULL ? NULL : DefinitionFromSchema::forEntry($declared);
+        $arguments = [&$rows, (string) $name, $entry, $definition, $refined, $value, $declared];
         $entry_rows->invokeArgs($this->panel, $arguments);
       }
       return static::plain($rows);
@@ -461,7 +463,7 @@ final class DoorCorpusRecorder {
       }
     };
     foreach ($surface->entries()->entries() as $name => $entry) {
-      $walk($entry->definition(), $prefix . $name, 0);
+      $walk(DefinitionFromSchema::forEntry($entry), $prefix . $name, 0);
     }
     return array_values(array_unique($paths));
   }

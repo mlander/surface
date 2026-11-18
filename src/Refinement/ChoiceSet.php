@@ -66,25 +66,23 @@ final class ChoiceSet {
    *
    * The reader a #[RefinesInput] method is promised for the key's schema
    * it is handed: the values, in the key's order, and what each is called.
-   * Handed a definition, it reads the definition's constraints the same
-   * way.
    *
-   * @param \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface $key
-   *   The key's schema, or a definition.
+   * @param \PortableSchema\Builder\Schema $key
+   *   The key's schema.
    *
    * @return \Drupal\surface\Refinement\ChoiceSet|null
    *   The set, or NULL when the key names no list of values and so allows
    *   anything its type allows.
    */
-  public static function of(Schema|DataDefinitionInterface $key): ?ChoiceSet {
-    return $key instanceof Schema ? static::ofSchema($key) : static::fromConstraints($key->getConstraints());
+  public static function of(Schema $key): ?ChoiceSet {
+    return static::ofSchema($key);
   }
 
   /**
    * Reads the choice constraint a key's schema holds, if it holds one.
    *
-   * What of() and ofConstraint() read, from the key's schema: its
-   * constraints as SchemaFacts::constraints() gives them.
+   * What of() reads, from the key's schema: its constraints as
+   * SchemaFacts::constraints() gives them.
    *
    * @param \PortableSchema\Builder\Schema $schema
    *   The key's schema.
@@ -106,7 +104,8 @@ final class ChoiceSet {
    * Reads the choice constraint a list of constraints holds, if it holds one.
    *
    * What of() reads, for a reader that holds a key's constraints as its
-   * schema holds them (SchemaFacts::constraints()).
+   * schema holds them (SchemaFacts::constraints()), or a definition's
+   * (getConstraints()): the builder's, before the seal.
    *
    * @param array $constraints
    *   The constraints, options by plugin id.
@@ -121,30 +120,6 @@ final class ChoiceSet {
       }
     }
     return NULL;
-  }
-
-  /**
-   * Reads one named constraint, whatever else the definition carries.
-   *
-   * Refinement asks by name rather than by precedence: the list a
-   * contribution was added to is the list the union is written back to,
-   * even when a refiner has since added a second choice constraint of
-   * its own beside it.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition to read.
-   * @param string $name
-   *   The constraint plugin ID to read.
-   *
-   * @return \Drupal\surface\Refinement\ChoiceSet|null
-   *   The set, or NULL when the definition does not carry that
-   *   constraint.
-   */
-  public static function ofConstraint(DataDefinitionInterface $definition, string $name): ?ChoiceSet {
-    $constraints = $definition->getConstraints();
-    return array_key_exists($name, $constraints)
-      ? self::fromOptions($name, (array) $constraints[$name])
-      : NULL;
   }
 
   /**

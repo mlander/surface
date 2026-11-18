@@ -8,12 +8,13 @@ use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Reference\References;
-use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Pipeline\PipelineGuard;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Plugin\Validation\Constraint\UniqueConstraint;
@@ -711,7 +712,7 @@ final class Declaring {
         unset($options[self::FIXED]);
         $target->addConstraint((string) $name, $options);
       }
-      Narrowing::assertNarrows($key, sprintf('the "%s" operation', $context->id), $before, $target);
+      Answer::assertNarrows($key, sprintf('the "%s" operation', $context->id), DefinitionSchema::of($before), DefinitionSchema::of($target));
       if ($fixed !== []) {
         // A fixed key holds its value: it starts from it, whether or not it
         // declares a default, and may not be left empty, so a key that may
@@ -852,7 +853,7 @@ final class Declaring {
         // docs/decisions.md#a-machine-name-is-a-computed-identity.
         $shape = DefinitionMetadata::shapeDefinition($declared) ?? DefinitionMetadata::configTypeDefinition($declared);
         assert($shape !== NULL);
-        $widened = Narrowing::narrowed($declared, $shape);
+        $widened = Answer::narrowed(DefinitionSchema::of($declared), DefinitionSchema::of($shape));
         if ($widened !== NULL) {
           throw new \LogicException(sprintf(
             '%s declares "%s" with the %s %s and widens it: %s. A key narrows the %s it uses, as a refiner narrows a key: declare a shape of its own, or narrow less.',

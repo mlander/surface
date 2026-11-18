@@ -557,7 +557,7 @@ final class Rule {
     $before = serialize($constraints);
     foreach ($this->constraints as $name => $options) {
       if ($name === 'Choice') {
-        $set = ChoiceSet::of($definition);
+        $set = ChoiceSet::fromConstraints($definition->getConstraints());
         if ($set === NULL) {
           continue;
         }

@@ -1439,7 +1439,7 @@ final class Attaching {
    */
   public static function assertListNarrowsVariants(SurfaceBuilder $builder, ResourceDefinition $definition, string $where, string $by, array $values): void {
     $deciding = $builder->getDefinition($by);
-    $set = $deciding === NULL ? NULL : ChoiceSet::of($deciding);
+    $set = $deciding === NULL ? NULL : ChoiceSet::fromConstraints($deciding->getConstraints());
     if ($set === NULL) {
       return;
     }

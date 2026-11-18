@@ -88,9 +88,9 @@ so the second writes to the first one's entity.
 
 **Here today.** The one place the module turns a data surface's
 definition into typed data to run a constraint, `ConstraintRunner`,
-goes through `DefinitionTypedData::create()`, which hands core a copy of
-the root carrying a digest of the definition in its settings, so the
-cache key names the definition (`src/DefinitionTypedData.php`; why: [decision](decisions.md#a-definition-is-validated-as-itself)).
+hands core a copy of the root carrying a digest of the definition in its
+settings, so the cache key names the definition
+(`ConstraintRunner::typedValue()`; why: [decision](decisions.md#a-definition-is-validated-as-itself)).
 Field items are built from `FieldConfigBase::getItemDefinition()`
 instead (`Form\SurfaceFieldTypeTrait`). It was found when one tool
 call's narrowing leaked into the next call in the same process, and

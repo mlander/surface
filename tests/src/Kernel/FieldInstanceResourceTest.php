@@ -20,6 +20,7 @@ use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests the field instance resource, its storage child and settings.
@@ -138,7 +139,7 @@ class FieldInstanceResourceTest extends SurfaceKernelTestBase {
     // The field type offers exactly the types the variants are for:
     // the declared ones first, then every UI field type the provider
     // lists, each labeled.
-    $choices = ChoiceSet::of(DerivedDefinition::at($surface, 'field_type'))->values;
+    $choices = ChoiceSet::of($surface->getSchema('field_type') ?? Schema::any())->values;
     $this->assertSame('address', $choices[0]);
     $this->assertContains('string', $choices);
     $this->assertSame($surface->entries()->entry('settings')?->variants?->variantIds(), $choices);

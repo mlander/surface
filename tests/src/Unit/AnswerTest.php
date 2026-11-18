@@ -173,7 +173,7 @@ class AnswerTest extends UnitTestCase {
   public function testEnumFiltersInTheKeysOrder(): void {
     $definition = static::labeled();
     $expected = clone $definition;
-    ChoiceSet::of($definition)->withValues(['a', 'c'])->applyTo($expected);
+    ChoiceSet::fromConstraints($definition->getConstraints())->withValues(['a', 'c'])->applyTo($expected);
     $key = DefinitionSchema::of($definition);
     $this->assertSameSchema(DefinitionSchema::of($expected), Answer::apply($key, Schema::enum(['c', 'a', 'z']), 'k', 'the declaring class'));
     // A key with no list gains a Choice of the values.
@@ -211,7 +211,7 @@ class AnswerTest extends UnitTestCase {
   public function testEmptyListsAreTheEmptyList(): void {
     $definition = static::labeled();
     $expected = clone $definition;
-    ChoiceSet::of($definition)->withValues([])->applyTo($expected);
+    ChoiceSet::fromConstraints($definition->getConstraints())->withValues([])->applyTo($expected);
     $key = DefinitionSchema::of($definition);
     $this->assertSameSchema(DefinitionSchema::of($expected), Answer::apply($key, Schema::enum([]), 'k', 'the declaring class'));
     $this->assertSameSchema(DefinitionSchema::of($expected), Answer::apply($key, Schema::options([]), 'k', 'the declaring class'));
@@ -247,7 +247,7 @@ class AnswerTest extends UnitTestCase {
   public function testNamedCheckWithOtherOptionsRefused(): void {
     $key = DefinitionSchema::of(DataDefinition::create('string')->addConstraint('SurfaceValidReference', ['targets' => ['node']]));
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('Refining "narrowed" for the declaring class widened what it was given: the options of the SurfaceValidReference constraint were replaced' . self::ONLY_NARROW);
+    $this->expectExceptionMessage('Refining "narrowed" for the declaring class widened what it was given: the options of the SurfaceValidReference check were replaced' . self::ONLY_NARROW);
     Answer::apply($key, Schema::any()->check('drupal:SurfaceValidReference', ['targets' => ['user']]), 'narrowed', 'the declaring class');
   }
 
@@ -339,7 +339,7 @@ class AnswerTest extends UnitTestCase {
     $map = static::map();
     $map->getPropertyDefinition('code')->addConstraint('Uuid', ['strict' => TRUE]);
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage(self::WIDENED . 'inside the code property, the options of the Uuid constraint were replaced' . self::ONLY_NARROW);
+    $this->expectExceptionMessage(self::WIDENED . 'inside the code property, the options of the Uuid check were replaced' . self::ONLY_NARROW);
     Answer::apply(DefinitionSchema::of($map), Schema::any()->properties(['code' => Schema::any()->check('drupal:Uuid', ['strict' => FALSE])]), 'k', 'the declaring class', TRUE);
   }
 
@@ -401,7 +401,7 @@ class AnswerTest extends UnitTestCase {
   public function testNarrowedWords(): void {
     $definition = DataDefinition::create('integer')->addConstraint('Range', ['max' => 100]);
     $key = DefinitionSchema::of($definition);
-    $this->assertSame('the max of the Range constraint moved from 50 to 100', Answer::narrowed($key, Answer::apply($key, Schema::any()->maximum(50), 'k', 'the declaring class')));
+    $this->assertSame('the maximum moved from 50 to 100', Answer::narrowed($key, Answer::apply($key, Schema::any()->maximum(50), 'k', 'the declaring class')));
     $this->assertNull(Answer::narrowed($key, $key));
   }
 
@@ -410,7 +410,7 @@ class AnswerTest extends UnitTestCase {
    */
   public function testWithChoices(): void {
     $definition = static::labeled();
-    $set = ChoiceSet::of($definition)->withValues(['b']);
+    $set = ChoiceSet::fromConstraints($definition->getConstraints())->withValues(['b']);
     $expected = $set->applyTo(clone $definition);
     $this->assertSameSchema(DefinitionSchema::of($expected), Answer::withChoices(DefinitionSchema::of($definition), $set));
   }

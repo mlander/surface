@@ -126,7 +126,7 @@ final class KeptPortCases {
             $answers["$case$form $set"] = get_class($e) . ': ' . $e->getMessage();
           }
           // The child bound directly (withPorts()), its port handed the
-          // value and the key's definition: the check is handed the value
+          // value and the key's schema: the check is handed the value
           // whatever the container's own key accepts.
           try {
             $child = $each->entries()->entry('att')->attachment->child->withPorts(['p' => $value], ['p' => DefinitionSchema::of($key)]);

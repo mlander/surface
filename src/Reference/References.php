@@ -25,6 +25,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Entry;
 use Drupal\surface\SurfaceInterface;
@@ -672,7 +673,8 @@ final class References {
    *   at the path refers to one entity type.
    */
   public function definitionAt(SurfaceInterface $surface, array $path, ?string $entity_type_id = NULL): ?DataDefinitionInterface {
-    return $this->placeAt($surface, $path, $entity_type_id)?->definition();
+    $entry = $this->placeAt($surface, $path, $entity_type_id);
+    return $entry === NULL ? NULL : DefinitionFromSchema::forEntry($entry);
   }
 
   /**

@@ -20,7 +20,6 @@ use Drupal\surface\Refinement\Answer;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\DeclaredRefiner;
 use Drupal\surface\Refinement\DoesNotApply;
-use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Refinement\RuntimeRefiner;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
 use Drupal\surface\Storage\StorageLayoutInterface;
@@ -174,7 +173,7 @@ final class Surface implements SurfaceInterface {
    * @internal
    */
   public static function holding(Schema $schema, string $name = 'value'): static {
-    return new static(new Entries([]), outputs: new Entries([Entry::ofSchema($name, $schema)]));
+    return new static(new Entries([]), outputs: new Entries([new Entry($name, $schema)]));
   }
 
   /**
@@ -571,11 +570,10 @@ final class Surface implements SurfaceInterface {
         continue;
       }
       // The mark is read at each place on the way: from the refined key's
-      // schema and the schemas below it, or, for a key whose source gave its
-      // definition, from that definition and the ones below it.
+      // schema and the schemas below it.
       $entry = $refined->entries()->entry((string) array_shift($parents));
       foreach ($entry === NULL ? [] : static::watchedPlaces($entry, $parents) as $place) {
-        if ($place instanceof Schema ? SchemaFacts::doesNotApply($place) : DoesNotApply::marks($place)) {
+        if ($place !== NULL && SchemaFacts::doesNotApply($place)) {
           $ruled[] = $path;
           break;
         }
@@ -665,11 +663,10 @@ final class Surface implements SurfaceInterface {
   /**
    * Makes the entry of a key its refiners answered for.
    *
-   * Schema-first where every class its schema holds derives a definition
-   * (Entries::derivedClasses()). A key that holds a class no
-   * schema derives a definition of keeps one: what the answers wrote is
-   * written on a copy of the key's definition (writtenOn()), and the
-   * entry is definition-first, its schema the one the answers gave.
+   * The entry holds the schema the answers gave. A key whose source is a
+   * definition no schema derives keeps one: what the answers wrote is
+   * written on a copy of that definition (writtenOn()), handed with the
+   * schema (Entry::withHost()).
    *
    * @param \Drupal\surface\Entry $entry
    *   The key, as advertised.
@@ -683,10 +680,11 @@ final class Surface implements SurfaceInterface {
    *   The refined entry.
    */
   protected static function refinedTo(Entry $entry, Entry $base, Schema $refined): Entry {
-    if (Entries::derivedClasses($refined)) {
-      return $base->withSchema($refined, TRUE);
+    $host = $entry->host();
+    if ($host === NULL) {
+      return $base->withSchema($refined);
     }
-    return $base->withDefinition(static::writtenOn($entry->definition(), $entry->schema(), $refined), $refined);
+    return $base->withHost(static::writtenOn($host, $entry->schema(), $refined), $refined);
   }
 
   /**
@@ -791,17 +789,14 @@ final class Surface implements SurfaceInterface {
    * at its mount, where its keys are accepted and stored as any key an
    * alter mounted is. Nothing of the parent's narrows a key there.
    *
-   * Where the key's own refiners left it as it was, its schema is the
-   * entry's with the schema at each refined structure's mount replaced by
-   * the structure's own schema around the refined structure's entries'
-   * schemas (DefinitionSchema::withProperties(), withPropertyAt()), and the
-   * entry is schema-first. Where they answered, the schema they gave is the
-   * key's source: its definition is derived and built as before, each
-   * refined structure written into a copy of it, and handed with the schema
-   * composed of the answer's own facts and the refined structures'
-   * entries' schemas, so the narrowing check of the whole map stands. So
-   * does a key whose composed schema holds a class no schema derives a
-   * definition of.
+   * The key's schema is the entry's, or the one its own refiners gave, with
+   * the schema at each refined structure's mount replaced by the
+   * structure's own schema around the refined structure's entries' schemas
+   * (DefinitionSchema::withProperties(), withPropertyAt()). The whole map
+   * is held to the narrowing check (Answer::assertNarrows()): a key refined
+   * already and refined again holds the sealed structures, whose keys were
+   * checked against the sealed ones, not against what that refinement made
+   * of them.
    *
    * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value and
    * docs/decisions.md#a-refined-shell-is-composed-of-schemas.
@@ -841,43 +836,12 @@ final class Surface implements SurfaceInterface {
     if ($answers === []) {
       return $refined === NULL ? NULL : static::refinedTo($entry, $base, $refined);
     }
-    $schema = $refined === NULL ? static::composedMount($entry, $base->schema(), $answers) : NULL;
-    if ($schema !== NULL && !$entry->madeByRefinement() && Entries::derivedClasses($schema)) {
-      // Each structure's keys were held to the narrowing check when the
-      // structure refined them, against the sealed structure's, and the
-      // rest of the map is the sealed entry's: nothing the map says can be
-      // wider than what it advertises. A mount a refinement made is held
-      // to the check below: its structures are refined from the sealed
-      // ones, not from what that refinement made of them.
-      return $base->withSchema($schema, TRUE);
-    }
-    // The definition, as before: the structures written into a copy of
-    // the key as its own refiners left it, or as advertised.
-    // A mount is a map: the definition of what its own refiners answered
-    // is derived.
-    $before = $refined === NULL ? $entry->definition() : static::refinedTo($entry, $base, $refined)->definition();
-    $definition = static::deepClone($before);
-    $parts = [];
-    foreach ($answers as $path => $answer) {
-      $parents = explode('.', $path);
-      $map = $definition;
-      foreach (array_slice($parents, 0, -1) as $parent) {
-        $map = $map instanceof ComplexDataDefinitionInterface ? $map->getPropertyDefinition($parent) : NULL;
-      }
-      $shell = $map instanceof MapDataDefinition ? $map->getPropertyDefinition((string) end($parents)) : NULL;
-      if (!$map instanceof MapDataDefinition || !$shell instanceof MapDataDefinition) {
-        throw new \LogicException(sprintf('The "%s.%s" mount no longer holds a map, so the structure attached there has nowhere to be written.', $entry->name, $path));
-      }
-      $written = Attachment::mapOf($shell, $answer);
-      $map->setPropertyDefinition((string) end($parents), $written);
-      $schemas = static::schemasOf($answer);
-      if (count($parents) === 1 && $schemas !== []) {
-        // The structure's own facts around its refined entries' schemas.
-        $parts[$path] = DefinitionSchema::around($written, $schemas);
-      }
-    }
-    Narrowing::assertNarrows($entry->name, 'the structures attached at its mounts', $before, $definition);
-    return $base->withDefinition($definition, $schema ?? DefinitionSchema::around($definition, $parts));
+    // The key's schema as its own refiners left it, or as advertised, each
+    // refined structure's schema in place at its mount.
+    $before = $refined ?? $base->schema();
+    $schema = static::composedMount($entry, $before, $answers);
+    Answer::assertNarrows($entry->name, 'the structures attached at its mounts', $refined ?? $entry->schema(), $schema);
+    return $base->withSchema($schema);
   }
 
   /**
@@ -890,14 +854,14 @@ final class Surface implements SurfaceInterface {
    * @param array<string, \Drupal\surface\SurfaceInterface> $answers
    *   Each refined structure, by its mount's path.
    *
-   * @return \PortableSchema\Builder\Schema|null
-   *   The schema; NULL where a structure has no keys, whose map is read as a
-   *   value, which no composition gives.
+   * @return \PortableSchema\Builder\Schema
+   *   The schema. A structure with no keys, whose map is read as a value,
+   *   keeps the schema at its mount.
    *
    * @throws \LogicException
    *   When a mount no longer holds a map.
    */
-  protected static function composedMount(Entry $entry, Schema $schema, array $answers): ?Schema {
+  protected static function composedMount(Entry $entry, Schema $schema, array $answers): Schema {
     foreach ($answers as $path => $answer) {
       $parents = explode('.', (string) $path);
       $map = $schema;
@@ -910,7 +874,7 @@ final class Surface implements SurfaceInterface {
       }
       $schemas = static::schemasOf($answer);
       if ($schemas === [] || !DefinitionSchema::holdsProperties($shell)) {
-        return NULL;
+        continue;
       }
       $schema = DefinitionSchema::withPropertyAt($schema, $parents, DefinitionSchema::withProperties($shell, $schemas));
     }
@@ -1075,15 +1039,13 @@ final class Surface implements SurfaceInterface {
         continue;
       }
       // The place is found as watchedPlaces() finds it, and the check is
-      // handed its schema: a place walked by its definition (a key whose
-      // source gave one) is read into its schema, nothing is derived.
+      // handed its schema.
       $entry = $refined->entries()->entry((string) array_shift($parents));
       if ($entry === NULL || $this->watchedValueCheck === NULL) {
         continue;
       }
       $places = static::watchedPlaces($entry, $parents);
-      $place = end($places);
-      $schema = $place instanceof DataDefinitionInterface ? DefinitionSchema::of($place) : $place;
+      $schema = end($places);
       if ($schema instanceof Schema && !$this->watchedValueCheck->admits($schema, $value)) {
         $refused[] = $path;
       }
@@ -1095,32 +1057,23 @@ final class Surface implements SurfaceInterface {
    * Walks a watched key down to the place a watched path names.
    *
    * The two watched-value walks (ruledOutWatchedValues(),
-   * refusedWatchedValues()) find a place one way: a key whose source gave
-   * its schema (Entry::isSchemaFirst()) by its schema and the schemas below it,
-   * so no definition is derived to find it; a key whose source gave its
-   * definition by that definition, part by part
-   * (getPropertyDefinition()), as before, so a class that answers for a
-   * property its schema does not hold is walked as it answers, as
-   * Location::below() walks it.
+   * refusedWatchedValues()) find a place one way: by the key's schema and
+   * the schemas below it, so no definition is derived to find it.
    *
    * @param \Drupal\surface\Entry $entry
    *   The watched key's entry, refined.
    * @param string[] $parents
    *   The property names below the key.
    *
-   * @return array<int, \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface|null>
-   *   The key's own schema or definition, then one per part: the place
-   *   there, or NULL from the first part that names nothing on.
+   * @return array<int, \PortableSchema\Builder\Schema|null>
+   *   The key's own schema, then one per part: the schema there, or NULL
+   *   from the first part that names nothing on.
    */
   private static function watchedPlaces(Entry $entry, array $parents): array {
-    $place = $entry->isSchemaFirst() ? $entry->schema() : $entry->definition();
+    $place = $entry->schema();
     $places = [$place];
     foreach ($parents as $property) {
-      $place = match (TRUE) {
-        $place instanceof Schema => DefinitionSchema::isComplex($place) ? DefinitionSchema::propertyOf($place, (string) $property) : NULL,
-        $place instanceof ComplexDataDefinitionInterface => $place->getPropertyDefinition($property),
-        default => NULL,
-      };
+      $place = $place !== NULL && DefinitionSchema::isComplex($place) ? DefinitionSchema::propertyOf($place, (string) $property) : NULL;
       $places[] = $place;
     }
     return $places;
@@ -1157,31 +1110,18 @@ final class Surface implements SurfaceInterface {
    * The child is refined against the value at this key, merged over the
    * child's own defaults, under the child's own key names: no parent
    * refiner reaches into it and its refiners never see a parent value.
-   * What comes back is the key's definition for these values: the
-   * child's refined map for an attached child, and for variants the
-   * chosen variant's refined map, or nothing while no variant is chosen.
+   * What comes back is the key's schema for these values: the child's
+   * refined map for an attached child, and for variants the chosen
+   * variant's refined map, or nothing while no variant is chosen.
    *
    * The key's schema is composed of its own schema and the refined child's
    * entries' schemas (DefinitionSchema::withProperties()): an attached
    * child's in the entry's own schema, a chosen variant's in the schema of
    * the variants' shell (Variants::shellSchema()), whatever the child left
-   * as it was. The entry is schema-first, a new one even where the child
-   * changed nothing, as the key's definition was a new one before.
-   *
-   * The narrowing check the key's definition was held to before is
-   * implied there: the key's own facts are the advertised ones, and each
-   * of the child's keys was held to the check when the child refined it.
-   * It is kept, on the definition built as before (Attachment::mapOf(),
-   * Variants::definitionFor()), handed with the composed schema, for what
-   * the check still guards: a variant chosen where the deciding key is
-   * locked, which the key already holds the map of (another variant
-   * gains and loses keys), and a key whose schema holds a class no schema
-   * derives a definition of, whose own definition the schema does not say
-   * all of, and a key a refinement made (Entry::madeByRefinement()),
-   * refined again: its child is the sealed one, whose keys were checked
-   * against the sealed child's, not against what the first refinement
-   * made of them. A child with no keys, whose map is read as a value,
-   * takes the definition too.
+   * as it was. The entry is a new one even where the child changed
+   * nothing. A child with no keys, whose map is read as a value, gives the
+   * shell alone. The whole key is held to the narrowing check
+   * (Answer::assertNarrows()).
    *
    * @param \Drupal\surface\Entry $entry
    *   The key, as advertised.
@@ -1224,26 +1164,12 @@ final class Surface implements SurfaceInterface {
     }
     $schemas = static::schemasOf($refined);
     $shell = $chosen === NULL ? $base->schema() : $entry->variants->shellSchema();
-    $schema = $schemas === [] || !DefinitionSchema::holdsProperties($shell) ? NULL : DefinitionSchema::withProperties($shell, $schemas);
-    // A key with variants whose schema is no placeholder holds a variant's
-    // map already: its deciding key is locked.
-    $locked = $chosen !== NULL && !(SchemaFacts::dataType($advertised) === 'any' && SchemaFacts::variantsBy($advertised) !== NULL);
-    // A key a refinement made, refined again, is held to the check: its
-    // child is the sealed one, so its keys were checked against the sealed
-    // child's, not against what that refinement made of them.
-    if ($schema !== NULL && !$locked && !$entry->madeByRefinement() && Entries::derivedClasses($schema)) {
-      return $base->withSchema($schema, TRUE);
-    }
-    if ($chosen === NULL) {
-      $definition = $entry->definition();
-      assert($definition instanceof MapDataDefinition);
-      $definition = Attachment::mapOf($definition, $refined);
-    }
-    else {
-      $definition = $entry->variants->definitionFor($chosen, $refined);
-    }
-    Narrowing::assertNarrows($entry->name, 'the child attached there', $entry->definition(), $definition);
-    return $base->withDefinition($definition, $schema);
+    // A child with no keys: its map is read as a value, the shell alone.
+    $schema = $schemas === [] || !DefinitionSchema::holdsProperties($shell)
+      ? ($chosen === NULL ? $shell : $entry->variants->valueSchema())
+      : DefinitionSchema::withProperties($shell, $schemas);
+    Answer::assertNarrows($entry->name, 'the child attached there', $entry->schema(), $schema);
+    return $base->withSchema($schema);
   }
 
   /**

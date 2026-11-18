@@ -146,24 +146,17 @@ final class Variants {
   }
 
   /**
-   * Builds the definition the key has once a variant is chosen.
+   * Gets the schema of a chosen variant that has no keys.
    *
-   * Exactly that variant's map, wearing the key's own label and
-   * description: the one move from the placeholder to a concrete shape
-   * refinement allows, because every shape was declared before anything
-   * was chosen.
+   * The shell alone, read as one value, as a map with no properties is
+   * read (DefinitionSchema::of()): what the key holds once a variant with
+   * no keys is chosen.
    *
-   * @param string $id
-   *   The chosen variant.
-   * @param \Drupal\surface\SurfaceInterface|null $child
-   *   The variant refined against the key's value, or NULL for the
-   *   variant as advertised.
-   *
-   * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The resolved definition.
+   * @return \PortableSchema\Builder\Schema
+   *   The schema.
    */
-  public function definitionFor(string $id, ?SurfaceInterface $child = NULL): MapDataDefinition {
-    return Attachment::mapOf($this->shell, $child ?? $this->variant($id)->child);
+  public function valueSchema(): Schema {
+    return DefinitionSchema::of($this->shell);
   }
 
   /**

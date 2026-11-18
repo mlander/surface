@@ -22,7 +22,7 @@ use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\DefinitionTypedData;
+use Drupal\surface\Validation\ConstraintRunner;
 use Drupal\surface\Plugin\SurfaceWidget\StringWidget;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Refinement\DoesNotApply;
@@ -126,11 +126,14 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    * then held that very definition. Now each entry derives its own when
    * this walk asks. With every sealed entry's definition derived before
    * the refinements, as the emitter did, the counts are 793 and 997 again.
+   * Since an entry holds its schema alone (2026-11-18) an edge's definition
+   * is derived once per schema object (DefinitionFromSchema::forEntry()),
+   * so an entry a refinement kept shares it: 793 and 997.
    */
   protected const COUNTS = [
     'surfaces' => 327,
-    'compared' => 795,
-    'reachable' => 1007,
+    'compared' => 793,
+    'reachable' => 997,
   ];
 
   /**
@@ -138,12 +141,13 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    *
    * 705, 43 and 350 before 2026-11-16: the 101 fewer of COUNTS. 647, 39
    * and 311 until the document was written from schemas (2026-11-16): the
-   * 10 more of COUNTS.
+   * 10 more of COUNTS; and again since an entry holds its schema alone
+   * (2026-11-18).
    */
   protected const CLASSES = [
-    DataDefinition::class => 653,
+    DataDefinition::class => 647,
     ListDataDefinition::class => 39,
-    MapDataDefinition::class => 315,
+    MapDataDefinition::class => 311,
   ];
 
   /**
@@ -152,7 +156,8 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    * Before 2026-11-16 (the 101 fewer of COUNTS): any 47, boolean 64,
    * email 28, integer 122, list 43, map 350, string 404. Until the
    * document was written from schemas (2026-11-16, the 10 more of
-   * COUNTS): integer 114, map 311, string 391.
+   * COUNTS): integer 114, map 311, string 391; and again since an entry
+   * holds its schema alone (2026-11-18).
    */
   protected const TYPES = [
     'any' => 31,
@@ -161,10 +166,10 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     'decimal' => 1,
     'email' => 13,
     'float' => 14,
-    'integer' => 116,
+    'integer' => 114,
     'list' => 39,
-    'map' => 315,
-    'string' => 395,
+    'map' => 311,
+    'string' => 391,
     'timestamp' => 5,
     'uri' => 13,
   ];
@@ -177,19 +182,20 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
    * the one schema that holds it is HandBuiltSurfaces' `decimal`, a type
    * with no row in LeafTypes::DEFAULT_CONSTRAINTS. Until the document was
    * written from schemas (2026-11-16, the 10 more of COUNTS): type 1,625,
-   * required 409, declared 579, grouping 30, placedAfter 15, shape 44.
+   * required 409, declared 579, grouping 30, placedAfter 15, shape 44; and
+   * again since an entry holds its schema alone (2026-11-18).
    */
   protected const MEMBERS = [
-    'type' => 1635,
+    'type' => 1625,
     'definitionClass' => 49,
     'label' => 1,
     'description' => 98,
-    'required' => 411,
+    'required' => 409,
     'readOnly' => 0,
     'computed' => 0,
     'settings' => 101,
     'constraints' => 1,
-    'declared' => 583,
+    'declared' => 579,
     'default' => 12,
     'examples' => 0,
     'secret' => 0,
@@ -198,15 +204,15 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     'readVariants' => 12,
     'oneVariant' => 0,
     'fixed' => 0,
-    'grouping' => 32,
+    'grouping' => 30,
     'alwaysHeld' => 164,
-    'placedAfter' => 17,
+    'placedAfter' => 15,
     'variantsFrom' => 116,
     'ownLabel' => 1,
     'arrangement' => 46,
     'compute' => 5,
     'resolve' => 3,
-    'shape' => 46,
+    'shape' => 44,
     'configType' => 4,
     'each' => 4,
     'doesNotApply' => 41,
@@ -568,11 +574,11 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     foreach (['in' => $surface->entries(), 'out' => $surface->outputEntries()] as $side => $map) {
       foreach ($map->entries() as $name => $entry) {
         $here = "$at $side:$name";
-        if (!$tops->contains($entry->definition())) {
-          $tops->attach($entry->definition(), $here);
+        if (!$tops->contains(DefinitionFromSchema::forEntry($entry))) {
+          $tops->attach(DefinitionFromSchema::forEntry($entry), $here);
         }
-        if ($entry->isSchemaFirst() && $entry->isShell() && $entry->mounted === []) {
-          $derivedShells->attach($entry->definition(), TRUE);
+        if ($entry->host() === NULL && $entry->isShell() && $entry->mounted === []) {
+          $derivedShells->attach(DefinitionFromSchema::forEntry($entry), TRUE);
         }
         $children = [];
         if ($entry->variants !== NULL) {
@@ -774,7 +780,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
       References::CONTENT => ['node'],
       References::TARGETS => ['article'],
       References::STORED_AS => 'uuid',
-      DefinitionTypedData::DIGEST_SETTING => 'abc',
+      ConstraintRunner::DIGEST_SETTING => 'abc',
       'own_setting' => ['nested' => [1, 2]],
     ]);
     $cases['settings with every key the module writes'] = [$settings, ['settings']];

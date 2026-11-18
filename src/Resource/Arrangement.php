@@ -30,14 +30,14 @@ namespace Drupal\surface\Resource;
  *
  * describe() lays what it is given over what the key has: an alter may
  * place an owner's key and reword what the owner said, never take any of
- * it away. This is the stored form the engine reads, kept on the key's
- * definition by DefinitionMetadata::setArrangement().
+ * it away. This is the stored form the engine reads, kept in the key's
+ * schema and read by SchemaFacts::arrangement().
  *
  * The placeholder is only ever this one: a declared example is no longer
  * drawn as a placeholder, since an empty field showing a value reads as
  * filled.
  *
- * @see \Drupal\surface\DefinitionMetadata::setArrangement()
+ * @see \Drupal\surface\Contract\SchemaFacts::arrangement()
  * @see docs/decisions.md#arrangement-is-declared-once
  */
 final class Arrangement {

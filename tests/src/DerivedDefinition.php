@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Entries;
 use Drupal\surface\Entry;
 use Drupal\surface\SurfaceInterface;
@@ -46,7 +47,8 @@ final class DerivedDefinition {
    *   The key's definition, or NULL when there is no such key.
    */
   public static function in(Entries $entries, string $key): ?DataDefinitionInterface {
-    return $entries->entry($key)?->definition();
+    $entry = $entries->entry($key);
+    return $entry === NULL ? NULL : DefinitionFromSchema::forEntry($entry);
   }
 
   /**
@@ -59,7 +61,7 @@ final class DerivedDefinition {
    *   Each key's definition, in declaration order.
    */
   public static function all(Entries $entries): array {
-    return array_map(static fn (Entry $entry): DataDefinitionInterface => $entry->definition(), $entries->entries());
+    return array_map(static fn (Entry $entry): DataDefinitionInterface => DefinitionFromSchema::forEntry($entry), $entries->entries());
   }
 
 }

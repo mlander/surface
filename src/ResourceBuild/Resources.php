@@ -148,9 +148,10 @@ final class Resources implements ResourcesInterface {
    *
    * Changed whenever a serialized build changes shape, so a row written
    * by other code is not read: 'entries' since a data surface holds its
-   * keys as Entries (2026-11-18).
+   * keys as Entries, 'schemas' since an entry holds its schema alone
+   * (both 2026-11-18).
    */
-  public const BUILD_FORMAT = 'entries';
+  public const BUILD_FORMAT = 'schemas';
 
   /**
    * What builds reference keys, where withRegistry() was handed one.

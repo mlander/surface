@@ -104,7 +104,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
 
     return new Surface(
       Entries::fromArrays(
-        definitions: $definitions,
+        schemas: $definitions,
         locked: $locked,
       ),
     );
@@ -224,7 +224,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
     DefinitionMetadata::setDefaultValue($kind, 'fixed');
     $surface = new Surface(
       Entries::fromArrays(
-        definitions: [
+        schemas: [
           'kind' => $kind,
           'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],
@@ -353,7 +353,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
       'choices' => ['news', 'tips', 'events'],
       'labels' => ['news' => 'News', 'tips' => 'Tips', 'events' => 'Events'],
     ]);
-    return new Surface(Entries::fromArrays(definitions: ['tags' => $tags]));
+    return new Surface(Entries::fromArrays(schemas: ['tags' => $tags]));
   }
 
   /**
@@ -426,7 +426,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
       ]);
     $surface = new Surface(
       Entries::fromArrays(
-        definitions: [
+        schemas: [
           'scope' => DataDefinition::create('string')->setLabel('Scope'),
           'mode' => $mode,
         ],
@@ -621,7 +621,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
     $map->setPropertyDefinition('badge', DataDefinition::create('string')->setLabel('Badge'));
     $surface = new Surface(
       Entries::fromArrays(
-        definitions: [
+        schemas: [
           'extras' => $map,
           'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],
@@ -647,7 +647,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
   public function testLockedElementSaysWhy(): void {
     $surface = new Surface(
       Entries::fromArrays(
-        definitions: [
+        schemas: [
           'plain' => DataDefinition::create('string')->setLabel('Plain'),
           'described' => DataDefinition::create('string')
             ->setLabel('Described')
@@ -673,7 +673,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
   public function testEmptyOptionSetIsSelectOfNothing(): void {
     $surface = new Surface(
       Entries::fromArrays(
-        definitions: [
+        schemas: [
           'badge' => DataDefinition::create('string')
             ->setLabel('Badge')
             ->setRequired(TRUE)
@@ -699,7 +699,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
   public function testUnregisteredConstraintDoesNotBreakWidgetSelection(): void {
     $surface = new Surface(
       Entries::fromArrays(
-        definitions: [
+        schemas: [
           'badge' => DataDefinition::create('string')
             ->setLabel('Badge')
             ->addConstraint('ThisConstraintPluginDoesNotExist', ['choices' => ['star']]),
@@ -719,7 +719,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
   public function testOptionsCarryTheirCacheability(): void {
     $surface = new Surface(
       Entries::fromArrays(
-        definitions: [
+        schemas: [
           'badge' => DataDefinition::create('string')
             ->setLabel('Badge')
             ->addConstraint('LabeledChoice', ['choices' => ['star'], 'labels' => ['star' => 'Star']]),
@@ -838,7 +838,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
   protected function dependencySurface(): SurfaceInterface {
     return new Surface(
       Entries::fromArrays(
-        definitions: [
+        schemas: [
           'kind' => DataDefinition::create('string')->setLabel('Kind'),
           'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\surface\Contract\DefinitionFromSchema;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Contract\ServedContract;
 use Drupal\surface\DefinitionMetadata;
@@ -211,13 +213,13 @@ class PortableServedContractTest extends SurfaceKernelTestBase {
     ];
     $expected = ['drupal:JsonSchema' => ['schema' => $fragment]];
     // The reader keeps no hint in a fragment; one a structure states is
-    // served as stated. A sealed surface's definitions are for reading, so
-    // the key is stated on a copy, and the surface's map holds an entry
-    // of it (Entry::withDefinition()), as a refinement makes one.
+    // served as stated. The key is stated on a copy of its definition,
+    // and the surface's map holds an entry of its schema
+    // (Entry::withSchema()), as a refinement makes one.
     $hinted = static function (SurfaceInterface $surface) use ($fragment): SurfaceInterface {
       $entry = $surface->entries()->entry('odd');
-      $stated = (clone $entry->definition())->addConstraint('JsonSchema', ['schema' => $fragment]);
-      return new Surface($surface->entries()->with($entry->withDefinition($stated)), outputs: $surface->outputEntries());
+      $stated = (clone DefinitionFromSchema::forEntry($entry))->addConstraint('JsonSchema', ['schema' => $fragment]);
+      return new Surface($surface->entries()->with($entry->withSchema(DefinitionSchema::of($stated))), outputs: $surface->outputEntries());
     };
     $read = $hinted($resources->buildStatic($structure, $context));
     $built = $hinted($resources->build($structure, $context));
@@ -238,7 +240,7 @@ class PortableServedContractTest extends SurfaceKernelTestBase {
     // An `any` a schema read holds whole, with no label: no type, no title.
     $anything = DataDefinition::create('any');
     DefinitionMetadata::setHeldWhole($anything);
-    $this->assertSame([], $emitter->describeKey(new Entry('anything', $anything)));
+    $this->assertSame([], $emitter->describeKey(Entry::ofHost('anything', $anything)));
   }
 
   /**

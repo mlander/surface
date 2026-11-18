@@ -13,7 +13,7 @@ namespace Drupal\surface\Resource\Attribute;
  * #[Examples('Harbour Kitchen')]
  * @endcode
  *
- * @see \Drupal\surface\DefinitionMetadata::setExamples()
+ * @see \PortableSchema\Builder\Schema::examples()
  */
 #[\Attribute(\Attribute::TARGET_PROPERTY)]
 final class Examples {

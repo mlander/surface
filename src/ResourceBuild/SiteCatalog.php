@@ -7,12 +7,12 @@ namespace Drupal\surface\ResourceBuild;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Session\AccountSwitcherInterface;
 use Drupal\Core\Session\AnonymousUserSession;
-use Drupal\surface\Collection;
-use Drupal\surface\Computed;
 use Drupal\surface\Contract\ContractBaselines;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\SchemaFacts;
+use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Contract\SiteListBudget;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Contract\WidgetChoice;
 use PortableSchema\Builder\Schema;
@@ -614,8 +614,8 @@ final class SiteCatalog {
     foreach ($surface->entries()->entries() as $name => $entry) {
       $name = (string) $name;
       $path = $prefix . $name;
-      $definition = $entry->definition();
-      $computed = Computed::of($definition);
+      $schema = $entry->schema();
+      $computed = SchemaFacts::compute($schema);
       // Variants the site lists past the budget are listed by value, and
       // their keys not walked: one structure a variant, at every depth, is
       // the product of the lists, which no page or command can hold.
@@ -625,22 +625,22 @@ final class SiteCatalog {
         $entry->attachment !== NULL => 'child',
         $entry->variants !== NULL => 'variants',
         $entry->list !== NULL => 'list',
-        default => $definition->getDataType(),
+        default => SchemaFacts::dataType($schema),
       };
       $keys[] = [
         'key' => $path,
         'variant' => $within,
         'type' => $type,
-        'label' => (string) $definition->getLabel(),
-        'required' => $definition->isRequired(),
+        'label' => (string) SchemaFacts::label($schema),
+        'required' => SchemaFacts::isRequired($schema),
         'default' => static::plain($surface->getDefault($name)),
         // The two a type and a required key add are said by those.
         'constraints' => static::plain(array_diff_key(
-          ($entry->variants->shell ?? $definition)->getConstraints(),
+          $entry->variants === NULL ? SchemaFacts::constraints($schema) : $entry->variants->shell->getConstraints(),
           ['PrimitiveType' => TRUE, 'NotNull' => TRUE],
         )),
         'locked' => $entry->locked,
-        'secret' => DefinitionMetadata::isSecret($definition),
+        'secret' => Secrets::marked($schema),
         'computed' => $computed === NULL ? NULL : [
           'from' => $computed->from,
           'by' => $computed->using,
@@ -659,7 +659,7 @@ final class SiteCatalog {
         ],
         'items' => $entry->list === NULL ? NULL : ($entry->list->item->id ?? $entry->list->item->source),
         // A list of maps is drawn as a collection, which no widget is.
-        'widget' => $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL && !Collection::holdsMaps($definition) ? $this->widget($entry->schema()) : NULL,
+        'widget' => $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL && !static::holdsMaps($schema) ? $this->widget($schema) : NULL,
       ];
       if ($entry->attachment !== NULL) {
         array_push($keys, ...$this->keys($entry->attachment->child, $entry->attachment->source, $path . '.', $within));
@@ -716,6 +716,23 @@ final class SiteCatalog {
       is_object($value) => get_class($value),
       default => $value,
     };
+  }
+
+  /**
+   * Answers whether a key's schema is a list whose item is a map.
+   *
+   * Collection::holdsMaps(), read from the schema: the form draws such a
+   * list as one details per item, with no widget.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema.
+   *
+   * @return bool
+   *   TRUE for a list whose item was read from a complex definition.
+   */
+  protected static function holdsMaps(Schema $schema): bool {
+    $item = DefinitionSchema::isList($schema) ? DefinitionSchema::itemOf($schema) : NULL;
+    return $item !== NULL && DefinitionSchema::isComplex($item);
   }
 
 }

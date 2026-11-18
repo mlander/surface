@@ -295,7 +295,7 @@ class ShapesTest extends SurfaceKernelTestBase {
   public function testEachRefusal(): void {
     $resources = $this->container->get('surface.resources');
     foreach ([
-      WideningShapeStructure::class => 'resource_test.broken.widening_shape declares "sku" with the shape resource_test.sku and widens it: the max of the Length constraint moved from 12 to 40. A key narrows the shape it uses, as a refiner narrows a key: declare a shape of its own, or narrow less.',
+      WideningShapeStructure::class => 'resource_test.broken.widening_shape declares "sku" with the shape resource_test.sku and widens it: the maxLength moved from 12 to 40. A key narrows the shape it uses, as a refiner narrows a key: declare a shape of its own, or narrow less.',
       MountedShapeStructure::class => MountingShapeAlter::class . ' alters the shape resource_test.broken.mounted and calls add("note"). A shape is one value, with no keys to mount and nothing to attach: an alter of it tightens it with narrow("resource_test.broken.mounted") and rewords it with describe("resource_test.broken.mounted"), at every key that uses it.',
       DefaultedShapeStructure::class => 'The shape resource_test.broken.defaulted (Drupal\surface_resource_test\Shape\Broken\DefaultedShape) declares a default: a default belongs to the key, add(\'<key>\', DefaultedShape::class, ..., default: ...).',
       AttachesShapeStructure::class => 'attachList("codes") was handed ' . Sku::class . ', a shape: a shape is one value, declared at a key with add(\'codes\', Sku::class, ...); attachList() holds a resource or structure.',
