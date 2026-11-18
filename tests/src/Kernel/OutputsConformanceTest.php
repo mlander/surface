@@ -138,6 +138,23 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests NULL at an optional map that names no keys is taken.
+   *
+   * Such a map is typed `object` and null where it is optional, as every
+   * optional output takes NULL; where it is required, NULL is refused.
+   */
+  public function testNullAtAnOptionalOpenMapIsTaken(): void {
+    $surface = OutputCases::handSurface();
+    $good = [];
+    foreach ($surface->getOutputDefinitions()->entries() as $name => $entry) {
+      $good[(string) $name] = OutputCases::good($entry->schema());
+    }
+    $this->assertSame([], $this->answer($surface, array_replace($good, ['open' => NULL])));
+    $required = (new SurfaceBuilder())->setOutputDefinition('open', MapDataDefinition::create()->setRequired(TRUE))->seal();
+    $this->assertSame([['open', 'type']], $this->answer($required, ['open' => NULL]));
+  }
+
+  /**
    * Tests property names that are numbers, in a map and at the top.
    *
    * PHP holds the names "0" and "1" as integer keys, so a map that names
