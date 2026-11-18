@@ -106,7 +106,7 @@ class LeafTypesTest extends SurfaceKernelTestBase {
     $this->assertRefused(fn () => $blueprint->addTyped('language', 'language', 'Language'), 'the language type');
     $this->assertRefused(fn () => $blueprint->addTyped('settings', 'map', 'Settings'), 'a group of keys is attach(\'<key>\', <structure>::class), or addMap() for keys only this one holds.');
     $this->assertRefused(fn () => $blueprint->addTyped('tags', 'list', 'Tags'), 'a list is add(\'<key>\', Schema::list(<item>)).');
-    $this->assertRefused(fn () => $blueprint->addTyped('page', 'entity:node', 'Page'), "an id of an entity is add('<key>', 'integer' or 'string', ...), the type the entity type keeps its id as, with the SurfaceValidReference constraint naming the entity type");
+    $this->assertRefused(fn () => $blueprint->addTyped('page', 'entity:node', 'Page'), "an id of an entity is add('<key>', Schema::integer() or Schema::string(), the type the entity type keeps its id as, with the SurfaceValidReference check naming the entity type: ->check('drupal:SurfaceValidReference', ['entityTypeId' => '<entity type>'])).");
     $this->assertRefused(fn () => $blueprint->addTyped('detail', 'any', 'Detail'), 'a value whose shape depends on another key is variants, attachVariants().');
     $this->assertRefused(fn () => $blueprint->addDefinition('logos', new ListDataDefinition(['type' => 'list'], DataDefinition::create('binary'))), 'addDefinition("logos") declares "*" of the binary type');
   }
