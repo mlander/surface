@@ -544,12 +544,10 @@ class AddressFieldResourceTest extends SurfaceKernelTestBase {
     // and neither is repeated as a labeled choice anywhere.
     // Each is a check given no options, held as none (NULL).
     $countries = $this->itemOf($declared['available_countries'])->getConstraints();
-    $this->assertArrayHasKey('Country', $countries);
-    $this->assertNull($countries['Country']);
+    $this->assertSame('null', json_encode($countries['Country'] ?? 'absent'));
     $this->assertArrayNotHasKey('LabeledChoice', $countries);
     $languages = $declared['langcode_override']->getConstraints();
-    $this->assertArrayHasKey('LanguageExists', $languages);
-    $this->assertNull($languages['LanguageExists']);
+    $this->assertSame('null', json_encode($languages['LanguageExists'] ?? 'absent'));
     $this->assertArrayNotHasKey('LabeledChoice', $languages);
     $this->assertSame(
       ['available_countries' => [], 'langcode_override' => NULL, 'field_overrides' => []],

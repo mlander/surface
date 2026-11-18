@@ -677,7 +677,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $type = ['NotNull' => TRUE, 'PrimitiveType' => TRUE];
     $constraints = static fn (string $key): array => array_diff_key($read->getDefinition($key)->getConstraints(), $type);
     $this->assertSame(['Length' => ['min' => 1]], $constraints('name'), 'minLength: 1 is the literal Length.');
-    $this->assertSame(['Uuid' => NULL], $constraints('id'), 'Given no options: held as none.');
+    $this->assertSame('{"Uuid":null}', json_encode($constraints('id')), 'Given no options: held as none.');
     $this->assertSame(['JsonSchema' => ['schema' => ['pattern' => '^[a-z]+$', 'not' => ['pattern' => '^x']]]], $constraints('code'), 'Two Regex constraints, of which a definition holds one: kept whole.');
     $this->assertSame(['JsonSchema' => ['schema' => ['minLength' => 2]]], $constraints('seats'), 'A length says nothing of an integer: kept.');
     $this->assertSame(['Length' => ['min' => 4, 'max' => 4]], $constraints('pin'), 'Two equal bounds are min and max.');
