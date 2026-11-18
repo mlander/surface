@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface_resource_test\Shape\Broken\MountedShape;
+use PortableSchema\Builder\Schema;
 
 /**
  * Adds a key to a shape, which has none: refused when the shape is used.
@@ -19,7 +20,7 @@ final class MountingShapeAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('note', 'string', 'Note');
+    $inputs->add('note', Schema::string()->title('Note'));
   }
 
 }
