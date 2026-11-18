@@ -8,7 +8,6 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Compute\MachineName;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\Compute;
@@ -17,6 +16,7 @@ use Drupal\surface_values_test\Shape\ValuesCode;
 use Drupal\surface_values_test\Storage\ValuesStorage;
 use Drupal\surface_values_test\Structure\MemberStructure;
 use Drupal\surface_values_test\Variants\AccessKinds;
+use PortableSchema\Builder\Schema;
 
 /**
  * A resource of the keys the value baseline needs that no example declares.
@@ -49,55 +49,79 @@ final class ValuesResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', t('Name'), default: 'Values');
-    $inputs->add('stamp', 'timestamp', t('Stamp'));
-    $inputs->add('moment', 'datetime_iso8601', t('Moment'));
-    $inputs->add('day', 'datetime_iso8601', t('Day'))
-      ->addConstraint('DateOnly', []);
-    $inputs->add('mail', 'email', t('Mail'));
-    $inputs->add('link', 'uri', t('Link'));
-    $inputs->add('ratio', 'float', t('Ratio'));
-    $inputs->add('flag', 'boolean', t('Flag'));
-    $inputs->add('picked', 'string', t('Picked'))
-      ->setSetting('widget', 'date');
-    $inputs->add('contact', 'string', t('Contact'))
-      ->addConstraint('Email', []);
-    $inputs->add('level', 'string', t('Level'))
-      ->addConstraint('Choice', ['choices' => ['1', '2', '3']]);
-    $inputs->addList('sizes', 'string', t('Sizes'))
-      ->addConstraint('Choice', ['choices' => ['s', 'm', 'l'], 'multiple' => TRUE]);
+    $inputs->add('name', Schema::string()
+      ->title(t('Name'))
+      ->default('Values'));
+    $inputs->addDefinition('stamp', DataDefinition::create('timestamp')->setLabel(t('Stamp')));
+    $inputs->add('moment', Schema::string()->format('date-time')
+      ->title(t('Moment')));
+    $inputs->addDefinition('day', DataDefinition::create('datetime_iso8601')->setLabel(t('Day'))->addConstraint('DateOnly', []));
+    $inputs->add('mail', Schema::string()->format('email')
+      ->title(t('Mail')));
+    $inputs->add('link', Schema::string()->format('uri')
+      ->title(t('Link')));
+    $inputs->add('ratio', Schema::number()
+      ->title(t('Ratio')));
+    $inputs->add('flag', Schema::bool()
+      ->title(t('Flag')));
+    $inputs->add('picked', Schema::string()
+      ->title(t('Picked'))
+      ->ui(widget: 'date'));
+    $inputs->add('contact', Schema::string()
+      ->title(t('Contact'))
+      ->check('drupal:Email'));
+    $inputs->add('level', Schema::enum(['1', '2', '3'])->type('string')
+      ->title(t('Level')));
+    $inputs->add('sizes', Schema::list(Schema::string())
+      ->title(t('Sizes'))
+      ->check('drupal:Choice', ['choices' => ['s', 'm', 'l'], 'multiple' => TRUE]));
     $inputs->addMap('window', t('Window'), function (BlueprintInterface $map): void {
-      $map->add('opens', 'datetime_iso8601', t('Opens'));
-      $map->add('closes', 'timestamp', t('Closes'));
-      $map->add('note', 'string', t('Note'));
+      $map->add('opens', Schema::string()->format('date-time')
+        ->title(t('Opens')));
+      $map->addDefinition('closes', DataDefinition::create('timestamp')->setLabel(t('Closes')));
+      $map->add('note', Schema::string()
+        ->title(t('Note')));
     });
-    $inputs->add('pair', 'string', t('Pair'))
-      ->addConstraint('Choice', ['choices' => ['a', 'A', 'b']]);
+    $inputs->add('pair', Schema::enum(['a', 'A', 'b'])
+      ->title(t('Pair')));
+    // A list whose item is a plain map, which no schema states at an
+    // input: a list of objects there is a collection.
     $slot = MapDataDefinition::create()
       ->setPropertyDefinition('at', DataDefinition::create('datetime_iso8601')->setLabel('At'));
     $inputs->addList('slots', $slot, t('Slots'));
-    $pin = $inputs->add('pin', 'string', t('PIN'))->setRequired(TRUE);
-    DefinitionMetadata::setSecret($pin);
+    $inputs->add('pin', Schema::string()
+      ->title(t('PIN'))
+      ->writeOnly(TRUE)
+      ->required());
     $inputs->addMap('vault', t('Vault'), function (BlueprintInterface $map): void {
-      $map->add('label', 'string', t('Label'));
-      $key = $map->add('key', 'string', t('Key'));
-      DefinitionMetadata::setSecret($key);
+      $map->add('label', Schema::string()
+        ->title(t('Label')));
+      $map->add('key', Schema::string()
+        ->title(t('Key'))
+        ->writeOnly(TRUE));
     });
-    $code = DataDefinition::create('string')->setLabel('Code');
-    DefinitionMetadata::setSecret($code);
-    $inputs->addList('codes', $code, t('Codes'));
-    $inputs->compute('handle', 'machine_name', t('Handle'), from: ['name'], using: MachineName::class)
-      ->setRequired(TRUE);
-    $inputs->compute('alias', 'machine_name', t('Alias'), from: ['name'], using: MachineName::class, when: Compute::UNLESS_SENT);
-    $inputs->add('code', ValuesCode::class, t('Code'));
-    $inputs->add('tier', 'string', t('Tier'), default: 'basic')
-      ->addConstraint('Choice', ['choices' => ['basic', 'premium']]);
+    $inputs->add('codes', Schema::list(Schema::string()->title('Code')->writeOnly(TRUE))
+      ->title(t('Codes')));
+    $inputs->compute('handle', Schema::of('drupal:config/machine_name')
+      ->title(t('Handle'))
+      ->required(), from: ['name'], using: MachineName::class);
+    $inputs->compute('alias', Schema::of('drupal:config/machine_name')
+      ->title(t('Alias')), from: ['name'], using: MachineName::class, when: Compute::UNLESS_SENT);
+    $inputs->add('code', Schema::of(ValuesCode::class)
+      ->title(t('Code')));
+    $inputs->add('tier', Schema::enum(['basic', 'premium'])
+      ->title(t('Tier'))
+      ->default('basic'));
     $inputs->attachVariants('plan', by: 'tier', label: t('Plan'));
     $inputs->attachList('members', MemberStructure::class, t('Members'), max: 5);
     $inputs->attachList('guests', MemberStructure::class, t('Guests'), max: 5);
-    $inputs->add('access_kind', 'string', t('Access kind'), default: 'open');
+    $inputs->add('access_kind', Schema::string()
+      ->title(t('Access kind'))
+      ->default('open'));
     $inputs->attachVariants('access', by: 'access_kind', label: t('Access'), from: AccessKinds::class);
-    $inputs->add('backup_kind', 'string', t('Backup kind'), default: 'keyed');
+    $inputs->add('backup_kind', Schema::string()
+      ->title(t('Backup kind'))
+      ->default('keyed'));
     $inputs->attachVariants('backup', by: 'backup_kind', label: t('Backup'), from: AccessKinds::class);
   }
 

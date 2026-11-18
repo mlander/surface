@@ -8,6 +8,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The access a site lists that holds no secret.
@@ -19,7 +20,9 @@ final class OpenAccessStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('note', 'string', t('Note'), default: 'open');
+    $inputs->add('note', Schema::string()
+      ->title(t('Note'))
+      ->default('open'));
   }
 
 }

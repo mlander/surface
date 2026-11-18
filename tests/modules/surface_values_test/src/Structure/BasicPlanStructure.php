@@ -10,6 +10,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_values_test\Resource\ValuesResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * The plan's variant that holds no secret.
@@ -22,7 +23,9 @@ final class BasicPlanStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('seats', 'integer', t('Seats'), default: 1);
+    $inputs->add('seats', Schema::integer()
+      ->title(t('Seats'))
+      ->default(1));
   }
 
 }

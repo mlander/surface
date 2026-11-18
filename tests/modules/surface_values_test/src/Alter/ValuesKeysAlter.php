@@ -12,6 +12,7 @@ use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\ResourceBuild\StorageAdapter;
 use Drupal\surface_values_test\Resource\ValuesResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * Mounts a key inside the stored map of mounted keys, and rules it out.
@@ -39,8 +40,12 @@ final class ValuesKeysAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('gate', 'string', $this->t('Gate'), default: 'on');
-    $inputs->add('extra', 'string', $this->t('Extra'), default: 'kept-extra');
+    $inputs->add('gate', Schema::string()
+      ->title($this->t('Gate'))
+      ->default('on'));
+    $inputs->add('extra', Schema::string()
+      ->title($this->t('Extra'))
+      ->default('kept-extra'));
     $inputs->describe(StorageAdapter::THIRD_PARTY . '.surface_values_test', label: $this->t('Values test'));
     $inputs->narrow('extra')
       ->when(Condition::present('gate'))

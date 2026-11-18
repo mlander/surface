@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Drupal\surface_values_test\Structure;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The access a site lists that holds a secret, which the other does not.
@@ -20,9 +20,12 @@ final class KeyedAccessStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('holder', 'string', t('Holder'), default: 'me');
-    $token = $inputs->add('token', 'string', t('Token'));
-    DefinitionMetadata::setSecret($token);
+    $inputs->add('holder', Schema::string()
+      ->title(t('Holder'))
+      ->default('me'));
+    $inputs->add('token', Schema::string()
+      ->title(t('Token'))
+      ->writeOnly(TRUE));
   }
 
 }
