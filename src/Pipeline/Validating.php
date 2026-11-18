@@ -1213,7 +1213,8 @@ final class Validating {
         continue;
       }
       if (SchemaFacts::isRequired($property_schema) && !ValueState::isConfigured($held)) {
-        $missing[$path] = SchemaFacts::label($property_schema) ?? $property;
+        // A label of '' is no label: the sentence names the key.
+        $missing[$path] = static::labelOf($property_schema) ?? $property;
       }
     }
     return $missing;

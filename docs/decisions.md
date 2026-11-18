@@ -16660,3 +16660,13 @@ costs no request time. A misread `maxLength` planted in a copy fails it.
 It found one disagreement, fixed: a PHP array whose keys are not 0 to
 n - 1 is a map to the validator, and `ApplicableSchemas` read it as a
 list, so a `type: object` there counted as a refusal.
+
+### A required key labeled '' is named by its key
+
+Decided 2026-11-17. "@label is required." printed a label of `''` as
+nothing (" is required."). A label of `''` is no label, as
+`Validating::labelOf()` reads it, so the sentence names the key
+("req is required."), by one rule at both places that word it
+(`Validating::missingInMap()`, `Sentences::ofError()`). A label of `'0'`
+is the author's text and stays ("0 is required."): a number label is
+refused at authoring, so `'0'` is always a string the author chose.

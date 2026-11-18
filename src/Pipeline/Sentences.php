@@ -114,7 +114,9 @@ final class Sentences implements MarkupInterface {
           '@expected' => implode(' or ', $expected),
           '@actual' => (string) ($params['actual'] ?? ''),
         ], [], $translation),
-      'required' => new TranslatableMarkup('@label is required.', ['@label' => $context['label'] ?? (string) ($params['property'] ?? '')], [], $translation),
+      // A label of '' is no label, as Validating::labelOf() reads it: the
+      // sentence names the key.
+      'required' => new TranslatableMarkup('@label is required.', ['@label' => isset($context['label']) && (string) $context['label'] !== '' ? $context['label'] : (string) ($params['property'] ?? '')], [], $translation),
       'unknownProperty' => new TranslatableMarkup('Unknown key @key.', ['@key' => $context['key'] ?? (string) ($params['property'] ?? '')], [], $translation),
       'const' => new TranslatableMarkup('This value should be @expected.', ['@expected' => static::spelled($params['expected'] ?? NULL)], [], $translation),
       'enum' => new TranslatableMarkup('The value you selected is not a valid choice.', [], [], $translation),
