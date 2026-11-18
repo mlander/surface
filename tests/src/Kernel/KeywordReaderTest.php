@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\KeywordReader;
@@ -199,7 +201,7 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
       ],
       'unique then count' => [
         fn ($i) => $i
-          ->addList('k', 'string', 'N')
+          ->addDefinition('k', (new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')))->setLabel('N'))
           ->shellAt('k')
           ->addConstraint('UniqueItems', [])
           ->addConstraint('Count', ['max' => 3]),

@@ -215,9 +215,9 @@ class PortableServedContractTest extends SurfaceKernelTestBase {
     // the key is stated on a copy, and the surface's map holds an entry
     // of it (Entry::withDefinition()), as a refinement makes one.
     $hinted = static function (SurfaceInterface $surface) use ($fragment): SurfaceInterface {
-      $entry = $surface->getDefinitions()->entry('odd');
+      $entry = $surface->entries()->entry('odd');
       $stated = (clone $entry->definition())->addConstraint('JsonSchema', ['schema' => $fragment]);
-      return new Surface($surface->getDefinitions()->with($entry->withDefinition($stated)), outputs: $surface->getOutputDefinitions());
+      return new Surface($surface->entries()->with($entry->withDefinition($stated)), outputs: $surface->outputEntries());
     };
     $read = $hinted($resources->buildStatic($structure, $context));
     $built = $hinted($resources->build($structure, $context));

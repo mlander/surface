@@ -12,6 +12,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\DataReferenceDefinitionInterface;
 use Drupal\Core\TypedData\DataReferenceTargetDefinition;
+use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\Core\Validation\Plugin\Validation\Constraint\ComplexDataConstraint;
@@ -33,8 +34,8 @@ use Drupal\surface\ResourceBuild\ResourceRegistry;
  *   that is complex itself is addMap(), or attach() of a derived
  *   structure where its data type has a name of its own to rebuild it by
  *   (`field_item:text`), `typed_data:<type>`;
- * - a list is addList() of its item, or attachList() of a derived
- *   structure for an item that is complex and named;
+ * - a list is addDefinition() of a list of its item, or attachList() of a
+ *   derived structure for an item that is complex and named;
  * - a reference is the reference key the module spells: the id with
  *   SurfaceValidReference (References::definition()), for a reference
  *   property, and for the id property a computed reference stands
@@ -221,7 +222,7 @@ final class TypedDataReader implements DeclarationReaderInterface {
         else {
           // Noted by value() where it reads no type.
           $value = $this->value($item, $laid[$key] ?? [], $reading, $here . '.*', NULL);
-          $declared = $value === NULL ? $this->open($inputs, $key, $property) : BlueprintAdapterBase::of($inputs->addList($key, $value, $label ?? $property->getLabel() ?? $key))->shellAt($key);
+          $declared = $value === NULL ? $this->open($inputs, $key, $property) : BlueprintAdapterBase::of($inputs->addDefinition($key, (new ListDataDefinition(['type' => 'list'], $value))->setLabel($label ?? $property->getLabel() ?? $key)))->shellAt($key);
         }
       }
       elseif ($property instanceof ComplexDataDefinitionInterface && !$property instanceof DataReferenceDefinitionInterface) {

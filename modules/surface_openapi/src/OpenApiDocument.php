@@ -736,7 +736,7 @@ final class OpenApiDocument {
    */
   protected static function references(SurfaceInterface $surface, string $prefix = ''): array {
     $found = [];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       if ($entry->variants !== NULL || $entry->list !== NULL) {
         continue;
       }
@@ -744,7 +744,7 @@ final class OpenApiDocument {
       $child = $entry->attachment?->child;
       if ($child !== NULL) {
         $inside = static::references($child, $at);
-        $id = $child->getDefinitions()->entry('id');
+        $id = $child->entries()->entry('id');
         if ($id !== NULL && in_array($at . '/id', $inside, TRUE) && SchemaFacts::setting($id->schema(), References::TARGETS) !== NULL) {
           $found[] = $at;
         }
@@ -874,8 +874,8 @@ final class OpenApiDocument {
     $parameters = [];
     foreach ($operation->parameters as $parameter) {
       $path = in_array($parameter->name, $inPath, TRUE);
-      $key = $built->getDefinition($parameter->name);
-      $said = $key === NULL ? '' : (string) ($key->getDescription() ?? $key->getLabel() ?? '');
+      $key = $built->getSchema($parameter->name);
+      $said = $key === NULL ? '' : (string) (SchemaFacts::description($key) ?? SchemaFacts::label($key) ?? '');
       $description = match (TRUE) {
         $said !== '' => $said,
         $path => (string) $this->t('The identity of the thing: the @name the operation takes.', ['@name' => $parameter->name]),

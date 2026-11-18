@@ -6,12 +6,13 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Entries;
+use Drupal\surface\Refinement\ChoiceSet;
+use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMap;
-use Drupal\surface\Refinement\ChoiceSet;
-use Drupal\surface\Refinement\Narrowing;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -285,7 +286,7 @@ class ChoiceSpellingParityTest extends SurfaceKernelTestBase {
    *   The data surface.
    */
   protected function surface(array $options): SurfaceInterface {
-    return new Surface(DefinitionMap::fromArrays(
+    return new Surface(Entries::fromArrays(
       definitions: ['badge' => $this->definition($options)],
     ));
   }
@@ -317,7 +318,7 @@ class ChoiceSpellingParityTest extends SurfaceKernelTestBase {
     $surface = $this->builderFor($options)
       ->extendChoices('badge', ['sash' => 'Sash'], 'other')
       ->seal();
-    $definition = $surface->getDefinition('badge');
+    $definition = DerivedDefinition::at($surface, 'badge');
     $this->assertNotNull($definition);
     return $definition->getConstraints()['LabeledChoice'];
   }

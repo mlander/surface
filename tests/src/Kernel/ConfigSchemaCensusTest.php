@@ -239,7 +239,7 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
       }
       $start = hrtime(TRUE);
       try {
-        $definitions = $resources->buildStatic($reader->structure(substr($structure, strlen(ConfigSchemaReader::PREFIX))), new OperationContext('configure'))->getDefinitions();
+        $definitions = $resources->buildStatic($reader->structure(substr($structure, strlen(ConfigSchemaReader::PREFIX))), new OperationContext('configure'))->entries();
         $chosen = $definitions->entry(ConfigSchemaReader::CHOSEN)?->variants;
         $tally['own_variants'][$structure] = count(array_map(static fn (string $value): SurfaceInterface => $chosen->variant($value)->child, $chosen?->variantIds() ?? []));
       }

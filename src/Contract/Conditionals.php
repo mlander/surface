@@ -8,7 +8,7 @@ use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Refinement\DeclaredRefiner;
 use Drupal\surface\Refinement\Answer;
@@ -109,7 +109,7 @@ final class Conditionals {
   /**
    * Answers whether a key watches anything that could hold another value.
    *
-   * @param \Drupal\surface\DefinitionMap $advertised
+   * @param \Drupal\surface\Entries $advertised
    *   The frame's definitions, as advertised.
    * @param \Drupal\surface\Entry $entry
    *   The key.
@@ -123,7 +123,7 @@ final class Conditionals {
    *   alter mounted. What only a runtime refiner watches is never read
    *   for any values.
    */
-  public function watchesFree(DefinitionMap $advertised, Entry $entry, bool $declaring = FALSE): bool {
+  public function watchesFree(Entries $advertised, Entry $entry, bool $declaring = FALSE): bool {
     foreach ($entry->codedDependencies() as $key) {
       if ($declaring || !$advertised->isLocked($key) || $advertised->isHeld($key)) {
         return TRUE;
@@ -135,14 +135,14 @@ final class Conditionals {
   /**
    * Answers whether a runtime refiner narrows any key of a frame.
    *
-   * @param \Drupal\surface\DefinitionMap $advertised
+   * @param \Drupal\surface\Entries $advertised
    *   The frame's definitions.
    *
    * @return bool
    *   TRUE when one does, so what the static refiners alone answer has to
    *   be asked separately.
    */
-  public function refinedAtRuntime(DefinitionMap $advertised): bool {
+  public function refinedAtRuntime(Entries $advertised): bool {
     foreach ($advertised->entries() as $entry) {
       if ($entry->isRefinedAtRuntime()) {
         return TRUE;
@@ -177,14 +177,14 @@ final class Conditionals {
   /**
    * Answers whether a declared rule narrows any key of a frame.
    *
-   * @param \Drupal\surface\DefinitionMap $advertised
+   * @param \Drupal\surface\Entries $advertised
    *   The frame's definitions.
    *
    * @return bool
    *   TRUE when one does, so what the coded refiners alone answer has to
    *   be asked separately.
    */
-  public function hasRules(DefinitionMap $advertised): bool {
+  public function hasRules(Entries $advertised): bool {
     foreach ($advertised->entries() as $entry) {
       if ($entry->isDeclared()) {
         return TRUE;
@@ -520,8 +520,8 @@ final class Conditionals {
   public function enumerate(SurfaceInterface $declared, SurfaceInterface $refined, Entry $entry, array $values, Schema $base, Emission $emission, bool $applicability = FALSE): ?array {
     $cacheability = $emission->cacheability;
     $kinds = $emission->kinds();
-    $order = array_flip($declared->getDefinitions()->names());
-    $ports = $declared->getDefinitions()->ports();
+    $order = array_flip($declared->entries()->names());
+    $ports = $declared->entries()->ports();
     $watched = $entry->codedDependencies();
     foreach ($watched as $i => $key) {
       if (!isset($order[$key])) {
@@ -569,7 +569,7 @@ final class Conditionals {
     $ruled = FALSE;
     $vanishing = [];
     foreach ($combinations as $i => [$combination, $surface]) {
-      $holder = $surface->getDefinitions()->entry($entry->name) ?? $entry;
+      $holder = $surface->entries()->entry($entry->name) ?? $entry;
       $schema = $this->answer($entry, $holder, $emission, $applicability);
       // In development and tests only, and for one combination per key:
       // asked again, a static refiner answers the same.
@@ -878,7 +878,7 @@ final class Conditionals {
    *   Naming the key's static refiners and the values.
    */
   protected function answersAgain(SurfaceInterface $declared, Entry $entry, array $values, Schema|false $schema, Emission $emission, bool $applicability = FALSE): bool {
-    $holder = $declared->refine($values, $emission->kinds())->getDefinitions()->entry($entry->name) ?? $entry;
+    $holder = $declared->refine($values, $emission->kinds())->entries()->entry($entry->name) ?? $entry;
     $again = $this->answer($entry, $holder, $emission, $applicability);
     if (json_encode($again === FALSE ? FALSE : $this->propertySchema->withoutExtension($again)) === json_encode($schema === FALSE ? FALSE : $this->propertySchema->withoutExtension($schema))) {
       return TRUE;
@@ -918,7 +918,7 @@ final class Conditionals {
    *   ENUMERATION_CAP.
    */
   protected function domain(SurfaceInterface $surface, string $key, array $values, CacheableMetadata $cacheability): ?array {
-    $entry = $surface->getDefinitions()->entry($key);
+    $entry = $surface->entries()->entry($key);
     // A collection's schema would be its child's whole tree: it is told
     // apart by its entry.
     if ($entry === NULL || $entry->isNested() || $entry->list !== NULL) {

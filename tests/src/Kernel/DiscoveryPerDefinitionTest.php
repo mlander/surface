@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\surface\ResourceBuild\ResourceCollectorPass;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface_examples_field\Resource\FieldInstanceResource;
-use Drupal\field\Entity\FieldConfig;
-use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -216,7 +217,7 @@ class DiscoveryPerDefinitionTest extends SurfaceKernelTestBase {
     }
     // What this request built from the storage sees the new setting.
     $item = $this->container->get('surface.resources')->build('field.item:node.kitchen.field_shared', $this->container->get('surface.resources')->operation('field.item:node.kitchen.field_shared', 'create'));
-    $this->assertSame(30, $item->getDefinition('value')?->getConstraint('Length')['max'] ?? NULL);
+    $this->assertSame(30, DerivedDefinition::at($item, 'value')?->getConstraint('Length')['max'] ?? NULL);
   }
 
   /**

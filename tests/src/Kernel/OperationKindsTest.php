@@ -131,7 +131,7 @@ class OperationKindsTest extends SurfaceKernelTestBase {
       $this->assertSame($operation->description === NULL, $id === 'surface:tool_test.vault:configure', $id . ': every shipped operation says what it does.');
       // An update whose data surface declares no keys, the stage's apply,
       // says it takes none instead.
-      $rules = $kind === OperationDefinition::UPDATE && $resources->buildDeclared($resource->name(), $operation->needsNothing() ? $resources->operation($resource->name(), $operation->id) : new OperationContext($operation->contextId()))->getDefinitions()->toArray() === [] ? self::NO_KEYS : self::RULES[$kind];
+      $rules = $kind === OperationDefinition::UPDATE && $resources->buildDeclared($resource->name(), $operation->needsNothing() ? $resources->operation($resource->name(), $operation->id) : new OperationContext($operation->contextId()))->entries()->toArray() === [] ? self::NO_KEYS : self::RULES[$kind];
       $this->assertSame((string) ($operation->description ?? $operation->label . '.') . ' ' . $rules, $description, $id . ': its own description, then its kind\'s call rules.');
       $this->assertStringNotContainsString('"', $description, $id . ': no literal quotes, which a bridge escapes.');
 
@@ -148,7 +148,7 @@ class OperationKindsTest extends SurfaceKernelTestBase {
       $this->assertInstanceOf(MapInputDefinition::class, $values, $id);
       $built = $resources->buildStatic($resource->name(), $context);
       $requires = [];
-      foreach ($built->getDefinitions()->entries() as $name => $entry) {
+      foreach ($built->entries()->entries() as $name => $entry) {
         if ($values->getPropertyDefinition($name) !== NULL && $entry->definition()->isRequired() && !in_array('', $entry->mayNotApply(), TRUE) && !DefinitionMetadata::isSecret($entry->definition())) {
           $requires[] = $name;
         }

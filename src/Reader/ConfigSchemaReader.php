@@ -33,8 +33,8 @@ use Drupal\surface\Variants\ConfigSchemaTypes;
  *   of a derived structure where the key names a mapping type
  *   (`type: views_display`): one structure wherever it is used, by its id,
  *   `config_schema:<type>`;
- * - a `sequence` of values is addList(), of mappings attachList() of a
- *   derived structure;
+ * - a `sequence` of values is addDefinition() of a list, of mappings
+ *   attachList() of a derived structure;
  * - a value is the blueprint's type its class is (LeafRules), its
  *   constraints carried verbatim, required where a fully validatable type
  *   holds it to a value;
@@ -676,7 +676,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
           $this->open($inputs, $key, $label, $required, $reading, $here, 'A sequence of sequences of groups of keys: a list item that is a list of structures has no verb, so the key is declared open, holding any value.');
           return;
         }
-        $list = BlueprintAdapterBase::of($inputs->addList($key, new ListDataDefinition([], $leaf), $label ?? $key, $this->defaultOf($defaults, $key, 'array', $reading, $here)))->shellAt($key);
+        $list = BlueprintAdapterBase::of($inputs->addDefinition($key, (new ListDataDefinition(['type' => 'list'], new ListDataDefinition([], $leaf)))->setLabel($label ?? $key), $this->defaultOf($defaults, $key, 'array', $reading, $here)))->shellAt($key);
       }
       elseif ($this->isA($item_merged, Ignore::class) || $this->isA($item_merged, Undefined::class)) {
         $this->open($inputs, $key, $label, $required, $reading, $here . '.*', sprintf('Of the type %s: the schema checks nothing here, so the list is declared open, holding any value.', $named));
@@ -689,7 +689,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
           $this->open($inputs, $key, $label, $required, $reading, $here);
           return;
         }
-        $list = BlueprintAdapterBase::of($inputs->addList($key, $value, $label ?? $key, $this->defaultOf($defaults, $key, 'array', $reading, $here)))->shellAt($key);
+        $list = BlueprintAdapterBase::of($inputs->addDefinition($key, (new ListDataDefinition(['type' => 'list'], $value))->setLabel($label ?? $key), $this->defaultOf($defaults, $key, 'array', $reading, $here)))->shellAt($key);
       }
     }
     // Declared open by named(), labeled there: nothing of the list holds.

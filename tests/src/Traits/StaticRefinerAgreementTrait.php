@@ -12,10 +12,11 @@ use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\SurfaceInterface;
+use Drupal\Tests\surface\DerivedDefinition;
 use Opis\JsonSchema\CompliantValidator;
 use PortableSchema\Builder\Schema;
 
@@ -83,7 +84,7 @@ trait StaticRefinerAgreementTrait {
       // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
       $schema = Schemas::decoded(SchemaResolver::inline(Schema::from($schema)));
     }
-    $definitions = $surface->getDefinitions();
+    $definitions = $surface->entries();
     // What the full schema itself is refined against: the locked keys,
     // which no value can change.
     $known = $values ?? [];
@@ -117,7 +118,7 @@ trait StaticRefinerAgreementTrait {
         $entry = $definitions->entry((string) $key);
         $this->assertNotNull($entry, sprintf('%s requires "%s", which it does not declare.', $label, $key));
         $combination = array_map(static fn (array $value): mixed => $value['const'], $if['properties']);
-        $refined = $surface->refine(array_replace($known, $combination), $kinds)->getDefinition((string) $key) ?? $entry->definition();
+        $refined = DerivedDefinition::at($surface->refine(array_replace($known, $combination), $kinds), (string) $key) ?? $entry->definition();
         $this->assertTrue($refined->isRequired() && $emitter->describeKey($entry, $refined) !== FALSE, sprintf('In %s, "%s" for %s is not required where the contract says.', $label, $key, json_encode($combination)));
         $compared++;
       }
@@ -130,7 +131,7 @@ trait StaticRefinerAgreementTrait {
         $entry = $definitions->entry((string) $key);
         $this->assertNotNull($entry, sprintf('%s states "%s", which it does not declare.', $label, $key));
         $combination = array_map(static fn (array $value): mixed => $value['const'], $if['properties']);
-        $refined = $surface->refine(array_replace($known, $combination), $kinds)->getDefinition((string) $key) ?? $entry->definition();
+        $refined = DerivedDefinition::at($surface->refine(array_replace($known, $combination), $kinds), (string) $key) ?? $entry->definition();
         if ($narrowed === FALSE || ($entry->isNested() && !isset($schema['properties'][$key]['x-surface']['reads']))) {
           // A key ruled out is `false`; a key holding a child is stated
           // only where it does not apply, unless the child reads ports,
@@ -145,7 +146,7 @@ trait StaticRefinerAgreementTrait {
         // docs/decisions.md#contract-2.
         $narrowed = self::defTypesLeftOut($narrowed, $entry->isNested());
         $this->assertEquals(
-          self::laidOver(self::decoded($emitter->describeKey($entry, $unanswered->getDefinition((string) $key) ?? $entry->definition())), $narrowed),
+          self::laidOver(self::decoded($emitter->describeKey($entry, DerivedDefinition::at($unanswered, (string) $key) ?? $entry->definition())), $narrowed),
           self::decoded($emitter->describeKey($entry, $refined)),
           sprintf(
             'In %s, "%s" for %s is not what the contract states for it: one of its refiners is declared static but answered differently when run again.',
@@ -207,7 +208,7 @@ trait StaticRefinerAgreementTrait {
     }
     $compared = 0;
     foreach ($rules as $key => $conditions) {
-      $entry = $surface->getDefinitions()->entry($key);
+      $entry = $surface->entries()->entry($key);
       $this->assertNotNull($entry, sprintf('%s states a rule for "%s", which it does not declare.', $label, $key));
       $this->assertArrayNotHasKey('declared', $schema['properties'][$key]['x-surface'] ?? [], sprintf('In %s, "%s" carries no marker of its own: the frame\'s `rules` lists its conditionals.', $label, $key));
       // Every value a condition names, either side of every bound, nothing,
@@ -267,7 +268,7 @@ trait StaticRefinerAgreementTrait {
             $expected = self::tightened($expected, $then);
           }
         }
-        $refined = $surface->refine($sampled, SurfaceInterface::DECLARED)->getDefinition($key) ?? $entry->definition();
+        $refined = DerivedDefinition::at($surface->refine($sampled, SurfaceInterface::DECLARED), $key) ?? $entry->definition();
         $actual = $emitter->describeKey($entry, $refined);
         $at = sprintf('In %s, "%s" for %s', $label, $key, json_encode($point));
         $this->assertSame($ruled, $actual === FALSE, $at . ' does not apply where its rules say otherwise.');
@@ -334,7 +335,7 @@ trait StaticRefinerAgreementTrait {
    */
   protected static function definitionAt(SurfaceInterface $surface, string $path): ?DataDefinitionInterface {
     $parents = explode('.', $path);
-    $definition = $surface->getDefinition((string) array_shift($parents));
+    $definition = DerivedDefinition::at($surface, (string) array_shift($parents));
     foreach ($parents as $property) {
       $definition = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($property) : NULL;
     }

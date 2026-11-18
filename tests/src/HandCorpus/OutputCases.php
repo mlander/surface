@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Pipeline\NotEmitted;
 use Drupal\surface\SurfaceBuilder;
@@ -41,13 +41,13 @@ final class OutputCases {
   /**
    * Lists the cases for a map of output entries.
    *
-   * @param \Drupal\surface\DefinitionMap $outputs
+   * @param \Drupal\surface\Entries $outputs
    *   The output entries.
    *
    * @return array<string, array>
    *   The emitted array of each case, by the case's name.
    */
-  public static function cases(DefinitionMap $outputs): array {
+  public static function cases(Entries $outputs): array {
     $good = [];
     $minimal = [];
     foreach ($outputs->entries() as $name => $entry) {

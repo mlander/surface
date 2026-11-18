@@ -6,12 +6,13 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Cache\Cache;
-use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\SiteList;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_resource_test\Resource\Poster\PosterResource;
 use Drupal\surface_resource_test\Structure\Broken\AccountVariantsStructure;
 use Drupal\surface_resource_test\Structure\Broken\UncacheableVariantsStructure;
@@ -21,7 +22,7 @@ use Drupal\surface_resource_test\Variants\Broken\LockedLayouts;
 use Drupal\surface_resource_test\Variants\Broken\RestatingLayouts;
 use Drupal\surface_resource_test\Variants\Broken\UnnamedLayouts;
 use Drupal\surface_resource_test\Variants\PosterLayouts;
-use Drupal\surface\Tool\OperationInputs;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\MapInputDefinition;
@@ -122,42 +123,42 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
    */
   public function testOneVariantPerLayout(): void {
     $poster = $this->poster();
-    $entry = $poster->getDefinitions()->entry('panels');
+    $entry = $poster->entries()->entry('panels');
     $this->assertNotNull($entry->variants);
     $this->assertSame(['banner', 'grid', 'strip'], array_keys($entry->variants->variants));
     $this->assertSame(PosterLayouts::class, DefinitionMetadata::variantsFrom($entry->variants->shell));
 
     // The deciding key offers each value under the provider's label, the
     // banner under its class's.
-    $layout = $poster->getDefinition('layout');
+    $layout = DerivedDefinition::at($poster, 'layout');
     $this->assertSame(['banner' => 'Banner', 'grid' => 'Grid', 'strip' => 'Strip'], array_map('strval', $this->options()->resolve($layout)->options));
 
     // The banner is its class: the provider's schema for it is not read.
     $banner = $entry->variants->variants['banner'];
     $this->assertSame(BannerPanelsStructure::class, $banner->source);
-    $this->assertSame(['headline'], $banner->child->getDefinitions()->names());
+    $this->assertSame(['headline'], $banner->child->entries()->names());
 
     // The grid is its schema, draft-04 read as 2020-12: an exclusive
     // minimum on an integer is the next one in.
     $grid = $entry->variants->variants['grid'];
     $this->assertSame('resource_test.poster.panels.grid', $grid->id);
-    $this->assertSame(['columns', 'gap'], $grid->child->getDefinitions()->names());
-    $columns = $grid->child->getDefinition('columns');
+    $this->assertSame(['columns', 'gap'], $grid->child->entries()->names());
+    $columns = DerivedDefinition::at($grid->child, 'columns');
     $this->assertSame('integer', $columns->getDataType());
     $this->assertTrue($columns->isRequired());
     $this->assertSame(['min' => 1, 'max' => 4], $columns->getConstraint('Range'));
     $this->assertSame(2, $grid->child->getDefault('columns'));
-    $gap = $grid->child->getDefinition('gap');
+    $gap = DerivedDefinition::at($grid->child, 'gap');
     $this->assertSame(['choices' => ['none', 'small', 'large']], $gap->getConstraint('Choice'));
     $this->assertTrue(DefinitionMetadata::isAlwaysHeld($gap), 'An optional key that refuses null and starts from a value is always held.');
 
     // The strip's caption says what no constraint does: kept, and
     // checked; its tags' uniqueItems is the stock UniqueItems.
     $strip = $entry->variants->variants['strip']->child;
-    $this->assertSame(['schema' => ['not' => ['const' => 'Untitled']]], $strip->getDefinition('caption')->getConstraint('JsonSchema'));
+    $this->assertSame(['schema' => ['not' => ['const' => 'Untitled']]], DerivedDefinition::at($strip, 'caption')->getConstraint('JsonSchema'));
     // Given no options, held as none (BlueprintAdapterBase::settleOptions()).
-    $this->assertSame('{"UniqueItems":null}', json_encode(array_intersect_key($strip->getDefinition('tags')->getConstraints(), ['UniqueItems' => TRUE])));
-    $this->assertArrayNotHasKey('JsonSchema', $strip->getDefinition('tags')->getConstraints());
+    $this->assertSame('{"UniqueItems":null}', json_encode(array_intersect_key(DerivedDefinition::at($strip, 'tags')->getConstraints(), ['UniqueItems' => TRUE])));
+    $this->assertArrayNotHasKey('JsonSchema', DerivedDefinition::at($strip, 'tags')->getConstraints());
   }
 
   /**
@@ -177,7 +178,7 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
     ]);
     Cache::invalidateTags([PosterLayouts::TAG]);
     $again = $this->poster();
-    $this->assertSame(['banner', 'grid', 'strip', 'column'], array_keys($again->getDefinitions()->entry('panels')->variants->variants));
+    $this->assertSame(['banner', 'grid', 'strip', 'column'], array_keys($again->entries()->entry('panels')->variants->variants));
     $full = $emitter->emitFull($again, 'resource_test.poster')->document['schema'];
     $this->assertSame('#/$defs/resource_test.poster.panels.column', $full['properties']['panels']['x-surface']['variants']['column']);
   }

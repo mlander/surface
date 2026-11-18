@@ -563,7 +563,7 @@ otherwise depend on the order the keys happened to be read in. And a
 sealed data surface is only read: refinement returns a new data surface
 rather than changing the one it was asked of.
 
-What the build step seals is a `DefinitionMap`: one `Entry` per
+What the build step seals is an `Entries`: one `Entry` per
 key, in declaration order, carrying that key's schema, its
 contributor, its locked state, its refinement edges, the values
 contributed to it and the refiner chains bound to it. The map checks

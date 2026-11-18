@@ -13,11 +13,11 @@ vocabulary and sealed into the same collection type, but never
 refined.
 
 ```php
-$surface->getDefinitions();        // What may be sent.
-$surface->getOutputDefinitions();  // What comes back.
+$surface->entries();        // What may be sent.
+$surface->outputEntries();  // What comes back.
 ```
 
-Both are a `DefinitionMap` of `Entry` objects. A data surface whose
+Both are an `Entries` of `Entry` objects. A data surface whose
 class declares no outputs answers with an empty map, so a caller never
 has to ask whether a data surface knows about outputs before asking what
 it emits.

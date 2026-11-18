@@ -186,7 +186,7 @@ class EntrySchemaIsNeverStaleTest extends SurfaceKernelTestBase {
       return;
     }
     $seen[spl_object_id($surface)] = TRUE;
-    foreach (['in' => $surface->getDefinitions(), 'out' => $surface->getOutputDefinitions()] as $side => $map) {
+    foreach (['in' => $surface->entries(), 'out' => $surface->outputEntries()] as $side => $map) {
       foreach ($map->entries() as $name => $entry) {
         $here = "$at $side:$name";
         $entry->schema();

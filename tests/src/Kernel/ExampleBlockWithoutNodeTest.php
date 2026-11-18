@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests that the example block can be constructed on a site without node.
@@ -70,10 +71,9 @@ class ExampleBlockWithoutNodeTest extends SurfaceKernelTestBase {
    * Tests that the entity type select offers only what this site has.
    */
   public function testTheSelectOffersOnlyInstalledEntityTypes(): void {
-    $definition = $this->container->get('plugin.manager.block')
+    $definition = DerivedDefinition::at($this->container->get('plugin.manager.block')
       ->createInstance('surface_examples_plugins')
-      ->getSurface()
-      ->getDefinition('entity_type');
+      ->getSurface(), 'entity_type');
 
     $options = $this->options()->resolve($definition)->options;
 

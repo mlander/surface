@@ -4,24 +4,25 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\address\LabelHelper;
 use Drupal\Core\Entity\Plugin\DataType\EntityAdapter;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\address\LabelHelper;
-use Drupal\surface\SurfaceInterface;
+use Drupal\entity_test\Entity\EntityTest;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Form\FieldSurfaceProviderInterface;
 use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_examples_address\Plugin\Field\FieldType\SurfaceAddressItem;
 use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
-use Drupal\entity_test\Entity\EntityTest;
-use Drupal\field\Entity\FieldConfig;
-use Drupal\field\Entity\FieldStorageConfig;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests a contrib field type adopting a resource without being forked.
@@ -216,7 +217,7 @@ class AddressFieldResourceTest extends SurfaceKernelTestBase {
    * Tests that the resource carries the meaning the schema cannot.
    */
   public function testResourceCarriesLabelsAndChoices(): void {
-    $definitions = $this->surface()->getDefinitions();
+    $definitions = $this->surface()->entries();
     $this->assertSame(
       ['available_countries', 'langcode_override', 'field_overrides'],
       $definitions->names(),
@@ -225,14 +226,14 @@ class AddressFieldResourceTest extends SurfaceKernelTestBase {
     $options = $this->container->get('surface.options');
     // Country labels are resolved live from the country repository, so
     // the list that validates and the list that is offered are one list.
-    $countries = $options->resolve($this->itemOf($definitions['available_countries']));
+    $countries = $options->resolve($this->itemOf(DerivedDefinition::in($definitions, 'available_countries')));
     $this->assertNotNull($countries);
     $this->assertSame('United States', (string) $countries->options['US']);
     $this->assertArrayHasKey('CA', $countries->options);
 
     // The override keys are the addressing library's camel case field
     // constants, and each one carries the generic label a person reads.
-    $properties = $this->propertiesOf($definitions['field_overrides']);
+    $properties = $this->propertiesOf(DerivedDefinition::in($definitions, 'field_overrides'));
     $this->assertCount(12, $properties);
     $this->assertArrayHasKey('givenName', $properties);
     $this->assertArrayHasKey('administrativeArea', $properties);
@@ -531,7 +532,7 @@ class AddressFieldResourceTest extends SurfaceKernelTestBase {
   public function testResourceIsDeclaredOnTheClass(): void {
     $declared = $this->container->get('surface.resources')
       ->build(AddressFieldSettingsResource::class, new OperationContext('field_settings'))
-      ->getDefinitions()
+      ->entries()
       ->toArray();
 
     $this->assertSame(
@@ -567,7 +568,7 @@ class AddressFieldResourceTest extends SurfaceKernelTestBase {
    * away from the original.
    */
   public function testOverrideLabelsMatchTheAddressModule(): void {
-    $properties = $this->propertiesOf($this->surface()->getDefinition('field_overrides'));
+    $properties = $this->propertiesOf(DerivedDefinition::at($this->surface(), 'field_overrides'));
 
     $this->assertSame(
       array_map('strval', LabelHelper::getGenericFieldLabels()),
@@ -579,10 +580,10 @@ class AddressFieldResourceTest extends SurfaceKernelTestBase {
    * Tests the two live lists resolving from the constraints that name them.
    */
   public function testLiveListsResolveFromTheirConstraints(): void {
-    $definitions = $this->surface()->getDefinitions();
+    $definitions = $this->surface()->entries();
     $options = $this->container->get('surface.options');
 
-    $countries = $options->resolve($this->itemOf($definitions['available_countries']));
+    $countries = $options->resolve($this->itemOf(DerivedDefinition::in($definitions, 'available_countries')));
     $this->assertNotNull($countries);
     $this->assertSame('United States', (string) $countries->options['US']);
     // Named in the interface language and rebuilt with the repository's

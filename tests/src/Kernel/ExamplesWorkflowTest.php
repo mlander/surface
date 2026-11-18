@@ -133,7 +133,7 @@ class ExamplesWorkflowTest extends SurfaceKernelTestBase {
     $this->publish();
     $built = $resources->build(ProgramResource::class, $context);
     $this->assertSame('The program is published in its workflow, so it is fixed.', (string) $built->lockedWhole());
-    $this->assertTrue($built->getDefinitions()->isHeld('headline'));
+    $this->assertTrue($built->entries()->isHeld('headline'));
     $this->assertNull($resources->buildStatic(ProgramResource::class, $context)->lockedWhole(), 'Runtime: set aside for the account alone.');
     $full = $this->full();
     $this->assertArrayNotHasKey('readOnly', $full, 'The full schema states no lock for what only the call settles.');

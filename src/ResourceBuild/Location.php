@@ -124,7 +124,7 @@ final class Location {
     $holder = NULL;
     while ($segments !== []) {
       $name = (string) array_shift($segments);
-      $entry = $frame->getDefinitions()->entry($name);
+      $entry = $frame->entries()->entry($name);
       if ($entry === NULL) {
         return NULL;
       }

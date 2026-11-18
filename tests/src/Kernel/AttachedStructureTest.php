@@ -7,25 +7,26 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Attachment;
 use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\Pipeline\PreparedValues;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\Pipeline\VariantMismatchException;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface\Attachment;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
 use Drupal\surface\ResourceBuild\ResourceBlueprintAdditions;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
-use Drupal\surface_resource_test\Structure\Pantry\JarStructure;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_resource_test\Resource\Pantry\LabelResource;
 use Drupal\surface_resource_test\Resource\Pantry\PantryResource;
-use Drupal\surface_resource_test\Structure\Pantry\ShelfStructure;
 use Drupal\surface_resource_test\Resource\Pantry\TinResource;
 use Drupal\surface_resource_test\Storage\PantryLabelStorage;
 use Drupal\surface_resource_test\Storage\PantryStorage;
 use Drupal\surface_resource_test\Storage\PantryTinStorage;
+use Drupal\surface_resource_test\Structure\Pantry\JarStructure;
+use Drupal\surface_resource_test\Structure\Pantry\ShelfStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PortableSchema\Builder\Schema;
@@ -85,14 +86,14 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
    */
   public function testAttachByClass(): void {
     $surface = $this->pantry();
-    $entry = $surface->getDefinitions()->entry('shelf');
+    $entry = $surface->entries()->entry('shelf');
     $this->assertSame(ShelfStructure::class, $entry->attachment->source);
-    $this->assertSame(LabelResource::class, $surface->getDefinitions()->entry('label')->attachment->source);
+    $this->assertSame(LabelResource::class, $surface->entries()->entry('label')->attachment->source);
 
     // Declared where defineInputs() put it, as a map of the child's keys,
     // the child's own alter included under its module, as on any structure.
-    $this->assertSame(['pantry', 'kind', 'shelf', 'label', 'kind_settings'], $surface->getDefinitions()->names());
-    $shelf = $surface->getDefinition('shelf');
+    $this->assertSame(['pantry', 'kind', 'shelf', 'label', 'kind_settings'], $surface->entries()->names());
+    $shelf = DerivedDefinition::at($surface, 'shelf');
     $this->assertInstanceOf(MapDataDefinition::class, $shelf);
     $this->assertSame(['unit', 'height', 'third_party_settings'], array_keys($shelf->getPropertyDefinitions()));
     // The alter of the child reworded the child's key, not the parent.
@@ -117,7 +118,7 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
   public function testChildRefinesInItsOwnFrame(): void {
     $surface = $this->pantry();
     $max = function (array $values) use ($surface): int {
-      $shelf = $surface->refine($values)->getDefinition('shelf');
+      $shelf = DerivedDefinition::at($surface->refine($values), 'shelf');
       $this->assertInstanceOf(MapDataDefinition::class, $shelf);
       return $shelf->getPropertyDefinition('height')->getConstraints()['Range']['max'];
     };
@@ -147,7 +148,7 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
    */
   public function testOpenVariantsAreAdvertisedAndResolve(): void {
     $surface = $this->pantry();
-    $entry = $surface->getDefinitions()->entry('kind_settings');
+    $entry = $surface->entries()->entry('kind_settings');
     $this->assertSame('kind', $entry->variants->by);
     $this->assertEqualsCanonicalizing(['jar', 'tin'], $entry->variants->variantIds());
     $this->assertSame(JarStructure::class, $entry->variants->variant('jar')->source);
@@ -155,29 +156,29 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
 
     // Unresolved, it is a placeholder that says it holds variants, and which
     // key decides; its label and description are the owner's describe().
-    $placeholder = $surface->getDefinition('kind_settings');
+    $placeholder = DerivedDefinition::at($surface, 'kind_settings');
     $this->assertSame('any', $placeholder->getDataType());
     $this->assertSame('kind', DefinitionMetadata::variantsBy($placeholder));
     $this->assertSame('Kind settings', (string) $placeholder->getLabel());
     // The deciding key keeps the list it declared, which names only values
     // a variant is for.
-    $this->assertEqualsCanonicalizing(['jar', 'tin'], $surface->getDefinition('kind')->getConstraints()['Choice']['choices']);
-    $this->assertSame(['kind_settings' => ['kind']], $surface->getDefinitions()->refinements());
+    $this->assertEqualsCanonicalizing(['jar', 'tin'], DerivedDefinition::at($surface, 'kind')->getConstraints()['Choice']['choices']);
+    $this->assertSame(['kind_settings' => ['kind']], $surface->entries()->refinements());
     // It starts as the variant the deciding key starts on.
     $this->assertSame(['lid' => 'screw', 'volume' => 500], $surface->getDefault('kind_settings'));
 
     // Resolved, it is exactly that variant's map, under the key's label.
-    $tin = $surface->refine(['kind' => 'tin'])->getDefinition('kind_settings');
+    $tin = DerivedDefinition::at($surface->refine(['kind' => 'tin']), 'kind_settings');
     $this->assertInstanceOf(MapDataDefinition::class, $tin);
     $this->assertSame(['opener', 'volume'], array_keys($tin->getPropertyDefinitions()));
     $this->assertSame('Kind settings', (string) $tin->getLabel());
     $this->assertNull(DefinitionMetadata::variantsBy($tin));
-    $jar = $surface->refine(['kind' => 'jar'])->getDefinition('kind_settings');
+    $jar = DerivedDefinition::at($surface->refine(['kind' => 'jar']), 'kind_settings');
     $this->assertInstanceOf(MapDataDefinition::class, $jar);
     $this->assertSame(['lid', 'volume'], array_keys($jar->getPropertyDefinitions()));
     // A deciding value naming no variant leaves it unresolved, and the
     // deciding key's own Choice refuses that value.
-    $this->assertSame('any', $surface->refine(['kind' => 'sack'])->getDefinition('kind_settings')->getDataType());
+    $this->assertSame('any', DerivedDefinition::at($surface->refine(['kind' => 'sack']), 'kind_settings')->getDataType());
     $this->assertContains('kind', $this->pipeline()->validate($surface, ['pantry' => 'a', 'kind' => 'sack'] + $surface->getDefaultValues())->keys());
   }
 
@@ -324,7 +325,7 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
     $first->add('badge', Schema::string()->title('Badge'));
     $second->add('ribbon', Schema::string()->title('Ribbon'));
     $first->describe('third_party_settings.first_module', label: 'Badges', description: 'How the title is decorated.');
-    $mount = $builder->seal()->getDefinition('third_party_settings');
+    $mount = DerivedDefinition::at($builder->seal(), 'third_party_settings');
     $this->assertInstanceOf(MapDataDefinition::class, $mount);
     $this->assertTrue(DefinitionMetadata::isGrouping($mount));
     // Kept for a reader with the definition alone, such as the Tool API.
@@ -366,7 +367,7 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
     $outputs->add('shown', Schema::string()->title('Shown'));
 
     $first->describe('third_party_settings.first_module', label: 'Badges', after: 'capacity');
-    $mounts = $builder->seal()->getDefinition('third_party_settings');
+    $mounts = DerivedDefinition::at($builder->seal(), 'third_party_settings');
     $this->assertInstanceOf(MapDataDefinition::class, $mounts);
     $this->assertSame('capacity', DefinitionMetadata::getPlacedAfter($mounts->getPropertyDefinition('first_module')));
     $this->assertSame('Badges', (string) $mounts->getPropertyDefinition('first_module')->getLabel());

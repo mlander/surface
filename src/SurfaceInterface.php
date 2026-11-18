@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Storage\StorageLayoutInterface;
 use PortableSchema\Builder\Schema;
 
@@ -18,7 +17,7 @@ use PortableSchema\Builder\Schema;
  * can carry live option lists and site-state constraints that YAML
  * cannot express.
  *
- * All of that is one DefinitionMap of Entry objects. A second map
+ * All of that is one Entries of Entry objects. A second map
  * of the same type holds the other half of the contract: what the host's
  * execution emits, declared in the same vocabulary, never refined, and
  * checked by the pipeline's conformOutput(). The
@@ -106,23 +105,23 @@ interface SurfaceInterface extends CacheableDependencyInterface {
   /**
    * Gets everything the data surface advertises, in declaration order.
    *
-   * The whole contract in one object: iterate it for name => definition,
+   * The whole contract in one object: iterate it for name => schema,
    * ask it for one entry to learn who introduced a key, whether it is
    * locked, what it refines against and whose values it offers. The
    * refinement map, the contributions and the locked keys are read from
    * here rather than from accessors of their own.
    *
-   * @return \Drupal\surface\DefinitionMap
-   *   The definition map.
+   * @return \Drupal\surface\Entries
+   *   The entries.
    */
-  public function getDefinitions(): DefinitionMap;
+  public function entries(): Entries;
 
   /**
    * Gets what the host's execution emits, in declaration order.
    *
    * The other half of the contract, in the same vocabulary and the same
    * collection type as the inputs: one entry per output key, carrying
-   * its definition and who introduced it. A data surface that declares no
+   * its schema and who introduced it. A data surface that declares no
    * outputs answers with an empty map, so nothing has to ask first.
    *
    * What differs from the input map, and why:
@@ -139,28 +138,27 @@ interface SurfaceInterface extends CacheableDependencyInterface {
    * SurfacePipelineInterface::conformOutput() is what checks an
    * emitted array against this map.
    *
-   * @return \Drupal\surface\DefinitionMap
-   *   The output definitions; empty when the data surface declares none.
+   * @return \Drupal\surface\Entries
+   *   The output entries; empty when the data surface declares none.
    *
    * @see \Drupal\surface\Pipeline\NotEmitted
    * @see docs/outputs.md
    */
-  public function getOutputDefinitions(): DefinitionMap;
+  public function outputEntries(): Entries;
 
   /**
-   * Gets one definition, or NULL if the data surface does not declare it.
+   * Gets one key's schema, or NULL if the data surface does not declare it.
    *
-   * Kept beside the map because reading one key by name is what most
-   * host code does, and getDefinitions()->get() says the same thing
-   * twice.
+   * Kept beside the entries because reading one key by name is what most
+   * host code does.
    *
    * @param string $name
-   *   The definition key.
+   *   The key.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
-   *   The definition, or NULL when the data surface declares no such key.
+   * @return \PortableSchema\Builder\Schema|null
+   *   The key's schema, or NULL when the data surface declares no such key.
    */
-  public function getDefinition(string $name): ?DataDefinitionInterface;
+  public function getSchema(string $name): ?Schema;
 
   /**
    * Returns whether a key's value is fixed by the data surface.
@@ -199,7 +197,7 @@ interface SurfaceInterface extends CacheableDependencyInterface {
    * Set when the access asked for the resource as a whole was set aside,
    * built for the account alone or for no account: once the subject is
    * known, any key may be found locked or left out, so every key is
-   * marked (DefinitionMap::isRuntimeAccess()), and a listing says so once
+   * marked (Entries::isRuntimeAccess()), and a listing says so once
    * rather than on each key.
    *
    * Decision: see
@@ -407,29 +405,16 @@ interface SurfaceInterface extends CacheableDependencyInterface {
    * @param array<string, mixed> $values
    *   What each port holds, by port name; names that are no port are
    *   ignored, and a port left out holds nothing.
-   * @param array<string, \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface> $definitions
-   *   The container's key each port reads, by port name: what a refusal
-   *   names when it depends on the port. Held as its schema
-   *   (getPortSchema()): a definition handed is read into one, once.
+   * @param array<string, \PortableSchema\Builder\Schema> $schemas
+   *   The schema of the container's key each port reads, by port name:
+   *   what a refusal names when it depends on the port (getPortSchema()).
    *
    * @return static
    *   The data surface, bound.
    *
    * @see docs/resources.md#ports
    */
-  public function withPorts(array $values, array $definitions = []): static;
-
-  /**
-   * Gets the container's key a port reads, as its container bound it.
-   *
-   * @param string $port
-   *   The port.
-   *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
-   *   The key's definition, derived from its schema (getPortSchema()) on
-   *   each ask; NULL for no port, or one no container bound.
-   */
-  public function getPortDefinition(string $port): ?DataDefinitionInterface;
+  public function withPorts(array $values, array $schemas = []): static;
 
   /**
    * Gets the schema of the container's key a port reads, as bound.

@@ -85,7 +85,7 @@ class WithoutToolModuleTest extends SurfaceKernelTestBase {
   public function testTheFormServesWithThePanel(): void {
     $resources = $this->container->get('surface.resources');
     $surface = $resources->build('route_test.card', $resources->operation('route_test.card', 'create'));
-    $this->assertTrue($surface->getDefinitions()->has('title'));
+    $this->assertTrue($surface->entries()->has('title'));
 
     $this->serveRoute('surface_route_test.add_welcome');
     $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);

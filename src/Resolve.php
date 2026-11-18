@@ -107,13 +107,13 @@ final class Resolve {
    *   while every key it is resolved from holds a value.
    */
   public static function apply(SurfaceInterface $surface, array $stored): array {
-    return static::applyIn($surface->getDefinitions(), $stored);
+    return static::applyIn($surface->entries(), $stored);
   }
 
   /**
    * Puts the resolved values of one frame, and of its children, over it.
    *
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The frame's keys.
    * @param array $stored
    *   What is stored for them.
@@ -121,7 +121,7 @@ final class Resolve {
    * @return array
    *   The stored values, resolved.
    */
-  protected static function applyIn(DefinitionMap $map, array $stored): array {
+  protected static function applyIn(Entries $map, array $stored): array {
     $values = $stored;
     foreach (static::own($map) as $path => [$resolve, $schema]) {
       $from = $resolve->sources($stored);
@@ -138,7 +138,7 @@ final class Resolve {
         continue;
       }
       if ($entry->list !== NULL) {
-        $item = $entry->list->child()->getDefinitions();
+        $item = $entry->list->child()->entries();
         foreach ($held as $delta => $one) {
           if (is_array($one)) {
             $values[$name][$delta] = static::applyIn($item, $one);
@@ -152,11 +152,11 @@ final class Resolve {
         $child = $chosen === NULL ? NULL : $entry->variants->variant($chosen)->child;
       }
       if ($child !== NULL) {
-        $values[$name] = static::applyIn($child->getDefinitions(), $held);
+        $values[$name] = static::applyIn($child->entries(), $held);
       }
       foreach ($entry->mounted as $module => $mounted) {
         if (is_array($held[$module] ?? NULL)) {
-          $values[$name][$module] = static::applyIn($mounted->child->getDefinitions(), $held[$module]);
+          $values[$name][$module] = static::applyIn($mounted->child->entries(), $held[$module]);
         }
       }
     }
@@ -176,13 +176,13 @@ final class Resolve {
    *   variant it is.
    */
   public static function declared(SurfaceInterface $surface): array {
-    return static::declaredIn($surface->getDefinitions(), '');
+    return static::declaredIn($surface->entries(), '');
   }
 
   /**
    * Lists the resolved keys of one frame and of its children.
    *
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The frame's keys.
    * @param string $prefix
    *   Their path, a dotted path and a dot; empty at the top.
@@ -190,7 +190,7 @@ final class Resolve {
    * @return array<string, array{0: static, 1: \PortableSchema\Builder\Schema}>
    *   What each is resolved from and its schema, by its dotted path.
    */
-  protected static function declaredIn(DefinitionMap $map, string $prefix): array {
+  protected static function declaredIn(Entries $map, string $prefix): array {
     $declared = [];
     foreach (static::own($map) as $path => $resolved) {
       $declared[$prefix . $path] = $resolved;
@@ -211,11 +211,11 @@ final class Resolve {
       }
       foreach ($children as [$at, $child]) {
         if ($child !== NULL) {
-          $declared += static::declaredIn($child->getDefinitions(), $prefix . $at);
+          $declared += static::declaredIn($child->entries(), $prefix . $at);
         }
       }
       foreach ($entry->mounted as $module => $mounted) {
-        $declared += static::declaredIn($mounted->child->getDefinitions(), $prefix . $name . '.' . $module . '.');
+        $declared += static::declaredIn($mounted->child->entries(), $prefix . $name . '.' . $module . '.');
       }
     }
     return $declared;
@@ -237,7 +237,7 @@ final class Resolve {
     if ($child === NULL || SchemaFacts::each($entry->schema()) === NULL) {
       return $child;
     }
-    $entries = $child->getDefinitions()->entries();
+    $entries = $child->entries()->entries();
     $first = reset($entries);
     return $first === FALSE ? NULL : $first->attachment?->child;
   }
@@ -245,7 +245,7 @@ final class Resolve {
   /**
    * Lists the resolved keys of one frame: its own and its alters' mounts.
    *
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The frame's keys.
    *
    * @return array<string, array{0: static, 1: \PortableSchema\Builder\Schema}>
@@ -253,7 +253,7 @@ final class Resolve {
    *   frame: a key's own (Entry::schema()), and a mounted key's the one its
    *   mount's schema holds, which its class is handed.
    */
-  protected static function own(DefinitionMap $map): array {
+  protected static function own(Entries $map): array {
     $declared = [];
     foreach ($map->entries() as $name => $entry) {
       $schema = $entry->schema();

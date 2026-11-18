@@ -8,13 +8,14 @@ use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\surface\SurfaceInterface;
+use Drupal\entity_test\Entity\EntityTest;
 use Drupal\surface\Pipeline\NotEmitted;
 use Drupal\surface\Resource\Attribute\UsesStructure;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter;
-use Drupal\entity_test\Entity\EntityTest;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests the example formatter and the third-party module extending it.
@@ -186,7 +187,7 @@ class ExampleFormatterTest extends SurfaceKernelTestBase {
   public function testExtrasMountsTheBadge(): void {
     $surface = $this->createFormatter()->getSurface();
 
-    $third_party = $surface->getDefinition('third_party_settings');
+    $third_party = DerivedDefinition::at($surface, 'third_party_settings');
     $this->assertInstanceOf(MapDataDefinition::class, $third_party);
     $provider = $third_party->getPropertyDefinitions()['surface_examples_extras'] ?? NULL;
     $this->assertInstanceOf(MapDataDefinition::class, $provider);
@@ -261,11 +262,11 @@ class ExampleFormatterTest extends SurfaceKernelTestBase {
     // The contribution is advertised, under the name of who made it.
     $this->assertSame(
       ['bold', 'strong', 'quiet', 'muted', 'ribbon'],
-      $surface->getDefinition('variant')->getConstraints()['LabeledChoice']['choices'],
+      DerivedDefinition::at($surface, 'variant')->getConstraints()['LabeledChoice']['choices'],
     );
     $this->assertSame(
       ['variant' => ['surface_examples_extras' => ['ribbon']]],
-      $surface->getDefinitions()->contributions(),
+      $surface->entries()->contributions(),
     );
 
     // Both refiners run, and the answer is the union of what each one
@@ -285,8 +286,8 @@ class ExampleFormatterTest extends SurfaceKernelTestBase {
     // Labels travel with the values they belong to, whoever added them.
     $this->assertSame(
       ['bold' => 'Bold', 'strong' => 'Strong', 'ribbon' => 'Ribbon'],
-      array_map('strval', $surface->refine(['casing' => 'uppercase'])
-        ->getDefinition('variant')->getConstraints()['LabeledChoice']['labels']),
+      array_map('strval', DerivedDefinition::at($surface->refine(['casing' => 'uppercase']), 'variant')
+        ->getConstraints()['LabeledChoice']['labels']),
     );
 
     // What validates is what the union offers.
@@ -311,7 +312,7 @@ class ExampleFormatterTest extends SurfaceKernelTestBase {
    *   The allowed values, in the order they are offered.
    */
   protected function variants(SurfaceInterface $surface): array {
-    return $surface->getDefinition('variant')->getConstraints()['LabeledChoice']['choices'];
+    return DerivedDefinition::at($surface, 'variant')->getConstraints()['LabeledChoice']['choices'];
   }
 
   /**
@@ -371,18 +372,18 @@ class ExampleFormatterTest extends SurfaceKernelTestBase {
   public function testOutputsAreDeclaredBesideTheSettings(): void {
     $surface = $this->createFormatter()->getSurface();
 
-    $outputs = $surface->getOutputDefinitions();
+    $outputs = $surface->outputEntries();
     $this->assertSame(['text', 'classes'], $outputs->names());
-    $this->assertSame('string', $outputs->get('text')->getDataType());
-    $this->assertTrue($outputs->get('text')->isRequired());
-    $this->assertFalse($outputs->get('classes')->isRequired());
+    $this->assertSame('string', DerivedDefinition::in($outputs, 'text')->getDataType());
+    $this->assertTrue(DerivedDefinition::in($outputs, 'text')->isRequired());
+    $this->assertFalse(DerivedDefinition::in($outputs, 'classes')->isRequired());
     $this->assertSame([], $outputs->refinements());
 
-    $classes = $outputs->get('classes');
+    $classes = DerivedDefinition::in($outputs, 'classes');
     $this->assertInstanceOf(ListDataDefinition::class, $classes);
     $this->assertArrayNotHasKey('Choice', $classes->getItemDefinition()->getConstraints());
-    $refined = $surface->refine(['casing' => 'uppercase', 'variant' => 'bold'])
-      ->getOutputDefinitions()->get('classes');
+    $refined = DerivedDefinition::in($surface->refine(['casing' => 'uppercase', 'variant' => 'bold'])
+      ->outputEntries(), 'classes');
     $this->assertInstanceOf(ListDataDefinition::class, $refined);
     $this->assertArrayNotHasKey('Choice', $refined->getItemDefinition()->getConstraints());
   }
@@ -400,7 +401,7 @@ class ExampleFormatterTest extends SurfaceKernelTestBase {
     $this->assertSame(ExampleFormatter::class, $definition[UsesStructure::DEFINITION_KEY]);
     $this->assertSame(
       ['prefix', 'casing', 'variant', 'third_party_settings'],
-      $this->createFormatter()->getSurface()->getDefinitions()->names(),
+      $this->createFormatter()->getSurface()->entries()->names(),
     );
     // The static defaults are the structure's own shape, alters left out.
     $this->assertSame(

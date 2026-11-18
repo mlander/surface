@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Cache\Cache;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Refinement\RuntimeRefiner;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_resource_test\Structure\StockroomStructure;
 use Drupal\surface_test\RecordingStorage;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -117,7 +118,7 @@ class RuntimeRefinementTest extends SurfaceKernelTestBase {
    * Tests the build binds each kind apart, and the entry says which.
    */
   public function testTheBuildKeepsTheKindsApart(): void {
-    $definitions = $this->stockroom()->getDefinitions();
+    $definitions = $this->stockroom()->entries();
     $shelf = $definitions->entry('shelf');
     $this->assertSame(['aisle'], $shelf->dependencies);
     $this->assertSame(['aisle'], $shelf->staticDependencies());
@@ -138,7 +139,7 @@ class RuntimeRefinementTest extends SurfaceKernelTestBase {
     // Unlike a static refiner that watches nothing, it did not run at
     // build: the tag still advertises every tag.
     StockroomStructure::$banned = ['red'];
-    $this->assertSame(array_keys(StockroomStructure::TAGS), array_keys($this->options()->resolve($this->stockroom()->getDefinition('tag'))->options));
+    $this->assertSame(array_keys(StockroomStructure::TAGS), array_keys($this->options()->resolve(DerivedDefinition::at($this->stockroom(), 'tag'))->options));
   }
 
   /**
@@ -230,8 +231,8 @@ class RuntimeRefinementTest extends SurfaceKernelTestBase {
 
     // The static refiners alone, as the engine answers them when asked.
     $static = $surface->refine($values, FALSE);
-    $this->assertSame(['north_1', 'north_2'], array_keys($this->options()->resolve($static->getDefinition('shelf'))->options));
-    $this->assertSame(array_keys(StockroomStructure::TAGS), array_keys($this->options()->resolve($static->getDefinition('tag'))->options));
+    $this->assertSame(['north_1', 'north_2'], array_keys($this->options()->resolve(DerivedDefinition::at($static, 'shelf'))->options));
+    $this->assertSame(array_keys(StockroomStructure::TAGS), array_keys($this->options()->resolve(DerivedDefinition::at($static, 'tag'))->options));
     $this->assertSame(Cache::PERMANENT, $static->getCacheMaxAge());
   }
 

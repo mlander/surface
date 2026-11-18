@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Storage;
 
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Variants;
@@ -92,7 +92,7 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
   public static function forSurface(SurfaceInterface $surface, array $skip = []): ?self {
     $marks = [];
     $schema = [];
-    static::walk($surface->getDefinitions(), [], '', $skip, $marks, $schema);
+    static::walk($surface->entries(), [], '', $skip, $marks, $schema);
     return $marks === [] ? NULL : new self($marks, $schema);
   }
 
@@ -244,7 +244,7 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
    * and
    * docs/decisions.md#a-fact-is-read-from-the-schema-and-the-options-service-takes-a-schema.
    *
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The keys of one level.
    * @param list<array{key: string, each: bool, variants: \Drupal\surface\Variants|null, variant: string|null}> $steps
    *   The steps from the top to the level.
@@ -258,7 +258,7 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
    * @param array<string, array> $schema
    *   Their stored schema, added to.
    */
-  protected static function walk(DefinitionMap $map, array $steps, string $path, array $skip, array &$marks, array &$schema): void {
+  protected static function walk(Entries $map, array $steps, string $path, array $skip, array &$marks, array &$schema): void {
     $names = $map->names();
     foreach ($map->entries() as $name => $entry) {
       $name = (string) $name;
@@ -267,22 +267,22 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
       }
       $at = $path . $name;
       if ($entry->list !== NULL) {
-        static::walk($entry->list->child()->getDefinitions(), [...$steps, static::step($name, each: TRUE)], $at . '.', [], $marks, $schema);
+        static::walk($entry->list->child()->entries(), [...$steps, static::step($name, each: TRUE)], $at . '.', [], $marks, $schema);
         continue;
       }
       if ($entry->attachment !== NULL) {
         $each = SchemaFacts::each($entry->schema());
         if ($each === NULL) {
-          static::walk($entry->attachment->child->getDefinitions(), [...$steps, static::step($name)], $at . '.', [], $marks, $schema);
+          static::walk($entry->attachment->child->entries(), [...$steps, static::step($name)], $at . '.', [], $marks, $schema);
         }
         elseif (is_string($each)) {
           // A structure per thing the site has: every entry the same,
           // named `*` in the schema, which entries there are being the
           // site's.
-          foreach ($entry->attachment->child->getDefinitions()->entries() as $id => $one) {
+          foreach ($entry->attachment->child->entries()->entries() as $id => $one) {
             if ($one->attachment !== NULL) {
               $into = [...$steps, static::step($name), static::step((string) $id)];
-              static::walk($one->attachment->child->getDefinitions(), $into, $at . '.*.', [], $marks, $schema);
+              static::walk($one->attachment->child->entries(), $into, $at . '.*.', [], $marks, $schema);
             }
           }
         }
@@ -304,13 +304,13 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
           $child = $variant->settledChild();
           if ($child !== NULL) {
             $into = [...$steps, static::step($name, variants: $entry->variants, variant: (string) $id)];
-            static::walk($child->getDefinitions(), $into, $at . '.', [], $marks, $schema);
+            static::walk($child->entries(), $into, $at . '.', [], $marks, $schema);
           }
         }
         continue;
       }
       foreach ($entry->mounted as $module => $mounted) {
-        static::walk($mounted->child->getDefinitions(), [...$steps, static::step($name), static::step((string) $module)], $at . '.' . $module . '.', [], $marks, $schema);
+        static::walk($mounted->child->entries(), [...$steps, static::step($name), static::step((string) $module)], $at . '.' . $module . '.', [], $marks, $schema);
       }
     }
   }
@@ -435,7 +435,7 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
     $child = $chosen === NULL || $gathered === [] ? NULL : $variants->variant($chosen)->child;
     // What another variant wrote is left out, but for the secrets the
     // pipeline keeps beside the chosen keys.
-    $held = $child === NULL ? $gathered : array_intersect_key($gathered, $child->getDefinitions()->keys() + $variants->keptSecrets((string) $chosen, $gathered));
+    $held = $child === NULL ? $gathered : array_intersect_key($gathered, $child->entries()->keys() + $variants->keptSecrets((string) $chosen, $gathered));
     // The key stands where the first key gathered under it stood, or,
     // with nothing of it stored, after the owner's keys declared before
     // it.

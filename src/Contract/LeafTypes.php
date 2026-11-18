@@ -397,7 +397,7 @@ final class LeafTypes {
     return match (TRUE) {
       static::refersToEntity($type) => 'an id of an entity is add(\'<key>\', \'integer\' or \'string\', ...), the type the entity type keeps its id as, with the SurfaceValidReference constraint naming the entity type: ->addConstraint(\'SurfaceValidReference\', [\'entityTypeId\' => \'<entity type>\']).',
       $type === 'map' => 'a group of keys is attach(\'<key>\', <structure>::class), or addMap() for keys only this one holds.',
-      $type === 'list' => 'a list is addList().',
+      $type === 'list' => 'a list is add(\'<key>\', Schema::list(<item>)).',
       $type === self::ANY => 'a value whose shape depends on another key is variants, attachVariants().',
       default => 'a typed data definition built by hand is addDefinition(), held to the same types.',
     };

@@ -24,6 +24,7 @@ use Drupal\surface_property_test\OutsideDiscovery\PlainItem;
 use Drupal\surface_property_test\OutsideDiscovery\SchemaAndKind;
 use Drupal\surface_property_test\OutsideDiscovery\SpelledTwice;
 use Drupal\surface_property_test\OutsideDiscovery\UndeclaredUiGroup;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PortableSchema\Builder\Attribute\Check;
@@ -92,15 +93,15 @@ class SchemaAttributesTest extends SurfaceKernelTestBase {
    */
   public function testEachAttributeDeclaresItsPart(): void {
     $built = $this->container->get('surface.resources')->buildStatic('property_test.portable.properties', new OperationContext('configure'));
-    $this->assertTrue($built->getDefinition('name')->isRequired(), 'No initializer and no null: required.');
-    $this->assertSame(['max' => 64], $built->getDefinition('name')->getConstraint('Length'), '#[Schema] keywords.');
-    $this->assertSame('email', $built->getDefinition('email')->getDataType(), '#[Of] a type of the library.');
-    $this->assertTrue($built->getDefinition('frequency')->isRequired(), '#[Required] with an initializer.');
+    $this->assertTrue(DerivedDefinition::at($built, 'name')->isRequired(), 'No initializer and no null: required.');
+    $this->assertSame(['max' => 64], DerivedDefinition::at($built, 'name')->getConstraint('Length'), '#[Schema] keywords.');
+    $this->assertSame('email', DerivedDefinition::at($built, 'email')->getDataType(), '#[Of] a type of the library.');
+    $this->assertTrue(DerivedDefinition::at($built, 'frequency')->isRequired(), '#[Required] with an initializer.');
     $this->assertSame('weekly', $built->getDefault('frequency'), 'The initializer is the default.');
-    $this->assertSame('property_test.code', DefinitionMetadata::shapeOf($built->getDefinition('code')), '#[Of] a shape\'s class is that shape.');
-    $this->assertSame(['type' => 'module'], $built->getDefinition('module')->getConstraint('ExtensionExists'), '#[Check] the constraint.');
-    $this->assertTrue($built->getDefinition('note')->getSetting('multiline'), '#[Ui] the widget.');
-    $arrangement = DefinitionMetadata::arrangementOf($built->getDefinition('name'));
+    $this->assertSame('property_test.code', DefinitionMetadata::shapeOf(DerivedDefinition::at($built, 'code')), '#[Of] a shape\'s class is that shape.');
+    $this->assertSame(['type' => 'module'], DerivedDefinition::at($built, 'module')->getConstraint('ExtensionExists'), '#[Check] the constraint.');
+    $this->assertTrue(DerivedDefinition::at($built, 'note')->getSetting('multiline'), '#[Ui] the widget.');
+    $arrangement = DefinitionMetadata::arrangementOf(DerivedDefinition::at($built, 'name'));
     $this->assertNotNull($arrangement);
     $this->assertSame('about', $arrangement->group?->id, 'The class\'s #[Ui(groups:)] declares the group #[Ui(group:)] names.');
     $this->assertSame(1, $arrangement->weight);

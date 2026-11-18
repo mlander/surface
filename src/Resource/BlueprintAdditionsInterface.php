@@ -75,49 +75,17 @@ interface BlueprintAdditionsInterface {
   public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): static;
 
   /**
-   * Adds a list whose item is a plain map: name, item, label.
-   *
-   * A list of values is add()'s, Schema::list(...). A list of objects at
-   * an input is a collection of children, so a list whose every item is
-   * a plain map with no child of its own is the one list no schema
-   * states yet: it is declared here, its item a map's definition. Not to
-   * be written for anything add() states: see
-   * docs/decisions.md#authoring-takes-a-schema.
-   *
-   * A list of structures is a collection, attachList(); a map of values
-   * per thing the site has is addEach().
-   *
-   * @param string $key
-   *   The key.
-   * @param string|\Drupal\Core\TypedData\DataDefinitionInterface $item
-   *   What every item is: one of the types add() takes, the class of a
-   *   shape (each item then starts from the shape as its alters left it),
-   *   or the item's definition, for an item with constraints of its own
-   *   (a LabeledChoice for a multi-select).
-   * @param string|\Stringable $label
-   *   The list's label.
-   * @param mixed $default
-   *   The default value, a list; NULL declares none.
-   *
-   * @return $this
-   *
-   * @throws \LogicException
-   *   When the key is already declared; for a class that is no shape (a
-   *   resource or structure is attachList()'s), and, for an alter of a
-   *   shape, always.
-   */
-  public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): static;
-
-  /**
    * Adds a key, the long form.
    *
-   * For one value whose definition the caller builds: a DataDefinition of
-   * one of the types add() takes, with settings or constraints of its
-   * own. A map or a list is refused, naming the verb that declares it
-   * (addMap() or attach(), add()), so every object a blueprint holds
-   * is declared by a verb that is one JSON Schema construct. The
-   * definition is complete when it is handed in: the blueprint is
-   * returned.
+   * For a key whose Typed Data definition the caller builds: one value, a
+   * DataDefinition of one of the types add() takes, with settings or
+   * constraints of its own; or a list, a ListDataDefinition, for the one
+   * list no schema states: a list whose item is a plain map with no child
+   * of its own (at an input a list of objects is a collection of
+   * children). A map is refused, naming the verb that declares it
+   * (addMap() or attach()). The definition is complete when it is handed
+   * in: the blueprint is returned. Not to be written for anything add()
+   * states: see docs/decisions.md#authoring-takes-a-schema.
    *
    * @param string $key
    *   The key.
@@ -129,8 +97,8 @@ interface BlueprintAdditionsInterface {
    * @return $this
    *
    * @throws \LogicException
-   *   When the key is declared already, when the definition is a map or a
-   *   list, or when its type is one add() refuses.
+   *   When the key is declared already, when the definition is a map, or
+   *   when a type in it is one add() refuses.
    */
   public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static;
 

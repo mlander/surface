@@ -85,7 +85,7 @@ final class DoorAgreementForm extends SurfaceOperationForm {
    */
   protected function storedSurfaceValues(SurfaceInterface $surface, SurfaceStorageInterface $storage): array {
     $stored = parent::storedSurfaceValues($surface, $storage);
-    return $this->drawing && $this->drawn !== NULL ? array_intersect_key($this->drawn, $surface->getDefinitions()->toArray()) : $stored;
+    return $this->drawing && $this->drawn !== NULL ? array_intersect_key($this->drawn, $surface->entries()->toArray()) : $stored;
   }
 
   /**

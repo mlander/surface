@@ -372,7 +372,7 @@ and access have each had their say.
 
 Precisely: what the build step seals from a resource or structure in a
 context: an immutable group of keys, each a Portable Schema
-(held in a `DefinitionMap` that refuses
+(held in an `Entries` that refuses
 writes; [Built on typed data](on-typed-data.md)), plus the map of which
 keys depend on which others and the refiners that narrow them.
 Once sealed it is only read. It has two halves: what a host
@@ -464,14 +464,14 @@ run a Drupal constraint.
 Not in the introduction. Reference:
 [The class](declaring-a-resource.md#the-class).
 
-### Definition map
+### Entries
 
-The definition map is the list of everything a data surface states, one
+The entries are the list of everything a data surface states, one
 entry per key.
 
 Precisely: everything a data surface advertises, as one ordered,
-validated collection: one entry per key, in declaration order. A
-`DefinitionMap` of `Entry` value objects, each carrying its schema,
+validated collection: one entry per key, in declaration order. An
+`Entries` of `Entry` value objects, each carrying its schema,
 who introduced it, whether it is locked, what it refines against and
 whose values it offers.
 
@@ -683,7 +683,7 @@ Precisely: the other half of the contract: what a host's execution
 emits, in the same vocabulary and the same collection type as the
 inputs, with an absent-rather-than-NULL rule. Never refined. Declared
 with `defineOutputs()`, read with
-`SurfaceInterface::getOutputDefinitions()`; a value not emitted is
+`SurfaceInterface::outputEntries()`; a value not emitted is
 `Pipeline\NotEmitted`.
 
 Not in the introduction. Reference: [Outputs](outputs.md).
@@ -713,7 +713,7 @@ values sent to it.
 
 Precisely: one rule settles what is typed and what is not.
 
-**What a data surface says is objects.** It is a `DefinitionMap` of
+**What a data surface says is objects.** It is an `Entries` of
 `Entry` value objects, one per key, each carrying its schema,
 who introduced it, whether it is locked, what it refines against and
 whose values it offers. What a run refused is a `ViolationSet` of

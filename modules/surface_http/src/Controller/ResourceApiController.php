@@ -471,7 +471,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     // Keys the resource does not declare are not an edit of it, so they
     // are left out here as a rebuild leaves them out; a write refuses
     // them.
-    $input = array_intersect_key($body, $served->surface->getDefinitions()->keys());
+    $input = array_intersect_key($body, $served->surface->entries()->keys());
     $input = $this->servedOperations->keepStale($input, $current, $this->stalePaths($request));
     // The one narrowing a form's rebuild draws from too: a key, or a
     // dotted path to one inside an attached child or a variant, dropped

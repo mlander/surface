@@ -126,9 +126,9 @@ $inputs->narrow('limit')
 ### The seal: what every door reads
 
 `SurfaceBuilder::seal()` returns a `SurfaceInterface`: a
-`DefinitionMap` of `Entry` objects, each holding the key's schema with
+`Entries` of `Entry` objects, each holding the key's schema with
 who added it, whether it is locked and the sibling keys it depends on,
-plus the refiners the build bound (`src/DefinitionMap.php`,
+plus the refiners the build bound (`src/Entries.php`,
 `src/Entry.php`). A door reads a key's schema from its entry:
 
 ```php
@@ -140,7 +140,7 @@ sealed:
 
 ```php
 public function offsetSet(mixed $offset, mixed $value): void {
-  throw new \LogicException('A definition map cannot be written to: the data surface has been sealed and advertised, and widening is a build-time act.');
+  throw new \LogicException('The entries cannot be written to: the data surface has been sealed and advertised, and widening is a build-time act.');
 }
 ```
 

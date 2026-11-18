@@ -512,10 +512,10 @@ final class DrupalCheckProvider implements CheckProvider {
         $errors[json_encode($error)] = $error;
       }
     }
-    if ($frame !== NULL && $id === 'JsonSchema' && $frame->getDefinitions()->frameConstraints() !== []) {
+    if ($frame !== NULL && $id === 'JsonSchema' && $frame->entries()->frameConstraints() !== []) {
       $ran = TRUE;
       $document = $this->pipeline->document($frame, is_array($location['value']) ? $location['value'] : []);
-      foreach ($frame->getDefinitions()->frameConstraints() as $json_schema) {
+      foreach ($frame->entries()->frameConstraints() as $json_schema) {
         if (self::namesChecksOnly($json_schema)) {
           // Named in the document as those checks, each asked on its own.
           continue;
@@ -544,14 +544,14 @@ final class DrupalCheckProvider implements CheckProvider {
     if (!$ran && $schema === NULL && $frame !== NULL && $request->location !== '' && $id !== 'JsonSchema') {
       // An item of a collection, whose structure names the check on its
       // whole: run on the item as a map of the structure's keys.
-      foreach ($frame->getDefinitions()->frameConstraints() as $json_schema) {
+      foreach ($frame->entries()->frameConstraints() as $json_schema) {
         $checks = $json_schema[PortableKeywords::CHECK] ?? NULL;
         if (!self::namesChecksOnly($json_schema) || !is_array($checks) || !array_key_exists($name, $checks)) {
           continue;
         }
         $ran = TRUE;
         $map = MapDataDefinition::create();
-        foreach ($frame->getDefinitions()->entries() as $key => $entry) {
+        foreach ($frame->entries()->entries() as $key => $entry) {
           $map->setPropertyDefinition((string) $key, $entry->definition());
         }
         $options = json_decode((string) json_encode($checks[$name]), TRUE);

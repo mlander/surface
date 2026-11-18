@@ -11,13 +11,14 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ShapeBlueprint;
 use Drupal\surface\ResourceBuild\Shapes;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_resource_test\Alter\MountingShapeAlter;
 use Drupal\surface_resource_test\Alter\SkuAlter;
 use Drupal\surface_resource_test\OutsideDiscovery\AccessShapeAlter;
@@ -48,7 +49,7 @@ use Drupal\surface_resource_test\Structure\Broken\MountedShapeStructure;
 use Drupal\surface_resource_test\Structure\Broken\WideningShapeStructure;
 use Drupal\surface_resource_test\Structure\Broken\WiresShapePortStructure;
 use Drupal\surface_resource_test\Structure\Depot\ShelfTagStructure;
-use Drupal\surface\Tool\OperationInputs;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Kernel\Fixture\FakeLanguageTranslator;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
@@ -257,7 +258,7 @@ class ShapesTest extends SurfaceKernelTestBase {
    */
   public function testKeysNarrowTheShape(): void {
     $depot = $this->depot();
-    $sku = $depot->getDefinition('sku');
+    $sku = DerivedDefinition::at($depot, 'sku');
     $this->assertSame('resource_test.sku', DefinitionMetadata::shapeOf($sku));
     $this->assertSame('string', $sku->getDataType());
     $this->assertSame('Stock code', (string) $sku->getLabel());
@@ -266,7 +267,7 @@ class ShapesTest extends SurfaceKernelTestBase {
     $this->assertSame(['Regex' => self::PATTERN, 'Length' => ['min' => 4, 'max' => 12]], self::declared($sku));
     $this->assertSame(['AB12'], DefinitionMetadata::getExamples($sku));
 
-    $spare = $depot->getDefinition('spare');
+    $spare = DerivedDefinition::at($depot, 'spare');
     $this->assertSame('resource_test.sku', DefinitionMetadata::shapeOf($spare));
     $this->assertSame('Spare code', (string) $spare->getLabel());
     $this->assertSame('Printed on the back of the shelf.', (string) $spare->getDescription());
@@ -285,7 +286,7 @@ class ShapesTest extends SurfaceKernelTestBase {
     $this->assertSame(['Regex' => self::PATTERN], self::declared(Shapes::unaltered(Sku::class)));
     $this->assertSame('Letters and digits.', (string) Shapes::unaltered(Sku::class)->getDescription());
     // The shelf tag's port reads the shape, wired to the stock code.
-    $this->assertSame('resource_test.sku', $this->container->get('surface.resources')->build(ShelfTagStructure::class, new OperationContext('configure'))->getDefinitions()->ports()['code']->shape);
+    $this->assertSame('resource_test.sku', $this->container->get('surface.resources')->build(ShelfTagStructure::class, new OperationContext('configure'))->entries()->ports()['code']->shape);
   }
 
   /**
@@ -388,8 +389,8 @@ class ShapesTest extends SurfaceKernelTestBase {
     $this->assertEquals($before, $kept(), 'The kept definition is never handed out.');
     // An alter tightens the copy a key gets, and nothing kept.
     $depot = $this->depot();
-    $this->assertSame(['Regex' => self::PATTERN, 'Length' => ['min' => 4, 'max' => 12]], self::declared($depot->getDefinition('sku')));
-    $this->assertNotSame($depot->getDefinition('sku'), $depot->getDefinition('spare'));
+    $this->assertSame(['Regex' => self::PATTERN, 'Length' => ['min' => 4, 'max' => 12]], self::declared(DerivedDefinition::at($depot, 'sku')));
+    $this->assertNotSame(DerivedDefinition::at($depot, 'sku'), DerivedDefinition::at($depot, 'spare'));
     $this->assertSame(['Regex' => self::PATTERN], self::declared(Shapes::unaltered(Sku::class)));
     $this->assertEquals($before, $kept());
     $this->assertSame('string', Shapes::dataType(Sku::class), 'The data type is the kept one\'s.');
@@ -541,7 +542,7 @@ class ShapesTest extends SurfaceKernelTestBase {
    */
   public function testRefinementIsUnaffected(): void {
     $depot = $this->depot();
-    $tag = $depot->refine(['sku' => 'XY99'])->getDefinition('tag');
+    $tag = DerivedDefinition::at($depot->refine(['sku' => 'XY99']), 'tag');
     $this->assertInstanceOf(MapDataDefinition::class, $tag);
     $this->assertSame('Printed beside XY99.', (string) $tag->getPropertyDefinition('label')?->getDescription(), 'The port reads the stock code as it stands.');
     $this->assertSame([], $this->refusals([]));

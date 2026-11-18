@@ -8,7 +8,7 @@ use Drupal\Core\Cache\Cache;
 use Drupal\surface\Contract\ContractBaselines;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
@@ -264,7 +264,7 @@ class BuildCacheTest extends SurfaceKernelTestBase {
       }
 
     };
-    $surface = new Surface(new DefinitionMap([]), thirdPartyLayouts: ['surface_test' => $layout]);
+    $surface = new Surface(new Entries([]), thirdPartyLayouts: ['surface_test' => $layout]);
     $keep = new \ReflectionMethod(Resources::class, 'keep');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessageMatches('/^The first\.newsletter resource, built for its "configure" operation, cannot be kept in the build cache: Serialization of \'[^\']+@anonymous\' is not allowed\./');

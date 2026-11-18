@@ -210,11 +210,11 @@ class ContentEntityReadTest extends SurfaceKernelTestBase {
     $resources = $this->container->get('surface.resources');
     $read = $resources->buildOperation('entity.content:node.page', 'read', ['id' => $this->node->id()]);
     $update = $resources->buildOperation('entity.content:node.page', 'update', ['id' => $this->node->id()]);
-    $this->assertTrue($read->getDefinitions()->has(EntityTestHooks::LOCKED));
+    $this->assertTrue($read->entries()->has(EntityTestHooks::LOCKED));
     $this->assertFalse($read->isLocked(EntityTestHooks::LOCKED), 'A read answers what the account may view.');
     $this->assertTrue($update->isLocked(EntityTestHooks::LOCKED), 'An update takes no value for a field the account may not edit.');
-    $this->assertFalse($read->getDefinitions()->has(EntityTestHooks::HIDDEN));
-    $this->assertFalse($update->getDefinitions()->has(EntityTestHooks::HIDDEN));
+    $this->assertFalse($read->entries()->has(EntityTestHooks::HIDDEN));
+    $this->assertFalse($update->entries()->has(EntityTestHooks::HIDDEN));
 
     // The update's tool takes no value for it: one sent is noted, not taken.
     $write = $this->runTool('surface:entity.content:node.page:update', [

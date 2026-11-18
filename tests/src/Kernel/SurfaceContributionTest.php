@@ -10,16 +10,18 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface_test\AnyToIntegerRefiner;
 use Drupal\surface_test\CacheableCasingRefiner;
 use Drupal\surface_test\ConstraintRewritingRefiner;
 use Drupal\surface_test\MapPropertyRefiner;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Drupal\Tests\surface\Traits\RowsInOneKernelTrait;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests refinement as the union of what each contribution narrowed to.
@@ -97,7 +99,7 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
    *   The allowed values.
    */
   protected function variants(SurfaceInterface $surface): array {
-    return $surface->getDefinition('variant')->getConstraints()['LabeledChoice']['choices'];
+    return DerivedDefinition::at($surface, 'variant')->getConstraints()['LabeledChoice']['choices'];
   }
 
   /**
@@ -169,12 +171,12 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
     $builder->addRefiner('variant', new ConstraintRewritingRefiner(['Length' => ['max' => 4]]));
     $surface = $builder->seal();
 
-    $refined = $surface->refine(['casing' => 'uppercase'])->getDefinition('variant');
+    $refined = DerivedDefinition::at($surface->refine(['casing' => 'uppercase']), 'variant');
     $this->assertSame(['bold'], $refined->getConstraints()['Choice']['choices']);
     $this->assertSame(['max' => 4], $refined->getConstraints()['Length']);
     // And the advertised data surface is untouched by any of it.
-    $this->assertArrayNotHasKey('Choice', $surface->getDefinition('variant')->getConstraints());
-    $this->assertArrayNotHasKey('Length', $surface->getDefinition('variant')->getConstraints());
+    $this->assertArrayNotHasKey('Choice', DerivedDefinition::at($surface, 'variant')->getConstraints());
+    $this->assertArrayNotHasKey('Length', DerivedDefinition::at($surface, 'variant')->getConstraints());
   }
 
   /**
@@ -232,7 +234,7 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
       refinements: ['variant' => ['casing']],
     );
     $builder->addRefiner('variant', new ConstraintRewritingRefiner(['Length' => ['min' => 1, 'max' => 40]]));
-    $refined = $builder->seal()->refine(['casing' => 'uppercase'])->getDefinitions()->entry('variant');
+    $refined = $builder->seal()->refine(['casing' => 'uppercase'])->entries()->entry('variant');
     $this->assertNotNull($refined);
     $this->assertSame(2, $refined->schema()->get('minLength'));
     $this->assertSame(10, $refined->schema()->get('maxLength'));
@@ -340,7 +342,7 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
    *   The property definition.
    */
   protected function note(SurfaceInterface $surface): DataDefinitionInterface {
-    $extras = $surface->getDefinition('extras');
+    $extras = DerivedDefinition::at($surface, 'extras');
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $extras);
     return $extras->getPropertyDefinitions()[MapPropertyRefiner::PROPERTY];
   }
@@ -364,7 +366,7 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
     );
     $surface = $builder->addRefiner('value', new AnyToIntegerRefiner())->seal();
 
-    $refined = $surface->refine(['kind' => 'count'])->getDefinition('value');
+    $refined = DerivedDefinition::at($surface->refine(['kind' => 'count']), 'value');
 
     $this->assertSame('integer', $refined->getDataType());
     $this->assertSame(7, DefinitionMetadata::getDefaultValue($refined));

@@ -10,27 +10,28 @@ use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Attachment;
+use Drupal\surface\Collection;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
-use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Pipeline\TypeMismatchException;
 use Drupal\surface\Pipeline\UnknownKeysException;
+use Drupal\surface\Plugin\tool\Tool\ResourceOperationTool;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
-use Drupal\surface\Attachment;
-use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\Collection;
 use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface\SurfaceRefinerInterface;
-use Drupal\surface_resource_test\Structure\Broken\NarrowsListItemsStructure;
-use Drupal\surface_resource_test\Structure\Broken\RefinesListItemKeyStructure;
-use Drupal\surface_resource_test\Structure\Broken\WatchesListStructure;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_resource_test\Resource\Cellar\CellarResource;
 use Drupal\surface_resource_test\Resource\Larder\SpiceRackResource;
 use Drupal\surface_resource_test\Storage\CellarStorage;
-use Drupal\surface\Plugin\tool\Tool\ResourceOperationTool;
-use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface_resource_test\Structure\Broken\NarrowsListItemsStructure;
+use Drupal\surface_resource_test\Structure\Broken\RefinesListItemKeyStructure;
+use Drupal\surface_resource_test\Structure\Broken\WatchesListStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolDefinition;
@@ -39,9 +40,9 @@ use Drupal\tool\TypedData\ListInputDefinition;
 use Drupal\tool\TypedData\MapInputDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\HttpFoundation\InputBag;
 use Symfony\Component\HttpFoundation\Request;
-use PortableSchema\Builder\Schema;
 
 /**
  * Tests a collection: a key whose value is a list of child instances.
@@ -154,7 +155,7 @@ class CollectionTest extends SurfaceKernelTestBase {
    *   The collection.
    */
   protected static function collection(SurfaceInterface $surface, string $key): Collection {
-    $list = $surface->getDefinitions()->entry($key)?->list;
+    $list = $surface->entries()->entry($key)?->list;
     assert($list !== NULL);
     return $list;
   }
@@ -174,8 +175,8 @@ class CollectionTest extends SurfaceKernelTestBase {
    */
   public function testShape(): void {
     $edit = $this->edit();
-    $this->assertSame(['larder', 'size', 'racks', 'shelves'], $edit->getDefinitions()->names());
-    $racks = $edit->getDefinition('racks');
+    $this->assertSame(['larder', 'size', 'racks', 'shelves'], $edit->entries()->names());
+    $racks = DerivedDefinition::at($edit, 'racks');
     $this->assertInstanceOf(ListDataDefinition::class, $racks);
     $this->assertSame('Spice racks', (string) $racks->getLabel());
     $this->assertSame('One rack to four.', (string) $racks->getDescription());
@@ -185,9 +186,9 @@ class CollectionTest extends SurfaceKernelTestBase {
     $this->assertInstanceOf(MapDataDefinition::class, $item);
     $this->assertSame(['shelf', 'spices', 'label'], array_keys($item->getPropertyDefinitions()));
     // No upper bound is no Count maximum.
-    $this->assertSame(['max' => 3], $edit->getDefinition('shelves')->getConstraints()['Count']);
+    $this->assertSame(['max' => 3], DerivedDefinition::at($edit, 'shelves')->getConstraints()['Count']);
     // A collection is not an attached structure: the key is the parent's.
-    $entry = $edit->getDefinitions()->entry('racks');
+    $entry = $edit->entries()->entry('racks');
     $this->assertFalse($entry->isNested());
     $this->assertNull($entry->childFor([]));
     $this->assertSame(SpiceRackResource::class, $entry->list->item->source);
@@ -204,7 +205,7 @@ class CollectionTest extends SurfaceKernelTestBase {
     // operation, which takes the larder the cellar knows.
     $edit = $this->edit();
     $racks = self::collection($edit, 'racks');
-    $this->assertSame(['min' => 0, 'max' => 40], $racks->child()->getDefinition('spices')->getConstraints()['Range']);
+    $this->assertSame(['min' => 0, 'max' => 40], DerivedDefinition::at($racks->child(), 'spices')->getConstraints()['Range']);
     $this->assertSame('update', $racks->context->id);
     $this->assertSame('main', $racks->context->known['larder']);
     // Each item's context knows its delta.
@@ -212,7 +213,7 @@ class CollectionTest extends SurfaceKernelTestBase {
     $this->assertSame(0, $racks->contextFor(0)->known['delta']);
     // Added: the rack's own create, ten at most.
     $add = $this->resources()->buildOperation(CellarResource::class, 'create');
-    $this->assertSame(['min' => 0, 'max' => 10], self::collection($add, 'racks')->child()->getDefinition('spices')->getConstraints()['Range']);
+    $this->assertSame(['min' => 0, 'max' => 10], DerivedDefinition::at(self::collection($add, 'racks')->child(), 'spices')->getConstraints()['Range']);
     $this->assertSame('create', self::collection($add, 'racks')->context->id);
     // The shelf declares no operation: it inherits, with no access of
     // its own asked.
@@ -227,7 +228,7 @@ class CollectionTest extends SurfaceKernelTestBase {
     $this->assertFalse($locked->isLocked('shelves'));
     // Omitted leaves the key out.
     $this->actAs('hide spice rack');
-    $this->assertSame(['larder', 'size', 'shelves'], $this->edit()->getDefinitions()->names());
+    $this->assertSame(['larder', 'size', 'shelves'], $this->edit()->entries()->names());
   }
 
   /**
@@ -289,18 +290,18 @@ class CollectionTest extends SurfaceKernelTestBase {
     $edit = $this->edit();
     // The parent narrows its own list.
     $small = $edit->refine(['size' => 'small'] + self::STORED);
-    $this->assertSame(['min' => 1, 'max' => 2], $small->getDefinition('racks')->getConstraints()['Count']);
-    $this->assertSame(['min' => 1, 'max' => 4], $edit->refine(self::STORED)->getDefinition('racks')->getConstraints()['Count']);
+    $this->assertSame(['min' => 1, 'max' => 2], DerivedDefinition::at($small, 'racks')->getConstraints()['Count']);
+    $this->assertSame(['min' => 1, 'max' => 4], DerivedDefinition::at($edit->refine(self::STORED), 'racks')->getConstraints()['Count']);
     // Whatever the items hold, the list's item is the child as
     // advertised: an item is refined in its own frame, by the child.
-    $shelves = $small->getDefinition('shelves');
+    $shelves = DerivedDefinition::at($small, 'shelves');
     $this->assertInstanceOf(ListDataDefinition::class, $shelves);
     $item = $shelves->getItemDefinition();
     $this->assertInstanceOf(MapDataDefinition::class, $item);
     $this->assertSame(['min' => 1], $item->getPropertyDefinition('height')->getConstraints()['Range']);
     $shelf = self::collection($edit, 'shelves')->child();
-    $this->assertSame(80, $shelf->refine(['unit' => 'in', 'height' => 30])->getDefinition('height')->getConstraints()['Range']['max']);
-    $this->assertSame(200, $shelf->refine(['unit' => 'cm', 'height' => 30])->getDefinition('height')->getConstraints()['Range']['max']);
+    $this->assertSame(80, DerivedDefinition::at($shelf->refine(['unit' => 'in', 'height' => 30]), 'height')->getConstraints()['Range']['max']);
+    $this->assertSame(200, DerivedDefinition::at($shelf->refine(['unit' => 'cm', 'height' => 30]), 'height')->getConstraints()['Range']['max']);
 
     // A parent refiner that answers for the items is refused: an author's
     // answer is for its key alone. Before refiners answered with schemas,

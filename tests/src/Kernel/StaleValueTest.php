@@ -10,7 +10,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\surface\Surface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
@@ -97,7 +97,7 @@ class StaleValueTest extends SurfaceKernelTestBase {
     if ($default !== NULL) {
       DefinitionMetadata::setDefaultValue($pick, $default);
     }
-    return new Surface(DefinitionMap::fromArrays(definitions: [
+    return new Surface(Entries::fromArrays(definitions: [
       'pick' => $pick,
       'note' => DataDefinition::create('string')->setLabel('Note'),
     ]));
@@ -507,7 +507,7 @@ class StaleValueTest extends SurfaceKernelTestBase {
    * Tests that a refusal with no list behind it is never called stale.
    */
   public function testRefusalWithNoOptionListIsAnOrdinaryViolation(): void {
-    $surface = new Surface(DefinitionMap::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(definitions: [
       'pick' => DataDefinition::create('string')
         ->setLabel('Pick')
         ->addConstraint('Length', ['max' => 3]),
@@ -528,7 +528,7 @@ class StaleValueTest extends SurfaceKernelTestBase {
   public function testListsAreNeverStale(): void {
     $item = DataDefinition::create('string')
       ->addConstraint('Choice', ['choices' => ['keep', 'other']]);
-    $surface = new Surface(DefinitionMap::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(definitions: [
       'picks' => ListDataDefinition::create('string')
         ->setItemDefinition($item)
         ->setLabel('Picks'),

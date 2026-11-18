@@ -164,8 +164,8 @@ class VenueResourceTest extends SurfaceKernelTestBase {
    */
   public function testTheResourceBuildsForEachOperation(): void {
     $resources = $this->container->get('surface.resources');
-    $keys = static fn (string $operation, array $arguments = []): array => $resources->build(VenueResource::class, $resources->operation(VenueResource::class, $operation, $arguments))->getDefinitions()->names();
-    $outputs = static fn (string $operation): array => $resources->build(VenueResource::class, $resources->operation(VenueResource::class, $operation))->getOutputDefinitions()->names();
+    $keys = static fn (string $operation, array $arguments = []): array => $resources->build(VenueResource::class, $resources->operation(VenueResource::class, $operation, $arguments))->entries()->names();
+    $outputs = static fn (string $operation): array => $resources->build(VenueResource::class, $resources->operation(VenueResource::class, $operation))->outputEntries()->names();
     $this->assertSame(['label', 'id', 'slug', 'capacity', 'address', 'rooms', 'weight', 'status'], $keys('create'));
     $this->assertSame(['label', 'id', 'slug', 'capacity', 'address', 'rooms', 'weight', 'status'], $keys('update', ['id' => 'riverside']));
     $this->assertSame(['offset', 'limit', 'status'], $keys('list'));

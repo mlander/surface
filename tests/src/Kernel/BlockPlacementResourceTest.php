@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\Core\Form\FormState;
 use Drupal\block\Entity\Block;
+use Drupal\Core\Form\FormState;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Reader\ConfigSchemaReader;
 use Drupal\surface_examples_block\Resource\BlockPlacementResource;
@@ -13,6 +13,7 @@ use Drupal\surface_examples_block\Structure\VisibilityConditionStructure;
 use Drupal\surface_examples_block\Variants\BlockPluginStructures;
 use Drupal\surface_examples_block\Variants\ConditionPluginStructures;
 use Drupal\surface_examples_component_block\Structure\ComponentBlockStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -166,8 +167,8 @@ class BlockPlacementResourceTest extends SurfaceKernelTestBase {
    */
   public function testTheKeysAndWhatTheyOffer(): void {
     $built = $this->built();
-    $this->assertSame(self::KEYS, $built->getDefinitions()->names());
-    $required = array_values(array_filter($built->getDefinitions()->names(), static fn (string $key): bool => $built->getDefinition($key)->isRequired()));
+    $this->assertSame(self::KEYS, $built->entries()->names());
+    $required = array_values(array_filter($built->entries()->names(), static fn (string $key): bool => DerivedDefinition::at($built, $key)->isRequired()));
     $this->assertSame(['label', 'id', 'plugin', 'theme', 'region'], $required);
     $defaults = $built->getDefaultValues();
     $this->assertSame([TRUE, 0, TRUE], [$defaults['label_display'], $defaults['weight'], $defaults['status']]);
@@ -176,14 +177,14 @@ class BlockPlacementResourceTest extends SurfaceKernelTestBase {
     // which the test module declares.
     $reading = array_keys(array_filter($this->container->get('plugin.manager.block')->getDefinitions(), static fn (array $definition): bool => !empty($definition['context_definitions'])));
     $this->assertContains('surface_block_test_context', $reading);
-    $plugins = $this->options()->resolve($built->getDefinition('plugin'));
+    $plugins = $this->options()->resolve(DerivedDefinition::at($built, 'plugin'));
     $this->assertSame(self::PLUGINS, array_keys($plugins->options));
     $this->assertSame([], array_intersect($reading, array_keys($plugins->options)));
     $this->assertSame('Site branding', (string) $plugins->options['system_branding_block']);
     $this->assertSame('Component', (string) $plugins->options['surface_component']);
 
     // The themes installed, cached by the extension list.
-    $themes = $this->options()->resolve($built->getDefinition('theme'));
+    $themes = $this->options()->resolve(DerivedDefinition::at($built, 'theme'));
     $this->assertSame(['claro' => 'Claro', 'stark' => 'Stark'], array_map('strval', $themes->options));
     $this->assertContains('config:core.extension', $themes->cacheability->getCacheTags());
     $this->assertContains('config:core.extension', $built->getCacheTags());
@@ -194,14 +195,14 @@ class BlockPlacementResourceTest extends SurfaceKernelTestBase {
    */
   public function testTheRegionIsTheTheme(): void {
     $built = $this->built();
-    $any = $this->options()->resolve($built->getDefinition('region'));
+    $any = $this->options()->resolve(DerivedDefinition::at($built, 'region'));
     $this->assertContains('sidebar_first', array_keys($any->options), 'No theme chosen: a region of any installed theme.');
     $this->assertContains('pre_content', array_keys($any->options));
-    $regions = $this->options()->resolve($built->refine(['theme' => 'stark'])->getDefinition('region'));
+    $regions = $this->options()->resolve(DerivedDefinition::at($built->refine(['theme' => 'stark']), 'region'));
     $this->assertSame(self::STARK, array_keys($regions->options));
     $this->assertSame('Left sidebar', (string) $regions->options['sidebar_first']);
     $this->assertSame(['config:core.extension'], $regions->cacheability->getCacheTags());
-    $claro = $this->options()->resolve($built->refine(['theme' => 'claro'])->getDefinition('region'));
+    $claro = $this->options()->resolve(DerivedDefinition::at($built->refine(['theme' => 'claro']), 'region'));
     $this->assertNotContains('sidebar_first', array_keys($claro->options));
     $this->assertContains('pre_content', array_keys($claro->options));
 
@@ -216,23 +217,23 @@ class BlockPlacementResourceTest extends SurfaceKernelTestBase {
    * Tests the settings variants: declared, or read from a config schema.
    */
   public function testTheSettingsAreThePluginsVariant(): void {
-    $variants = $this->built()->getDefinitions()->entry('settings')->variants;
+    $variants = $this->built()->entries()->entry('settings')->variants;
     $this->assertSame('plugin', $variants->by);
     $this->assertSame(self::PLUGINS, array_keys($variants->variants));
     // The component block's own structure, as declared, its components
     // its variants in turn.
     $component = $variants->variants['surface_component'];
     $this->assertSame(ComponentBlockStructure::class, $component->source);
-    $this->assertSame(self::COMPONENTS, array_keys($component->child->getDefinitions()->entry('props')->variants->variants));
-    $this->assertSame(self::COMPONENTS, array_keys($component->child->getDefinitions()->entry('slots')->variants->variants));
+    $this->assertSame(self::COMPONENTS, array_keys($component->child->entries()->entry('props')->variants->variants));
+    $this->assertSame(self::COMPONENTS, array_keys($component->child->entries()->entry('slots')->variants->variants));
     // A core block, read from block.settings.system_branding_block, less
     // the keys every block has, its defaults the plugin's own.
     $branding = $variants->variants['system_branding_block']->child;
-    $this->assertSame(['use_site_logo', 'use_site_name', 'use_site_slogan'], $branding->getDefinitions()->names());
+    $this->assertSame(['use_site_logo', 'use_site_name', 'use_site_slogan'], $branding->entries()->names());
     $this->assertSame(['use_site_logo' => TRUE, 'use_site_name' => TRUE, 'use_site_slogan' => TRUE], $branding->getDefaultValues());
-    $this->assertSame('boolean', $branding->getDefinition('use_site_logo')->getDataType());
+    $this->assertSame('boolean', DerivedDefinition::at($branding, 'use_site_logo')->getDataType());
     // A block with no settings of its own reads as no keys.
-    $this->assertSame([], $variants->variants['system_powered_by_block']->child->getDefinitions()->names());
+    $this->assertSame([], $variants->variants['system_powered_by_block']->child->entries()->names());
     // What a variant leaves out is the fallback's keys, which are the keys
     // the placement holds itself and its storage keeps out of the settings.
     $this->assertSame(BlockPluginStructures::BASE, array_keys($this->container->get(ConfigSchemaReader::class)->keysOf(BlockPluginStructures::FALLBACK)));
@@ -242,17 +243,17 @@ class BlockPlacementResourceTest extends SurfaceKernelTestBase {
    * Tests the visibility conditions, each with what it reads.
    */
   public function testVisibility(): void {
-    $list = $this->built()->getDefinitions()->entry('visibility')->list;
+    $list = $this->built()->entries()->entry('visibility')->list;
     $this->assertNotNull($list);
     $condition = $list->item->child;
-    $this->assertSame(['id', 'negate', 'settings'], $condition->getDefinitions()->names());
-    $variants = $condition->getDefinitions()->entry('settings')->variants->variants;
+    $this->assertSame(['id', 'negate', 'settings'], $condition->entries()->names());
+    $variants = $condition->entries()->entry('settings')->variants->variants;
     // The block layout's conditions, less the current theme; no language
     // on a site with one.
     $this->assertSame(['request_path', 'response_status', 'user_role'], array_keys($variants));
-    $this->assertSame(['pages'], $variants['request_path']->child->getDefinitions()->names());
+    $this->assertSame(['pages'], $variants['request_path']->child->entries()->names());
     $roles = $variants['user_role']->child;
-    $this->assertSame(['roles', 'context_mapping'], $roles->getDefinitions()->names());
+    $this->assertSame(['roles', 'context_mapping'], $roles->entries()->names());
     $this->assertSame(['user' => '@user.current_user_context:current_user'], $roles->getDefaultValues()['context_mapping'] ?? NULL, 'The context the block layout assigns is the default.');
     $this->assertSame(VisibilityConditionStructure::class, $this->container->get('surface.resource_registry')->getDefinition('block.placement.condition')->class);
     // What a variant leaves out, the fallback's keys, the condition entry
@@ -303,7 +304,7 @@ class BlockPlacementResourceTest extends SurfaceKernelTestBase {
     $block = Block::create(['settings' => ['label' => 'Branding']] + self::BRANDING);
     $block->save();
     $built = $this->built('update', ['id' => $block]);
-    $this->assertSame(['stark' => 'Stark'], array_map('strval', $this->options()->resolve($built->getDefinition('theme'))->options));
+    $this->assertSame(['stark' => 'Stark'], array_map('strval', $this->options()->resolve(DerivedDefinition::at($built, 'theme'))->options));
     $values = $this->pipeline()->accept($built, ['theme' => 'claro', 'region' => 'pre_content'], self::BRANDING);
     $this->assertContains('theme', $this->pipeline()->validate($built, $values)->keys());
   }

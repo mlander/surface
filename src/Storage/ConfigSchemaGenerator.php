@@ -27,7 +27,7 @@ use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
 use Drupal\surface\Reference\ReferenceStorageLayout;
@@ -474,7 +474,7 @@ final class ConfigSchemaGenerator {
     $this->translated = $translated ?? ReferenceStorageLayout::storedSchemaOf($built) + FlatVariantsLayout::storedSchemaOf($built);
     $entries = [];
     $installed = $this->install($built, $install);
-    $mapping = $this->mapping($built->getDefinitions(), $config, $owner, $entries, $schema, TRUE, installed: $installed);
+    $mapping = $this->mapping($built->entries(), $config, $owner, $entries, $schema, TRUE, installed: $installed);
     array_unshift($entries, [
       'module' => $owner->module,
       'name' => $config,
@@ -535,7 +535,7 @@ final class ConfigSchemaGenerator {
     assert(is_subclass_of($storage, ConfigEntityStorage::class));
     $properties = array_filter($storage::properties(), 'is_string');
     $entries = [];
-    $written = $this->mapping($built->getDefinitions(), $type->getConfigPrefix(), $definition, $entries, $existing['schema']);
+    $written = $this->mapping($built->entries(), $type->getConfigPrefix(), $definition, $entries, $existing['schema']);
     $mapping = [];
     foreach ($properties as $key => $property) {
       if (isset($written[$key])) {
@@ -582,7 +582,7 @@ final class ConfigSchemaGenerator {
   /**
    * Writes the mapping of a map of keys.
    *
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The keys.
    * @param string $prefix
    *   The schema type every named type below starts with.
@@ -617,7 +617,7 @@ final class ConfigSchemaGenerator {
    *   For a key whose variants are stored flat at a level this writes no
    *   own-key type for: inside variants at a key, or in a mount.
    */
-  protected function mapping(DefinitionMap $map, string $prefix, ResourceDefinition $owner, array &$entries, array $existing, bool $top = FALSE, bool $absent = FALSE, ?array $installed = NULL, array $ruledOut = [], string $at = '', bool $ownKeyed = FALSE): array {
+  protected function mapping(Entries $map, string $prefix, ResourceDefinition $owner, array &$entries, array $existing, bool $top = FALSE, bool $absent = FALSE, ?array $installed = NULL, array $ruledOut = [], string $at = '', bool $ownKeyed = FALSE): array {
     $mapping = [];
     foreach ($map->entries() as $name => $entry) {
       $name = (string) $name;
@@ -705,10 +705,10 @@ final class ConfigSchemaGenerator {
         'type' => 'sequence',
         'label' => $label,
       ] + ($this->clearable($schema, $at) ? ['nullable' => TRUE] : []) + static::constraints($schema) + [
-        'sequence' => $this->ownKeyed($entry->list->child()->getDefinitions(), $path, $label, $owner, $entries, $existing, $at . '.') ?? [
+        'sequence' => $this->ownKeyed($entry->list->child()->entries(), $path, $label, $owner, $entries, $existing, $at . '.') ?? [
           'type' => 'mapping',
           'label' => $label,
-          'mapping' => $this->mapping($entry->list->child()->getDefinitions(), $path, $owner, $entries, $existing, at: $at . '.'),
+          'mapping' => $this->mapping($entry->list->child()->entries(), $path, $owner, $entries, $existing, at: $at . '.'),
         ],
       ];
     }
@@ -722,10 +722,10 @@ final class ConfigSchemaGenerator {
           // An entry is stored as it was accepted, so a key of it may be
           // absent. Which entries there are is the site's: a key the
           // storage keeps otherwise is named under `*`.
-          'sequence' => $this->ownKeyed($child->getDefinitions(), $path, $label, $owner, $entries, $existing, $at . '.*.', absent: TRUE) ?? [
+          'sequence' => $this->ownKeyed($child->entries(), $path, $label, $owner, $entries, $existing, $at . '.*.', absent: TRUE) ?? [
             'type' => 'mapping',
             'label' => $label,
-            'mapping' => $this->mapping($child->getDefinitions(), $path, $owner, $entries, $existing, absent: TRUE, at: $at . '.*.'),
+            'mapping' => $this->mapping($child->entries(), $path, $owner, $entries, $existing, absent: TRUE, at: $at . '.*.'),
           ],
         ];
       }
@@ -745,10 +745,10 @@ final class ConfigSchemaGenerator {
             : $this->definition($each, $each_definition, $label),
         ];
       }
-      return $this->ownKeyed($entry->attachment->child->getDefinitions(), $path, $label, $owner, $entries, $existing, $at . '.', installed: is_array($held) ? $held : NULL) ?? [
+      return $this->ownKeyed($entry->attachment->child->entries(), $path, $label, $owner, $entries, $existing, $at . '.', installed: is_array($held) ? $held : NULL) ?? [
         'type' => 'mapping',
         'label' => $label,
-        'mapping' => $this->mapping($entry->attachment->child->getDefinitions(), $path, $owner, $entries, $existing, installed: is_array($held) ? $held : NULL, at: $at . '.'),
+        'mapping' => $this->mapping($entry->attachment->child->entries(), $path, $owner, $entries, $existing, installed: is_array($held) ? $held : NULL, at: $at . '.'),
       ];
     }
     // Of the keys that hold a child frame only a mount gets here (the
@@ -778,7 +778,7 @@ final class ConfigSchemaGenerator {
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
    *   The resource.
    *
-   * @return array<string, array{0: \Drupal\surface\DefinitionMap, 1: \Drupal\surface\ResourceBuild\ResourceDefinition|null}>
+   * @return array<string, array{0: \Drupal\surface\Entries, 1: \Drupal\surface\ResourceBuild\ResourceDefinition|null}>
    *   Each variant's keys and its definition, by value, in the variants'
    *   order.
    */
@@ -793,13 +793,13 @@ final class ConfigSchemaGenerator {
       foreach ($from::structures() as $value => $class) {
         $source = $this->registry->getDefinition($class);
         $declared = $this->resources->declaration($source->name(), $this->context($owner));
-        $variants[(string) $value] = [$declared->getDefinitions(), $source];
+        $variants[(string) $value] = [$declared->entries(), $source];
       }
       return $variants;
     }
     foreach ($entry->variants->variants as $value => $variant) {
       $source = $variant->source !== NULL && $this->registry->hasDefinition($variant->source) ? $this->registry->getDefinition($variant->source) : NULL;
-      $variants[(string) $value] = [$variant->child->getDefinitions(), $source];
+      $variants[(string) $value] = [$variant->child->entries(), $source];
     }
     return $variants;
   }
@@ -909,7 +909,7 @@ final class ConfigSchemaGenerator {
    * variant's, extending it, written in the module declaring the variant
    * with the secrets the other variants keep, as variants under a key are.
    *
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The level's keys.
    * @param string $path
    *   The level's type.
@@ -932,7 +932,7 @@ final class ConfigSchemaGenerator {
    *   The level's schema, its type named by its deciding key; NULL when
    *   no key of it is stored flat.
    */
-  protected function ownKeyed(DefinitionMap $map, string $path, string $label, ResourceDefinition $owner, array &$entries, array $existing, string $at, bool $absent = FALSE, ?array $installed = NULL): ?array {
+  protected function ownKeyed(Entries $map, string $path, string $label, ResourceDefinition $owner, array &$entries, array $existing, string $at, bool $absent = FALSE, ?array $installed = NULL): ?array {
     $flat = NULL;
     foreach ($map->entries() as $name => $one) {
       if ($this->spreads($at . $name)) {
@@ -992,7 +992,7 @@ final class ConfigSchemaGenerator {
    *
    * @param string $value
    *   The variant whose mapping is written.
-   * @param array<string, array{0: \Drupal\surface\DefinitionMap, 1: mixed}> $variants
+   * @param array<string, array{0: \Drupal\surface\Entries, 1: mixed}> $variants
    *   Every variant's keys, by value.
    *
    * @return array
@@ -1054,7 +1054,7 @@ final class ConfigSchemaGenerator {
         $name = $config . '.third_party.' . $module;
         $mounted = $entry->mounted[(string) $module] ?? NULL;
         $mapping = $mounted !== NULL
-          ? $this->mapping($mounted->child->getDefinitions(), $name, $owner, $entries, $existing, absent: TRUE, ruledOut: $ruled[(string) $module] ?? [], at: ConfigObjectStorage::THIRD_PARTY . '.' . $module . '.')
+          ? $this->mapping($mounted->child->entries(), $name, $owner, $entries, $existing, absent: TRUE, ruledOut: $ruled[(string) $module] ?? [], at: ConfigObjectStorage::THIRD_PARTY . '.' . $module . '.')
           : $this->plainMapping(static::propertyOf($entry->schema(), (string) $module), $part, TRUE, ConfigObjectStorage::THIRD_PARTY . '.' . $module);
         $entries[] = [
           'module' => (string) $module,
@@ -1307,13 +1307,13 @@ final class ConfigSchemaGenerator {
    *   The values.
    */
   protected function install(SurfaceInterface $built, array $existing): array {
-    return $this->installMap($built->getDefinitions(), $built, $existing);
+    return $this->installMap($built->entries(), $built, $existing);
   }
 
   /**
    * Writes the values a map of keys starts from.
    *
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The keys.
    * @param \Drupal\surface\SurfaceInterface $surface
    *   What holds them, for its defaults.
@@ -1326,7 +1326,7 @@ final class ConfigSchemaGenerator {
    * @return array
    *   The values.
    */
-  protected function installMap(DefinitionMap $map, SurfaceInterface $surface, array $existing, string $at = ''): array {
+  protected function installMap(Entries $map, SurfaceInterface $surface, array $existing, string $at = ''): array {
     // In declaration order, the order core keeps a config object in once
     // its schema lists the keys so.
     $values = [];
@@ -1356,10 +1356,10 @@ final class ConfigSchemaGenerator {
       $schema = $entry->schema();
       if ($entry->variants !== NULL) {
         $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? $surface->getDefault($entry->variants->by));
-        $values[$name] = $chosen === NULL ? $held : $this->installMap($entry->variants->variant($chosen)->child->getDefinitions(), $entry->variants->variant($chosen)->child, is_array($held) ? $held : [], $at . $name . '.');
+        $values[$name] = $chosen === NULL ? $held : $this->installMap($entry->variants->variant($chosen)->child->entries(), $entry->variants->variant($chosen)->child, is_array($held) ? $held : [], $at . $name . '.');
       }
       elseif ($entry->attachment !== NULL && SchemaFacts::each($schema) === NULL) {
-        $values[$name] = $this->installMap($entry->attachment->child->getDefinitions(), $entry->attachment->child, is_array($held) ? $held : [], $at . $name . '.');
+        $values[$name] = $this->installMap($entry->attachment->child->entries(), $entry->attachment->child, is_array($held) ? $held : [], $at . $name . '.');
       }
       elseif (array_key_exists($name, $existing)) {
         // What a site starts from may differ from what a key starts from
@@ -1390,7 +1390,7 @@ final class ConfigSchemaGenerator {
    *
    * @param \Drupal\surface\Entry $entry
    *   The flat key.
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The level's keys.
    * @param array $existing
    *   What the file holds at the level now.
@@ -1403,15 +1403,15 @@ final class ConfigSchemaGenerator {
    * @return array
    *   The values, by the variants' keys.
    */
-  protected function installSpread(Entry $entry, DefinitionMap $map, array $existing, mixed $decided, string $at): array {
+  protected function installSpread(Entry $entry, Entries $map, array $existing, mixed $decided, string $at): array {
     $variants = $entry->variants;
     $leftover = array_diff_key($existing, $map->keys());
     $chosen = $variants->chosen($decided);
     $child = $chosen === NULL ? NULL : $variants->variant($chosen)->settledChild();
-    $written = $child === NULL ? [] : $this->installMap($child->getDefinitions(), $child, $leftover, $at);
+    $written = $child === NULL ? [] : $this->installMap($child->entries(), $child, $leftover, $at);
     $values = [];
     foreach ($variants->variants as $variant) {
-      foreach ($variant->settledChild()?->getDefinitions()->names() ?? [] as $key) {
+      foreach ($variant->settledChild()?->entries()->names() ?? [] as $key) {
         if (array_key_exists($key, $written)) {
           $values[$key] = $written[$key];
         }

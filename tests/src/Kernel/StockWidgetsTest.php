@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Form\Document\DocumentSchemas;
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Form\Document\DocumentDrawer;
+use Drupal\surface\Form\Document\DocumentSchemas;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\Form\SurfaceFormBuilderInterface;
-use Drupal\surface\Form\Document\DocumentDrawer;
-use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\SurfaceWidgetManager;
 use Drupal\surface\Widget\WidgetContext;
@@ -25,6 +25,7 @@ use Drupal\surface_resource_test\Resource\Library\OpeningHoursResource;
 use Drupal\surface_resource_test\Resource\Parcel\ParcelResource;
 use Drupal\surface_resource_test\Storage\OpeningHoursStorage;
 use Drupal\surface_resource_test\Storage\ParcelStorage;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -300,7 +301,7 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
     $this->assertTrue($this->container->get(ParcelStorage::class)->mayClear($context, 'insured'), 'Not fully validatable: anything may hold nothing.');
 
     $hours = $this->built(OpeningHoursResource::class);
-    $marked = array_filter(['holidays', 'after_hours', 'keywords', 'notes', 'opens'], static fn (string $key): bool => DefinitionMetadata::isAlwaysHeld($hours->getDefinition($key)));
+    $marked = array_filter(['holidays', 'after_hours', 'keywords', 'notes', 'opens'], static fn (string $key): bool => DefinitionMetadata::isAlwaysHeld(DerivedDefinition::at($hours, $key)));
     $this->assertSame(['holidays', 'after_hours', 'keywords'], array_values($marked), 'A required key is not marked: it holds a value anyway.');
 
     $holidays = $this->form($hours)['holidays'];

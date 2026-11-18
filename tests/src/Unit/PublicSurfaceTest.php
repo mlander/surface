@@ -144,6 +144,12 @@ use PHPUnit\Framework\Attributes\Group;
  * label, until its last callers are converted
  * (docs/decisions.md#authoring-takes-a-schema): 17 methods.
  *
+ * Cut on 2026-11-18 by one blueprint method: `addList()` is gone. A
+ * list of values is add()'s, and the one list no schema states, a list
+ * whose item is a plain map, is a list definition handed to
+ * addDefinition() (docs/decisions.md#authoring-takes-a-schema): 16
+ * methods.
+ *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
 #[Group('surface')]
@@ -165,7 +171,7 @@ class PublicSurfaceTest extends UnitTestCase {
   protected const PINNED = [
     'attributes' => 26,
     'attribute arguments' => 110,
-    'blueprint methods' => 17,
+    'blueprint methods' => 16,
     'interfaces' => 22,
   ];
 

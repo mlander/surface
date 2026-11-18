@@ -7,14 +7,15 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\surface\Surface;
-use Drupal\surface\DefinitionMap;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Entries;
+use Drupal\surface\Surface;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_test\AnyToIntegerRefiner;
 use Drupal\surface_test\RogueRefiner;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests the data surface value object: refinement contract, defaults, locking.
@@ -73,13 +74,13 @@ class SurfaceTest extends SurfaceKernelTestBase {
 
     // No dependency value: nothing refines.
     $this->assertSame($surface, $surface->refine([]));
-    $this->assertArrayNotHasKey('Choice', $surface->getDefinition('variant')->getConstraints());
+    $this->assertArrayNotHasKey('Choice', DerivedDefinition::at($surface, 'variant')->getConstraints());
 
     // Refined: the owner narrows the open key to the casing's variants.
     $refined = $surface->refine(['casing' => 'uppercase']);
-    $this->assertSame(['bold', 'strong'], $refined->getDefinition('variant')->getConstraints()['Choice']['choices']);
+    $this->assertSame(['bold', 'strong'], DerivedDefinition::at($refined, 'variant')->getConstraints()['Choice']['choices']);
     // The advertised data surface is untouched.
-    $this->assertArrayNotHasKey('Choice', $surface->getDefinition('variant')->getConstraints());
+    $this->assertArrayNotHasKey('Choice', DerivedDefinition::at($surface, 'variant')->getConstraints());
 
     // Validation runs against the refined definitions.
     $this->assertCount(0, $this->pipeline()->validate($surface, ['casing' => 'uppercase', 'variant' => 'bold']));
@@ -98,7 +99,7 @@ class SurfaceTest extends SurfaceKernelTestBase {
    */
   public function testOnlyThePlaceholderBecomesAnything(): void {
     $surface = static fn (DataDefinitionInterface $value): Surface => new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: [
           'kind' => DataDefinition::create('string'),
           'value' => $value,
@@ -110,7 +111,7 @@ class SurfaceTest extends SurfaceKernelTestBase {
     $placeholder = DataDefinition::create('any');
     DefinitionMetadata::setVariantsBy($placeholder, 'kind');
     $refined = $surface($placeholder)->refine(['kind' => 'count']);
-    $this->assertSame('integer', $refined->getDefinition('value')->getDataType());
+    $this->assertSame('integer', DerivedDefinition::at($refined, 'value')->getDataType());
 
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('the data type changed from any to integer');
@@ -139,7 +140,7 @@ class SurfaceTest extends SurfaceKernelTestBase {
   public function testNestedViolationPaths(): void {
     $map = MapDataDefinition::create()->setLabel('Settings');
     $map->setPropertyDefinition('sub', DataDefinition::create('string')->addConstraint('Length', ['max' => 3]));
-    $surface = new Surface(DefinitionMap::fromArrays(definitions: ['settings' => $map]));
+    $surface = new Surface(Entries::fromArrays(definitions: ['settings' => $map]));
 
     $errors = $this->pipeline()->validate($surface, ['settings' => ['sub' => 'too long']]);
     $this->assertSame('sub', $errors->byKey('settings')[0]->path);
@@ -160,7 +161,7 @@ class SurfaceTest extends SurfaceKernelTestBase {
     $empty = MapDataDefinition::create()->setLabel('Empty');
     $empty->setPropertyDefinition('nothing', DataDefinition::create('string'));
 
-    $surface = new Surface(DefinitionMap::fromArrays(definitions: ['settings' => $outer, 'empty' => $empty]));
+    $surface = new Surface(Entries::fromArrays(definitions: ['settings' => $outer, 'empty' => $empty]));
     // Properties that declare nothing are left out at the nested level.
     $this->assertSame(['provider' => ['badge' => 'star']], $surface->getDefault('settings'));
     // A map with nothing to assemble has no default, and every
@@ -176,7 +177,7 @@ class SurfaceTest extends SurfaceKernelTestBase {
     DefinitionMetadata::setDefaultValue($declared, ['provider' => ['note' => 'fixed']]);
     $this->assertSame(
       ['provider' => ['badge' => 'star', 'note' => 'fixed']],
-      (new Surface(DefinitionMap::fromArrays(definitions: ['settings' => $declared])))->getDefault('settings'),
+      (new Surface(Entries::fromArrays(definitions: ['settings' => $declared])))->getDefault('settings'),
     );
   }
 
@@ -224,7 +225,7 @@ class SurfaceTest extends SurfaceKernelTestBase {
   public function testUnknownKeysRefused(): void {
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('"missing" is not a data surface definition.');
-    DefinitionMap::fromArrays(
+    Entries::fromArrays(
       definitions: ['a' => DataDefinition::create('string')],
       locked: ['missing'],
     );

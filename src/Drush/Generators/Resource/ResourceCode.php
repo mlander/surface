@@ -165,7 +165,7 @@ final class ResourceCode {
    * @phpstan-impure
    */
   protected function frame(SurfaceInterface $surface, string $path): array {
-    $map = $surface->getDefinitions();
+    $map = $surface->entries();
     // A structure's frame is written while its parent's is: each names
     // its own keys.
     $parent_constants = $this->constants;

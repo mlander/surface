@@ -260,7 +260,7 @@ final class InputDefinitions {
     // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
     $once = $runtimeAccessSaidOnce && $surface->isRuntimeAccessWhole();
     $properties = [];
-    $definitions = $surface->getDefinitions();
+    $definitions = $surface->entries();
     foreach ($definitions->entries() as $name => $entry) {
       $property = $this->fromEntry($entry, $narrowing);
       // A key a refiner may rule out is required only where it applies,
@@ -322,7 +322,7 @@ final class InputDefinitions {
       return $map;
     }
     $properties = $map->getPropertyDefinitions();
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $property = $properties[$name] ?? NULL;
       $at = $pointer . '/' . str_replace(['~', '/'], ['~0', '~1'], (string) $name);
       $child = $entry->attachment?->child;
@@ -421,7 +421,7 @@ final class InputDefinitions {
    */
   protected static function dependencies(SurfaceInterface $surface, string $prefix = '', array $ports = [], ?MapInputDefinition $shown = NULL): array {
     $found = [];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $at = $prefix . $name;
       $shown_at = $shown?->getPropertyDefinition((string) $name);
       // A map the listing states with no key (one it leaves out) has
@@ -915,7 +915,7 @@ final class InputDefinitions {
       return $this->headOf($schema);
     }
     $converted_all = [];
-    foreach ($child->getDefinitions()->entries() as $name => $child_entry) {
+    foreach ($child->entries()->entries() as $name => $child_entry) {
       $property = $properties[$name] ?? $child_entry->schema();
       $converted = match (TRUE) {
         $this->deferred($child_entry) => $this->leftOut($child_entry, $property, $narrowing),
@@ -927,7 +927,7 @@ final class InputDefinitions {
       // child's own values or by a port, is optional in a listing.
       // Decision: see docs/decisions.md#a-key-that-does-not-apply.
       static::optionalWhereRuledOut($converted, $child_entry->mayNotApply());
-      if ($child->getDefinitions()->isLocked((string) $name)) {
+      if ($child->entries()->isLocked((string) $name)) {
         // As at the top: an entry of a map of keys from the site its
         // provider locked, say.
         static::lock($converted);
@@ -1004,7 +1004,7 @@ final class InputDefinitions {
   protected function wholeMap(SurfaceInterface $child, Schema $schema): array {
     $properties = [];
     foreach (SchemaFacts::properties($schema) as $name => $property_schema) {
-      $entry = $child->getDefinitions()->entry((string) $name);
+      $entry = $child->entries()->entry((string) $name);
       $properties[(string) $name] = $entry === NULL ? $this->fromSchema($property_schema) : $this->whole($entry, $property_schema);
     }
     return $properties;
@@ -1147,7 +1147,7 @@ final class InputDefinitions {
     $table = [];
     foreach ($variants->variants as $id => $variant) {
       $keys = [];
-      foreach ($variant->child->getDefinitions()->entries() as $name => $entry) {
+      foreach ($variant->child->entries()->entries() as $name => $entry) {
         $owners[$name][] = (string) $id;
         $entries[$name] ??= $entry;
         $keys[] = $name;
@@ -1228,7 +1228,7 @@ final class InputDefinitions {
    */
   public function outputsFromSurface(SurfaceInterface $surface): array {
     $outputs = [];
-    foreach ($surface->getOutputDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->outputEntries()->entries() as $name => $entry) {
       $outputs[$name] = $this->outputFromSchema($entry->schema());
     }
     return $outputs;
@@ -1455,7 +1455,7 @@ final class InputDefinitions {
    */
   public function withStored(MapInputDefinition $map, SurfaceInterface $surface, array $stored): MapInputDefinition {
     $properties = $map->getPropertyDefinitions();
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $property = $properties[$name] ?? NULL;
       if (!$property instanceof InputDefinitionInterface || !array_key_exists($name, $stored) || Secrets::marked($entry->schema())) {
         continue;

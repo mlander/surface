@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Attachment;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
 use Drupal\surface\Port;
@@ -189,20 +189,20 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     foreach (['narrow', 'same', 'optional', 'out'] as $mode) {
       $refined = $surface->refine(static::at($mode));
       foreach (['att', 'pick', 'deep', 'third_party_settings'] as $key) {
-        $entry = $refined->getDefinitions()->entry($key);
+        $entry = $refined->entries()->entry($key);
         $this->assertNotNull($entry);
         $this->assertTrue($entry->isSchemaFirst(), "$key ($mode) is schema-first.");
-        $this->assertFalse($entry->sameSource($surface->getDefinitions()->entry($key)), "$key ($mode) has a source of its own, even where its child changed nothing.");
+        $this->assertFalse($entry->sameSource($surface->entries()->entry($key)), "$key ($mode) has a source of its own, even where its child changed nothing.");
         $this->assertTrue(DefinitionSchema::same($entry->schema(), DefinitionSchema::of($entry->definition())), "$key ($mode): its schema is what its definition reads.");
       }
-      $fixed = $refined->getDefinitions()->entry('fixed');
+      $fixed = $refined->entries()->entry('fixed');
       $this->assertFalse($fixed->isSchemaFirst(), "fixed ($mode): a locked deciding key keeps its definition and its narrowing check.");
       $this->assertTrue(DefinitionSchema::same($fixed->schema(), DefinitionSchema::of($fixed->definition())));
     }
     $out = $surface->refine(static::at('out'));
-    $this->assertTrue(SchemaFacts::doesNotApply(DefinitionSchema::propertyOf($out->getDefinitions()->entry('att')->schema(), 'code')), 'A key the child ruled out is marked in the shell\'s schema.');
-    $this->assertSame(['inner.code'], SchemaFacts::ruledOutInside($out->getDefinitions()->entry('deep')->schema()), 'And in a shell inside a shell.');
-    $this->assertSame(['surface.code'], SchemaFacts::ruledOutInside($out->getDefinitions()->entry('third_party_settings')->schema()), 'And at a mount.');
+    $this->assertTrue(SchemaFacts::doesNotApply(DefinitionSchema::propertyOf($out->entries()->entry('att')->schema(), 'code')), 'A key the child ruled out is marked in the shell\'s schema.');
+    $this->assertSame(['inner.code'], SchemaFacts::ruledOutInside($out->entries()->entry('deep')->schema()), 'And in a shell inside a shell.');
+    $this->assertSame(['surface.code'], SchemaFacts::ruledOutInside($out->entries()->entry('third_party_settings')->schema()), 'And at a mount.');
   }
 
   /**
@@ -221,14 +221,14 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $surface = static::shells(static::child(NULL, $foreign));
     $refined = $surface->refine(static::at('narrow'));
     foreach (['att', 'pick', 'fixed', 'deep', 'third_party_settings'] as $key) {
-      $entry = $refined->getDefinitions()->entry($key);
+      $entry = $refined->entries()->entry($key);
       $this->assertNotNull($entry);
       $this->assertFalse($entry->isSchemaFirst(), "$key: definition-first.");
-      $this->assertFalse(DefinitionMap::derivedClasses($entry->schema()), "$key: its schema holds a class no schema derives.");
+      $this->assertFalse(Entries::derivedClasses($entry->schema()), "$key: its schema holds a class no schema derives.");
       $this->assertTrue(DefinitionSchema::same($entry->schema(), DefinitionSchema::of($entry->definition())), "$key: its schema, composed, is what its definition, built as before, reads.");
     }
     $plain = static::shells(static::child())->refine(static::at('narrow'));
-    $this->assertTrue($plain->getDefinitions()->entry('att')->isSchemaFirst(), 'The same shell is schema-first where the child\'s keys are of the derived classes.');
+    $this->assertTrue($plain->entries()->entry('att')->isSchemaFirst(), 'The same shell is schema-first where the child\'s keys are of the derived classes.');
   }
 
   /**
@@ -303,16 +303,16 @@ class RefinedShellTest extends SurfaceKernelTestBase {
         }
       }
       $same = $again->refine($first);
-      $this->assertSame(4, DefinitionSchema::propertyOf($same->getDefinitions()->entry('att')->schema(), 'code')?->get('maxLength'), "The same narrowing again answers ($how).");
+      $this->assertSame(4, DefinitionSchema::propertyOf($same->entries()->entry('att')->schema(), 'code')?->get('maxLength'), "The same narrowing again answers ($how).");
       $narrower = $again->refine(static::at('narrower'));
       foreach (['att', 'pick', 'deep', 'third_party_settings'] as $key) {
-        $this->assertTrue($narrower->getDefinitions()->entry($key)->madeByRefinement(), "$key ($how): refined again, made by the refinement.");
+        $this->assertTrue($narrower->entries()->entry($key)->madeByRefinement(), "$key ($how): refined again, made by the refinement.");
       }
-      $this->assertSame(2, DefinitionSchema::propertyOf($narrower->getDefinitions()->entry('att')->schema(), 'code')?->get('maxLength'), "A narrower one answers ($how).");
+      $this->assertSame(2, DefinitionSchema::propertyOf($narrower->entries()->entry('att')->schema(), 'code')?->get('maxLength'), "A narrower one answers ($how).");
     }
-    $this->assertFalse($surface->getDefinitions()->entry('att')->madeByRefinement(), 'A sealed entry is not made by a refinement.');
-    $this->assertTrue($refined->getDefinitions()->entry('att')->madeByRefinement(), 'A composed one is.');
-    $this->assertTrue($woken->getDefinitions()->entry('att')->madeByRefinement(), 'And it wakes so.');
+    $this->assertFalse($surface->entries()->entry('att')->madeByRefinement(), 'A sealed entry is not made by a refinement.');
+    $this->assertTrue($refined->entries()->entry('att')->madeByRefinement(), 'A composed one is.');
+    $this->assertTrue($woken->entries()->entry('att')->madeByRefinement(), 'And it wakes so.');
   }
 
   /**
@@ -342,7 +342,7 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $builder->addRefiner('target', new HandRefiner([]));
     $builder->setWatchedValueCheck($this->container->get('surface.watched_value_check'));
     $surface = $builder->seal();
-    $this->assertFalse($surface->getDefinitions()->entry('cfg')->isSchemaFirst());
+    $this->assertFalse($surface->entries()->entry('cfg')->isSchemaFirst());
     $this->assertSame(['cfg.x' => 'word'], $surface->refine(['cfg' => ['x' => 'word']])->withheldValues());
     $this->assertSame([], $surface->refine(['cfg' => ['x' => 3]])->withheldValues());
   }
@@ -402,14 +402,14 @@ class RefinedShellTest extends SurfaceKernelTestBase {
    */
   public function testRuledOutPlaceOfGivenDefinitionIsWithheld(): void {
     $frame = $this->definitionWatchedFrame();
-    $this->assertFalse($frame->getDefinitions()->entry('cfg')->isSchemaFirst());
-    $max = static fn (SurfaceInterface $refined): mixed => $refined->getDefinitions()->entry('target')->schema()->get('maxLength');
+    $this->assertFalse($frame->entries()->entry('cfg')->isSchemaFirst());
+    $max = static fn (SurfaceInterface $refined): mixed => $refined->entries()->entry('target')->schema()->get('maxLength');
     $this->assertSame(9, $max($frame->refine(['cfg' => ['x' => 'a'], 'mode' => 'out'])), 'Ruled out: the watcher stays at its bound.');
     $this->assertSame(3, $max($frame->refine(['cfg' => ['x' => 'a']])), 'Not ruled out: the watcher narrows.');
     $holder = new SurfaceBuilder(['att' => MapDataDefinition::create()->setLabel('Att')]);
     $holder->attach('att', new Attachment($frame));
     $surface = $holder->seal();
-    $inside = static fn (array $values): mixed => DefinitionSchema::propertyOf($surface->refine(['att' => $values])->getDefinitions()->entry('att')->schema(), 'target')?->get('maxLength');
+    $inside = static fn (array $values): mixed => DefinitionSchema::propertyOf($surface->refine(['att' => $values])->entries()->entry('att')->schema(), 'target')?->get('maxLength');
     $this->assertSame(9, $inside(['cfg' => ['x' => 'a'], 'mode' => 'out']), 'Inside an attachment\'s child, too.');
     $this->assertSame(3, $inside(['cfg' => ['x' => 'a']]));
   }
@@ -432,7 +432,7 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $builder->addRefiner('target', new HandRefiner(['v' => [['len', '', 3]]], 'w'));
     $builder->setWatchedValueCheck($this->container->get('surface.watched_value_check'));
     $surface = $builder->seal();
-    $max = static fn (array $values): mixed => $surface->refine($values)->getDefinitions()->entry('target')->schema()->get('maxLength');
+    $max = static fn (array $values): mixed => $surface->refine($values)->entries()->entry('target')->schema()->get('maxLength');
     $this->assertSame(9, $max(['mode' => 'out', 'w' => 'v']), 'Ruled out, still holding a value: the watcher stays at its bound.');
     $this->assertSame(3, $max(['mode' => 'in', 'w' => 'v']), 'Applying: the watcher narrows.');
   }
@@ -460,8 +460,8 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $surface = $builder->seal();
     $refined = $surface->refine(['e' => ['mode' => 'narrow']]);
     $bound = $refined->withPorts([$through->name => ['x' => 'v']]);
-    $entry = $bound->getDefinitions()->entry('e');
-    $this->assertNotSame($refined->getDefinitions()->entry('e'), $entry, 'The through port copies the refined shell.');
+    $entry = $bound->entries()->entry('e');
+    $this->assertNotSame($refined->entries()->entry('e'), $entry, 'The through port copies the refined shell.');
     $this->assertTrue($entry->madeByRefinement(), 'The copy carries the mark.');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('Refining "e" for the child attached there widened what it was given: inside the code property, the max of the Length constraint moved from 4 to 8.');
@@ -476,9 +476,9 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $builder->mountStructure('surface', new Attachment(static::child()));
     $builder->mountStructure('user', new Attachment(static::child()));
     $surface = $builder->seal();
-    $code = static fn (SurfaceInterface $refined, string $at): mixed => DefinitionSchema::propertyOf(DefinitionSchema::propertyOf($refined->getDefinitions()->entry('third_party_settings')->schema(), $at) ?? Schema::boolean(FALSE), 'code')?->get('maxLength');
+    $code = static fn (SurfaceInterface $refined, string $at): mixed => DefinitionSchema::propertyOf(DefinitionSchema::propertyOf($refined->entries()->entry('third_party_settings')->schema(), $at) ?? Schema::boolean(FALSE), 'code')?->get('maxLength');
     $one = $surface->refine(['third_party_settings' => ['user' => ['mode' => 'narrow']]]);
-    $this->assertTrue($one->getDefinitions()->entry('third_party_settings')->isSchemaFirst());
+    $this->assertTrue($one->entries()->entry('third_party_settings')->isSchemaFirst());
     $this->assertSame(4, $code($one, 'user'), 'The second structure refined, at its own path.');
     $this->assertSame(8, $code($one, 'surface'), 'The first left as sealed.');
     $mounts = ['surface' => ['mode' => 'narrower'], 'user' => ['mode' => 'narrow']];
@@ -615,10 +615,10 @@ class RefinedShellTest extends SurfaceKernelTestBase {
     $refined = $surface->refine(static::at('narrow'));
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
     $woken = unserialize(serialize($refined));
-    $entry = $woken->getDefinitions()->entry('att');
+    $entry = $woken->entries()->entry('att');
     $this->assertInstanceOf(Entry::class, $entry);
     $this->assertTrue($entry->isSchemaFirst());
-    $sealed = $entry->attachment->child->getDefinitions();
+    $sealed = $entry->attachment->child->entries();
     $this->assertSame($sealed->entry('note')?->schema(), DefinitionSchema::propertyOf($entry->schema(), 'note'), 'A key the child left as it was: the woken child\'s very schema.');
     $this->assertNotSame($sealed->entry('code')?->schema(), DefinitionSchema::propertyOf($entry->schema(), 'code'), 'A key the child refined: the shell\'s own.');
     $this->assertSame(4, DefinitionSchema::propertyOf($entry->schema(), 'code')?->get('maxLength'));

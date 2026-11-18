@@ -8,6 +8,7 @@ use Drupal\Component\Render\PlainTextOutput;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\ResourceBuild\Shapes;
 use Drupal\surface_examples_compliance\Shape\License;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Kernel\Fixture\FakeLanguageTranslator;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -66,7 +67,7 @@ class ConstraintMessageTranslationTest extends SurfaceKernelTestBase {
    */
   public function testTheBuildHandsTheValidatorTheSource(): void {
     $built = $this->container->get('surface.resources')->buildOperation('event.doors', 'configure');
-    $this->assertSame(self::MESSAGE, $built->getDefinitions()->get('opens')->getConstraints()['Regex']['message'], 'The message written with t() is its source string.');
+    $this->assertSame(self::MESSAGE, DerivedDefinition::in($built->entries(), 'opens')->getConstraints()['Regex']['message'], 'The message written with t() is its source string.');
 
     $license = DefinitionMetadata::shapeDefinition(Shapes::unaltered(License::class));
     $this->assertNotNull($license);

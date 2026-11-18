@@ -10,6 +10,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Tool\InputDefinitions;
 use Drupal\surface_values_test\HandBuiltSurfaces;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Values\ValueCorpus;
 use Drupal\Tests\surface\Values\ValueRecorder;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -436,7 +437,7 @@ abstract class ValueBaselineTestBase extends SurfaceKernelTestBase {
         }
       }
     };
-    $walk($surface->getDefinitions()->toArray(), '');
+    $walk(DerivedDefinition::all($surface->entries()), '');
     $places = array_map(static fn (array $place): array => $place['types'], ValueCorpus::places($document));
     $stated = [];
     foreach ($types as $pointer => $type) {

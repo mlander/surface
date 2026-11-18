@@ -7,20 +7,21 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\Schemas;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\DeclaredRefiner;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_resource_test\Resource\Parcel\ParcelResource;
-use Drupal\surface_resource_test\Structure\Sender\SenderIdentityStructure;
 use Drupal\surface_resource_test\Structure\Broken\MistypedConditionStructure;
 use Drupal\surface_resource_test\Structure\Broken\RequiresRuledOutStructure;
 use Drupal\surface_resource_test\Structure\Broken\UnconditionalRuleStructure;
 use Drupal\surface_resource_test\Structure\Broken\UnofferedRuleValueStructure;
 use Drupal\surface_resource_test\Structure\Broken\WideningRuleStructure;
-use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface_resource_test\Structure\Sender\SenderIdentityStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -100,9 +101,9 @@ class DeclaredNarrowingTest extends SurfaceKernelTestBase {
   protected function refined(array $values, string $key): DataDefinitionInterface {
     $refined = $this->parcel()->refine($values);
     if ($key !== 'customs') {
-      return $refined->getDefinition($key);
+      return DerivedDefinition::at($refined, $key);
     }
-    $mount = $refined->getDefinition('third_party_settings');
+    $mount = DerivedDefinition::at($refined, 'third_party_settings');
     $own = $mount instanceof ComplexDataDefinitionInterface ? $mount->getPropertyDefinition('surface_resource_test') : NULL;
     $customs = $own instanceof ComplexDataDefinitionInterface ? $own->getPropertyDefinition('customs') : NULL;
     $this->assertNotNull($customs, 'The customs code is mounted.');
@@ -156,7 +157,7 @@ class DeclaredNarrowingTest extends SurfaceKernelTestBase {
    * Tests each rule is bound as a refiner that gates nothing.
    */
   public function testTheRulesAreRefinersThatWaitForNothing(): void {
-    $definitions = $this->parcel()->getDefinitions();
+    $definitions = $this->parcel()->entries();
     $value = $definitions->entry('declared_value');
     $this->assertTrue($value->isDeclared());
     $this->assertFalse($value->isRefinedAtRuntime());

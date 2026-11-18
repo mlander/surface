@@ -32,14 +32,15 @@ use Drupal\surface_resource_test\Structure\Broken\Flat\FlatMixinClashStructure;
 use Drupal\surface_resource_test\Structure\Broken\Flat\FlatNestedStructure;
 use Drupal\surface_resource_test\Structure\Broken\Flat\FlatOwnerClashStructure;
 use Drupal\surface_resource_test\Structure\Broken\Flat\FlatTwoKeysStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Route;
-use PortableSchema\Builder\Schema;
 
 /**
  * Variants stored flat: asked for under their key, stored beside its sibling.
@@ -212,30 +213,30 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
    * Tests the variants sit at the gear, the setting on its map.
    */
   public function testTheVariantsSitAtTheGear(): void {
-    $map = $this->kit()->getDefinitions();
+    $map = $this->kit()->entries();
     $this->assertSame(self::KEYS, $map->names());
     $variants = $map->entry('gear')->variants;
     $this->assertSame('kind', $variants->by);
     $this->assertSame(['stove', 'tent'], $variants->variantIds(), 'In the order discovery found them.');
     $this->assertSame(Variants::FLAT, $variants->shell->getSetting(Variants::STORED_AS));
     $this->assertTrue($variants->storedFlat());
-    $this->assertSame(['weight', 'fuel'], $variants->variant('stove')->child->getDefinitions()->names());
-    $this->assertSame(['weight', 'poles', 'fly'], $variants->variant('tent')->child->getDefinitions()->names());
+    $this->assertSame(['weight', 'fuel'], $variants->variant('stove')->child->entries()->names());
+    $this->assertSame(['weight', 'poles', 'fly'], $variants->variant('tent')->child->entries()->names());
     $this->assertSame(['resource_test.kit.stove', 'resource_test.kit.tent'], array_map(static fn ($variant) => $variant->id, array_values($variants->variants)));
     $this->assertSame(array_fill_keys(self::KEYS, NULL), $this->kit()->getDefaultValues());
 
     // As properties, #[Setting] beside #[AttachVariants] says the same.
     $resources = $this->container->get('surface.resources');
-    $pitch = $resources->build(CampsiteResource::class, $resources->operation(CampsiteResource::class, 'configure'))->getDefinitions()->entry('pitches')->list->child();
-    $this->assertSame(['name', 'kind', 'gear'], $pitch->getDefinitions()->names());
-    $this->assertTrue($pitch->getDefinitions()->entry('gear')->variants->storedFlat());
+    $pitch = $resources->build(CampsiteResource::class, $resources->operation(CampsiteResource::class, 'configure'))->entries()->entry('pitches')->list->child();
+    $this->assertSame(['name', 'kind', 'gear'], $pitch->entries()->names());
+    $this->assertTrue($pitch->entries()->entry('gear')->variants->storedFlat());
   }
 
   /**
    * Tests the deciding key is offered the variants' values, by their labels.
    */
   public function testTheDecidingKeyOffersTheVariants(): void {
-    $kind = $this->kit()->getDefinition('kind');
+    $kind = DerivedDefinition::at($this->kit(), 'kind');
     $offered = $kind->getConstraints()['LabeledChoice'];
     $this->assertSame(['stove', 'tent'], $offered['choices']);
     $this->assertSame(['stove' => 'Stove', 'tent' => 'Tent'], array_map('strval', $offered['labels']));
@@ -247,16 +248,16 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
    */
   public function testEachValueChoosesWhatApplies(): void {
     $kit = $this->kit();
-    $tent = $kit->refine(['kind' => 'tent'])->getDefinition('gear');
+    $tent = DerivedDefinition::at($kit->refine(['kind' => 'tent']), 'gear');
     $this->assertInstanceOf(MapDataDefinition::class, $tent, 'Chosen: the tent\'s map.');
     $this->assertSame(['weight', 'poles', 'fly'], array_keys($tent->getPropertyDefinitions()));
     $this->assertTrue($tent->getPropertyDefinition('poles')->isRequired());
     $this->assertFalse($tent->getPropertyDefinition('weight')->isRequired());
-    $stove = $kit->refine(['kind' => 'stove'])->getDefinition('gear');
+    $stove = DerivedDefinition::at($kit->refine(['kind' => 'stove']), 'gear');
     $this->assertInstanceOf(MapDataDefinition::class, $stove);
     $this->assertSame(['weight', 'fuel'], array_keys($stove->getPropertyDefinitions()));
     $this->assertTrue($stove->getPropertyDefinition('fuel')->isRequired());
-    $this->assertSame('any', $kit->refine([])->getDefinition('gear')->getDataType(), 'Nothing chosen: the placeholder.');
+    $this->assertSame('any', DerivedDefinition::at($kit->refine([]), 'gear')->getDataType(), 'Nothing chosen: the placeholder.');
 
     $this->assertSame([], $this->refusals([]));
     try {
@@ -294,7 +295,7 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
     // Read under the gear, the fuel would have the pipeline read the gear
     // as written for another variant, and start the tent from its
     // defaults.
-    $variants = $this->kit()->getDefinitions()->entry('gear')->variants;
+    $variants = $this->kit()->entries()->entry('gear')->variants;
     $this->assertNull($variants->held('tent', ['fuel' => 'gas'] + self::READ['gear']));
     $this->assertSame(self::READ['gear'], $variants->held('tent', self::READ['gear']));
 
@@ -385,9 +386,9 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
   public function testAccessOmitsOrLocksOneVariant(): void {
     $this->setUpCurrentUser([], ['administer site configuration', 'hide stove']);
     $kit = $this->kit();
-    $this->assertSame(self::KEYS, $kit->getDefinitions()->names());
-    $this->assertSame(['tent'], $kit->getDefinition('kind')->getConstraints()['LabeledChoice']['choices'], 'Its value is not offered.');
-    $this->assertSame(['tent'], $kit->getDefinitions()->entry('gear')->variants->variantIds());
+    $this->assertSame(self::KEYS, $kit->entries()->names());
+    $this->assertSame(['tent'], DerivedDefinition::at($kit, 'kind')->getConstraints()['LabeledChoice']['choices'], 'Its value is not offered.');
+    $this->assertSame(['tent'], $kit->entries()->entry('gear')->variants->variantIds());
     $stored = $this->write(['title' => 'Kept apart']);
     $this->assertSame(['Kept apart', 'gas'], [$stored['title'], $stored['fuel']], 'What the access took away, storage keeps.');
     $full = $this->schema();
@@ -395,10 +396,10 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
     $this->assertSame(['tent'], array_keys($full['properties']['gear']['x-surface']['variants']));
 
     $this->setUpCurrentUser([], ['administer site configuration', 'inspect stove']);
-    $variants = $this->kit()->getDefinitions()->entry('gear')->variants;
+    $variants = $this->kit()->entries()->entry('gear')->variants;
     $this->assertSame(['stove', 'tent'], $variants->variantIds(), 'A locked variant is offered.');
-    $this->assertTrue($variants->variant('stove')->child->getDefinitions()->isLocked('fuel'), 'Locked whole.');
-    $this->assertFalse($variants->variant('tent')->child->getDefinitions()->isLocked('weight'));
+    $this->assertTrue($variants->variant('stove')->child->entries()->isLocked('fuel'), 'Locked whole.');
+    $this->assertFalse($variants->variant('tent')->child->entries()->isLocked('weight'));
   }
 
   /**
@@ -490,8 +491,8 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
     $full = $this->schema();
     $read = $this->container->get('surface.schema_reader')->structure($full, 'resource_test.kit', 'surface_resource_test');
     $built = $this->container->get('surface.resources')->buildStatic($read, new OperationContext('configure'));
-    $this->assertSame(self::KEYS, $built->getDefinitions()->names());
-    $this->assertSame(['stove', 'tent'], $built->getDefinitions()->entry('gear')->variants->variantIds());
+    $this->assertSame(self::KEYS, $built->entries()->names());
+    $this->assertSame(['stove', 'tent'], $built->entries()->entry('gear')->variants->variantIds());
     $again = $this->container->get('surface.contract_emitter')->emitFull($built, 'resource_test.kit', 'configure')->document['schema'];
     $this->assertSame(json_encode($full), json_encode($again));
   }
@@ -561,8 +562,8 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
     $woken = $resources->buildDeclared(KitResource::class, $context);
     $this->assertSame($cached + 1, $resources->buildCounts()['cached']);
     $this->assertNotSame($fresh, $woken);
-    $this->assertTrue($woken->getDefinitions()->entry('gear')->variants->storedFlat(), 'The setting survives the cache.');
-    $this->assertSame($fresh->getDefinitions()->entry('gear')->variants->variantIds(), $woken->getDefinitions()->entry('gear')->variants->variantIds());
+    $this->assertTrue($woken->entries()->entry('gear')->variants->storedFlat(), 'The setting survives the cache.');
+    $this->assertSame($fresh->entries()->entry('gear')->variants->variantIds(), $woken->entries()->entry('gear')->variants->variantIds());
     $this->assertSame($document, $emitted($woken));
   }
 
@@ -673,11 +674,11 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
    */
   public function testListedVariantIsRefusedWhenSettled(): void {
     $built = $this->container->get('surface.resources')->build(FlatListedClashStructure::class, new OperationContext('configure'));
-    $variant = $built->getDefinitions()->entry('gear')->variants->variant('a');
+    $variant = $built->entries()->entry('gear')->variants->variant('a');
     $this->assertFalse($variant->isSettled(), 'Held unsettled until a door reads it.');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('resource_test.broken.flat_listed_clash stores the variants at "gear" flat beside its own keys (Variants::STORED_AS), and the variant for "a", resource_test.broken.kit.weight_only, declares "weight", which resource_test.broken.flat_listed_clash declares too. Stored flat, the two would be one key: rename one, or store the variants under "gear".');
-    $variant->child->getDefinitions();
+    $variant->child->entries();
   }
 
   /**
@@ -689,11 +690,11 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
    */
   public function testListedVariantStoringFlatIsRefusedWhenSettled(): void {
     $built = $this->container->get('surface.resources')->build(FlatListedNestedStructure::class, new OperationContext('configure'));
-    $variant = $built->getDefinitions()->entry('gear')->variants->variant('a');
+    $variant = $built->entries()->entry('gear')->variants->variant('a');
     $this->assertFalse($variant->isSettled(), 'Held unsettled until a door reads it.');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('resource_test.broken.flat_listed_nested stores the variants at "gear" flat (Variants::STORED_AS), and the variant for "a", resource_test.broken.flat.listed_inner, stores the variants at "inner" flat too, at the same level. Read back, every key that is not the owner\'s is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.');
-    $variant->child->getDefinitions();
+    $variant->child->entries();
   }
 
   /**
@@ -713,18 +714,18 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
     $this->container->get('cache.surface_build')->deleteAll();
     $resources->forgetBuilds();
     $fresh = $resources->buildDeclared(FlatListedClashStructure::class, $context);
-    $this->assertFalse($fresh->getDefinitions()->entry('gear')->variants->variant('a')->isSettled());
+    $this->assertFalse($fresh->entries()->entry('gear')->variants->variant('a')->isSettled());
     $cached = $resources->buildCounts()['cached'];
     $resources->forgetBuilds();
     (new \ReflectionProperty(ResourceRegistry::class, 'read'))->setValue($registry, []);
     $woken = $resources->buildDeclared(FlatListedClashStructure::class, $context);
     $this->assertSame($cached + 1, $resources->buildCounts()['cached'], 'Read back from the build cache.');
     $this->assertNotSame($fresh, $woken);
-    $variant = $woken->getDefinitions()->entry('gear')->variants->variant('a');
+    $variant = $woken->entries()->entry('gear')->variants->variant('a');
     $this->assertFalse($variant->isSettled(), 'Stored as what builds it.');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('resource_test.broken.flat_listed_clash stores the variants at "gear" flat beside its own keys (Variants::STORED_AS), and the variant for "a", resource_test.broken.kit.weight_only, declares "weight", which resource_test.broken.flat_listed_clash declares too.');
-    $variant->child->getDefinitions();
+    $variant->child->entries();
   }
 
   /**
@@ -745,7 +746,7 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
     $derived = new \ReflectionProperty(Entry::class, 'definition');
     $unread = [];
     foreach ($built as $id => $surface) {
-      foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      foreach ($surface->entries()->entries() as $name => $entry) {
         $this->assertTrue($entry->isSchemaFirst());
         if ($derived->getValue($entry) === NULL) {
           $unread[$id . '.' . $name] = $entry;

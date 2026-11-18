@@ -355,7 +355,7 @@ class OperationRunnerTest extends SurfaceKernelTestBase {
     $this->assertFalse($prepared->isRefused());
     $this->assertTrue($prepared->hasBuilt());
     $this->assertFalse($prepared->hasStorage());
-    $this->assertNotEmpty($prepared->surface()->getDefinitions()->toArray(), 'It is built.');
+    $this->assertNotEmpty($prepared->surface()->entries()->toArray(), 'It is built.');
     $this->assertThrowsMessage(fn () => $prepared->storage(), 'resource_test.larder.rack names no storage of its own: its host or its parent stores it.');
 
     $run = $this->runner()->run('resource_test.larder.rack', 'restock', $arguments, [], account: $stocker);

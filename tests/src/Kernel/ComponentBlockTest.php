@@ -10,6 +10,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Variants\ComponentSlots;
 use Drupal\surface_examples_component_block\Plugin\Block\ComponentBlock;
 use Drupal\surface_examples_component_block\Structure\ComponentBlockStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -143,31 +144,31 @@ class ComponentBlockTest extends SurfaceKernelTestBase {
    */
   public function testTheStructureIsComponentPropsAndSlots(): void {
     $built = $this->container->get('surface.resources')->build(ComponentBlockStructure::class, new OperationContext('configure'));
-    $this->assertSame(['component', 'props', 'slots'], $built->getDefinitions()->names());
-    $this->assertFalse($built->getDefinition('component')->isRequired(), 'The block is built before anything is chosen, so no component is required.');
+    $this->assertSame(['component', 'props', 'slots'], $built->entries()->names());
+    $this->assertFalse(DerivedDefinition::at($built, 'component')->isRequired(), 'The block is built before anything is chosen, so no component is required.');
     $this->assertNull($built->getDefault('component'));
-    $this->assertSame(self::COMPONENTS, array_keys($built->getDefinitions()->entry('props')->variants->variants));
-    $this->assertSame(self::COMPONENTS, array_keys($built->getDefinitions()->entry('slots')->variants->variants), 'The slots offer the same components: one with none is a variant with no keys.');
+    $this->assertSame(self::COMPONENTS, array_keys($built->entries()->entry('props')->variants->variants));
+    $this->assertSame(self::COMPONENTS, array_keys($built->entries()->entry('slots')->variants->variants), 'The slots offer the same components: one with none is a variant with no keys.');
     $this->assertContains('config:core.extension', $built->getCacheTags());
-    $this->assertSame('Hero', (string) $this->options()->resolve($built->getDefinition('component'))->options['surface_examples:hero']);
-    $card = $built->getDefinitions()->entry('props')->variants->variants['surface_examples:card']->child;
-    $this->assertSame(['heading', 'tone', 'link'], $card->getDefinitions()->names());
-    $this->assertTrue($card->getDefinition('heading')->isRequired());
+    $this->assertSame('Hero', (string) $this->options()->resolve(DerivedDefinition::at($built, 'component'))->options['surface_examples:hero']);
+    $card = $built->entries()->entry('props')->variants->variants['surface_examples:card']->child;
+    $this->assertSame(['heading', 'tone', 'link'], $card->entries()->names());
+    $this->assertTrue(DerivedDefinition::at($card, 'heading')->isRequired());
 
     // One key per slot, each its kind and what that kind holds.
-    $slots = array_map(static fn ($variant): array => $variant->child->getDefinitions()->names(), $built->getDefinitions()->entry('slots')->variants->variants);
+    $slots = array_map(static fn ($variant): array => $variant->child->entries()->names(), $built->entries()->entry('slots')->variants->variants);
     $this->assertSame([
       'surface_examples:call_to_action' => [],
       'surface_examples:card' => ['body'],
       'surface_examples:hero' => ['actions'],
       'surface_examples:section' => ['content'],
     ], $slots);
-    $slot = static fn (string $component, string $name) => $built->getDefinitions()->entry('slots')->variants->variants[$component]->child->getDefinitions()->entry($name)->attachment->child;
-    $this->assertSame(['kind', 'text'], $slot('surface_examples:card', 'body')->getDefinitions()->names());
-    $this->assertSame(['kind', 'text', 'component', 'components'], $slot('surface_examples:hero', 'actions')->getDefinitions()->names());
-    $nested = $slot('surface_examples:section', 'content')->getDefinitions()->entry('component')->attachment->child;
-    $this->assertSame(['component', 'props', 'slots'], $nested->getDefinitions()->names(), 'A nested component is the same three keys again.');
-    $this->assertSame(['surface_examples:card', 'surface_examples:hero'], array_keys($nested->getDefinitions()->entry('slots')->variants->variants));
+    $slot = static fn (string $component, string $name) => $built->entries()->entry('slots')->variants->variants[$component]->child->entries()->entry($name)->attachment->child;
+    $this->assertSame(['kind', 'text'], $slot('surface_examples:card', 'body')->entries()->names());
+    $this->assertSame(['kind', 'text', 'component', 'components'], $slot('surface_examples:hero', 'actions')->entries()->names());
+    $nested = $slot('surface_examples:section', 'content')->entries()->entry('component')->attachment->child;
+    $this->assertSame(['component', 'props', 'slots'], $nested->entries()->names(), 'A nested component is the same three keys again.');
+    $this->assertSame(['surface_examples:card', 'surface_examples:hero'], array_keys($nested->entries()->entry('slots')->variants->variants));
 
     // The plugin names it, and its defaults are its configuration's.
     $block = $this->container->get('plugin.manager.block')->createInstance(ComponentBlock::ID, []);

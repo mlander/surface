@@ -44,7 +44,7 @@ class DefinitionReadCallersTest extends UnitTestCase {
    *   schema of its own facts around its child's entries' schemas (composed()
    *   for a collection, around a collection's item and a mount's, and
    *   framed() for a map of a child's keys). The seal makes each entry
-   *   schema-first (Entry::sealed(), from DefinitionMap::fromArrays() with
+   *   schema-first (Entry::sealed(), from Entries::fromArrays() with
    *   schemaFirst): a shell is handed its own facts alone and composed by
    *   the same calls, its child's keys placed by name (since 2026-11-15);
    *   fromArrays() reads nothing itself.

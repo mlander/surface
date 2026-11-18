@@ -230,7 +230,7 @@ it, for every connector:
 <!-- excerpt: src/Tool/OperationInputs.php -->
 
 ```php
-$key = $neutral?->getDefinitions()->entry($parameter->name);
+$key = $neutral?->entries()->entry($parameter->name);
 if ($key !== NULL && $key->attachment === NULL && $key->variants === NULL && $key->list === NULL) {
   $input = $this->inputDefinitions->fromSchema($key->schema());
   $input->setRequired(!$parameter->optional);

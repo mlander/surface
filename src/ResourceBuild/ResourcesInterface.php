@@ -56,7 +56,7 @@ interface ResourcesInterface {
    * applied, locking or leaving out its keys as build() does, and one that
    * is runtime (it read the subject, a value or site state) is set aside:
    * its keys are kept as the static answers leave them and marked
-   * (DefinitionMap::isRuntimeAccess()). It is what the full schema and a
+   * (Entries::isRuntimeAccess()). It is what the full schema and a
    * tool's listing are emitted from, which say for the account that asks
    * what that account will find and mark what only the subject decides;
    * the form, the pipeline and the schema for one set of values read
@@ -111,7 +111,7 @@ interface ResourcesInterface {
    * The build buildStatic() makes, with every access answer set aside,
    * static or runtime, the operation's permission at a child among them,
    * and none asked: each key an answer could lock or leave out is kept as
-   * declared and marked (DefinitionMap::isRuntimeAccess()), so nothing in
+   * declared and marked (Entries::isRuntimeAccess()), so nothing in
    * it is any account's view. It is what a listing cached for every
    * account is made from, the derived tool definitions, and a listing an
    * account asks for applies that account's answers again

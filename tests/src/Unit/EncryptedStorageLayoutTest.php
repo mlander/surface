@@ -11,7 +11,7 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Attachment;
 use Drupal\surface\Entry;
 use Drupal\surface\Surface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Storage\EncryptedStorageLayout;
 use Drupal\surface\Storage\SecretCodecException;
@@ -63,7 +63,7 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
   protected function surface(): Surface {
     $token = DataDefinition::create('string')->setLabel('API key');
     DefinitionMetadata::setSecret($token);
-    return new Surface(DefinitionMap::fromArrays(definitions: [
+    return new Surface(Entries::fromArrays(definitions: [
       'endpoint' => DataDefinition::create('string')->setLabel('Endpoint'),
       'token' => $token,
     ]));
@@ -84,11 +84,11 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
     foreach ([FALSE, TRUE] as $schema_first) {
       // The child as a sealed child is, and the map of its keys the build
       // makes of it; then the surface the layout reads, made in each form.
-      $child = new Surface(DefinitionMap::fromArrays(definitions: ['code' => DataDefinition::create('string')->setLabel('Code')]));
+      $child = new Surface(Entries::fromArrays(definitions: ['code' => DataDefinition::create('string')->setLabel('Code')]));
       $place = Attachment::mapOf(MapDataDefinition::create()->setLabel('Place'), $child);
       $token = DataDefinition::create('string')->setLabel('API key');
       DefinitionMetadata::setSecret($token);
-      $surface = new Surface(DefinitionMap::fromArrays(
+      $surface = new Surface(Entries::fromArrays(
         definitions: [
           'endpoint' => DataDefinition::create('string')->setLabel('Endpoint'),
           'token' => $token,
@@ -99,7 +99,7 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
       ));
       $found[] = EncryptedStorageLayout::secretKeys($surface);
       if ($schema_first) {
-        foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+        foreach ($surface->entries()->entries() as $name => $entry) {
           $this->assertTrue($entry->isSchemaFirst());
           $this->assertNull($derived->getValue($entry), sprintf('Reading whether "%s" is secret derives no definition.', $name));
         }
@@ -148,7 +148,7 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
    * types declare no secret must not grow a layer that does nothing.
    */
   public function testSurfaceWithoutSecretsIsNotWrapped(): void {
-    $surface = new Surface(DefinitionMap::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(definitions: [
       'endpoint' => DataDefinition::create('string'),
     ]));
     $inner = $this->passThroughLayout();

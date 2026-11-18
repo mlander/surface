@@ -5,25 +5,26 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Entity\ContentEntityInterface;
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\Reference\References;
-use Drupal\surface\ResourceBuild\ResourceBlueprint;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
+use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\node\Entity\NodeType;
 use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Reference\References;
 use Drupal\surface\ResourceBuild\OperationRoute;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_examples\ConceptPanel;
 use Drupal\surface_examples\ExamplePanels;
 use Drupal\surface_examples_references\Resource\SponsorshipResource;
 use Drupal\surface_examples_references\Sponsorship;
-use Drupal\surface\Tool\OperationInputs;
-use Drupal\node\Entity\NodeType;
+use Drupal\Tests\surface\DerivedDefinition;
+use Drupal\Tests\user\Traits\UserCreationTrait;
+use Drupal\tool\TypedData\MapInputDefinition;
 use Drupal\user\Entity\Role;
 use Drupal\user\Entity\User;
-use Drupal\tool\TypedData\MapInputDefinition;
-use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
@@ -158,33 +159,33 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
    */
   public function testTheThreeSpellingsBuild(): void {
     $built = $this->built();
-    $venue = $built->getDefinition('venue');
+    $venue = DerivedDefinition::at($built, 'venue');
     $this->assertSame('string', $venue->getDataType(), 'A config entity keeps its id as a string.');
     $this->assertSame(['entityTypeId' => 'event_venue'], $venue->getConstraints()[References::CONSTRAINT]);
     $this->assertNull($venue->getSetting(References::CONTENT), 'A config entity is stored by its id.');
-    $contact = $built->getDefinition('contact');
+    $contact = DerivedDefinition::at($built, 'contact');
     $this->assertSame('integer', $contact->getDataType(), "A user's id field is an integer.");
     $this->assertSame(['entityTypeId' => 'user'], $contact->getConstraints()[References::CONSTRAINT]);
     $this->assertTrue($contact->getSetting(References::CONTENT), 'The build marks a key that refers to a content entity, for the storage that keeps its uuid.');
-    $page = $built->getDefinition('page');
+    $page = DerivedDefinition::at($built, 'page');
     $this->assertSame('integer', $page->getDataType());
     $this->assertSame(['entityTypeId' => 'node', 'bundles' => ['article']], $page->getConstraints()[References::CONSTRAINT], 'The bundle is fixed: the selection handler is handed it as its target bundles.');
 
     // Of any type: a structure the example declares, its entity type
     // filtered by the structure's own declaration.
-    $thing = $built->getDefinitions()->entry('thing');
+    $thing = $built->entries()->entry('thing');
     $this->assertNotNull($thing->attachment);
     $this->assertSame('event.sponsorship.thing', $thing->attachment->id);
     $child = $thing->attachment->child;
-    $this->assertSame(['entity_type', 'id'], $child->getDefinitions()->names());
-    $this->assertSame(['interface' => ContentEntityInterface::class], $child->getDefinition('entity_type')->getConstraints()[References::TYPE_CONSTRAINT]);
-    $this->assertSame('string', $child->getDefinition('id')->getDataType(), 'Entity types keep their ids as integers or strings: any id is a string.');
+    $this->assertSame(['entity_type', 'id'], $child->entries()->names());
+    $this->assertSame(['interface' => ContentEntityInterface::class], DerivedDefinition::at($child, 'entity_type')->getConstraints()[References::TYPE_CONSTRAINT]);
+    $this->assertSame('string', DerivedDefinition::at($child, 'id')->getDataType(), 'Entity types keep their ids as integers or strings: any id is a string.');
     // Its refiner narrows the id by the constraint every reference key
     // carries, so one mechanism serves all three.
-    $refined = $child->refine(['entity_type' => 'node'], FALSE)->getDefinition('id');
+    $refined = DerivedDefinition::at($child->refine(['entity_type' => 'node'], FALSE), 'id');
     $this->assertSame(['entityTypeId' => 'node'], $refined->getConstraints()[References::CONSTRAINT]);
-    $credit = $built->getDefinitions()->entry('credit')->attachment->child;
-    $this->assertSame(['entityTypeId' => 'node', 'bundles' => ['article']], $credit->refine(['entity_type' => 'node'], FALSE)->getDefinition('id')->getConstraints()[References::CONSTRAINT], 'A bundle list narrows the id of each entity type it names.');
+    $credit = $built->entries()->entry('credit')->attachment->child;
+    $this->assertSame(['entityTypeId' => 'node', 'bundles' => ['article']], DerivedDefinition::at($credit->refine(['entity_type' => 'node'], FALSE), 'id')->getConstraints()[References::CONSTRAINT], 'A bundle list narrows the id of each entity type it names.');
 
     // What the build refuses of a reference key, and the type strings
     // add() refuses naming the constraint.
@@ -360,21 +361,21 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
    */
   public function testTheCandidatesAreTheAccounts(): void {
     $options = $this->options();
-    $page = $this->built()->getDefinition('page');
+    $page = DerivedDefinition::at($this->built(), 'page');
     $set = $options->resolve($page);
     $nodes = $this->nodes();
     $this->assertSame([$nodes['draft'], $nodes['article']], array_keys($set->options));
     $this->assertContains('node_list', $set->getCacheTags());
     $this->assertContains('config:surface.settings', $set->getCacheTags(), 'Whether it is listed at all is the limit\'s.');
     $this->assertSame(['user.permissions', 'user.node_grants:view'], $set->getCacheContexts(), 'What core\'s node selection reads.');
-    $venue = $options->resolve($this->built()->getDefinition('venue'));
+    $venue = $options->resolve(DerivedDefinition::at($this->built(), 'venue'));
     $this->assertContains('config:event_venue_list', $venue->getCacheTags(), "A config entity type's list tag.");
 
     // An account that may not see unpublished content is not offered the
     // draft, and is refused it.
     $this->setUpCurrentUser([], ['access content', 'set event sponsorship']);
     $this->container->get('surface.resources')->forgetBuilds();
-    $this->assertSame([$nodes['article']], array_keys($this->options()->resolve($this->built()->getDefinition('page'))->options));
+    $this->assertSame([$nodes['article']], array_keys($this->options()->resolve(DerivedDefinition::at($this->built(), 'page'))->options));
     $this->assertSame([
       'success' => FALSE,
       'refused' => ['/page' => sprintf('This entity (node: %d) cannot be referenced.', $nodes['draft'])],
@@ -578,7 +579,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
     $this->assertNotNull($account);
     $this->assertTrue($account->hasPermission('set event sponsorship'));
     $this->assertFalse($account->hasPermission('bypass node access'));
-    $this->assertInstanceOf(MapDataDefinition::class, $this->built()->getDefinition('thing'));
+    $this->assertInstanceOf(MapDataDefinition::class, DerivedDefinition::at($this->built(), 'thing'));
   }
 
   /**

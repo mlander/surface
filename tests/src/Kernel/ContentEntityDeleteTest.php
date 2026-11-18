@@ -322,12 +322,12 @@ class ContentEntityDeleteTest extends SurfaceKernelTestBase {
     $update = $resources->buildOperation(self::PAGE, 'update', ['id' => $node->id()]);
     $delete = $resources->buildOperation(self::PAGE, 'delete', ['id' => $node->id()]);
     $locked = static fn ($built): array => array_values(array_filter(
-      $built->getDefinitions()->names(),
+      $built->entries()->names(),
       [$built, 'isLocked'],
     ));
-    $this->assertSame($update->getDefinitions()->names(), $delete->getDefinitions()->names(), 'The delete carries the keys the update carries.');
+    $this->assertSame($update->entries()->names(), $delete->entries()->names(), 'The delete carries the keys the update carries.');
     $this->assertSame($locked($update), $locked($delete));
-    $this->assertNull($delete->getDefinitions()->entry(EntityTestHooks::HIDDEN), 'A field the account may not see is not there.');
+    $this->assertNull($delete->entries()->entry(EntityTestHooks::HIDDEN), 'A field the account may not see is not there.');
     $this->assertContains(EntityTestHooks::LOCKED, $locked($delete));
     $this->assertContains('uid', $locked($delete), 'Core lets only administer nodes change the author.');
 

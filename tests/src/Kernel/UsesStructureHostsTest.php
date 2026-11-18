@@ -7,23 +7,24 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\surface\Form\SurfacePluginForm;
+use Drupal\surface\Pipeline\Storage\PluginConfigurationStorage;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Resource\Attribute\UsesStructure;
-use Drupal\surface\Pipeline\Storage\PluginConfigurationStorage;
-use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
 use Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter;
 use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
+use Drupal\surface_resource_test\Alter\StickyNoteAlter;
 use Drupal\surface_resource_test\PlainThresholdPlugin;
 use Drupal\surface_resource_test\Plugin\Action\ThresholdAction;
 use Drupal\surface_resource_test\Plugin\Block\StickyNoteBlock;
 use Drupal\surface_resource_test\Plugin\Condition\ThresholdCondition;
 use Drupal\surface_resource_test\Resource\PinnedNoteResource;
 use Drupal\surface_resource_test\Structure\ThresholdStructure;
-use Drupal\surface_resource_test\Alter\StickyNoteAlter;
-use Drupal\field\Entity\FieldConfig;
-use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -129,15 +130,15 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
 
     // Built by id as well as by class, on the class, with no instance.
     $built = $this->container->get('surface.resources')->build('field_formatter:surface_examples_plugins_string', new OperationContext('configure'));
-    $this->assertSame(['prefix', 'casing', 'variant'], $built->getDefinitions()->names());
-    $this->assertSame(['text', 'classes'], $built->getOutputDefinitions()->names());
+    $this->assertSame(['prefix', 'casing', 'variant'], $built->entries()->names());
+    $this->assertSame(['text', 'classes'], $built->outputEntries()->names());
     // The refiner rides along as the class name, so a cached form holds
     // no formatter.
     $serialized = serialize($built);
     $this->assertStringNotContainsString('O:' . strlen(ExampleFormatter::class) . ':"' . ExampleFormatter::class . '"', $serialized);
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
     $restored = unserialize($serialized);
-    $this->assertSame(['muted', 'quiet'], $this->variants($restored->refine(['casing' => 'lowercase'])->getDefinition('variant')));
+    $this->assertSame(['muted', 'quiet'], $this->variants(DerivedDefinition::at($restored->refine(['casing' => 'lowercase']), 'variant')));
   }
 
   /**
@@ -163,15 +164,15 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
     $block = $this->container->get('plugin.manager.block')->createInstance('surface_resource_test_sticky_note');
     $this->assertInstanceOf(StickyNoteBlock::class, $block);
     $surface = $block->getSurface();
-    $this->assertSame(['color', 'note'], $surface->getDefinitions()->names());
+    $this->assertSame(['color', 'note'], $surface->entries()->names());
     // Defaults read off the block's own static defineInputs().
     $this->assertSame('yellow', $block->getConfiguration()['color']);
     $this->assertSame('Sticky', $block->getConfiguration()['note']);
     // The alter that names the block class applies.
-    $this->assertSame('Written on the note.', (string) $surface->getDefinition('note')->getDescription());
+    $this->assertSame('Written on the note.', (string) DerivedDefinition::at($surface, 'note')->getDescription());
     // The static refiner runs.
-    $this->assertSame(['max' => 10], $surface->refine(['color' => 'pink'])->getDefinition('note')->getConstraints()['Length']);
-    $this->assertSame(['max' => 40], $surface->refine(['color' => 'yellow'])->getDefinition('note')->getConstraints()['Length']);
+    $this->assertSame(['max' => 10], DerivedDefinition::at($surface->refine(['color' => 'pink']), 'note')->getConstraints()['Length']);
+    $this->assertSame(['max' => 40], DerivedDefinition::at($surface->refine(['color' => 'yellow']), 'note')->getConstraints()['Length']);
 
     $result = $this->pipeline()->submit($surface, ['color' => 'pink', 'note' => 'Far too long a note'], $block->getSurfaceStorage());
     $this->assertFalse($result->committed);
@@ -187,7 +188,7 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
   public function testTheBlockHost(): void {
     $block = $this->container->get('plugin.manager.block')->createInstance('surface_resource_test_pinned_note');
     $surface = $block->getSurface();
-    $this->assertSame(['note'], $surface->getDefinitions()->names());
+    $this->assertSame(['note'], $surface->entries()->names());
     // Defaults reach the configuration through the host, beside the
     // host's own keys.
     $this->assertSame('Pinned', $block->getConfiguration()['note']);
@@ -212,8 +213,8 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
       'third_party_settings' => [],
     ]);
     $surface = $formatter->getSurface();
-    $this->assertSame(['prefix', 'casing', 'variant'], $surface->getDefinitions()->names());
-    $this->assertSame(['text', 'classes'], $surface->getOutputDefinitions()->names());
+    $this->assertSame(['prefix', 'casing', 'variant'], $surface->entries()->names());
+    $this->assertSame(['text', 'classes'], $surface->outputEntries()->names());
     $form = $formatter->settingsForm([], new FormState());
     $this->assertSame(['quiet' => 'Quiet', 'muted' => 'Muted'], array_map('strval', $form['variant']['#options']));
   }
@@ -225,7 +226,7 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
     $condition = $this->container->get('plugin.manager.condition')->createInstance('surface_resource_test_threshold', ['reading' => 20]);
     $this->assertInstanceOf(ThresholdCondition::class, $condition);
     $surface = $condition->getSurface();
-    $this->assertSame(['mode', 'threshold', 'reading'], $surface->getDefinitions()->names());
+    $this->assertSame(['mode', 'threshold', 'reading'], $surface->entries()->names());
     // The host's own key stays the host's.
     $configuration = $condition->getConfiguration();
     $this->assertSame('surface_resource_test_threshold', $configuration['id']);
@@ -233,8 +234,8 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
     $this->assertSame(10, $configuration['threshold']);
     $this->assertTrue($condition->evaluate());
 
-    $this->assertSame(0, $this->range($surface->refine(['mode' => 'at_least'])->getDefinition('threshold'))['min']);
-    $this->assertSame(1, $this->range($surface->refine(['mode' => 'at_most'])->getDefinition('threshold'))['min']);
+    $this->assertSame(0, $this->range(DerivedDefinition::at($surface->refine(['mode' => 'at_least']), 'threshold'))['min']);
+    $this->assertSame(1, $this->range(DerivedDefinition::at($surface->refine(['mode' => 'at_most']), 'threshold'))['min']);
 
     $form = $condition->buildConfigurationForm([], new FormState());
     $this->assertArrayHasKey('threshold', $form);
@@ -273,7 +274,7 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
     $field->save();
     $item = $this->container->get('typed_data_manager')->create($field->getItemDefinition());
     $surface = $item->getFieldSurface();
-    $this->assertSame(['available_countries', 'langcode_override', 'field_overrides'], $surface->getDefinitions()->names());
+    $this->assertSame(['available_countries', 'langcode_override', 'field_overrides'], $surface->entries()->names());
     $this->assertSame(['available_countries' => [], 'langcode_override' => NULL, 'field_overrides' => []], $surface->getDefaultValues());
   }
 

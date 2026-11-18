@@ -6,8 +6,6 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Render\Element;
-use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Form\SurfaceFormBuilder;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
@@ -15,7 +13,10 @@ use Drupal\surface\Resource\Arrangement;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
 use Drupal\surface\ResourceBuild\ResourceBlueprintAdditions;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_resource_test\Resource\Studio\StudioResource;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -77,7 +78,7 @@ class ArrangementTest extends SurfaceKernelTestBase {
    */
   public function testTheArrangementIsOnTheSealedKeys(): void {
     $studio = $this->studio();
-    $rate = DefinitionMetadata::arrangementOf($studio->getDefinition('rate'));
+    $rate = DefinitionMetadata::arrangementOf(DerivedDefinition::at($studio, 'rate'));
     $this->assertInstanceOf(Arrangement::class, $rate);
     $this->assertSame([
       'group' => ['id' => 'pricing', 'label' => 'Pricing', 'as' => 'details', 'collapsed' => TRUE],
@@ -86,25 +87,25 @@ class ArrangementTest extends SurfaceKernelTestBase {
       'suffix' => 'per hour',
       'help' => 'Whole dollars.',
     ], $rate->toArray());
-    $this->assertSame(['group' => ['id' => 'hours', 'label' => 'Opening hours', 'as' => 'fieldset'], 'weight' => 1], DefinitionMetadata::arrangementOf($studio->getDefinition('closes'))->toArray());
-    $this->assertSame(['weight' => -10], DefinitionMetadata::arrangementOf($studio->getDefinition('notes'))->toArray());
+    $this->assertSame(['group' => ['id' => 'hours', 'label' => 'Opening hours', 'as' => 'fieldset'], 'weight' => 1], DefinitionMetadata::arrangementOf(DerivedDefinition::at($studio, 'closes'))->toArray());
+    $this->assertSame(['weight' => -10], DefinitionMetadata::arrangementOf(DerivedDefinition::at($studio, 'notes'))->toArray());
 
     // The alter's words over the owner's: it gave the name, which the
     // owner did not arrange, a placeholder and a help text, and weighed
     // the deposit inside the owner's group, which stays.
-    $this->assertSame(['placeholder' => 'Riverside studio', 'help' => 'Shown on the door.'], DefinitionMetadata::arrangementOf($studio->getDefinition('name'))->toArray());
+    $this->assertSame(['placeholder' => 'Riverside studio', 'help' => 'Shown on the door.'], DefinitionMetadata::arrangementOf(DerivedDefinition::at($studio, 'name'))->toArray());
     $this->assertSame([
       'group' => ['id' => 'pricing', 'label' => 'Pricing', 'as' => 'details', 'collapsed' => TRUE],
       'weight' => -1,
-    ], DefinitionMetadata::arrangementOf($studio->getDefinition('deposit'))->toArray());
+    ], DefinitionMetadata::arrangementOf(DerivedDefinition::at($studio, 'deposit'))->toArray());
 
     // Refinement keeps it: the arrangement is the key's, whatever the
     // values.
-    $this->assertSame('For example, 40', (string) DefinitionMetadata::arrangementOf($studio->refine(['rate' => 10])->getDefinition('rate'))->placeholder);
+    $this->assertSame('For example, 40', (string) DefinitionMetadata::arrangementOf(DerivedDefinition::at($studio->refine(['rate' => 10]), 'rate'))->placeholder);
 
     // Nothing in it is a rule: the example is still an example, and is no
     // placeholder of its own.
-    $this->assertSame([40], DefinitionMetadata::getExamples($studio->getDefinition('rate')));
+    $this->assertSame([40], DefinitionMetadata::getExamples(DerivedDefinition::at($studio, 'rate')));
   }
 
   /**

@@ -1639,7 +1639,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
         'allowFallback' => TRUE,
       ]),
     ]);
-    $this->assertNull($this->options()->resolve($plugin->getDefinitions()->get('k')));
+    $this->assertNull($this->options()->resolve($plugin->entries()->get('k')));
     $schema = $full($plugin);
     $this->assertArrayNotHasKey('oneOf', $schema['properties']['k']);
     $this->assertTrue($this->pipeline()->validate($plugin, ['k' => 'no_such_block'])->isEmpty());
@@ -1648,7 +1648,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
     $strict = $this->surface([
       'k' => DataDefinition::create('string')->setLabel('K')->addConstraint('PluginExists', ['manager' => 'plugin.manager.block']),
     ]);
-    $this->assertNotNull($this->options()->resolve($strict->getDefinitions()->get('k')));
+    $this->assertNotNull($this->options()->resolve($strict->entries()->get('k')));
   }
 
   /**

@@ -16671,8 +16671,8 @@ every check.
 ### Every verb returns the blueprint
 
 `addMap()`, `attach()`, `attachList()`, `attachVariants()`,
-`attachEach()`, `addEach()`, `addDefinition()`, `compute()` and
-`addList()` return the blueprint, as `add()` does (decision 1 of
+`attachEach()`, `addEach()`, `addDefinition()` and `compute()` return
+the blueprint, as `add()` does (decision 1 of
 2026-11-14). A key is worded through its schema or the verb's named
 arguments (`description:`, `required:`, `storedAs:`), never through a
 definition a verb hands back. `add()` takes a `Schema` alone, `compute()`
@@ -16686,12 +16686,15 @@ alone.
   spelling through `addTyped()`, `addEachTyped()` and `computeTyped()`,
   all `@internal`. Slice 35's later parts remove them with the
   definitions.
-- **`addList()` stays, for a list of plain maps.** At an input a list of
-  objects is a collection of children (decided 2026-11-17), so a list
-  whose item is a plain map with no child has no schema spelling. The
-  value baseline pins one, `values_test.keys` `/slots`: written as a
-  schema it moved 17 cases. `addList()` now documents that one use; the
-  blueprint keeps 17 methods.
+- **`addList()` is gone; `addDefinition()` takes a list.** At an input
+  a list of objects is a collection of children (decided 2026-11-17), so
+  a list whose item is a plain map with no child has no schema spelling.
+  The value baseline pins one, `values_test.keys` `/slots`: written as a
+  schema it moved 17 cases. It is handed to `addDefinition()` as a
+  `ListDataDefinition`, the Typed Data door decision 6 keeps; a map is
+  still refused there. The readers that build a list definition declare
+  it the same way. The blueprint has 16 methods (decision 5 of
+  2026-11-14).
 - **An author's plain map may say its default.** `Schema::object([...])
   ->default([])` is read as a map that starts empty, as
   `AddressFieldSettingsResource`'s overrides do. Only an author's
@@ -16762,3 +16765,24 @@ library has no id for (`decimal`, `timespan`, `duration_iso8601`, the
 three types `NotDrawnWidget` leaves out), the `any` type told apart
 from those, the key a variants placeholder is chosen by, and whether a
 key holds one variant, is fixed or holds a value (`OptionsWidget`).
+
+### A data surface answers schemas
+
+`DefinitionMap` is `Entries`: the entries of a data surface, each
+holding its key's schema. `SurfaceInterface::entries()` and
+`outputEntries()` replace `getDefinitions()` and
+`getOutputDefinitions()`, and `getSchema($key)` replaces
+`getDefinition($key)`. Iterating the entries, `get()` and array access
+give each key's schema. `getPortDefinition()` is gone
+(`getPortSchema()` answers), and `withPorts()` takes the ports' schemas.
+
+- **The build cache names its format.** A cache id carries
+  `Resources::BUILD_FORMAT` (`entries`), so a row written before the
+  rename is never read.
+- **`Entries::toArray()` still gives definitions, for the edges.** The
+  value baseline's own walk reads it as definitions, and that class is
+  not edited in this stream. It yields schemas when an entry holds its
+  schema alone.
+- **Tests read a definition at the edge.** `Drupal\Tests\surface\
+  DerivedDefinition` gives the definition of a data surface's key from
+  its entry, for the tests that hold a fact a definition states.

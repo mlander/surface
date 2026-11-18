@@ -43,7 +43,7 @@ use Drupal\surface\Pipeline\PreparedValues;
  *   configured through a contributed key depends on the module that
  *   contributed it. The provenance is on the data surface now, as each
  *   entry's contributor and contributed values; read it with
- *   DefinitionMap::byContributor() or contributions().
+ *   Entries::byContributor() or contributions().
  *
  * @see docs/storage.md
  */
@@ -66,21 +66,21 @@ final class PluginConfigurationStorage implements SurfaceStorageInterface {
    * {@inheritdoc}
    */
   public function load(SurfaceInterface $surface): array {
-    return array_intersect_key($this->plugin->getConfiguration(), $surface->getDefinitions()->keys());
+    return array_intersect_key($this->plugin->getConfiguration(), $surface->entries()->keys());
   }
 
   /**
    * {@inheritdoc}
    */
   public function prepare(SurfaceInterface $surface, array $values): PreparedValues {
-    $host_keys = array_diff_key($this->plugin->getConfiguration(), $surface->getDefinitions()->keys());
+    $host_keys = array_diff_key($this->plugin->getConfiguration(), $surface->entries()->keys());
     // A plugin reads its configuration whole, so every key it declares is
     // there: a default the pipeline did not write, since the
     // configuration never held it, is filled in here.
     // Decision: see docs/decisions.md#absent-keeps-null-clears.
     $complete = [];
     $defaults = $surface->getDefaultValues();
-    foreach ($surface->getDefinitions()->names() as $name) {
+    foreach ($surface->entries()->names() as $name) {
       if (array_key_exists($name, $values)) {
         $complete[$name] = $values[$name];
       }

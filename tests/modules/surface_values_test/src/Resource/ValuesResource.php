@@ -6,6 +6,7 @@ namespace Drupal\surface_values_test\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Compute\MachineName;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -88,7 +89,7 @@ final class ValuesResource implements ResourceInterface {
     // input: a list of objects there is a collection.
     $slot = MapDataDefinition::create()
       ->setPropertyDefinition('at', DataDefinition::create('datetime_iso8601')->setLabel('At'));
-    $inputs->addList('slots', $slot, t('Slots'));
+    $inputs->addDefinition('slots', (new ListDataDefinition(['type' => 'list'], $slot))->setLabel(t('Slots')));
     $inputs->add('pin', Schema::string()
       ->title(t('PIN'))
       ->writeOnly(TRUE)

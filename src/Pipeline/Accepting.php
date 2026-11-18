@@ -202,7 +202,7 @@ final class Accepting {
    *   other than the chosen.
    */
   protected function acceptLevel(SurfaceInterface $surface, array $input, array $current, string $prefix): array {
-    $definitions = $surface->getDefinitions();
+    $definitions = $surface->entries();
     $unknown = array_keys(array_diff_key($input, $definitions->keys()));
     if ($unknown !== []) {
       throw new UnknownKeysException(array_map('strval', $unknown), $prefix, $definitions->names());
@@ -263,11 +263,11 @@ final class Accepting {
       return $values;
     }
     $defaults = NULL;
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $name = (string) $name;
       // The mark and what is ruled out below it are read from the
       // refined key's schema.
-      $schema = $refined->getDefinitions()->entry($name)?->schema();
+      $schema = $refined->entries()->entry($name)?->schema();
       $paths = $schema === NULL ? [] : (SchemaFacts::doesNotApply($schema) ? [''] : SchemaFacts::ruledOutInside($schema));
       foreach ($paths as $path) {
         $parents = $path === '' ? [$name] : [$name, ...explode('.', $path)];
@@ -455,7 +455,7 @@ final class Accepting {
    */
   public function sources(SurfaceInterface $surface, Computed $computed, string $prefix): array {
     $prefix = $prefix === '' || str_ends_with($prefix, '.') ? $prefix : $prefix . '.';
-    $entries = $surface->getDefinitions();
+    $entries = $surface->entries();
     return array_map(static function (string $source) use ($entries, $prefix): Named {
       $entry = $entries->entry($source);
       return Named::key(($entry === NULL ? NULL : SchemaFacts::label($entry->schema())) ?? $source, $prefix . $source);
@@ -668,7 +668,7 @@ final class Accepting {
     // The coercion table: a JSON list read as one, and a single item map
     // as a list of it.
     $raw = Coercion::decoded($raw, TRUE);
-    if (is_array($raw) && static::isItem($raw, $child->getDefinitions()->names())) {
+    if (is_array($raw) && static::isItem($raw, $child->entries()->names())) {
       $raw = [$raw];
     }
     if (!is_array($raw)) {
@@ -761,7 +761,7 @@ final class Accepting {
       // optional one is cleared, a required one is refused in its own
       // words, and the document stays a map the child's def describes.
       // Decision: see docs/decisions.md#absent-keeps-null-clears.
-      $input = array_fill_keys($child->getDefinitions()->names(), NULL);
+      $input = array_fill_keys($child->entries()->names(), NULL);
     }
     $input = Coercion::decoded($input, FALSE);
     if (!is_array($input)) {

@@ -490,7 +490,7 @@ final class SchemaReader {
    * Whether an author's schema is read into an outputs blueprint.
    *
    * Outputs hold no attached structure, so a list of objects there is a
-   * list of maps, as addList() declares one: its items read as plain
+   * list of maps, as addDefinition() declares one: its items read as plain
    * maps, a list of objects inside them too.
    *
    * Decision: see docs/decisions.md#authoring-takes-a-schema.
@@ -3417,9 +3417,9 @@ final class SchemaReader {
   /**
    * Declares a key read from a schema with the method its kind is.
    *
-   * One value with addDefinition(), a list with addList() and a map with
-   * addMap(), each of its keys declared the same way inside, so a read is
-   * declared as an author declares it. What the read says of the list or
+   * One value or a list with addDefinition() and a map with addMap(),
+   * each of its keys declared the same way inside, so a read is declared
+   * as an author declares it. What the read says of the list or
    * the map itself (its label, constraints, settings and what the module
    * writes beside them) is laid on what the method declared.
    *
@@ -3436,7 +3436,7 @@ final class SchemaReader {
    */
   protected static function declareRead(BlueprintAdditionsInterface $inputs, string $name, DataDefinitionInterface $read, mixed $default = NULL): void {
     if ($read instanceof ListDataDefinitionInterface) {
-      $inputs->addList($name, $read->getItemDefinition(), $read->getLabel() ?? $name, $default);
+      $inputs->addDefinition($name, (new ListDataDefinition(['type' => 'list'], $read->getItemDefinition()))->setLabel($read->getLabel() ?? $name), $default);
     }
     elseif ($read instanceof ComplexDataDefinitionInterface) {
       $inputs->addMap($name, $read->getLabel() ?? $name, static function (BlueprintInterface $map) use ($read): void {

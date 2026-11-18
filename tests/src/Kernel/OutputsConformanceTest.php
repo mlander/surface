@@ -72,7 +72,7 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
   public function testTheCheckAnswersInTheInputPathsCodes(): void {
     $surface = OutputCases::handSurface();
     $good = [];
-    foreach ($surface->getOutputDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->outputEntries()->entries() as $name => $entry) {
       $good[(string) $name] = OutputCases::good($entry->schema());
     }
     $said = function (array $changes) use ($surface, $good): array {

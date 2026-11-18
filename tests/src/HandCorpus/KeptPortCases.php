@@ -113,7 +113,7 @@ final class KeptPortCases {
             foreach ($pipeline->validate($each, $accepted, []) as $violation) {
               $refusals[] = $violation->key . ':' . $violation->path;
             }
-            $child = $each->refine($accepted)->getDefinitions()->entry('att')->childFor($accepted);
+            $child = $each->refine($accepted)->entries()->entry('att')->childFor($accepted);
             $schema = $child->getPortSchema('p');
             $answers["$case$form $set"] = [
               'accepted' => $accepted,
@@ -129,7 +129,7 @@ final class KeptPortCases {
           // value and the key's definition: the check is handed the value
           // whatever the container's own key accepts.
           try {
-            $child = $each->getDefinitions()->entry('att')->attachment->child->withPorts(['p' => $value], ['p' => $key]);
+            $child = $each->entries()->entry('att')->attachment->child->withPorts(['p' => $value], ['p' => $key]);
             $answers["$case$form $set bound"] = [
               'withheld' => array_keys($child->refine(['v' => 'abcdef'])->withheldValues()),
               'port' => DefinitionSchema::classOf($child->getPortSchema('p')),

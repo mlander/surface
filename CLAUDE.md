@@ -260,7 +260,7 @@ the record of the rework that brought the module to the pattern.
   nothing), a conditional of the vocabulary a declared rule. What no
   keyword says is a **foreign constraint**: the part left over, a
   `JsonSchema` constraint on the key, or on the frame
-  (`DefinitionMap::frameConstraints()`), checked with opis and named
+  (`Entries::frameConstraints()`), checked with opis and named
   under `portable-check` as `drupal:JsonSchema` with its schema. A
   constraint and its keywords
   are one table, read both ways (`Contract\ConstraintKeywords`, a row per
@@ -727,7 +727,7 @@ the record of the rework that brought the module to the pattern.
   `definition()` is derived by `DefinitionFromSchema::of()`, refused there with
   the key's name, and asserted not written
   (`docs/decisions.md#an-entry-holds-the-form-its-source-gave`). The seal
-  makes every entry schema-first (`DefinitionMap::fromArrays()` with
+  makes every entry schema-first (`Entries::fromArrays()` with
   `schemaFirst: TRUE`, `Entry::sealed()`): a key that holds a child frame
   is handed its own facts alone and its schema composed around its child's
   entries' schemas, by name; an entry of a class `DefinitionFromSchema` does not
@@ -737,7 +737,7 @@ the record of the rework that brought the module to the pattern.
   next ask with assertions on; build what a test needs before the seal,
   or make an entry of a copy (`withDefinition()`)
   (`docs/decisions.md#a-sealed-entry-holds-its-schema`). Ask for
-  what is needed: the keys alone are `DefinitionMap::keys()` (name to
+  what is needed: the keys alone are `Entries::keys()` (name to
   TRUE) or `names()`, never `toArray()`
   (`docs/decisions.md#nothing-asks-for-a-definition-it-does-not-need`),
   and a fact of a key is read from its schema (`Entry::schema()`), never
@@ -756,7 +756,7 @@ the record of the rework that brought the module to the pattern.
   (`DefinitionSchema::withProperties()`; chosen variants over
   `Variants::shellSchema()`, a mount's part put back by `withPropertyAt()`)
   and is schema-first (`withSchema()`); where its schema holds a class
-  `DefinitionFromSchema` does not derive (`DefinitionMap::derivedClasses()`), a
+  `DefinitionFromSchema` does not derive (`Entries::derivedClasses()`), a
   deciding key is locked, or a mount's own refiners refined it too, the
   definition is built as before and handed with that schema
   (`withDefinition($definition, $schema)`). A key whose refiner chain ran
@@ -837,9 +837,8 @@ the record of the rework that brought the module to the pattern.
   key whose refiner chain ran is definition-first, and its schema reads
   the answer once. A port's key is held as its schema
   (`Surface::$portSchemas`, `Attachment::$wired`,
-  `SurfaceInterface::getPortSchema()`); `getPortDefinition()` derives
-  one on each ask, and the watched-value check is handed one, but for a
-  key of a class outside `DefinitionFromSchema::DERIVED`, whose definition is
+  `SurfaceInterface::getPortSchema()`), and the watched-value check is
+  handed one, but for a key of a class outside `DefinitionFromSchema::DERIVED`, whose definition is
   kept beside its schema and handed as it is
   (`docs/decisions.md#the-document-is-written-from-schemas`).
 - **The remaining readers read schemas**: `KeyPaths` (`reachedOn()`,
@@ -1507,7 +1506,7 @@ so the rule is this sentence. `npm test` is not part of
   one-line `//` topic comment only where a long method turns, key
   constants one line each with no docblock
   (`docs/declaring-a-resource.md#the-class`); the generator writes it.
-- Iteration order is load-bearing: the definition map is in declaration
+- Iteration order is load-bearing: the entries are in declaration
   order, and `FieldToolsComparisonTest`'s drift assertion is the tripwire.
 - `modules/surface_examples_field/COMPARISON.md` and
   `modules/surface_examples_node_type_tool/COMPARISON.md` are generated
@@ -1580,7 +1579,7 @@ See `docs/declaring-a-resource.md` for all four in full.
 ## Where things live
 
 ```
-src/                     Data surface, builder (internal), definition map, host trait;
+src/                     Data surface, builder (internal), entries, host trait;
                          Computed and Resolve, a computed key's and a
                          resolved key's metadata.
 src/Reader/              Readers into the blueprint: ConfigSchemaReader,

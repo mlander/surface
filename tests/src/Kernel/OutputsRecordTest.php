@@ -93,7 +93,7 @@ class OutputsRecordTest extends SurfaceKernelTestBase {
         $unbuilt[$label] = $surface;
         continue;
       }
-      $outputs = $surface->getOutputDefinitions();
+      $outputs = $surface->outputEntries();
       if ($outputs->keys() === []) {
         continue;
       }

@@ -243,7 +243,7 @@ final class DoorCorpusRecorder {
       'stored' => static::attempt(fn (): mixed => static::plain($this->operationInputs->stored($this->owner, $surface, new OperationContext('update', FALSE), $storage))),
       'secretKeys' => static::attempt(fn (): mixed => EncryptedStorageLayout::secretKeys($surface)),
     ];
-    $keys = array_keys($surface->getDefinitions()->toArray());
+    $keys = array_keys($surface->entries()->toArray());
     $kept_otherwise = ['type' => 'string', 'label' => 'T'];
     $config_schema = static::attempt(fn (): mixed => $this->configSchema->describeBuilt($surface, $this->owner, 'hand.settings', [], [], []));
     $door += [
@@ -255,7 +255,7 @@ final class DoorCorpusRecorder {
     if (is_array($config_schema)) {
       $door['wider generated'] = static::attempt(function () use ($surface, $config_schema): mixed {
         $wider = [];
-        foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+        foreach ($surface->entries()->entries() as $name => $entry) {
           $wider[$name] = $this->probe->wider($entry, $config_schema['entries'][0]['schema']['mapping'][$name] ?? NULL, (string) $name, TRUE);
         }
         return static::plain($wider);
@@ -263,7 +263,7 @@ final class DoorCorpusRecorder {
     }
     $door['ResourceCode'] = static::attempt(fn (): mixed => static::plain((new ResourceCode('hand', 'hand'))->write($surface)));
     $placed = new \ReflectionMethod(CompiledFlow::class, 'placed');
-    $first = (string) array_key_first($surface->getDefinitions()->toArray());
+    $first = (string) array_key_first($surface->entries()->toArray());
     $placings = [
       'whole' => [1 => [NULL, NULL]],
       'grouped' => [1 => ['g1', NULL], 2 => [NULL, [$first]], 3 => ['g2', NULL]],
@@ -278,7 +278,7 @@ final class DoorCorpusRecorder {
     foreach ($values as $case => $value) {
       yield "$form | values | $case" => $this->valuesRecord($surface, $stored, $value, is_object($map) ? $map : NULL);
     }
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $record = [
         'fromDefinition' => static::attempt(fn (): mixed => static::tree($defs->fromDefinition($entry->definition()))),
         'outputFromDefinition' => static::attempt(fn (): mixed => static::tree($defs->outputFromDefinition($entry->definition()))),
@@ -398,8 +398,8 @@ final class DoorCorpusRecorder {
       $refined = $surface->refine($value);
       $rows = [];
       $entry_rows = new \ReflectionMethod($this->panel, 'entryRows');
-      foreach ($refined->getDefinitions()->entries() as $name => $entry) {
-        $declared = $surface->getDefinitions()->entry((string) $name);
+      foreach ($refined->entries()->entries() as $name => $entry) {
+        $declared = $surface->entries()->entry((string) $name);
         $arguments = [&$rows, (string) $name, $entry, $declared?->definition(), $refined, $value, $declared];
         $entry_rows->invokeArgs($this->panel, $arguments);
       }
@@ -424,7 +424,7 @@ final class DoorCorpusRecorder {
    */
   protected static function paths(SurfaceInterface $surface, string $prefix = '', int $level = 0): array {
     $paths = $prefix === '' ? ['nope', 'nope.deeper'] : [];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       if ($level > 2) {
         break;
       }
@@ -460,8 +460,8 @@ final class DoorCorpusRecorder {
         $paths[] = "$at.nope";
       }
     };
-    foreach ($surface->getDefinitions() as $name => $definition) {
-      $walk($definition, $prefix . $name, 0);
+    foreach ($surface->entries()->entries() as $name => $entry) {
+      $walk($entry->definition(), $prefix . $name, 0);
     }
     return array_values(array_unique($paths));
   }

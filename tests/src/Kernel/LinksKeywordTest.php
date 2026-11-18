@@ -5,18 +5,19 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\node\Entity\NodeType;
 use Drupal\surface\Contract\ServedContract;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface_examples_references\Resource\SponsorshipResource;
 use Drupal\surface_examples_references\Sponsorship;
-use Drupal\surface_resource_test\Variants\PosterLayouts;
+use Drupal\surface_resource_test\Keys\WorkshopBenches;
 use Drupal\surface_resource_test\Resource\Poster\PosterResource;
 use Drupal\surface_resource_test\Resource\Workshop\WorkshopResource;
-use Drupal\surface_resource_test\Keys\WorkshopBenches;
-use Drupal\node\Entity\NodeType;
+use Drupal\surface_resource_test\Variants\PosterLayouts;
+use Drupal\Tests\surface\DerivedDefinition;
+use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\Role;
 use Drupal\user\Entity\User;
-use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -281,7 +282,7 @@ class LinksKeywordTest extends SurfaceKernelTestBase {
           $this->assertSame($schema['properties'][$key], $again['properties'][$key], $where . ' ' . $key);
         }
         $this->assertSame('Not read: a link names where a client asks.', $reader->notes($schema)['/properties/venue/x-portable-links/0'] ?? NULL, $where . ': the link is noted.');
-        $this->assertSame(['entityTypeId' => 'node', 'bundles' => ['article']], $read->getDefinition('page')->getConstraints()['SurfaceValidReference'], $where . ': as its author declares it.');
+        $this->assertSame(['entityTypeId' => 'node', 'bundles' => ['article']], DerivedDefinition::at($read, 'page')->getConstraints()['SurfaceValidReference'], $where . ': as its author declares it.');
       });
     }
   }

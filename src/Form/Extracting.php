@@ -139,7 +139,7 @@ final class Extracting {
       // A mounted key falls back to what is stored, as a whole key does;
       // a child's key, inside its own frame, to the child's defaults.
       $parents = explode('.', $dotted);
-      $entry = $surface->getDefinitions()->entry($parents[0]);
+      $entry = $surface->entries()->entry($parents[0]);
       if (count($parents) > 1 && $entry !== NULL && !$entry->isNested() && $entry->list === NULL) {
         static::restore($values, $stored, $parents);
       }
@@ -182,7 +182,7 @@ final class Extracting {
   protected static function overlaid(SurfaceInterface $surface, array $stored, array $input): array {
     $values = array_replace($stored, $input);
     foreach ($input as $name => $held) {
-      $child = $surface->getDefinitions()->entry((string) $name)?->attachment?->child;
+      $child = $surface->entries()->entry((string) $name)?->attachment?->child;
       if ($child !== NULL && is_array($held) && is_array($stored[$name] ?? NULL)) {
         $values[$name] = static::overlaid($child, $stored[$name], $held);
       }
@@ -226,7 +226,7 @@ final class Extracting {
    */
   protected static function schemaAt(SurfaceInterface $surface, string $path): ?Schema {
     $parents = explode('.', $path);
-    $schema = $surface->getDefinitions()->entry((string) array_shift($parents))?->schema();
+    $schema = $surface->entries()->entry((string) array_shift($parents))?->schema();
     foreach ($parents as $property) {
       $schema = $schema !== NULL && DefinitionSchema::isComplex($schema) ? DefinitionSchema::propertyOf($schema, $property) : NULL;
     }
@@ -255,7 +255,7 @@ final class Extracting {
     // parent's input now holds for it. A key discarded whole above has
     // nothing left inside it to ask about.
     $values = static::frameValues($stored, $input, $discarded, $orphaned);
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $name = (string) $name;
       if ($entry->list !== NULL && is_array($input[$name] ?? NULL)) {
         // Each item is settled by the child in its own frame, against what
@@ -331,7 +331,7 @@ final class Extracting {
   protected function settleFrame(SurfaceInterface $surface, array $stored, array $input): array {
     // One mounted key at a time: a moved capacity drops the stewards
     // count it narrows, and not the license beside it.
-    $refinements = $surface->getDefinitions()->refinementPaths();
+    $refinements = $surface->entries()->refinementPaths();
     if ($refinements === []) {
       return [[], []];
     }
@@ -460,7 +460,7 @@ final class Extracting {
       return FALSE;
     }
     $schema = static::schemaAt($refined, $name);
-    if ($schema === NULL || DefinitionSchema::isList($schema) || $refined->getDefinitions()->entry($name)?->variants !== NULL) {
+    if ($schema === NULL || DefinitionSchema::isList($schema) || $refined->entries()->entry($name)?->variants !== NULL) {
       return FALSE;
     }
     $set = $this->options->resolve($schema);
@@ -534,7 +534,7 @@ final class Extracting {
         return FALSE;
       }
     }
-    $variants = $refined->getDefinitions()->entry($name)?->variants;
+    $variants = $refined->entries()->entry($name)?->variants;
     if ($variants !== NULL) {
       // The input at a key with variants stands while it is shaped for
       // the variant now chosen. Input left by another variant answered a
@@ -883,7 +883,7 @@ final class Extracting {
   protected static function variantsAt(SurfaceInterface $surface, array $parents, array $input, array $stored): ?Variants {
     $frame = $surface;
     foreach ($parents as $position => $name) {
-      $entry = $frame->getDefinitions()->entry((string) $name);
+      $entry = $frame->entries()->entry((string) $name);
       if ($position === count($parents) - 1 || $entry === NULL) {
         return $entry?->variants;
       }

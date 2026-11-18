@@ -145,7 +145,7 @@ trait SurfaceConfigurationTrait {
    */
   public function setConfiguration(array $configuration): static {
     $surface = $this->memoizedSurface();
-    $keys = $surface->getDefinitions()->keys();
+    $keys = $surface->entries()->keys();
     $pipeline = $this->surfacePipeline();
     $values = $pipeline->accept($surface, array_intersect_key($configuration, $keys));
     // The values are their own stored values here, and that is not a

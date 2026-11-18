@@ -8,7 +8,7 @@ use Drupal\Core\Block\BlockPluginInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\Entry;
 use Drupal\surface\Options\OptionSet;
 use Drupal\surface\Options\SurfaceOptionsResolverInterface;
@@ -310,7 +310,7 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
 
     foreach ([FALSE, TRUE] as $schema_first) {
       $derived = new \ReflectionProperty(Entry::class, 'definition');
-      $entry = DefinitionMap::fromArrays(['room' => (clone $definition)->setLabel('Hall')], schemaFirst: $schema_first)->entry('room');
+      $entry = Entries::fromArrays(['room' => (clone $definition)->setLabel('Hall')], schemaFirst: $schema_first)->entry('room');
       $recorder->handed = [];
       $this->assertSame(['east' => 'east', 'west' => 'west'], $options->resolve($entry->schema())->options);
       $this->assertSame([$entry->schema()], $recorder->handed, 'Handed the key\'s schema, the service hands that very schema on.');
@@ -339,7 +339,7 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
     $options = $this->options();
     foreach ([FALSE, TRUE] as $schema_first) {
       $room = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['east', 'west', 'north']]);
-      $declared = DefinitionMap::fromArrays(['room' => $room], schemaFirst: $schema_first)->entry('room');
+      $declared = Entries::fromArrays(['room' => $room], schemaFirst: $schema_first)->entry('room');
       // What refinement makes of a key: a copy, narrowed, and an entry of it.
       $refined = $declared->withDefinition((clone $declared->definition())->addConstraint('Choice', ['choices' => ['east']]));
       $this->assertNotSame($declared->schema(), $refined->schema());
@@ -356,8 +356,8 @@ class SurfaceOptionsResolverTest extends SurfaceKernelTestBase {
     $resources = $this->container->get('surface.resources');
     $surface = $resources->build(RegistrationStep3Resource::class, $resources->operation(RegistrationStep3Resource::class, 'configure'));
     $options = $this->options();
-    $declared = $surface->getDefinitions()->entry('room');
-    $refined = $surface->refine(['venue' => 'library'])->getDefinitions()->entry('room');
+    $declared = $surface->entries()->entry('room');
+    $refined = $surface->refine(['venue' => 'library'])->entries()->entry('room');
     $this->assertNotNull($declared);
     $this->assertNotNull($refined);
     $all = array_keys($options->resolve($declared->schema())->options);

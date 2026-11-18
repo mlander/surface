@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceInterface;
+use Drupal\node\Entity\NodeType;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Reference\ReferenceStorageLayout;
 use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_examples_node_type\Storage\NodeTypeStorage;
 use Drupal\surface_schema_test\Storage\AliasSettingsStorage;
 use Drupal\surface_schema_test\Storage\NarrowedStorage;
-use Drupal\node\Entity\NodeType;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -80,7 +81,7 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
     // What the schema is generated from is built all the same: the schema
     // on disk is what is being replaced.
     $declared = $resources->declaration('schema_test.narrowed', $context);
-    $this->assertSame(['code', 'limit', 'mode', 'size', 'note'], $declared->getDefinitions()->names());
+    $this->assertSame(['code', 'limit', 'mode', 'size', 'note'], $declared->entries()->names());
     $generated = $this->container->get('surface.config_schema')->files(['surface_schema_test']);
     $schema = $generated[$this->container->get('extension.list.module')->getPath('surface_schema_test') . '/config/schema/surface_schema_test.schema.yml'];
     $this->assertStringContainsString(<<<'YAML'
@@ -108,7 +109,7 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
     $resources = $this->container->get('surface.resources');
     $context = $resources->operation('schema_test.aliases', 'configure');
     $built = $resources->build('schema_test.aliases', $context);
-    $this->assertSame(['types', 'marks'], $built->getDefinitions()->names());
+    $this->assertSame(['types', 'marks'], $built->entries()->names());
     $this->assertSame([], $this->container->get('class_resolver')->getInstanceFromDefinition(AliasSettingsStorage::class)->widerThanSchema($built));
     // Not told, the check names each entry.
     $untold = new class(
@@ -213,10 +214,10 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
     NodeType::create(['type' => 'page', 'name' => 'Basic page'])->save();
     $edit = $resources->build('node.type', $resources->operation('node.type', 'update', ['type' => NodeType::load('page')]));
     foreach ([$add, $edit] as $built) {
-      $this->assertTrue(DefinitionMetadata::isAlwaysHeld($built->getDefinition('new_revision')), 'Not nullable in core\'s schema: always held.');
-      $this->assertTrue(DefinitionMetadata::isAlwaysHeld($built->getDefinition('display_submitted')));
-      $this->assertFalse(DefinitionMetadata::isAlwaysHeld($built->getDefinition('description')), 'Nullable in core\'s schema: may be cleared.');
-      $regex = $built->getDefinition('name')->getConstraints()['Regex'];
+      $this->assertTrue(DefinitionMetadata::isAlwaysHeld(DerivedDefinition::at($built, 'new_revision')), 'Not nullable in core\'s schema: always held.');
+      $this->assertTrue(DefinitionMetadata::isAlwaysHeld(DerivedDefinition::at($built, 'display_submitted')));
+      $this->assertFalse(DefinitionMetadata::isAlwaysHeld(DerivedDefinition::at($built, 'description')), 'Nullable in core\'s schema: may be cleared.');
+      $regex = DerivedDefinition::at($built, 'name')->getConstraints()['Regex'];
       $this->assertSame('/([^\PC])/u', $regex['pattern']);
       $this->assertFalse($regex['match']);
     }

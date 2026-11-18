@@ -162,7 +162,7 @@ abstract class ResourceTestBase extends SurfaceKernelTestBase {
     foreach ($contexts as $id => $context) {
       $declared = $resources->buildDeclared($definition->name(), $context);
       $static = $resources->buildStatic($definition->name(), $context);
-      $this->assertSame($declared->getDefinitions()->names(), $static->getDefinitions()->names(), $resource . ':' . $id . ': an administrator sees every key it declares.');
+      $this->assertSame($declared->entries()->names(), $static->entries()->names(), $resource . ':' . $id . ': an administrator sees every key it declares.');
       $document = $emitter->emitFull($static, $definition->id, $operations === [] ? NULL : $id)->document;
       $this->assertSame($definition->id, $document['resource'], $resource . ':' . $id . ': its full schema is emitted.');
     }
@@ -408,7 +408,7 @@ abstract class ResourceTestBase extends SurfaceKernelTestBase {
       return [];
     }
     $storage = $this->container->get('surface.resources')->storage($name, $context, $surface);
-    return array_intersect_key($storage->load($surface), $surface->getDefinitions()->toArray());
+    return array_intersect_key($storage->load($surface), $surface->entries()->toArray());
   }
 
   /**

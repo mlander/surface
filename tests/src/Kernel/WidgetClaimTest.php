@@ -6,11 +6,12 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\Resource\OperationContext;
 use Drupal\surface_widget_test\Plugin\SurfaceWidget\ColorPickerWidget;
 use Drupal\surface_widget_test\Structure\SwatchStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -56,9 +57,9 @@ class WidgetClaimTest extends SurfaceKernelTestBase {
   public function testClaimServesTheKeyAndLosesToTheOwnersSetting(): void {
     $swatch = $this->swatch();
     $widgets = $this->container->get('surface.widget_choice');
-    $this->assertInstanceOf(ColorPickerWidget::class, $widgets->forSchema($swatch->getDefinitions()->entry('accent')->schema()), 'The higher priority of two claims serves the key.');
-    $this->assertNull($widgets->claimed($swatch->getDefinitions()->entry('trim')->schema()), 'A key whose owner asks for a widget is claimed by none.');
-    $this->assertNull($widgets->claimed($swatch->getDefinitions()->entry('caption')->schema()), 'A key no claim matches is claimed by none.');
+    $this->assertInstanceOf(ColorPickerWidget::class, $widgets->forSchema($swatch->entries()->entry('accent')->schema()), 'The higher priority of two claims serves the key.');
+    $this->assertNull($widgets->claimed($swatch->entries()->entry('trim')->schema()), 'A key whose owner asks for a widget is claimed by none.');
+    $this->assertNull($widgets->claimed($swatch->entries()->entry('caption')->schema()), 'A key no claim matches is claimed by none.');
 
     $form = $this->formBuilder()->buildSurfaceForm($swatch, $swatch->getDefaultValues(), new FormState());
     $this->assertSame('color', $form['accent']['#type']);
@@ -137,9 +138,9 @@ class WidgetClaimTest extends SurfaceKernelTestBase {
     $hinted['properties']['name']['x-portable-ui']['options']['shade'] = 'dark';
     $reader = $this->container->get('surface.schema_reader');
     $read = $this->container->get('surface.resources')->build($reader->structure($hinted, 'test.settings_read'), new OperationContext('configure'));
-    $this->assertSame(30, $read->getDefinition('name')->getSetting('size'));
-    $this->assertSame(4, $read->getDefinition('notes')->getSetting('rows'));
-    $this->assertSame(['#336699', '#ffffff'], $read->getDefinition('accent')->getSetting('palette'));
+    $this->assertSame(30, DerivedDefinition::at($read, 'name')->getSetting('size'));
+    $this->assertSame(4, DerivedDefinition::at($read, 'notes')->getSetting('rows'));
+    $this->assertSame(['#336699', '#ffffff'], DerivedDefinition::at($read, 'accent')->getSetting('palette'));
     $this->assertSame('Not read: no widget the word names publishes a setting of that name.', $reader->notes($hinted)['/properties/name/x-portable-ui/options/shade'] ?? NULL);
   }
 

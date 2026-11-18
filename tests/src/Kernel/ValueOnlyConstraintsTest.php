@@ -195,7 +195,7 @@ class ValueOnlyConstraintsTest extends KernelTestBase {
         }
       }
     }
-    $shipped = array_keys(array_filter($constraints->getDefinitions(), static fn (array $definition): bool => ($definition['provider'] ?? NULL) === 'surface'));
+    $shipped = array_keys(array_filter($constraints->entries(), static fn (array $definition): bool => ($definition['provider'] ?? NULL) === 'surface'));
     sort($shipped);
     $held = array_keys($seen);
     sort($held);

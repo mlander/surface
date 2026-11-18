@@ -296,7 +296,7 @@ trait SurfaceHostTrait {
     foreach (static::uncheckedBoxes($state->getCompleteForm(), $path, $input) as $parents) {
       NestedArray::setValue($tree, $parents, 0, TRUE);
     }
-    return array_intersect_key($tree, $surface->getDefinitions()->keys());
+    return array_intersect_key($tree, $surface->entries()->keys());
   }
 
   /**
@@ -524,7 +524,7 @@ trait SurfaceHostTrait {
       return [];
     }
     $tree = NestedArray::getValue($state->getUserInput(), $path);
-    return is_array($tree) ? array_intersect_key($tree, $surface->getDefinitions()->keys()) : [];
+    return is_array($tree) ? array_intersect_key($tree, $surface->entries()->keys()) : [];
   }
 
   /**

@@ -6,6 +6,7 @@ namespace Drupal\surface_test\Plugin\Block;
 
 use Drupal\Core\Block\Attribute\Block;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Plugin\Block\TypedBlockBase;
 use Drupal\surface\Resource\Attribute\UsesStructure;
 use Drupal\surface_test\Structure\TestBlockStructure;
@@ -30,8 +31,8 @@ final class SurfaceTestBlock extends TypedBlockBase {
   public function build(): array {
     $configuration = $this->getConfiguration();
     $items = [];
-    foreach ($this->getSurface()->getDefinitions() as $name => $definition) {
-      $items[] = $definition->getLabel() . ': ' . var_export($configuration[$name] ?? NULL, TRUE);
+    foreach ($this->getSurface()->entries() as $name => $schema) {
+      $items[] = SchemaFacts::label($schema) . ': ' . var_export($configuration[$name] ?? NULL, TRUE);
     }
     return [
       '#theme' => 'item_list',

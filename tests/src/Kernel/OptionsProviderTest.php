@@ -7,6 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\TypedData\OptionsProviderInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface_examples\Resource\RegistrationStep2Resource;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -65,8 +66,8 @@ class OptionsProviderTest extends SurfaceKernelTestBase {
    */
   public function testPossibleIsDeclaredAndSettableIsRefined(): void {
     $surface = $this->surface();
-    $declared = $surface->getDefinition('room');
-    $refined = $surface->refine(['venue' => 'harbour'])->getDefinition('room');
+    $declared = DerivedDefinition::at($surface, 'room');
+    $refined = DerivedDefinition::at($surface->refine(['venue' => 'harbour']), 'room');
     $provider = $this->options()->provider($declared, $refined);
     $this->assertInstanceOf(OptionsProviderInterface::class, $provider);
 
@@ -91,7 +92,7 @@ class OptionsProviderTest extends SurfaceKernelTestBase {
    * Tests a provider with no refined definition settles on the declared.
    */
   public function testWithoutRefinedSettableIsDeclared(): void {
-    $declared = $this->surface()->getDefinition('room');
+    $declared = DerivedDefinition::at($this->surface(), 'room');
     $provider = $this->options()->provider($declared);
     $this->assertSame($provider->getPossibleValues(), $provider->getSettableValues());
     $this->assertSame($provider->getPossibleOptions(), $provider->getSettableOptions());
@@ -103,7 +104,7 @@ class OptionsProviderTest extends SurfaceKernelTestBase {
    */
   public function testKeyWithoutListAnswersEmpty(): void {
     $surface = $this->surface();
-    $provider = $this->options()->provider($surface->getDefinition('title'), $surface->refine(['venue' => 'harbour'])->getDefinition('title'));
+    $provider = $this->options()->provider(DerivedDefinition::at($surface, 'title'), DerivedDefinition::at($surface->refine(['venue' => 'harbour']), 'title'));
     $this->assertSame([], $provider->getPossibleValues());
     $this->assertSame([], $provider->getPossibleOptions());
     $this->assertSame([], $provider->getSettableValues());

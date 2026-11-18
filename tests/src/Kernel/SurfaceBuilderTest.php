@@ -7,12 +7,13 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
 use Drupal\surface\Storage\StorageLayoutInterface;
+use Drupal\surface\SurfaceBuilder;
 use Drupal\surface_test\CasingVariantRefiner;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests the builder: the seal guard and contributions.
@@ -86,7 +87,7 @@ class SurfaceBuilderTest extends SurfaceKernelTestBase {
         $this->assertStringContainsString('sealed', $e->getMessage());
       }
       // The advertised data surface is what it was: nothing half-applied.
-      $this->assertSame(['casing', 'extras'], $surface->getDefinitions()->names());
+      $this->assertSame(['casing', 'extras'], $surface->entries()->names());
     }
   }
 
@@ -149,14 +150,14 @@ class SurfaceBuilderTest extends SurfaceKernelTestBase {
 
     $this->assertSame(
       ['none', 'uppercase', 'lowercase', 'sentence'],
-      $surface->getDefinition('casing')->getConstraints()['Choice']['choices'],
+      DerivedDefinition::at($surface, 'casing')->getConstraints()['Choice']['choices'],
     );
     // And the data surface knows whose values those two are, which is what
     // lets refinement hand them to that module's refiner and nobody
     // else's.
     $this->assertSame(
       ['casing' => ['other' => ['lowercase', 'sentence']]],
-      $surface->getDefinitions()->contributions(),
+      $surface->entries()->contributions(),
     );
   }
 
@@ -175,7 +176,7 @@ class SurfaceBuilderTest extends SurfaceKernelTestBase {
 
     $surface = $builder->extendChoices('mode', ['auto' => 'Automatic'], 'other')->seal();
 
-    $constraint = $surface->getDefinition('mode')->getConstraints()['LabeledChoice'];
+    $constraint = DerivedDefinition::at($surface, 'mode')->getConstraints()['LabeledChoice'];
     // Written back in the canonical spelling, whichever one it was
     // declared in: the values are a list and the labels say what they
     // are called.
@@ -189,7 +190,7 @@ class SurfaceBuilderTest extends SurfaceKernelTestBase {
     // And the widened list is one list: what validates is what is
     // offered, so the resolver reads the contribution too.
     $options = $this->container->get('surface.options')
-      ->resolve($surface->getDefinition('mode'));
+      ->resolve(DerivedDefinition::at($surface, 'mode'));
     $this->assertSame(['off', 'on', 'auto'], array_keys($options->options));
     $this->assertCount(
       0,
@@ -231,7 +232,7 @@ class SurfaceBuilderTest extends SurfaceKernelTestBase {
     $surface = $builder->seal();
     $this->assertSame(
       ['on' => 'On', 'auto' => 'Automatic'],
-      $surface->getDefinition('mode')->getConstraints()['LabeledChoice']['labels'],
+      DerivedDefinition::at($surface, 'mode')->getConstraints()['LabeledChoice']['labels'],
     );
     // The constraint class is core-shaped and knows nothing of this.
     $this->assertTrue(class_exists(LabeledChoiceConstraint::class));
@@ -301,7 +302,7 @@ class SurfaceBuilderTest extends SurfaceKernelTestBase {
 
     $this->assertSame(
       ['bundle' => ['entity_type'], 'field' => ['entity_type', 'bundle']],
-      $builder->seal()->getDefinitions()->refinements(),
+      $builder->seal()->entries()->refinements(),
     );
   }
 

@@ -6,6 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\SurfaceInterface;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -124,13 +125,13 @@ class TypeByReaderTest extends SurfaceKernelTestBase {
    */
   public function testTypeByReadsAsVariants(): void {
     $read = $this->read(static::document());
-    $variants = $read->getDefinitions()->entry('settings')->variants;
+    $variants = $read->entries()->entry('settings')->variants;
     $this->assertSame('kind', $variants->by);
     $this->assertSame(['text', 'number'], array_keys($variants->variants));
     $this->assertSame(self::WIDGETS . 'text', $variants->variants['text']->id, 'Each variant is the registry\'s schema.');
-    $this->assertSame(['rows'], $variants->variants['text']->child->getDefinitions()->names());
-    $this->assertSame(['min' => 1], $variants->variants['text']->child->getDefinition('rows')->getConstraint('Range'));
-    $this->assertSame(['step'], $variants->variants['number']->child->getDefinitions()->names());
+    $this->assertSame(['rows'], $variants->variants['text']->child->entries()->names());
+    $this->assertSame(['min' => 1], DerivedDefinition::at($variants->variants['text']->child, 'rows')->getConstraint('Range'));
+    $this->assertSame(['step'], $variants->variants['number']->child->entries()->names());
     $this->assertArrayNotHasKey('/properties/settings/portable-typeBy', $this->notes(static::document()));
 
     $full = $this->container->get('surface.contract_emitter')->emitFull($read, 'test.widget')->document['schema'];
@@ -150,9 +151,9 @@ class TypeByReaderTest extends SurfaceKernelTestBase {
       'additionalProperties' => FALSE,
       'properties' => ['widget' => ['title' => 'Widget'] + $inner],
     ]);
-    $widget = $read->getDefinitions()->entry('widget')->attachment;
+    $widget = $read->entries()->entry('widget')->attachment;
     $this->assertNotNull($widget, 'An object holding portable-typeBy is read as a structure, not as a plain map.');
-    $variants = $widget->child->getDefinitions()->entry('settings')->variants;
+    $variants = $widget->child->entries()->entry('settings')->variants;
     $this->assertSame('kind', $variants->by);
     $this->assertSame(['text', 'number'], array_keys($variants->variants));
     $this->assertSame(self::WIDGETS . 'number', $variants->variants['number']->id);
@@ -164,7 +165,7 @@ class TypeByReaderTest extends SurfaceKernelTestBase {
   public function testFallbackIsReadWhereValueNeedsIt(): void {
     $kind = ['type' => 'string', 'enum' => ['text', 'number', 'other']];
     $read = $this->read(static::document(['fallback' => self::WIDGETS . 'text'], $kind));
-    $variants = $read->getDefinitions()->entry('settings')->variants;
+    $variants = $read->entries()->entry('settings')->variants;
     $this->assertSame(['text', 'number', 'other'], array_keys($variants->variants));
     $this->assertSame(self::WIDGETS . 'text', $variants->variants['other']->id, 'A value with no schema of its own falls back.');
 
@@ -194,7 +195,7 @@ class TypeByReaderTest extends SurfaceKernelTestBase {
     foreach ($cases as $why => $document) {
       $notes = $this->notes($document);
       $this->assertSame('Not read: portable-typeBy ' . $why . '; kept as a JsonSchema constraint, which the server\'s validator checks.', $notes['/properties/settings/portable-typeBy'] ?? NULL, $why);
-      $settings = $this->read($document)->getDefinition('settings');
+      $settings = DerivedDefinition::at($this->read($document), 'settings');
       $this->assertSame('any', $settings->getDataType(), $why);
       $this->assertArrayHasKey('portable-typeBy', $settings->getConstraint('JsonSchema')['schema'] ?? [], $why . ': kept for the validator.');
     }
@@ -232,10 +233,10 @@ class TypeByReaderTest extends SurfaceKernelTestBase {
     $this->assertStringContainsString('the validator\'s to decide', $notes['/properties/note/x-portable-unchecked']);
 
     $read = $this->read($document);
-    $this->assertSame(['schema' => ['portable-compare' => ['op' => '>=', 'pointer' => '1/min']]], $read->getDefinition('max')->getConstraint('JsonSchema'));
-    $this->assertSame('integer', $read->getDefinition('max')->getDataType());
-    $this->assertArrayHasKey('portable-refine', $read->getDefinition('city')->getConstraint('JsonSchema')['schema']);
-    $this->assertArrayNotHasKey('JsonSchema', $read->getDefinition('note')->getConstraints(), 'The annotations are dropped.');
+    $this->assertSame(['schema' => ['portable-compare' => ['op' => '>=', 'pointer' => '1/min']]], DerivedDefinition::at($read, 'max')->getConstraint('JsonSchema'));
+    $this->assertSame('integer', DerivedDefinition::at($read, 'max')->getDataType());
+    $this->assertArrayHasKey('portable-refine', DerivedDefinition::at($read, 'city')->getConstraint('JsonSchema')['schema']);
+    $this->assertArrayNotHasKey('JsonSchema', DerivedDefinition::at($read, 'note')->getConstraints(), 'The annotations are dropped.');
   }
 
 }

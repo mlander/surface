@@ -91,7 +91,7 @@ final class ResourceOperationSchemaTool extends ResourceOperationToolBase {
     $resource = $run->definition();
     $operation = $run->operation();
     $built = $run->surface();
-    $keys = $built->getDefinitions()->keys();
+    $keys = $built->entries()->keys();
     // A resource its host or its parent stores is prepared with no storage.
     $stored = $run->hasStorage() ? array_intersect_key($run->storage()->load($built), $keys) : [];
     $current = $built->withDefaults($stored);

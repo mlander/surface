@@ -121,8 +121,8 @@ final class ContractPanel implements SurfaceFormPanelInterface {
   public function buildPanel(OperationRoute $served, SurfaceInterface $declared, array $values): array {
     $refined = $declared->refine($values);
     $rows = [];
-    foreach ($refined->getDefinitions()->entries() as $name => $entry) {
-      $declared_entry = $declared->getDefinitions()->entry((string) $name);
+    foreach ($refined->entries()->entries() as $name => $entry) {
+      $declared_entry = $declared->entries()->entry((string) $name);
       $this->entryRows($rows, (string) $name, $entry, NULL, $refined, $values, $declared_entry);
     }
     $resource_id = $this->registry->getDefinition($served->resource)->id;
@@ -257,7 +257,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    *   from its definition, the only definitions asked.
    */
   protected function entryRows(array &$rows, string $path, Entry $entry, ?DataDefinitionInterface $declared, SurfaceInterface $refined, array $values, ?Entry $declared_entry = NULL): void {
-    $depends = $refined->getDefinitions()->dependencies($entry->name);
+    $depends = $refined->entries()->dependencies($entry->name);
     $schema = $entry->schema();
     $declared_schema = $declared_entry?->schema();
     if ($entry->variants === NULL && $entry->list === NULL && $entry->attachment === NULL && !(DefinitionSchema::isComplex($schema) && SchemaFacts::properties($schema) !== [])) {
@@ -292,7 +292,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       if ($chosen !== NULL) {
         $child = $entry->variants->variant($chosen)->child;
         $held = is_array($values[$entry->name] ?? NULL) ? $values[$entry->name] : [];
-        $this->propertyRows($rows, $path, $entry->variants->definitionFor($chosen, $child->refine($held)), $child->getDefinitions()->toArray(), []);
+        $this->propertyRows($rows, $path, $entry->variants->definitionFor($chosen, $child->refine($held)), array_map(static fn (Entry $entry): DataDefinitionInterface => $entry->definition(), $child->entries()->entries()), []);
       }
       return;
     }

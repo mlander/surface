@@ -19,7 +19,7 @@ use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\Entry;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\ResourceBuild\RefinesInputRefiner;
@@ -123,7 +123,7 @@ trait HeldToConfigSchemaTrait {
    *   Each such key's config schema as stored, by its dotted path.
    */
   protected static function mountedLayouts(SurfaceInterface $built): array {
-    $mount = $built->getDefinitions()->entry(RefinesInputRefiner::MOUNT)?->schema();
+    $mount = $built->entries()->entry(RefinesInputRefiner::MOUNT)?->schema();
     $keys = [];
     foreach ($mount !== NULL && DefinitionSchema::isComplex($mount) ? array_keys(SchemaFacts::properties($mount)) : [] as $module) {
       $layout = $built->getThirdPartyLayout((string) $module);
@@ -175,7 +175,7 @@ trait HeldToConfigSchemaTrait {
     $root = $this->typedConfig->getDefinition($type);
     $paths = $this->configSchemaPaths();
     $wider = [];
-    foreach ($built->getDefinitions()->entries() as $key => $entry) {
+    foreach ($built->entries()->entries() as $key => $entry) {
       $key = (string) $key;
       if ($paths !== NULL && !isset($paths[$key])) {
         continue;
@@ -261,7 +261,7 @@ trait HeldToConfigSchemaTrait {
           continue;
         }
         $definition = $this->typedConfig->getDefinition($resolved);
-        $this->mapWider($variant->child->getDefinitions(), $definition, $path, static::fullyValidatable($definition), $wider);
+        $this->mapWider($variant->child->entries(), $definition, $path, static::fullyValidatable($definition), $wider);
       }
       return;
     }
@@ -278,7 +278,7 @@ trait HeldToConfigSchemaTrait {
         $definition = $this->typedConfig->getDefinition($resolved);
         $mounted = $entry->mounted[(string) $module] ?? NULL;
         if ($mounted !== NULL) {
-          $this->mapWider($mounted->child->getDefinitions(), $definition, $path . '.' . $module, static::fullyValidatable($definition), $wider);
+          $this->mapWider($mounted->child->entries(), $definition, $path . '.' . $module, static::fullyValidatable($definition), $wider);
         }
         else {
           // A module's plain part: its schema is the one the mount's schema
@@ -299,7 +299,7 @@ trait HeldToConfigSchemaTrait {
         return;
       }
       $this->constraintsWider($entry->schema(), $schema, $path, $wider);
-      $this->mapWider($entry->list->child()->getDefinitions(), $this->merged($schema['sequence'] ?? []), $path, $strict, $wider);
+      $this->mapWider($entry->list->child()->entries(), $this->merged($schema['sequence'] ?? []), $path, $strict, $wider);
       return;
     }
     if ($entry->attachment !== NULL) {
@@ -309,12 +309,12 @@ trait HeldToConfigSchemaTrait {
           return;
         }
         $item = $this->merged($schema['sequence'] ?? []);
-        foreach ($entry->attachment->child->getDefinitions()->entries() as $name => $one) {
+        foreach ($entry->attachment->child->entries()->entries() as $name => $one) {
           $this->entryWider($one, $item + ['type' => (string) ($schema['sequence']['type'] ?? 'undefined')], $path . '.' . $name, $strict, $wider);
         }
         return;
       }
-      $this->mapWider($entry->attachment->child->getDefinitions(), $schema, $path, $strict, $wider);
+      $this->mapWider($entry->attachment->child->entries(), $schema, $path, $strict, $wider);
       return;
     }
     $this->definitionWider($entry->schema(), static fn (): DataDefinitionInterface => $entry->definition(), $schema, $path, $strict, $wider);
@@ -323,7 +323,7 @@ trait HeldToConfigSchemaTrait {
   /**
    * Compares a map of the resource's keys with a schema mapping.
    *
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The keys.
    * @param array $schema
    *   The mapping, merged with its type.
@@ -334,7 +334,7 @@ trait HeldToConfigSchemaTrait {
    * @param array<string, string> $wider
    *   Where the resource is wider, added to.
    */
-  protected function mapWider(DefinitionMap $map, array $schema, string $path, bool $strict, array &$wider): void {
+  protected function mapWider(Entries $map, array $schema, string $path, bool $strict, array &$wider): void {
     if (str_contains((string) ($schema['type'] ?? ''), ']') && static::holdsFlatKey($map)) {
       // A level holding a key whose variants are stored flat, typed by its
       // own deciding key, core's own-key form: not read, as entryWider()
@@ -354,13 +354,13 @@ trait HeldToConfigSchemaTrait {
   /**
    * Answers whether a map holds a key whose variants are stored flat.
    *
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The keys of one level.
    *
    * @return bool
    *   TRUE when one of its keys' maps says Variants::STORED_AS FLAT.
    */
-  protected static function holdsFlatKey(DefinitionMap $map): bool {
+  protected static function holdsFlatKey(Entries $map): bool {
     foreach ($map->entries() as $entry) {
       if ($entry->variants?->storedFlat()) {
         return TRUE;

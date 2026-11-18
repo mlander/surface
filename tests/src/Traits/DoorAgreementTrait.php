@@ -145,7 +145,7 @@ trait DoorAgreementTrait {
   protected static function generated(SurfaceInterface $surface): array {
     $defaults = $surface->getDefaultValues();
     $documents = ['the declared defaults' => $defaults];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $name = (string) $name;
       $documents[$name . ' sent null'] = [$name => NULL] + $defaults;
       $documents[$name . ' sent a value of another type'] = [$name => static::otherType($entry->definition(), $entry->attachment !== NULL || $entry->variants !== NULL)] + $defaults;
@@ -403,7 +403,7 @@ trait DoorAgreementTrait {
     $resources = $this->container->get('surface.resources');
     $context = $resources->operation($definition->name(), $operation->id, $parameters);
     $surface = $resources->build($definition->name(), $context);
-    $stored = array_intersect_key($resources->storage($definition->name(), $context, $surface)->load($surface), $surface->getDefinitions()->toArray());
+    $stored = array_intersect_key($resources->storage($definition->name(), $context, $surface)->load($surface), $surface->entries()->toArray());
     try {
       $document = $this->pipeline()->accept($surface, $input, $stored);
     }

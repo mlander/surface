@@ -137,11 +137,11 @@ final class DoesNotApply {
     if ($refined === $surface) {
       return $values;
     }
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $name = (string) $name;
       // The mark and what is ruled out below it are read from the refined
       // key's schema.
-      $schema = $refined->getDefinitions()->entry($name)?->schema();
+      $schema = $refined->entries()->entry($name)?->schema();
       if ($schema !== NULL && SchemaFacts::doesNotApply($schema)) {
         unset($values[$name]);
         continue;

@@ -255,7 +255,7 @@ trait NeverStricterTrait {
       return $values;
     }
     $values = clone $values;
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $name = (string) $name;
       if (!property_exists($values, $name)) {
         continue;

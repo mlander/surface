@@ -189,16 +189,6 @@ final class RecordingBlueprint extends BlueprintAdapterBase implements Blueprint
   /**
    * {@inheritdoc}
    */
-  public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): static {
-    $list = new ListDataDefinition([], is_string($item) ? DataDefinition::create($item) : $item);
-    $list->setLabel($label);
-    $this->record($key, 'addList', $list);
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static {
     $this->record($key, 'addDefinition', $definition, ['default' => $default]);
     return $this;

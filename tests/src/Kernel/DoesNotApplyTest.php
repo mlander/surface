@@ -7,20 +7,21 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\surface\Surface;
-use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMap;
-use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Contract\SchemaFacts;
+use Drupal\surface\Entries;
+use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Refinement\Narrowing;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Surface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_resource_test\Resource\Bulletin\BulletinResource;
 use Drupal\surface_resource_test\Structure\Broken\NarrowsAttachedStructure;
 use Drupal\surface_resource_test\Structure\Broken\UndeclaredDoesNotApplyStructure;
 use Drupal\surface_resource_test\Structure\Notice\NoticeBoardStructure;
 use Drupal\surface_resource_test\Structure\Notice\NoticeStructure;
-use Drupal\surface\Tool\OperationInputs;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -104,13 +105,13 @@ class DoesNotApplyTest extends SurfaceKernelTestBase {
    */
   public function testTheRefinerRulesTheKeyOut(): void {
     $built = $this->built();
-    $this->assertSame([''], $built->getDefinitions()->entry('send_day')->mayNotApply(), 'Declared in the return type.');
-    $this->assertFalse(DoesNotApply::marks($built->getDefinition('send_day')), 'Advertised: it may apply.');
-    $this->assertTrue(DoesNotApply::marks($built->refine(['frequency' => 'monthly'])->getDefinition('send_day')));
-    $weekly = $built->refine(['frequency' => 'weekly'])->getDefinition('send_day');
+    $this->assertSame([''], $built->entries()->entry('send_day')->mayNotApply(), 'Declared in the return type.');
+    $this->assertFalse(DoesNotApply::marks(DerivedDefinition::at($built, 'send_day')), 'Advertised: it may apply.');
+    $this->assertTrue(DoesNotApply::marks(DerivedDefinition::at($built->refine(['frequency' => 'monthly']), 'send_day')));
+    $weekly = DerivedDefinition::at($built->refine(['frequency' => 'weekly']), 'send_day');
     $this->assertFalse(DoesNotApply::marks($weekly));
     $this->assertTrue($weekly->isRequired(), 'Required when it applies.');
-    $this->assertFalse(DoesNotApply::marks($built->refine(['frequency' => 'yearly'])->getDefinition('send_day')), 'A frequency its own list refuses is no frequency: the gate stays closed.');
+    $this->assertFalse(DoesNotApply::marks(DerivedDefinition::at($built->refine(['frequency' => 'yearly']), 'send_day')), 'A frequency its own list refuses is no frequency: the gate stays closed.');
   }
 
   /**
@@ -139,16 +140,16 @@ class DoesNotApplyTest extends SurfaceKernelTestBase {
    */
   public function testParentMayOnlyRuleOutChild(): void {
     $notice = $this->built(NoticeStructure::class);
-    $this->assertSame([''], $notice->getDefinitions()->entry('address')->mayNotApply());
+    $this->assertSame([''], $notice->entries()->entry('address')->mayNotApply());
     $email = $notice->refine(['channel' => 'email', 'cadence' => 'weekly']);
-    $this->assertTrue(DoesNotApply::marks($email->getDefinition('address')));
-    $this->assertFalse(DoesNotApply::marks($email->getDefinition('schedule')));
+    $this->assertTrue(DoesNotApply::marks(DerivedDefinition::at($email, 'address')));
+    $this->assertFalse(DoesNotApply::marks(DerivedDefinition::at($email, 'schedule')));
     $post = $notice->refine(['channel' => 'post', 'cadence' => 'weekly']);
-    $this->assertFalse(DoesNotApply::marks($post->getDefinition('address')));
-    $this->assertTrue(DoesNotApply::marks($post->getDefinition('schedule')), 'Variants are ruled out like any key.');
-    $this->assertSame(['surface_resource_test.signature'], $notice->getDefinitions()->entry('third_party_settings')->mayNotApply(), 'A mounted key, by its path inside the mount.');
-    $this->assertSame(['surface_resource_test.signature'], SchemaFacts::ruledOutInside($post->getDefinitions()->entry('third_party_settings')->schema()));
-    $this->assertSame([], SchemaFacts::ruledOutInside($email->getDefinitions()->entry('third_party_settings')->schema()));
+    $this->assertFalse(DoesNotApply::marks(DerivedDefinition::at($post, 'address')));
+    $this->assertTrue(DoesNotApply::marks(DerivedDefinition::at($post, 'schedule')), 'Variants are ruled out like any key.');
+    $this->assertSame(['surface_resource_test.signature'], $notice->entries()->entry('third_party_settings')->mayNotApply(), 'A mounted key, by its path inside the mount.');
+    $this->assertSame(['surface_resource_test.signature'], SchemaFacts::ruledOutInside($post->entries()->entry('third_party_settings')->schema()));
+    $this->assertSame([], SchemaFacts::ruledOutInside($email->entries()->entry('third_party_settings')->schema()));
 
     $narrows = $this->built(NarrowsAttachedStructure::class);
     $this->expectException(\LogicException::class);
@@ -311,7 +312,7 @@ class DoesNotApplyTest extends SurfaceKernelTestBase {
   public function testRuntimeRuledOutIsRequiredNowhereAhead(): void {
     $board = $this->built(NoticeBoardStructure::class);
     $emitter = $this->container->get('surface.contract_emitter');
-    $this->assertSame([''], $board->getDefinitions()->entry('pinned')->mayNotApply(TRUE));
+    $this->assertSame([''], $board->entries()->entry('pinned')->mayNotApply(TRUE));
     $full = $emitter->emitFull($board, 'resource_test.notice_board')->document['schema'];
     $this->assertSame(['title'], $full['required'], 'Nothing says where it applies, so nothing requires it.');
     $this->assertTrue($full['properties']['pinned']['x-surface']['live']);
@@ -413,7 +414,7 @@ class DoesNotApplyTest extends SurfaceKernelTestBase {
    * Tests a list narrowed to nothing is a select offering nothing.
    */
   public function testListOfNothingIsSelectOfNothing(): void {
-    $surface = new Surface(DefinitionMap::fromArrays(definitions: [
+    $surface = new Surface(Entries::fromArrays(definitions: [
       'badge' => DataDefinition::create('string')->setLabel('Badge')->addConstraint('LabeledChoice', ['choices' => []]),
       'kind' => DataDefinition::create('string')->setLabel('Kind')->setRequired(TRUE)->addConstraint('Choice', ['choices' => []]),
     ]));

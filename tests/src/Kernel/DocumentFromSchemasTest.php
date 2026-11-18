@@ -135,12 +135,12 @@ class DocumentFromSchemasTest extends SurfaceKernelTestBase {
     $seen[spl_object_id($surface)] = TRUE;
     $walked = 1;
     $watched = [];
-    foreach ($surface->getDefinitions()->entries() as $entry) {
+    foreach ($surface->entries()->entries() as $entry) {
       foreach ($entry->dependencies as $path) {
         $watched[explode('.', $path)[0]] = TRUE;
       }
     }
-    foreach (['in' => $surface->getDefinitions(), 'out' => $surface->getOutputDefinitions()] as $side => $map) {
+    foreach (['in' => $surface->entries(), 'out' => $surface->outputEntries()] as $side => $map) {
       foreach ($map->entries() as $name => $entry) {
         $here = "$at $side:$name";
         $entries[$here] = [$entry, $entry->refiners !== [] || isset($watched[$name])];
@@ -209,7 +209,7 @@ class DocumentFromSchemasTest extends SurfaceKernelTestBase {
     $surface = SchemaEmitCases::rules();
     $this->container->get('surface.contract_emitter')->emitFull($surface, 'hand', 'op', 'Op', TRUE);
     $asked = [];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       if ($derived->getValue($entry) !== NULL) {
         $asked[] = (string) $name;
       }
@@ -243,7 +243,7 @@ class DocumentFromSchemasTest extends SurfaceKernelTestBase {
    */
   public function testThePortIsHeldAsItsSchema(): void {
     $top = SchemaEmitCases::twoLevelPort();
-    $middle = $top->getDefinitions()->entry('mid')->attachment->bound(['cap' => 's']);
+    $middle = $top->entries()->entry('mid')->attachment->bound(['cap' => 's']);
     $declared = DefinitionSchema::of(DataDefinition::create('string')->setLabel('Cap'));
     // The middle's port, bound by the top: the top's own declaration.
     $this->assertTrue(DefinitionSchema::same($declared, $middle->getPortSchema('cap')));
@@ -251,20 +251,14 @@ class DocumentFromSchemasTest extends SurfaceKernelTestBase {
     $this->assertNull($top->getPortSchema('cap'), 'A key is no port.');
     // Read through the middle: its child's port holds what the middle
     // wired to it.
-    $inner = $middle->getDefinitions()->entry('deep')->attachment->bound($middle->getPortValues());
+    $inner = $middle->entries()->entry('deep')->attachment->bound($middle->getPortValues());
     $this->assertSame('Middle cap', (string) $inner->getPortSchema('cap')->get('title'));
     $this->assertSame(['cap' => 's'], $inner->getPortValues());
-    // The definition is derived on each ask, equal to the one handed.
-    $definition = $middle->getPortDefinition('cap');
-    $this->assertInstanceOf(DataDefinition::class, $definition);
-    $this->assertEquals(['type' => 'string', 'label' => 'Cap'], $definition->toArray());
-    $this->assertNotSame($definition, $middle->getPortDefinition('cap'));
-    $this->assertNull($middle->getPortDefinition('nothing'));
-    // A definition handed to withPorts() is read once, at the door; handed
-    // again, equal, it binds nothing new.
-    $handed = DataDefinition::create('string')->setLabel('Handed');
+    // A schema handed to withPorts() is held as handed; handed again,
+    // equal, it binds nothing new.
+    $handed = DefinitionSchema::of(DataDefinition::create('string')->setLabel('Handed'));
     $bound = $middle->withPorts(['cap' => 'm'], ['cap' => $handed]);
-    $this->assertSame('Handed', (string) $bound->getPortSchema('cap')->get('title'));
+    $this->assertSame($handed, $bound->getPortSchema('cap'));
     $this->assertSame($bound, $bound->withPorts(['cap' => 'm'], ['cap' => clone $handed]));
   }
 

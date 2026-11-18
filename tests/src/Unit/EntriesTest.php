@@ -7,7 +7,7 @@ namespace Drupal\Tests\surface\Unit;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\Entry;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -25,25 +25,24 @@ use PortableSchema\Builder\Schema;
  * map cannot be written to, which is the same statement the builder
  * makes about itself, kept true of the thing the builder produced.
  *
- * @see \Drupal\surface\DefinitionMap
+ * @see \Drupal\surface\Entries
  * @see \Drupal\surface\Entry
  */
 #[Group('surface')]
-class DefinitionMapTest extends UnitTestCase {
+class EntriesTest extends UnitTestCase {
 
   /**
    * Tests that the declaration order survives every way of reading it.
    */
   public function testDeclarationOrderIsPreserved(): void {
-    $map = DefinitionMap::fromArrays([
-      'zebra' => DataDefinition::create('string'),
-      'aardvark' => DataDefinition::create('string'),
-      'moose' => DataDefinition::create('string'),
+    $map = Entries::fromArrays([
+      'zebra' => Schema::keywords(['type' => 'string']),
+      'aardvark' => Schema::keywords(['type' => 'string']),
+      'moose' => Schema::keywords(['type' => 'string']),
     ]);
 
     $this->assertSame(['zebra', 'aardvark', 'moose'], $map->names());
     $this->assertSame(['zebra', 'aardvark', 'moose'], array_keys(iterator_to_array($map)));
-    $this->assertSame(['zebra', 'aardvark', 'moose'], array_keys($map->toArray()));
     $this->assertSame(['zebra', 'aardvark', 'moose'], array_keys($map->keys()));
     $this->assertCount(3, $map);
   }
@@ -56,7 +55,7 @@ class DefinitionMapTest extends UnitTestCase {
    * it, and the keys come in declaration order, each TRUE.
    */
   public function testKeysDeriveNoDefinition(): void {
-    $map = new DefinitionMap([
+    $map = new Entries([
       Entry::ofSchema('zebra', Schema::keywords(['type' => 'string'])),
       Entry::ofSchema('aardvark', Schema::keywords(['type' => 'integer'])),
     ]);
@@ -68,22 +67,22 @@ class DefinitionMapTest extends UnitTestCase {
       $this->assertTrue($entry->isSchemaFirst());
       $this->assertNull($derived->getValue($entry), sprintf('The "%s" entry derived no definition.', $name));
     }
-    $this->assertSame([], (new DefinitionMap([]))->keys());
+    $this->assertSame([], (new Entries([]))->keys());
   }
 
   /**
-   * Tests that iterating hands back name => definition.
+   * Tests that iterating hands back name => schema.
    */
-  public function testIterationYieldsDefinitions(): void {
-    $title = DataDefinition::create('string')->setLabel('Title');
-    $map = DefinitionMap::fromArrays(['title' => $title]);
+  public function testIterationYieldsSchemas(): void {
+    $schema = Schema::keywords(['type' => 'string', 'title' => 'Title']);
+    $map = Entries::fromArrays(['title' => $schema]);
 
-    foreach ($map as $name => $definition) {
+    foreach ($map as $name => $yielded) {
       $this->assertSame('title', $name);
-      $this->assertSame($title, $definition);
+      $this->assertSame($schema, $yielded);
     }
-    $this->assertSame($title, $map->get('title'));
-    $this->assertSame($title, $map['title']);
+    $this->assertSame($schema, $map->get('title'));
+    $this->assertSame($schema, $map['title']);
     $this->assertTrue(isset($map['title']));
     $this->assertNull($map->get('nothing'));
     $this->assertFalse($map->has('nothing'));
@@ -95,7 +94,7 @@ class DefinitionMapTest extends UnitTestCase {
   public function testDuplicateNameRefused(): void {
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('The key "title" is declared twice.');
-    new DefinitionMap([
+    new Entries([
       new Entry('title', DataDefinition::create('string')),
       new Entry('title', DataDefinition::create('integer')),
     ]);
@@ -107,7 +106,7 @@ class DefinitionMapTest extends UnitTestCase {
   public function testUnknownDependencyRefused(): void {
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('Refinement dependency "kind" of "detail" is not a data surface definition.');
-    new DefinitionMap([
+    new Entries([
       new Entry('detail', DataDefinition::create('string'), dependencies: ['kind']),
     ]);
   }
@@ -118,7 +117,7 @@ class DefinitionMapTest extends UnitTestCase {
   public function testUnknownRefinementTargetRefused(): void {
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('Refinement target "detail" is not a data surface definition.');
-    DefinitionMap::fromArrays(
+    Entries::fromArrays(
       definitions: ['kind' => DataDefinition::create('string')],
       refinements: ['detail' => ['kind']],
     );
@@ -130,7 +129,7 @@ class DefinitionMapTest extends UnitTestCase {
   public function testUnknownKeyInBookkeepingRefused(): void {
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('"missing" is not a data surface definition.');
-    DefinitionMap::fromArrays(
+    Entries::fromArrays(
       definitions: ['kind' => DataDefinition::create('string')],
       locked: ['missing'],
     );
@@ -140,7 +139,7 @@ class DefinitionMapTest extends UnitTestCase {
    * Tests the per-key answers the parallel arrays used to give.
    */
   public function testEntriesCarryWhatTheArraysHeld(): void {
-    $map = DefinitionMap::fromArrays(
+    $map = Entries::fromArrays(
       definitions: [
         'kind' => DataDefinition::create('string'),
         'detail' => DataDefinition::create('string'),
@@ -172,7 +171,7 @@ class DefinitionMapTest extends UnitTestCase {
    * Tests that a dependency named by two keys is listed once.
    */
   public function testRefinementDependenciesAreDeduplicated(): void {
-    $map = DefinitionMap::fromArrays(
+    $map = Entries::fromArrays(
       definitions: [
         'entity_type' => DataDefinition::create('string'),
         'bundle' => DataDefinition::create('string'),
@@ -191,7 +190,7 @@ class DefinitionMapTest extends UnitTestCase {
    * Tests reading the map by the provider that had a hand in each key.
    */
   public function testByContributor(): void {
-    $map = new DefinitionMap([
+    $map = new Entries([
       new Entry('owned', DataDefinition::create('string')),
       new Entry(
         'extended',
@@ -216,7 +215,7 @@ class DefinitionMapTest extends UnitTestCase {
    * Tests that replacing one entry keeps its place and changes nothing else.
    */
   public function testWithReplacesInPlace(): void {
-    $map = DefinitionMap::fromArrays(
+    $map = Entries::fromArrays(
       definitions: [
         'kind' => DataDefinition::create('string'),
         'detail' => DataDefinition::create('string'),
@@ -231,19 +230,19 @@ class DefinitionMapTest extends UnitTestCase {
 
     $this->assertNotSame($map, $next);
     $this->assertSame(['kind', 'detail', 'note'], $next->names());
-    $this->assertSame($narrowed, $next->get('detail'));
+    $this->assertSame($narrowed, $next->entry('detail')->definition());
     // Everything else about the key is settled at build time.
     $this->assertTrue($next->isLocked('detail'));
     $this->assertSame(['kind'], $next->dependencies('detail'));
     // And the map it came from is untouched.
-    $this->assertNotSame($narrowed, $map->get('detail'));
+    $this->assertNotSame($narrowed, $map->entry('detail')->definition());
   }
 
   /**
    * Tests that a key the map never declared cannot be added by with().
    */
   public function testWithRefusesAnUndeclaredKey(): void {
-    $map = DefinitionMap::fromArrays(['kind' => DataDefinition::create('string')]);
+    $map = Entries::fromArrays(['kind' => DataDefinition::create('string')]);
 
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('"extra" is not a data surface definition.');
@@ -254,21 +253,21 @@ class DefinitionMapTest extends UnitTestCase {
    * Tests that the map refuses to be written to through array access.
    */
   public function testArrayAccessIsReadOnly(): void {
-    $map = DefinitionMap::fromArrays(['kind' => DataDefinition::create('string')]);
+    $map = Entries::fromArrays(['kind' => DataDefinition::create('string')]);
 
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('A definition map cannot be written to');
-    $map['extra'] = DataDefinition::create('string');
+    $this->expectExceptionMessage('The entries cannot be written to');
+    $map['extra'] = Schema::keywords(['type' => 'string']);
   }
 
   /**
    * Tests that the map refuses to have a key taken out of it.
    */
   public function testArrayAccessRefusesUnset(): void {
-    $map = DefinitionMap::fromArrays(['kind' => DataDefinition::create('string')]);
+    $map = Entries::fromArrays(['kind' => DataDefinition::create('string')]);
 
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('A definition map cannot be written to');
+    $this->expectExceptionMessage('The entries cannot be written to');
     unset($map['kind']);
   }
 
@@ -278,7 +277,7 @@ class DefinitionMapTest extends UnitTestCase {
   public function testChosenWithoutSchemaFirstIsRefused(): void {
     $this->expectException(\AssertionError::class);
     $this->expectExceptionMessage('A chosen variant is passed only with schemaFirst');
-    DefinitionMap::fromArrays(['pick' => MapDataDefinition::create()], chosen: ['pick' => 'x']);
+    Entries::fromArrays(['pick' => MapDataDefinition::create()], chosen: ['pick' => 'x']);
   }
 
   /**
@@ -287,7 +286,7 @@ class DefinitionMapTest extends UnitTestCase {
   public function testChosenAtKeyWithoutVariantsIsRefused(): void {
     $this->expectException(\AssertionError::class);
     $this->expectExceptionMessage('A chosen variant is passed only at a key with variants, not at pick.');
-    DefinitionMap::fromArrays(['pick' => MapDataDefinition::create()], schemaFirst: TRUE, chosen: ['pick' => 'x']);
+    Entries::fromArrays(['pick' => MapDataDefinition::create()], schemaFirst: TRUE, chosen: ['pick' => 'x']);
   }
 
 }

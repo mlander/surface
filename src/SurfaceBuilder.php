@@ -1205,11 +1205,11 @@ final class SurfaceBuilder {
       throw new \LogicException(sprintf('The %s mount holds keys already, so a structure cannot be attached there: a mount that holds a structure holds its keys alone.', $provider));
     }
     $this->reserveThirdPartyMount($provider);
-    foreach ($attachment->child->getDefinitions()->entries() as $name => $entry) {
+    foreach ($attachment->child->entries()->entries() as $name => $entry) {
       // A definition of its own, derived from the entry's schema: the
       // alter writes the mounted keys by path. A key of a class no schema
       // derives keeps a copy of its own definition, as the entry does.
-      $this->thirdParty[$provider][(string) $name] = DefinitionMap::derivedClasses($entry->schema())
+      $this->thirdParty[$provider][(string) $name] = Entries::derivedClasses($entry->schema())
         ? DefinitionFromSchema::of($entry->schema())
         : Surface::deepClone($entry->definition());
     }
@@ -1418,7 +1418,7 @@ final class SurfaceBuilder {
    * would otherwise produce an answer that depends on the order the keys
    * happened to be read in.
    *
-   * What comes out is a DefinitionMap: the builder's own bookkeeping
+   * What comes out is an Entries: the builder's own bookkeeping
    * (definitions, refinement edges, locked keys, contributed values and
    * refiner chains) folded into one entry per key, in declaration
    * order, and checked once for the rest of its shape.
@@ -1514,7 +1514,7 @@ final class SurfaceBuilder {
       static::assertOutputDeclarable((string) $name, $definition);
     }
     return $this->sealed = new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: $definitions,
         refinements: $this->refinements,
         locked: $locked,
@@ -1536,7 +1536,7 @@ final class SurfaceBuilder {
         chosen: $picked,
       ),
       $this->cacheability,
-      DefinitionMap::fromArrays(definitions: $outputs, schemaFirst: TRUE),
+      Entries::fromArrays(definitions: $outputs, schemaFirst: TRUE),
       $this->thirdPartyLayouts,
       $this->watchedValueCheck,
       lockedWhole: $this->lockedWhole,
