@@ -6,7 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\surface\Contract\ContractEmitter;
-use Drupal\surface\Contract\NodeFacts;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Refinement\WatchedValueAnswers;
 use Drupal\surface\Refinement\WatchedValueCheck;
@@ -82,7 +82,7 @@ final class WatchedValueParityCheck implements WatchedValueCheckInterface {
         self::count('refused, answered from kept');
       }
     }
-    if ($value === TRUE && NodeFacts::dataType($schema) === 'string') {
+    if ($value === TRUE && SchemaFacts::dataType($schema) === 'string') {
       self::count($said['asked'] === TRUE ? 'TRUE at a string key, admitted' : 'TRUE at a string key, refused');
     }
     if ($said['kept'] !== $said['asked'] || ($kept !== NULL && $kept !== $said['asked'])) {
