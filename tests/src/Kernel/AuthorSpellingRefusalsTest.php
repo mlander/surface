@@ -114,4 +114,27 @@ class AuthorSpellingRefusalsTest extends SurfaceKernelTestBase {
     $this->assertTrue($inputs->ports()['cap']->required);
   }
 
+  /**
+   * Tests options whose every value PHP made an integer state their type.
+   *
+   * PHP turns a numeric-string array key into an integer, so
+   * Schema::options(['1' => 'One']) offers the integer 1, and "1" was then
+   * refused at the key. With no type stated the author's meaning is
+   * unknown, so the spelling is refused naming both types; a stated type
+   * is read as stated.
+   */
+  public function testOptionsOfIntegerKeysStateTheirType(): void {
+    $this->assertRefused(fn () => $this->blueprint()->add('k', Schema::options(['1' => 'One', '2' => 'Two'])->title('N')), ['/properties/k:', "->type('string')", "->type('integer')"], \InvalidArgumentException::class);
+    $this->assertRefused(fn () => $this->blueprint()->add('days', Schema::list(Schema::options([1 => 'Monday', 2 => 'Tuesday']))->title('Days')), ['/properties/days/items:', "->type('string')"], \InvalidArgumentException::class);
+
+    $builder = new SurfaceBuilder();
+    $inputs = $this->blueprint($builder);
+    $inputs->add('text', Schema::options(['1' => 'One', '2' => 'Two'])->type('string')->title('N'));
+    $inputs->add('number', Schema::options([1 => 'One', 2 => 'Two'])->type('integer')->title('N'));
+    $inputs->add('mixed', Schema::options(['1' => 'One', 'b' => 'Bee'])->title('N'));
+    $this->assertContains('string', (array) $builder->heldSchema('text')?->get('type'));
+    $this->assertContains('integer', (array) $builder->heldSchema('number')?->get('type'));
+    $this->assertNotNull($builder->heldSchema('mixed'));
+  }
+
 }

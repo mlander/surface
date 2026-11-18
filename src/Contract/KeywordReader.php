@@ -1457,6 +1457,12 @@ final class KeywordReader {
         }
         $values[] = $choice->get('const');
       }
+      if ($values !== [] && array_filter($values, 'is_int') === $values) {
+        // PHP turns a numeric-string array key into an integer, so
+        // Schema::options(['1' => ...]) offers the integer 1. Which the
+        // author meant is not known.
+        throw new \InvalidArgumentException(sprintf('%s: every option is a whole number and no type is stated. PHP turns an array key such as \'1\' into the integer 1, so Schema::options() cannot tell the text "1" from the number 1: state the type, ->type(\'string\') for text or ->type(\'integer\') for numbers.', $pointer));
+      }
     }
     elseif (is_array($property->get('enum'))) {
       $values = $property->get('enum');
