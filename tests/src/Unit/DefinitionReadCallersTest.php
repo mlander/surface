@@ -73,11 +73,10 @@ class DefinitionReadCallersTest extends UnitTestCase {
    * - src/Pipeline/Validating.php reads none since 2026-11-16: a port's
    *   key is held as its schema (SurfaceInterface::getPortSchema()), and
    *   schemaAt() hands it on, to the options service too.
-   * - src/Surface.php, of(): withPorts() reads a port's key handed as a
-   *   definition into its schema, once, at the door (since 2026-11-16);
-   *   refusedWatchedValues() reads the place of a watched key its source
-   *   gave as a definition, which the watched-value check is handed as a
-   *   schema (since slice 34).
+   * - src/Surface.php, of(): withPorts() takes schemas only since slice 35
+   *   (2026-11-18), so nothing is read there; refusedWatchedValues() reads
+   *   the place of a watched key its source gave as a definition, which the
+   *   watched-value check is handed as a schema (since slice 34).
    * - src/Attachment.php, of(): withReads() reads the definition of the
    *   key a port is wired to into its schema, once (since 2026-11-16):
    *   the build hands the builder's definition (Attaching::wiredKeys()),
@@ -116,7 +115,7 @@ class DefinitionReadCallersTest extends UnitTestCase {
     'src/Options/SurfaceOptions.php' => ['of' => 1],
     'src/ResourceBuild/Binding.php' => ['of' => 1],
     'src/ResourceBuild/KeyPaths.php' => ['of' => 1],
-    'src/Surface.php' => ['around' => 2, 'of' => 2],
+    'src/Surface.php' => ['around' => 2, 'of' => 1],
     // A key the builder holds as a definition, asked for as a schema.
     'src/SurfaceBuilder.php' => ['of' => 1],
     'src/Tool/InputDefinitions.php' => ['of' => 2],
