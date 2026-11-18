@@ -123,7 +123,11 @@ class AddDefinitionListTest extends SurfaceKernelTestBase {
     $late = $builder->getDefinition('late_days');
     $this->assertInstanceOf(ListDataDefinition::class, $late);
     // Each list derives its own item definition, so the arrays are compared.
-    $this->assertEquals($days->getItemDefinition()->toArray(), $late->getItemDefinition()->toArray(), 'One item, two lists.');
+    $item = $days->getItemDefinition();
+    $late_item = $late->getItemDefinition();
+    $this->assertInstanceOf(DataDefinition::class, $item);
+    $this->assertInstanceOf(DataDefinition::class, $late_item);
+    $this->assertEquals($item->toArray(), $late_item->toArray(), 'One item, two lists.');
     $this->assertSame(1, $late->getConstraints()['Count']['min']);
 
     $keywords = $builder->getDefinition('keywords');
