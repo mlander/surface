@@ -15813,6 +15813,18 @@ they served.
   `Schema::of(Shape::class)`, alone or with a `default`, as each entry
   being that shape, as `add()` reads the shape's class: a shape is a
   document the key refers to (decided 2026-11-17).
+- **A check given no options.** `check('drupal:Country')` and
+  `check('drupal:Country', [])` are one schema, since the builder writes
+  both as `{}`, so the reader holds both as a constraint given no
+  options (NULL). A constraint an author adds with `[]` to what a verb
+  returns (`addConstraint('Country', [])` on what `addMap()` or
+  `addDefinition()` declares) is held the same way once the owner's
+  declaration and each alter's are done
+  (`BlueprintAdapterBase::settleOptions()`). Core's constraint manager
+  makes the same constraint of NULL and `[]`, so no value is checked
+  otherwise; only how the schema holds the options changed. A
+  definition handed to the builder directly, not through a verb, keeps
+  its options (decided 2026-11-17).
 - **Settings in the author's order.** A key's settings under
   `x-surface-settings` and those its `x-portable-ui` says are held in
   the order the two keywords are written, as `setSetting()` calls hold

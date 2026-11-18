@@ -298,6 +298,18 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    *
+   * The keys of each structure mixed in too.
+   */
+  public function settleOptions(): void {
+    parent::settleOptions();
+    foreach ($this->mixins as $mixin) {
+      $mixin['blueprint']->settleOptions();
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   *
    * A structure's members mixed in are the owner's keys, so are its keys
    * declared with a shape.
    */

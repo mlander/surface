@@ -914,6 +914,7 @@ final class Declaring {
       if ($instance instanceof AltersInputsInterface) {
         $blueprint = $additions[$alter->module] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, described: $described))->useShapes($this->shapes());
         PipelineGuard::onBehalf(PipelineGuard::ALTER, $alter->class, 'alterInputs', static fn () => $instance->alterInputs($blueprint));
+        $blueprint->settleOptions();
       }
       if ($instance instanceof AltersStorageLayoutInterface) {
         $builder->setThirdPartyLayout($alter->module, $instance->storageLayout());
@@ -987,6 +988,8 @@ final class Declaring {
       if ($outputs !== NULL) {
         $definition->outputs?->call($this->classResolver, $outputs);
       }
+      $inputs->settleOptions();
+      $outputs?->settleOptions();
       return;
     }
     // Decision: see docs/decisions.md#a-resource-or-structure-is-static.
@@ -995,6 +998,8 @@ final class Declaring {
     if ($outputs !== NULL && is_subclass_of($owner, DefinesOutputsInterface::class)) {
       $owner::defineOutputs($outputs);
     }
+    $inputs->settleOptions();
+    $outputs?->settleOptions();
   }
 
   /**

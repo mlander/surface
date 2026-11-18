@@ -14,6 +14,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_address\Storage\AddressFieldSettingsStorage;
 use Drupal\surface_examples_field\Resource\FieldInstanceResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * Settings only an address field has: the address field's settings variant.
@@ -52,18 +53,20 @@ final class AddressFieldSettingsResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     // The item says what one country code is, and the Country constraint
     // is the whole of that.
-    $country = DataDefinition::create('string')
-      ->setLabel(t('Country'))
-      ->addConstraint('Country', []);
-    $inputs->addList('available_countries', $country, t('Available countries'), default: [])
-      ->setDescription(t('Leave empty for all countries.'));
+    $inputs->addSchema('available_countries', Schema::list(Schema::string()
+      ->title(t('Country'))
+      ->check('drupal:Country'))
+      ->title(t('Available countries'))
+      ->description(t('Leave empty for all countries.'))
+      ->default([]));
 
     // Locked languages are excluded by default, which is what the address
     // module's own settings form does by hand: "not specified" and "not
     // applicable" are not languages an address is formatted in.
-    $inputs->add('langcode_override', 'string', t('Language override'))
-      ->setDescription(t('Ensures entered addresses are always formatted in the same language.'))
-      ->addConstraint('LanguageExists', []);
+    $inputs->addSchema('langcode_override', Schema::string()
+      ->title(t('Language override'))
+      ->description(t('Ensures entered addresses are always formatted in the same language.'))
+      ->check('drupal:LanguageExists'));
 
     $overrides = $inputs->addMap(
       'field_overrides',

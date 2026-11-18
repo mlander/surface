@@ -47,11 +47,12 @@ abstract class AnyEntityStructure implements StructureInterface {
     $targets = static::ENTITY_TYPES['targets'] ?? [];
     ksort($targets);
 
-    $inputs->add('entity_type', 'string', t('Entity type'))
-      ->addConstraint(References::TYPE_CONSTRAINT, array_filter([
+    $inputs->addSchema('entity_type', Schema::string()
+      ->title(t('Entity type'))
+      ->check('drupal:' . References::TYPE_CONSTRAINT, array_filter([
         'interface' => static::ENTITY_TYPES['interface'] ?? NULL,
         'targets' => $targets,
-      ]));
+      ])));
 
     $inputs->addSchema('id', Schema::string()
       ->title(t('ID'))
