@@ -178,8 +178,13 @@ class TypedDataFootprintTest extends UnitTestCase {
    * answers schemas, so CompiledFlow, PluginConfigurationStorage,
    * ResourcesInterface, FlatVariantsLayout and SurfaceInterface name no Typed
    * Data.
+   * Lowered on 2026-11-18 to 68: an entry holds a schema alone and the edges
+   * derive their own definition, so DefinitionTypedData is gone and
+   * SurfaceFormBuilderInterface, Narrowing, Arrangement, Examples,
+   * KnowsClearableKeysInterface, SiteCatalog and EncryptedStorageLayout name
+   * no Typed Data.
    */
-  public const OUTSIDE_THE_EDGES = 76;
+  public const OUTSIDE_THE_EDGES = 68;
 
   /**
    * Finds the files that use Typed Data.
