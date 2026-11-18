@@ -129,7 +129,7 @@ final class StoreResource implements ResourceInterface {
       ->default('CA')
       ->required());
 
-    $inputs->add(self::REGION, Schema::options(self::regions('CA') + self::regions('US'))
+    $inputs->add(self::REGION, Schema::options(self::regions('CA') + self::regions('US'))->type('string')
       ->title(t('Region'))
       ->default('CA-ON')
       ->required());

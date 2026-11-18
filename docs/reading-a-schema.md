@@ -420,7 +420,7 @@ final class BlockDirectStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('plugin', Schema::enum(['page_title_block', 'system_branding_block', 'system_menu_block:main'])->type('string')
+    $inputs->add('plugin', Schema::enum(['page_title_block', 'system_branding_block', 'system_menu_block:main'])
       ->title(t('Plugin')));
 
     $inputs->attachVariants('settings', by: 'plugin', label: t('Settings'), from: ConfigSchemaTypes::class, arguments: [
@@ -499,7 +499,7 @@ final class ConditionDirectStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('id', Schema::enum(['request_path', 'response_status', 'user_role'])->type('string')
+    $inputs->add('id', Schema::enum(['request_path', 'response_status', 'user_role'])
       ->title(t('Plugin')));
 
     $inputs->attachVariants('settings', by: 'id', label: t('Settings'), from: ConfigSchemaTypes::class, arguments: [

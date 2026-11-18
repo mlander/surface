@@ -1530,7 +1530,6 @@ namespace Drupal\surface_examples_compliance\Alter;
 use Drupal\Core\State\StateInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\Attribute\RefinesInput;
@@ -1538,6 +1537,7 @@ use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\surface_examples_compliance\Structure\ComplianceStructure;
+use Drupal\surface\Refinement\ChoiceSet;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -1609,18 +1609,18 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
    */
   #[RefinesInput('room', runtime: TRUE)]
   public function openRooms(Schema $room, string $venue): Schema {
-    $rooms = ChoiceSet::of($room)?->labels ?? [];
+    $set = ChoiceSet::of($room);
+    $rooms = $set === NULL ? [] : array_intersect_key($set->labels, array_flip($set->values));
     $closed = array_intersect_key($rooms, array_flip((array) $this->state->get(self::CLOSED_ROOMS, [])));
     if ($closed === []) {
       return Schema::any();
     }
-    return Schema::enum(array_keys(array_diff_key($rooms, $closed)))
-      ->description($this->formatPlural(
-        count($closed),
-        'The @rooms is closed.',
-        'The @rooms are closed.',
-        ['@rooms' => implode(' and the ', $closed)],
-      ));
+    return Schema::enum(array_keys(array_diff_key($rooms, $closed)))->description($this->formatPlural(
+      count($closed),
+      'The @rooms is closed.',
+      'The @rooms are closed.',
+      ['@rooms' => implode(' and the ', $closed)],
+    ));
   }
 
 }
@@ -2002,7 +2002,7 @@ use PortableSchema\Builder\Schema;
  *
  * The tent and the stove are variants at "gear", each a #[Variant] of
  * this class there, asked for under the gear like any variants at a key.
- * The gear is stored as Variants::FLAT, so the kit's config object
+ * The gear's map says Variants::STORED_AS FLAT, so the kit's config object
  * keeps the chosen variant's keys beside the kind, and no gear, which is
  * what the engine's layout writes and reads (FlatVariantsLayout). Both
  * declare the weight; the fuel is the stove's, the poles and the fly the

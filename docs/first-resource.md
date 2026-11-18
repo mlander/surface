@@ -194,6 +194,7 @@ final class NewsletterResource implements ResourceInterface {
       'weekly' => t('Weekly'),
       'monthly' => t('Monthly'),
     ])
+      ->type('string')
       ->title(t('Frequency'))
       ->default('weekly')
       ->required());

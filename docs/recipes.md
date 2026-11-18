@@ -110,7 +110,7 @@ $day = Schema::options([
   'fri' => t('Friday'),
   'sat' => t('Saturday'),
   'sun' => t('Sunday'),
-])->type('string');
+]);
 $inputs->add('days', Schema::list($day)
   ->title(t('Days open'))
   ->default(['mon', 'tue', 'wed', 'thu', 'fri'])
@@ -283,8 +283,13 @@ a bench per bench its configuration lists:
 
 ```php
 $inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class, label: t('Benches'));
-$inputs->addEach('lights', Schema::bool()->default(FALSE), from: WorkshopBenches::class, label: t('Lights'),
-  description: t('Which benches have their lamp on.'));
+$inputs->addEach(
+  'lights',
+  Schema::bool()->default(FALSE),
+  from: WorkshopBenches::class,
+  label: t('Lights'),
+  description: t('Which benches have their lamp on.'),
+);
 $inputs->addEach('codes', Schema::of(Sku::class), from: WorkshopBenches::class, label: t('Bench codes'));
 ```
 
@@ -328,7 +333,12 @@ translate. The alias settings ask for their types so:
 <!-- excerpt: tests/modules/surface_schema_test/src/Resource/AliasSettingsResource.php -->
 
 ```php
-$inputs->addEach('types', Schema::bool()->default(FALSE), from: AliasTypes::class, label: t('Types with aliases'));
+$inputs->addEach(
+  'types',
+  Schema::bool()->default(FALSE),
+  from: AliasTypes::class,
+  label: t('Types with aliases'),
+);
 ```
 
 The translation is a layout, a `StorageLayoutInterface` with two
@@ -430,11 +440,16 @@ $inputs->add('label', Schema::string()
   ->maxLength(128)
   ->required());
 
-$inputs->compute('id', Schema::of('drupal:config/machine_name')
-  ->title(t('Machine name'))
-  ->description(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
-  ->maxLength(32),
-  from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT);
+$inputs->compute(
+  'id',
+  Schema::of('drupal:config/machine_name')
+    ->title(t('Machine name'))
+    ->description(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
+    ->check('drupal:Length', ['max' => 32]),
+  from: ['label'],
+  using: MachineName::class,
+  when: Compute::UNLESS_SENT,
+);
 ```
 
 `id` is the resource's identity, `#[Resource(identity: ['id'])]`, and its

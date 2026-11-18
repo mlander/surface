@@ -354,21 +354,28 @@ final class RegistrationStep2Resource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add(self::TITLE, 'string', t('Event title'))
-      ->setRequired(TRUE);
+    $inputs->add(self::TITLE, Schema::string()
+      ->title(t('Event title'))
+      ->required());
 
-    $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
+    $inputs->add(self::OPEN, Schema::bool()
+      ->title(t('Registration open'))
+      ->default(TRUE));
 
-    $inputs->add(self::VENUE, 'string', t('Venue'))
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue'])
-      ->setRequired(TRUE);
+    $inputs->add(self::VENUE, Schema::string()
+      ->title(t('Venue'))
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'event_venue'])
+      ->required());
 
-    $inputs->add(self::ROOM, 'string', t('Room'))
-      ->setRequired(TRUE)
-      ->addConstraint('EventVenueRoom');
+    $inputs->add(self::ROOM, Schema::string()
+      ->title(t('Room'))
+      ->check('drupal:EventVenueRoom')
+      ->required());
 
-    $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1]);
+    $inputs->add(self::CAPACITY, Schema::integer()
+      ->title(t('Capacity'))
+      ->default(50)
+      ->minimum(1));
   }
 
   /**
@@ -378,8 +385,8 @@ final class RegistrationStep2Resource implements ResourceInterface {
    * key is spelled as a string: rename the key, rename the parameter.
    */
   #[RefinesInput(self::ROOM)]
-  public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
-    return $room->addConstraint('RoomOfEventVenue', ['venue' => $venue]);
+  public static function roomInVenue(string $venue): Schema {
+    return Schema::any()->check('drupal:RoomOfEventVenue', ['venue' => $venue]);
   }
 
   /**
@@ -390,16 +397,17 @@ final class RegistrationStep2Resource implements ResourceInterface {
    * self::ROOM by its name.
    */
   #[RefinesInput(self::CAPACITY)]
-  public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
+  public static function capacityOfRoom(string $room): Schema {
     $seats = Venues::seats($room);
-    if ($seats !== NULL && $capacity instanceof DataDefinition) {
-      $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats])
-        ->setDescription(t('Up to @seats for the @room.', [
-          '@seats' => $seats,
-          '@room' => Venues::rooms()[$room],
-        ]));
+    if ($seats === NULL) {
+      return Schema::any();
     }
-    return $capacity;
+    return Schema::any()
+      ->maximum($seats)
+      ->description(t('Up to @seats for the @room.', [
+        '@seats' => $seats,
+        '@room' => Venues::rooms()[$room],
+      ]));
   }
 
 }
@@ -675,24 +683,31 @@ final class RegistrationStep3Resource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Event title'))
-      ->setRequired(TRUE);
+    $inputs->add('title', Schema::string()
+      ->title(t('Event title'))
+      ->required());
 
-    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
+    $inputs->add('open', Schema::bool()
+      ->title(t('Registration open'))
+      ->default(TRUE));
 
-    $inputs->add('venue', 'string', t('Venue'))
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
+    $inputs->add('venue', Schema::options(Venues::VENUES)->type('string')
+      ->title(t('Venue'))
+      ->required());
 
-    $inputs->add('room', 'string', t('Room'))
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
+    $inputs->add('room', Schema::options(Venues::rooms())->type('string')
+      ->title(t('Room'))
+      ->required());
 
-    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1]);
+    $inputs->add('capacity', Schema::integer()
+      ->title(t('Capacity'))
+      ->default(50)
+      ->minimum(1));
 
-    $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
-      ->setRequired(TRUE);
+    $inputs->add('pricing', Schema::string()
+      ->title(t('Pricing'))
+      ->default('free')
+      ->required());
 
     $inputs->attachVariants('ticket', by: 'pricing', label: t('Ticket'));
 
@@ -703,8 +718,8 @@ final class RegistrationStep3Resource implements ResourceInterface {
    * The room must be one of the chosen venue's rooms.
    */
   #[RefinesInput('room')]
-  public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
-    return $room->addConstraint('LabeledChoice', ['choices' => Venues::rooms($venue)]);
+  public static function roomInVenue(string $venue): Schema {
+    return Schema::options(Venues::rooms($venue));
   }
 
   /**
@@ -714,16 +729,17 @@ final class RegistrationStep3Resource implements ResourceInterface {
    * its lower bound and has no upper one.
    */
   #[RefinesInput('capacity')]
-  public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
+  public static function capacityOfRoom(string $room): Schema {
     $seats = Venues::seats($room);
-    if ($seats !== NULL && $capacity instanceof DataDefinition) {
-      $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats])
-        ->setDescription(t('Up to @seats for the @room.', [
-          '@seats' => $seats,
-          '@room' => Venues::rooms()[$room],
-        ]));
+    if ($seats === NULL) {
+      return Schema::any();
     }
-    return $capacity;
+    return Schema::any()
+      ->maximum($seats)
+      ->description(t('Up to @seats for the @room.', [
+        '@seats' => $seats,
+        '@room' => Venues::rooms()[$room],
+      ]));
   }
 
 }
@@ -747,8 +763,9 @@ final class FreeTicketStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('note', 'string', t('Note'))
-      ->setDescription(t('Shown beside the register button, for example "Donations welcome".'));
+    $inputs->add('note', Schema::string()
+      ->title(t('Note'))
+      ->description(t('Shown beside the register button, for example "Donations welcome".')));
   }
 
 }
@@ -768,13 +785,15 @@ final class PaidTicketStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('price', 'float', t('Price'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 0.01]);
+    $inputs->add('price', Schema::number()
+      ->title(t('Price'))
+      ->minimum(0.01)
+      ->required());
 
-    $inputs->add('currency', 'string', t('Currency'), default: 'EUR')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['EUR', 'GBP', 'USD']]);
+    $inputs->add('currency', Schema::enum(['EUR', 'GBP', 'USD'])
+      ->title(t('Currency'))
+      ->default('EUR')
+      ->required());
   }
 
 }
@@ -792,10 +811,12 @@ final class ContactStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('email', 'email', t('Email'))
-      ->setRequired(TRUE);
+    $inputs->add('email', Schema::string()->format('email')
+      ->title(t('Email'))
+      ->required());
 
-    $inputs->add('phone', 'string', t('Phone'));
+    $inputs->add('phone', Schema::string()
+      ->title(t('Phone')));
   }
 
 }
@@ -909,21 +930,25 @@ final class ComplianceStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->reads('capacity', 'integer', required: TRUE);
+    $inputs->reads('capacity', Schema::integer()->required());
 
-    $inputs->add('license', License::class, t('Event license'));
+    $inputs->add('license', Schema::of(License::class)
+      ->title(t('Event license')));
 
-    $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
+    $inputs->add('stewards', Schema::integer()
+      ->title(t('Stewards'))
+      ->default(1)
+      ->required());
   }
 
   /**
    * One steward for every fifty people, at least one.
    */
   #[RefinesInput('stewards')]
-  public static function stewardsForCapacity(DataDefinition $stewards, int $capacity): DataDefinition {
+  public static function stewardsForCapacity(int $capacity): Schema {
     $n = max(1, (int) ceil($capacity / 50));
-    return $stewards->addConstraint('Range', ['min' => $n])
-      ->setDescription(new PluralTranslatableMarkup(
+    return Schema::any()->minimum($n)
+      ->description(new PluralTranslatableMarkup(
         $n,
         'At least 1 steward for @capacity attendees.',
         'At least @count stewards for @capacity attendees.',
@@ -973,7 +998,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     // an invalid sibling.
     $inputs->narrow('capacity')
       ->when(Condition::absent('license'))
-      ->constrain(Schema::keywords(['maximum' => 100]))
+      ->constrain(Schema::any()->maximum(100))
       ->because($this->t('Up to 100 without an event license.'));
   }
 
@@ -991,14 +1016,14 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
    * @see docs/decisions.md#static-by-default-runtime-by-declaration
    */
   #[RefinesInput('room', runtime: TRUE)]
-  public function openRooms(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
-    $rooms = $room->getConstraints()['LabeledChoice']['choices'] ?? [];
+  public function openRooms(Schema $room, string $venue): Schema {
+    $set = ChoiceSet::of($room);
+    $rooms = $set === NULL ? [] : array_intersect_key($set->labels, array_flip($set->values));
     $closed = array_intersect_key($rooms, array_flip((array) $this->state->get(self::CLOSED_ROOMS, [])));
-    if ($closed === [] || !$room instanceof DataDefinition) {
-      return $room;
+    if ($closed === []) {
+      return Schema::any();
     }
-    $room->addConstraint('LabeledChoice', ['choices' => array_diff_key($rooms, $closed)]);
-    return $room->setDescription($this->formatPlural(
+    return Schema::enum(array_keys(array_diff_key($rooms, $closed)))->description($this->formatPlural(
       count($closed),
       'The @rooms is closed.',
       'The @rooms are closed.',
@@ -1293,20 +1318,25 @@ final class BulletinResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('frequency', 'string', t('Frequency'), default: 'weekly')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => ['weekly' => t('Weekly'), 'monthly' => t('Monthly')],
-      ]);
+    $inputs->add('frequency', Schema::options(['weekly' => t('Weekly'), 'monthly' => t('Monthly')])
+      ->title(t('Frequency'))
+      ->default('weekly')
+      ->required());
 
-    $inputs->add('send_day', 'string', t('Send day'), default: 'monday')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => ['monday' => t('Monday'), 'wednesday' => t('Wednesday'), 'friday' => t('Friday')],
-      ]);
+    $inputs->add('send_day', Schema::options([
+      'monday' => t('Monday'),
+      'wednesday' => t('Wednesday'),
+      'friday' => t('Friday'),
+    ])
+      ->title(t('Send day'))
+      ->default('monday')
+      ->required());
 
-    $inputs->add('items', 'integer', t('Items per issue'), default: 5)
-      ->addConstraint('Range', ['min' => 1, 'max' => 20]);
+    $inputs->add('items', Schema::integer()
+      ->title(t('Items per issue'))
+      ->default(5)
+      ->minimum(1)
+      ->maximum(20));
 
     $inputs->narrow('send_day')
       ->when(Condition::equals('frequency', 'monthly'))
@@ -1314,7 +1344,7 @@ final class BulletinResource implements ResourceInterface {
 
     $inputs->narrow('items')
       ->when(Condition::equals('frequency', 'weekly'))
-      ->constrain(Schema::keywords(['maximum' => 5]))
+      ->constrain(Schema::any()->maximum(5))
       ->because(t('Up to 5 in a weekly issue.'));
   }
 
@@ -1392,14 +1422,17 @@ final class PersonStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->reads('listed', 'boolean');
+    $inputs->reads('listed', Schema::bool());
 
-    $inputs->add('name', 'string', t('Name'))
-      ->setRequired(TRUE);
+    $inputs->add('name', Schema::string()
+      ->title(t('Name'))
+      ->required());
 
-    $inputs->add('email', 'email', t('Email'));
+    $inputs->add('email', Schema::string()->format('email')
+      ->title(t('Email')));
 
-    $inputs->add('phone', PhoneNumber::class, t('Phone'));
+    $inputs->add('phone', Schema::of(PhoneNumber::class)
+      ->title(t('Phone')));
 
     $inputs->narrow('email')
       ->when(Condition::equals('listed', TRUE))
@@ -1448,15 +1481,17 @@ final class ReviewStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('reviewed_on', 'string', t('Reviewed on'))
-      ->setDescription(t('YYYY-MM-DD.'))
-      ->setSetting('widget', 'date')
-      ->addConstraint('Regex', [
+    $inputs->add('reviewed_on', Schema::string()
+      ->title(t('Reviewed on'))
+      ->description(t('YYYY-MM-DD.'))
+      ->check('drupal:Regex', [
         'pattern' => '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D',
         'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-19.'),
-      ]);
+      ])
+      ->ui(widget: 'date'));
 
-    $inputs->add('reviewed_by', 'string', t('Reviewed by'));
+    $inputs->add('reviewed_by', Schema::string()
+      ->title(t('Reviewed by')));
 
     $inputs->narrow('reviewed_by')
       ->when(Condition::present('reviewed_on'))
@@ -1482,7 +1517,9 @@ final class PressResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('public', 'boolean', t('Show on the press page'), default: TRUE);
+    $inputs->add('public', Schema::bool()
+      ->title(t('Show on the press page'))
+      ->default(TRUE));
 
     $inputs->attach('contact', PersonStructure::class, t('Press contact'), reads: ['listed' => 'public']);
 
@@ -1513,17 +1550,26 @@ final class InfoDeskResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('phone', PhoneNumber::class, t('Desk phone'))
-      ->setRequired(TRUE);
+    $inputs->add('phone', Schema::of(PhoneNumber::class)
+      ->title(t('Desk phone'))
+      ->required());
 
-    $inputs->add('in_program', 'boolean', t('Listed in the printed program'), default: FALSE);
+    $inputs->add('in_program', Schema::bool()
+      ->title(t('Listed in the printed program'))
+      ->default(FALSE));
 
     // A pair only the desk holds: an anonymous map, written inline.
     $inputs->addMap('location', t('Where the desk stands'), static function (BlueprintInterface $location): void {
-      $location->add('lat', 'float', t('Latitude'), default: 43.6532)
-        ->addConstraint('Range', ['min' => -90, 'max' => 90]);
-      $location->add('lng', 'float', t('Longitude'), default: -79.3832)
-        ->addConstraint('Range', ['min' => -180, 'max' => 180]);
+      $location->add('lat', Schema::number()
+        ->title(t('Latitude'))
+        ->default(43.6532)
+        ->minimum(-90)
+        ->maximum(90));
+      $location->add('lng', Schema::number()
+        ->title(t('Longitude'))
+        ->default(-79.3832)
+        ->minimum(-180)
+        ->maximum(180));
     });
 
     $inputs->attach('lead', PersonStructure::class, t('Desk lead'), reads: ['listed' => 'in_program']);
@@ -1621,8 +1667,13 @@ final class TicketSalesResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, label: t('On sale'), default: FALSE)
-      ->setDescription(t('Which ticket types can be bought.'));
+    $inputs->addEach(
+      'on_sale',
+      Schema::bool()->default(FALSE),
+      from: TicketTypes::class,
+      label: t('On sale'),
+      description: t('Which ticket types can be bought.'),
+    );
 
     $inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, label: t('Limits'), reads: ['selling' => 'on_sale']);
   }
@@ -1646,12 +1697,17 @@ final class TicketLimitStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('per_order', 'integer', t('Per order'), default: 4)
-      ->addConstraint('Range', ['min' => 1, 'max' => 10]);
+    $inputs->add('per_order', Schema::integer()
+      ->title(t('Per order'))
+      ->default(4)
+      ->minimum(1)
+      ->maximum(10));
 
-    $inputs->add('waiting_list', 'boolean', t('Waiting list when sold out'), default: FALSE);
+    $inputs->add('waiting_list', Schema::bool()
+      ->title(t('Waiting list when sold out'))
+      ->default(FALSE));
 
-    $inputs->reads('selling', 'boolean');
+    $inputs->reads('selling', Schema::bool());
 
     $inputs->narrow('per_order')->when(Condition::equals('selling', FALSE))->doesNotApply();
 
@@ -1874,11 +1930,15 @@ final class FeesStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('standard', 'float', t('Standard fee'), default: 20.0)
-      ->addConstraint('Range', ['min' => 0]);
+    $inputs->add('standard', Schema::number()
+      ->title(t('Standard fee'))
+      ->default(20.0)
+      ->minimum(0));
 
-    $inputs->add('concession', 'float', t('Concession fee'), default: 10.0)
-      ->addConstraint('Range', ['min' => 0]);
+    $inputs->add('concession', Schema::number()
+      ->title(t('Concession fee'))
+      ->default(10.0)
+      ->minimum(0));
   }
 
 }
@@ -1905,13 +1965,19 @@ final class ProgramResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('headline', 'string', t('Headline'))
-      ->setRequired(TRUE);
+    $inputs->add('headline', Schema::string()
+      ->title(t('Headline'))
+      ->required());
 
-    $inputs->add('sessions', 'integer', t('Sessions'), default: 8)
-      ->addConstraint('Range', ['min' => 1, 'max' => 30]);
+    $inputs->add('sessions', Schema::integer()
+      ->title(t('Sessions'))
+      ->default(8)
+      ->minimum(1)
+      ->maximum(30));
 
-    $inputs->add('published', 'boolean', t('Published'), default: FALSE);
+    $inputs->add('published', Schema::bool()
+      ->title(t('Published'))
+      ->default(FALSE));
 
     $inputs->attach('fees', FeesStructure::class, t('Fees'));
   }
@@ -2124,32 +2190,41 @@ final class DoorsResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('opens', 'string', t('Doors open at'), default: '18:30')
-      ->setRequired(TRUE)
-      ->setDescription(t('HH:MM, on a 24-hour clock.'))
-      ->setSetting('widget', 'time')
-      ->addConstraint('Regex', [
+    $inputs->add('opens', Schema::string()
+      ->title(t('Doors open at'))
+      ->description(t('HH:MM, on a 24-hour clock.'))
+      ->default('18:30')
+      ->check('drupal:Regex', [
         'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
         'message' => t('Write the time as HH:MM, such as 18:30.'),
-      ]);
+      ])
+      ->ui(widget: 'time')
+      ->required());
+    $inputs->add('days', Schema::list(Schema::options([
+      'fri' => t('Friday'),
+      'sat' => t('Saturday'),
+      'sun' => t('Sunday'),
+    ]))
+      ->title(t('Days'))
+      ->default(['fri', 'sat'])
+      ->required());
 
-    $day = DataDefinition::create('string')
-      ->addConstraint('LabeledChoice', [
-        'choices' => ['fri' => t('Friday'), 'sat' => t('Saturday'), 'sun' => t('Sunday')],
-      ]);
-    $inputs->addList('days', $day, t('Days'), default: ['fri', 'sat'])
-      ->setRequired(TRUE);
+    $inputs->add('badges', Schema::options([
+      'printed' => t('Printed at the door'),
+      'digital' => t('On the phone'),
+      'none' => t('No badges'),
+    ])
+      ->title(t('Badges'))
+      ->default('printed')
+      ->ui(widget: 'radios'));
 
-    $inputs->add('badges', 'string', t('Badges'), default: 'printed')
-      ->setSetting('widget', 'radios')
-      ->addConstraint('LabeledChoice', [
-        'choices' => ['printed' => t('Printed at the door'), 'digital' => t('On the phone'), 'none' => t('No badges')],
-      ]);
+    $inputs->add('notes', Schema::string()
+      ->title(t('Notes for the door team'))
+      ->ui(widget: 'textarea'));
 
-    $inputs->add('notes', 'string', t('Notes for the door team'))
-      ->setSetting('multiline', TRUE);
-
-    $inputs->addList('greeters', 'string', t('Greeters'), default: []);
+    $inputs->add('greeters', Schema::list(Schema::string())
+      ->title(t('Greeters'))
+      ->default([]));
   }
 
 }
@@ -2243,8 +2318,10 @@ final class SpotlightResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('component', 'string', t('Component'), default: 'surface_examples:card')
-      ->setRequired(TRUE);
+    $inputs->add('component', Schema::string()
+      ->title(t('Component'))
+      ->default('surface_examples:card')
+      ->required());
 
     $inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
 
@@ -2660,7 +2737,8 @@ final class ComponentBlockStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('component', 'string', t('Component'));
+    $inputs->add('component', Schema::string()
+      ->title(t('Component')));
 
     $inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
 
@@ -3025,14 +3103,20 @@ final class MailerResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('sender', 'email', t('Sender'), default: 'tickets@example.com')
-      ->setRequired(TRUE);
+    $inputs->add('sender', Schema::string()->format('email')
+      ->title(t('Sender'))
+      ->default('tickets@example.com')
+      ->required());
 
-    $inputs->add('endpoint', 'uri', t('Mail service'), default: 'https://mail.example.com/v1/send')
-      ->setRequired(TRUE);
+    $inputs->add('endpoint', Schema::string()->format('uri')
+      ->title(t('Mail service'))
+      ->default('https://mail.example.com/v1/send')
+      ->required());
 
-    $inputs->add('source', 'string', t('Credential source'), default: 'pasted')
-      ->setRequired(TRUE);
+    $inputs->add('source', Schema::string()
+      ->title(t('Credential source'))
+      ->default('pasted')
+      ->required());
 
     $inputs->attachVariants('credential', by: 'source', label: t('Credential'), from: CredentialSources::class);
   }
@@ -3124,10 +3208,11 @@ final class PastedCredentialStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $api_key = $inputs->add('api_key', 'string', t('API key'))
-      ->setDescription(t('The key the mail service issued, pasted here.'))
-      ->setRequired(TRUE);
-    DefinitionMetadata::setSecret($api_key);
+    $inputs->add('api_key', Schema::string()
+      ->title(t('API key'))
+      ->description(t('The key the mail service issued, pasted here.'))
+      ->writeOnly(TRUE)
+      ->required());
   }
 
 }
@@ -3146,10 +3231,11 @@ final class ManagedCredentialStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('key_id', 'string', t('Key'))
-      ->setDescription(t('A key the site manages; its value is read where it is used, never stored here.'))
-      ->setRequired(TRUE)
-      ->addConstraint('ManagedKey');
+    $inputs->add('key_id', Schema::string()
+      ->title(t('Key'))
+      ->description(t('A key the site manages; its value is read where it is used, never stored here.'))
+      ->check('drupal:ManagedKey')
+      ->required());
   }
 
 }
@@ -3273,12 +3359,15 @@ final class WebhookResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('endpoint', 'uri', t('Endpoint'), default: 'https://hooks.example.com/sales')
-      ->setRequired(TRUE);
+    $inputs->add('endpoint', Schema::string()->format('uri')
+      ->title(t('Endpoint'))
+      ->default('https://hooks.example.com/sales')
+      ->required());
 
-    $api_key = $inputs->add('api_key', 'string', t('API key'))
-      ->setDescription(t('The key each post is signed with, pasted here.'));
-    DefinitionMetadata::setSecret($api_key);
+    $inputs->add('api_key', Schema::string()
+      ->title(t('API key'))
+      ->description(t('The key each post is signed with, pasted here.'))
+      ->writeOnly(TRUE));
   }
 
 }
@@ -3311,9 +3400,10 @@ final class WebhookKeyAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('key_id', 'string', $this->t('Key'))
-      ->setDescription($this->t('A key the site manages, used in place of a pasted one.'))
-      ->addConstraint('ManagedKey');
+    $inputs->add('key_id', Schema::string()
+      ->title($this->t('Key'))
+      ->description($this->t('A key the site manages, used in place of a pasted one.'))
+      ->check('drupal:ManagedKey'));
     $inputs->describe('third_party_settings.surface_examples_keys', label: $this->t('Managed key'), after: 'api_key');
     // A managed key chosen: a pasted one means nothing beside it.
     $inputs->narrow('api_key')
@@ -3792,40 +3882,66 @@ final class VenueResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('label', 'string', t('Name'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 128]);
+    $inputs->add('label', Schema::string()
+      ->title(t('Name'))
+      ->maxLength(128)
+      ->required());
 
-    $inputs->compute('id', 'machine_name', t('Machine name'),
-      from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
-      ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
-      ->addConstraint('Length', ['max' => 32]);
+    $inputs->compute(
+      'id',
+      Schema::of('drupal:config/machine_name')
+        ->title(t('Machine name'))
+        ->description(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
+        ->check('drupal:Length', ['max' => 32]),
+      from: ['label'],
+      using: MachineName::class,
+      when: Compute::UNLESS_SENT,
+    );
 
-    $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
-      ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
-      ->addConstraint('Regex', [
-        'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
-        'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
-      ])
-      ->addConstraint('Length', ['max' => 128]);
+    $inputs->compute(
+      'slug',
+      Schema::string()
+        ->title(t('Slug'))
+        ->description(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
+        ->check('drupal:Regex', [
+          'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
+          'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
+        ])
+        ->maxLength(128),
+      from: ['label'],
+      using: Slugify::class,
+    );
 
-    $inputs->add('capacity', 'integer', t('Capacity'))
-      ->setDescription(t('How many people the venue holds.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 100000]);
+    $inputs->add('capacity', Schema::integer()
+      ->title(t('Capacity'))
+      ->description(t('How many people the venue holds.'))
+      ->minimum(1)
+      ->maximum(100000)
+      ->required());
 
-    $inputs->add('address', 'string', t('Address'))
-      ->addConstraint('Length', ['max' => 255]);
+    $inputs->add('address', Schema::string()
+      ->title(t('Address'))
+      ->maxLength(255));
 
-    $inputs->attachList('rooms', VenueRoomStructure::class, t('Rooms'), max: 20)
-      ->setDescription(t('The rooms an event at the venue may be held in.'));
+    $inputs->attachList(
+      'rooms',
+      VenueRoomStructure::class,
+      t('Rooms'),
+      max: 20,
+      description: t('The rooms an event at the venue may be held in.'),
+    );
 
-    $inputs->add('weight', 'integer', t('Weight'), default: 0)
-      ->setDescription(t('Its place among the venues: lighter first.'))
-      ->addConstraint('Range', ['min' => -1000, 'max' => 1000]);
+    $inputs->add('weight', Schema::integer()
+      ->title(t('Weight'))
+      ->description(t('Its place among the venues: lighter first.'))
+      ->default(0)
+      ->minimum(-1000)
+      ->maximum(1000));
 
-    $inputs->add('status', 'boolean', t('Enabled'), default: TRUE)
-      ->setDescription(t('Whether events may be held there; a disabled venue is listed only for an account that administers the venues.'));
+    $inputs->add('status', Schema::bool()
+      ->title(t('Enabled'))
+      ->description(t('Whether events may be held there; a disabled venue is listed only for an account that administers the venues.'))
+      ->default(TRUE));
   }
 
 }
@@ -3888,35 +4004,43 @@ final class VenueListingStructure implements StructureInterface, DefinesOutputsI
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('offset', 'integer', t('Offset'), default: 0)
-      ->setDescription(t('How many venues to skip, in order of weight.'))
-      ->addConstraint('Range', ['min' => 0, 'max' => 10000]);
+    $inputs->add('offset', Schema::integer()
+      ->title(t('Offset'))
+      ->description(t('How many venues to skip, in order of weight.'))
+      ->default(0)
+      ->minimum(0)
+      ->maximum(10000));
 
-    $inputs->add('limit', 'integer', t('Limit'), default: 20)
-      ->setDescription(t('How many venues to answer at most.'))
-      ->addConstraint('Range', ['min' => 1, 'max' => 50]);
+    $inputs->add('limit', Schema::integer()
+      ->title(t('Limit'))
+      ->description(t('How many venues to answer at most.'))
+      ->default(20)
+      ->minimum(1)
+      ->maximum(50));
 
-    $inputs->add('status', 'boolean', t('Enabled'))
-      ->setDescription(t('Only the venues enabled, or only those disabled; left out, every venue.'));
+    $inputs->add('status', Schema::bool()
+      ->title(t('Enabled'))
+      ->description(t('Only the venues enabled, or only those disabled; left out, every venue.')));
   }
 
   /**
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $item = MapDataDefinition::create()
-      ->setLabel(t('Venue'))
-      ->setPropertyDefinition('id', DataDefinition::create('string')->setLabel(t('Machine name'))->setRequired(TRUE))
-      ->setPropertyDefinition('label', DataDefinition::create('string')->setLabel(t('Name'))->setRequired(TRUE))
-      ->setPropertyDefinition('capacity', DataDefinition::create('integer')->setLabel(t('Capacity'))->setRequired(TRUE))
-      ->setPropertyDefinition('weight', DataDefinition::create('integer')->setLabel(t('Weight'))->setRequired(TRUE));
-    $outputs->addList('items', $item, t('Venues'))
-      ->setDescription(t('The page of venues, lighter first, each one the account may read.'))
-      ->setRequired(TRUE);
+    $outputs->add('items', Schema::list(Schema::object([
+      'id' => Schema::string()->title(t('Machine name'))->required(),
+      'label' => Schema::string()->title(t('Name'))->required(),
+      'capacity' => Schema::integer()->title(t('Capacity'))->required(),
+      'weight' => Schema::integer()->title(t('Weight'))->required(),
+    ])->title(t('Venue')))
+      ->title(t('Venues'))
+      ->description(t('The page of venues, lighter first, each one the account may read.'))
+      ->required());
 
-    $outputs->add('total', 'integer', t('Total'))
-      ->setDescription(t('How many venues the filter matched that the account may read, on every page.'))
-      ->setRequired(TRUE);
+    $outputs->add('total', Schema::integer()
+      ->title(t('Total'))
+      ->description(t('How many venues the filter matched that the account may read, on every page.'))
+      ->required());
   }
 
 }
@@ -3934,9 +4058,14 @@ final class VenueReorderStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->attachList('venues', VenueOrderStructure::class, t('Venues'), min: 1)
-      ->setDescription(t('Each venue to move, once, with its new weight; a venue left out keeps its own.'))
-      ->setRequired(TRUE);
+    $inputs->attachList(
+      'venues',
+      VenueOrderStructure::class,
+      t('Venues'),
+      min: 1,
+      description: t('Each venue to move, once, with its new weight; a venue left out keeps its own.'),
+      required: TRUE,
+    );
   }
 
 }
@@ -3952,14 +4081,17 @@ final class VenueOrderStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('id', 'string', t('Venue'))
-      ->setDescription(t('The machine name of a venue the site has.'))
-      ->setRequired(TRUE);
+    $inputs->add('id', Schema::string()
+      ->title(t('Venue'))
+      ->description(t('The machine name of a venue the site has.'))
+      ->required());
 
-    $inputs->add('weight', 'integer', t('Weight'))
-      ->setDescription(t('Its place among the venues: lighter first.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => -1000, 'max' => 1000]);
+    $inputs->add('weight', Schema::integer()
+      ->title(t('Weight'))
+      ->description(t('Its place among the venues: lighter first.'))
+      ->minimum(-1000)
+      ->maximum(1000)
+      ->required());
   }
 
 }
@@ -4599,28 +4731,44 @@ final class SponsorshipResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     // A venue keeps its id as a string, a user and a node as an integer.
-    $inputs->add('venue', 'string', t('Venue'), default: 'riverside')
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue'])
-      ->setDescription(t("Where the sponsor's stand is."))
-      ->setRequired(TRUE);
+    $inputs->add('venue', Schema::string()
+      ->title(t('Venue'))
+      ->description(t("Where the sponsor's stand is."))
+      ->default('riverside')
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'event_venue'])
+      ->required());
 
-    $inputs->add('contact', 'integer', t('Contact'))
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user'])
-      ->setDescription(t('Who answers for the sponsor.'));
+    $inputs->add('contact', Schema::integer()
+      ->title(t('Contact'))
+      ->description(t('Who answers for the sponsor.'))
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'user']));
 
-    $inputs->add('page', 'integer', t('Announcement'))
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']])
-      ->setDescription(t('The article that announces the sponsor.'));
+    $inputs->add('page', Schema::integer()
+      ->title(t('Announcement'))
+      ->description(t('The article that announces the sponsor.'))
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]));
 
     // Of any type: an entity type, then an id of it.
-    $inputs->attach('thing', ThingStructure::class, t('Featured beside'))
-      ->setDescription(t('Any content the sponsor is featured beside.'));
+    $inputs->attach(
+      'thing',
+      ThingStructure::class,
+      t('Featured beside'),
+      description: t('Any content the sponsor is featured beside.'),
+    );
 
-    $inputs->attach('setting', SettingStructure::class, t('Linked to'))
-      ->setDescription(t('A venue or a role the sponsorship is linked to.'));
+    $inputs->attach(
+      'setting',
+      SettingStructure::class,
+      t('Linked to'),
+      description: t('A venue or a role the sponsorship is linked to.'),
+    );
 
-    $inputs->attach('credit', CreditStructure::class, t('Credited on'))
-      ->setDescription(t('An article or a user the sponsor is credited on.'));
+    $inputs->attach(
+      'credit',
+      CreditStructure::class,
+      t('Credited on'),
+      description: t('An article or a user the sponsor is credited on.'),
+    );
   }
 
 }
@@ -4795,27 +4943,34 @@ final class RetitleResource implements ResourceInterface, DefinesOutputsInterfac
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->attachList('items', RetitleItemStructure::class, t('Nodes'), min: 1, max: 50)
-      ->setDescription(t('Each node to retitle, one to fifty.'))
-      ->setRequired(TRUE);
+    $inputs->attachList(
+      'items',
+      RetitleItemStructure::class,
+      t('Nodes'),
+      min: 1,
+      max: 50,
+      description: t('Each node to retitle, one to fifty.'),
+      required: TRUE,
+    );
 
-    $inputs->add('style', 'string', t('Style'), default: TitleRewriter::TITLE)
-      ->setDescription(t('How the title of a node sent no new title is rewritten.'))
-      ->addConstraint('LabeledChoice', ['choices' => TitleRewriter::styles()]);
+    $inputs->add('style', Schema::options(TitleRewriter::styles())->type('string')
+      ->title(t('Style'))
+      ->description(t('How the title of a node sent no new title is rewritten.'))
+      ->default(TitleRewriter::TITLE));
   }
 
   /**
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $title = MapDataDefinition::create()
-      ->setLabel(t('Title'))
-      ->setPropertyDefinition('node', DataDefinition::create('integer')->setLabel(t('Node'))->setRequired(TRUE))
-      ->setPropertyDefinition('old', DataDefinition::create('string')->setLabel(t('Old title'))->setRequired(TRUE))
-      ->setPropertyDefinition('new', DataDefinition::create('string')->setLabel(t('New title'))->setRequired(TRUE));
-    $outputs->addList('titles', $title, t('Titles'))
-      ->setDescription(t("Each node's title before and after, in the order sent: what a dry run would write, or what was written."))
-      ->setRequired(TRUE);
+    $outputs->add('titles', Schema::list(Schema::object([
+      'node' => Schema::integer()->title(t('Node'))->required(),
+      'old' => Schema::string()->title(t('Old title'))->required(),
+      'new' => Schema::string()->title(t('New title'))->required(),
+    ])->title(t('Title')))
+      ->title(t('Titles'))
+      ->description(t("Each node's title before and after, in the order sent: what a dry run would write, or what was written."))
+      ->required());
   }
 
 }
@@ -4834,14 +4989,16 @@ final class RetitleItemStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('node', 'integer', t('Node'))
-      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node'])
-      ->setDescription(t('The node to retitle.'))
-      ->setRequired(TRUE);
+    $inputs->add('node', Schema::integer()
+      ->title(t('Node'))
+      ->description(t('The node to retitle.'))
+      ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node'])
+      ->required());
 
-    $inputs->add('new_title', 'string', t('New title'))
-      ->setDescription(t("Written as sent; left out, the node's title is rewritten in the style chosen."))
-      ->addConstraint('Length', ['max' => 255]);
+    $inputs->add('new_title', Schema::string()
+      ->title(t('New title'))
+      ->description(t("Written as sent; left out, the node's title is rewritten in the style chosen."))
+      ->maxLength(255));
   }
 
 }
@@ -5105,44 +5262,51 @@ final class CateringByMethodResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $details = ArrangementGroup::fieldset('details', t('Details'));
 
-    $inputs->add('public', 'boolean', t('Show the caterer on the event page'), default: FALSE);
+    $inputs->add('public', Schema::bool()
+      ->title(t('Show the caterer on the event page'))
+      ->default(FALSE));
 
-    $provider = $inputs->add('provider', 'string', t('Caterer'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 128]);
-    DefinitionMetadata::setExamples($provider, ['Harbour Kitchen']);
+    $inputs->add('provider', Schema::string()
+      ->title(t('Caterer'))
+      ->maxLength(128)
+      ->examples(['Harbour Kitchen'])
+      ->required());
     $inputs->describe('provider', placeholder: t('The name on the contract'));
 
-    $inputs->add('headcount', 'integer', t('Headcount'))
-      ->setDescription(t('How many people to cater for.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 5000]);
+    $inputs->add('headcount', Schema::integer()
+      ->title(t('Headcount'))
+      ->description(t('How many people to cater for.'))
+      ->minimum(1)
+      ->maximum(5000)
+      ->required());
 
-    $inputs->add('budget', 'float', t('Budget'))
-      ->addConstraint('Range', ['min' => 0]);
+    $inputs->add('budget', Schema::number()
+      ->title(t('Budget'))
+      ->minimum(0));
     $inputs->describe('budget', group: $details, suffix: t('EUR'));
 
-    $dietary = $inputs->addList('dietary', 'string', t('Dietary needs'), default: []);
-    $dietary->getItemDefinition()->addConstraint('LabeledChoice', [
-      'choices' => [
-        'vegetarian' => t('Vegetarian'),
-        'vegan' => t('Vegan'),
-        'gluten_free' => t('Gluten free'),
-        'halal' => t('Halal'),
-        'kosher' => t('Kosher'),
-      ],
-    ]);
+    $inputs->add('dietary', Schema::list(Schema::options([
+      'vegetarian' => t('Vegetarian'),
+      'vegan' => t('Vegan'),
+      'gluten_free' => t('Gluten free'),
+      'halal' => t('Halal'),
+      'kosher' => t('Kosher'),
+    ]))
+      ->title(t('Dietary needs'))
+      ->default([]));
 
-    $inputs->add('served_at', 'string', t('Served at'))
-      ->setDescription(t('HH:MM, on a 24-hour clock.'))
-      ->setSetting('widget', 'time')
-      ->addConstraint('Regex', [
+    $inputs->add('served_at', Schema::string()
+      ->title(t('Served at'))
+      ->description(t('HH:MM, on a 24-hour clock.'))
+      ->check('drupal:Regex', [
         'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
         'message' => t('Write the time as HH:MM, such as 18:30.'),
-      ]);
+      ])
+      ->ui(widget: 'time'));
 
-    $inputs->add('notes', 'string', t('Notes for the caterer'))
-      ->setSetting('multiline', TRUE);
+    $inputs->add('notes', Schema::string()
+      ->title(t('Notes for the caterer'))
+      ->ui(widget: 'textarea'));
     $inputs->describe('notes', group: $details);
 
     $inputs->attach('contact', PersonStructure::class, t('Caterer contact'), reads: ['listed' => 'public']);
@@ -5424,29 +5588,41 @@ final class EventSetupResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('name', 'string', t('Event name'), default: 'Autumn meetup')
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 128]);
+    $inputs->add('name', Schema::string()
+      ->title(t('Event name'))
+      ->default('Autumn meetup')
+      ->maxLength(128)
+      ->required());
 
-    $inputs->add('date', 'string', t('Date'), default: '2026-10-17')
-      ->setDescription(t('YYYY-MM-DD.'))
-      ->setSetting('widget', 'date')
-      ->addConstraint('Regex', [
+    $inputs->add('date', Schema::string()
+      ->title(t('Date'))
+      ->description(t('YYYY-MM-DD.'))
+      ->default('2026-10-17')
+      ->check('drupal:Regex', [
         'pattern' => '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D',
         'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-17.'),
-      ]);
+      ])
+      ->ui(widget: 'date'));
 
-    $inputs->add('capacity', 'integer', t('Capacity'), default: 100)
-      ->addConstraint('Range', ['min' => 1, 'max' => 5000]);
+    $inputs->add('capacity', Schema::integer()
+      ->title(t('Capacity'))
+      ->default(100)
+      ->minimum(1)
+      ->maximum(5000));
 
-    $inputs->add('price', 'float', t('Ticket price'), default: 25.0)
-      ->addConstraint('Range', ['min' => 0]);
+    $inputs->add('price', Schema::number()
+      ->title(t('Ticket price'))
+      ->default(25.0)
+      ->minimum(0));
     $inputs->describe('price', suffix: t('EUR'));
 
-    $inputs->add('sales_open', 'boolean', t('Ticket sales open'), default: FALSE);
+    $inputs->add('sales_open', Schema::bool()
+      ->title(t('Ticket sales open'))
+      ->default(FALSE));
 
-    $inputs->add('note', 'string', t('Note for buyers'))
-      ->setSetting('multiline', TRUE);
+    $inputs->add('note', Schema::string()
+      ->title(t('Note for buyers'))
+      ->ui(widget: 'textarea'));
   }
 
 }
@@ -5469,11 +5645,15 @@ final class EventNoticesResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('banner', 'string', t('Banner'), default: '')
-      ->setSetting('multiline', TRUE)
-      ->addConstraint('Length', ['max' => 500]);
+    $inputs->add('banner', Schema::string()
+      ->title(t('Banner'))
+      ->default('')
+      ->maxLength(500)
+      ->ui(widget: 'textarea'));
 
-    $inputs->add('show_banner', 'boolean', t('Show the banner'), default: FALSE);
+    $inputs->add('show_banner', Schema::bool()
+      ->title(t('Show the banner'))
+      ->default(FALSE));
   }
 
 }

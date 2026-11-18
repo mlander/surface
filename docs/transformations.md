@@ -133,8 +133,12 @@ $inputs->add('page', Schema::integer()
   ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]));
 
 // Of any type: an entity type, then an id of it.
-$inputs->attach('thing', ThingStructure::class, t('Featured beside'),
-  description: t('Any content the sponsor is featured beside.'));
+$inputs->attach(
+  'thing',
+  ThingStructure::class,
+  t('Featured beside'),
+  description: t('Any content the sponsor is featured beside.'),
+);
 ```
 
 Its config object stores a content entity by its uuid, which names the
@@ -390,13 +394,12 @@ Example 15's listing answers a page of the venues and how many matched:
 <!-- excerpt: modules/surface_examples/src/Structure/VenueListingStructure.php -->
 
 ```php
-$item = Schema::object([
+$outputs->add('items', Schema::list(Schema::object([
   'id' => Schema::string()->title(t('Machine name'))->required(),
   'label' => Schema::string()->title(t('Name'))->required(),
   'capacity' => Schema::integer()->title(t('Capacity'))->required(),
   'weight' => Schema::integer()->title(t('Weight'))->required(),
-])->title(t('Venue'));
-$outputs->add('items', Schema::list($item)
+])->title(t('Venue')))
   ->title(t('Venues'))
   ->description(t('The page of venues, lighter first, each one the account may read.'))
   ->required());
@@ -461,15 +464,19 @@ Example 15's venue computes its slug from its name:
 <!-- excerpt: modules/surface_examples/src/Resource/VenueResource.php -->
 
 ```php
-$inputs->compute('slug', Schema::string()
-  ->title(t('Slug'))
-  ->description(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
-  ->check('drupal:Regex', [
-    'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
-    'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
-  ])
-  ->maxLength(128),
-  from: ['label'], using: Slugify::class);
+$inputs->compute(
+  'slug',
+  Schema::string()
+    ->title(t('Slug'))
+    ->description(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
+    ->check('drupal:Regex', [
+      'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
+      'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
+    ])
+    ->maxLength(128),
+  from: ['label'],
+  using: Slugify::class,
+);
 ```
 
 The class is a pure function of the keys `from:` names:
@@ -529,11 +536,16 @@ gives one:
 <!-- excerpt: modules/surface_examples/src/Resource/VenueResource.php -->
 
 ```php
-$inputs->compute('id', Schema::of('drupal:config/machine_name')
-  ->title(t('Machine name'))
-  ->description(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
-  ->maxLength(32),
-  from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT);
+$inputs->compute(
+  'id',
+  Schema::of('drupal:config/machine_name')
+    ->title(t('Machine name'))
+    ->description(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
+    ->check('drupal:Length', ['max' => 32]),
+  from: ['label'],
+  using: MachineName::class,
+  when: Compute::UNLESS_SENT,
+);
 ```
 
 `drupal:config/machine_name` names core's config schema type, so the key is a string with
