@@ -278,7 +278,6 @@ final class RecordingBlueprint extends BlueprintAdapterBase implements Blueprint
     }
   }
 
-
   /**
    * {@inheritdoc}
    */

@@ -346,7 +346,6 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
     return FALSE;
   }
 
-
   /**
    * {@inheritdoc}
    */
