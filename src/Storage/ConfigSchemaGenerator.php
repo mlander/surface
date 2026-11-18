@@ -92,8 +92,8 @@ use Symfony\Component\Yaml\Yaml;
  *
  * A key the storage keeps otherwise than it is asked for is written as
  * the storage keeps it, from the one place that says so, the storage's
- * translatedKeys(): a key its layout translates (a checkbox per type,
- * stored as the list of the types checked), with the schema the layout
+ * translatedKeys(): a key its storage layout translates (a checkbox per type,
+ * stored as the list of the types checked), with the schema the storage layout
  * gives, and a key that refers to a content entity, as a `uuid`. Its
  * install value is the one the file gives, else nothing: a declared
  * default is in the layout it is asked for; see
@@ -420,7 +420,7 @@ final class ConfigSchemaGenerator {
    * Gives the keys a resource's storage keeps otherwise than asked for.
    *
    * Decision: see
-   * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
+   * docs/decisions.md#a-storage-layout-is-the-storages-one-word-on-its-shape.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
@@ -462,7 +462,7 @@ final class ConfigSchemaGenerator {
    * @param array<string, array>|null $translated
    *   The keys its storage keeps otherwise than asked for, each with its
    *   config schema as stored, by dotted path (translatedKeys()); NULL for
-   *   a storage with no layout of its own, whose references to content
+   *   a storage with no storage layout of its own, whose references to content
    *   entities and keys whose variants are stored flat alone are.
    *
    * @return array{config: string, entries: list<array{module: string, name: string, resource: string, schema: array}>, install: array}
@@ -471,7 +471,7 @@ final class ConfigSchemaGenerator {
    */
   public function describeBuilt(SurfaceInterface $built, ResourceDefinition $owner, string $config, array $always_held, array $schema, array $install, ?array $translated = NULL): array {
     $this->alwaysHeld = $always_held;
-    $this->translated = $translated ?? ReferenceStorageLayout::storedSchemaOf($built) + FlatVariantsLayout::storedSchemaOf($built);
+    $this->translated = $translated ?? ReferenceStorageLayout::storedSchemaOf($built) + FlatVariantsStorageLayout::storedSchemaOf($built);
     $entries = [];
     $installed = $this->install($built, $install);
     $mapping = $this->mapping($built->entries(), $config, $owner, $entries, $schema, TRUE, installed: $installed);
@@ -1174,7 +1174,7 @@ final class ConfigSchemaGenerator {
    * does.
    *
    * Decision: see
-   * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
+   * docs/decisions.md#a-storage-layout-is-the-storages-one-word-on-its-shape.
    *
    * @param array $stored
    *   The schema as stored.

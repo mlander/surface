@@ -707,7 +707,7 @@ among them, so it seals them:
   writes again.
 
 Permanent storage is unchanged: a resource's storage keeps its secrets
-as it always did, in the clear unless its layout seals them
+as it always did, in the clear unless its storage layout seals them
 ([Storage: Secrets at the codec](storage.md#secrets-at-the-codec)).
 
 (why: [decision](decisions.md#a-secret-is-sealed-in-the-stage-record-by-its-recorded-paths))

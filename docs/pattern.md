@@ -503,7 +503,7 @@ verbs:
   storage would make (the config schema, a field type the storage could
   not take, a schema change a field with data could not take) and no
   side effects, and returns what would be stored, in storage's own
-  layout. A dry run stops here and reports it.
+  storage layout. A dry run stops here and reports it.
 - `commit($context, $prepared)` writes what prepare returned.
 
 Whether to create or update is the context's `creates`. Storage composes

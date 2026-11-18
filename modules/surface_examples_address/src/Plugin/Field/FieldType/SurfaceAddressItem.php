@@ -52,7 +52,7 @@ class SurfaceAddressItem extends AddressItem implements FieldSurfaceProviderInte
   /**
    * {@inheritdoc}
    *
-   * The storage carries the layout, which is what lets the resource
+   * The storage carries the storage layout, which is what lets the resource
    * describe the input layout while the field goes on storing exactly
    * what it always stored.
    */

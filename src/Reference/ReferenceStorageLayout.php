@@ -24,11 +24,11 @@ use PortableSchema\Builder\Schema;
  * config entity's dependencies. A config entity's id is its machine name,
  * the same everywhere, so a reference to one stays its id.
  *
- * The engine applies this layout to every resource stored in a config
+ * The engine applies this storage layout to every resource stored in a config
  * storage, ConfigObjectResourceStorage or ConfigEntityResourceStorage
- * (StorageAdapter), outside any layout the storage declares, in the layout
- * values are asked for: every door sends and answers the id, and only the
- * config holds the uuid.
+ * (StorageAdapter), outside any storage layout the storage declares, in the
+ * storage layout values are asked for: every door sends and answers the id, and
+ * only the config holds the uuid.
  *
  * - A key that refers to one content entity type (a user, or a schema of
  *   the article bundle) is stored as the entity's uuid, its config schema
@@ -45,7 +45,7 @@ use PortableSchema\Builder\Schema;
  * nothing for such a key keeps it (keepUnresolved()), as a stale value is
  * kept: it names its entity again once that entity is there. A stored
  * value that is no uuid is read as an id, which is what such a key held
- * before this layout, and stored as the uuid at the next write.
+ * before this storage layout, and stored as the uuid at the next write.
  *
  * Keys are found where a config storage stores them: at the top, inside
  * an attached structure and a map, in each item of a collection, in each
@@ -54,8 +54,8 @@ use PortableSchema\Builder\Schema;
  * what another module mounts. Variants the site lists are stored open
  * (`type: ignore`) and keep the id.
  *
- * Unlike an author's layout, this one reads the site: a uuid's entity is
- * site state by definition. It reads it the same way for every door.
+ * Unlike an author's storage layout, this one reads the site: a uuid's entity
+ * is site state by definition. It reads it the same way for every door.
  *
  * Every fact of a key is read from its schema (Entry::schema()), walked
  * down a plain map's properties: whether it is stored by uuid
@@ -104,7 +104,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   ) {}
 
   /**
-   * Gives the layout for a resource, when it has a key to translate.
+   * Gives the storage layout for a resource, when it has a key to translate.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource.
@@ -114,7 +114,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    *   Top-level keys left alone.
    *
    * @return self|null
-   *   The layout, or NULL when no key may be stored by uuid.
+   *   The storage layout, or NULL when no key may be stored by uuid.
    */
   public static function forSurface(SurfaceInterface $surface, References $references, array $skip = []): ?self {
     return static::holds($surface->entries(), $skip) ? new self($surface, $references, $skip) : NULL;
@@ -176,8 +176,8 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * What fromStorage() read as nothing stored: a write that still holds
    * nothing for it writes the stored uuid back, so a reference to an
    * entity not on this site yet survives a save made before it arrives.
-   * A new choice replaces it. An id stored before this layout that names
-   * nothing is not kept: it names nothing on any site. Inside a
+   * A new choice replaces it. An id stored before this storage layout that
+   * names nothing is not kept: it names nothing on any site. Inside a
    * collection an item's position may hold another item, so nothing is
    * kept there.
    *

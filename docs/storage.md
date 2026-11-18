@@ -92,7 +92,7 @@ so it is the whole of the storage code. What it does:
   never narrower.
 - **`layout()`** says how the object keeps a key it stores otherwise
   than it is asked for: none by default. `load()` reads through the
-  layout and `prepare()` writes through it
+  storage layout and `prepare()` writes through it
   ([StorageLayoutInterface](#storagelayoutinterface)).
 - **`STORED_AT`** says where the object keeps a key deeper than its own
   name, by dotted path, beside keys the resource does not declare: none
@@ -151,7 +151,7 @@ resource the command writes:
   `float`, `boolean`, `uri`, `timestamp`, or the primitive its typed
   data class holds), labeled with the label its owner gave it, whatever
   an alter reworded. A key the storage keeps otherwise than it is asked
-  for is written as stored: what the storage's layout says of it, or
+  for is written as stored: what the storage layout says of it, or
   `uuid` for a key that refers to a content entity
   ([translated keys](#a-key-stored-otherwise-than-it-is-asked-for)). A multi-line string is a `string` too: config
   schema's `text` is a string marked translatable, and a resource cannot
@@ -283,7 +283,7 @@ surface_resource_test.opening_hours:
 The values are stored as the resource accepted them, key for key: an
 attached structure is the map at its key, and the variants at a key
 are the map of the variant the deciding key chose. Two keys are not:
-one the storage's layout translates, and one that refers to a content
+one the storage layout translates, and one that refers to a content
 entity, stored by uuid ([below](#a-reference-is-stored-by-uuid)).
 
 A simple config object records no dependencies; core has no place for
@@ -390,13 +390,13 @@ to core's schema as core wrote it
 
 A key the resource asks for one way and the storage keeps another (a
 checkbox per type, stored as the list of the types checked) is
-translated by the storage's layout, and the layout is where the check
+translated by the storage layout, and the storage layout is where the check
 and the generator learn the stored shape. The storage answers
 `translatedKeys($built)`: the config schema of each such key as it is
 stored, by its dotted path. It holds two things:
 
-- What the storage's layout says of the keys it translates, when the
-  layout implements `StoredSchemaInterface`.
+- What the storage layout says of the keys it translates, when the
+  storage layout implements `StoredSchemaInterface`.
 - Each key that refers to one content entity type, typed `uuid`
   ([below](#a-reference-is-stored-by-uuid)).
 
@@ -408,7 +408,7 @@ is still told with `configSchemaPaths()`, which answers the schema's
 property for each key. The recipe
 [Asked as checkboxes, stored as a list of ids](recipes.md#asked-as-checkboxes-stored-as-a-list-of-ids)
 shows all of it
-(why: [decision](decisions.md#a-layout-is-the-storages-one-word-on-its-shape)).
+(why: [decision](decisions.md#a-storage-layout-is-the-storages-one-word-on-its-shape)).
 
 #### A reference is stored by uuid
 
@@ -434,7 +434,7 @@ setting:
 
 - **The engine translates**, not the storage class: the stock
   `ReferenceStorageLayout`, applied by `StorageAdapter` outside any
-  layout the storage declares, in the layout values are asked for. A
+  storage layout the storage declares, in the layout values are asked for. A
   storage class sees the uuid and writes nothing for it.
 - **Where.** At the top, inside an attached structure or a map, in each
   item of a collection, in each entry of a map of keys from the site
@@ -531,9 +531,9 @@ refused by the schema under that key. A structure an alter attaches at
 its mount is written the same way, its keys the mount's
 ([Reusing a structure](resources.md#reusing-a-structure-from-another-module)).
 An alter that stores its mount otherwise than it asks
-(`AltersStorageLayoutInterface`), with a layout that says its stored
+(`AltersStorageLayoutInterface`), with a storage layout that says its stored
 schema (`StoredSchemaInterface`), is read by the check and the generator
-as the storage's own layout is, each key at
+as the storage's own storage layout is, each key at
 `third_party_settings.<module>.<key>`.
 
 ### A config entity
@@ -680,8 +680,8 @@ Variants at a key attached with
 `attachVariants(..., storedAs: Variants::FLAT)` are stored with the
 chosen variant's keys beside the deciding key and nothing at the key,
 while every door asks for them under the key
-([Stored flat](resources.md#stored-flat)). The layout
-(`Storage\FlatVariantsLayout`) tells the generator to write every
+([Stored flat](resources.md#stored-flat)). The storage layout
+(`Storage\FlatVariantsStorageLayout`) tells the generator to write every
 variant's keys at that level (`StoredSchemaInterface::SPREAD`), and what
 that writes depends on where the level is.
 
@@ -788,7 +788,7 @@ surface_resource_test.campsite.pitches.hammock:
           min: 1
 ```
 
-Below the top level the layout keeps nothing of a variant not chosen:
+Below the top level the storage layout keeps nothing of a variant not chosen:
 an item's position may hold another item on the next write, and the
 chosen variant's type declares none of the other variants' keys.
 
@@ -902,7 +902,7 @@ host holds the instance its values belong to. The host supplies it:
 | Host family | Answers with |
 | --- | --- |
 | Any configurable plugin (block, condition, action) | `PluginConfigurationStorage` over itself, from `SurfaceHostFormTrait`: the one construction path for the family, which the form submit asks for rather than building inline. |
-| Field types | `FieldSettingsStorage` over the field config entity the item is bound to, from `SurfaceFieldTypeTrait`. A field type whose storage layout differs overrides `getSurfaceStorage()` and hands `FieldSettingsStorage` a layout. |
+| Field types | `FieldSettingsStorage` over the field config entity the item is bound to, from `SurfaceFieldTypeTrait`. A field type whose storage layout differs overrides `getSurfaceStorage()` and hands `FieldSettingsStorage` a storage layout. |
 | Field formatters | Nothing: they throw. |
 
 ### The refusal, and why it is a refusal
@@ -1017,7 +1017,7 @@ host used, with the same short name as core's
 The namespace says which kind a class is. A class in `Storage\` is one
 you name on `#[Resource(storage:)]` or extend: `ConfigObjectResourceStorage`
 and `ConfigEntityResourceStorage`, and beside them what such a class works
-with, the layouts, the secret codec and `SchemaViolations`. The other
+with, the storage layouts, the secret codec and `SchemaViolations`. The other
 five implement the pipeline's
 `SurfaceStorageInterface` and live beside it in `Pipeline\Storage\`
 (`use Drupal\surface\Pipeline\Storage\StateStorage;`): a plugin's
@@ -1108,14 +1108,14 @@ array`. `FieldSettingsStorage` takes one, optionally, and a
 the input layout is the storage layout. It is also where encryption
 sits, below.
 
-A config object's layout may implement `StoredSchemaInterface`, whose
+A config object's storage layout may implement `StoredSchemaInterface`, whose
 `storedSchema()` says the config schema of each key it translates, as
 stored. That is the storage's one word on its shape: `load()` and
-`prepare()` translate through the layout, the build's check skips each
+`prepare()` translate through the storage layout, the build's check skips each
 key it names, and the generator writes its schema for them
 ([A key stored otherwise than it is asked
 for](#a-key-stored-otherwise-than-it-is-asked-for)). It sits beside
-`StorageLayoutInterface` rather than on it, since a field type's layout
+`StorageLayoutInterface` rather than on it, since a field type's storage layout
 and an alter's are stored under a schema their owner writes, which no
 generator reads.
 
@@ -1129,7 +1129,7 @@ which is exactly why only a form can write those settings correctly.
 `AddressStorageLayout` is the same translation with a name, so a form, a
 kernel test, a config action and an agent all go through it.
 
-An implementation must be pure layout: no services, no current user, no
+An implementation must be pure storage layout: no services, no current user, no
 site state. The two halves are expected to round-trip, and where they
 cannot the implementation says so in its own documentation. The one
 layout that reads the site is the engine's own `ReferenceStorageLayout`,
@@ -1139,7 +1139,7 @@ for every door.
 For how this fits with the other kinds of transformation, see
 [Transformations](transformations.md).
 
-### A layout for settings another module mounted
+### A storage layout for settings another module mounted
 
 An alter that adds keys may ask for a value in one layout and store it
 in another. It does not own the storage, so it hands the translation to
@@ -1147,18 +1147,18 @@ the data surface instead, by implementing
 `AltersStorageLayoutInterface`, whose `storageLayout()` returns a
 `StorageLayoutInterface`.
 
-The sealed data surface carries the layout, refinement keeps it, and
+The sealed data surface carries the storage layout, refinement keeps it, and
 `getThirdPartyLayout($module)` answers it. It is applied to that
 module's mount, `third_party_settings.<module>`, and nothing else:
 `toStorage()` before the storage prepares, so storage's own checks judge
-what will actually be stored; `fromStorage()` after it loads. The layout
+what will actually be stored; `fromStorage()` after it loads. The storage layout
 sees only that module's own settings, keyed by the keys it mounted. A
-layout for a module that mounts nothing is refused.
+storage layout for a module that mounts nothing is refused.
 
 `surface_examples_extras` is the worked example: `NodeTypeAlter` asks
 for a content type's review deadline as an amount and a unit, and its
-`ReviewDeadlineLayout` stores seconds, through `NodeTypeResourceStorage`, which
-knows nothing about it. `StorageAdapter` applies the layout for a
+`ReviewDeadlineStorageLayout` stores seconds, through `NodeTypeResourceStorage`, which
+knows nothing about it. `StorageAdapter` applies the storage layout for a
 resource's own storage class, `ConfigEntityResourceStorage` and its subclasses
 among them; none of the engine's storage classes writes third party
 settings.
@@ -1173,7 +1173,7 @@ never reaches storage from any caller. Two small pieces do it:
 | Piece | What it is |
 | --- | --- |
 | `SecretCodecInterface` | `encrypt()`, `decrypt()`, `isEncrypted()`. A service, so a deployment can replace it. |
-| `EncryptedStorageLayout` | A `StorageLayoutInterface` decorator that wraps another layout, or none, and enciphers the secret keys of the data surface it was made for. |
+| `EncryptedStorageLayout` | A `StorageLayoutInterface` decorator that wraps another storage layout, or none, and enciphers the secret keys of the data surface it was made for. |
 
 The shipped codec, `SodiumSecretCodec`, is a **reference
 implementation**: libsodium's `crypto_secretbox` with a fresh random
@@ -1189,26 +1189,26 @@ ciphertext, and the prefix is what lets a migration tell ciphertext from
 plaintext.
 
 The decorator works in **input layout**: it encrypts before the inner
-layout runs on the way in and decrypts after the inner layout has run on
-the way out. That order is what lets it compose with any layout. The
+storage layout runs on the way in and decrypts after the inner storage layout has run on
+the way out. That order is what lets it compose with any storage layout. The
 secret flag is declared on the resource or structure, so input layout is
-the only place the keys can be named, and an inner layout then carries
+the only place the keys can be named, and an inner storage layout then carries
 an opaque string exactly as it carried the plaintext. The one thing an
-inner layout may not do is look *into* a secret value, since by then it
+inner storage layout may not do is look *into* a secret value, since by then it
 is ciphertext.
 
 It takes its key list at construction rather than reading a data
-surface at call time, because a layout has no data surface and is not
-going to get one: `StorageLayoutInterface` is pure layout, built once and
+surface at call time, because a storage layout has no data surface and is not
+going to get one: `StorageLayoutInterface` is pure storage layout, built once and
 reused for every instance of a field type.
 `EncryptedStorageLayout::forSurface()` is the one line that reads the
-flags off a data surface and hands back the inner layout unchanged when
+flags off a data surface and hands back the inner storage layout unchanged when
 there are none.
 
 ### What is wired, and what is not
 
 `FieldSettingsStorage` composes the decorator itself. It is handed the
-data surface on both calls that translate, so it wraps its layout when
+data surface on both calls that translate, so it wraps its storage layout when
 the data surface declares a secret key and the codec service is
 available, and leaves everything else exactly as it was.
 

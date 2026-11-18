@@ -34,10 +34,10 @@ Four pieces:
 - `Storage\AddressFieldSettingsResourceStorage`: the resource's own storage, for a
   caller that addresses the field by its identity rather than holding
   it: the field instance resource routes its settings here, after the
-  field itself is stored. Its prepare holds the settings, in the layout
+  field itself is stored. Its prepare holds the settings, in the storage layout
   the field stores, to the address field type's settings schema, so a
   dry run previews them.
-- `AddressStorageLayout::toStorage()` / `fromStorage()`: the layout transform between the input
+- `AddressStorageLayout::toStorage()` / `fromStorage()`: the storage layout transform between the input
   layout and the stored layout. It is not new logic: it is the settings
   form's validate handler (strip the rows with an empty override) plus
   the item class's accessors (unwrap each override, drop the falsy
@@ -82,7 +82,7 @@ before and after are one uninstall apart:
 
 ## What gates it
 
-`Kernel\AddressFieldResourceTest` covers the resource, the layout transform
+`Kernel\AddressFieldResourceTest` covers the resource, the storage layout transform
 in both directions, and the settings round trip. The same resource is what
 `surface_examples_field`'s tools describe, so
 `Kernel\FieldToolsTest` and `Kernel\FieldToolsComparisonTest` exercise it

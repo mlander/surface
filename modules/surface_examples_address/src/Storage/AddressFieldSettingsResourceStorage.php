@@ -20,8 +20,8 @@ use Drupal\Core\Session\AccountInterface;
  * name, which the field instance resource hands its settings child as the
  * one door through the wall between them) and translates through
  * AddressStorageLayout, so the resource is the input layout and the field
- * goes on storing exactly what it always stored. Settings the layout does
- * not produce, a key some other code wrote, survive.
+ * goes on storing exactly what it always stored. Settings the storage layout
+ * does not produce, a key some other code wrote, survive.
  *
  * Committed after its parent, so a field being added exists by the time
  * its settings are written.
@@ -58,8 +58,8 @@ final class AddressFieldSettingsResourceStorage implements ResourceStorageInterf
   /**
    * {@inheritdoc}
    *
-   * The settings in the layout the field stores them, over what the field
-   * stores today, held to the address field type's settings schema. A
+   * The settings in the storage layout the field stores them, over what the
+   * field stores today, held to the address field type's settings schema. A
    * field being added does not exist yet when this runs, so it rehearses
    * against nothing stored and the field's own defaults fill the rest
    * when it is committed.

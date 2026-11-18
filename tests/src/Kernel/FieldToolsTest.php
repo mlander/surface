@@ -38,10 +38,11 @@ use PHPUnit\Framework\Attributes\Group;
  * them: a tool contributes nothing of its own to the settings. The field type's
  * settings resource says what the values may be, the pipeline accepts,
  * validates, prepares and commits them, and the tool is the caller. So a valid
- * payload reaches storage in the layout the field type reads back, an invalid
- * one is refused with the path that names it and leaves nothing behind, and a
- * partial edit changes only the keys it carries — including clearing one by
- * sending it as null, which is the thing a null-stripping merge cannot express.
+ * payload reaches storage in the storage layout the field type reads back, an
+ * invalid one is refused with the path that names it and leaves nothing behind,
+ * and a partial edit changes only the keys it carries — including clearing one
+ * by sending it as null, which is the thing a null-stripping merge cannot
+ * express.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]

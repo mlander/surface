@@ -18,13 +18,13 @@ use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Tests the layout decorator that keeps plaintext out of storage.
+ * Tests the storage layout decorator that keeps plaintext out of storage.
  *
  * What it has to prove is narrow and load-bearing: the declared secret
  * is enciphered and everything beside it is not touched at all, the
  * round trip is exact so a partial update can leave a secret alone, an
- * inner layout still gets to do its own translation, and a value written
- * before the key was declared secret is recognized as plaintext and
+ * inner storage layout still gets to do its own translation, and a value
+ * written before the key was declared secret is recognized as plaintext and
  * enciphered on the next write rather than double-enciphered or
  * refused.
  *
@@ -36,8 +36,8 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
   /**
    * {@inheritdoc}
    *
-   * The layout reads which keys are secret from each key's schema, and a
-   * schema is read with the constraints typed data gives a definition.
+   * The storage layout reads which keys are secret from each key's schema, and
+   * a schema is read with the constraints typed data gives a definition.
    */
   protected function setUp(): void {
     parent::setUp();
@@ -49,7 +49,7 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
   }
 
   /**
-   * Builds the data surface the layout reads its secret keys from.
+   * Builds the data surface the storage layout reads its secret keys from.
    *
    * One secret key, one ordinary one beside it, because "the ordinary
    * one is untouched" is half of what is being tested.
@@ -67,7 +67,7 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
   }
 
   /**
-   * Builds the codec the layout encrypts with.
+   * Builds the codec the storage layout encrypts with.
    *
    * @return \Drupal\surface\Storage\SodiumSecretCodec
    *   The codec.
@@ -159,9 +159,9 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
   }
 
   /**
-   * Tests that the inner layout's own translation still happens.
+   * Tests that the inner storage layout's own translation still happens.
    *
-   * Encryption goes on first and comes off last, so the inner layout
+   * Encryption goes on first and comes off last, so the inner storage layout
    * moves an opaque string around exactly as it moved the plaintext.
    */
   public function testInnerLayoutStillTranslates(): void {
@@ -171,7 +171,7 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
 
     $stored = $layout->toStorage(['endpoint' => 'https://example.com', 'token' => 'sk-1234']);
 
-    // The inner layout's wrapping is intact, and what it wrapped is
+    // The inner storage layout's wrapping is intact, and what it wrapped is
     // ciphertext.
     $this->assertSame(['value' => 'https://example.com'], $stored['endpoint']);
     $this->assertTrue($codec->isEncrypted($stored['token']['value']));
@@ -196,10 +196,10 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
   }
 
   /**
-   * Builds a layout that translates nothing, to be identical by identity.
+   * Builds a storage layout translating nothing, to be identical by identity.
    *
    * @return \Drupal\surface\Storage\StorageLayoutInterface
-   *   The layout.
+   *   The storage layout.
    */
   protected function passThroughLayout(): StorageLayoutInterface {
     return new class implements StorageLayoutInterface {
@@ -222,14 +222,14 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
   }
 
   /**
-   * Builds a layout that wraps every value the way a real one might.
+   * Builds a storage layout that wraps every value the way a real one might.
    *
    * Modelled on the address field's overrides, which storage keeps in a
    * single-key array each: a translation that moves values without
    * looking into them.
    *
    * @return \Drupal\surface\Storage\StorageLayoutInterface
-   *   The layout.
+   *   The storage layout.
    */
   protected function wrappingLayout(): StorageLayoutInterface {
     return new class implements StorageLayoutInterface {

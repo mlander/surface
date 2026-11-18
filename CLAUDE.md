@@ -168,14 +168,14 @@ the record of the rework that brought the module to the pattern.
   an output's hold plain keys alone (`docs/decisions.md#an-anonymous-map`).
 - **Storage**: where a resource's values live: `load()`, `prepare()`,
   `commit()` on a `ResourceStorageInterface`.
-- **Layout**: how a storage lays accepted values out where that differs
+- **Storage layout**: how a storage lays accepted values out where that differs
   from how they are asked for, `StorageLayoutInterface`; an alter hands
   one for its mount with `AltersStorageLayoutInterface::storageLayout()`,
   and a `ConfigObjectResourceStorage` subclass answers one from `layout()`. A
-  layout implementing `StoredSchemaInterface` says each translated key's
+  storage layout implementing `StoredSchemaInterface` says each translated key's
   stored schema, which the build's check skips and the config schema
   generator writes, both through the storage's `translatedKeys()`
-  (`docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape`).
+  (`docs/decisions.md#a-storage-layout-is-the-storages-one-word-on-its-shape`).
 - **Alter**: another module's class that adds keys to a resource or
   structure and narrows it, `#[Alters]` in `src/Alter/`; one that
   implements `OperationAccessInterface`, the access class's interface,
@@ -205,10 +205,10 @@ the record of the rework that brought the module to the pattern.
 - **Stored flat**: variants whose chosen keys the storage keeps flat
   beside the deciding key, `->setSetting(Variants::STORED_AS,
   Variants::FLAT)` on the map `attachVariants()` returns (`#[Setting]`
-  beside `#[AttachVariants]`), applied by `Storage\FlatVariantsLayout`
+  beside `#[AttachVariants]`), applied by `Storage\FlatVariantsStorageLayout`
   for the config storages; the contract is unchanged
   (`docs/resources.md#stored-flat`,
-  `docs/decisions.md#variants-stored-flat-are-a-layout`).
+  `docs/decisions.md#variants-stored-flat-are-a-storage-layout`).
 - **Variant**: one structure (or resource) among the variants, for one
   value of the deciding key, `#[Variant(of:, at:, for:)]`; `at` is the
   key the variants sit at.
@@ -962,7 +962,7 @@ the record of the rework that brought the module to the pattern.
 makes (`SurfaceInterface`); it is not a third kind. "Shape" is the
 named type, of which resources, structures and named scalar shapes are
 the three kinds; in code `ShapeInterface` names the third, and the word never
-names the blueprint or the layout. A value that arrives of the wrong
+names the blueprint or the storage layout. A value that arrives of the wrong
 type is a `TypeMismatchException`. Product names
 and on-the-wire identifiers keep the word surface (module, namespaces,
 services, routes and paths, `x-surface`, the `surface[...]` form key,

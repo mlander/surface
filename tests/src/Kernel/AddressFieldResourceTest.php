@@ -302,7 +302,7 @@ class AddressFieldResourceTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a payload storing the layout the address field expects.
+   * Tests a payload storing the storage layout the address field expects.
    */
   public function testSubmitStoresTheStorageLayout(): void {
     $result = $this->pipeline()->submit(

@@ -27,7 +27,7 @@ use Drupal\surface\Storage\StorageLayoutInterface;
  * not whole hours, which neither this resource nor the form alter writes,
  * reads back as no amount.
  */
-final class ReviewDeadlineLayout implements StorageLayoutInterface {
+final class ReviewDeadlineStorageLayout implements StorageLayoutInterface {
 
   /**
    * {@inheritdoc}

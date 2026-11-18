@@ -22,7 +22,7 @@ use Drupal\surface_reference_test\Resource\ReferencingEntityResource;
 use Drupal\surface_reference_test\Storage\ReferenceSettingsStorage;
 use Drupal\surface_reference_test\Storage\ReferencingEntityStorage;
 use Drupal\surface_schema_test\Storage\AliasSettingsStorage;
-use Drupal\surface_schema_test\Storage\CheckedListLayout;
+use Drupal\surface_schema_test\Storage\CheckedListStorageLayout;
 use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\Role;
@@ -40,11 +40,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * config entity's stays its id, and so does a key whose author kept the
  * id. A config entity saved through its storage
  * carries the dependencies of what it refers to, as core's own do. And
- * the layout seam a config object's storage declares: it saves and loads
- * through it, and the check and the generator learn its stored schema.
+ * the storage layout seam a config object's storage declares: it saves and
+ * loads through it, and the check and the generator learn its stored schema.
  *
  * @see docs/decisions.md#a-config-object-stores-a-reference-by-uuid
- * @see docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape
+ * @see docs/decisions.md#a-storage-layout-is-the-storages-one-word-on-its-shape
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -126,7 +126,7 @@ class ReferenceStorageTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Loads what a resource's storage answers, through every layout.
+   * Loads what a resource's storage answers, through every storage layout.
    *
    * @param string $resource
    *   The resource class.
@@ -243,7 +243,7 @@ class ReferenceStorageTest extends SurfaceKernelTestBase {
    * Tests each entry of a map of keys from the site is stored by uuid.
    *
    * A node at each entry of one map (addEach()), and a user inside the
-   * structure at each entry of another (attachEach()): the layout
+   * structure at each entry of another (attachEach()): the storage layout
    * translates inside each entry, and the generated schema types each
    * entry's reference `uuid`.
    */
@@ -369,11 +369,11 @@ class ReferenceStorageTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a config object's own layout: saved and loaded through it.
+   * Tests a config object's own storage layout: saved and loaded through it.
    *
    * The alias settings ask for a checkbox per type and store the list of
-   * the types checked (CheckedListLayout); the layout says the stored
-   * schema of the key, which the check skips and the generator writes.
+   * the types checked (CheckedListStorageLayout); the storage layout says the
+   * stored schema of the key, which the check skips and the generator writes.
    */
   public function testLayoutIsTheStoragesWordOnItsShape(): void {
     $resources = $this->container->get('surface.resources');
@@ -382,13 +382,13 @@ class ReferenceStorageTest extends SurfaceKernelTestBase {
     // Content is locked and kept as stored: out of the list.
     $result = $this->pipeline()->submit($built, ['types' => ['term' => TRUE, 'user' => FALSE]], $resources->storage('schema_test.aliases', $context, $built));
     $this->assertTrue($result->isValid());
-    $this->assertSame(['term'], $this->config('surface_schema_test.aliases')->get('types'), 'Stored through the layout: the list of the types checked.');
+    $this->assertSame(['term'], $this->config('surface_schema_test.aliases')->get('types'), 'Stored through the storage layout: the list of the types checked.');
     $this->assertSame(['term' => TRUE], $resources->storage('schema_test.aliases', $context, $built)->load($built)['types'], 'Read through it: a map.');
 
     $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(AliasSettingsStorage::class);
-    $layout = new CheckedListLayout(AliasSettingsStorage::LISTED);
+    $layout = new CheckedListStorageLayout(AliasSettingsStorage::LISTED);
     $this->assertInstanceOf(StoredSchemaInterface::class, $layout);
-    $this->assertSame($layout->storedSchema(), $storage->translatedKeys($built), 'What the layout says, and no reference.');
+    $this->assertSame($layout->storedSchema(), $storage->translatedKeys($built), 'What the storage layout says, and no reference.');
     $this->assertSame([], $storage->widerThanSchema($built));
   }
 

@@ -101,7 +101,7 @@ version it is written in, is not the one served.
 | An optional key made required | breaking | A stored value holding nothing is refused at the next write, and that nothing may be a `null` stored on purpose, since `null` cleared it: a migration fills it. | A create that leaves it out is refused, and so is the `null` a client sent to clear it. | `made required` |
 | A choice removed | breaking | Nothing is lost: [the stale rule](semantics.md#stale-values-the-third-state) keeps the stored value and warns until someone chooses anew; a migration may map it to a value still offered. | Sending it is refused, with the values that apply. | `choice removed` |
 | A type changed | breaking | A migration converts it. | A value of the old type is refused, or coerced where the coercion table reads it. | `type changed` |
-| A storage layout changed (a layout, the config object's name, the storage class) | breaking for stored values, invisible to clients | The storage reads both layouts and writes the new one, as `EncryptedStorageLayout` reads plaintext; when the accepted document moves too, a version and a migration. | Nothing: the documents do not move. | Not by the contract diff: by the storage's own tests and its config schema. |
+| A storage layout changed (a storage layout, the config object's name, the storage class) | breaking for stored values, invisible to clients | The storage reads both storage layouts and writes the new one, as `EncryptedStorageLayout` reads plaintext; when the accepted document moves too, a version and a migration. | Nothing: the documents do not move. | Not by the contract diff: by the storage's own tests and its config schema. |
 | A variant removed | breaking | The deciding key's stored value is stale and the variant's keys are unread: a migration moves them to a variant still offered. | Choosing it is refused. | `choice removed`, `rule removed` |
 | A required port added to a structure others attach | breaking for every container | Nothing. | Every container must wire it: the build refuses an unwired required port, at each site. | `required port added` on the def |
 | A shape tightened by an alter, on a site that stores values outside it | breaking, on that site | As for a constraint tightened; the alter's module ships the post-update that converts or reports them. | As for a constraint tightened. | The site's own contract diff over its own baselines; the shape's module cannot see it. |
@@ -257,7 +257,7 @@ What the runner will do:
   attached key, each item of a collection, a module's mount, a mixed-in
   structure's members inside its owner's map (the step handed the
   owner's map and allowed to change only its members).
-- **The ledger is the storage's.** A storage owns the layout, so it
+- **The ledger is the storage's.** A storage owns the storage layout, so it
   says where the stamp lives, and stamps the declared versions at
   commit. `ConfigObjectResourceStorage` keeps `_surface.versions`, keyed by
   id, beside `_core`, owning it as it owns `_core` and `langcode`:
@@ -283,7 +283,7 @@ What the runner will do:
   destination of a resource through the pipeline, so its stored values
   move once, at deploy.
 - **A storage layout change is not a migration.** One that leaves the
-  accepted document as it was is the storage's own: read both layouts,
+  accepted document as it was is the storage's own: read both storage layouts,
   write the new one, no version.
 - **A content entity resource, later, without redesign.** Its storage
   answers the same two questions, where the ledger lives (a field the
@@ -418,4 +418,4 @@ an alter a site installs, which only that site's own baselines cover.
 - [Testing a resource](testing-a-resource.md), the contract baseline among an adopter's checks
 - [The served contract](served-contract.md), whose full schema the lint compares
 - [Value semantics](semantics.md), which says what a client asked for
-- [Storage](storage.md), which owns the layout and will own the ledger
+- [Storage](storage.md), which owns the storage layout and will own the ledger

@@ -17,7 +17,7 @@ use PortableSchema\Builder\Schema;
  * Mounts a reviewer and a delay on the alias settings.
  *
  * The reviewer refers to a user, stored by uuid; the delay is asked in
- * minutes and stored as an ISO 8601 duration, which its layout says.
+ * minutes and stored as an ISO 8601 duration, which its storage layout says.
  */
 #[Alters(AliasSettingsResource::class)]
 final class AliasMountAlter implements AltersInputsInterface, AltersStorageLayoutInterface {

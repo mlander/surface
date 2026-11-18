@@ -88,13 +88,13 @@ trait HeldToConfigSchemaTrait {
   /**
    * Gives the config schema of each key stored otherwise than asked for.
    *
-   * What the storage's layout says of the keys it translates, and the
+   * What the storage layout says of the keys it translates, and the
    * references a config storage stores by uuid: the check skips each, and
    * the config schema generator writes the schema given instead of the
    * asked one.
    *
    * Decision: see
-   * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
+   * docs/decisions.md#a-storage-layout-is-the-storages-one-word-on-its-shape.
    *
    * @param \Drupal\surface\SurfaceInterface $built
    *   The resource, built.
@@ -108,15 +108,15 @@ trait HeldToConfigSchemaTrait {
   }
 
   /**
-   * Gives the config schema of each key an alter's layout stores otherwise.
+   * Gives the config schema of keys an alter's storage layout stores otherwise.
    *
    * An alter that lays its mount out (AltersStorageLayoutInterface) with a
-   * layout that says its stored schema (StoredSchemaInterface) tells the
-   * check and the generator, as the storage's own layout does: each key at
-   * `third_party_settings.<module>.<key>`.
+   * storage layout that says its stored schema (StoredSchemaInterface) tells
+   * the check and the generator, as the storage's own storage layout does: each
+   * key at `third_party_settings.<module>.<key>`.
    *
    * Decision: see
-   * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
+   * docs/decisions.md#a-storage-layout-is-the-storages-one-word-on-its-shape.
    *
    * @param \Drupal\surface\SurfaceInterface $built
    *   The resource, built.

@@ -182,16 +182,17 @@ abstract class ConfigObjectResourceStorage implements ResourceStorageInterface, 
    * subclass whose object keeps a key in another shape (a checkbox per
    * type, stored as the list of the types checked) answers a layout:
    * load() reads through its fromStorage(), prepare() writes through its
-   * toStorage() before the config schema judges the object. A layout that
-   * implements StoredSchemaInterface also says the stored schema of each
+   * toStorage() before the config schema judges the object. A storage layout
+   * that implements StoredSchemaInterface also says the stored schema of each
    * key it translates, which the build's check and the config schema
    * generator read (translatedKeys()).
    *
    * Decision: see
-   * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
+   * docs/decisions.md#a-storage-layout-is-the-storages-one-word-on-its-shape.
    *
    * @return \Drupal\surface\Storage\StorageLayoutInterface|null
-   *   The layout, or NULL when the object holds each key as it is asked.
+   *   The storage layout, or NULL when the object holds each key as it is
+   *   asked.
    */
   protected function layout(): ?StorageLayoutInterface {
     return NULL;
@@ -200,13 +201,13 @@ abstract class ConfigObjectResourceStorage implements ResourceStorageInterface, 
   /**
    * {@inheritdoc}
    *
-   * What the layout says of the keys it translates, what each alter's
-   * layout says of the keys at its mount, each reference to a content
+   * What the storage layout says of the keys it translates, what each alter's
+   * storage layout says of the keys at its mount, each reference to a content
    * entity, stored by uuid, and each key whose variants are stored flat.
    */
   public function translatedKeys(SurfaceInterface $built): array {
     $layout = $this->layout();
-    return ($layout instanceof StoredSchemaInterface ? $layout->storedSchema() : []) + static::mountedLayouts($built) + ReferenceStorageLayout::storedSchemaOf($built) + FlatVariantsLayout::storedSchemaOf($built);
+    return ($layout instanceof StoredSchemaInterface ? $layout->storedSchema() : []) + static::mountedLayouts($built) + ReferenceStorageLayout::storedSchemaOf($built) + FlatVariantsStorageLayout::storedSchemaOf($built);
   }
 
   /**

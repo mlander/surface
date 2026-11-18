@@ -148,7 +148,7 @@ All in `src/Resource/` but the last two, in `src/ResourceBuild/`.
 | `KnowsClearableKeysInterface` | `src/Resource/` | [storage](../storage.md#a-schema-the-module-did-not-generate) | the two bases only | - | none |
 | `HeldToConfigSchemaInterface` | `src/Resource/` | as above | the two bases only | - | none |
 | `StorageLayoutInterface` | `src/Storage/` | [storage](../storage.md#storagelayoutinterface) | 2/0, 1 engine | - | none |
-| `AltersStorageLayoutInterface` | `src/Resource/` | [storage](../storage.md#a-layout-for-settings-another-module-mounted) | 1/0 | - | none |
+| `AltersStorageLayoutInterface` | `src/Resource/` | [storage](../storage.md#a-storage-layout-for-settings-another-module-mounted) | 1/0 | - | none |
 | `StoredValueMigrationInterface` | `src/Resource/` | [evolution](../evolution.md#stored-value-migrations-as-they-will-be) | 0/0, designed, not run | - | none |
 
 ### 1.5 Access interfaces

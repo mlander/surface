@@ -18,7 +18,7 @@ use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\Drush\Generators\Resource\ResourceCode;
 use Drupal\surface\Storage\ConfigSchemaGenerator;
 use Drupal\surface\Storage\EncryptedStorageLayout;
-use Drupal\surface\Storage\FlatVariantsLayout;
+use Drupal\surface\Storage\FlatVariantsStorageLayout;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Tool\InputDefinitions;
 use Drupal\surface\Tool\OperationInputs;
@@ -34,18 +34,18 @@ use Drupal\surface\Tool\OperationInputs;
  *   what is stored and narrowing, withLookups(), withDependencies(),
  *   withStored(), shapeOf(), withoutRequired(), outputFromInput(),
  *   secrets(), outputsFromSurface(), OperationInputs::values() for an
- *   update and a create and stored(); the encrypted layout's secret keys;
- *   the config schema the generator writes, alone, with keys always held
+ *   update and a create and stored(); the encrypted storage layout's secret
+ *   keys; the config schema the generator writes, alone, with keys always held
  *   and what it is installed with, installed with nothing for every key,
  *   and with every key kept otherwise, and
  *   each key held to that schema; ResourceCode's output; the flow's
  *   placing of the keys, whole and grouped.
  * - `values`: for what is stored and for each case, the surface refined
- *   by it: its tool tree and secrets, the encrypted layout's secret keys,
- *   withoutNonScalars() of the shape, KeyPaths::pathsOf() and heldOn() of
+ *   by it: its tool tree and secrets, the encrypted storage layout's secret
+ *   keys, withoutNonScalars() of the shape, KeyPaths::pathsOf() and heldOn() of
  *   the values as given, as text and as JSON, the encrypted (fixed codec)
- *   and flat layouts' toStorage() and fromStorage(), the panel's rows and
- *   the formatter's summary.
+ *   and flat storage layouts' toStorage() and fromStorage(), the panel's rows
+ *   and the formatter's summary.
  * - `key`: for each key, fromDefinition(), outputFromDefinition(),
  *   fromVariants() for variants, the builder side of KeyPaths::held() for
  *   18 raw values in both verbs, and the key held to 12 schemas written
@@ -388,7 +388,7 @@ final class DoorCorpusRecorder {
       return static::plain(['to' => $to, 'from' => $layout->fromStorage($to)]);
     });
     $record['flat'] = static::attempt(function () use ($surface, $value): mixed {
-      $layout = FlatVariantsLayout::forSurface($surface);
+      $layout = FlatVariantsStorageLayout::forSurface($surface);
       if ($layout === NULL) {
         return NULL;
       }

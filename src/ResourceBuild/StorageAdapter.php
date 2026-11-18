@@ -21,7 +21,7 @@ use Drupal\surface\Resource\DeletableStorageInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceStorageInterface;
 use Drupal\surface\Storage\ConfigEntityResourceStorage;
-use Drupal\surface\Storage\FlatVariantsLayout;
+use Drupal\surface\Storage\FlatVariantsStorageLayout;
 use Drupal\surface\Entry;
 
 /**
@@ -32,8 +32,8 @@ use Drupal\surface\Entry;
  * The context is bound here, once, so the pipeline's submit() path
  * reaches the storage unchanged: load narrows what the storage returns
  * to the data surface's own keys; prepare hands the storage the accepted
- * values, in the layout a contributor's settings are stored in, and wraps
- * the array it rehearses in PreparedValues, so a dry run reports it and
+ * values, in the storage layout a contributor's settings are stored in, and
+ * wraps the array it rehearses in PreparedValues, so a dry run reports it and
  * a refusal from storage arrives as the pipeline's own violations;
  * commit hands the storage that same array back, with the context it
  * loads by.
@@ -51,10 +51,10 @@ use Drupal\surface\Entry;
  *
  * A config storage (ConfigObjectResourceStorage, ConfigEntityResourceStorage)
  * stores a reference to a content entity by its uuid: ReferenceStorageLayout is
- * applied here, outside every other layout, in the layout values are
+ * applied here, outside every other storage layout, in the layout values are
  * asked for, and the dependencies of what a config entity's keys refer to
  * are added to what its storage rehearsed. Where a key's variants are
- * stored flat (Variants::STORED_AS), FlatVariantsLayout lays the chosen
+ * stored flat (Variants::STORED_AS), FlatVariantsStorageLayout lays the chosen
  * keys beside the deciding key the same way, in the asked layout too.
  *
  * A storage layout an alter hands the build for the keys it mounts
@@ -593,7 +593,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
   }
 
   /**
-   * Gives the layout that stores references to content entities by uuid.
+   * Gives the storage layout storing references to content entities by uuid.
    *
    * For a config storage alone, and for the keys this level stores: a
    * child with storage of its own translates its own.
@@ -605,14 +605,14 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    *   The data surface.
    *
    * @return \Drupal\surface\Reference\ReferenceStorageLayout|null
-   *   The layout, or NULL when there is nothing to translate.
+   *   The storage layout, or NULL when there is nothing to translate.
    */
   protected function referenceLayout(SurfaceInterface $surface): ?ReferenceStorageLayout {
     return $this->references === NULL ? NULL : ReferenceStorageLayout::forSurface($surface, $this->references, array_map('strval', array_keys($this->routes)));
   }
 
   /**
-   * Gives the layout that stores variants' keys beside their deciding key.
+   * Gives the storage layout storing variants' keys beside their deciding key.
    *
    * For a config storage alone, as referenceLayout() is, and for the keys
    * this level stores. Applied in the layout values are asked for:
@@ -622,20 +622,20 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    *
-   * @return \Drupal\surface\Storage\FlatVariantsLayout|null
-   *   The layout, or NULL when no key's variants are stored flat.
+   * @return \Drupal\surface\Storage\FlatVariantsStorageLayout|null
+   *   The storage layout, or NULL when no key's variants are stored flat.
    *
    * @see \Drupal\surface\Variants::STORED_AS
    */
-  protected function flatLayout(SurfaceInterface $surface): ?FlatVariantsLayout {
-    return $this->references === NULL ? NULL : FlatVariantsLayout::forSurface($surface, array_map('strval', array_keys($this->routes)));
+  protected function flatLayout(SurfaceInterface $surface): ?FlatVariantsStorageLayout {
+    return $this->references === NULL ? NULL : FlatVariantsStorageLayout::forSurface($surface, array_map('strval', array_keys($this->routes)));
   }
 
   /**
    * Reads what a config storage holds back into the asked layout.
    *
    * The inverse of what prepare() lays out, in the reverse order: the
-   * layouts alters give their mounts first, then the variants stored
+   * storage layouts alters give their mounts first, then the variants stored
    * flat. The references are read after, from the keys of the data
    * surface alone.
    *
@@ -643,13 +643,13 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    *   The data surface.
    * @param array $stored
    *   What the storage holds, as loaded.
-   * @param \Drupal\surface\Storage\FlatVariantsLayout|null $flat
-   *   The layout of its variants stored flat; NULL for none.
+   * @param \Drupal\surface\Storage\FlatVariantsStorageLayout|null $flat
+   *   The storage layout of its variants stored flat; NULL for none.
    *
    * @return array
    *   What it holds, every key it holds kept.
    */
-  protected static function asked(SurfaceInterface $surface, array $stored, ?FlatVariantsLayout $flat): array {
+  protected static function asked(SurfaceInterface $surface, array $stored, ?FlatVariantsStorageLayout $flat): array {
     $stored = self::applyThirdPartyLayouts($surface, $stored, FALSE);
     return $flat?->fromStorage($stored) ?? $stored;
   }
@@ -691,7 +691,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    *   TRUE to turn them into the stored layout, FALSE to read them back.
    *
    * @return array
-   *   The values, the settings of each module with a layout translated
+   *   The values, the settings of each module with a storage layout translated
    *   and nothing else touched.
    */
   protected static function applyThirdPartyLayouts(SurfaceInterface $surface, array $values, bool $to_storage): array {

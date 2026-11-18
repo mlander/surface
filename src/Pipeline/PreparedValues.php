@@ -20,7 +20,7 @@ final class PreparedValues {
    * @param array $values
    *   The accepted, validated values in input layout.
    * @param mixed $artifact
-   *   What the storage produced, in its own layout: a configuration
+   *   What the storage produced, in its own storage layout: a configuration
    *   array, a config object, an unsaved entity, whatever it commits.
    * @param array $dependencies
    *   Dependencies the artifact carries, in the shape

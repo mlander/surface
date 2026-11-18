@@ -19,12 +19,12 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * pointed at a subclass by hook_field_info_alter() and its per instance
  * settings form is generated from a resource, while the storage layout is
  * unchanged. Every part of that had been checked by calling the field
- * item, the storage class and the layout object directly. What a browser
- * adds is the one thing those cannot: Field UI owns the write here. It
+ * item, the storage class and the storage layout object directly. What a
+ * browser adds is the one thing those cannot: Field UI owns the write here. It
  * builds $form['settings'], copies whatever the elements produced onto the
  * field config entity, and saves it, so the values have to have been
  * through the storage's prepare() by the time the element validate
- * callback returns, or the wrong layout is what gets stored.
+ * callback returns, or the wrong storage layout is what gets stored.
  *
  * Two assertions follow from that and are the point of this test: the
  * saved field config holds the address module's own storage layout, each
@@ -124,8 +124,8 @@ class FieldUiAddressSettingsTest extends BrowserTestBase {
     ], 'Save settings');
     $assert_session->pageTextContains('Saved Address configuration.');
 
-    // What is stored is the address module's own layout, unchanged: each
-    // country keyed by itself, each override wrapped in its single-key
+    // What is stored is the address module's own storage layout, unchanged:
+    // each country keyed by itself, each override wrapped in its single-key
     // array, and the deprecated key emptied so it can never shadow them.
     $this->container->get('entity_field.manager')->clearCachedFieldDefinitions();
     $field = FieldConfig::loadByName('entity_test', 'entity_test', 'field_address');
@@ -133,7 +133,7 @@ class FieldUiAddressSettingsTest extends BrowserTestBase {
     $settings = $field->getSettings();
     $this->assertSame(['US' => 'US', 'CA' => 'CA'], $settings['available_countries']);
     // In the order the resource declares the properties, not the order
-    // the form happened to be filled in: the layout object walks the
+    // the form happened to be filled in: the storage layout object walks the
     // accepted values, and those are keyed by the definitions.
     $this->assertSame([
       AddressField::GIVEN_NAME => ['override' => FieldOverride::REQUIRED],

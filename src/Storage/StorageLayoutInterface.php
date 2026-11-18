@@ -23,8 +23,8 @@ namespace Drupal\surface\Storage;
  * object is honestly serializable, which a closure is not and a callable
  * typed 'mixed' only is by convention.
  *
- * An implementation must be pure layout. It may not consult services, the
- * current user, or the site: it describes how one set of values is
+ * An implementation must be pure storage layout. It may not consult services,
+ * the current user, or the site: it describes how one set of values is
  * written down, and the same values must translate the same way for a
  * form, a kernel test, a config action and an agent.
  *

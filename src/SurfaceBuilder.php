@@ -804,16 +804,16 @@ final class SurfaceBuilder {
    * as a number of seconds. The owner's storage cannot know that, and the
    * contributor does not build the storage, so the translation travels on
    * the data surface: storage that writes third-party settings applies the
-   * provider's layout to that provider's namespace, toStorage() on the
+   * provider's storage layout to that provider's namespace, toStorage() on the
    * way in and fromStorage() on the way out, and to nothing else.
    *
-   * The layout sees the provider's settings only, keyed by the keys the
+   * The storage layout sees the provider's settings only, keyed by the keys the
    * provider mounted, and must be pure (the StorageLayoutInterface
    * contract), because the data surface carrying it is serialized with every
    * form that renders it.
    *
    * @param string $provider
-   *   The module whose mounted settings the layout translates. It must
+   *   The module whose mounted settings the storage layout translates. It must
    *   mount at least one definition before the data surface is sealed.
    * @param \Drupal\surface\Storage\StorageLayoutInterface $layout
    *   The translation.

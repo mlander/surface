@@ -40,7 +40,7 @@ interface SurfaceStorageInterface {
   public function load(SurfaceInterface $surface): array;
 
   /**
-   * Turns accepted values into this storage's own layout.
+   * Turns accepted values into this storage's own storage layout.
    *
    * Writes nothing.
    *

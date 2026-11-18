@@ -49,7 +49,8 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * `storedAs: Variants::FLAT` has a config storage keep the chosen
    * variant's keys beside $by and nothing at $key, while every door asks
-   * for them under $key (FlatVariantsLayout), as the test module's kit does
+   * for them under $key (FlatVariantsStorageLayout), as the test module's kit
+   * does
    * (tests/modules/surface_resource_test/src/Resource/Kit/KitResource.php).
    *
    * @code

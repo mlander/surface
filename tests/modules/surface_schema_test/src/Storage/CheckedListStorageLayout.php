@@ -13,10 +13,10 @@ use Drupal\surface\Storage\StoredSchemaInterface;
  * pathauto stores its enabled entity types. An id the list leaves out
  * reads as left out of the map, so it starts from its entry's default.
  */
-final class CheckedListLayout implements StoredSchemaInterface {
+final class CheckedListStorageLayout implements StoredSchemaInterface {
 
   /**
-   * Constructs a CheckedListLayout.
+   * Constructs a CheckedListStorageLayout.
    *
    * @param string $key
    *   The key asked for as a map and stored as a list.

@@ -18,7 +18,7 @@ and variants from the site);
 by side. Where a value asked for one way is stored another, what runs
 because something was saved, and where a value nobody types comes from,
 is no concept of its own: [Transformations](transformations.md) puts
-coercion, layouts, the commit, ECA, outputs and `prepare()` side by
+coercion, storage layouts, the commit, ECA, outputs and `prepare()` side by
 side. The Example column is the example that shows the concept, in
 the order the examples index, `/surface-examples`, reads them, and the
 last column a page that shows it on a site, of the examples module
@@ -55,7 +55,7 @@ first resource's (`surface_examples_first`); a dash where none does.
 | Machine name, `compute($key, 'machine_name', ..., using: MachineName::class, when: Compute::UNLESS_SENT)` | - | Does a thing have a name and a machine name suggested from it, which a person may type over, held once, and fixed once the thing exists? ([Recipe](recipes.md#a-title-and-a-machine-name)) | The identity is a number storage hands out, or nobody names the thing. | 15 | `/surface-examples/15/add`; `/admin/structure/types/surface-add` (with `surface_examples_node_type`) |
 | Examples, `examples([...])` | - | Should a caller see what a valid value looks like? Both documents state it; a form shows it only as a placeholder the key's arrangement declares. | The label says enough. | 4, 8 | `/surface-examples/8/desk` |
 | Arrangement, `$inputs->describe($key, group: ...)` | - | Should keys sit in a group (a fieldset or a details), in another order, or show a placeholder, a prefix, a suffix or a help text, on every form that draws them and in React? ([Generated forms](forms.md#arranging-the-keys)) | Declaration order and the labels are the form you want. | - | `/admin/structure/types/surface-add` (with `surface_examples_node_type`) |
-| Layout, `StorageLayoutInterface` | - | Is a value stored differently from how a person is asked for it? | It is stored as asked. | - | - |
+| Storage layout, `StorageLayoutInterface` | - | Is a value stored differently from how a person is asked for it? | It is stored as asked. | - | - |
 | Outputs, `defineOutputs()` | - | Does running the host emit values a caller relies on, such as a listing's page? ([Outputs](outputs.md)) | Nothing is emitted: settings pages emit nothing. | 15 | `/surface-api/event.venue?limit=2` |
 | Plugin host, `#[UsesStructure]` | [Structures](introduction/03-structures.md) | Is it a block's, formatter's, condition's, action's or field type's settings? | No plugin holds it. | 13 | - |
 | Cosmetic layer, `_surface_cosmetics` | - | Does one operation form need a borrowed element (vertical tabs), markup, a message or a redirect, with nothing meaning something else? Grouping and order are the arrangement's. | The generated form, arranged, is the form you want. | - | - |
@@ -97,7 +97,7 @@ the module that it does not import and this table does not list.
 
 A class in `Storage\` is one you name on `#[Resource(storage:)]` or
 extend (`ConfigObjectResourceStorage`, `ConfigEntityResourceStorage`), or one such a
-class works with: a layout, the secret codec, `SchemaViolations`. The
+class works with: a storage layout, the secret codec, `SchemaViolations`. The
 storages the engine writes through for a plugin's host or State implement
 the pipeline's `SurfaceStorageInterface` and live in
 `Pipeline\Storage\` beside it; naming one on `#[Resource(storage:)]` is

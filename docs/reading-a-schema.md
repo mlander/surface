@@ -530,7 +530,7 @@ key unlike each keep their own definition: `views.field.field` holds
 (from `views.field.prerender_list`) to a plain `string`. A variant may
 hold children, maps and variants at a key of its own, as
 `views.field.field` holds its formatter's `settings`
-(why: [decision](decisions.md#variants-stored-flat-are-a-layout)).
+(why: [decision](decisions.md#variants-stored-flat-are-a-storage-layout)).
 
 **Which structure each value is.** `Variants\ConfigSchemaTypes` lists the
 variants of both forms, bound by name to the type and the path of the

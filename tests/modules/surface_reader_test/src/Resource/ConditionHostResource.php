@@ -21,7 +21,7 @@ use Drupal\surface_reader_test\Storage\ConditionHostStorage;
  * condition's own at `configuration`, which the config object keeps flat
  * beside the id, as a block's visibility keeps each condition.
  *
- * @see \Drupal\surface\Storage\FlatVariantsLayout
+ * @see \Drupal\surface\Storage\FlatVariantsStorageLayout
  */
 #[Resource('reader_test.condition_host', storage: ConditionHostStorage::class, label: new TranslatableMarkup('Condition host'))]
 final class ConditionHostResource implements ResourceInterface {

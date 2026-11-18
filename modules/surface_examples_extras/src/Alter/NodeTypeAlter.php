@@ -13,7 +13,7 @@ use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Storage\StorageLayoutInterface;
 use Drupal\surface_examples_extras\NodeTypeReviewSettings;
 use Drupal\surface_examples_extras\Plugin\SurfaceWidget\CommaSeparatedListWidget;
-use Drupal\surface_examples_extras\ReviewDeadlineLayout;
+use Drupal\surface_examples_extras\ReviewDeadlineStorageLayout;
 use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
 use PortableSchema\Builder\Schema;
 
@@ -28,8 +28,8 @@ use PortableSchema\Builder\Schema;
  *
  * - The deadline is asked for the way a person says it, an amount and a
  *   unit, and stored as the seconds the classic form stores. The
- *   conversion is this alter's storage layout, ReviewDeadlineLayout, which
- *   the build hands the resource for this module's mount and the storage
+ *   conversion is this alter's storage layout, ReviewDeadlineStorageLayout,
+ *   which the build hands the resource for this module's mount and the storage
  *   adapter applies to it and nothing else: the content type's storage
  *   reads and writes the seconds. The classic form does the same
  *   arithmetic, NodeTypeReviewSettings::seconds(), in its element
@@ -115,7 +115,7 @@ final class NodeTypeAlter implements AltersInputsInterface, AltersStorageLayoutI
    * fixed unit that divides them.
    */
   public function storageLayout(): StorageLayoutInterface {
-    return new ReviewDeadlineLayout();
+    return new ReviewDeadlineStorageLayout();
   }
 
 }

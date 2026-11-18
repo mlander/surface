@@ -100,10 +100,10 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
    * Tests a key asked as checkboxes and stored as a list is told to the check.
    *
    * The alias settings ask for a checkbox per type, and their storage keeps
-   * the list of the types checked through its layout, as docs/recipes.md
-   * shows. The layout says the stored schema of the key it translates, a
-   * sequence of strings: the check skips the key, so the build passes, and
-   * the generator writes that schema rather than the asked one.
+   * the list of the types checked through its storage layout, as
+   * docs/recipes.md shows. The storage layout says the stored schema of the key
+   * it translates, a sequence of strings: the check skips the key, so the build
+   * passes, and the generator writes that schema rather than the asked one.
    */
   public function testTranslatedKeyIsToldToTheCheck(): void {
     $resources = $this->container->get('surface.resources');
@@ -139,14 +139,14 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
             sequence:
               type: string
               label: 'Type'
-      YAML, $schema, 'Generated, the schema says what the layout stores.');
+      YAML, $schema, 'Generated, the schema says what the storage layout stores.');
   }
 
   /**
-   * Tests an alter's layout of its mount is told to the check and generator.
+   * Tests an alter's storage layout of its mount reaches check and generator.
    *
    * The mount test module mounts a reviewer, a user stored by uuid, and a
-   * delay asked in minutes and stored as a duration, which its layout
+   * delay asked in minutes and stored as a duration, which its storage layout
    * says. Each is named at third_party_settings.<module>.<key>: the check
    * skips both, and the generator writes each as it is stored.
    */
@@ -157,7 +157,7 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
     $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(AliasSettingsStorage::class);
     $translated = $storage->translatedKeys($built);
     $mount = 'third_party_settings.surface_mount_test.';
-    $this->assertSame(['type' => 'string'], $translated[$mount . 'delay'], 'What the alter\'s layout says.');
+    $this->assertSame(['type' => 'string'], $translated[$mount . 'delay'], 'What the alter\'s storage layout says.');
     $this->assertSame(ReferenceStorageLayout::UUID_SCHEMA, $translated[$mount . 'reviewer'], 'A reference at the mount, by uuid.');
     $this->assertSame([], $storage->widerThanSchema($built));
     // Told of the references alone, the check names the delay.
@@ -190,7 +190,7 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
           delay:
             type: string
             label: 'Delay in minutes'
-      YAML, $schema, 'Generated, the mount\'s schema says what its layout stores.');
+      YAML, $schema, 'Generated, the mount\'s schema says what its storage layout stores.');
     $this->assertStringContainsString(<<<'YAML'
           reviewer:
             type: uuid

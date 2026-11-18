@@ -19,12 +19,12 @@ use Drupal\surface\Variants;
  * and nothing at the key's own name: the shape core's own-key schemas
  * describe (`condition.plugin.[id]`, a views handler).
  *
- * The engine applies this layout to every resource stored in a config
+ * The engine applies this storage layout to every resource stored in a config
  * storage, ConfigObjectResourceStorage or ConfigEntityResourceStorage
  * (StorageAdapter), beside ReferenceStorageLayout and in the layout values are
  * asked for: fromStorage() before the references are read, toStorage() after
- * they are written; the layouts alters give their mounts are applied outside
- * it, as stored.
+ * they are written; the storage layouts alters give their mounts are applied
+ * outside it, as stored.
  *
  * - toStorage(): at each level holding a flat key, the map under the key
  *   is laid into the level where the key stands, and the key is removed;
@@ -60,10 +60,10 @@ use Drupal\surface\Variants;
  * @see \Drupal\surface\Variants::STORED_AS
  * @see \Drupal\surface\ResourceBuild\StorageAdapter
  */
-final class FlatVariantsLayout implements StoredSchemaInterface {
+final class FlatVariantsStorageLayout implements StoredSchemaInterface {
 
   /**
-   * Constructs a FlatVariantsLayout.
+   * Constructs a FlatVariantsStorageLayout.
    *
    * @param list<array{steps: list<array{key: string, each: bool, variants: \Drupal\surface\Variants|null, variant: string|null}>, key: string, own: string[], before: string[], variants: \Drupal\surface\Variants}> $marks
    *   Each flat key, outermost first: the steps from the top to its level,
@@ -78,7 +78,7 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
   ) {}
 
   /**
-   * Gives the layout for a resource, when it stores a key flat.
+   * Gives the storage layout for a resource, when it stores a key flat.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource, sealed.
@@ -87,7 +87,7 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
    *   holds, which its own storage lays out.
    *
    * @return self|null
-   *   The layout, or NULL when no key's variants are stored flat.
+   *   The storage layout, or NULL when no key's variants are stored flat.
    */
   public static function forSurface(SurfaceInterface $surface, array $skip = []): ?self {
     $marks = [];

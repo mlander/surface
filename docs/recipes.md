@@ -341,11 +341,11 @@ $inputs->addEach(
 );
 ```
 
-The translation is a layout, a `StorageLayoutInterface` with two
+The translation is a storage layout, a `StorageLayoutInterface` with two
 methods. `fromStorage()` turns the stored list into the map, and
 `toStorage()` turns the map back into the list:
 
-<!-- excerpt: tests/modules/surface_schema_test/src/Storage/CheckedListLayout.php -->
+<!-- excerpt: tests/modules/surface_schema_test/src/Storage/CheckedListStorageLayout.php -->
 
 ```php
 public function toStorage(array $values): array {
@@ -356,7 +356,7 @@ public function toStorage(array $values): array {
 }
 ```
 
-<!-- excerpt: tests/modules/surface_schema_test/src/Storage/CheckedListLayout.php -->
+<!-- excerpt: tests/modules/surface_schema_test/src/Storage/CheckedListStorageLayout.php -->
 
 ```php
 public function fromStorage(array $settings): array {
@@ -367,10 +367,10 @@ public function fromStorage(array $settings): array {
 }
 ```
 
-The layout also implements `StoredSchemaInterface`, whose one method
+The storage layout also implements `StoredSchemaInterface`, whose one method
 says the config schema of each key it translates, as it is stored:
 
-<!-- excerpt: tests/modules/surface_schema_test/src/Storage/CheckedListLayout.php -->
+<!-- excerpt: tests/modules/surface_schema_test/src/Storage/CheckedListStorageLayout.php -->
 
 ```php
 public function storedSchema(): array {
@@ -389,19 +389,19 @@ The storage, a `ConfigObjectResourceStorage` subclass, names it in `layout()`:
 
 ```php
 protected function layout(): StorageLayoutInterface {
-  return new CheckedListLayout(self::LISTED);
+  return new CheckedListStorageLayout(self::LISTED);
 }
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-That is all of it. `load()` reads through the layout and `prepare()`
+That is all of it. `load()` reads through the storage layout and `prepare()`
 writes through it before the config schema judges the object. The build
 holds the resource to that schema
 ([A schema the module did not generate](storage.md#a-schema-the-module-did-not-generate)),
-and skips each key the layout names: a boolean at each entry is what
+and skips each key the storage layout names: a boolean at each entry is what
 the resource asks for, and a list of strings is what is stored. `drush
-surface:config-schema` writes the schema the layout gives for the
+surface:config-schema` writes the schema the storage layout gives for the
 key, labeled with the key's label, so `types` is generated as a
 `sequence` of `string`.
 
@@ -420,7 +420,7 @@ Three more things hold for a translated key:
 - **Every door asks for the map.** The tool, HTTP, the form and React
   send and receive the map of booleans; only storage sees the list.
 
-A layout is pure: it reads no service and no site state. A rule that
+A storage layout is pure: it reads no service and no site state. A rule that
 needs the site, such as pathauto leaving out a type whose path field
 another module provides, stays in the storage's `prepare()`, on the
 values as asked, before it calls the parent.

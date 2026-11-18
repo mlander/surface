@@ -21,7 +21,7 @@ use PortableSchema\Builder\Schema;
  * config schema types each item by the item's own kind, core's own-key
  * form, which a config object's root cannot take.
  *
- * @see \Drupal\surface\Storage\FlatVariantsLayout
+ * @see \Drupal\surface\Storage\FlatVariantsStorageLayout
  */
 #[Resource('resource_test.campsite', storage: CampsiteStorage::class, label: new TranslatableMarkup('Campsite'))]
 final class CampsiteResource implements ResourceInterface {

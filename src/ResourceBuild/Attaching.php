@@ -1188,8 +1188,8 @@ final class Attaching {
    * Refuses two keys whose variants are stored flat at one level.
    *
    * Read back, every stored key that is not the owner's is gathered under
-   * the flat key (FlatVariantsLayout::fromStorage()), so with two of them
-   * nothing could tell which keys each left behind.
+   * the flat key (FlatVariantsStorageLayout::fromStorage()), so with two of
+   * them nothing could tell which keys each left behind.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build.
@@ -1212,8 +1212,8 @@ final class Attaching {
    * The variants' keys are stored among the owner's at its level, so a
    * variant may declare no key the owner holds there, a member a structure
    * it mixes in brought among them, and hold no variants stored flat of
-   * its own, which would land at the same level too; and the layout that
-   * stores them so is a config storage's (StorageAdapter), so the storage
+   * its own, which would land at the same level too; and the storage layout
+   * that stores them so is a config storage's (StorageAdapter), so the storage
    * that stores the owner is one. That storage is the owner's own, or that
    * of the nearest parent with one; a structure built on its own names
    * none, and its host's storage says what it does with the key.
@@ -1246,7 +1246,7 @@ final class Attaching {
       $storage = $this->registry->hasDefinition($parent['class']) ? $this->registry->getDefinition($parent['class'])->storage : NULL;
     }
     if ($storage !== NULL && !is_a($storage, ConfigObjectResourceStorage::class, TRUE) && !is_a($storage, ConfigEntityResourceStorage::class, TRUE)) {
-      throw new \LogicException(sprintf('%s stores the variants at "%s" flat (Variants::STORED_AS), and %s, which stores it, is no config storage: the layout that stores them beside their deciding key is applied to ConfigObjectResourceStorage and ConfigEntityResourceStorage alone. Store them under the key, or lay them out in the storage itself.', $id, $key, $storage));
+      throw new \LogicException(sprintf('%s stores the variants at "%s" flat (Variants::STORED_AS), and %s, which stores it, is no config storage: the storage layout that stores them beside their deciding key is applied to ConfigObjectResourceStorage and ConfigEntityResourceStorage alone. Store them under the key, or lay them out in the storage itself.', $id, $key, $storage));
     }
   }
 

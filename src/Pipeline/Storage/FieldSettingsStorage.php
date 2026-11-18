@@ -21,7 +21,7 @@ use Drupal\surface\Storage\StorageLayoutInterface;
  * a field config entity and are described today by nothing more than the
  * form that collects them.
  *
- * The optional layout is the point of the class. A field type's stored
+ * The optional storage layout is the point of the class. A field type's stored
  * settings are routinely not the layout a person or an agent should be
  * asked for: the address field type stores its countries as a map of
  * each code to itself, wraps every field override in a single-key array,
@@ -37,8 +37,8 @@ use Drupal\surface\Storage\StorageLayoutInterface;
  * path can take the artifact and hand it to Field UI to copy onto the
  * entity rather than saving behind the form's back.
  *
- * Encryption rides that same layout. A data surface that declares a
- * secret key has its layout wrapped in an EncryptedStorageLayout before
+ * Encryption rides that same storage layout. A data surface that declares a
+ * secret key has its storage layout wrapped in an EncryptedStorageLayout before
  * either direction runs, so the field's stored settings hold ciphertext
  * and the pipeline is handed plaintext, which is what makes a partial
  * update of the settings beside a secret leave the secret intact. A data
@@ -102,18 +102,18 @@ final class FieldSettingsStorage implements SurfaceStorageInterface {
   }
 
   /**
-   * Gets the layout to translate through, encryption included.
+   * Gets the storage layout to translate through, encryption included.
    *
    * The data surface is what says which keys are secret, and a storage is
    * handed the data surface on both of the calls that translate, so this
    * is where the two meet. A data surface that declares no secret key
-   * gets the layout it was constructed with, unchanged and unwrapped.
+   * gets the storage layout it was constructed with, unchanged and unwrapped.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface being read or written.
    *
    * @return \Drupal\surface\Storage\StorageLayoutInterface|null
-   *   The layout, or NULL when there is nothing to translate.
+   *   The storage layout, or NULL when there is nothing to translate.
    */
   protected function layoutFor(SurfaceInterface $surface): ?StorageLayoutInterface {
     $codec = $this->secretCodec();

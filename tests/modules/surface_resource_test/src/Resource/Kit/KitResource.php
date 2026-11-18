@@ -21,9 +21,9 @@ use PortableSchema\Builder\Schema;
  * this class there, asked for under the gear like any variants at a key.
  * The gear's map says Variants::STORED_AS FLAT, so the kit's config object
  * keeps the chosen variant's keys beside the kind, and no gear, which is
- * what the engine's layout writes and reads (FlatVariantsLayout). Both
- * declare the weight; the fuel is the stove's, the poles and the fly the
- * tent's.
+ * what the engine's storage layout writes and reads
+ * (FlatVariantsStorageLayout). Both declare the weight; the fuel is the
+ * stove's, the poles and the fly the tent's.
  *
  * @see docs/resources.md#stored-flat
  */

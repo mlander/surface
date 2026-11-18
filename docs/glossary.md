@@ -67,7 +67,7 @@ static `schema()` returns the Portable Schema of the value, the start of
 a key's schema as `Schema::of(Shape::class)`;
 each key may only narrow it, an alter of it tightens it at every key,
 and the served contract writes it once, as a def. Never the blueprint
-or the layout.
+or the storage layout.
 
 Introduced in [Shapes](introduction/04-shapes.md). Reference:
 [Named shapes](declaring-a-resource.md#named-shapes).
@@ -219,7 +219,7 @@ does.
 
 Precisely: where accepted values are written, and the place that knows
 the distance between how a resource asks for its values and how the
-store lays them out (a layout). A resource names its storage class, a
+store lays them out (a storage layout). A resource names its storage class, a
 `ResourceStorageInterface` with `load()`, `prepare()` (rehearse the
 write, no side effects) and `commit()`; a plugin's host supplies one of
 the engine's (plugin configuration, field settings) for what it holds.
@@ -436,9 +436,9 @@ sealed.
 Not in the introduction. Reference:
 [The class](declaring-a-resource.md#the-class).
 
-### Layout
+### Storage layout
 
-A layout says how the stored values are arranged when that differs from
+A storage layout says how the stored values are arranged when that differs from
 how they are asked for.
 
 Precisely: how a storage lays accepted values out where that differs
@@ -591,7 +591,7 @@ chooses it, in storage only.
 Precisely: variants at a key attached with
 `attachVariants(..., storedAs: Variants::FLAT)`: a config storage
 keeps the chosen variant's keys beside the deciding key and nothing at
-the key (`Storage\FlatVariantsLayout`), while every door asks for them
+the key (`Storage\FlatVariantsStorageLayout`), while every door asks for them
 under the key, and the contract does not change. A storage layout, not
 a way to compose.
 
@@ -603,18 +603,18 @@ Experimental: see [Variants stored flat](storage.md#variants-stored-flat).
 
 Removed 2026-11-06: variants kept beside their deciding key are
 [stored flat](resources.md#stored-flat)
-([decision](decisions.md#variants-stored-flat-are-a-layout)).
+([decision](decisions.md#variants-stored-flat-are-a-storage-layout)).
 
 ### Widest
 
 Removed 2026-11-06 with variants mixed in: each variant states its own
 keys in its own frame ([Stored flat](resources.md#stored-flat),
-[decision](decisions.md#variants-stored-flat-are-a-layout)).
+[decision](decisions.md#variants-stored-flat-are-a-storage-layout)).
 
 ### Held to
 
 Removed 2026-11-06 with variants mixed in, for the reason Widest gives
-([decision](decisions.md#variants-stored-flat-are-a-layout)).
+([decision](decisions.md#variants-stored-flat-are-a-storage-layout)).
 
 ### Reader
 

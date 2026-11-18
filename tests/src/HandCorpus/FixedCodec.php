@@ -10,8 +10,8 @@ use Drupal\surface\Storage\SecretCodecInterface;
  * Writes a secret the same way every time, for the door corpus.
  *
  * Not encryption: the text, base64 encoded behind a marker, so what the
- * encrypted layout stores is the same on every run and a digest of it is
- * stable.
+ * encrypted storage layout stores is the same on every run and a digest of it
+ * is stable.
  */
 final class FixedCodec implements SecretCodecInterface {
 

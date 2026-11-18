@@ -163,9 +163,9 @@ class PipelineResultTest extends UnitTestCase {
    * Tests that a prepared artifact carries the write without doing it.
    *
    * The preview object: the values in input layout, whatever storage
-   * layout the storage class turned them into, and the dependencies that layout
-   * carries. A caller can render or discard all three, and nothing has
-   * been written until commit takes the same object.
+   * layout the storage class turned them into, and the dependencies that
+   * storage layout carries. A caller can render or discard all three, and
+   * nothing has been written until commit takes the same object.
    */
   public function testPreparedValuesCarryTheStorageLayout(): void {
     $values = ['available_countries' => ['US']];

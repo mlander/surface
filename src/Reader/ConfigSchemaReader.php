@@ -163,10 +163,10 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
    * keep their own definition of it. The map at `configuration` carries
    * no label, since the schema names none for it. The variants' keys are
    * stored flat beside the deciding key, as config stores them
-   * (Variants::STORED_AS, FlatVariantsLayout), and asked for under the
+   * (Variants::STORED_AS, FlatVariantsStorageLayout), and asked for under the
    * key.
    *
-   * Decision: see docs/decisions.md#variants-stored-flat-are-a-layout.
+   * Decision: see docs/decisions.md#variants-stored-flat-are-a-storage-layout.
    *
    * @param string $named
    *   The expression as written: `views.field.[plugin_id]`.
@@ -753,7 +753,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
 
       case 'own key':
         // Decision: see
-        // docs/decisions.md#variants-stored-flat-are-a-layout.
+        // docs/decisions.md#variants-stored-flat-are-a-storage-layout.
         if ($this->fallbackOf($expression) === NULL) {
           $reading->expression($here, $named, 'own key', $by, 'open');
           return $this->open($inputs, $key, $label, $required, $reading, $here, sprintf('Its type is chosen by its own "%s" key, and no type says what every one holds, so "%s" itself has no type: attachVariants(ConfigSchemaReader::CHOSEN), which reads the chosen type at "%s", stored flat, needs a type every value holds that declares "%s". Until one does, the key is declared open, holding any value.', $by, $by, self::CHOSEN, $by));

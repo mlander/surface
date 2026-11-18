@@ -51,7 +51,7 @@ install; read it first.
   the seal), why core alone does not do each today, and the edges where
   Typed Data stays.
 - [Transformations](transformations.md): a value asked for one way and
-  stored another (coercion, layouts, the doors' wire forms), what runs
+  stored another (coercion, storage layouts, the doors' wire forms), what runs
   because something was saved, and a value nobody types.
 
 ### Writing a resource
@@ -75,7 +75,7 @@ install; read it first.
   `Schema::options()`, the resolver plugin type, the stock resolvers.
 - [Storage](storage.md): what storage is, prepare and commit, the
   engine storage classes (a simple config object first), config schema,
-  settings layouts, secrets, the serialization rule.
+  settings storage layouts, secrets, the serialization rule.
 - [Outputs](outputs.md): declaring what a host emits, the `NotEmitted`
   sentinel, conformance, its two consumers, an alter's outputs.
 - [Widgets](widgets.md): the widget plugin type, and writing one.

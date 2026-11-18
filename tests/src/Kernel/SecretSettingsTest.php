@@ -103,7 +103,7 @@ class SecretSettingsTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Reads what the field config actually stores, with no layout in front.
+   * Reads what the field config stores, with no storage layout in front.
    *
    * @return array
    *   The stored settings.

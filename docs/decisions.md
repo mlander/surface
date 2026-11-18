@@ -110,13 +110,13 @@ These keep the word, as product names or on-the-wire identifiers:
 - the `Surface` prefix of a class-swap adopter (`SurfaceAddressItem`).
 
 Everything that names a concept uses the new word: resource, structure,
-shape, operation, storage, blueprint, layout, child. In prose, "the
+shape, operation, storage, blueprint, storage layout, child. In prose, "the
 surface" for a resource or a structure is wrong; "data surface" is the
 sealed object and nothing else; "shape" is Smithy's, a named type, of
 which resources, structures and named scalar shapes are the three kinds
 ([A shape is a named definition](#a-shape-is-a-named-definition)); in
 code `#[Shape]` names the third, and the word never names the blueprint
-or the layout.
+or the storage layout.
 
 Renamed under this decision (2026-10-18), URL paths and wire formats
 unchanged:
@@ -286,7 +286,7 @@ since.
 its attribute, `#[MixInVariants]`, with its three arguments: a tagged
 union has one blueprint form, `attachVariants()` at a key, and keeping
 the chosen keys beside the deciding key is the setting
-`Variants::STORED_AS` on that key, which the engine's layout reads.
+`Variants::STORED_AS` on that key, which the engine's storage layout reads.
 The pins are 27 attributes, 110 arguments and 17 blueprint methods
 since.
 
@@ -378,7 +378,7 @@ What changed, old → new, to grep:
   `deferred`; the served contract's "Three markers" is "Markers", the
   table's title; concept rows for a key that does not apply (led by the
   declared rule), `describe()` and `extendChoices()` (no numbered
-  example calls the second), and Layout.
+  example calls the second), and Storage layout.
 - **A2.** `BlueprintInterface::derive()` → `compute()`; `DeriverInterface`
   → `ComputesValueInterface`, its static `derive(array $from)` →
   `compute(array $from)`; `Derive::ON_CREATE`, `ON_CHANGE` →
@@ -560,7 +560,7 @@ resource with no storage should be a structure whose identity its parent
 hands it, which would need identity on a structure.
 (`ResourceRegistry::discover()`, `Resources::storage()`)
 
-### Blueprints and layouts
+### Blueprints and storage layouts
 
 What `defineInputs()`, `defineOutputs()` and `alterInputs()` are handed
 (and `alterOutputs()`, until 2026-10-24: [The surface was counted and cut](#the-surface-was-counted-and-cut)) is a **blueprint**: `BlueprintInterface` for
@@ -572,11 +572,11 @@ its members are declared into is not one; a named scalar shape, a
 `#[Shape]` class reused at many keys, is
 ([A shape is a named definition](#a-shape-is-a-named-definition)), and
 the two never share a name. How accepted values are laid out in storage, where that
-differs from how they are asked for, is a **layout**:
+differs from how they are asked for, is a **storage layout**:
 `StorageLayoutInterface`, and `AltersStorageLayoutInterface::storageLayout()`
 for an alter's mount (and, *added 2026-10-27*, `ConfigObjectResourceStorage::layout()`
-for a config object, [A layout is the storage's one word on its
-shape](#a-layout-is-the-storages-one-word-on-its-shape)). "Shape" is the named type, of three kinds, and in
+for a config object, [A storage layout is the storage's one word on its
+shape](#a-storage-layout-is-the-storages-one-word-on-its-shape)). "Shape" is the named type, of three kinds, and in
 code names the third, `#[Shape]`. (`ResourceBlueprint`,
 `ResourceBlueprintAdditions`, `BlueprintAdapterBase`)
 
@@ -852,7 +852,7 @@ way ([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-siblin
 *Reversed 2026-11-06:* variants mixed in were removed; variants kept
 beside their deciding key are variants at a key stored flat, whose tags
 live on the variants the same way, `at` naming the key
-([Variants stored flat are a layout](#variants-stored-flat-are-a-layout)).
+([Variants stored flat are a storage layout](#variants-stored-flat-are-a-storage-layout)).
 
 *Amended 2026-11-01:* there is no escape hatch beside variants. A key
 declared `any` with a `#[RefinesInput]` method returning a whole
@@ -873,7 +873,7 @@ unlike open, held to the chosen variant's own definition there
 (`Narrowing`, [A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key)).
 `add()` still refuses `any`. *Amended 2026-11-06:* the frame of
 variants mixed in went with them; a reader's open key is the one use
-([Variants stored flat are a layout](#variants-stored-flat-are-a-layout)).
+([Variants stored flat are a storage layout](#variants-stored-flat-are-a-storage-layout)).
 
 ### A page stands without the decisions page
 
@@ -2892,7 +2892,7 @@ too since 2026-11-13: see [The validator's checks and the document read
 schemas](#the-validators-checks-and-the-document-read-schemas).);
 `EncryptedStorageLayout`, `ConfigSchemaGenerator`,
 `HeldToConfigSchemaTrait`, `InputDefinitions`, `ResourceCode`,
-`SiteCatalog` and `FlatVariantsLayout` in slice 27; `KeyPaths`,
+`SiteCatalog` and `FlatVariantsStorageLayout` in slice 27; `KeyPaths`,
 `Binding` and the emitter's own write of `writeOnly` at the flip, with
 a shape's alters as a `Schema` in, a `Schema` out.
 
@@ -3042,7 +3042,7 @@ built on the untouched tree. No file under `src` changed.
   asked.
 
 Not covered, and pinned elsewhere:
-- Storage layouts: `FlatVariantsLayoutTest`, `ConfigEntityResourceStorageTest`
+- Storage layouts: `FlatVariantsStorageLayoutTest`, `ConfigEntityResourceStorageTest`
   and `NodeTypeToolComparisonTest`.
 - `prepare()` and `commit()`: `ConfigObjectResourceStorageTest` and
   `SurfaceStorageAccessorTest`.
@@ -4154,7 +4154,7 @@ the two faults below, fixed on purpose.
   DateOnly flag, a secret, computed, a list's item, a map's properties)
   from the definition, as the build did before, and reads no schema.
 - **Storage.** `EncryptedStorageLayout::secretKeys()` reads
-  `Secrets::marked()` on each plain key's schema. `FlatVariantsLayout`
+  `Secrets::marked()` on each plain key's schema. `FlatVariantsStorageLayout`
   reads `each` only for a key that holds an attachment, a shell: it
   stays on the definition. `ReferenceStorageLayout` walks definitions
   through properties, items and `each` for the stored layout; it is the
@@ -4496,7 +4496,7 @@ changed.
   default and the keywords in another order. The two storage layouts
   keep a shell's definition for their one fact of it
   (`EncryptedStorageLayout::secretKeys()`'s secret flag,
-  `FlatVariantsLayout`'s `each`): a layout reads no child key, so the
+  `FlatVariantsStorageLayout`'s `each`): a storage layout reads no child key, so the
   schema read 315 more schemas laying out a save (41 percent slower by the
   minimum) and 95 loading one (74 percent). `Entry::isShell()` stays:
   `Entry::schema()` asks it to choose between the composition and the
@@ -4550,7 +4550,7 @@ byte, refusal or value changed.
   `PluginConfigurationStorage` (twice), `SurfaceHostFormTrait`,
   `SurfaceOperationForm`, `SurfaceFieldTypeTrait`,
   `SurfaceFormatterTrait`, `Accepting`, `Conforming`, `StagedStorage`
-  (twice), `StorageAdapter` (twice), `FlatVariantsLayout`,
+  (twice), `StorageAdapter` (twice), `FlatVariantsStorageLayout`,
   `ConfigSchemaGenerator`, `ResourceOperationSchemaTool`, `Variants`,
   and in `surface_http` `ServedOperations` and `ResourceApiController`.
   `OperationInputs::takesNoKeys()` asks `names() === []`. Two callers
@@ -4772,9 +4772,9 @@ value changed.
   reads `SchemaFacts::defaultOf()`; `SiteListBudget::listedBySite()` reads
   `SchemaFacts::each()` and the tool door's `deferred()`
   `SchemaFacts::variantsBy()`, with no ternary on the entry's form; the
-  flat variants layout reads `each`, and the encrypted layout a shell's
+  flat variants storage layout reads `each`, and the encrypted storage layout a shell's
   secret flag (`Secrets::marked()`), from the key's schema. The reference
-  layout reads every fact from schemas, walked down a plain map's
+  storage layout reads every fact from schemas, walked down a plain map's
   properties: whether a key is stored by uuid (a new reader,
   `References::storedByUuidIn()`, beside `storedByUuid()`), the entity
   type (`targetIn()`), a bare key's parts, the data type, `each`. The
@@ -4834,8 +4834,8 @@ value changed.
 - **The proof.** In the schema-first mode the instrument's run (262
   operations as two accounts) derives 6,477 definitions, from 11,308:
   the tool door none (from 3,318, with `parameterInput()`), the defaults
-  none (from 846), the reference layout none (from 841), the accept's
-  computed flag and key none (from 697), the flat and encrypted layouts
+  none (from 846), the reference storage layout none (from 841), the accept's
+  computed flag and key none (from 697), the flat and encrypted storage layouts
   and the config schema check none (from 141). The config schema check
   of a resource's build, which the instrument's cached builds do not
   reach, derived a definition for every plain key of a resource stored
@@ -4854,7 +4854,7 @@ value changed.
   handed the schema it was given, a refined key and its declared key
   resolved apart (by hand and through example 3's room), and
   `invalidateTags()` forgetting an answer under a schema; `ExamplesToolTest`,
-  `ReferenceStoredByUuidTest`, `FlatVariantsLayoutTest` and
+  `ReferenceStoredByUuidTest`, `FlatVariantsStorageLayoutTest` and
   `EncryptedStorageLayoutTest` build a schema-first resource and show its
   tool definitions, its storage layouts and its config schema check
   derive no definition; each fails against the file it covers as it was
@@ -5865,7 +5865,7 @@ of which this is the one case the third-party mount needs.*
 ### A storage layout for a mount
 
 An alter whose keys are asked for in one layout and stored in another
-implements `AltersStorageLayoutInterface`; its layout applies to its own
+implements `AltersStorageLayoutInterface`; its storage layout applies to its own
 module's mount and nothing else. The alter does not own the storage, so
 it hands the translation to the data surface, and the composed storage
 applies it. (`Resources::buildResource()`, `StorageAdapter`)
@@ -6416,7 +6416,7 @@ declare is still refused, since no value chooses between them.
 *Amended 2026-11-06:* variants mixed in were removed, so the three
 amendments above that speak of them record what was; a structure mixed
 in with `mixIn()` still refuses variants at a key
-([Variants stored flat are a layout](#variants-stored-flat-are-a-layout)).
+([Variants stored flat are a storage layout](#variants-stored-flat-are-a-storage-layout)).
 
 ### A mixin may be chosen by a sibling key
 
@@ -6439,14 +6439,14 @@ the own-key form into it.
 *Superseded 2026-11-06:* a stored shape that differs from the asked
 shape is a storage layout, so the flat form is variants at a key with
 `Variants::STORED_AS` `Variants::FLAT`
-([Variants stored flat are a layout](#variants-stored-flat-are-a-layout)).
+([Variants stored flat are a storage layout](#variants-stored-flat-are-a-storage-layout)).
 `mixInVariants()`, `#[MixInVariants]` and what this entry built for
 them are removed: the call's place in the builder's order, the rules
 that chose and held each member, the widest frame, the conditionals and
 `x-surface.variantsMixedIn`, the reader's wall. `MixinVariantsTest`'s
 cases for variants that hold children and variants are
 `VariantsHoldTest`'s, and those for the kit's stored shape
-`FlatVariantsLayoutTest`'s.
+`FlatVariantsStorageLayoutTest`'s.
 
 *Amended 2026-11-05, later:* two variants declaring a member alike but
 for its label shared it, and a variant could hold a child (removed with
@@ -6479,9 +6479,9 @@ keys and the variants the key chooses at `configuration`
 before. Each variant is whole in its own frame, so no wall is needed:
 `ownKeyWall()` and the keys it declared open are gone, and a fallback
 that declares `configuration` itself is refused.
-(`ConfigSchemaReader::ownKey()`, `FlatVariantsLayout`)
+(`ConfigSchemaReader::ownKey()`, `FlatVariantsStorageLayout`)
 
-### Variants stored flat are a layout
+### Variants stored flat are a storage layout
 
 Decided 2026-11-06, by the maintainer. A stored shape that differs from
 the asked shape is a storage layout, never a verb. Variants whose
@@ -6489,17 +6489,17 @@ chosen keys the storage keeps beside the deciding key are variants at
 a key, `attachVariants()`, and the map it returns says how they are
 kept: `->setSetting(Variants::STORED_AS, Variants::FLAT)`, or
 `#[Setting(Variants::STORED_AS, Variants::FLAT)]` beside
-`#[AttachVariants]`. The engine's `FlatVariantsLayout` applies it for
+`#[AttachVariants]`. The engine's `FlatVariantsStorageLayout` applies it for
 the config storages, under `StorageAdapter` and beside
 `ReferenceStorageLayout`, as `References::STORED_AS` tells the reference
-layout to keep an id. The blueprint states what is asked; the storage
+storage layout to keep an id. The blueprint states what is asked; the storage
 says how it is kept. The test module's kit is the first case, its
 campsite the case inside a mapping, and the config schema reader reads
 core's own-key form into it. Each choice, and why:
 
 - **The blueprint states no storage fact.** The maintainer's reason.
   Where the chosen keys sit in storage is the storage's word
-  ([A layout is the storage's one word on its shape](#a-layout-is-the-storages-one-word-on-its-shape)),
+  ([A storage layout is the storage's one word on its shape](#a-storage-layout-is-the-storages-one-word-on-its-shape)),
   and a verb for it put a storage fact into the blueprint, which the
   module keeps out of it everywhere else. A variant does not know how
   its owner stores it, and two owners may store one variant each its
@@ -6518,7 +6518,7 @@ core's own-key form into it. Each choice, and why:
   deciding key. The block example's visibility conditions did this by
   hand, in both directions, in `BlockPlacementResourceStorage` until 2026-11-06
   ([A placed block is a resource](#a-placed-block-is-a-resource)); the
-  layout does it for every config storage, at any depth the sealed
+  storage layout does it for every config storage, at any depth the sealed
   surface holds, with no transform an owner writes.
 - **Read back by exclusion, the chosen variant alone.** On read, every
   stored key at the level that is not one of the owner's own there is
@@ -6552,14 +6552,14 @@ core's own-key form into it. Each choice, and why:
   flat may not store variants flat of its own: its keys land at the same
   level, the first refusal again (both `Attaching::assertFlatVariantFits()`).
   And variants stored flat by a storage that is no config storage are
-  refused naming it, since no layout applies there
+  refused naming it, since no storage layout applies there
   (`Attaching::assertFlatFits()`).
 - **Checked when settled.** A variant the site lists is built when a
   door reads it, so it is checked then: `VariantsToSettle` carries the
   owner's keys at the level when the key is stored flat, and
   `Resources::settleVariant()` holds the variant it builds to
   `Attaching::assertFlatVariantFits()`.
-- **The schema follows the level.** The layout tells the generator to
+- **The schema follows the level.** The storage layout tells the generator to
   write every variant's keys at the level
   (`StoredSchemaInterface::SPREAD`). At a config object's root that is
   the union, every variant's keys beside the deciding key, each
@@ -6596,11 +6596,11 @@ one fact.
 
 Not built: variants stored flat by a storage that is no config storage,
 refused today. (`Variants::STORED_AS`, `Variants::FLAT`,
-`Storage\FlatVariantsLayout`, `StoredSchemaInterface::SPREAD`,
+`Storage\FlatVariantsStorageLayout`, `StoredSchemaInterface::SPREAD`,
 `StorageAdapter`, `Attaching::assertOneFlatKey()`,
 `Attaching::assertFlatFits()`, `Attaching::assertFlatVariantFits()`,
 `Resources::settleVariant()`, `VariantsToSettle`,
-`ConfigSchemaReader::CHOSEN`, `FlatVariantsLayoutTest`,
+`ConfigSchemaReader::CHOSEN`, `FlatVariantsStorageLayoutTest`,
 `VariantsHoldTest`)
 
 ### An anonymous map
@@ -7413,7 +7413,7 @@ looks for its source beside it.
 `ComputedKeysTest`, `MachineNameTest`, `UniqueIdentityTest`,
 `VenueApiTest`)
 
-### A layout is the storage's one word on its shape
+### A storage layout is the storage's one word on its shape
 
 Decided 2026-10-27, with the pathauto port. A key a resource asks for
 one way and a config object keeps another (a checkbox per type, stored
@@ -7429,8 +7429,8 @@ match, and such a module kept its schema written by hand.
   `fromStorage()`, `prepare()` writes through its `toStorage()` before
   the config schema judges the object. The constructor and the service
   wiring stay as they are, so a subclass that needs a service for its
-  layout already has one.
-- **The stored schema, said once.** A layout implementing
+  storage layout already has one.
+- **The stored schema, said once.** A storage layout implementing
   `StoredSchemaInterface` answers `storedSchema()`: the config schema of
   each key it translates, as stored, by dotted path. The storage's
   `translatedKeys($built)` joins it with the references the engine
@@ -7442,21 +7442,21 @@ match, and such a module kept its schema written by hand.
   key asked as one value by the three-way rule, and installed with what
   the install file gives it, else nothing, since a declared default is
   in the asked shape.
-- **Beside `StorageLayoutInterface`, not on it.** Every existing layout
+- **Beside `StorageLayoutInterface`, not on it.** Every existing storage layout
   could answer the question: `AddressStorageLayout` its countries as a
-  sequence, `ReviewDeadlineLayout` its seconds as an integer. But a field
+  sequence, `ReviewDeadlineStorageLayout` its seconds as an integer. But a field
   type's settings and an alter's mount are stored under a schema their
   owner writes, which nothing here generates, so the answer would have
-  no reader, and adding a method to the interface breaks every layout an
-  adopter wrote. An optional interface costs a layout nothing until it
+  no reader, and adding a method to the interface breaks every storage layout an
+  adopter wrote. An optional interface costs a storage layout nothing until it
   is read. It is in `src/Storage/`, which the counted surface does not
   include ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
-- **A layout stays pure.** It reads no service and no site state, as
+- **A storage layout stays pure.** It reads no service and no site state, as
   before; a rule that needs the site stays in the storage's `prepare()`,
   on the values as asked (the pathauto port leaves out a type whose path
   field another module provides there, then calls the parent).
 
-Moved onto it: the recipe's alias settings (`CheckedListLayout`), and
+Moved onto it: the recipe's alias settings (`CheckedListStorageLayout`), and
 the pathauto port on the development site, whose `widerThanSchema()`
 and `load()` overrides are gone.
 
@@ -7467,13 +7467,13 @@ the resource the pattern keeps it out of; and `layout()` on
 `ConfigEntityResourceStorage`, which maps keys to properties and has
 `fromEntity()` and `toEntity()` for the rest, with no case yet.
 
-*Amended 2026-10-27:* an alter's layout of its mount
+*Amended 2026-10-27:* an alter's storage layout of its mount
 (`AltersStorageLayoutInterface`) that implements `StoredSchemaInterface`
 tells the check and the generator as the storage's own does, each key
 at `third_party_settings.<module>.<key>`
 (`HeldToConfigSchemaTrait::mountedLayouts()`, both config storages'
 `translatedKeys()`). A reference an alter mounts was already among the
-keys the uuid layout names there. An entry of a map of keys from the
+keys the uuid storage layout names there. An entry of a map of keys from the
 site is named `*` in a translated path (`pages.*`, `authors.*.author`),
 since which entries there are is the site's: the check matches `*`
 against any entry, and the generator writes the sequence's item as
@@ -7522,14 +7522,14 @@ What it shows: core's schema says only `type: integer, label: 'Max
 age'`. The resource declares the title, the description and the list of
 fourteen periods with their labels once; the form, the tool, the MCP
 listing, the OpenAPI document and the React page read them from it, and
-core's schema stays as core wrote it. Rejected: a layout
+core's schema stays as core wrote it. Rejected: a storage layout
 (`StorageLayoutInterface`) that moves keys, which works on the values
 alone and cannot keep the siblings, and cannot tell the check where to
 look; a constant naming the map the keys share, which a key at another
 depth (`cache.page.max_age` beside `css.preprocess`) does not fit.
 
-This answers the open point of [A layout is the storage's one word on
-its shape](#a-layout-is-the-storages-one-word-on-its-shape) for a config
+This answers the open point of [A storage layout is the storage's one word on
+its shape](#a-storage-layout-is-the-storages-one-word-on-its-shape) for a config
 object; `ConfigEntityResourceStorage` still answers `configSchemaPaths()` itself.
 (`ConfigObjectResourceStorage::STORED_AT`, `HeldToConfigSchemaTrait::schemaAt()`,
 `ConfigSchemaGenerator::describe()`, `PerformanceResourceStorage`,
@@ -7552,13 +7552,13 @@ stored as the entity's uuid; a config entity's stays its id.
   stored config holds the uuid. A uuid on the wire would make every
   caller look an entity up twice, and the lookup and the selection
   handler answer ids.
-- **A stock layout the engine applies.** `ReferenceStorageLayout`,
+- **A stock storage layout the engine applies.** `ReferenceStorageLayout`,
   applied by `StorageAdapter` to every resource whose storage is a
-  config storage, outside the storage's own layout and in the layout
+  config storage, outside the storage's own storage layout and in the storage layout
   values are asked for (as the secrets decorator works in it), so a
-  storage class sees the uuid and its own layout sees the uuid too. It
+  storage class sees the uuid and its own storage layout sees the uuid too. It
   translates on load, uuid to id through the entity repository, and on
-  prepare, id to uuid. It is the one layout that reads the site, since
+  prepare, id to uuid. It is the one storage layout that reads the site, since
   what a uuid names is site state; it reads it the same for every door.
   The build marks a key that refers to a content entity type
   (`References::CONTENT`), so the check and the generator know it
@@ -7583,8 +7583,8 @@ stored as the entity's uuid; a config entity's stays its id.
 - **The schema.** A key that refers to one content entity type is typed
   `uuid`, core's type with its `Uuid` constraint, `nullable` by the
   three-way rule; the generator writes it so, and the check skips it
-  ([A layout is the storage's one word on its
-  shape](#a-layout-is-the-storages-one-word-on-its-shape)).
+  ([A storage layout is the storage's one word on its
+  shape](#a-storage-layout-is-the-storages-one-word-on-its-shape)).
 - **A uuid that names nothing reads as nothing stored**, a bare key's
   two parts both, and the stale rule applies: a write that holds nothing
   for it keeps the stored uuid, as an untouched stale value is kept, and
@@ -7627,7 +7627,7 @@ stored as the entity's uuid; a config entity's stays its id.
   other place a config storage keeps one. Its translated path names the
   entry `*` (`pages.*`, `authors.*.author`), which the check and the
   generator read
-  ([A layout is the storage's one word on its shape](#a-layout-is-the-storages-one-word-on-its-shape)).
+  ([A storage layout is the storage's one word on its shape](#a-storage-layout-is-the-storages-one-word-on-its-shape)).
 - **An install file that holds an id is read by the rule for ids stored
   before.** A module's `config/install` file is written by hand, and the
   generator keeps what it says for a key stored by uuid. Installed as
@@ -7646,7 +7646,7 @@ resource has no conversion helper for ids stored before. A site's
 default for such a key (`surface.defaults`, [A site sets a default
 in configuration](#a-site-sets-a-default-in-configuration)) is a value
 as every door sends it, an id, written over the declared default and
-never through the storage's layout, so it deploys as an id does;
+never through the storage layout, so it deploys as an id does;
 resolving a uuid there would make the build depend on whether the
 entity is on the site yet.
 (`ReferenceStorageLayout`, `References::storedByUuid()`,
@@ -8284,7 +8284,7 @@ A read through the stage and apply open exactly those paths.
   cannot be opened; discard it." Why not throw: a 500 tells the caller
   nothing it can act on, and the discard is the one remedy.
 - **The stage is the first sealed place.** A resource's own storage
-  keeps its secrets as it did: in the clear unless its layout seals them
+  keeps its secrets as it did: in the clear unless its storage layout seals them
   ([Storage: Secrets at the codec](storage.md#secrets-at-the-codec)).
 
 (`Staging\StagedSecrets`, `Staging\StagedStorage`,
@@ -9220,16 +9220,16 @@ leaves a secret out" are promises about every door, or about none.
   is written and the caller corrects what it sent.
 - **`prepared` is not served.** What prepare rehearsed is storage's own
   shape, and the one answer no access rule read: storage puts back what
-  the caller could not see so the write does not drop it, and a layout
-  (third-party settings, an encrypted layout) is storage's to know. A
+  the caller could not see so the write does not drop it, and a storage layout
+  (third-party settings, an encrypted storage layout) is storage's to know. A
   dry run's caller needs the accepted document as it may see it, which
   is `values`, and whether storage's own checks passed, which is the
   run's success; so the write tool declares no `prepared` output and
   React's `/validate` answers no `prepared` key. It stays on
   `SurfaceResult` for PHP callers, who hold the storage anyway.
   Projecting it instead was weighed and refused: storage's shape is not
-  the resource's, and a projection that must know every layout is one a
-  new layout breaks.
+  the resource's, and a projection that must know every storage layout is one a
+  new storage layout breaks.
 - **A secret in a collection's item keeps its place's.** The read never
   returns an item's secret, so a caller sending back what it read sends
   none; accepted over the child's defaults, the item erased it. Now an
@@ -10697,7 +10697,7 @@ their schemas asks `Secrets::marked()` of each.
 
 *Known gap, open:* storage. `EncryptedStorageLayout::secretKeys()`
 encrypts secret keys at the top level only, so a secret below the top
-level is stored unencrypted by that layout. Changing that changes what
+level is stored unencrypted by that storage layout. Changing that changes what
 is written to storage and needs a plan for values already stored, which
 is the owner's decision.
 
@@ -12626,9 +12626,9 @@ apart as `<id>@<n>`, as for defaults.
 *Changed 2026-11-06:* `VisibilityConditionStructure` stores its
 `settings` flat (`Variants::STORED_AS`), so what `BlockPlacementResourceStorage`'s
 two visibility loops did to lay a condition's settings beside its id and
-gather them back went with the layout, the loops keeping the conditions
+gather them back went with the storage layout, the loops keeping the conditions
 keyed by id and a list of strings as core's map of each value to itself
-([Variants stored flat are a layout](#variants-stored-flat-are-a-layout)).
+([Variants stored flat are a storage layout](#variants-stored-flat-are-a-storage-layout)).
 
 ### A listing is a read-only operation with outputs; a reorder is an update over the collection
 
@@ -16505,12 +16505,12 @@ was accepted. The table, change by change, is [Evolving a resource](evolution.md
   pipeline runs the steps on what `load()` hands it, before `accept()`
   reads it as what is stored, so every door reads converted values;
   storage stamps the declared versions at commit, since it owns the
-  layout and so where the stamp lives (`ConfigObjectResourceStorage` beside
+  storage layout and so where the stamp lives (`ConfigObjectResourceStorage` beside
   `_core`, as `_surface.versions`). The stamp travels with the data,
   so an import of an older export is converted again on read and
   environments converge in recorded order. Only up-steps: going back is
   a restore. A stored version above the declared one is refused at load.
-  A layout change that leaves the accepted document alone is the
+  A storage layout change that leaves the accepted document alone is the
   storage's own, read both and write the new one, as
   `EncryptedStorageLayout` reads plaintext. A content entity's storage
   will answer the same two questions, where its ledger lives and how it

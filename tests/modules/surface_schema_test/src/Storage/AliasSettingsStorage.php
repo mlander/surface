@@ -26,7 +26,7 @@ final class AliasSettingsStorage extends ConfigObjectResourceStorage {
    * {@inheritdoc}
    */
   protected function layout(): StorageLayoutInterface {
-    return new CheckedListLayout(self::LISTED);
+    return new CheckedListStorageLayout(self::LISTED);
   }
 
 }

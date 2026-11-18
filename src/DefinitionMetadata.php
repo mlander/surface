@@ -350,7 +350,7 @@ final class DefinitionMetadata {
    *   it, because a form that cannot echo a secret submits an empty box
    *   for an unchanged one (docs/semantics.md says how a caller clears
    *   one on purpose);
-   * - a settings layout decorated with EncryptedStorageLayout encrypts
+   * - a settings storage layout decorated with EncryptedStorageLayout encrypts
    *   the value on its way to storage.
    *
    * A secret holds one scalar value. A list or a complex definition is

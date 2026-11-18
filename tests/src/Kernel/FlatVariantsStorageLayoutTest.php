@@ -17,7 +17,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\Resources;
-use Drupal\surface\Storage\FlatVariantsLayout;
+use Drupal\surface\Storage\FlatVariantsStorageLayout;
 use Drupal\surface\Storage\StoredSchemaInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Tool\OperationInputs;
@@ -50,19 +50,19 @@ use Symfony\Component\Routing\Route;
  * both declare the weight. The gear's map says Variants::STORED_AS FLAT:
  * the contract, the form and the tool ask for the gear as variants at a
  * key, and the kit's config object keeps the chosen keys beside the kind,
- * with no gear, through the engine's FlatVariantsLayout.
+ * with no gear, through the engine's FlatVariantsStorageLayout.
  *
  * The campsite lists pitches, each a name, a kind and the gear that kind
  * chooses, stored flat in the item: its generated config schema types each
  * item by the item's own kind, core's own-key form, which the kit's root
  * cannot take, since core types a config object's root by its name alone.
  *
- * @see \Drupal\surface\Storage\FlatVariantsLayout
+ * @see \Drupal\surface\Storage\FlatVariantsStorageLayout
  * @see docs/resources.md#stored-flat
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
+class FlatVariantsStorageLayoutTest extends SurfaceKernelTestBase {
 
   use ContractValidationTrait;
   use StaticRefinerAgreementTrait;
@@ -298,9 +298,9 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
     $this->assertNull($variants->held('tent', ['fuel' => 'gas'] + self::READ['gear']));
     $this->assertSame(self::READ['gear'], $variants->held('tent', self::READ['gear']));
 
-    // The layout alone: what it reads, and what it writes back.
-    $layout = FlatVariantsLayout::forSurface($this->kit());
-    $this->assertInstanceOf(FlatVariantsLayout::class, $layout);
+    // The storage layout alone: what it reads, and what it writes back.
+    $layout = FlatVariantsStorageLayout::forSurface($this->kit());
+    $this->assertInstanceOf(FlatVariantsStorageLayout::class, $layout);
     $this->assertSame(self::READ, $layout->fromStorage(self::KIT));
     $stored = $layout->toStorage(self::READ);
     $this->assertSame(['title', 'kind', 'weight', 'poles', 'fly', 'notes'], array_keys($stored), 'The gear\'s keys where it stood, and no gear.');
@@ -314,14 +314,14 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
    * As variants under a key do: the pipeline writes a chosen variant as
    * its defaults (Variants::defaultsOf()), an empty map for one that
    * declares no keys, and a nested storage reads that map back. Stored
-   * flat, an empty map writes no key, so the layout reads the chosen
+   * flat, an empty map writes no key, so the storage layout reads the chosen
    * variant as an empty map where the level holds the deciding key and
-   * the owner's keys alone (FlatVariantsLayout::gather()). With nothing
+   * the owner's keys alone (FlatVariantsStorageLayout::gather()). With nothing
    * chosen, nothing is read under the key.
    */
   public function testNothingOfTheChosenVariantReadsAsAnEmptyMap(): void {
-    $layout = FlatVariantsLayout::forSurface($this->kit());
-    $this->assertInstanceOf(FlatVariantsLayout::class, $layout);
+    $layout = FlatVariantsStorageLayout::forSurface($this->kit());
+    $this->assertInstanceOf(FlatVariantsStorageLayout::class, $layout);
     $stored = ['title' => 'Bare kit', 'kind' => 'tent', 'notes' => ''];
     $read = ['title' => 'Bare kit', 'kind' => 'tent', 'gear' => [], 'notes' => ''];
     $this->assertSame($read, $layout->fromStorage($stored), 'Where the kit declares the gear, after the kind.');
@@ -337,8 +337,8 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
 
     // In a collection's item the same.
     $resources = $this->container->get('surface.resources');
-    $campsite = FlatVariantsLayout::forSurface($resources->build(CampsiteResource::class, $resources->operation(CampsiteResource::class, 'configure')));
-    $this->assertInstanceOf(FlatVariantsLayout::class, $campsite);
+    $campsite = FlatVariantsStorageLayout::forSurface($resources->build(CampsiteResource::class, $resources->operation(CampsiteResource::class, 'configure')));
+    $this->assertInstanceOf(FlatVariantsStorageLayout::class, $campsite);
     $read = $campsite->fromStorage(['title' => 'Lakeside', 'pitches' => [['name' => 'North', 'kind' => 'cot']]]);
     $this->assertSame([['name' => 'North', 'kind' => 'cot', 'gear' => []]], $read['pitches']);
   }
@@ -617,7 +617,7 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
     $result = $this->pipeline()->submit($built, ['pitches' => $pitches], $resources->storage(CampsiteResource::class, $context, $built));
     $this->assertTrue($result->isValid());
     $this->assertSame([['name' => 'Birch', 'kind' => 'cot', 'length' => 190]], $this->config('surface_resource_test.campsite')->get('pitches'), 'Nothing kept of the hammock: an item\'s position may hold another item.');
-    $this->assertSame(['pitches.gear' => StoredSchemaInterface::SPREAD], FlatVariantsLayout::storedSchemaOf($built));
+    $this->assertSame(['pitches.gear' => StoredSchemaInterface::SPREAD], FlatVariantsStorageLayout::storedSchemaOf($built));
   }
 
   /**
@@ -629,15 +629,15 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
   public function testStoredPathDropsEachFlatKey(): void {
     $resources = $this->container->get('surface.resources');
     $built = $resources->build(CampsiteResource::class, $resources->operation(CampsiteResource::class, 'configure'));
-    $layout = FlatVariantsLayout::forSurface($built);
-    $this->assertInstanceOf(FlatVariantsLayout::class, $layout);
+    $layout = FlatVariantsStorageLayout::forSurface($built);
+    $this->assertInstanceOf(FlatVariantsStorageLayout::class, $layout);
     $this->assertSame('pitches.0.straps', $layout->storedPath('pitches.0.gear.straps'), 'The gear\'s keys are stored in the item, beside its kind.');
     $this->assertSame('pitches.1.length', $layout->storedPath('pitches.1.gear.length'));
     $this->assertSame('pitches.0.name', $layout->storedPath('pitches.0.name'), 'A path through no flat key is its own.');
     $this->assertSame('title', $layout->storedPath('title'));
     $this->assertSame('gear.straps', $layout->storedPath('gear.straps'), 'No gear stored flat at the top.');
     $this->assertSame('pitches.0.gear', $layout->storedPath('pitches.0.gear'), 'The flat key itself.');
-    $this->assertSame('poles', FlatVariantsLayout::forSurface($this->kit())->storedPath('gear.poles'), 'At the top level the same.');
+    $this->assertSame('poles', FlatVariantsStorageLayout::forSurface($this->kit())->storedPath('gear.poles'), 'At the top level the same.');
   }
 
   /**
@@ -650,7 +650,7 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
       FlatMixinClashStructure::class => 'resource_test.broken.flat_mixin_clash stores the variants at "gear" flat beside its own keys (Variants::STORED_AS), and the variant for "a", resource_test.broken.flat.mixed_weight, declares "weight", which resource_test.broken.flat_mixin_clash declares too. Stored flat, the two would be one key: rename one, or store the variants under "gear".',
       FlatTwoKeysStructure::class => 'resource_test.broken.flat_two_keys stores the variants at "gear" and at "spare" flat at one level (Variants::STORED_AS). Read back, every key that is not its own is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.',
       FlatNestedStructure::class => 'resource_test.broken.flat_nested stores the variants at "gear" flat (Variants::STORED_AS), and the variant for "a", resource_test.broken.flat.inner, stores the variants at "inner" flat too, at the same level. Read back, every key that is not the owner\'s is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.',
-      FlatStateResource::class => 'resource_test.broken.flat_state stores the variants at "gear" flat (Variants::STORED_AS), and Drupal\surface_resource_test\Storage\PinnedNoteStorage, which stores it, is no config storage: the layout that stores them beside their deciding key is applied to ConfigObjectResourceStorage and ConfigEntityResourceStorage alone. Store them under the key, or lay them out in the storage itself.',
+      FlatStateResource::class => 'resource_test.broken.flat_state stores the variants at "gear" flat (Variants::STORED_AS), and Drupal\surface_resource_test\Storage\PinnedNoteStorage, which stores it, is no config storage: the storage layout that stores them beside their deciding key is applied to ConfigObjectResourceStorage and ConfigEntityResourceStorage alone. Store them under the key, or lay them out in the storage itself.',
     ];
     $refused = [];
     foreach (array_keys($refusals) as $class) {

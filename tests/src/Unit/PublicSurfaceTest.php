@@ -71,7 +71,7 @@ use PHPUnit\Framework\Attributes\Group;
  * attribute, #[MixInVariants], with its three arguments: a tagged union
  * has one blueprint form, attachVariants() at a key, and storing the
  * chosen keys beside the deciding key is a setting on that key,
- * Variants::STORED_AS, which the engine's layout reads: 17 methods, 27
+ * Variants::STORED_AS, which the engine's storage layout reads: 17 methods, 27
  * attributes, 110 arguments.
  * Grown on 2026-11-07 by one interface outside `src/Resource/`,
  * TransactionalStorageInterface in `src/Pipeline/`, with its one method,

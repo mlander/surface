@@ -70,7 +70,8 @@ interface SecretCodecInterface {
    *
    * The question a migration asks: a value that answers FALSE is
    * plaintext written before the key was declared secret, which the
-   * layout hands to the pipeline as it is and encrypts on the next write.
+   * storage layout hands to the pipeline as it is and encrypts on the next
+   * write.
    *
    * @param string $value
    *   The stored value.

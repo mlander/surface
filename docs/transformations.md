@@ -23,14 +23,14 @@ each layer changes one thing about it and nothing else:
 | Layer | What it transforms | Who declares it | Where it is documented |
 | --- | --- | --- | --- |
 | Coercion, at the door | A raw value into the declared type, before validation: `'7'` becomes `7` for an integer, `'yes'` becomes `TRUE` for a boolean. Only when the intended value is unambiguous; anything else is left for a constraint to refuse. | Nobody: one table, the Tool API's, mirrored in `Pipeline\Coercion` and run by `accept()` for every door. | [The coercion table](semantics.md#the-coercion-table) (why: [decision](decisions.md#one-coercion-table-the-tool-apis)) |
-| Storage layout | The accepted document into the shape storage keeps, and back: a deadline asked as an amount and a unit, stored as seconds. | The storage class, in its own `load()` and `prepare()`; a field type, by handing `FieldSettingsStorage` a `StorageLayoutInterface`; an alter, for its own mount, with `AltersStorageLayoutInterface::storageLayout()`. | [StorageLayoutInterface](storage.md#storagelayoutinterface) (why: [decision](decisions.md#blueprints-and-layouts)) |
+| Storage layout | The accepted document into the shape storage keeps, and back: a deadline asked as an amount and a unit, stored as seconds. | The storage class, in its own `load()` and `prepare()`; a field type, by handing `FieldSettingsStorage` a `StorageLayoutInterface`; an alter, for its own mount, with `AltersStorageLayoutInterface::storageLayout()`. | [StorageLayoutInterface](storage.md#storagelayoutinterface) (why: [decision](decisions.md#blueprints-and-storage-layouts)) |
 | Wire representation | How a value travels at one door: an operation's parameter as the value of the key it names at the tool door, an update's body as a merge patch over HTTP. | The door: the tool door's `OperationInputs`, the HTTP door's API controller. | [The Tool API door](tools.md), [The write](served-contract.md#the-write) |
 
 The resource's keys, as declared, are the one document all three layers
 translate to and from. Coercion produces it from what a caller sent, a
-layout writes it down, and a door's wire representation is how a caller
+storage layout writes it down, and a door's wire representation is how a caller
 names it. No layer changes a value into a different value: coercion
-changes a spelling, a layout changes a shape, and a door changes how an
+changes a spelling, a storage layout changes a shape, and a door changes how an
 entity is named.
 
 ### Coercion, at the door
@@ -58,15 +58,15 @@ refuses it, naming the value. The tool door runs the Tool API's own
 subscriber first and then the same `accept()`; every rule is
 idempotent, so the second pass changes nothing.
 
-### In storage: the layout
+### In storage: the storage layout
 
-A layout is two pure functions, `toStorage()` and `fromStorage()`, with
+A storage layout is two pure functions, `toStorage()` and `fromStorage()`, with
 no services and no site state, because the same values must translate
 the same way for a form, a tool, a config action and a test. The
 extras example asks for a content type's review deadline as an amount and
 a unit, and stores seconds:
 
-<!-- excerpt: modules/surface_examples_extras/src/ReviewDeadlineLayout.php -->
+<!-- excerpt: modules/surface_examples_extras/src/ReviewDeadlineStorageLayout.php -->
 
 ```php
 public function toStorage(array $values): array {
@@ -83,14 +83,14 @@ public function toStorage(array $values): array {
 ```
 
 The alter that adds the deadline does not own the content type's
-storage, so it hands the layout to the data surface for its own mount,
+storage, so it hands the storage layout to the data surface for its own mount,
 `third_party_settings.surface_examples_extras`:
 
 <!-- excerpt: modules/surface_examples_extras/src/Alter/NodeTypeAlter.php -->
 
 ```php
 public function storageLayout(): StorageLayoutInterface {
-  return new ReviewDeadlineLayout();
+  return new ReviewDeadlineStorageLayout();
 }
 ```
 
@@ -111,7 +111,7 @@ public function load(OperationContext $context): array {
 ```
 
 Its `prepare()` calls `toStorage()` the same way. Every door answers
-values in the resource's layout, a dry run's included; what a layout
+values in the resource's storage layout, a dry run's included; what a storage layout
 produces is served to no caller, and only PHP code holding the storage
 reads it on the result
 (why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
@@ -171,13 +171,13 @@ thing:
       nullable: true
 ```
 
-No layout of the example's is involved: the uuid is the engine's.
+No storage layout of the example's is involved: the uuid is the engine's.
 When storage keeps a reference in another shape, the mapping is a
-layout and nowhere else. A field item keeps an entity reference as
+storage layout and nowhere else. A field item keeps an entity reference as
 `[['target_id' => 7]]`; a resource that asks for the id as `page` and
 stores it in such an item translates in its storage class, and an alter
 that mounts such a key hands the translation for its mount with
-`storageLayout()`. The layout would read, as a sketch (no shipped
+`storageLayout()`. The storage layout would read, as a sketch (no shipped
 resource has one):
 
 ```php
@@ -201,7 +201,7 @@ final class AnnouncementLayout implements StorageLayoutInterface {
 ```
 
 The key's constraint, its candidates and its lookup still judge the id
-as asked, before the layout runs. A content entity's own reference
+as asked, before the storage layout runs. A content entity's own reference
 field is asked for as its item, `{target_id}`, by the field's structure
 (`surface_examples_entity`), and its `target_id` is a reference key,
 answered by the field's own selection handler, so a reference key and a
@@ -329,7 +329,7 @@ that already exist:
 - **As a reaction to the save.** ECA's "Save config" event
   (`config:save`) and its content entity events fire on the saves the
   commit makes. A model reads what was written from the saved object,
-  which holds the stored values in storage's layout.
+  which holds the stored values in storage layout.
 - **As a caller.** The ECA Tool module (`eca_tool`) derives an ECA
   action per tool, so a model runs a derived tool,
   `surface:<resource>:<operation>`, and a model that changes a

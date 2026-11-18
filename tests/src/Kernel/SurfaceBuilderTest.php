@@ -118,7 +118,7 @@ class SurfaceBuilderTest extends SurfaceKernelTestBase {
    * Builds a storage layout that translates nothing.
    *
    * @return \Drupal\surface\Storage\StorageLayoutInterface
-   *   The layout.
+   *   The storage layout.
    */
   protected function layout(): StorageLayoutInterface {
     return new class() implements StorageLayoutInterface {

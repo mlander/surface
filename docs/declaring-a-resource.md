@@ -902,7 +902,7 @@ class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterfa
 
 A field type whose storage layout differs from how a caller is asked
 for its settings overrides `getSurfaceStorage()` and hands
-`FieldSettingsStorage` a layout, as `SurfaceAddressItem` does.
+`FieldSettingsStorage` a storage layout, as `SurfaceAddressItem` does.
 
 What a host supplies, and why the structure does not:
 

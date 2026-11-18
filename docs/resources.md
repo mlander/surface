@@ -918,7 +918,7 @@ it along the tree:
 - A child without storage, every structure among them, is stored by its
   parent under its key.
 - An alter whose keys are asked for in one layout and stored in another
-  implements `AltersStorageLayoutInterface`. Its layout is applied to that
+  implements `AltersStorageLayoutInterface`. Its storage layout is applied to that
   module's mount, `third_party_settings.<module>`, and nothing else:
   `toStorage()` before the storage class prepares, `fromStorage()` after
   it reads. `NodeTypeAlter` in the extras module asks for a review
@@ -929,7 +929,7 @@ it along the tree:
 
 `prepare(OperationContext $context, array $values, AccountInterface
 $account): array` rehearses the write. It builds what `commit()` would
-store, in storage's own layout, holds it to every check storage itself
+store, in storage's own storage layout, holds it to every check storage itself
 would make (the config schema, which for a config entity is also its
 entity validation) and has no side effects. It returns that array, and
 `commit(OperationContext $context, array $prepared, AccountInterface
@@ -965,7 +965,7 @@ made as, which a storage that records who wrote reads there
   field's, and, once the field has data, a settings change that would
   alter its database columns, which the SQL storage would otherwise
   throw on at save. `AddressFieldSettingsResourceStorage` holds the settings, in
-  the layout the field stores, to `field.field_settings.address`.
+  the storage layout the field stores, to `field.field_settings.address`.
 - What a prepare returns is what is stored: the node type's prepared
   array is the config the commit writes, uuid included.
 
@@ -1970,9 +1970,9 @@ itself, while every door still asks for them under the key. It is a
 storage layout, not a way to compose. Stored flat is experimental: see
 [Variants stored flat](storage.md#variants-stored-flat). The blueprint
 states what is asked, and the named argument `storedAs: Variants::FLAT`
-on `attachVariants()` says how it is kept. `Storage\FlatVariantsLayout` applies it for the config
+on `attachVariants()` says how it is kept. `Storage\FlatVariantsStorageLayout` applies it for the config
 storages, `ConfigObjectResourceStorage` and `ConfigEntityResourceStorage`, beside the
-layout that stores a reference by uuid. It is the shape core gives a
+storage layout that stores a reference by uuid. It is the shape core gives a
 condition's settings and a views handler's options, and the block
 example stores each visibility condition's settings so, in the block's
 config entity (`VisibilityConditionStructure`). The test module's kit
@@ -2004,9 +2004,9 @@ use PortableSchema\Builder\Schema;
  * this class there, asked for under the gear like any variants at a key.
  * The gear's map says Variants::STORED_AS FLAT, so the kit's config object
  * keeps the chosen variant's keys beside the kind, and no gear, which is
- * what the engine's layout writes and reads (FlatVariantsLayout). Both
- * declare the weight; the fuel is the stove's, the poles and the fly the
- * tent's.
+ * what the engine's storage layout writes and reads
+ * (FlatVariantsStorageLayout). Both declare the weight; the fuel is the
+ * stove's, the poles and the fly the tent's.
  *
  * @see docs/resources.md#stored-flat
  */
@@ -2129,7 +2129,7 @@ fly: true
 notes: ''
 ```
 
-On read, the layout gathers every stored key at that level that is not
+On read, the storage layout gathers every stored key at that level that is not
 one of the owner's own under the key, and reads back the chosen
 variant's keys and the secrets the other variants keep
 (`Variants::keptSecrets()`). A plain leftover of a variant not chosen
@@ -2146,7 +2146,7 @@ written once the deciding key moves on, and as core writes a plugin's
 settings when its id changes: the tent's poles kept in storage are not
 read back. Below the top level nothing is kept for a variant not
 chosen, since an item's position in a collection may hold another item
-on the next write (`FlatVariantsLayoutTest`).
+on the next write (`FlatVariantsStorageLayoutTest`).
 
 Refused at build, each naming the owner and the key: two keys stored
 flat at one level, since read back every key that is not the owner's is
@@ -2155,7 +2155,7 @@ left behind; a variant that declares a key the owner declares at that
 level, a member of a structure the owner mixes in among them, since
 stored flat the two would be one key; a variant that stores variants
 flat of its own, which would land at the same level; and variants
-stored flat by a storage that is no config storage, which no layout
+stored flat by a storage that is no config storage, which no storage layout
 applies. A variant the site lists is built when a door reads it, and
 checked then (`Resources::settleVariant()`).
 

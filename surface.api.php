@@ -302,7 +302,7 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  *
  * An alter adds no outputs: what a call answers is its operation's, and a
  * reaction to a save belongs to ECA. An alter whose keys are asked for in
- * one layout and stored in another implements
+ * one storage layout and stored in another implements
  * \Drupal\surface\Resource\AltersStorageLayoutInterface. An
  * operation stands on its resource's or structure's own class only.
  *

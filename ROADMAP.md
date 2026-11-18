@@ -664,7 +664,7 @@ renames sit in A because they are cheapest before new code exists.
    The members a blueprint holds keep Smithy's word in prose. Also
    `HasStorageShapeInterface::storageShape()` and `SettingsShapeInterface`,
    which describe how values are laid out in storage, take a name that
-   says so (layout). Mechanical, with the snapshot.
+   says so (storage layout). Mechanical, with the snapshot.
 7. **Named scalar shapes.** DONE 2026-10-18
    (`docs/decisions.md#a-shape-is-a-named-definition`,
    `docs/declaring-a-resource.md#named-shapes`): a `#[Shape('event.license')]`
@@ -1472,12 +1472,12 @@ renames sit in A because they are cheapest before new code exists.
 
 28. **References in config, carried forward.** Partly DONE 2026-10-27
     (`docs/decisions.md#a-config-object-stores-a-reference-by-uuid`,
-    `docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape`).
+    `docs/decisions.md#a-storage-layout-is-the-storages-one-word-on-its-shape`).
     A content entity referenced from config is stored by uuid and the
-    wire stays the id; a storage's layout is what the schema check and
+    wire stays the id; a storage layout is what the schema check and
     the generator read. DONE: the entries of a map of keys from the site
     (`addEach`, `attachEach`) are translated, named `*` in a translated
-    path; an alter's layout of its mount tells the check and the
+    path; an alter's storage layout of its mount tells the check and the
     generator, at `third_party_settings.<module>.<key>`; an id a module's
     install file holds is read as an id stored before is (a test, no
     code). Still open: a site default in `surface.defaults` for a

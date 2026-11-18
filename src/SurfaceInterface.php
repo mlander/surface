@@ -274,7 +274,7 @@ interface SurfaceInterface extends CacheableDependencyInterface {
    *   The module that mounted the settings.
    *
    * @return \Drupal\surface\Storage\StorageLayoutInterface|null
-   *   The layout the provider declared at build time, or NULL when its
+   *   The storage layout the provider declared at build time, or NULL when its
    *   settings are stored exactly as the data surface describes them.
    *
    * @see \Drupal\surface\SurfaceBuilder::setThirdPartyLayout()

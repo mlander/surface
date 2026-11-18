@@ -36,7 +36,7 @@ use Drupal\Core\Session\AccountInterface;
  *   condition id on the block: each condition's id and negation, with
  *   its settings flat beside them, which the engine lays out and gathers
  *   back, since the condition's settings say Variants::STORED_AS FLAT
- *   (FlatVariantsLayout). A condition twice is refused.
+ *   (FlatVariantsStorageLayout). A condition twice is refused.
  * - **The dependencies.** prepare() calculates what the block depends on,
  *   as its save does (its theme, its plugin's provider, what the plugin
  *   names), so a dry run shows them.
@@ -151,7 +151,7 @@ final class BlockPlacementResourceStorage extends ConfigEntityResourceStorage {
     $values['visibility'] = [];
     foreach ((array) $entity->get('visibility') as $id => $condition) {
       // As stored, the settings beside the id: the engine gathers them
-      // under `settings` (FlatVariantsLayout).
+      // under `settings` (FlatVariantsStorageLayout).
       $condition = array_map(self::listOf(...), array_diff_key((array) $condition, ['uuid' => TRUE]));
       if (($condition['context_mapping'] ?? NULL) === []) {
         unset($condition['context_mapping']);
@@ -192,7 +192,7 @@ final class BlockPlacementResourceStorage extends ConfigEntityResourceStorage {
     if (array_key_exists('visibility', $values)) {
       $visibility = [];
       // Each condition's settings arrive beside its id, laid out by the
-      // engine (FlatVariantsLayout); core keys the conditions by id.
+      // engine (FlatVariantsStorageLayout); core keys the conditions by id.
       foreach (is_array($values['visibility']) ? $values['visibility'] : [] as $condition) {
         if (!is_array($condition) || !is_string($condition['id'] ?? NULL)) {
           continue;

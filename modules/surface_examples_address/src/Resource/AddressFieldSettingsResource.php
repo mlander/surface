@@ -18,14 +18,16 @@ use PortableSchema\Builder\Schema;
  * Settings only an address field has: the address field's settings variant.
  *
  * The three settings the address module stores per field instance, in
- * the input layout a caller sends rather than the layout the field stores:
+ * the input layout a caller sends rather than the storage layout the field
+ * stores:
  * - a list of country codes, not the map of each code to itself a
  *   multi-select happens to submit;
  * - one optional override per address field, not a single-key array
  *   wrapped around each one;
  * - no deprecated 'fields' key at all, because a caller should never be
  *   offered a key that silently overrules the one next to it.
- * The storage is where the two layouts meet, through AddressStorageLayout.
+ * The storage is where the two storage layouts meet, through
+ * AddressStorageLayout.
  *
  * #[Variant] declares this the address field type's variant among the
  * field instance resource's settings variants, which any module may add

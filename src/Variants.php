@@ -42,17 +42,17 @@ final class Variants {
   /**
    * The setting with which an author stores the chosen keys flat.
    *
-   * How variants at a key are stored is a layout, the storage's fact,
+   * How variants at a key are stored is a storage layout, the storage's fact,
    * said on the map attachVariants() returns:
    * `->setSetting(Variants::STORED_AS, Variants::FLAT)`, or
    * `#[Setting(Variants::STORED_AS, Variants::FLAT)]` beside
    * #[AttachVariants]. Absent, a config storage stores the chosen keys
    * under the key; FLAT, it stores them beside the deciding key, and the
-   * key itself is not stored (FlatVariantsLayout). The contract, the
+   * key itself is not stored (FlatVariantsStorageLayout). The contract, the
    * form, the tool and the pipeline do not read it: what is asked is the
    * same either way.
    *
-   * @see \Drupal\surface\Storage\FlatVariantsLayout
+   * @see \Drupal\surface\Storage\FlatVariantsStorageLayout
    */
   public const STORED_AS = 'variants_stored_as';
 

@@ -12,7 +12,7 @@ use Drupal\surface_resource_test\Storage\PinnedNoteStorage;
 use PortableSchema\Builder\Schema;
 
 /**
- * Stores variants flat in state, where no layout lays them out.
+ * Stores variants flat in state, where no storage layout lays them out.
  */
 #[Resource('resource_test.broken.flat_state', storage: PinnedNoteStorage::class)]
 final class FlatStateResource implements ResourceInterface {

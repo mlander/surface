@@ -412,7 +412,7 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
    * Tests a condition stored with no settings reads them as an empty map.
    *
    * The condition's settings are stored flat beside its id and negation
-   * (FlatVariantsLayout): where nothing of them is stored, the chosen
+   * (FlatVariantsStorageLayout): where nothing of them is stored, the chosen
    * variant reads as an empty map, as variants under a key read back the
    * empty map the pipeline writes for one.
    */
@@ -428,7 +428,7 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
    * The read keeps the chosen variant's keys and the secrets kept for the
    * others; a key no variant declares stays in storage, unread.
    *
-   * Decision: see docs/decisions.md#variants-stored-flat-are-a-layout.
+   * Decision: see docs/decisions.md#variants-stored-flat-are-a-storage-layout.
    */
   public function testStaleKeyInConditionIsNotRead(): void {
     $stored = ['id' => 'request_path', 'negate' => FALSE, 'pages' => '/events', 'stale_key' => 'x'];

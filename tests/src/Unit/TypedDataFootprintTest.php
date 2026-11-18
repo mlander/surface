@@ -42,7 +42,7 @@ use PHPUnit\Framework\Attributes\Group;
  * (reads or runs constraints), `emitter` (reads definitions to write the
  * document), `reader` (turns a document into definitions), `pipeline`
  * (coerces, computes, resolves options, conforms outputs), `storage`
- * (layouts and stored shapes), `door` (forms, tools, drush), `shape`
+ * (storage layouts and stored shapes), `door` (forms, tools, drush), `shape`
  * (shapes, metadata, secrets), `example` (the example modules), and
  * `edge`, a file EDGES names with the reason it stays on Typed Data.
  *
@@ -176,8 +176,8 @@ class TypedDataFootprintTest extends UnitTestCase {
    * NodeTypeAlter name no Typed Data.
    * Lowered on 2026-11-18 to 76: DefinitionMap is Entries and the data surface
    * answers schemas, so CompiledFlow, PluginConfigurationStorage,
-   * ResourcesInterface, FlatVariantsLayout and SurfaceInterface name no Typed
-   * Data.
+   * ResourcesInterface, FlatVariantsStorageLayout and SurfaceInterface name no
+   * Typed Data.
    * Lowered on 2026-11-18 to 68: an entry holds a schema alone and the edges
    * derive their own definition, so DefinitionTypedData is gone and
    * SurfaceFormBuilderInterface, Narrowing, Arrangement, Examples,
