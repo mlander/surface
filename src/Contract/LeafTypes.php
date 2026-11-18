@@ -8,6 +8,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\DefinitionMetadata;
+use PortableSchema\Builder\Schema;
 
 /**
  * The typed data types a key may hold one value of, and their JSON Schema.
@@ -137,6 +138,39 @@ final class LeafTypes {
     'list' => [],
     self::ANY => [],
   ];
+
+  /**
+   * Gets the schema of one value of a typed data type, a shape or any.
+   *
+   * For a reader that holds a type by its name (a served document's port,
+   * a #[Port] attribute) and hands the blueprint a schema: a shape's
+   * class is `Schema::of()` the class, `any` is Schema::any(), and a type
+   * of the table is its id in the library (LIBRARY).
+   *
+   * @param string $type
+   *   The type.
+   * @param string $what
+   *   What holds the type, for the message.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The schema.
+   *
+   * @throws \InvalidArgumentException
+   *   For any other type.
+   */
+  public static function schemaOf(string $type, string $what): Schema {
+    if (str_contains($type, '\\')) {
+      return Schema::of($type);
+    }
+    if ($type === self::ANY) {
+      return Schema::any();
+    }
+    $id = array_search($type, self::LIBRARY, TRUE);
+    if (!is_string($id)) {
+      throw new \InvalidArgumentException(sprintf('%s reads a "%s", which is no type of the table, no shape and not any.', $what, $type));
+    }
+    return Schema::of($id);
+  }
 
   /**
    * Answers whether a type is a row.

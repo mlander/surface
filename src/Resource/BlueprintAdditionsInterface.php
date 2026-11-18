@@ -447,7 +447,7 @@ interface BlueprintAdditionsInterface {
    * @code
    * $inputs->narrow('capacity')
    *   ->when(Condition::absent('license'))
-   *   ->constrain('Range', ['max' => 100])
+   *   ->constrain(Schema::keywords(['maximum' => 100]))
    *   ->because(t('Up to 100 without an event license.'));
    * @endcode
    *

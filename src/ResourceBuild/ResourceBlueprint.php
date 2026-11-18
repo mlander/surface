@@ -917,20 +917,21 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    */
-  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, mixed $default = NULL, string|\Stringable|null $description = NULL): MapDataDefinition {
+  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, string|\Stringable|null $description = NULL): MapDataDefinition {
     if ($description !== NULL) {
-      return static::stated($this->addEach($key, $type, $from, $label, $default), $description);
+      return static::stated($this->addEach($key, $type, $from, $label), $description);
     }
+    $default = NULL;
     if ($type instanceof Schema && ($shape = $this->shapeEntry($type)) !== NULL) {
       // Each entry is the shape the schema refers to, as add() reads its
       // class: Schema::of(Shape::class), its default beside it.
-      $default ??= $type->get('default');
+      $default = $type->get('default');
       $type = $shape;
     }
     elseif ($type instanceof Schema) {
       // What every entry is, as a schema: its default inside it.
       $schema = $this->schemaOfOne('addEach', $key, $type);
-      $default ??= ValueSchema::factsOf($schema)['default_value'] ?? NULL;
+      $default = ValueSchema::factsOf($schema)['default_value'] ?? NULL;
       $type = DefinitionFromSchema::of($schema);
     }
     $this->assertHoldsNoChild('declares keys from the site', $key);
@@ -1101,15 +1102,13 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
    */
-  public function reads(string $port, string|Schema $type, bool $required = FALSE): static {
-    if ($type instanceof Schema) {
-      // The port's type as a schema: required where it is marked, a shape
-      // by its id (Schema::of(Shape::class)).
-      $required = $required || $type->isRequired();
-      $reference = $type->get('$ref');
-      $shape = is_string($reference) ? $this->shapeOf($reference) : NULL;
-      $type = $shape ?? (string) SchemaFacts::dataType($this->schemaOfOne('reads', $port, $type));
-    }
+  public function reads(string $port, Schema $schema): static {
+    // The port's type as a schema: required where it is marked, a shape by
+    // its id (Schema::of(Shape::class)).
+    $required = $schema->isRequired();
+    $reference = $schema->get('$ref');
+    $shape = is_string($reference) ? $this->shapeOf($reference) : NULL;
+    $type = $shape ?? (string) SchemaFacts::dataType($this->schemaOfOne('reads', $port, $schema));
     if ($this->outputs) {
       throw new \LogicException(sprintf('reads() was asked to read "%s" into outputs. An output is emitted, never refined, so it has nothing to read.', $port));
     }

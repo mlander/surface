@@ -604,7 +604,9 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
         "any": {"type": "array", "items": {"type": "string"}, "uniqueItems": false}
       }}
       JSON));
-    $this->assertSame(['Count' => ['min' => 1], 'UniqueItems' => []], array_diff_key($read->getDefinition('tags')->getConstraints(), ['NotNull' => TRUE]), 'After the bounds, where the emitter writes it.');
+    // A constraint given no options is held as given none once the
+    // declaration is done (BlueprintAdapterBase::settleOptions()).
+    $this->assertSame(['Count' => ['min' => 1], 'UniqueItems' => NULL], array_diff_key($read->getDefinition('tags')->getConstraints(), ['NotNull' => TRUE]), 'After the bounds, where the emitter writes it.');
     $this->assertSame([], $read->getDefinition('rows')->getConstraints()['UniqueItems']);
     $this->assertArrayNotHasKey('UniqueItems', $read->getDefinition('any')->getConstraints());
     $this->assertArrayNotHasKey('JsonSchema', $read->getDefinition('any')->getConstraints());
@@ -675,7 +677,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $type = ['NotNull' => TRUE, 'PrimitiveType' => TRUE];
     $constraints = static fn (string $key): array => array_diff_key($read->getDefinition($key)->getConstraints(), $type);
     $this->assertSame(['Length' => ['min' => 1]], $constraints('name'), 'minLength: 1 is the literal Length.');
-    $this->assertSame(['Uuid' => []], $constraints('id'));
+    $this->assertSame(['Uuid' => NULL], $constraints('id'), 'Given no options: held as none.');
     $this->assertSame(['JsonSchema' => ['schema' => ['pattern' => '^[a-z]+$', 'not' => ['pattern' => '^x']]]], $constraints('code'), 'Two Regex constraints, of which a definition holds one: kept whole.');
     $this->assertSame(['JsonSchema' => ['schema' => ['minLength' => 2]]], $constraints('seats'), 'A length says nothing of an integer: kept.');
     $this->assertSame(['Length' => ['min' => 4, 'max' => 4]], $constraints('pin'), 'Two equal bounds are min and max.');

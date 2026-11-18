@@ -89,7 +89,7 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, mixed $default = NULL, string|\Stringable|null $description = NULL): MapDataDefinition {
+  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, string|\Stringable|null $description = NULL): MapDataDefinition {
     $map = MapDataDefinition::create()->setLabel($label);
     $this->record($key, 'addEach', $map, ['from' => $from]);
     return $map;
@@ -107,7 +107,7 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function reads(string $port, string|Schema $type, bool $required = FALSE): static {
+  public function reads(string $port, Schema $schema): static {
     return $this;
   }
 

@@ -104,7 +104,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * checkbox per form the site has), so a provider lists them, and each
    * entry becomes a key in the map at $key, declared as add() declares
    * one: of $type, labeled with the entry's label, starting from the
-   * entry's default or else $default, held to what is stored when the
+   * entry's default or else the schema's `default`, held to what is stored when the
    * entry is locked; an entry that names a schema or a structure is
    * refused, since a key per thing reads neither. $type is a type or a
    * definition, as addList() takes its item: an entry with constraints of
@@ -138,9 +138,6 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   The provider's class, implementing SiteListInterface.
    * @param string|\Stringable $label
    *   The map's label: the values have no structure to borrow one from.
-   * @param mixed $default
-   *   What every entry starts from unless it says otherwise, for a type
-   *   given otherwise than as a schema; NULL for nothing.
    * @param string|\Stringable|null $description
    *   The key's description, as setDescription() on the definition
    *   returned would write it; NULL for none.
@@ -158,7 +155,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @see docs/resources.md#keys-that-come-from-the-site
    */
-  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, mixed $default = NULL, string|\Stringable|null $description = NULL): MapDataDefinition;
+  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, string|\Stringable|null $description = NULL): MapDataDefinition;
 
   /**
    * A map with one child per thing the site has: keys from the site.
@@ -276,19 +273,15 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @param string $port
    *   The name the structure reads it by: no key it declares.
-   * @param string|\PortableSchema\Builder\Schema $type
-   *   The schema of the value, required where it is marked required(),
-   *   `Schema::of(Shape::class)` for a shape; or, until the old spelling's
-   *   callers are converted, the typed data type of the value: a key
-   *   wired to it must have this type, or the build refuses the wiring;
-   *   `any` reads any key. Or a shape's class: a key wired to it must
-   *   then be declared with that shape, which it may have narrowed.
-   *   See docs/decisions.md#a-shape-is-a-named-definition.
-   * @param bool $required
-   *   Whether every container attaching the structure must wire it, for a
-   *   type given as a string; a schema says it with required(). An
-   *   optional port left unwired holds nothing: a refiner watching it
-   *   never runs, and a rule reads it as absent.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema of the value: a key wired to it must have its type, or
+   *   the build refuses the wiring; `Schema::any()` reads any key;
+   *   `Schema::of(Shape::class)` reads a key declared with that shape,
+   *   which it may have narrowed (see
+   *   docs/decisions.md#a-shape-is-a-named-definition). Required where it
+   *   is marked required(): every container attaching the structure must
+   *   then wire it. An optional port left unwired holds nothing: a
+   *   refiner watching it never runs, and a rule reads it as absent.
    *
    * @return $this
    *
@@ -296,11 +289,11 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   For outputs, which read nothing; when the name is a key, or a port,
    *   already declared.
    * @throws \InvalidArgumentException
-   *   When the type is no typed data type and no shape.
+   *   When the schema is no schema of one value and no shape.
    *
    * @see docs/resources.md#ports
    */
-  public function reads(string $port, string|Schema $type, bool $required = FALSE): static;
+  public function reads(string $port, Schema $schema): static;
 
   /**
    * A computed key: a value of the resource no caller types.

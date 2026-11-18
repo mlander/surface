@@ -15826,6 +15826,17 @@ they served.
   until its last callers (the value baseline's test module and the
   readers that declare through the verbs) are converted; a label or a
   default handed beside a schema is refused, since the schema says both.
+- **One spelling for the port, the entry and the rule.** `reads()`
+  takes a `Schema` alone, required where it is marked `required()`: the
+  `required:` argument and the type given as a string are gone, and a
+  reader that holds a type by its name hands `LeafTypes::schemaOf()`.
+  `addEach()` takes no `default:`: the entry's schema says it.
+  `Rule::constrain()` takes a `Schema` alone; the constraint and its
+  options as two arguments is gone, and the schema reader hands a rule
+  it reads as the check of its constraint. A rule's bound check with one
+  Symfony message option (`maxMessage`) is read as the rule's message,
+  so only two such options are refused now (decided 2026-11-17, docs
+  answers 8, 9 and 13).
 - **A check given no options.** `check('drupal:Country')` and
   `check('drupal:Country', [])` are one schema, since the builder writes
   both as `{}`, so the reader holds both as a constraint given no

@@ -491,7 +491,7 @@ class ShapesTest extends SurfaceKernelTestBase {
     }
     $narrowed = [
       'a condition' => [
-        static fn (ShapeBlueprint $inputs) => $inputs->narrow('resource_test.sku')->when(Condition::present('x'))->constrain('Length', ['max' => 4]),
+        static fn (ShapeBlueprint $inputs) => $inputs->narrow('resource_test.sku')->when(Condition::present('x'))->constrain(Schema::any()->check('drupal:Length', ['max' => 4])),
         'narrows the shape resource_test.sku with a condition',
       ],
       'required' => [
@@ -503,11 +503,11 @@ class ShapesTest extends SurfaceKernelTestBase {
         'narrows the shape resource_test.sku that rules it out',
       ],
       'a second pattern' => [
-        static fn (ShapeBlueprint $inputs) => $inputs->narrow('resource_test.sku')->constrain('Regex', ['pattern' => '/^[A-Z]+$/D']),
+        static fn (ShapeBlueprint $inputs) => $inputs->narrow('resource_test.sku')->constrain(Schema::any()->check('drupal:Regex', ['pattern' => '/^[A-Z]+$/D'])),
         'widens the shape resource_test.sku',
       ],
       'a number\'s bound' => [
-        static fn (ShapeBlueprint $inputs) => $inputs->narrow('resource_test.sku')->constrain('Range', ['max' => 4]),
+        static fn (ShapeBlueprint $inputs) => $inputs->narrow('resource_test.sku')->constrain(Schema::any()->check('drupal:Range', ['max' => 4])),
         'narrows the shape resource_test.sku, whose type is string, by Range, which it cannot take.',
       ],
     ];
@@ -524,7 +524,7 @@ class ShapesTest extends SurfaceKernelTestBase {
     }
     // A bound and words, which is what the stock code's alter says.
     $inputs = $blueprint();
-    $inputs->narrow('resource_test.sku')->constrain('Length', ['max' => 8]);
+    $inputs->narrow('resource_test.sku')->constrain(Schema::any()->check('drupal:Length', ['max' => 8]));
     $inputs->describe('resource_test.sku', description: 'Eight at most.');
     $tightened = $inputs->applyTo(Shapes::unaltered(Sku::class));
     $this->assertSame(['Regex' => self::PATTERN, 'Length' => ['max' => 8]], self::declared($tightened));
@@ -532,7 +532,7 @@ class ShapesTest extends SurfaceKernelTestBase {
     // A pattern where the shape has none.
     $inputs = new ShapeBlueprint('resource_test.broken.mounted', $alter);
     $lowercase = ['pattern' => '/^[a-z]+$/D', 'message' => 'Lowercase letters.'];
-    $inputs->narrow('resource_test.broken.mounted')->constrain('Regex', $lowercase);
+    $inputs->narrow('resource_test.broken.mounted')->constrain(Schema::any()->check('drupal:Regex', $lowercase));
     $this->assertSame(['Regex' => $lowercase], self::declared($inputs->applyTo(Shapes::declared(MountedShape::class, 'resource_test.broken.mounted'))));
   }
 

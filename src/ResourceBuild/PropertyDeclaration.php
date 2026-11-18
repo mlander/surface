@@ -631,7 +631,8 @@ final class PropertyDeclaration {
     $default = $property->hasDefaultValue() ? $property->getDefaultValue() : NULL;
 
     if ($port = self::attribute($property, Port::class)) {
-      $blueprint->reads($key, $port->type ?? self::type($property), $port->required);
+      $read = LeafTypes::schemaOf($port->type ?? self::type($property), sprintf('The "%s" port', $key));
+      $blueprint->reads($key, $port->required ? $read->required() : $read);
       return NULL;
     }
     if ($computed = self::attribute($property, Computed::class)) {
@@ -657,8 +658,16 @@ final class PropertyDeclaration {
     if ($each = self::attribute($property, Each::class)) {
       // An entry #[Schema(additionalProperties:)] lays rules on is a
       // definition, which decorate() reaches through the map.
-      $entry = self::constrainsItem($property) ? DataDefinition::create($each->type) : $each->type;
-      $definition = $blueprint->addEach($key, $entry, $each->from, self::label($each->label), $each->default);
+      // A default is the entry schema's.
+      if ($each->default !== NULL && self::constrainsItem($property)) {
+        throw new \LogicException(sprintf('%s::$%s carries #[Each] with a default and #[Schema] or #[Check] rules on its entry: state the default in the entry\'s #[Schema(additionalProperties:)] instead.', $property->getDeclaringClass()->getName(), $key));
+      }
+      $entry = match (TRUE) {
+        self::constrainsItem($property) => DataDefinition::create($each->type),
+        $each->default !== NULL => LeafTypes::schemaOf($each->type, sprintf('#[Each] on %s::$%s', $property->getDeclaringClass()->getName(), $key))->default($each->default),
+        default => $each->type,
+      };
+      $definition = $blueprint->addEach($key, $entry, $each->from, self::label($each->label));
       self::word($definition, $each->description);
       return $definition;
     }

@@ -2644,7 +2644,8 @@ final class SchemaReader {
       if (isset($declared['shape']) && $shape === NULL) {
         $this->note(static::below($at, 'ports', (string) $port, 'shape'), 'Read as the shape\'s type: the site has no shape of that id.');
       }
-      $this->framing($inputs, 'a port')->reads((string) $port, $shape ?? $declared['type'], (bool) ($declared['required'] ?? FALSE));
+      $read = LeafTypes::schemaOf($shape ?? $declared['type'], sprintf('The "%s" port', $port));
+      $this->framing($inputs, 'a port')->reads((string) $port, ($declared['required'] ?? FALSE) === TRUE ? $read->required() : $read);
     }
     if (is_int($extension['version'] ?? NULL) && $extension['version'] > 1) {
       $this->note(static::below($at, 'version'), 'Not read: a version counts the changes made to stored values, which are the declaring class\'s.');
@@ -4875,7 +4876,7 @@ final class SchemaReader {
             'doesNotApply' => $rule->doesNotApply(),
             'require' => $rule->require(),
             'because' => $rule->because($effect[1]),
-            default => $rule->constrain($effect[0], $effect[1]),
+            default => $rule->constrain(Schema::any()->check(PortableKeywords::PROVIDER . $effect[0], $effect[1])),
           };
         }
       }

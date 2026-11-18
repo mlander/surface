@@ -14,6 +14,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface_resource_test\Structure\Kiosk\KioskStructure;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests a declared rule's message on a Range, a Length and a Count.
@@ -103,7 +104,7 @@ class RuleMessageTest extends SurfaceKernelTestBase {
    * Tests where the message is written, tightening and as written.
    */
   public function testWhereTheMessageIsWritten(): void {
-    $rule = (new Rule('capacity'))->constrain('Range', ['max' => 100, 'message' => 'Up to 100.']);
+    $rule = (new Rule('capacity'))->constrain(Schema::any()->check('drupal:Range', ['max' => 100, 'message' => 'Up to 100.']));
     $range = $rule->apply(DataDefinition::create('integer')->addConstraint('Range', ['min' => 1, 'max' => 1000]))->getConstraints()['Range'];
     $this->assertSame(['min' => 1, 'max' => 100, 'notInRangeMessage' => 'Up to 100.'], $range, 'A range holding both bounds reports in one message, and Symfony refuses the other two beside it.');
     $below = $rule->apply(DataDefinition::create('integer'))->getConstraints()['Range'];
@@ -115,11 +116,11 @@ class RuleMessageTest extends SurfaceKernelTestBase {
     $this->assertSame(['max' => 50, 'maxMessage' => 'Fifty.'], $rule->apply(clone $held)->getConstraints()['Range']);
     $this->assertSame('Up to 100.', $rule->applyAsWritten(clone $held)->getConstraints()['Range']['maxMessage']);
 
-    $length = (new Rule('code'))->constrain('Length', ['min' => 4, 'message' => 'Four.'])
+    $length = (new Rule('code'))->constrain(Schema::any()->check('drupal:Length', ['min' => 4, 'message' => 'Four.']))
       ->apply(DataDefinition::create('string'))->getConstraints()['Length'];
     $this->assertSame(['min' => 4, 'minMessage' => 'Four.', 'exactMessage' => 'Four.'], $length);
 
-    $count = (new Rule('days'))->constrain('Count', ['min' => 1, 'max' => 3, 'message' => $this->t('One to three.')])
+    $count = (new Rule('days'))->constrain(Schema::any()->check('drupal:Count', ['min' => 1, 'max' => 3, 'message' => $this->t('One to three.')]))
       ->apply(new ListDataDefinition([], DataDefinition::create('string')))->getConstraints()['Count'];
     $expected = [
       'min' => 1,
@@ -153,16 +154,16 @@ class RuleMessageTest extends SurfaceKernelTestBase {
   public function testWhatItRefuses(): void {
     foreach ([
       'a message and no bound' => [
-        static fn () => (new Rule('count'))->constrain('Range', ['message' => 'No.']),
-        'was given a message and no bound',
+        static fn () => (new Rule('count'))->constrain(Schema::any()->check('drupal:Range', ['message' => 'No.'])),
+        'with a message and no bound',
       ],
       'a message that says nothing' => [
-        static fn () => (new Rule('count'))->constrain('Count', ['max' => 2, 'message' => '']),
+        static fn () => (new Rule('count'))->constrain(Schema::any()->check('drupal:Count', ['max' => 2, 'message' => ''])),
         'takes a message that says something',
       ],
       'Symfony\'s own option names' => [
-        static fn () => (new Rule('count'))->constrain('Length', ['max' => 2, 'maxMessage' => 'No.']),
-        'takes min, max and message, and was given max, maxMessage',
+        static fn () => (new Rule('count'))->constrain(Schema::any()->check('drupal:Length', ['max' => 2, 'maxMessage' => 'No.', 'minMessage' => 'No.'])),
+        'takes min, max and message, and was given max, maxMessage, minMessage',
       ],
     ] as $label => [$call, $message]) {
       try {

@@ -649,6 +649,43 @@ final class ResourceCode {
   }
 
   /**
+   * Writes what a rule adds, as the schema Rule::constrain() takes.
+   *
+   * A bound with no message is its keywords (`maximum`, `minLength` and so
+   * on), the values to keep `enum`, anything else the check of its
+   * constraint with its options.
+   *
+   * @param string $constraint
+   *   The constraint the rule holds.
+   * @param array $options
+   *   Its options.
+   *
+   * @return string
+   *   The schema, as PHP.
+   */
+  protected function ruleSchema(string $constraint, array $options): string {
+    $this->uses[Schema::class] = TRUE;
+    $keywords = [
+      'Range' => ['min' => 'minimum', 'max' => 'maximum'],
+      'Length' => ['min' => 'minLength', 'max' => 'maxLength'],
+      'Count' => ['min' => 'minItems', 'max' => 'maxItems'],
+    ];
+    if (isset($keywords[$constraint]) && array_diff_key($options, $keywords[$constraint]) === []) {
+      $stated = [];
+      foreach ($keywords[$constraint] as $option => $keyword) {
+        if (array_key_exists($option, $options)) {
+          $stated[$keyword] = $options[$option];
+        }
+      }
+      return 'Schema::keywords(' . PhpLiteral::write($stated, self::INDENT + 2) . ')';
+    }
+    if ($constraint === 'Choice' && array_keys($options) === ['choices'] && is_array($options['choices'])) {
+      return 'Schema::enum(' . PhpLiteral::write(array_values($options['choices']), self::INDENT + 2) . ')';
+    }
+    return sprintf("Schema::any()->check('drupal:%s', %s)", $constraint, PhpLiteral::write($options, self::INDENT + 2, static fn (array $path): bool => end($path) === 'message'));
+  }
+
+  /**
    * Writes a declared rule.
    *
    * @param \Drupal\surface\Refinement\Rule $rule
@@ -665,7 +702,7 @@ final class ResourceCode {
       $calls[] = '->when(' . $this->condition($condition) . ')';
     }
     foreach ($rule->constraints() as $constraint => $options) {
-      $calls[] = sprintf('->constrain(%s, %s)', PhpLiteral::string((string) $constraint), PhpLiteral::write($options, self::INDENT + 2, static fn (array $path): bool => end($path) === 'message'));
+      $calls[] = '->constrain(' . $this->ruleSchema((string) $constraint, $options) . ')';
     }
     if ($rule->requires()) {
       $calls[] = '->require()';
