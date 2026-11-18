@@ -31,9 +31,10 @@ use PortableSchema\Builder\Schema;
  *
  * KeywordReader reads a key of one value, or a list of values, from the
  * author's Schema by its keywords into the key's schema, with no document
- * and no definition. Each key here is read by it and by
- * SchemaReader::authored() into a builder of its own: the schema the
- * builder holds, the notes and the refusals are the same. What needs a
+ * and no definition. Each key here is read by it and by SchemaReader's
+ * document path, which reads what KeywordReader leaves to it, into a
+ * builder of its own: the schema the key holds, the notes and the
+ * refusals are the same. What needs a
  * frame is left to SchemaReader. The parts of part 32.9's decisions the
  * reader reads already are pinned here: a key required by its mark, the
  * empty list, the settings keyword and a config schema type.
@@ -54,10 +55,13 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
   ];
 
   /**
-   * Tests SchemaReader::authored() declares the schema the reader reads.
+   * Tests the reader reads each key as the document path does.
    *
-   * The method authored() reads a value key with KeywordReader and declares its
-   * schema: the builder holds that schema itself (and a lock beside it).
+   * SchemaReader::authored() reads a value key with KeywordReader itself,
+   * so the other side is the document path: the key's schema laid in a
+   * def and referred to, which KeywordReader leaves to SchemaReader, read
+   * in place as the key's own (documentPath()). The schema the key holds,
+   * the notes and the lock are the same.
    */
   public function testAuthoredDeclaresTheSchemaRead(): void {
     $keys = [
@@ -79,11 +83,18 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
       'unchecked' => Schema::string()->check('acme:thing', ['level' => 1]),
       'locked' => Schema::const('fixed')->with('readOnly', TRUE),
     ];
+    // Read through a def, these are read otherwise by the def's reading,
+    // not the key's: an anyOf of one schema and null is held whole, and an
+    // open map is a structure, which needs a registry to be built by.
+    $own = ['nullable', 'whole'];
     foreach ($keys as $key => $schema) {
-      [$schema_today, $notes_today, $locked_today] = $this->authored($key, $schema);
       $read = KeywordReader::forBuild()->read($key, $schema);
       $this->assertNotNull($read, $key);
-      $this->assertTrue(DefinitionSchema::same($schema_today, $read->schema), $key);
+      if (in_array($key, $own, TRUE)) {
+        continue;
+      }
+      [$schema_today, $notes_today, $locked_today] = $this->documentPath($key, $schema);
+      $this->assertSame(static::canonical($schema_today), static::canonical($read->schema), $key);
       $this->assertSame($notes_today, $read->notes, $key);
       $this->assertSame($locked_today, $read->locked, $key);
     }
@@ -112,21 +123,37 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a refusal is the reader's, word for word.
+   * Tests a refusal is the document path's, word for word.
+   *
+   * A group the frame does not declare and the boolean schema are refused
+   * by the reader alone: in a def, neither is the key's (a def is read
+   * before the frame that names its groups, and a boolean def is a
+   * reference's target, not a key).
    */
   public function testRefusalsAreTheReaders(): void {
     $refused = [
       'widget' => Schema::string()->ui('no_such_widget'),
-      'group' => Schema::string()->ui(NULL, NULL, NULL, 'side'),
       'format' => Schema::integer()->format('date'),
       'message' => Schema::string()->message('maximum', 'Too long.'),
-      'boolean' => Schema::boolean(TRUE),
       'a.b' => Schema::string(),
     ];
+    $reader_alone = [
+      'group' => Schema::string()->ui(NULL, NULL, NULL, 'side'),
+      'boolean' => Schema::boolean(TRUE),
+    ];
+    foreach ($reader_alone as $key => $schema) {
+      try {
+        KeywordReader::forBuild()->read($key, $schema);
+        $this->fail($key . ' was read.');
+      }
+      catch (\InvalidArgumentException $refusal) {
+        $this->assertStringContainsString($key === 'group' ? '/properties/group/x-portable-ui/group' : 'boolean schema', $refusal->getMessage(), $key);
+      }
+    }
     foreach ($refused as $key => $schema) {
       $today = NULL;
       try {
-        $this->authored($key, $schema);
+        $this->documentPath($key, $schema);
       }
       catch (\InvalidArgumentException $refusal) {
         $today = $refusal->getMessage();
@@ -366,6 +393,73 @@ class KeywordReaderTest extends SurfaceKernelTestBase {
     $blueprint->compute('slug', Schema::string()->title('Slug')->maxLength(16), from: ['label'], using: get_class($slug));
     $this->assertSame(['label'], DefinitionMetadata::computedOf($builder->getDefinition('slug'))?->from);
     $this->assertSame(['max' => 16], $builder->getDefinition('slug')->getConstraint('Length'));
+  }
+
+  /**
+   * Reads a key by the document path, into a builder of its own.
+   *
+   * The key's schema is laid in a def, its title beside the reference, so
+   * KeywordReader answers NULL and SchemaReader reads the def in place as
+   * the key's own.
+   *
+   * @param string $key
+   *   The key.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   Its schema.
+   *
+   * @return array{0: \PortableSchema\Builder\Schema, 1: array<string, string>, 2: bool}
+   *   The schema of what the builder holds, the notes but the one that
+   *   says the def is read in place, and whether the key is locked.
+   */
+  protected function documentPath(string $key, Schema $schema): array {
+    $title = $schema->get('title');
+    $spelled = Schema::of('#/$defs/own')->with('$defs', ['own' => $title === NULL ? $schema : $schema->without('title')]);
+    if ($title !== NULL) {
+      $spelled = $spelled->title($title);
+    }
+    $this->assertNull(KeywordReader::forBuild()->read($key, $spelled), 'The document path reads the key.');
+    $builder = new SurfaceBuilder();
+    $notes = SchemaReader::authored(new ResourceBlueprint($builder, $this->container->get('typed_data_manager')), $key, $spelled);
+    // A def of a library type is followed with no note.
+    $this->assertStringStartsWith('Read in place', $notes['/properties/' . $key . '/$ref'] ?? 'Read in place', $key);
+    unset($notes['/properties/' . $key . '/$ref']);
+    $locked = in_array($key, (new \ReflectionProperty(SurfaceBuilder::class, 'locked'))->getValue($builder), TRUE);
+    $definition = $builder->getDefinition($key);
+    $this->assertNotNull($definition, $key);
+    return [$builder->heldSchema($key) ?? DefinitionSchema::of($definition), $notes, $locked];
+  }
+
+  /**
+   * Writes a schema's document with one spelling of a labeled choice.
+   *
+   * The document path writes LabeledChoice as `choices` and `labels`, the
+   * reader as a map in `choices`: one constraint, which
+   * ChoiceSpellingParityTest holds to be one declaration.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
+   *
+   * @return array
+   *   Its document, as JSON decodes it, the map spelling written as the
+   *   list and its labels.
+   */
+  protected static function canonical(Schema $schema): array {
+    $document = json_decode((string) json_encode($schema->toDocument()), TRUE);
+    $listed = static function (array $options): array {
+      $choices = $options['choices'] ?? NULL;
+      if (is_array($choices) && !array_is_list($choices) && !isset($options['labels'])) {
+        $options['choices'] = array_keys($choices);
+        $options['labels'] = $choices;
+      }
+      return $options;
+    };
+    if (isset($document['portable-check']['drupal:LabeledChoice'])) {
+      $document['portable-check']['drupal:LabeledChoice'] = $listed($document['portable-check']['drupal:LabeledChoice']);
+    }
+    if (isset($document['x-surface-model']['declared']['LabeledChoice'])) {
+      $document['x-surface-model']['declared']['LabeledChoice'] = $listed($document['x-surface-model']['declared']['LabeledChoice']);
+    }
+    return $document;
   }
 
   /**
