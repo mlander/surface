@@ -16,6 +16,8 @@ use Drupal\surface_property_test\OutsideDiscovery\MapNamesNoClass;
 use Drupal\surface_property_test\OutsideDiscovery\NoAttribute;
 use Drupal\surface_property_test\OutsideDiscovery\NoKeyType;
 use Drupal\surface_property_test\OutsideDiscovery\OutputWithoutInterface;
+use Drupal\surface_property_test\OutsideDiscovery\RuleMisspellsKeyword;
+use Drupal\surface_property_test\OutsideDiscovery\RuleNamesConstraint;
 use Drupal\surface_property_test\OutsideDiscovery\TwoKinds;
 use Drupal\surface_property_test\OutsideDiscovery\UnknownGroup;
 use Drupal\surface_property_test\Plugin\Block\PropertyNoteBlock;
@@ -243,6 +245,30 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
       }
       catch (\LogicException $e) {
         $this->assertSame($message, $e->getMessage(), $class);
+      }
+    }
+  }
+
+  /**
+   * Tests a rule's constrain: that is no keyword names what to write.
+   *
+   * The package's own refusal names no class and no property; the reader
+   * says which, the keyword it could not read and the keywords to write.
+   */
+  public function testRuleConstrainNamesTheSpellingToWrite(): void {
+    $refused = [
+      RuleNamesConstraint::class => [RuleNamesConstraint::class . '::$code', '"Length"', "constrain: ['maxLength' => 4]"],
+      RuleMisspellsKeyword::class => [RuleMisspellsKeyword::class . '::$code', '"maxLenght"', 'maxLength'],
+    ];
+    foreach ($refused as $class => $parts) {
+      try {
+        PropertyDeclaration::inputs($class, $this->blueprint());
+        $this->fail($class . ' was not refused.');
+      }
+      catch (\InvalidArgumentException $e) {
+        foreach ($parts as $part) {
+          $this->assertStringContainsString($part, $e->getMessage(), $class);
+        }
       }
     }
   }
