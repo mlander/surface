@@ -11,7 +11,6 @@ example modules/surface_examples_node_type/src/Storage/NodeTypeStorage.php
 example modules/surface_examples_performance/src/Storage/PerformanceStorage.php
 model src/Attachment.php
 model src/Collection.php
-pipeline src/Computed.php
 constraints src/ConstraintMessages.php
 emitter src/Contract/Conditionals.php
 emitter src/Contract/ConfigSchemaDocument.php
@@ -22,12 +21,10 @@ reader src/Contract/KeywordReader.php
 emitter src/Contract/LeafTypes.php
 emitter src/Contract/PropertySchema.php
 reader src/Contract/SchemaReader.php
-emitter src/Contract/SiteListBudget.php
 shape src/DefinitionMetadata.php
 door src/Drush/Generators/Resource/ResourceCode.php
 model src/Entries.php
 model src/Entry.php
-door src/Form/ContractPanel.php
 door src/Form/SurfaceFieldTypeTrait.php
 pipeline src/Options/OptionsProvider.php
 constraints src/Options/SurfaceOptions.php
@@ -38,13 +35,11 @@ door src/Plugin/tool/Tool/ResourceOperationTool.php
 edge src/Reader/ConfigSchemaReader.php
 reader src/Reader/LeafRules.php
 edge src/Reader/TypedDataReader.php
-storage src/Reference/ReferenceStorageLayout.php
 pipeline src/Reference/References.php
 constraints src/Refinement/ChoiceSet.php
 model src/Refinement/DeclaredRefiner.php
 model src/Refinement/DoesNotApply.php
 model src/Refinement/Rule.php
-pipeline src/Resolve.php
 model src/Resource/BlueprintAdditionsInterface.php
 model src/ResourceBuild/Attaching.php
 model src/ResourceBuild/Binding.php
@@ -74,6 +69,5 @@ edge src/Tool/InputDefinitions.php
 door src/Tool/OperationInputs.php
 edge src/Validation/ConstraintRunner.php
 constraints src/Validation/DrupalCheckProvider.php
-model src/Variants.php
 model src/Variants/ConfigSchemaTypes.php
 model surface.services.yml

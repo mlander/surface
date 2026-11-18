@@ -183,8 +183,12 @@ class TypedDataFootprintTest extends UnitTestCase {
    * SurfaceFormBuilderInterface, Narrowing, Arrangement, Examples,
    * KnowsClearableKeysInterface, SiteCatalog and EncryptedStorageLayout name
    * no Typed Data.
+   * Lowered on 2026-11-18 to 62: the sealed side reads schemas (Variants holds
+   * its shell as a schema, the panel walks schemas, Computed::of() and
+   * Resolve::of() are gone), so Computed, SiteListBudget, ContractPanel,
+   * ReferenceStorageLayout, Resolve and Variants name no Typed Data.
    */
-  public const OUTSIDE_THE_EDGES = 68;
+  public const OUTSIDE_THE_EDGES = 62;
 
   /**
    * Finds the files that use Typed Data.
