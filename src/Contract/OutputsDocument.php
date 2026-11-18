@@ -116,24 +116,27 @@ final class OutputsDocument {
    *   The key's built schema (Entry::schema()), or one below it.
    * @param \PortableSchema\Builder\Schema $written
    *   The same place, as the writer of a key wrote it.
+   * @param bool $item
+   *   Whether the place is a list's item, which is never null.
    *
    * @return \PortableSchema\Builder\Schema
    *   The written schema, each such map typed, NULL kept where it was
    *   allowed.
    */
-  private static function typed(Schema $built, Schema $written): Schema {
+  private static function typed(Schema $built, Schema $written, bool $item = FALSE): Schema {
     if ($built->isBoolean() || $written->isBoolean()) {
       return $written;
     }
     if (DefinitionSchema::isList($built)) {
-      $item = DefinitionSchema::itemOf($built);
+      $built_item = DefinitionSchema::itemOf($built);
       $items = $written->get('items');
-      return $item !== NULL && $items instanceof Schema ? $written->with('items', self::typed($item, $items)) : $written;
+      return $built_item !== NULL && $items instanceof Schema ? $written->with('items', self::typed($built_item, $items, TRUE)) : $written;
     }
     $properties = SchemaFacts::properties($built);
     if ($properties === []) {
       if (SchemaFacts::dataType($built) === 'map' && !$written->has('type')) {
-        return $written->with('type', SchemaFacts::isRequired($built) ? 'object' : ['object', 'null']);
+        // Decision: see docs/decisions.md#an-item-is-never-null.
+        return $written->with('type', $item || SchemaFacts::isRequired($built) ? 'object' : ['object', 'null']);
       }
       return $written;
     }

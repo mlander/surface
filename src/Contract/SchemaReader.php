@@ -3733,11 +3733,19 @@ final class SchemaReader {
    *
    * @return bool
    *   TRUE where an author's schema is read into outputs and the items are
-   *   an object of properties that is a plain map.
+   *   an object of properties that is a plain map, or an object that names
+   *   no keys and says nothing else a map cannot, read as a map that names
+   *   none.
    */
   protected function isOutputMaps(Schema $items): bool {
     $types = array_values(array_diff((array) ($items->get('type') ?? []), ['null']));
-    return $this->outputs && $types === ['object'] && is_array($items->get('properties')) && $items->get('properties') !== [] && $this->isPlainMap($items);
+    if (!$this->outputs || $types !== ['object']) {
+      return FALSE;
+    }
+    if (in_array($items->get('properties'), [NULL, []], TRUE)) {
+      return array_diff(array_keys($items->all()), self::MAP) === [] && !$items->has('additionalProperties');
+    }
+    return is_array($items->get('properties')) && $this->isPlainMap($items);
   }
 
   /**
@@ -3771,7 +3779,9 @@ final class SchemaReader {
     $this->mapChecks($map, $schema, $pointer);
     $groups = Schemas::data((Schemas::data($schema->get(PortableKeywords::UI)) ?? [])['groups'] ?? NULL) ?? [];
     $required = array_map('strval', is_array($schema->get('required')) ? $schema->get('required') : []);
-    foreach ($schema->get('properties') as $name => $property) {
+    // An output's list of objects that name no keys is a list of maps that
+    // name none (isOutputMaps()).
+    foreach (is_array($schema->get('properties')) ? $schema->get('properties') : [] as $name => $property) {
       $name = (string) $name;
       assert($property instanceof Schema);
       $at = static::below($pointer, 'properties', $name);

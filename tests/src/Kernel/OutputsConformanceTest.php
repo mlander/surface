@@ -238,6 +238,24 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests a list of open objects at an output is a list of open maps.
+   *
+   * Each item is a map that names no keys: an object, never null, an
+   * object inside it refused as anywhere.
+   */
+  public function testListOfOpenObjectsIsAListOfOpenMaps(): void {
+    $builder = new SurfaceBuilder();
+    (new ResourceBlueprint($builder, $this->container->get('typed_data_manager'), TRUE))->add('rows', Schema::list(Schema::object()));
+    $surface = $builder->seal();
+    $served = Schemas::arrayed($this->container->get('surface.contract_emitter')->emit($surface, [], 'p')->outputs());
+    $this->assertSame(['type' => 'object'], $served['properties']['rows']['items']);
+    $this->assertSame([], $this->answer($surface, ['rows' => [['a' => 1], []]]));
+    $this->assertSame([['rows.0', 'type']], $this->answer($surface, ['rows' => ['x']]));
+    $this->assertSame([['rows.0', 'type']], $this->answer($surface, ['rows' => [NULL]]));
+    $this->assertSame([['rows.0.a', 'type']], $this->answer($surface, ['rows' => [['a' => new \stdClass()]]]));
+  }
+
+  /**
    * Holds outputs to a surface, each violation as its path and code.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
