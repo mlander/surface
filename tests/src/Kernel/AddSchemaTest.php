@@ -85,7 +85,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
     $name = DerivedDefinition::at($built, 'name');
     $this->assertSame('string', $name->getDataType());
     $this->assertSame('Name', (string) $name->getLabel());
-    $this->assertTrue($name->isRequired(), 'No default and no null: required, by the dialect\'s rule.');
+    $this->assertTrue($name->isRequired(), 'Marked required(): required, and only where it is marked.');
     $this->assertSame(['max' => 20], $name->getConstraint('Length'));
 
     $this->assertFalse(DerivedDefinition::at($built, 'size')->isRequired(), 'A default: optional.');

@@ -15782,6 +15782,10 @@ they served.
   which puts the default back, as for a key `add()` declares, so the
   document writes `["<type>", "null"]` for it: the authored schema is
   what the definition is read from, never what is served.
+  Note, 2026-11-18: the first sentence no longer holds. A key is
+  required where its schema is marked `required()`, and only there, as
+  `SchemaReader::authored()` reads it: no default and no null make a key
+  optional unless it is marked.
 - **Types of the library.** `#[Of('portable:email')]` and
   `Schema::of('portable:email')` are the `email` leaf type, served as
   that leaf is (`type: string`, `format: email`). What the type's

@@ -524,9 +524,9 @@ final class ConceptPanel {
    * Example 16: how each key is declared, by key.
    */
   public const SPELLINGS = [
-    'venue' => "add('venue', 'string', ...), an event_venue",
-    'contact' => "add('contact', 'integer', ...), a user",
-    'page' => "add('page', 'integer', ...), a node of the article bundle",
+    'venue' => "add('venue', Schema::string()...), an event_venue",
+    'contact' => "add('contact', Schema::integer()...), a user",
+    'page' => "add('page', Schema::integer()...), a node of the article bundle",
     'thing' => "attach('thing', ThingStructure::class), content entities",
     'setting' => "attach('setting', SettingStructure::class), config entities among three",
     'credit' => "attach('credit', CreditStructure::class), an article or a user",
