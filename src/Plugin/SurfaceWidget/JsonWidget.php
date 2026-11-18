@@ -8,11 +8,11 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\KeyFacts;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
 use PortableSchema\Builder\Schema;
@@ -61,7 +61,7 @@ final class JsonWidget extends SurfaceWidgetBase implements SchemaWidgetInterfac
    *   only when every other widget refused it.
    */
   public static function draws(Schema $schema): bool {
-    if (DefinitionSchema::isList($schema)) {
+    if (KeyFacts::isList($schema)) {
       return TRUE;
     }
     return SchemaFacts::dataType($schema) === 'any' && SchemaFacts::variantsBy($schema) === NULL;

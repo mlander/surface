@@ -9,6 +9,7 @@ use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
+use Drupal\surface\KeyFacts;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
 use PortableSchema\Builder\Schema;
@@ -30,7 +31,9 @@ final class NumberWidget extends SurfaceWidgetBase implements SchemaWidgetInterf
    * {@inheritdoc}
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    return in_array(SchemaFacts::dataType($schema), ['integer', 'float', 'decimal', 'timestamp', 'timespan'], TRUE);
+    return in_array(KeyFacts::type($schema), ['portable:integer', 'portable:number', 'portable:timestamp'], TRUE)
+      // A decimal and a timespan have no type of the library.
+      || in_array(SchemaFacts::dataType($schema), ['decimal', 'timespan'], TRUE);
   }
 
   /**

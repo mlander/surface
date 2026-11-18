@@ -330,7 +330,9 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  * label, description, the values it allows) is in the schema, and what
  * the schema does not say of itself (whether it is required, its pointer)
  * is on the widget context, which is what makes one key render the same
- * way wherever it appears.
+ * way wherever it appears. \Drupal\surface\KeyFacts reads the key's type,
+ * a setting, whether it holds a list and the schema of its items; every
+ * other fact is a keyword of the schema.
  *
  * @code
  * #[SurfaceWidget(
@@ -338,11 +340,15 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  *   label: new TranslatableMarkup('Color'),
  *   weight: 5,
  * )]
- * final class ColorWidget extends SurfaceWidgetBase {
+ * final class ColorWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
+ *
+ *   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+ *     return KeyFacts::type($schema) === 'portable:string'
+ *       && KeyFacts::setting($schema, 'my_module_color') === TRUE;
+ *   }
  *
  *   public function isApplicable(Schema $schema, WidgetContext $context): bool {
- *     return static::types($schema) === ['string']
- *       && $schema->get('format') === 'color';
+ *     return static::types($schema) === ['string'];
  *   }
  *
  *   public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {

@@ -11,7 +11,7 @@ use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\NotEmitted;
 use Drupal\surface\Pipeline\ViolationSet;
-use PHPUnit\Framework\Attributes\DataProvider;
+use Drupal\Tests\surface\Traits\RowsInOneKernelTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -32,6 +32,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class OutputsTest extends SurfaceKernelTestBase {
+
+  use RowsInOneKernelTrait;
 
   /**
    * {@inheritdoc}
@@ -213,18 +215,16 @@ class OutputsTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests every rule conformance applies, one row at a time.
+   * Tests every rule conformance applies, the rows in one kernel.
    *
-   * @param array $emitted
-   *   What the producer emitted, NotEmitted included.
-   * @param array $expected
-   *   The full paths expected to be refused, in order.
+   * Each row holds what it emitted to a data surface sealed for it, so no
+   * row reads what another left.
    */
-  #[DataProvider('conformanceRules')]
-  public function testConformance(array $emitted, array $expected): void {
-    $violations = $this->pipeline()->conformOutput($this->outputSurface(), $emitted);
-
-    $this->assertSame($expected, $this->paths($violations));
+  public function testConformance(): void {
+    $this->checkRows(static::conformanceRules(), function (string $name, array $emitted, array $expected): void {
+      $violations = $this->pipeline()->conformOutput($this->outputSurface(), $emitted);
+      $this->assertSame($expected, $this->paths($violations), $name);
+    });
   }
 
   /**

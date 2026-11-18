@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Surface;
@@ -21,12 +20,12 @@ use PHPUnit\Framework\Attributes\Group;
 /**
  * Tests that every caller reaches storage through the same pipeline.
  *
- * The claim the pipeline exists to make good on: a generated form and a
- * raw payload carrying the same strings produce the same values, because
- * both are coerced by accept() and nothing else. Around that, the stages
- * a non-form caller depends on — refusing undeclared keys, merging over
- * stored values, preparing without writing, and leaving host-owned
- * storage keys alone.
+ * The stages a non-form caller depends on: refusing undeclared keys,
+ * merging over stored values, preparing without writing, and leaving
+ * host-owned storage keys alone. That a generated form and a raw payload
+ * carrying the same strings produce the same values is held by
+ * InputCoercionMatrixTest (the form door and the tool door) and
+ * SurfacePipelineCastingTest.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -104,86 +103,6 @@ class PipelineParityTest extends SurfaceKernelTestBase {
       // Tampering with a locked key is ignored on both paths.
       'flavor' => 'chocolate',
     ];
-  }
-
-  /**
-   * Tests the form path and the payload path produce identical values.
-   */
-  public function testFormAndPayloadAgree(): void {
-    $surface = $this->surface();
-
-    // The form path: build the elements, hand Form API what a browser
-    // submits (strings, and an integer for the checkbox), extract.
-    $form = $this->formBuilder()->buildSurfaceForm($surface, $surface->getDefaultValues(), new FormState());
-    $form_state = new FormState();
-    $form_state->setValues([
-      'title' => 'Typed title',
-      'count' => '7',
-      'ratio' => '1.5',
-      'active' => 1,
-      'mode' => '2',
-      'extras' => ['badge' => 'star', 'weight' => '3'],
-      'flavor' => 'chocolate',
-    ]);
-    $from_form = $this->formBuilder()->extractSurfaceValues($surface, $form, $form_state);
-
-    // The payload path: the equivalent raw strings, straight to accept().
-    $from_payload = $this->pipeline()->accept($surface, $this->payload());
-
-    $this->assertSame($from_payload, $from_form);
-    $this->assertSame([
-      'title' => 'Typed title',
-      'count' => 7,
-      'ratio' => 1.5,
-      'active' => TRUE,
-      'mode' => 2,
-      'extras' => ['badge' => 'star', 'weight' => 3],
-      'flavor' => 'vanilla',
-    ], $from_form);
-
-    // And what both paths produced validates.
-    $this->assertCount(0, $this->pipeline()->validate($surface, $from_form));
-  }
-
-  /**
-   * Tests empty submissions mean the same thing on both paths.
-   */
-  public function testEmptyValuesAgree(): void {
-    $surface = $this->surface();
-    $empty = [
-      'title' => '',
-      'count' => '',
-      'ratio' => '',
-      'active' => '',
-      'mode' => '',
-      'extras' => ['badge' => '', 'weight' => ''],
-      'flavor' => '',
-    ];
-
-    $form = $this->formBuilder()->buildSurfaceForm($surface, $surface->getDefaultValues(), new FormState());
-    $form_state = new FormState();
-    $form_state->setValues($empty);
-    $from_form = $this->formBuilder()->extractSurfaceValues($surface, $form, $form_state);
-    $from_payload = $this->pipeline()->accept($surface, $empty);
-
-    $this->assertSame($from_payload, $from_form);
-    // An empty submission is "not configured", and that means the same
-    // thing for every data type: the key holds nothing. There is no
-    // required-string exception and no checkbox exception, which is what
-    // used to make one empty form produce three different answers.
-    $this->assertNull($from_form['title']);
-    $this->assertNull($from_form['count']);
-    $this->assertNull($from_form['ratio']);
-    $this->assertNull($from_form['active']);
-    $this->assertNull($from_form['mode']);
-    $this->assertSame(['badge' => NULL, 'weight' => NULL], $from_form['extras']);
-
-    $violations = $this->pipeline()->validate($surface, $from_form);
-    $this->assertSame(['title'], $violations->keys());
-    $this->assertSame('', $violations->byKey('title')[0]->path);
-    // The data surface's own message, translatable, rather than whichever
-    // message a type-specific constraint would have produced.
-    $this->assertSame('Title is required.', (string) $violations->byKey('title')[0]->message);
   }
 
   /**

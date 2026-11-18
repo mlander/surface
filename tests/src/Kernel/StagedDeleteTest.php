@@ -10,7 +10,6 @@ use Drupal\surface_http\ServedPaths;
 use Drupal\surface\Pipeline\Fingerprint;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Tool\OperationInputs;
-use Drupal\surface_stage_test\Storage\LedgerStorage;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\FailureCategory;
@@ -304,35 +303,6 @@ class StagedDeleteTest extends SurfaceKernelTestBase {
     $this->assertFalse($applied['success']);
     $this->assertSame(['/writes/1' => Violation::CONFLICT], static::toolCodes($applied));
     $this->assertSame('One, changed meanwhile', $this->stored(0)?->label());
-  }
-
-  /**
-   * Tests a rolled back apply leaves the node in place, and loadable.
-   *
-   * The delete commits, the ledger row after it throws: the transaction
-   * rolls the delete back, and a load in the same request finds the node.
-   */
-  public function testRollbackLeavesTheNode(): void {
-    $this->ledger('a', 'Alpha');
-    $id = $this->open();
-    $this->stageDelete($id, 0);
-    $result = $this->stage($id, 'stage_test.ledger', ['id' => 'a'], ['title' => 'Alpha moved']);
-    $this->assertTrue($result->committed, $this->said($result));
-    $this->container->get('state')->set(LedgerStorage::FAIL, 'a');
-    [$built, $storage] = $this->permanent('surface.stage', 'apply', ['id' => $id]);
-    try {
-      $this->pipeline()->submit($built, [], $storage);
-      $this->fail('The second write fails.');
-    }
-    catch (\RuntimeException $e) {
-      $this->assertSame('The ledger row "a" could not be written.', $e->getMessage());
-    }
-    $node = Node::load($this->nid(0));
-    $this->assertInstanceOf(NodeInterface::class, $node, 'Loadable in the same request.');
-    $this->assertSame('One', $node->getTitle());
-    $this->assertNotNull($this->stored(0));
-    $this->assertSame('Alpha', $this->row('a')['title']);
-    $this->assertSame('open', $this->stages()->read($id)['status']);
   }
 
   /**

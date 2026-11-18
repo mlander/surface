@@ -7,10 +7,10 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\surface\Contract\SchemaFacts;
+use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
-use Drupal\surface\Attribute\SurfaceWidget;
+use Drupal\surface\KeyFacts;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
 use PortableSchema\Builder\Schema;
@@ -35,7 +35,7 @@ final class DateTimeWidget extends SurfaceWidgetBase implements SchemaWidgetInte
    * {@inheritdoc}
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    return SchemaFacts::dataType($schema) === 'datetime_iso8601';
+    return KeyFacts::type($schema) === 'portable:date-time';
   }
 
   /**

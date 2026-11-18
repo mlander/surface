@@ -343,12 +343,17 @@ final class ApplicableSchemas {
    *   The types.
    *
    * @return bool
-   *   TRUE when it is; an empty list is a list and a map alike.
+   *   TRUE when it is; an empty list is a list and a map alike, and a
+   *   PHP array whose keys are not 0 to n - 1 is a map, as the validator
+   *   reads them.
    */
   private static function typed(mixed $value, array $types): bool {
     $type = Json::typeOf($value);
     if ($value === []) {
       return in_array('array', $types, TRUE) || in_array('object', $types, TRUE);
+    }
+    if (is_array($value) && !array_is_list($value)) {
+      $type = 'object';
     }
     return in_array($type, $types, TRUE) || ($type === 'integer' && in_array('number', $types, TRUE));
   }

@@ -10,11 +10,11 @@ use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Render\Element;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
-use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\KeyFacts;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\SurfaceWidgetManager;
@@ -101,11 +101,11 @@ final class ListWidget extends SurfaceWidgetBase implements ContainerFactoryPlug
    * the form does not draw leaves the list not drawn.
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    if (!DefinitionSchema::isList($schema)) {
+    if (!KeyFacts::isList($schema)) {
       return FALSE;
     }
-    $item = DefinitionSchema::itemOf($schema);
-    if ($item === NULL || DefinitionSchema::isComplex($item) || DefinitionSchema::isList($item) || $choice->optionSet($item) !== NULL) {
+    $item = KeyFacts::item($schema);
+    if ($item === NULL || in_array(KeyFacts::type($item), ['object', 'array'], TRUE) || $choice->optionSet($item) !== NULL) {
       return FALSE;
     }
     try {

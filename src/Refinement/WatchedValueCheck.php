@@ -99,8 +99,7 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
    *
    * Each value that is not a list or a map is read through the coercion
    * table, as accept() reads a value a form posts (Coercion::scalar()),
-   * then spelled as the document spells it (spelled()). A scalar at a
-   * string key is read as its text, here alone.
+   * then spelled as the document spells it (spelled()).
    *
    * @param \PortableSchema\Builder\Schema $schema
    *   The value's built schema.
@@ -115,15 +114,10 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
       // Read through the coercion table first, as accept() reads what a
       // form posts: a form's "1" is a boolean's TRUE.
       $type = SchemaFacts::dataType($leaf);
-      $one = Coercion::scalar($type, DefinitionSchema::declares($leaf, 'DateOnly'), $one);
-      if ($type === 'string' && is_scalar($one) && !is_string($one)) {
-        // A scalar at a string key, which the watched-value check has
-        // always handed over, as Typed Data's string takes any scalar; the
-        // value baseline pins it. Open, revisit in slice 35: see
-        // docs/decisions.md#outputs-conform-through-the-dialects-validator.
-        return is_bool($one) ? ($one ? '1' : '0') : (string) $one;
-      }
-      return static::spelled($leaf, $one);
+      // A scalar other than a string at a string key stays as it is, so
+      // the validator refuses it with `type`, as validate() and KeyPaths
+      // do.
+      return static::spelled($leaf, Coercion::scalar($type, DefinitionSchema::declares($leaf, 'DateOnly'), $one));
     });
   }
 

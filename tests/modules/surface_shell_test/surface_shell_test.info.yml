@@ -1,0 +1,8 @@
+name: 'Surface API shell test'
+type: module
+description: 'A hand-built data surface whose keys that hold a child frame are computed, refer to an entity, are grouped, hold a default, are ruled out or always held, for the readers of those facts.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface

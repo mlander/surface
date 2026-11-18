@@ -10,12 +10,11 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\SchemaFacts;
-use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Schemas;
+use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
+use Drupal\surface\KeyFacts;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
@@ -105,7 +104,7 @@ final class AutocompleteWidget extends SurfaceWidgetBase implements ContainerFac
    *   is drawn as, a select or this, is whether its candidates are listed.
    */
   public static function draws(Schema $schema): bool {
-    return !DefinitionSchema::isList($schema) && References::targetIn($schema) !== NULL;
+    return !KeyFacts::isList($schema) && References::targetIn($schema) !== NULL;
   }
 
   /**
@@ -113,7 +112,7 @@ final class AutocompleteWidget extends SurfaceWidgetBase implements ContainerFac
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
     return static::draws($schema)
-      && (SchemaFacts::setting($schema, 'widget') === 'autocomplete' || $choice->optionSet($schema) === NULL);
+      && (KeyFacts::setting($schema, 'widget') === 'autocomplete' || $choice->optionSet($schema) === NULL);
   }
 
   /**

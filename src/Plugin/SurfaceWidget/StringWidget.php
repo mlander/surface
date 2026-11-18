@@ -10,6 +10,7 @@ use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\Contract\WidgetChoice;
+use Drupal\surface\KeyFacts;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
 use PortableSchema\Builder\Schema;
@@ -45,7 +46,9 @@ final class StringWidget extends SurfaceWidgetBase implements SchemaWidgetInterf
    * {@inheritdoc}
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    return in_array(SchemaFacts::dataType($schema), ['string', 'email', 'uri', 'duration_iso8601'], TRUE);
+    return in_array(KeyFacts::type($schema), ['portable:string', 'portable:email', 'portable:uri'], TRUE)
+      // A duration has no type of the library.
+      || SchemaFacts::dataType($schema) === 'duration_iso8601';
   }
 
   /**

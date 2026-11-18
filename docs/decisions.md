@@ -7105,11 +7105,9 @@ output entries' schemas, in the input path's codes.
   `accept()` reads what a form posts (a form's `"1"` is `TRUE`) and
   written as the document holds it (a date and time with its offset); a
   float the table leaves a float is not handed to a refiner typed for an
-  integer. *Open, revisit in slice 35:* a scalar at a string key (`TRUE`)
-  is read as its text and handed over, as Typed Data's string took any
-  scalar, since the value baseline pins it (`values_test.keys`, gate
-  `TRUE` and `FALSE`). It applies to the watched-value check alone, never
-  to a site's or a route's value (next point). A string
+  integer. A scalar other than a string at a string key (`TRUE`) is
+  refused with `type`, as `validate()` and `KeyPaths` refuse it, and no
+  refiner is handed it (decided in slice 35, see [Slice 35 verdicts](#slice-35-verdicts)). A string
   at a key that holds a list of field items, which Typed Data let
   through, is withheld now; and a value whose check threw Symfony's
   `UnexpectedTypeException` out of `accept()` (`TRUE` at a block's
@@ -16705,3 +16703,62 @@ alone.
   writes `add($key, Schema::...)` for a value, a list and a map; a map
   whose key is digits alone, which an object schema cannot name, is
   still `addMap()`.
+## Slice 35 verdicts
+
+### A scalar at a string key is refused at the watched-value check
+
+Decided 2026-11-17. The watched-value check read a scalar other than a
+string at a string key (`TRUE`) as its text and handed it to the
+refiner, as Typed Data's string took any scalar. It now leaves the value
+as it is, and the validator refuses it with `type`, as `validate()` and
+`KeyPaths` refuse it: a refiner does not compute an answer for a value
+the same request then refuses, and every door reads the value by one
+rule. (`WatchedValueCheck::written()`)
+
+### ApplicableSchemas is held to the dialect by a test
+
+Decided 2026-11-17. A check that a keyword refuses at its place is left
+unasked (`ApplicableSchemas`). Until slice 34 a second run of the
+validator caught a keyword `ApplicableSchemas` read otherwise than the
+validator; since the fix of review S2 a check skipped inside an `anyOf`
+or `oneOf` branch causes no second run, so such a misreading in a branch
+went uncaught at run time. The fix stays, since a second run there asks
+checks on values of the wrong type, and a test takes the guard's place:
+`ApplicableSchemasVerdictTest` holds, at each place of each document of
+the contract baselines and of each case of the hand and door corpora,
+and of a hand set of branches of mixed types, the verdict of every
+schema that applies there, certain or in a branch, to the dialect's own
+errors for that schema over the keywords `ApplicableSchemas` reads. It
+costs no request time. A misread `maxLength` planted in a copy fails it.
+It found one disagreement, fixed: a PHP array whose keys are not 0 to
+n - 1 is a map to the validator, and `ApplicableSchemas` read it as a
+list, so a `type: object` there counted as a refusal.
+
+### A required key labeled '' is named by its key
+
+Decided 2026-11-17. "@label is required." printed a label of `''` as
+nothing (" is required."). A label of `''` is no label, as
+`Validating::labelOf()` reads it, so the sentence names the key
+("req is required."), by one rule at both places that word it
+(`Validating::missingInMap()`, `Sentences::ofError()`). A label of `'0'`
+is the author's text and stays ("0 is required."): a number label is
+refused at authoring, so `'0'` is always a string the author chose.
+
+### Widgets read a key through KeyFacts
+
+Decided 2026-11-17. A widget or a refiner outside the module read a
+key's schema through `SchemaFacts`, which is `@internal` and names Typed
+Data's types. `Drupal\surface\KeyFacts` is the public reader (`@api`,
+static, pure): `type()` names the type by the Portable Schema library's
+id (`portable:string` and the seven others), `array` for a list,
+`object` for a map and `any` for any other value, never by a Typed Data
+id; `setting()` gives one setting by name, from `x-surface-settings` or
+from the options the key's `x-portable-ui` sets for its widget, both read
+into the same settings; `isList()` and `item()` answer for a list. Every
+other fact is a keyword of the schema. The stock widgets and the
+extras' `CommaSeparatedListWidget` read through it where it answers what
+they ask. What it does not answer stays on `SchemaFacts`: a type the
+library has no id for (`decimal`, `timespan`, `duration_iso8601`, the
+three types `NotDrawnWidget` leaves out), the `any` type told apart
+from those, the key a variants placeholder is chosen by, and whether a
+key holds one variant, is fixed or holds a value (`OptionsWidget`).
