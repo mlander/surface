@@ -19,8 +19,7 @@ final class PairsStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->attach('asked', PairStructure::class, t('As it asks'));
-    $inputs->attach('owned', PairStructure::class, t('As its owner asks'))
-      ->setSetting('widget', 'fieldset');
+    $inputs->attach('owned', PairStructure::class, t('As its owner asks'), widget: 'fieldset');
   }
 
 }

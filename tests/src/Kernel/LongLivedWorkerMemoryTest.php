@@ -14,6 +14,7 @@ use Drupal\surface_resource_test\Access\ArchiveAccess;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * A worker that outlives a request does not keep what each call made.
@@ -160,7 +161,7 @@ class LongLivedWorkerMemoryTest extends SurfaceKernelTestBase {
     $limit = (new \ReflectionClassConstant($resources, 'BUILDS_KEPT'))->getValue();
     $this->assertIsInt($limit);
     $context = static fn (int $capacity): OperationContext => (new OperationContext('configure'))
-      ->withConstraint('capacity', 'Range', ['min' => 1, 'max' => $capacity]);
+      ->withConstraint('capacity', Schema::any()->minimum(1)->maximum($capacity));
     for ($capacity = 1; $capacity <= $limit + 300; $capacity++) {
       $resources->build(RegistrationStep3Resource::class, $context($capacity));
     }

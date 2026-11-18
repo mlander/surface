@@ -46,7 +46,7 @@ Inside the class, the permission they share and the two methods:
     $block = \Drupal::classResolver(BlockPlacementStorage::class)->named($id, 'The "update" operation of block.placement');
     assert($block instanceof BlockInterface);
     return (new OperationContext(known: ['id' => (string) $block->id()]))
-      ->withConstraint('theme', 'Choice', ['choices' => [$block->getTheme()]]);
+      ->withConstraint('theme', Schema::enum([$block->getTheme()]));
   }
 
   #[Operation('delete',

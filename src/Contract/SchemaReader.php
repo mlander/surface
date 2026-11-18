@@ -487,6 +487,17 @@ final class SchemaReader {
   protected bool $authored = FALSE;
 
   /**
+   * Whether an author's schema is read into an outputs blueprint.
+   *
+   * Outputs hold no attached structure, so a list of objects there is a
+   * list of maps, as addList() declares one: its items read as plain
+   * maps, a list of objects inside them too.
+   *
+   * Decision: see docs/decisions.md#authoring-takes-a-schema.
+   */
+  protected bool $outputs = FALSE;
+
+  /**
    * Constructs a SchemaReader.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceRegistry|null $registry
@@ -706,6 +717,7 @@ final class SchemaReader {
     $widgets = \Drupal::hasService('plugin.manager.surface_widget') ? \Drupal::service('plugin.manager.surface_widget') : NULL;
     $reader = new static(entityTypeManager: \Drupal::hasService('entity_type.manager') ? \Drupal::entityTypeManager() : NULL, library: static::library(), widgets: $widgets instanceof SurfaceWidgetManager ? $widgets : NULL);
     $reader->authored = TRUE;
+    $reader->outputs = $inputs instanceof BlueprintAdapterBase && $inputs->declaresOutputs();
     [$root, $read] = static::preparing($document);
     $reader->document = $root;
     // The author's Schema value itself, where preparing it moved nothing
@@ -1754,12 +1766,16 @@ final class SchemaReader {
    * @param string|null $why
    *   Set to why the options are not read, where the check names an
    *   entity type they cannot be read for; NULL otherwise.
+   * @param bool $anyType
+   *   Whether an entity type the site lacks is read too: an author's
+   *   check is, as add() holds its constraint, and the build judges it
+   *   (References::settle()).
    *
    * @return array{entityTypeId: string, bundles?: string[]}|null
    *   The constraint's options, as an author declares them; NULL where its
    *   check names no entity type, or one that is not read.
    */
-  protected function referenceOptions(Schema $property, ?string &$why = NULL): ?array {
+  protected function referenceOptions(Schema $property, ?string &$why = NULL, bool $anyType = FALSE): ?array {
     $why = NULL;
     $checks = $property->get(PortableKeywords::CHECK);
     $options = is_array($checks) ? ($checks[PortableKeywords::PROVIDER . References::CONSTRAINT] ?? NULL) : NULL;
@@ -1767,7 +1783,7 @@ final class SchemaReader {
     if (!is_array($options) || !is_string($options['entityTypeId'] ?? NULL) || $options['entityTypeId'] === '') {
       return NULL;
     }
-    if ($this->entityTypeManager !== NULL && !$this->entityTypeManager->hasDefinition($options['entityTypeId'])) {
+    if (!$anyType && $this->entityTypeManager !== NULL && !$this->entityTypeManager->hasDefinition($options['entityTypeId'])) {
       $why = sprintf('it refers to %s, an entity type this site does not have', $options['entityTypeId']);
       return NULL;
     }
@@ -3265,7 +3281,7 @@ final class SchemaReader {
       $items = $library_items;
       $property = $property->with('items', $items);
     }
-    if ($not_null === ['array'] && Schemas::isObjectSchema($items) && ($this->isObject($items) || $this->refersToObject($items, $root))) {
+    if ($not_null === ['array'] && Schemas::isObjectSchema($items) && ($this->isObject($items) || $this->refersToObject($items, $root)) && !$this->isOutputMaps($items)) {
       $this->collection($name, $property, $required, $pointer, $inputs, $root);
       return;
     }
@@ -3586,7 +3602,8 @@ final class SchemaReader {
         static::holdTo($definition, $options['schema']);
         continue;
       }
-      $definition->addConstraint($constraint, in_array($constraint, ['Range', 'Length', 'Count'], TRUE) ? array_replace($held, $options) : $options);
+      // In the author's order, as addConstraint() keeps the options.
+      $definition->addConstraint($constraint, in_array($constraint, ['Range', 'Length', 'Count'], TRUE) ? $options + $held : $options);
     }
     static::holdTo($definition, static::fragment(Schema::from($foreign)));
     $this->settings($definition, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
@@ -3690,11 +3707,26 @@ final class SchemaReader {
       if ($types === ['object'] && is_array($nested) && $nested !== [] && !$this->isPlainMap($property)) {
         return FALSE;
       }
-      if ($types === ['array'] && Schemas::isObjectSchema($property->get('items')) && $this->isObject($property->get('items'))) {
+      if ($types === ['array'] && Schemas::isObjectSchema($property->get('items')) && $this->isObject($property->get('items')) && !$this->isOutputMaps($property->get('items'))) {
         return FALSE;
       }
     }
     return TRUE;
+  }
+
+  /**
+   * Answers whether a list's items are read as plain maps at an output.
+   *
+   * @param \PortableSchema\Builder\Schema $items
+   *   The list's items.
+   *
+   * @return bool
+   *   TRUE where an author's schema is read into outputs and the items are
+   *   an object of properties that is a plain map.
+   */
+  protected function isOutputMaps(Schema $items): bool {
+    $types = array_values(array_diff((array) ($items->get('type') ?? []), ['null']));
+    return $this->outputs && $types === ['object'] && is_array($items->get('properties')) && $items->get('properties') !== [] && $this->isPlainMap($items);
   }
 
   /**
@@ -3975,7 +4007,14 @@ final class SchemaReader {
       $items = Schemas::isObjectSchema($property->get('items')) ? $this->throughLibrary($property->get('items'), $root) : Schema::any();
       $item_types = $this->types($items, static::below($pointer, 'items'));
       $item_library = $this->libraryOf($items, static::below($pointer, 'items'));
-      if (array_values(array_diff($item_types, ['null'])) === ['array'] || ($items->all() !== [] && $this->isObject($items) && ($item_library === NULL || $item_library['object']))) {
+      if ($this->isOutputMaps($items)) {
+        // A list of objects at an output: a list of maps.
+        $item = $this->map($items, static::below($pointer, 'items'), $root);
+        if (static::text($items->get('title')) !== NULL) {
+          $item->setLabel($items->get('title'));
+        }
+      }
+      elseif (array_values(array_diff($item_types, ['null'])) === ['array'] || ($items->all() !== [] && $this->isObject($items) && ($item_library === NULL || $item_library['object']))) {
         $item = $this->foreignValue($items, static::below($pointer, 'items'), $root);
       }
       else {
@@ -4485,7 +4524,7 @@ final class SchemaReader {
               $held_at = static::below($at, PortableKeywords::PROVIDER . 'JsonSchema', 'schema');
               $read[] = new ReadBack('JsonSchema', ['schema' => static::fragment($this->keptSchema(static::checked($check['options']['schema'], $held_at), $held_at))], [$keyword]);
             }
-            elseif ($check['constraint'] === References::CONSTRAINT && ($refers = $this->referenceOptions($property, $why)) !== NULL) {
+            elseif ($check['constraint'] === References::CONSTRAINT && ($refers = $this->referenceOptions($property, $why, $this->authored)) !== NULL) {
               // What a key refers to, as its author declares it.
               // Decision: see
               // docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.

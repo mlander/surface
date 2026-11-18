@@ -991,7 +991,10 @@ use `DeclaresByProperties`, which supplies `defineInputs()` and
 - **Conditions in words.** `Condition`'s factories are calls, so
   `#[Rule]` spells four: `whenEquals:`, `whenPresent:`, `whenAbsent:`,
   `whenIn:`, all required to hold when several are given. Any other is
-  `narrow()` in `defineInputs()` or a `#[RefinesInput]` method.
+  `narrow()` in `defineInputs()` or a `#[RefinesInput]` method. Its
+  `constrain:` is a keyword map, `constrain: ['maximum' => 5]`, read as
+  `Rule::constrain()` reads a Schema of those keywords; a constraint and
+  its options is refused (decided 2026-11-17).
 - **Not spelled.** `addDefinition()`, the long form, which has no short
   form by design; `resolve()` and `extendChoices()`, an alter's verbs,
   and alters keep the blueprint; `addCacheableDependency()`, used by
@@ -1559,8 +1562,9 @@ context the operation built ([forms](forms.md#a-route-that-fixes-or-fills-keys))
   a check or a report run; until the maintainer decides, the rule holds,
   and `_surface_query` starts such a key from a link.
 - **Fixing narrows the contract, so at a route it is true on that page
-  only.** A fixed value is `withConstraint($path, 'Choice', ['choices' =>
-  [$value], 'surface_fixed' => TRUE])`, nothing new in either
+  only.** A fixed value is `withConstraint($path,
+  Schema::any()->check('drupal:Choice', ['choices' => [$value],
+  'surface_fixed' => TRUE]))`, nothing new in either
   document's vocabulary: a key fixed so is drawn as that value and
   stated `const` with `x-surface.fixed`, as a deciding key with one
   variant is, and starts from it (a fixed key holds its value, below).
@@ -6300,6 +6304,9 @@ journal is the first case. Each choice, and why:
   child at a fixed key or in a collection is the owner's child at that
   key); a resource, which stores itself; one with outputs, which are not
   merged. A structure may mix another in.
+  A member declared with `addSchema()` is held as one declared with
+  `add()`: the clash is refused with the same message, and the key is
+  one of the owner's (decided 2026-11-17).
 - **Emitted as a composition, so the def stays reusable.** The frame is
   `allOf` of a reference to each structure's def and its own
   `properties`, closed with `unevaluatedProperties: false`. Each member
@@ -15726,9 +15733,12 @@ they served.
   both hold. A check kept inside the JsonSchema constraint would be
   answered `unchecked` for every value, so the keyword is the one kept
   there. A message under any other code but `pattern` and `not` is
-  refused. A document from anywhere else is read as before: its checks
-  describe what its server runs, and only `drupal:JsonSchema` and a
-  reference's are read.
+  refused. A reference check naming an entity type the site lacks is
+  read as its constraint, as `add()` holds it, and judged at the build
+  where `add()`'s is (decided 2026-11-17: the config schema command
+  reads modules that are not installed). A document from anywhere else
+  is read as before: its checks describe what its server runs, and only
+  `drupal:JsonSchema` and a reference's are read.
 - **A union of one schema and null.** In an author's schema, an `anyOf`
   or `oneOf` of exactly one schema and `{"type": "null"}` (or `{"const":
   null}`), in either order, is that schema with null allowed: its
@@ -15737,6 +15747,14 @@ they served.
   leaf, an enum, an object, a type of the library or a `$ref`. The
   package writes `?Size` and a nullable `#[Of]` so. A document from
   anywhere else is read as before.
+- **A list of objects at an output.** Outputs hold no attached
+  structure, so `Schema::list(Schema::object([...]))` handed to an
+  outputs blueprint is a list of maps, as `addList()` declares one: each
+  item a plain map, a list of plain objects inside it too. At an input it
+  stays a collection of children (decided 2026-11-17, on the condition
+  that the venue listing's served document stays byte-identical, which
+  `ContractBaselineTest` holds). A `portable:timestamp` property is no
+  plain map's yet, since the library's type adds a range.
 - **Labels stay translatable.** The reader reads a `Schema` an author
   hands it as it is, never through JSON, so a title, description or
   option label made with `t()` stays a `TranslatableMarkup` in the
@@ -15775,6 +15793,30 @@ they served.
   Reading a `drupal:` check as its constraint holds for an author's
   schema alone: a served document publishes its checks with `{}`
   options, which describe and never run.
+- **A bound beside a shape's.** A key of a shape that states a bound
+  the shape holds too is that bound, the key's options in the order the
+  author wrote them and the shape's others after, as `addConstraint()`
+  keeps the options it is handed (decided 2026-11-17).
+- **A context narrows by a schema.** `OperationContext::withConstraint()`
+  takes a `Schema`, as `Rule::constrain()` does: a bound, a `pattern`,
+  `enum` (the values to keep), or a `drupal:` check with its options as
+  given, so a fixed key is `Schema::any()->check('drupal:Choice',
+  ['choices' => [$value], 'surface_fixed' => TRUE])`. One spelling: the
+  constraint and its options is gone (decided 2026-11-17).
+- **The widget of an attached child.** `attach()` takes `widget:` by
+  name beside `description:`, `required:` and `storedAs:`, the word of
+  the widget that draws the child at this key (`widget: 'fieldset'`),
+  as `setSetting('widget', ...)` on the returned map wrote it and checked
+  at the build as every key's widget setting is. An attach takes no
+  schema, so no `ui()` can say it (decided 2026-11-17).
+- **An entry that is a shape.** `addEach()` takes
+  `Schema::of(Shape::class)`, alone or with a `default`, as each entry
+  being that shape, as `add()` reads the shape's class: a shape is a
+  document the key refers to (decided 2026-11-17).
+- **Settings in the author's order.** A key's settings under
+  `x-surface-settings` and those its `x-portable-ui` says are held in
+  the order the two keywords are written, as `setSetting()` calls hold
+  them (decided 2026-11-17).
 - **Shapes and other ids.** `#[Of(SomeShape::class)]`, or the shape's
   class as the property's type, is that shape: a `$ref` to a def of the
   shape's `#[Shape]` id, which the reader reads as the shape. An

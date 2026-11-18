@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Structure\Mixin\TimestampsStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Mixes a structure in, then declares one of its members itself.
@@ -20,7 +21,8 @@ final class MixinClashLateStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->mixIn(TimestampsStructure::class);
-    $inputs->add('changed', 'string', 'Changed');
+    $inputs->addSchema('changed', Schema::string()
+      ->title('Changed'));
   }
 
 }

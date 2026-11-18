@@ -27,6 +27,8 @@ use Drupal\surface\Resource\DefinesInputsInterface;
 use Drupal\surface\Resource\DeletableStorageInterface;
 use Drupal\surface\Resource\HeldToConfigSchemaInterface;
 use Drupal\surface\Resource\ResourceStorageInterface;
+use Drupal\surface\Contract\PortableKeywords;
+use PortableSchema\Builder\Schema;
 
 /**
  * The first phase of the build: the blueprint filled from the class.
@@ -299,7 +301,7 @@ final class Declaring {
     foreach ($parent->constraints() as $path => $constraints) {
       if (str_starts_with((string) $path, $prefix)) {
         foreach ($constraints as $name => $options) {
-          $child = $child->withConstraint(substr((string) $path, strlen($prefix)), (string) $name, $options);
+          $child = $child->withConstraint(substr((string) $path, strlen($prefix)), Schema::any()->check(PortableKeywords::PROVIDER . $name, $options));
         }
       }
     }

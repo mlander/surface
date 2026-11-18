@@ -48,6 +48,7 @@ use Drupal\Tests\surface\Kernel\Fixture\CountingResources;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests the build step: a class and a context in, a data surface out.
@@ -188,17 +189,14 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
    * Tests that a context's constraints narrow, and may not widen.
    */
   public function testContextConstraintsNarrow(): void {
-    $context = RecipeResource::create('main')->withConstraint('servings', 'Range', ['min' => 2, 'max' => 12]);
+    $context = RecipeResource::create('main')->withConstraint('servings', Schema::any()->minimum(2)->maximum(12));
     $surface = $this->resources()->build(RecipeResource::class, $context);
     $this->assertSame(['min' => 2, 'max' => 12], $surface->getDefinition('servings')->getConstraints()['Range']);
     $this->assertContains('servings', $this->pipeline()->validate($surface, ['servings' => 1] + $surface->getDefaultValues() + ['name' => 'x'])->keys());
 
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('Refining "servings" for the "create" operation widened what it was given: the max of the Range constraint moved from 12 to 99.');
-    $widening = RecipeResource::create('main')->withConstraint('servings', 'Range', [
-      'min' => 1,
-      'max' => 99,
-    ]);
+    $widening = RecipeResource::create('main')->withConstraint('servings', Schema::any()->minimum(1)->maximum(99));
     $this->resources()->build(RecipeResource::class, $widening);
   }
 

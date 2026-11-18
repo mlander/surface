@@ -375,6 +375,11 @@ interface BlueprintAdditionsInterface {
    * @param string|null $storedAs
    *   How a reference the child holds is stored, the value of
    *   References::STORED_AS (References::BY_ID); NULL to say nothing.
+   * @param string|null $widget
+   *   The word of the widget that draws the child here, as setSetting(
+   *   'widget', ...) on the definition returned would write it, checked at
+   *   the build as every key's widget setting is (`fieldset`); NULL to
+   *   leave the structure's own.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key, already part of the blueprint.
@@ -385,7 +390,7 @@ interface BlueprintAdditionsInterface {
    *   wiring is checked when the parent is built: see
    *   docs/resources.md#ports.
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition;
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): MapDataDefinition;
 
   /**
    * A collection at a key: a list whose every item is the child.

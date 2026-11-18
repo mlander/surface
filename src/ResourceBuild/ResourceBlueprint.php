@@ -389,6 +389,39 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * refused naming both who declared it.
    */
   protected function addKey(string $key, DataDefinitionInterface $definition, mixed $default = NULL, string $verb = 'addDefinition'): DataDefinitionInterface {
+    $this->assertNoMixinClash($key);
+    parent::addKey($key, $definition, $default, $verb);
+    if ($this->into !== NULL) {
+      $this->into->adopt($key, (string) $this->owner);
+    }
+    return $definition;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A key read from an author's schema is held as addKey() holds one: the
+   * mixin clash is refused first, and a key a structure mixed in declares
+   * is the owner's.
+   */
+  public function declareRead(string $key, Schema $schema): void {
+    $this->assertNoMixinClash($key);
+    parent::declareRead($key, $schema);
+    if ($this->into !== NULL && $this->holdsSchemas()) {
+      $this->into->adopt($key, (string) $this->owner);
+    }
+  }
+
+  /**
+   * Refuses a key the owner and a structure mixed in both declare.
+   *
+   * @param string $key
+   *   The key.
+   *
+   * @throws \LogicException
+   *   When the key is declared already among the owner's and its mixins'.
+   */
+  protected function assertNoMixinClash(string $key): void {
     $root = $this->root();
     if (!$this->outputs && ($this->into !== NULL || isset($root->origins[$key])) && $root->isDeclared($key)) {
       $before = $root->origins[$key] ?? NULL;
@@ -399,11 +432,6 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
         default => sprintf('%s, mixed into %s, declares "%s", which %s, also mixed in, declares too. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once.', $this->name($this->owner), $owner, $key, $this->name($before)),
       });
     }
-    parent::addKey($key, $definition, $default, $verb);
-    if ($this->into !== NULL) {
-      $this->into->adopt($key, (string) $this->owner);
-    }
-    return $definition;
   }
 
   /**
@@ -462,9 +490,9 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
-    if ($description !== NULL || $required || $storedAs !== NULL) {
-      return static::stated($this->attach($key, $structure, $label, $reads), $description, $required, $storedAs, References::STORED_AS);
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): MapDataDefinition {
+    if ($description !== NULL || $required || $storedAs !== NULL || $widget !== NULL) {
+      return static::stated($this->attach($key, $structure, $label, $reads), $description, $required, $storedAs, References::STORED_AS, $widget);
     }
     $this->assertUnwiredInMixin($structure, $key, $reads);
     return parent::attach($key, $structure, $label, $reads);
@@ -881,7 +909,13 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     if ($description !== NULL) {
       return static::stated($this->addEach($key, $type, $from, $label, $default), $description);
     }
-    if ($type instanceof Schema) {
+    if ($type instanceof Schema && ($shape = $this->shapeEntry($type)) !== NULL) {
+      // Each entry is the shape the schema refers to, as add() reads its
+      // class: Schema::of(Shape::class), its default beside it.
+      $default ??= $type->get('default');
+      $type = $shape;
+    }
+    elseif ($type instanceof Schema) {
       // What every entry is, as a schema: its default inside it.
       $schema = $this->schemaOfOne('addEach', $key, $type);
       $default ??= ValueSchema::factsOf($schema)['default_value'] ?? NULL;
@@ -1163,6 +1197,24 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     $definition = $this->add($key, $type, $label);
     DefinitionMetadata::setComputed($definition, $computed);
     return $definition;
+  }
+
+  /**
+   * Gets the shape an entry's schema refers to, where that is all it says.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The entry's schema.
+   *
+   * @return string|null
+   *   The shape's class, where the schema is a `$ref` to a shape's id,
+   *   with a `default` or nothing beside it; NULL otherwise.
+   */
+  protected function shapeEntry(Schema $schema): ?string {
+    $id = $schema->isBoolean() ? NULL : $schema->get('$ref');
+    if (!is_string($id) || array_diff(array_keys($schema->all()), ['$ref', 'default']) !== []) {
+      return NULL;
+    }
+    return $this->shapeOf($id);
   }
 
   /**

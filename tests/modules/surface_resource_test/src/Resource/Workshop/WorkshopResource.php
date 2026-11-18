@@ -50,7 +50,7 @@ final class WorkshopResource implements ResourceInterface {
       label: t('Lights'),
       description: t('Which benches have their lamp on.'),
     );
-    $inputs->addEach('codes', Sku::class, from: WorkshopBenches::class, label: t('Bench codes'));
+    $inputs->addEach('codes', Schema::of(Sku::class), from: WorkshopBenches::class, label: t('Bench codes'));
     $inputs->narrow('lights')
       ->when(Condition::equals('closed', TRUE))
       ->doesNotApply();

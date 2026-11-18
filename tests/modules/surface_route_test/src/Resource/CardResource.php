@@ -57,7 +57,10 @@ final class CardResource implements ResourceInterface {
       throw new \InvalidArgumentException(sprintf('There is no "%s" list; the lists are %s.', $to, implode(', ', self::LISTS)));
     }
     return (new OperationContext(known: array_filter(['to' => $to, 'from' => $from], static fn (?string $value): bool => $value !== NULL)))
-      ->withConstraint('envelope.color', 'Choice', ['choices' => ['white'], 'surface_fixed' => TRUE]);
+      ->withConstraint('envelope.color', Schema::any()->check('drupal:Choice', [
+        'choices' => ['white'],
+        'surface_fixed' => TRUE,
+      ]));
   }
 
   /**

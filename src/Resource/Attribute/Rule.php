@@ -11,7 +11,9 @@ namespace Drupal\surface\Resource\Attribute;
  * cannot call Condition's factories, so the condition is spelled in
  * words, one of four, all of which must hold when several are given:
  * `whenEquals:`, `whenPresent:`, `whenAbsent:`, `whenIn:`. The effect is
- * `constrain:`, `require:` or `doesNotApply:`. A rule needing another
+ * `constrain:`, a keyword map as Rule::constrain() reads its Schema
+ * (`constrain: ['maximum' => 5]`), `require:` or `doesNotApply:`. A rule
+ * needing another
  * condition (`not`, `anyOf`, a bound) stays narrow() in defineInputs(),
  * or a #[RefinesInput] method.
  *
@@ -38,8 +40,11 @@ final class Rule {
    *   A sibling key that holds nothing, Condition::absent().
    * @param array{0: string, 1: array<int|float|string|bool>}|null $whenIn
    *   A sibling key and the values it may hold, Condition::in().
-   * @param array{0: string, 1: array}|null $constrain
-   *   A constraint's id and its options, added while the condition holds.
+   * @param array<int|string, mixed>|null $constrain
+   *   What the rule adds while the condition holds, as keywords by name:
+   *   a bound (`maximum`, `maxLength`, ...), `pattern`, `enum`, or
+   *   `portable-check` of a bound's check, read as Rule::constrain()
+   *   reads a Schema of them.
    * @param bool $require
    *   TRUE to require the key while the condition holds.
    * @param bool $doesNotApply

@@ -1375,7 +1375,10 @@ final class Resources implements ResourcesInterface {
     $context = $create->withId($found->id, TRUE)->withKnown([StagedStorage::POSITION => (int) $entry['position']]);
     foreach (StageRecord::address($entry) as $key => $name) {
       if (!array_key_exists($key, $create->known)) {
-        $context = $context->withConstraint($key, 'Choice', ['choices' => [$name], 'surface_fixed' => TRUE]);
+        $context = $context->withConstraint($key, Schema::any()->check('drupal:Choice', [
+          'choices' => [$name],
+          'surface_fixed' => TRUE,
+        ]));
       }
     }
     return $context;

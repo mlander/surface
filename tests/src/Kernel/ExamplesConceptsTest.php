@@ -807,7 +807,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     [$spotlight, $block_lines] = array_map(static fn (array $cell): string => (string) $cell['data']['#code'], $page['parts']['two_lines']['#rows'][0]);
     $lines = "\$inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);\n\$inputs->attachVariants('slots', by: 'component', label: t('Slots'), from: ComponentSlots::class);";
     $this->assertStringContainsString($lines, $spotlight);
-    $this->assertSame("\$inputs->add('component', 'string', t('Component'));\n" . $lines, $block_lines);
+    $this->assertSame("\$inputs->addSchema('component', Schema::string()\n  ->title(t('Component')));\n" . $lines, $block_lines);
     $contract = json_decode((string) $page['parts']['contract']['content']['#code'], TRUE);
     $this->assertSame(self::COMPONENTS, array_column($contract['component']['oneOf'], 'const'));
     $this->assertSame('#/$defs/block.surface_component.props.surface_examples:card', $contract['props'][ContractEmitter::EXTENSION]['variants']['surface_examples:card']);

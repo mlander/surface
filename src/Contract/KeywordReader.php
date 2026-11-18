@@ -514,8 +514,7 @@ final class KeywordReader {
         $list['constraints'][$constraint] = $options;
       }
       $list = static::holdTo($list, $this->withDefs($foreign));
-      $list = $this->settings($list, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
-      $list = $this->ownSettings($list, $property, $pointer);
+      $list = $this->allSettings($list, $property, $pointer);
       $list = static::examples($list, $property);
       return [$list, $item, $default, $read];
     }
@@ -559,8 +558,7 @@ final class KeywordReader {
       $facts = static::holdTo($facts, static::fragment(Schema::from($extra)));
     }
     $facts = static::holdTo($facts, $this->withDefs($foreign));
-    $facts = $this->settings($facts, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
-    $facts = $this->ownSettings($facts, $property, $pointer);
+    $facts = $this->allSettings($facts, $property, $pointer);
     $facts = static::examples($facts, $property);
     return [$facts, NULL, $default, $read];
   }
@@ -760,6 +758,33 @@ final class KeywordReader {
   }
 
   /**
+   * Reads a key's settings, its widget's and its own, in the author's order.
+   *
+   * What `x-portable-ui` says (settings()) and what SETTINGS says
+   * (ownSettings()), the one the author wrote first first, as the verbs
+   * write settings in the order they are set.
+   *
+   * @param array $facts
+   *   The facts.
+   * @param \PortableSchema\Builder\Schema $property
+   *   The key's schema.
+   * @param string $pointer
+   *   The key's pointer.
+   *
+   * @return array
+   *   The facts.
+   */
+  protected function allSettings(array $facts, Schema $property, string $pointer): array {
+    $keywords = array_flip(array_map('strval', array_keys($property->all())));
+    if (($keywords[self::SETTINGS] ?? PHP_INT_MAX) < ($keywords[PortableKeywords::UI] ?? PHP_INT_MAX)) {
+      $facts = $this->ownSettings($facts, $property, $pointer);
+      return $this->settings($facts, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
+    }
+    $facts = $this->settings($facts, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
+    return $this->ownSettings($facts, $property, $pointer);
+  }
+
+  /**
    * Reads the settings an author says under SETTINGS.
    *
    * Each by its name, as the key's definition holds it. A setting a
@@ -867,8 +892,7 @@ final class KeywordReader {
       $facts['constraints'][$constraint] = in_array($constraint, ['Range', 'Length', 'Count'], TRUE) && is_array($held) ? array_replace($held, $options) : $options;
     }
     $facts = static::holdTo($facts, $this->withDefs($foreign));
-    $facts = $this->settings($facts, Schemas::data($property->get(PortableKeywords::UI)) ?? [], $pointer);
-    $facts = $this->ownSettings($facts, $property, $pointer);
+    $facts = $this->allSettings($facts, $property, $pointer);
     $facts = static::examples($facts, $property);
     $facts = $this->finished($facts, FALSE, $property, $required, in_array('null', $types, TRUE));
     $default = $property->get('default');
@@ -966,7 +990,7 @@ final class KeywordReader {
               $held_at = static::below($at, PortableKeywords::PROVIDER . 'JsonSchema', 'schema');
               $read[] = new ReadBack('JsonSchema', ['schema' => static::fragment($this->keptSchema(static::checked($check['options']['schema'], $held_at), $held_at))], [$keyword]);
             }
-            elseif ($check['constraint'] === References::CONSTRAINT && ($refers = $this->referenceOptions($property, $why)) !== NULL) {
+            elseif ($check['constraint'] === References::CONSTRAINT && ($refers = $this->referenceOptions($property, $why, TRUE)) !== NULL) {
               $read[] = new ReadBack(References::CONSTRAINT, $refers, [$keyword]);
             }
             elseif ($check['constraint'] === References::CONSTRAINT && $why !== NULL) {
@@ -1257,12 +1281,16 @@ final class KeywordReader {
    * @param string|null $why
    *   Set to why the options are not read, where the check names an
    *   entity type they cannot be read for; NULL otherwise.
+   * @param bool $anyType
+   *   Whether an entity type the site lacks is read too: an author's
+   *   check is, as add() holds its constraint, and the build judges it
+   *   (References::settle()).
    *
    * @return array{entityTypeId: string, bundles?: string[]}|null
    *   The constraint's options, as an author declares them; NULL where its
    *   check names no entity type, or one that is not read.
    */
-  protected function referenceOptions(Schema $property, ?string &$why = NULL): ?array {
+  protected function referenceOptions(Schema $property, ?string &$why = NULL, bool $anyType = FALSE): ?array {
     $why = NULL;
     $checks = $property->get(PortableKeywords::CHECK);
     $options = is_array($checks) ? ($checks[PortableKeywords::PROVIDER . References::CONSTRAINT] ?? NULL) : NULL;
@@ -1270,7 +1298,7 @@ final class KeywordReader {
     if (!is_array($options) || !is_string($options['entityTypeId'] ?? NULL) || $options['entityTypeId'] === '') {
       return NULL;
     }
-    if ($this->entityTypeManager !== NULL && !$this->entityTypeManager->hasDefinition($options['entityTypeId'])) {
+    if (!$anyType && $this->entityTypeManager !== NULL && !$this->entityTypeManager->hasDefinition($options['entityTypeId'])) {
       $why = sprintf('it refers to %s, an entity type this site does not have', $options['entityTypeId']);
       return NULL;
     }

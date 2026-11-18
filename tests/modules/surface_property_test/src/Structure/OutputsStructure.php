@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_property_test\Structure;
 
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
@@ -35,11 +33,12 @@ final class OutputsStructure implements StructureInterface, DefinesOutputsInterf
       ->description(t('How many matched.'))
       ->required());
 
-    $item = MapDataDefinition::create()
-      ->setPropertyDefinition('id', DataDefinition::create('string')->setLabel(t('Id'))->setRequired(TRUE))
-      ->setPropertyDefinition('label', DataDefinition::create('string')->setLabel(t('Label')));
-    $outputs->addList('items', $item, t('Items'))
-      ->setRequired(TRUE);
+    $outputs->addSchema('items', Schema::list(Schema::object([
+      'id' => Schema::string()->title(t('Id'))->required(),
+      'label' => Schema::string()->title(t('Label')),
+    ]))
+      ->title(t('Items'))
+      ->required());
   }
 
 }

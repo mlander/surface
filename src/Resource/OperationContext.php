@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Resource;
 
+use Drupal\surface\Contract\ConstraintKeywords;
+use Drupal\surface\Contract\PortableKeywords;
+use PortableSchema\Builder\Schema;
+
 /**
  * Which operation is being asked, and what it knows. Never the values.
  *
@@ -251,22 +255,93 @@ final class OperationContext {
   }
 
   /**
-   * Returns a copy that narrows one key with one more constraint.
+   * Returns a copy that narrows one key with what a schema adds.
+   *
+   * The schema is read as Rule::constrain() reads one: a bound
+   * (`minimum`, `maximum`, `minLength`, `maxLength`, `minItems`,
+   * `maxItems`), a `pattern`, `enum` (the values to keep), or a check of
+   * the site's (`drupal:<plugin id>`) with its options, as given.
+   *
+   * @code
+   * $context->withConstraint('theme', Schema::enum([$block->getTheme()]));
+   * $context->withConstraint('servings', Schema::any()->minimum(2)->maximum(12));
+   * @endcode
+   *
+   * Decision: see docs/decisions.md#authoring-takes-a-schema.
    *
    * @param string $key
    *   The input key, or a path to one (see the class docblock).
-   * @param string $constraint
-   *   The constraint plugin ID.
-   * @param array $options
-   *   The constraint options.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   What the key is narrowed by.
    *
    * @return self
    *   The new context.
+   *
+   * @throws \InvalidArgumentException
+   *   For a keyword outside those, a check named outside `drupal:`, or a
+   *   schema that adds nothing.
    */
-  public function withConstraint(string $key, string $constraint, array $options = []): self {
+  public function withConstraint(string $key, Schema $schema): self {
     $constraints = $this->constraints;
-    $constraints[$key][$constraint] = $options;
+    foreach (self::constraintsOf($key, $schema) as $constraint => $options) {
+      $constraints[$key][$constraint] = $options;
+    }
     return self::copy($this->saidId, $this->saidCreates, $this->known, $constraints, $this->defaults, $this->children, $this->childOperations);
+  }
+
+  /**
+   * Reads the constraints a schema handed to withConstraint() adds.
+   *
+   * @param string $key
+   *   The key, for a refusal.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema.
+   *
+   * @return array<string, array>
+   *   The options of each constraint, by plugin id, in the order written.
+   *
+   * @throws \InvalidArgumentException
+   *   For what withConstraint() refuses.
+   */
+  private static function constraintsOf(string $key, Schema $schema): array {
+    $bounds = [
+      'minimum' => ['Range', 'min'],
+      'maximum' => ['Range', 'max'],
+      'minLength' => ['Length', 'min'],
+      'maxLength' => ['Length', 'max'],
+      'minItems' => ['Count', 'min'],
+      'maxItems' => ['Count', 'max'],
+    ];
+    $read = [];
+    foreach ($schema->isBoolean() ? ['a boolean schema' => NULL] : $schema->all() as $keyword => $value) {
+      $keyword = (string) $keyword;
+      if (isset($bounds[$keyword])) {
+        [$name, $option] = $bounds[$keyword];
+        $read[$name][$option] = $value;
+      }
+      elseif ($keyword === 'pattern' && is_string($value) && ($back = ConstraintKeywords::read(['pattern' => $value], ['string'])[0] ?? NULL)?->constraint === 'Regex') {
+        $read['Regex'] = ['pattern' => $back->options['pattern']];
+      }
+      elseif ($keyword === 'enum' && is_array($value)) {
+        $read['Choice'] = ['choices' => array_values($value)];
+      }
+      elseif ($keyword === PortableKeywords::CHECK && is_array($value)) {
+        foreach ($value as $id => $options) {
+          if (!str_starts_with((string) $id, PortableKeywords::PROVIDER)) {
+            throw new \InvalidArgumentException(sprintf('withConstraint("%s") was given the check %s: a context narrows by a check of this site, %s<plugin id>.', $key, $id, PortableKeywords::PROVIDER));
+          }
+          $name = substr((string) $id, strlen(PortableKeywords::PROVIDER));
+          $read[$name] = ($read[$name] ?? []) + (array) $options;
+        }
+      }
+      else {
+        throw new \InvalidArgumentException(sprintf('withConstraint("%s") was given %s: a context narrows by a bound, a pattern, the values to keep (`enum`), or a check of this site.', $key, $keyword === 'a boolean schema' ? $keyword : '`' . $keyword . '`'));
+      }
+    }
+    if ($read === []) {
+      throw new \InvalidArgumentException(sprintf('withConstraint("%s") was given a Schema that adds nothing.', $key));
+    }
+    return $read;
   }
 
   /**

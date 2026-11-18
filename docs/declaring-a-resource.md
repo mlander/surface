@@ -460,7 +460,7 @@ whether it must be given. The attributes say the rest:
 | `addEach('on_sale', 'boolean', from:, label:)`, `attachEach()` | `#[Each('boolean', from:, label:)]`, each entry's rules `#[Schema(additionalProperties: [...])]`; `#[AttachEach(Structure::class, from:, label:)]` on an array property |
 | `reads('listed', 'boolean')` | `#[Port] public bool $listed;`, `type: 'any'` for any type |
 | `compute('slug', ..., from:, using:, when:)` | `#[Computed('Slug', from:, using:, when:)] public string $slug;` |
-| `narrow('items')->when(Condition::equals('frequency', 'weekly'))->constrain(...)` | `#[Rule(whenEquals: ['frequency', 'weekly'], constrain: ['Range', ['max' => 5]])]` on `$items` |
+| `narrow('items')->when(Condition::equals('frequency', 'weekly'))->constrain(...)` | `#[Rule(whenEquals: ['frequency', 'weekly'], constrain: ['maximum' => 5])]` on `$items` |
 | `mixIn(ReviewStructure::class, reads: [...])` | `#[MixIn(ReviewStructure::class, reads: [...])]` on the class |
 | `defineOutputs()` | `#[Output(...)]`, which says what `#[Input]` says, on the class implementing `DefinesOutputsInterface` |
 

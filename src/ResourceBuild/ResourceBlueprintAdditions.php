@@ -182,9 +182,9 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    *
    * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
-    if ($description !== NULL || $required || $storedAs !== NULL) {
-      return static::stated($this->attach($key, $structure, $label, $reads), $description, $required, $storedAs, References::STORED_AS);
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): MapDataDefinition {
+    if ($description !== NULL || $required || $storedAs !== NULL || $widget !== NULL) {
+      return static::stated($this->attach($key, $structure, $label, $reads), $description, $required, $storedAs, References::STORED_AS, $widget);
     }
     static::assertNoShape('attach', $key, $structure);
     $this->assertWithinMixin('attaches ' . $structure, NULL);

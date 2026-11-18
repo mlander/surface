@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples\Structure;
 
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
@@ -50,15 +48,15 @@ final class VenueListingStructure implements StructureInterface, DefinesOutputsI
    * {@inheritdoc}
    */
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $item = MapDataDefinition::create()
-      ->setLabel(t('Venue'))
-      ->setPropertyDefinition('id', DataDefinition::create('string')->setLabel(t('Machine name'))->setRequired(TRUE))
-      ->setPropertyDefinition('label', DataDefinition::create('string')->setLabel(t('Name'))->setRequired(TRUE))
-      ->setPropertyDefinition('capacity', DataDefinition::create('integer')->setLabel(t('Capacity'))->setRequired(TRUE))
-      ->setPropertyDefinition('weight', DataDefinition::create('integer')->setLabel(t('Weight'))->setRequired(TRUE));
-    $outputs->addList('items', $item, t('Venues'))
-      ->setDescription(t('The page of venues, lighter first, each one the account may read.'))
-      ->setRequired(TRUE);
+    $outputs->addSchema('items', Schema::list(Schema::object([
+      'id' => Schema::string()->title(t('Machine name'))->required(),
+      'label' => Schema::string()->title(t('Name'))->required(),
+      'capacity' => Schema::integer()->title(t('Capacity'))->required(),
+      'weight' => Schema::integer()->title(t('Weight'))->required(),
+    ])->title(t('Venue')))
+      ->title(t('Venues'))
+      ->description(t('The page of venues, lighter first, each one the account may read.'))
+      ->required());
 
     $outputs->addSchema('total', Schema::integer()
       ->title(t('Total'))

@@ -48,7 +48,7 @@ final class SpiceRackResource implements ResourceInterface {
    */
   #[Operation('create', label: 'Add a spice rack', creates: TRUE)]
   public static function create(): OperationContext {
-    return (new OperationContext())->withConstraint('spices', 'Range', ['min' => 0, 'max' => 10]);
+    return (new OperationContext())->withConstraint('spices', Schema::any()->minimum(0)->maximum(10));
   }
 
   /**
@@ -56,7 +56,7 @@ final class SpiceRackResource implements ResourceInterface {
    */
   #[Operation('browse', label: 'Browse a spice rack')]
   public static function browse(): OperationContext {
-    return (new OperationContext('browse'))->withConstraint('spices', 'Range', ['min' => 0, 'max' => 10]);
+    return (new OperationContext('browse'))->withConstraint('spices', Schema::any()->minimum(0)->maximum(10));
   }
 
   /**

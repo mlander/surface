@@ -69,7 +69,7 @@ final class BlockPlacementResource implements ResourceInterface {
     $block = \Drupal::classResolver(BlockPlacementStorage::class)->named($id, 'The "update" operation of block.placement');
     assert($block instanceof BlockInterface);
     return (new OperationContext(known: ['id' => (string) $block->id()]))
-      ->withConstraint('theme', 'Choice', ['choices' => [$block->getTheme()]]);
+      ->withConstraint('theme', Schema::enum([$block->getTheme()]));
   }
 
   /**

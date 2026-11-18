@@ -911,7 +911,10 @@ final class PropertyDeclaration {
       $rule->require();
     }
     if ($declared->constrain !== NULL) {
-      $rule->constrain($declared->constrain[0], $declared->constrain[1]);
+      if (array_is_list($declared->constrain)) {
+        throw new \InvalidArgumentException('#[Rule] takes constrain: as keywords by name, constrain: [\'maximum\' => 5], not a constraint and its options.');
+      }
+      $rule->constrain(Schema::keywords($declared->constrain));
     }
     if ($declared->because !== NULL) {
       $rule->because(self::label($declared->because));

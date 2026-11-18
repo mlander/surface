@@ -7,6 +7,7 @@ namespace Drupal\surface_resource_test\Structure\Broken;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * A structure with one key, "created", as the timestamps have.
@@ -18,7 +19,8 @@ final class CreatedOnlyStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('created', 'string', 'Created');
+    $inputs->addSchema('created', Schema::string()
+      ->title('Created'));
   }
 
 }
