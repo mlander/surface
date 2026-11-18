@@ -98,7 +98,7 @@ final class ConceptPanel {
       'docs/resources.md#an-alters-answer',
     ],
     'event.doors' => [
-      'docs/recipes.md',
+      'docs/how-to.md',
       'docs/semantics.md#absent-null-or-a-value',
       'docs/storage.md#a-schema-generated-from-the-resource',
     ],

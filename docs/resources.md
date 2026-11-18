@@ -390,7 +390,7 @@ value names ([decision](decisions.md#an-operation-is-handed-values-never-objects
 The create needs nothing more, so it is the attribute
 alone on the class: the build holds the machine name it creates under
 to one no content type has, with the stock `SurfaceUnique`
-([A title and a machine name](recipes.md#a-title-and-a-machine-name)).
+([A title and a machine name](how-to.md#a-title-and-a-machine-name)).
 A settings object's one `configure` is the attribute alone too, as on
 [the first resource](first-resource.md):
 
@@ -2388,7 +2388,7 @@ timestamps' two are the journal's own.
 ### Reusing a structure from another module
 
 A structure declared in one module is attached by another the same way
-its own module attaches it. The recipe:
+its own module attaches it. The how-to:
 
 1. **Depend on the structure's module** in the reusing module's
    `.info.yml`, so the class is discovered wherever it is attached.

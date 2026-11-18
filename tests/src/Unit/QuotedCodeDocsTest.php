@@ -14,14 +14,14 @@ use PHPUnit\Framework\Attributes\Group;
  * Each block a page marks, as on the first resource page
  * (FirstResourceDocsTest says how), is that code as it is:
  *
- * - "Common settings recipes" quotes the test module's opening hours and
+ * - "How-to: common settings" quotes the test module's opening hours and
  *   the widget beside it, and every snippet on it is marked, so what a
- *   reader copies is code that builds. RecipesTest holds the fixture to
- *   what the page says each recipe does.
+ *   reader copies is code that builds. HowToTest holds the fixture to
+ *   what the page says each how-to does.
  * - "Resources and structures" quotes the examples' compliance alter
  *   whole, with the two schemas that describe its keys.
  * - "Storage" quotes the opening hours' fully validatable schema, which
- *   RecipesTest holds to what the page says it asks.
+ *   HowToTest holds to what the page says it asks.
  * - "Transformations" quotes the coercion rule, the storage layouts, the tool
  *   door's parameter typed as its key, the id an entity is handed over
  *   as, the commit and the computed values it puts in their places.
@@ -35,15 +35,15 @@ use PHPUnit\Framework\Attributes\Group;
 class QuotedCodeDocsTest extends UnitTestCase {
 
   /**
-   * The recipes page, relative to the module root.
+   * The how-to page, relative to the module root.
    */
-  public const RECIPES = 'docs/recipes.md';
+  public const HOW_TO = 'docs/how-to.md';
 
   /**
    * The pages, relative to the module root.
    */
   public const PAGES = [
-    self::RECIPES,
+    self::HOW_TO,
     'docs/resources.md',
     'docs/storage.md',
     'docs/transformations.md',
@@ -95,11 +95,11 @@ class QuotedCodeDocsTest extends UnitTestCase {
   }
 
   /**
-   * Tests every snippet on the recipes page is marked, one per recipe.
+   * Tests every snippet on the how-to page is marked, one per how-to.
    */
-  public function testEveryRecipeIsPinned(): void {
-    $page = FirstResourceDocsTest::page(self::RECIPES);
-    $blocks = FirstResourceDocsTest::blocks([self::RECIPES]);
+  public function testEveryHowToIsPinned(): void {
+    $page = FirstResourceDocsTest::page(self::HOW_TO);
+    $blocks = FirstResourceDocsTest::blocks([self::HOW_TO]);
     $this->assertCount(substr_count($page, "```php\n"), $blocks, 'A snippet with no marker is held to nothing.');
     $this->assertGreaterThanOrEqual(substr_count($page, "\n## "), count($blocks));
   }

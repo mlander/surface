@@ -218,8 +218,8 @@ sequence stores `[]`, and `nullable: true` on one only lets a schema
 written for an object that was not fully validatable keep what it said.
 To check a stored object, ask core's typed config:
 `\Drupal::service('config.typed')->get('<name>')->validate()` answers
-no violation. The test module's opening hours, whose recipes are
-[Common settings recipes](recipes.md), always hold the after-hours flag,
+no violation. The test module's opening hours, whose how-tos are
+[How-to: common settings](how-to.md), always hold the after-hours flag,
 the keywords and the holidays, which `OpeningHoursStorage::ALWAYS_HELD`
 names, and may hold nothing for the notes and for the door code, which
 is installed holding nothing:
@@ -405,8 +405,8 @@ it gives in place of the asked one, labeled with the key's own label
 where the schema gives none, and `nullable: true` on a key asked as one
 value by the three-way rule. A key the storage keeps under another name
 is still told with `configSchemaPaths()`, which answers the schema's
-property for each key. The recipe
-[Asked as checkboxes, stored as a list of ids](recipes.md#asked-as-checkboxes-stored-as-a-list-of-ids)
+property for each key. The how-to
+[Asked as checkboxes, stored as a list of ids](how-to.md#asked-as-checkboxes-stored-as-a-list-of-ids)
 shows all of it
 (why: [decision](decisions.md#a-storage-layout-is-the-storages-one-word-on-its-shape)).
 

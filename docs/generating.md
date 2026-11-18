@@ -52,7 +52,7 @@ In the order asked, each default in brackets:
    `$inputs->compute('id', Schema::of('drupal:config/machine_name')->title(t('Machine
    name')), from: ['label'], using: MachineName::class, when:
    Compute::UNLESS_SENT)`
-   ([A title and a machine name](recipes.md#a-title-and-a-machine-name)).
+   ([A title and a machine name](how-to.md#a-title-and-a-machine-name)).
 6. **Operation label** [Configure the ...] and **Operation description**,
    the first thing an agent reads about the tool.
 7. **Config object** [`<module>.<class name>`]: one of the module's own.

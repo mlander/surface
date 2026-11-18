@@ -14,16 +14,16 @@ use Drupal\surface_resource_test\Storage\OpeningHoursStorage;
 use PortableSchema\Builder\Schema;
 
 /**
- * A library's opening hours: the common settings recipes, each a key.
+ * A library's opening hours: the common settings how-tos, each a key.
  *
  * Its config schema is fully validatable, so a key its schema does not
  * call nullable is always held: the holidays choice offers no empty
  * option, and null is refused for it naming its default
  * (docs/decisions.md#a-key-its-storage-always-holds).
  *
- * The recipes page, docs/recipes.md, quotes these keys, and
+ * The how-to page, docs/how-to.md, quotes these keys, and
  * QuotedCodeDocsTest fails when the page and this class differ;
- * RecipesTest holds each recipe to what the page says it does.
+ * HowToTest holds each how-to to what the page says it does.
  */
 #[Resource('resource_test.opening_hours', storage: OpeningHoursStorage::class)]
 final class OpeningHoursResource implements ResourceInterface {

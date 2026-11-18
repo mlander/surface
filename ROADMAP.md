@@ -463,7 +463,7 @@ renames sit in A because they are cheapest before new code exists.
   the log asked, the two contradictions, the three bugs, and defaults
   out of the tool listing (item 9). As planned: ship a storage class for a simple config object
   (the most common case has none; the docs only say it was removed);
-  a settings-page recipe at the top of the README, which becomes the
+  a settings-page how-to at the top of the README, which becomes the
   pinned "Your first resource" page; document the permissions file and
   the config schema convention for keys another module mounts; fix the
   two contradictions (a page saying nothing emits a schema; two
@@ -975,7 +975,7 @@ renames sit in A because they are cheapest before new code exists.
       that too.
 
 14. **From the gates (2026-10-19).** The two gates of item 13 were folded
-    in on 2026-10-19: the recipes page, a whole alter, the cosmetic
+    in on 2026-10-19: the how-to page, a whole alter, the cosmetic
     seam's posted shape, refusals naming a declared rule's condition,
     plain text in the machine documents, items never null, composites
     as `allOf` and `anyOf`, and the maxlength message. Not built, each
@@ -1008,7 +1008,7 @@ renames sit in A because they are cheapest before new code exists.
       input, each asked for with `setSetting('widget', ...)`, at both
       doors (`docs/decisions.md#a-widget-is-chosen-from-the-definition`).
     - **A time-of-day type**: today a string with a Regex, or minutes
-      when a rule compares it (`docs/recipes.md`). (Fresh eyes, 6.) The
+      when a rule compares it (`docs/how-to.md`). (Fresh eyes, 6.) The
       widget is DONE 2026-10-19 (`setSetting('widget', 'time')`, a time
       input at both doors); a type of its own is still not built.
     - **Site-derived keys cost a deriver**: 107 lines for pathauto's,

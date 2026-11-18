@@ -5735,7 +5735,7 @@ condition is runtime. Each choice, and why:
   on its slice of the list alone (not built; its refiner says it).
 - **`unless()`, and no double negation in the schema** (2026-10-20,
   from the DX reviews). `->unless($c)` is `->when(Condition::not($c))`,
-  under the same one-condition check: the recipe every toggle copies
+  under the same one-condition check: the how-to every toggle copies
   ("the door code does not apply unless after-hours access is on") read
   as two negations. `unless` is a word of the rule, not of the closed
   condition vocabulary, and states the same `if`. Where the conditional
@@ -6835,7 +6835,7 @@ format core is asked to replace with data definitions
   dotted path; the schema leaves `nullable: true` off them, and
   `mayClear()` reads it back. So the generated schemas keep every key's
   nullability as it was: example 11's badges and greeters and the
-  recipes' after-hours flag, keywords and holidays always held, every
+  how-tos' after-hours flag, keywords and holidays always held, every
   other optional key cleared by null. Deriving it from a declared
   default was tried and turned down: it made every optional key with a
   default refuse null on objects that were not fully validatable, a
@@ -7456,7 +7456,7 @@ match, and such a module kept its schema written by hand.
   on the values as asked (the pathauto port leaves out a type whose path
   field another module provides there, then calls the parent).
 
-Moved onto it: the recipe's alias settings (`CheckedListStorageLayout`), and
+Moved onto it: the how-to's alias settings (`CheckedListStorageLayout`), and
 the pathauto port on the development site, whose `widerThanSchema()`
 and `load()` overrides are gone.
 

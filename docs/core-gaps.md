@@ -724,7 +724,7 @@ cannot disagree with the API because both read one declaration.
   every piece worked the first time it was wired
   ([the log](fresh-eyes-2026-10-18.md)). Its verdict was yes for the
   schema and API half, not yet for forms; its three suggestions (a
-  storage class for a config object with a settings page recipe, "this
+  storage class for a config object with a settings page how-to, "this
   key does not apply" as an idea of its own, and the rule's own message
   reaching the person) have since been built.
 - **Fresh eyes, 2026-10-19.** A second agent built a library's opening

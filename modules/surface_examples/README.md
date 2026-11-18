@@ -2168,7 +2168,7 @@ of code, counted without blank lines or comments:
 
 `/surface-examples/11`
 
-The live companion of [Common settings recipes](../../docs/recipes.md):
+The live companion of [How-to: common settings](../../docs/how-to.md):
 every stock widget, each chosen by what its key declares. A time input
 for a string that asks for one; checkboxes for a list of three choices;
 radios for one choice that asks for them; a text area for a multiline

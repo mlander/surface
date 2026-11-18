@@ -97,7 +97,7 @@ use Symfony\Component\Yaml\Yaml;
  * gives, and a key that refers to a content entity, as a `uuid`. Its
  * install value is the one the file gives, else nothing: a declared
  * default is in the layout it is asked for; see
- * docs/recipes.md#asked-as-checkboxes-stored-as-a-list-of-ids.
+ * docs/how-to.md#asked-as-checkboxes-stored-as-a-list-of-ids.
  *
  * A storage that keeps a key under a dotted path (ConfigObjectResourceStorage's
  * STORED_AT) stores to a schema written by hand, beside keys the resource

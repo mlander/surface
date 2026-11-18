@@ -101,7 +101,7 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
    *
    * The alias settings ask for a checkbox per type, and their storage keeps
    * the list of the types checked through its storage layout, as
-   * docs/recipes.md shows. The storage layout says the stored schema of the key
+   * docs/how-to.md shows. The storage layout says the stored schema of the key
    * it translates, a sequence of strings: the check skips the key, so the build
    * passes, and the generator writes that schema rather than the asked one.
    */

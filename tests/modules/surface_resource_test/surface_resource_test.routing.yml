@@ -112,7 +112,7 @@ surface_resource_test.gallery:
     _surface_operation: 'configure'
 
 # The opening hours' one operation, served by the generic form: the
-# common settings recipes, drawn by the stock widgets (docs/recipes.md).
+# common settings how-tos, drawn by the stock widgets (docs/how-to.md).
 surface_resource_test.opening_hours:
   path: '/surface-test/opening-hours'
   defaults:

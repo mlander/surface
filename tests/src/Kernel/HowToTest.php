@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Holds each common settings recipe to what docs/recipes.md says it does.
+ * Holds each common settings how-to to what docs/how-to.md says it does.
  *
  * QuotedCodeDocsTest holds the page's code to the fixture; this holds the
  * fixture to the page's words: what each key draws, what the full schema
@@ -21,7 +21,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class RecipesTest extends SurfaceKernelTestBase {
+class HowToTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -76,9 +76,9 @@ class RecipesTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests each recipe draws the element the page says.
+   * Tests each how-to draws the element the page says.
    */
-  public function testEachRecipeDraws(): void {
+  public function testEachHowToDraws(): void {
     $hours = $this->hours();
     $form = $this->formBuilder()->buildSurfaceForm($hours, $hours->getDefaultValues(), new FormState());
     $this->assertSame(['date', 'time'], [$form['opens']['#type'], $form['opens']['#attributes']['type']], 'A time of day is a time input.');
@@ -107,9 +107,9 @@ class RecipesTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests each recipe refuses what the page says.
+   * Tests each how-to refuses what the page says.
    */
-  public function testEachRecipeRefuses(): void {
+  public function testEachHowToRefuses(): void {
     $this->assertSame([], $this->refusals([]));
     $this->assertSame(['opens' => 'Write the time as HH:MM, such as 09:00.'], $this->refusals(['opens' => '9am']));
     $closes = $this->refusals(['closes' => 720]);

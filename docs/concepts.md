@@ -10,7 +10,7 @@ need it, and the sentence that lets you skip it. The four marked **1**
 are all [Your first resource](first-resource.md) uses; a working settings
 page needs nothing else. Read a row only when its question is yours. A
 time of day, a multi-select, a text area and the other keys a settings
-page often asks for are [Common settings recipes](recipes.md), one
+page often asks for are [How-to: common settings](how-to.md), one
 snippet each. Six rows are ways to make one resource or structure of
 others (an attached child, a mixin, a port, variants, a collection, keys
 and variants from the site);
@@ -52,7 +52,7 @@ first resource's (`surface_examples_first`); a dash where none does.
 | Secret, `writeOnly(TRUE)` | - | Is a value write-only, such as an API key? A secret of a variant not chosen is kept as stored. | Every value may be read back. | 14 | `/surface-examples/14` |
 | Resolve, `resolve($key, from:, using:)` | - | Should the code that uses a resource read another value at a key than the one stored, such as a managed key's value in place of a pasted one, while another key names it? Read with `Resources::resolved()`; never stored, and stated by no document ([Resources](resources.md#standing-in-for-a-key-at-use)). | The code reads what is stored, or the declaring class declares both sources itself, as variants. | 14 | `/surface-examples/14/webhook` (with `surface_examples_keys`) |
 | Computed key, `compute()` | - | Does a key follow others, a value nobody types, such as a slug from a name, set once or again whenever they change? ([Declaring a resource](declaring-a-resource.md#computed-keys)) | A caller types it; or it needs a service or the clock, such as a changed time, which a storage's `prepare()` adds. | 15 | `/surface-examples/15/add` |
-| Machine name, `compute($key, 'machine_name', ..., using: MachineName::class, when: Compute::UNLESS_SENT)` | - | Does a thing have a name and a machine name suggested from it, which a person may type over, held once, and fixed once the thing exists? ([Recipe](recipes.md#a-title-and-a-machine-name)) | The identity is a number storage hands out, or nobody names the thing. | 15 | `/surface-examples/15/add`; `/admin/structure/types/surface-add` (with `surface_examples_node_type`) |
+| Machine name, `compute($key, 'machine_name', ..., using: MachineName::class, when: Compute::UNLESS_SENT)` | - | Does a thing have a name and a machine name suggested from it, which a person may type over, held once, and fixed once the thing exists? ([How-to](how-to.md#a-title-and-a-machine-name)) | The identity is a number storage hands out, or nobody names the thing. | 15 | `/surface-examples/15/add`; `/admin/structure/types/surface-add` (with `surface_examples_node_type`) |
 | Examples, `examples([...])` | - | Should a caller see what a valid value looks like? Both documents state it; a form shows it only as a placeholder the key's arrangement declares. | The label says enough. | 4, 8 | `/surface-examples/8/desk` |
 | Arrangement, `$inputs->describe($key, group: ...)` | - | Should keys sit in a group (a fieldset or a details), in another order, or show a placeholder, a prefix, a suffix or a help text, on every form that draws them and in React? ([Generated forms](forms.md#arranging-the-keys)) | Declaration order and the labels are the form you want. | - | `/admin/structure/types/surface-add` (with `surface_examples_node_type`) |
 | Storage layout, `StorageLayoutInterface` | - | Is a value stored differently from how a person is asked for it? | It is stored as asked. | - | - |

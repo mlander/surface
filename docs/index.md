@@ -25,7 +25,7 @@ install; read it first.
   surface:resource`, the first page's files from an interview, a config
   schema entry or a JSON Schema document, and the comments it leaves for
   what it cannot write.
-- [Common settings recipes](recipes.md): a time of day, a multi-select,
+- [How-to: common settings](how-to.md): a time of day, a multi-select,
   a text area and the other keys a settings page often asks for, one
   snippet each.
 - [See what your site has](catalog-command.md): `drush surface:catalog`,

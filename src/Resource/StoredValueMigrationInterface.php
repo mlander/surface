@@ -9,7 +9,7 @@ namespace Drupal\surface\Resource;
  *
  * Designed, not run yet: discovery refuses a `version` above 1 until the
  * runner is built (ROADMAP.md, Phase D item 13), so nothing calls this.
- * It is here so the recipe in docs/evolution.md names a real interface.
+ * It is here so the how-to in docs/evolution.md names a real interface.
  *
  * A resource or structure that raised its `version` implements it, on the
  * class that declares the version, since a structure is stored by every

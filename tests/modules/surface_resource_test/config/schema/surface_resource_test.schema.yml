@@ -468,7 +468,7 @@ surface_resource_test.exhibit:
               label: 'Policy'
               nullable: true
 
-# The opening hours fixture: the common settings recipes (docs/recipes.md).
+# The opening hours fixture: the common settings how-tos (docs/how-to.md).
 # Fully validatable, so a key not marked nullable always holds a value.
 # Generated from the resource_test.opening_hours resource by drush surface:config-schema.
 surface_resource_test.opening_hours:

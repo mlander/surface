@@ -21,12 +21,12 @@ Started reading: 07:02 (Mon Oct 19 2026, from `date`).
 13. Concept: fully validatable config schema. docs/storage.md#a-simple-config-object says `constraints: {FullyValidatable: ~}` at the root and that only `nullable: true` keys may be emptied. Did tell me what changes, but not what "fully validatable" demands of the schema author (core's rule that every leaf needs constraints and every key is required unless requiredKey: false). Guess: I add a constraint to each leaf by hand (Length, Choice, Regex, Range). The docs say the opening hours fixture is such an object, but that fixture is off limits to me, so no example of a fully validatable schema is reachable from the allowed pages.
 14. Concept: radios. docs/widgets.md#which-element-a-list-of-choices-is: `->setSetting('widget', 'radios')` on a single LabeledChoice key. Did tell me; concepts.md pointed there correctly.
 15. Concept: served contract and React. docs/served-contract.md#where-to-see-it and #the-endpoints give `GET /surface-api/{resource}/{operation}` and `/schema`; modules/data_surface_react/README.md gives the page `/surface-react/{resource}/{operation}`. Explained well.
-16. Searched for the namespaces of KeysFromSiteInterface and KeyedList. Not in any doc page, not in data_surface.api.php, not in any shipped submodule (grep of modules/ found no addEach user). Found by `find src -name KeysFromSiteInterface.php`: both are `Drupal\data_surface\Resource\`. Shape, ShapeInterface, Structure, Condition, Alters, AltersInputsInterface I found as `use` lines in shipped submodules. DoesNotApply is `Drupal\data_surface\Refinement\DoesNotApply` (given in refinement.md). recipes.md#one-key-per-thing-the-site-has should show the provider's use lines and class header.
+16. Searched for the namespaces of KeysFromSiteInterface and KeyedList. Not in any doc page, not in data_surface.api.php, not in any shipped submodule (grep of modules/ found no addEach user). Found by `find src -name KeysFromSiteInterface.php`: both are `Drupal\data_surface\Resource\`. Shape, ShapeInterface, Structure, Condition, Alters, AltersInputsInterface I found as `use` lines in shipped submodules. DoesNotApply is `Drupal\data_surface\Refinement\DoesNotApply` (given in refinement.md). how-to.md#one-key-per-thing-the-site-has should show the provider's use lines and class header.
 17. Reading time: started 07:02:11, first line of code after 07:04 by the shell clock (see (d) for the caveat).
 18. Both modules installed on the first try, no build refusal. (Drush printed many "ComponentMetadataRequirementsChecker.php:111" warnings; those come from an unrelated SDC module on this site, not from data_surface.) That the first build passed is the strongest thing I can say for the docs: concepts.md + recipes.md + resources.md#a-whole-alter + declaring-a-resource.md#named-shapes were enough to write all eleven files without a single refused build.
 19. `drush tool:info` observations (first-resource.md#7 told me the tool name and the command, correctly):
     - the locked content type (`include.page`) shows nothing in the "Locked" column, although resources.md#keys-that-come-from-the-site says a locked thing is "locked in the tool listing". Either the nested rows never fill that column, or the lock is missing. Still to check with a write.
-    - `weekdays` lists "items: mon|tue|wed|thu|fri|sat|sun|null", although recipes.md#a-multi-select says "An item is never null in either schema". Not necessarily a disagreement (the tool listing is a third rendering, the Tool API's), but a reader will see `null` and wonder.
+    - `weekdays` lists "items: mon|tue|wed|thu|fri|sat|sun|null", although how-to.md#a-multi-select says "An item is never null in either schema". Not necessarily a disagreement (the tool listing is a third rendering, the Tool API's), but a reader will see `null` and wonder.
     - `send_at` and `reply_to` show no pattern in the Constraints column, so the tool listing does not say a time must be HH:MM or that the reply-to must end in @example.org. served-contract.md#where-to-see-it does warn that tool:info is the Tool API's lossy rendering; good that it was said.
     - `name` says "Depends on sender.email." and `max_articles` "Depends on..." once the extras module is on: as resources.md#tools promised.
     - The Description column is truncated by the table; I could not read the full text from this command.
@@ -61,11 +61,11 @@ Finished: 07:11:08 by the shell clock.
 2. Permission and route on DataSurfaceOperationForm with `_data_surface_operation_access`: docs/first-resource.md#5, #6.
 3. The tool and the read tool, `drush tool:run --uid=1`: docs/first-resource.md#7.
 4. The concept map (Shape, Declared rule, DoesNotApply, Structure, attach, Alter, Mounted keys, addEach, Served contract): docs/concepts.md.
-5. Time of day as a string with a Regex and `widget: time`: docs/recipes.md#a-time-of-day.
-6. Multi-select (list of LabeledChoice, checkboxes up to twelve), required means configured: docs/recipes.md#a-multi-select.
+5. Time of day as a string with a Regex and `widget: time`: docs/how-to.md#a-time-of-day.
+6. Multi-select (list of LabeledChoice, checkboxes up to twelve), required means configured: docs/how-to.md#a-multi-select.
 7. Applies only when, then required (`setRequired` + `narrow()->when()->doesNotApply()`): docs/recipes.md, section of that name.
-8. List of free strings drawn as rows: docs/recipes.md#a-list-of-free-strings.
-9. One key per thing the site has (addEach, provider, KeyedList, locked): docs/recipes.md#one-key-per-thing-the-site-has, then docs/resources.md#keys-that-come-from-the-site.
+8. List of free strings drawn as rows: docs/how-to.md#a-list-of-free-strings.
+9. One key per thing the site has (addEach, provider, KeyedList, locked): docs/how-to.md#one-key-per-thing-the-site-has, then docs/resources.md#keys-that-come-from-the-site.
 10. Declared rule, its condition and effect vocabulary: docs/refinement.md#declaring-a-rule.
 11. An alter's rule on the owner's keys: docs/refinement.md (where this does not reach yet) and docs/resources.md#alters.
 12. Named shape: docs/declaring-a-resource.md#named-shapes.

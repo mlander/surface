@@ -397,5 +397,5 @@ also come from a config schema entry or a JSON Schema document
   values depend on another's.
 - [Concepts](concepts.md): every other idea in the module, the question
   that makes you need it, and how to tell you do not.
-- [Common settings recipes](recipes.md): a time of day, a multi-select,
+- [How-to: common settings](how-to.md): a time of day, a multi-select,
   a text area and a few more, one snippet each.

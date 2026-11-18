@@ -107,9 +107,9 @@ class AddDefinitionListTest extends SurfaceKernelTestBase {
    * Tests the opening hours' lists, as the recipes page quotes them.
    *
    * Declared into a blueprint of their own: what the lists are is the
-   * declaration's, and RecipesTest holds the built resource to the page.
+   * declaration's, and HowToTest holds the built resource to the page.
    */
-  public function testTheRecipesLists(): void {
+  public function testTheHowToLists(): void {
     $builder = new SurfaceBuilder();
     OpeningHoursResource::defineInputs(new ResourceBlueprint($builder, $this->container->get('typed_data_manager')));
 

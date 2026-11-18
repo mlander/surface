@@ -1,4 +1,4 @@
-# Common settings recipes
+# How-to: common settings
 
 Each section below declares one kind of key that settings pages often
 need, for when [Your first resource](first-resource.md) does not show
@@ -16,7 +16,7 @@ workshop, the eighth the schema test module's alias settings
 and the last example 15's venue.
 A test fails if this page and the class differ, and another holds each
 key to what this page says it does. Read
-[Your first resource](first-resource.md) first: a recipe is a few more
+[Your first resource](first-resource.md) first: a how-to is a few more
 lines in the same method. To try them on a page, example 11 of the
 examples module, `/surface-examples/11`, holds a time, checkboxes,
 radios, a text area and a list of free strings, and shows what a key

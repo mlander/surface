@@ -212,7 +212,7 @@ things set it apart:
   when the resource is built, and so are a condition comparing a key
   with a value of another type, a rule with no condition (a rule that
   holds whatever the other keys hold is a rule in the key's schema in
-  `defineInputs()`: [recipe](recipes.md#an-unconditional-rule-is-a-constraint)),
+  `defineInputs()`: [how-to](how-to.md#an-unconditional-rule-is-a-constraint)),
   and a rule requiring a key a refiner may rule out.
 
 The full schema states each rule as written, one conditional whose
