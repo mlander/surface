@@ -141,7 +141,12 @@ services:
   # own schema refuses is handed to no refiner.
   surface.watched_value_check:
     class: Drupal\surface\Refinement\WatchedValueCheck
-    arguments: ['@surface.pipeline']
+    arguments: ['@surface.pipeline', '@surface.watched_value_answers']
+  # What the watched-value check computed in this request, by the schema and
+  # the value; dropped on every cache tag invalidation.
+  surface.watched_value_answers:
+    class: Drupal\surface\Refinement\WatchedValueAnswers
+    arguments: ['@surface.contract_emitter']
   # An operation's arguments from a route's parameters or a tool's inputs,
   # by name: values, which the operation's storage loads what they name by.
   surface.operation_arguments:

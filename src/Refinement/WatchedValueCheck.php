@@ -10,7 +10,7 @@ use Drupal\surface\Contract\NodeFacts;
 use Drupal\surface\Pipeline\Coercion;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\ValueState;
-use Drupal\surface\Surface;
+use Drupal\surface\SurfaceInterface;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -22,13 +22,18 @@ use PortableSchema\Builder\Schema;
  * provider, as the pipeline validates a value it is sent, so a value the
  * pipeline refuses is a value no refiner is handed. The value, as
  * accepted, is written as the document holds it first (written()). Only
- * the yes or no is
- * kept; what the refusal says is the pipeline's to report, under the key
- * that holds the value. A check that throws is not a refusal: it is
- * thrown.
+ * the yes or no is kept; what the refusal says is the pipeline's to
+ * report, under the key that holds the value. A check that throws is not
+ * a refusal: it is thrown.
+ *
+ * The holding data surface, and the answer for a schema whose checks read
+ * only the value, are kept for the request by the schema and the written
+ * value (WatchedValueAnswers): the same question is asked of the
+ * validator once.
  *
  * Decision: see
- * docs/decisions.md#outputs-conform-through-the-dialects-validator.
+ * docs/decisions.md#outputs-conform-through-the-dialects-validator, and
+ * docs/decisions.md#a-watched-value-is-asked-once-per-request.
  */
 final class WatchedValueCheck implements WatchedValueCheckInterface {
 
@@ -39,9 +44,12 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
    *
    * @param \Drupal\surface\Pipeline\SurfacePipelineInterface $pipeline
    *   The pipeline, whose conform verb holds the value.
+   * @param \Drupal\surface\Refinement\WatchedValueAnswers $answers
+   *   What was computed for the same schema and value in this request.
    */
   public function __construct(
     protected SurfacePipelineInterface $pipeline,
+    protected WatchedValueAnswers $answers,
   ) {
   }
 
@@ -50,7 +58,7 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
    */
   public function admits(Schema $schema, mixed $value): bool {
     $written = static::written($schema, $value);
-    return static::holdsIntegers($schema, $written) && $this->pipeline->conformOutput(Surface::holding($schema), ['value' => $written])->isEmpty();
+    return $this->answers->answer($schema, $written, fn (SurfaceInterface $holding): bool => static::holdsIntegers($schema, $written) && $this->pipeline->conformOutput($holding, ['value' => $written])->isEmpty());
   }
 
   /**

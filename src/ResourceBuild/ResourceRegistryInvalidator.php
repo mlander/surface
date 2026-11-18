@@ -6,6 +6,7 @@ namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
 use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\Refinement\WatchedValueAnswers;
 use Drupal\surface\Validation\PortableValidator;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -67,6 +68,13 @@ final class ResourceRegistryInvalidator implements CacheTagsInvalidatorInterface
       $validator = $this->container->get('surface.portable_validator');
       if ($validator instanceof PortableValidator) {
         $validator->forget();
+      }
+    }
+    // What the watched-value check answered, read from the same.
+    if ($this->container->initialized('surface.watched_value_answers')) {
+      $answers = $this->container->get('surface.watched_value_answers');
+      if ($answers instanceof WatchedValueAnswers) {
+        $answers->forget();
       }
     }
   }
