@@ -36,33 +36,46 @@ once. This is its resource class, `MySettingsResource`, in full:
 final class MySettingsResource implements ResourceInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Title'), default: 'Latest content')
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 64]);
+    $inputs->add('title', Schema::string()
+      ->title(t('Title'))
+      ->default('Latest content')
+      ->maxLength(64)
+      ->required());
 
-    $inputs->add('items_per_page', 'integer', t('Items per page'), default: 10)
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 50]);
+    $inputs->add('items_per_page', Schema::integer()
+      ->title(t('Items per page'))
+      ->default(10)
+      ->minimum(1)
+      ->maximum(50)
+      ->required());
 
-    $inputs->add('show_author', 'boolean', t('Show the author'), default: TRUE);
+    $inputs->add('show_author', Schema::bool()
+      ->title(t('Show the author'))
+      ->default(TRUE));
 
-    $inputs->add('notify_email', 'email', t('Email for notices'), default: 'admin@example.com');
+    $inputs->add('notify_email', Schema::string()->format('email')
+      ->title(t('Email for notices'))
+      ->default('admin@example.com'));
 
-    $inputs->add('layout', 'string', t('Layout'), default: 'list')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'list' => t('List'),
-          'grid' => t('Grid'),
-        ],
-      ]);
+    $inputs->add('layout', Schema::options([
+      'list' => t('List'),
+      'grid' => t('Grid'),
+    ])
+      ->title(t('Layout'))
+      ->default('list')
+      ->required());
   }
 
 }
 ```
 
-Each `add()` names one value: its name, its type, its label and its
-default. The calls chained after it say what the value allows. The two
+Each `add()` names one value and hands it a schema, written with the
+`Schema` class of the Portable Schema package. The first call gives the
+type (`Schema::string()`, `Schema::integer()`, `Schema::bool()`), or the
+list of values with their labels (`Schema::options()`). The calls after
+it give the label (`title()`), the default, what the value allows
+(`maxLength()`, `minimum()`, `maximum()`) and whether it must be given
+(`required()`). The two
 attributes above the class name the settings, `my_module.settings`, the
 class that saves them, and the way of asking for them with its
 permission; later pages explain each.

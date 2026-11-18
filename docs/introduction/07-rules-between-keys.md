@@ -10,23 +10,26 @@ worked out when the request comes in.
 
 ## A refiner
 
-A refiner is a static method with `#[RefinesInput]`. It takes the
-key's definition, and one parameter for each key it watches, matched
-by name. It returns the key narrowed. The placed block's region, from
-`BlockPlacementResource`:
+A refiner is a static method with `#[RefinesInput]`. It takes one
+parameter for each key it watches, matched by name, and returns a
+schema of what those values add to the key. The placed block's region,
+from `BlockPlacementResource`:
 
 ```php
 #[RefinesInput('region')]
-public static function regionsOfTheme(DataDefinitionInterface $region, string $theme): DataDefinitionInterface {
-  return $region->addConstraint('SurfaceThemeRegion', ['theme' => $theme]);
+public static function regionsOfTheme(string $theme): Schema {
+  return Schema::any()->check('drupal:SurfaceThemeRegion', ['theme' => $theme]);
 }
 ```
 
 `SurfaceThemeRegion` is a constraint this module ships: it allows
-only the regions of the theme it names. `defineInputs()` declares
-`region` as a region of any installed theme. Once `theme` holds a
-value, the refiner narrows `region` to that theme's regions. A refiner
-may narrow what a key allows; it may never widen it.
+only the regions of the theme it names. `check()` names it, since no
+JSON Schema keyword says it. `defineInputs()` declares `region` as a
+region of any installed theme. Once `theme` holds a value, the module
+adds the refiner's answer to what `region` already allows, so `region`
+narrows to that theme's regions. A refiner may narrow what a key
+allows; it may never widen it. Where its answer and the key's own
+schema both set a bound, the stricter one stands.
 
 The same theme always gives the same regions, so the module runs this
 refiner ahead of time, for every theme, and writes each answer into the

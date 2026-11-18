@@ -61,10 +61,10 @@ it reads the same everywhere and tightening it tightens every key.
 Precisely: a named type, in Smithy's sense, of which there are three
 kinds: a resource, a structure, and a named scalar shape, one value
 (its type, label, description, constraints, examples) declared once
-and used at many keys. The third is the one the attribute names: a
-class in `src/Shape/` carrying `#[Shape(id)]`, whose static `schema()`
-returns the Portable Schema of the value, used in the type position of
-`add()`;
+and used at many keys. The third is the one a shape class is: a class
+in `src/Shape/` carrying Portable Schema's `#[Document(id)]`, whose
+static `schema()` returns the Portable Schema of the value, the start of
+a key's schema as `Schema::of(Shape::class)`;
 each key may only narrow it, an alter of it tightens it at every key,
 and the served contract writes it once, as a def. Never the blueprint
 or the layout.
@@ -78,8 +78,9 @@ A key is one value a resource or structure holds, with a type, a label
 and a default.
 
 Precisely: one entry of a resource's or structure's declaration, added
-with `$inputs->add($key, $type, $label, default:)` in its static
-`defineInputs()`. What the key accepts is its definition.
+with `$inputs->add($key, $schema)` in its static `defineInputs()`, the
+schema a Portable Schema with its type, title, default and rules. What
+the key accepts is its schema.
 
 Introduced in [Keys](introduction/05-keys.md). Reference:
 [The class](declaring-a-resource.md#the-class),
@@ -103,10 +104,12 @@ Introduced in [Keys](introduction/05-keys.md). Reference:
 A rule says what a key allows: required, a length, a range, one of a
 list.
 
-Precisely: a core validation constraint on the key's definition, added
-with `addConstraint()`, or the key's required flag, set with
-`setRequired()`. A list of allowed values is a constraint too, which an
-options resolver reads as the list it offers.
+Precisely: a JSON Schema keyword on the key's schema (`maxLength()`,
+`minimum()`, `pattern()`), a named check for a Drupal constraint with no
+keyword (`check('drupal:<id>', [...])`), or `required()`. The module
+checks each with a core validation constraint. A list of allowed values
+is a rule too, `Schema::options()` or a named check, which an options
+resolver reads as the list it offers.
 
 Introduced in [Rules on a key](introduction/06-rules-on-a-key.md).
 Reference: [Required](declaring-a-resource.md#required),
@@ -117,10 +120,10 @@ Reference: [Required](declaring-a-resource.md#required),
 A rule between keys says that what one key allows depends on another
 key's value.
 
-Precisely: a narrowing of one key's definition given the values of the
+Precisely: a narrowing of one key's schema given the values of the
 siblings it watches, written as a declared rule or a refiner. It may
-only narrow what the key allows, never widen it, and the answer is
-checked narrower on every run.
+only narrow what the key allows, never widen it: its answer only adds
+rules, and of two rules the stricter stands.
 
 Introduced in [Rules between keys](introduction/07-rules-between-keys.md).
 Reference: [Refinement](refinement.md).
@@ -145,9 +148,10 @@ A refiner is a method that works out what one key allows from the
 values of other keys, for a rule a schema cannot state or one that needs
 the site.
 
-Precisely: a `#[RefinesInput]` method that returns a narrower
-definition for one key given the values of the siblings it watches. A
-refiner may restrict what a definition allows; it may never widen it.
+Precisely: a `#[RefinesInput]` method that returns a `Schema` of what
+the values of the siblings it watches add to one key, or
+`DoesNotApply::here()`. A refiner may restrict what a key allows; it
+may never widen it.
 It is static unless declared runtime: a static refiner reads only the
 values, a runtime one may read the site and is asked when the request
 comes in.
@@ -367,10 +371,10 @@ key and every rule, after the owner, other modules, the site, the page
 and access have each had their say.
 
 Precisely: what the build step seals from a resource or structure in a
-context: an immutable group of core data definitions
-(`DataDefinitionInterface`, held in a `DefinitionMap` that refuses
+context: an immutable group of keys, each a Portable Schema
+(held in a `DefinitionMap` that refuses
 writes; [Built on typed data](on-typed-data.md)), plus the map of which
-definitions depend on which others and the refiners that narrow them.
+keys depend on which others and the refiners that narrow them.
 Once sealed it is only read. It has two halves: what a host
 **accepts**, and what its execution **emits**, declared in the same
 vocabulary (see [Outputs](outputs.md)). It is what the pipeline, the
@@ -408,8 +412,8 @@ Precisely: the build step, `surface.resources`
 (`ResourceBuild\ResourcesInterface`), turns a resource or structure
 class and a context into a sealed `SurfaceInterface`. The blueprint
 is filled once at build, then sealed; the context is applied once by
-the build step. It exists because core holds no group of data
-definitions that several parties write in order and that is then fixed
+the build step. It exists because core holds no group of keys that
+several parties write in order and that is then fixed
 ([Built on typed data](on-typed-data.md)).
 
 Introduced in [Sealed](introduction/16-sealed.md). Reference:
@@ -424,8 +428,8 @@ The blueprint is the object a class writes its keys into.
 Precisely: what a resource or structure declares its keys into, handed
 to `defineInputs()` and `defineOutputs()` as a `BlueprintInterface`; an
 alter gets the add-only `BlueprintAdditionsInterface`. Each key it holds
-is a core data definition: `add()` gets a `DataDefinition` from core's
-typed data manager and returns it
+is a Portable Schema: `add()` takes the key's name and its schema, reads
+the schema at the call and returns the blueprint
 ([Built on typed data](on-typed-data.md)). Filled once at build, then
 sealed.
 
@@ -446,12 +450,16 @@ Not in the introduction. Reference:
 
 ### Definition
 
-A definition describes one value: its type, its label and its rules.
+A definition describes one value in core's Typed Data terms: its type,
+its label and its constraints.
 
 Precisely: one core `DataDefinitionInterface` describing a single
 value: its type, label, description, constraints, whether it is
 required, and the interim default and example metadata the module
-carries until core lands its own (`DefinitionMetadata`).
+carries until core lands its own (`DefinitionMetadata`). An author
+writes none: a key is a schema. A host reader hands one to
+`addDefinition()`, and the module derives one from a key's schema to
+run a Drupal constraint.
 
 Not in the introduction. Reference:
 [The class](declaring-a-resource.md#the-class).
@@ -463,7 +471,7 @@ entry per key.
 
 Precisely: everything a data surface advertises, as one ordered,
 validated collection: one entry per key, in declaration order. A
-`DefinitionMap` of `Entry` value objects, each carrying its definition,
+`DefinitionMap` of `Entry` value objects, each carrying its schema,
 who introduced it, whether it is locked, what it refines against and
 whose values it offers.
 
@@ -580,8 +588,8 @@ Reference: [Mixins](resources.md#mixins).
 Variants stored flat keep the chosen variant's keys beside the key that
 chooses it, in storage only.
 
-Precisely: variants at a key whose map says
-`->setSetting(Variants::STORED_AS, Variants::FLAT)`: a config storage
+Precisely: variants at a key attached with
+`attachVariants(..., storedAs: Variants::FLAT)`: a config storage
 keeps the chosen variant's keys beside the deciding key and nothing at
 the key (`Storage\FlatVariantsLayout`), while every door asks for them
 under the key, and the contract does not change. A storage layout, not
@@ -687,7 +695,7 @@ The pipeline is the one path every value takes from a door to storage.
 Precisely: access, accept, validate, prepare, commit: the one road from
 raw input to storage, `Pipeline\SurfacePipelineInterface`. The
 architecture is three layers that never reach into each other. A data
-surface is pure data: it holds definitions and refiners, reaches no
+surface is pure data: it holds schemas and refiners, reaches no
 service, and can therefore ride along in a cached form or be read by a
 caller with no container. The pipeline is the only thing that needs
 services, because running constraints needs the typed data manager. The
@@ -706,7 +714,7 @@ values sent to it.
 Precisely: one rule settles what is typed and what is not.
 
 **What a data surface says is objects.** It is a `DefinitionMap` of
-`Entry` value objects, one per key, each carrying its definition,
+`Entry` value objects, one per key, each carrying its schema,
 who introduced it, whether it is locked, what it refines against and
 whose values it offers. What a run refused is a `ViolationSet` of
 `Violation` objects. A resolved list of allowed values is an
@@ -720,11 +728,11 @@ config action and a stored settings array are all the same kind of
 thing, and wrapping them would buy nothing and cost every caller a
 conversion.
 
-**Authoring syntax is arrays too.** A resource or structure class hands
-core's definitions plain arrays (a constraint's options, a choice list
-with its labels) and names what a refinement reads in the method's own
-signature. Declaring one never means constructing an object graph by
-hand.
+**Authoring syntax is a schema.** A resource or structure class hands
+each key a `Schema` built with the package's methods, its checks' options
+and its lists' labels plain arrays, and names what a refinement reads in
+the method's own signature. Declaring one never means constructing a
+Typed Data object graph by hand.
 
 Not in the introduction. Reference: [Outputs](outputs.md),
 [Violations are objects](pipeline.md#violations-are-objects).
@@ -745,7 +753,7 @@ Not in the introduction. Reference:
 
 A widget draws one key as a form element and reads the value back.
 
-Precisely: maps one definition to a form element and back. A plugin
+Precisely: maps one key's schema to a form element and back. A plugin
 type, `Widget\SurfaceWidgetInterface`, its plugins in
 `Plugin/SurfaceWidget/`.
 

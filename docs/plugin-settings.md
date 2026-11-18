@@ -16,12 +16,17 @@ it describes, and delete the form code:
 final class TeaserBlockStructure implements StructureInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('headline', 'string', t('Headline'), default: 'Featured content')
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 50]);
-    $inputs->add('limit', 'integer', t('Number of items'), default: 10)
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 50]);
+    $inputs->add('headline', Schema::string()
+      ->title(t('Headline'))
+      ->default('Featured content')
+      ->maxLength(50)
+      ->required());
+    $inputs->add('limit', Schema::integer()
+      ->title(t('Number of items'))
+      ->default(10)
+      ->minimum(1)
+      ->maximum(50)
+      ->required());
   }
 
 }
@@ -46,7 +51,7 @@ discovered; nothing is registered by hand. Its declaration is static, asked
 of the class, so it is never constructed, and its labels are `t()`. The
 block has no `defaultConfiguration()`, no `blockForm()`, no
 `blockValidate()` and no `blockSubmit()`. Its configuration form is
-generated from the definitions, with a maxlength on the headline and a
+generated from the keys, with a maxlength on the headline and a
 number spinner bounded at 1 and 50.
 
 A separate class is not required. A small plugin is its own structure:
@@ -59,13 +64,18 @@ and the same static `defineInputs()` on it:
 final class TeaserBlock extends TypedBlockBase implements StructureInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('headline', 'string', t('Headline'), default: 'Featured content')
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 50]);
+    $inputs->add('headline', Schema::string()
+      ->title(t('Headline'))
+      ->default('Featured content')
+      ->maxLength(50)
+      ->required());
 
-    $inputs->add('limit', 'integer', t('Number of items'), default: 10)
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 50]);
+    $inputs->add('limit', Schema::integer()
+      ->title(t('Number of items'))
+      ->default(10)
+      ->minimum(1)
+      ->maximum(50)
+      ->required());
   }
 
   public function build(): array {

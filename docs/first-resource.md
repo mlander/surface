@@ -194,7 +194,6 @@ final class NewsletterResource implements ResourceInterface {
       'weekly' => t('Weekly'),
       'monthly' => t('Monthly'),
     ])
-      ->type('string')
       ->title(t('Frequency'))
       ->default('weekly')
       ->required());
@@ -234,15 +233,16 @@ Read it top to bottom:
   and a Portable Schema of what it holds, built from `Schema::string()`,
   `Schema::integer()`, `Schema::bool()` or `Schema::options()` with one
   method per keyword: `title()`, `description()`, `maxLength()`,
-  `format()`, `minimum()`, `maximum()`, `default()`.
+  `format()`, `minimum()`, `maximum()`, `default()`, and `required()`.
 - **The label** is `title()`. It is the form element's title, the tool's
   property label and the served schema's `title`; `description()` is the
   text under the element and the property's description.
-- **Required or not.** A key with no default is required. One with a
-  default is optional unless `required: TRUE` says otherwise, as for the
-  frequency, which always holds a value. An optional key with a default,
-  the maximum, may be cleared, which puts the default back, so the
-  served schema allows `null` for it.
+- **Required or not.** A key is required when its schema says
+  `required()`: the sender's name and email, and the frequency, which
+  starts from its default and always holds a value. Any other key is
+  optional. An optional key with a default, the maximum, may be
+  cleared, which puts the default back, so the served schema allows
+  `null` for it.
 - **What a key allows** is a keyword. `maxLength()` becomes a maximum
   length, `format('email')` an email address, `minimum()` and
   `maximum()` a number field bounded at 1 and 10000, and
@@ -384,10 +384,7 @@ surface:resource --answer=surface_examples_first --answer=first.newsletter
 permissions file the module has gains the new entry and keeps every
 other. This page still shows each file in full and stays the source of
 truth: a test answers the interview as the newsletter needs and fails
-when a single byte it writes differs from the files above, but for the
-keys, which the command writes with `add()`, the module's other
-spelling of the same keys, so the files written from them are the same.
-The keys can
+when a single byte it writes differs from the files above. The keys can
 also come from a config schema entry or a JSON Schema document
 ([Generating a resource](generating.md)).
 

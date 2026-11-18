@@ -1,7 +1,8 @@
 # Built on typed data
 
-Every key this module describes is a core typed data definition, and
-every value is validated by core's typed data validation. This page
+Every key this module describes is a Portable Schema, and every value
+is validated by core's validation constraints, run on core's typed
+data. This page
 says what core gives, what a form, a tool and an HTTP API need that
 core has no object for, which three parts the module adds to supply
 it, and why each part is needed today. [How it fits](how-it-fits.md)
@@ -29,7 +30,7 @@ Core 11's Typed Data API, in `core/lib/Drupal/Core/TypedData/`:
 ## What the doors need that core has no object for
 
 A form, a tool, an HTTP endpoint and its OpenAPI document each read the
-definitions of one thing. To read the same ones, they need:
+keys of one thing. To read the same ones, they need:
 
 - **One group, written by several parties, then fixed.** The owner's
   class, other modules, the site's defaults, what the operation knows,
@@ -49,37 +50,39 @@ definitions of one thing. To read the same ones, they need:
 
 ## What the module adds
 
-Three parts, in the order a build uses them. The definitions inside are
-core's throughout.
+Three parts, in the order a build uses them. The keys inside are
+schemas; core's typed data runs their constraints.
 
-### The blueprint: where definitions are written
+### The blueprint: where keys are written
 
 A resource or structure class writes its keys into a
 `BlueprintInterface` in `defineInputs()`; another module's alter writes
 into the add-only `BlueprintAdditionsInterface` in `alterInputs()`.
-`add()` asks core's typed data manager for the definition
-(`createDataDefinition()`, in `src/ResourceBuild/BlueprintAdapterBase.php`)
-and returns it, so the rest is core's own setters:
+`add()` takes the key's name and its schema, reads the schema at the
+call and returns the blueprint, so nothing changes the key afterwards:
 
 ```php
-public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition;
+public function add(string $key, Schema $schema): static;
 ```
 
 The types a key may hold are a fixed table, `Contract\LeafTypes`, one
 row per type with the JSON Schema `type` and `format` it is written
 with: eight of core's typed data types, `string`, `email`, `uri`,
-`datetime_iso8601`, `integer`, `timestamp`, `float` and `boolean`. The
-blueprint refuses any other type, at any depth of a definition it is
-handed; the emitter writes each row; the schema reader reads a JSON type
+`datetime_iso8601`, `integer`, `timestamp`, `float` and `boolean`, which
+a key's type and format are held as. The blueprint refuses any other
+type, at any depth of a schema or a definition it is handed; the emitter writes each row; the schema reader reads a JSON type
 and format back into its row. Typed data accepts types a JSON Schema
 document cannot state (`binary`, `language`, `any`), and a key of one
 would be written with no `type`, vaguer than what the runtime holds it
 to; one table read by all three keeps the contract exactly as wide as
 the runtime ([decision](decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
 
-What core's definition has no method for, `DefinitionMetadata` writes
-onto the same object under an array key, and each of its methods calls
-core's own method instead once core has one (`src/DefinitionMetadata.php`):
+A Typed Data definition a host reader holds (a config schema type, a
+field's properties) is handed to `addDefinition()` and read into a
+schema at the call. What core's definition has no method for,
+`DefinitionMetadata` writes onto the same object under an array key,
+and each of its methods calls core's own method instead once core has
+one (`src/DefinitionMetadata.php`):
 
 ```php
 public static function setDefaultValue(DataDefinitionInterface $definition, mixed $value): void {
@@ -107,28 +110,29 @@ internal mutable stage, in a fixed order: the owner's blueprint, each
 alter's additions, the site's defaults, the context's defaults,
 constraints and locks, the refiners and the declared rules between
 keys (the owner's first), the children, each built the same way, and
-the access answer for the account. A constraint the context adds and
-every refiner's result are checked narrower than what the key had
-(`src/Refinement/Narrowing.php`). A rule between keys is data on the
+the access answer for the account. A constraint the context adds is
+checked narrower than what the key had (`src/Refinement/Narrowing.php`),
+and a refiner's answer only adds to the key, so of two rules the
+stricter stands. A rule between keys is data on the
 blueprint, as the introduction's badge alter declares it
 (`tests/modules/surface_intro_test/src/OutsideDiscovery/TeaserBadgeAlter.php`):
 
 ```php
 $inputs->narrow('limit')
   ->when(Condition::present('badge'))
-  ->constrain('Range', ['max' => 20]);
+  ->constrain(Schema::any()->maximum(20));
 ```
 
 ### The seal: what every door reads
 
 `SurfaceBuilder::seal()` returns a `SurfaceInterface`: a
-`DefinitionMap` of `Entry` objects, each holding a core definition with
+`DefinitionMap` of `Entry` objects, each holding the key's schema with
 who added it, whether it is locked and the sibling keys it depends on,
 plus the refiners the build bound (`src/DefinitionMap.php`,
-`src/Entry.php`). A door asks it for a key and gets core's definition:
+`src/Entry.php`). A door reads a key's schema from its entry:
 
 ```php
-public function getDefinition(string $name): ?DataDefinitionInterface;
+public function schema(): Schema;
 ```
 
 The map refuses writes, and the builder's mutators throw once it has
@@ -140,8 +144,8 @@ public function offsetSet(mixed $offset, mixed $value): void {
 }
 ```
 
-`refine()` hands each refiner a deep clone of a definition, never the
-sealed one. The form, the pipeline and the contract emitter
+`refine()` applies each refiner's answer to a copy of the key's
+schema, never the sealed one. The form, the pipeline and the contract emitter
 (`src/Contract/ContractEmitter.php`) read only the sealed result.
 
 ## Why each part is not core alone
@@ -155,18 +159,16 @@ sealed one. The form, the pipeline and the contract emitter
 | The seal | `DataDefinition` keeps public setters, so a group handed to a form can change before the values are validated, and nothing promises that a description is never stricter than validation. | [Step 4](core-gaps.md#step-4-a-served-contract) |
 | The JSON Schema | The serialization module's JSON Schema normalizers never read `getConstraints()`, and nothing describes what an operation accepts. | [1.2](core-gaps.md#12-constraints-as-json-schema-keywords), [step 4](core-gaps.md#step-4-a-served-contract) |
 
-## What passes through untouched
+## What stays Typed Data
 
-- **The definitions.** `add()`, `addList()`, `addMap()` and `attach()`
-  return core's `DataDefinition`, `ListDataDefinition` and
-  `MapDataDefinition`; a shape's `schema()` is read into a
-  `DataDefinition`, as `add()` reads a key's.
-  A definition an author builds by hand is one value, handed to
-  `addDefinition()`; a map or a list is built by the blueprint, so every
-  object it holds is a method that is one JSON Schema construct
+- **Host definitions.** A definition a host reader holds is one value,
+  handed to `addDefinition()`; a map or a list is built by the
+  blueprint, so every object it holds is a method that is one JSON
+  Schema construct
   ([decision](decisions.md#a-blueprint-takes-no-complex-data-types)).
-- **The constraints.** A key's rules are core validation constraint
-  plugins (`Range`, `Length`, `Regex`). The module's own, such as
+- **The constraints.** A key's rules are keywords and named checks,
+  each checked by a core validation constraint plugin (`Range`,
+  `Length`, `Regex`). The module's own, such as
   `LabeledChoice` and `UniqueItems`, are constraint plugins of the same
   kind, in `src/Plugin/Validation/Constraint/`.
 - **Validation.** One class makes typed data to run a constraint on a

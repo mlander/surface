@@ -7,7 +7,7 @@ namespace Drupal\surface\Resource\Attribute;
 /**
  * On a key's property: the widget it asks for, its `widget` setting.
  *
- * The spelling of setSetting('widget', ...), checked at the build like
+ * The spelling of ui(widget: ...), checked at the build like
  * every widget a key asks for.
  *
  * @code

@@ -49,8 +49,8 @@ interface BlueprintAdditionsInterface {
    *
    * @code
    * $inputs->addMap('coordinates', t('Coordinates'), function (BlueprintInterface $map): void {
-   *   $map->add('lat', 'float', t('Latitude'));
-   *   $map->add('lng', 'float', t('Longitude'));
+   *   $map->add('lat', Schema::number()->title(t('Latitude')));
+   *   $map->add('lng', Schema::number()->title(t('Longitude')));
    * });
    * @endcode
    *
@@ -238,7 +238,7 @@ interface BlueprintAdditionsInterface {
    * text emptied where the owner gave one is refused.
    *
    * @code
-   * $inputs->addEach('punctuation', PunctuationAction::class, from: PunctuationCharacters::class, label: t('Punctuation'));
+   * $inputs->addEach('punctuation', Schema::of(PunctuationAction::class), from: PunctuationCharacters::class, label: t('Punctuation'));
    * $inputs->describe('punctuation', group: ArrangementGroup::details('punctuation', t('Punctuation'), collapsed: TRUE));
    * @endcode
    *
@@ -447,7 +447,7 @@ interface BlueprintAdditionsInterface {
    * @code
    * $inputs->narrow('capacity')
    *   ->when(Condition::absent('license'))
-   *   ->constrain(Schema::keywords(['maximum' => 100]))
+   *   ->constrain(Schema::any()->maximum(100))
    *   ->because(t('Up to 100 without an event license.'));
    * @endcode
    *

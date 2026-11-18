@@ -36,8 +36,8 @@ pages the third column names.
 | Is this group of keys a thing of its own? | `attach($key, Child::class, $label)`: a fixed child, its keys stored as a map under the key, behind the wall; the schema refers to the child's def at the key. | The contact, `/surface-examples/3`; the press contact, `/surface-examples/8` | [Children](#children) |
 | Is this group of keys mine alone, with no class of its own? | `addMap($key, $label, fn (BlueprintInterface $map) => ...)`: an anonymous map, the owner's own keys under the key, stored as a map; the schema is an inline object, with no def. | The desk's location, `/surface-examples/8/desk` | [An anonymous map](declaring-a-resource.md#an-anonymous-map) |
 | Are these keys shared members that are part of this thing? | `mixIn(Structure::class)`: a mixin, its members the owner's own keys, stored flat beside them; the schema is `allOf` of the structure's def and the owner's properties. | The review, `/surface-examples/8` | [Mixins](#mixins) |
-| Does a structure need a value its container holds? | `reads($port, $type)` in the structure, wired by `attach(..., reads: [$port => $key])`: a port, the value kept at the container's key and stored by nothing in the structure; the def lists its ports, and what depends on one is stated on the container's `allOf`. | The person's `listed`, `/surface-examples/8` and `/surface-examples/8/desk` | [Ports](#ports) |
-| Does one key's value choose which further keys apply? | `attachVariants($key, by: $sibling, label: $label)` and a `#[Variant]` per value, or `from:` a provider that lists them from the site, each with its schema: variants, the chosen variant's keys stored under the key; the schema is an `if`/`then` on the sibling for each variant. Stored flat beside the deciding key where the storage keeps it so, `->setSetting(Variants::STORED_AS, Variants::FLAT)`; the contract does not change ([Stored flat](#stored-flat)). | The ticket, `/surface-examples/3`; a component's props, `/surface-examples/12` | [Variants](#variants), [from the site](#variants-from-the-site) |
+| Does a structure need a value its container holds? | `reads($port, $schema)` in the structure, wired by `attach(..., reads: [$port => $key])`: a port, the value kept at the container's key and stored by nothing in the structure; the def lists its ports, and what depends on one is stated on the container's `allOf`. | The person's `listed`, `/surface-examples/8` and `/surface-examples/8/desk` | [Ports](#ports) |
+| Does one key's value choose which further keys apply? | `attachVariants($key, by: $sibling, label: $label)` and a `#[Variant]` per value, or `from:` a provider that lists them from the site, each with its schema: variants, the chosen variant's keys stored under the key; the schema is an `if`/`then` on the sibling for each variant. Stored flat beside the deciding key where the storage keeps it so, `storedAs: Variants::FLAT`; the contract does not change ([Stored flat](#stored-flat)). | The ticket, `/surface-examples/3`; a component's props, `/surface-examples/12` | [Variants](#variants), [from the site](#variants-from-the-site) |
 | Does a group of keys repeat? | `attachList($key, Child::class, $label, min:, max:)`: a collection, a list under the key whose every item is the child's keys; the schema is an array whose `items` refer to the child's def, its Count as `minItems` and `maxItems`. | The volunteers, `/surface-examples/8/desk` | [Collections](#collections) |
 | Is there one key per thing the site has? | `addEach()` or `attachEach()` with a provider: keys from the site, a map under the key with one entry per thing the provider lists at every build; the schema states every entry, the map a def of the owner's. | The ticket types, `/surface-examples/9` | [Keys that come from the site](#keys-that-come-from-the-site) |
 
@@ -70,7 +70,8 @@ module the way core scans `src/Hook`:
 - A plugin carrying `#[UsesStructure]` with no argument is its own
   structure, found through its plugin definition rather than a
   directory ([Plugins](#plugins)).
-- A class in `src/Shape/` carrying `#[Shape]` is a shape: one scalar
+- A class in `src/Shape/` carrying Portable Schema's `#[Document]` with
+  an id is a shape: one scalar
   value, declared once and used at many keys ([Named shapes](declaring-a-resource.md#named-shapes)).
 - A class in `src/Alter/` carrying `#[Alters]` is an alter. It is
   registered as an autowired service, so it may hold services.
@@ -103,11 +104,11 @@ An owner may write its keys as properties carrying attributes instead of
 `defineInputs()`: the same blueprint in a second spelling, chosen per
 class ([Declared as properties](declaring-a-resource.md#declared-as-properties)).
 
-A key may also be stated as a Portable Schema, beside the Typed Data
-spelling: `$inputs->add('capacity', Schema::integer()->title(t('Capacity'))->minimum(1)->default(50))`
-is read into the same definition `add()` and a Range declare, and the
-document served for it is the same
-([Declared as a Schema](declaring-a-resource.md#declared-as-a-schema)).
+A key is a Portable Schema handed to `add()`:
+`$inputs->add('capacity', Schema::integer()->title(t('Capacity'))->minimum(1)->default(50))`
+is read at the call into the key the data surface holds, and the
+document served for it states the same keywords
+([What a key's schema may say](declaring-a-resource.md#what-a-keys-schema-may-say)).
 
 The example block's configuration, `ExampleBlockStructure` in the example module,
 is the first one written this way. It is a structure: the block holds
@@ -118,30 +119,81 @@ it, and the block's host stores it.
 final class ExampleBlockStructure implements StructureInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('entity_type', 'string', t('Entity type'), default: 'user')
-      ->setRequired(TRUE)
-      ->addConstraint('PluginExists', [
+    $source = ArrangementGroup::fieldset('source', t('What to feature'));
+
+    $inputs->add('headline', Schema::string()
+      ->title(t('Headline'))
+      ->description(t('Shown above the featured content.'))
+      ->default('Featured content')
+      ->maxLength(50)
+      ->examples(['Quarterly report'])
+      ->required());
+    $inputs->describe('headline', placeholder: t('For example, Quarterly report'));
+
+    $inputs->add('entity_type', Schema::string()
+      ->title(t('Entity type'))
+      ->description(t('The type of content to feature.'))
+      ->default('user')
+      ->check('drupal:PluginExists', [
         'manager' => 'entity_type.manager',
         'interface' => ContentEntityInterface::class,
-      ]);
+      ])
+      ->required());
+    $inputs->describe('entity_type', group: $source);
 
-    $inputs->add('bundle', 'string', t('Bundle'));
+    $inputs->add('bundle', Schema::string()
+      ->title(t('Bundle'))
+      ->description(t('Choose an entity type to see its bundles.')));
+    $inputs->describe('bundle', group: $source);
 
-    $inputs->add('field', 'string', t('Highlight field'));
-    // ...
+    $inputs->add('field', Schema::string()
+      ->title(t('Highlight field'))
+      ->description(t('Choose a bundle to pick from its fields.')));
+    $inputs->describe('field', group: $source);
+
+    $inputs->add('limit', Schema::integer()
+      ->title(t('Number of items'))
+      ->description(t('How many items to feature.'))
+      ->default(10)
+      ->minimum(1)
+      ->maximum(50)
+      ->required());
+    $inputs->describe('limit', weight: 10, suffix: t('items'));
+
+    $inputs->add('presentation', Schema::string()
+      ->title(t('Presentation'))
+      ->description(t('How the items are laid out.'))
+      ->default('list')
+      ->required());
+
+    $inputs->attachVariants('presentation_settings', by: 'presentation', label: t('Presentation settings'),
+      description: t('What the chosen presentation needs.'));
   }
 
+  /**
+   * The bundle must be one of the chosen entity type's bundles.
+   */
   #[RefinesInput('bundle')]
-  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
-    return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type]);
+  public static function bundleOfEntityType(string $entity_type): Schema {
+    return Schema::any()
+      ->check('drupal:EntityBundleExists', ['entityTypeId' => $entity_type])
+      ->description(t('A @entity_type bundle.', ['@entity_type' => $entity_type]));
   }
 
+  /**
+   * The field must be one of the chosen bundle's fields.
+   */
   #[RefinesInput('field')]
-  public static function fieldOfBundle(DataDefinitionInterface $field, string $entity_type, string $bundle): DataDefinitionInterface {
-    return $field->addConstraint('SurfaceExamplesBundleField', [
-      'entityTypeId' => $entity_type,
-      'bundle' => $bundle,
-    ]);
+  public static function fieldOfBundle(string $entity_type, string $bundle): Schema {
+    return Schema::any()
+      ->check('drupal:SurfaceExamplesBundleField', [
+        'entityTypeId' => $entity_type,
+        'bundle' => $bundle,
+      ])
+      ->description(t('A field on @entity_type @bundle.', [
+        '@entity_type' => $entity_type,
+        '@bundle' => $bundle,
+      ]));
   }
 
 }
@@ -159,16 +211,17 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   its label, its description and its arrangement (where it is drawn,
   and its placeholder and help), which change nothing about what is
   accepted.
-- **`add()` takes name, type and label** and returns the core
-  definition, so the rest is plain core API. `addList()` is the same
-  for a list of values, `addMap()` for a map, and `addDefinition()` the
-  long form, for one value built by hand.
-  A label is `t('...')`, with a literal
+- **`add()` takes the key's name and its schema** and returns the
+  blueprint: the key is complete at the call. A list is
+  `Schema::list()` in `add()`, a map `addMap()`, and `addDefinition()`
+  takes a Typed Data definition a host reader holds.
+  A label is `title(t('...'))`, with a literal
   string: a static method has no instance for the translation service
   to be injected into, and `t()` returns the same lazy
   `TranslatableMarkup`.
-- **A `#[RefinesInput('key')]` method takes the key's definition first,
-  then one parameter per sibling it watches**, matched by name: a
+- **A `#[RefinesInput('key')]` method takes one parameter per sibling
+  it watches**, matched by name, and returns a schema of what those
+  values add to the key ([What an answer says](refinement.md#what-an-answer-says)): a
   parameter that names no declared key is refused at build, so a
   renamed one is never silently left unwatched. It runs once every watched
   sibling has a value, and again when one changes. A method that
@@ -178,21 +231,21 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   because an alter is a service and may hold what a runtime rule reads
   ([refinement](refinement.md#enforcing-the-kind)).
 - **A refiner never calls a service.** A list that depends on a value
-  is a constraint whose options resolver fetches it, handed the value as
-  an option. The refiner points; the resolver fetches. Core's
+  is a named check whose options resolver fetches it, handed the value
+  as an option. The refiner points; the resolver fetches. Core's
   `EntityBundleExists` is one; the example brings `SurfaceExamplesBundleField`
   for a bundle's fields.
-- **The framework checks every refinement is narrower**, so a refiner
-  cannot widen, retype, or turn off required. The two type changes it
-  accepts are away from `any` and to a derivative of the type
-  (`entity` to `entity:node` to `entity:node:article`); see [the narrowing table](refinement.md#the-narrowing-table).
+- **A refiner's answer only adds**, so it cannot widen, retype, or turn
+  off required: of its rule and the key's, the stricter stands; see
+  [the narrowing table](refinement.md#the-narrowing-table).
 
 ## Reading a class
 
 - Everything on it is static: `defineInputs()`, refiners, operations. No
   constructor, no properties, no `$this`.
 - `defineInputs()` is a flat list. No `if`, no loop.
-- Name, type and label sit on one line.
+- A key's name and the start of its schema sit on one line, its title
+  on the next.
 - It is ordered like the thing it describes: identity first, the
   thing's own keys next.
 - `defineInputs()` never mentions a sibling. Anything that reads another
@@ -751,11 +804,11 @@ operation runs as; it never reads the current user itself
 
 ```php
 #[RefinesInput('room', runtime: TRUE)]
-public static function roomsForAccount(DataDefinitionInterface $room, AccountInterface $account): DataDefinitionInterface {
+public static function roomsForAccount(AccountInterface $account): Schema {
   if ($account->hasPermission('use the vault')) {
-    return $room;
+    return Schema::any();
   }
-  return $room->addConstraint('LabeledChoice', ['choices' => array_diff_key(self::ROOMS, ['vault' => TRUE])]);
+  return Schema::enum(array_keys(array_diff_key(self::ROOMS, ['vault' => TRUE])));
 }
 ```
 
@@ -800,8 +853,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 What the gate is asked about:
 
 - **The thing the context knows.** An identity key declared as a
-  reference to the gate's entity type (`$inputs->add('node', 'integer',
-  ...)` with `SurfaceValidReference` naming `node`), or the
+  reference to the gate's entity type (`$inputs->add('node',
+  Schema::integer()->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node']))`),
+  or the
   `entity_type` and `id` a content entity
   resource knows. A gate naming a content entity resource's operation,
   whose parameter is the identity key `id`, is asked about that entity
@@ -1114,24 +1168,9 @@ final class ExampleBlock extends TypedBlockBase {
 ```
 
 or, with no argument, the plugin class itself, which implements
-`StructureInterface` with the same static methods a structure class has:
-
-```php
-#[FieldFormatter(id: 'surface_examples_plugins_string', label: new TranslatableMarkup('Surface API example formatter'), field_types: ['string'])]
-#[UsesStructure]
-final class ExampleFormatter extends TypedFormatterBase implements StructureInterface, DefinesOutputsInterface {
-
-  public static function defineInputs(BlueprintInterface $inputs): void { /* ... */ }
-
-  public static function defineOutputs(BlueprintInterface $outputs): void { /* ... */ }
-
-  #[RefinesInput('variant')]
-  public static function variantsOfCasing(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface { /* ... */ }
-
-  public function formatValue(FieldItemInterface $item, array $settings): array { /* ... */ }
-
-}
-```
+`StructureInterface` with the same static methods a structure class
+has. The example formatter is one; its class, whole, is on
+[Declaring a resource](declaring-a-resource.md#on-a-plugin).
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
@@ -1263,8 +1302,9 @@ The one widening an alter may make is `extendChoices()`: more values on
 a key whose owner declared a list of allowed values. The values are the
 alter's module's contribution, advertised under its name, and an
 `#[RefinesInput]` method of the same alter on that key is that
-contribution's refiner: it is handed the alter's values only, the
-owner's methods never see them, and what is offered is the union.
+contribution's refiner: its answer applies to the alter's values only,
+the owner's answers never reach them, and what is offered is the
+union.
 `ExampleFormatterAlter` offers a ribbon variant on the example formatter and
 keeps it to upper case.
 
@@ -1285,14 +1325,29 @@ alters do: it adds a badge, rewords the headline's help text with
 #[Alters(ExampleBlockStructure::class)]
 final class ExampleBlockAlter implements AltersInputsInterface {
 
+  use StringTranslationTrait;
+
+  public const GRID_LIMIT = 20;
+
+  // __construct() is left out: it is not part of the surface.
+
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('badge', 'string', $this->t('Badge'), default: 'star');
+    $inputs->add('badge', Schema::options([
+      'star' => $this->t('Star'),
+      'flame' => $this->t('Flame'),
+    ])
+      ->title($this->t('Badge'))
+      ->description($this->t('A badge rendered beside the headline.'))
+      ->default('star'));
     $inputs->describe('headline', description: $this->t('Shown above the featured content, beside its badge.'));
+    $inputs->describe('third_party_settings.surface_examples_extras', label: $this->t('Extras'));
   }
 
   #[RefinesInput('limit')]
-  public static function shortInGrid(DataDefinitionInterface $limit, string $presentation): DataDefinitionInterface {
-    // ...
+  public static function shortInGrid(string $presentation): Schema {
+    return $presentation === 'grid'
+      ? Schema::any()->maximum(self::GRID_LIMIT)
+      : Schema::any();
   }
 
 }
@@ -1475,8 +1530,7 @@ namespace Drupal\surface_examples_compliance\Alter;
 use Drupal\Core\State\StateInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\Attribute\RefinesInput;
@@ -1484,6 +1538,7 @@ use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\surface_examples_compliance\Structure\ComplianceStructure;
+use PortableSchema\Builder\Schema;
 
 /**
  * Example 4: others get a say.
@@ -1535,7 +1590,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     // an invalid sibling.
     $inputs->narrow('capacity')
       ->when(Condition::absent('license'))
-      ->constrain('Range', ['max' => 100])
+      ->constrain(Schema::any()->maximum(100))
       ->because($this->t('Up to 100 without an event license.'));
   }
 
@@ -1553,19 +1608,19 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
    * @see docs/decisions.md#static-by-default-runtime-by-declaration
    */
   #[RefinesInput('room', runtime: TRUE)]
-  public function openRooms(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
-    $rooms = $room->getConstraints()['LabeledChoice']['choices'] ?? [];
+  public function openRooms(Schema $room, string $venue): Schema {
+    $rooms = ChoiceSet::of($room)?->labels ?? [];
     $closed = array_intersect_key($rooms, array_flip((array) $this->state->get(self::CLOSED_ROOMS, [])));
-    if ($closed === [] || !$room instanceof DataDefinition) {
-      return $room;
+    if ($closed === []) {
+      return Schema::any();
     }
-    $room->addConstraint('LabeledChoice', ['choices' => array_diff_key($rooms, $closed)]);
-    return $room->setDescription($this->formatPlural(
-      count($closed),
-      'The @rooms is closed.',
-      'The @rooms are closed.',
-      ['@rooms' => implode(' and the ', $closed)],
-    ));
+    return Schema::enum(array_keys(array_diff_key($rooms, $closed)))
+      ->description($this->formatPlural(
+        count($closed),
+        'The @rooms is closed.',
+        'The @rooms are closed.',
+        ['@rooms' => implode(' and the ', $closed)],
+      ));
   }
 
 }
@@ -1676,8 +1731,8 @@ own, as a field's storage is.
 
 A value asked for at several keys is no child: a child is a group of
 keys behind the wall, and one value with its type, pattern and words is
-a shape, declared once in `src/Shape/` and used in the type position of
-`add()`, `$inputs->add('license', License::class, t('Event license'))`,
+a shape, declared once in `src/Shape/` and the start of a key's schema,
+`$inputs->add('license', Schema::of(License::class)->title(t('Event license')))`,
 each key narrowing it as it needs and an alter of the shape tightening
 it at all of them ([Named shapes](declaring-a-resource.md#named-shapes)).
 The compliance structure's license is one; a shape handed to `attach()`
@@ -1688,15 +1743,14 @@ is refused.
   **variants**: children the sibling's value chooses between, one per
   value ([Variants](#variants)).
 
-The label is given with the key, as `add()`'s is, and is optional: NULL
-gives the key no label of its own, leaving the structure's, which titles
-its def. `attach()` and `attachVariants()` return the map
-definition at the key, a core `MapDataDefinition`, the way `add()`
-returns its definition, so the owner describes its own child's key with
-the core setters (`setLabel()` still works, and says in two statements
-what one says). A structure may ask for the widget that draws it as a whole,
+The label is given with the key, as a key's title is, and is optional:
+NULL gives the key no label of its own, leaving the structure's, which
+titles its def. `attach()` and `attachVariants()` return the blueprint,
+as `add()` does, so what else the owner says of its own child's key is
+a named argument: `description:`, and `storedAs:` for how it is stored.
+A structure may ask for the widget that draws it as a whole,
 `#[Structure('event.pair', widget: 'my_pair')]`, by the word a key's
-`widget` setting uses; it is set on the key wherever the structure is
+`ui(widget:)` uses; it is set on the key wherever the structure is
 attached, unless the owner set one there, and a widget that cannot draw
 a map is refused when the parent is built
 ([Generated forms](forms.md#a-widget-a-structure-asks-for)). A map only
@@ -1797,11 +1851,14 @@ as are the storage's own settings:
 
 ```php
 // ExampleBlockStructure
-$inputs->add('presentation', 'string', t('Presentation'), default: 'list')
-  ->setRequired(TRUE);
+$inputs->add('presentation', Schema::string()
+  ->title(t('Presentation'))
+  ->description(t('How the items are laid out.'))
+  ->default('list')
+  ->required());
 
-$inputs->attachVariants('presentation_settings', by: 'presentation', label: t('Presentation settings'))
-  ->setDescription(t('What the chosen presentation needs.'));
+$inputs->attachVariants('presentation_settings', by: 'presentation', label: t('Presentation settings'),
+  description: t('What the chosen presentation needs.'));
 
 // ListPresentationStructure and GridPresentationStructure, beside it
 #[Structure('block.surface_examples_plugins.presentation.list',
@@ -1831,8 +1888,8 @@ $inputs->attachVariants('settings', by: 'field_type', label: t('Storage settings
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-Until the deciding key holds a value, the key is advertised as an `any`
-placeholder marked as variants (`DefinitionMetadata::variantsBy()`); once
+Until the deciding key holds a value, the key is advertised as a
+placeholder that allows any value, marked as variants; once
 it does, or from the start when the context locks the deciding key, it is
 exactly the chosen variant's map. That is an ordinary refinement under
 the rule that the placeholder may become anything narrower, not a
@@ -1868,6 +1925,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Resource\Shelter\ShelterResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * A hut: the shelter's variant for "hut", holding variants of its own.
@@ -1884,8 +1942,9 @@ final class HutStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('roof', 'string', t('Roof'))
-      ->setRequired(TRUE);
+    $inputs->add('roof', Schema::string()
+      ->title(t('Roof'))
+      ->required());
 
     $inputs->attachVariants('covering', by: 'roof', label: t('Covering'));
   }
@@ -1910,9 +1969,8 @@ variant's keys beside the deciding key, with nothing stored at the key
 itself, while every door still asks for them under the key. It is a
 storage layout, not a way to compose. Stored flat is experimental: see
 [Variants stored flat](storage.md#variants-stored-flat). The blueprint
-states what is asked, and a setting on the map `attachVariants()`
-returns, `->setSetting(Variants::STORED_AS, Variants::FLAT)`, says how
-it is kept. `Storage\FlatVariantsLayout` applies it for the config
+states what is asked, and the named argument `storedAs: Variants::FLAT`
+on `attachVariants()` says how it is kept. `Storage\FlatVariantsLayout` applies it for the config
 storages, `ConfigObjectStorage` and `ConfigEntityStorage`, beside the
 layout that stores a reference by uuid. It is the shape core gives a
 condition's settings and a views handler's options, and the block
@@ -1937,13 +1995,14 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface\Variants;
 use Drupal\surface_resource_test\Storage\KitStorage;
+use PortableSchema\Builder\Schema;
 
 /**
  * A camping kit: the variant its kind chooses, at its gear, stored flat.
  *
  * The tent and the stove are variants at "gear", each a #[Variant] of
  * this class there, asked for under the gear like any variants at a key.
- * The gear's map says Variants::STORED_AS FLAT, so the kit's config object
+ * The gear is stored as Variants::FLAT, so the kit's config object
  * keeps the chosen variant's keys beside the kind, and no gear, which is
  * what the engine's layout writes and reads (FlatVariantsLayout). Both
  * declare the weight; the fuel is the stove's, the poles and the fly the
@@ -1966,13 +2025,15 @@ final class KitResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Title'))
-      ->setRequired(TRUE);
-    $inputs->add('kind', 'string', t('Kind'))
-      ->setRequired(TRUE);
-    $inputs->attachVariants('gear', by: 'kind', label: t('Gear'))
-      ->setSetting(Variants::STORED_AS, Variants::FLAT);
-    $inputs->add('notes', 'string', t('Notes'));
+    $inputs->add('title', Schema::string()
+      ->title(t('Title'))
+      ->required());
+    $inputs->add('kind', Schema::string()
+      ->title(t('Kind'))
+      ->required());
+    $inputs->attachVariants('gear', by: 'kind', label: t('Gear'), storedAs: Variants::FLAT);
+    $inputs->add('notes', Schema::string()
+      ->title(t('Notes')));
   }
 
 }
@@ -1994,6 +2055,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Resource\Kit\KitResource;
+use PortableSchema\Builder\Schema;
 
 /**
  * A tent: the kit's variant for "tent", at its gear.
@@ -2010,15 +2072,20 @@ final class TentKitStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('weight', 'integer', t('Weight'))
-      ->addConstraint('Range', ['min' => 0]);
-    $inputs->add('poles', 'integer', t('Poles'), default: 2)
-      ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1]);
-    $inputs->add('fly', 'boolean', t('Rain fly'), default: FALSE);
+    $inputs->add('weight', Schema::integer()
+      ->title(t('Weight'))
+      ->minimum(0));
+    $inputs->add('poles', Schema::integer()
+      ->title(t('Poles'))
+      ->default(2)
+      ->minimum(1)
+      ->required());
+    $inputs->add('fly', Schema::bool()
+      ->title(t('Rain fly'))
+      ->default(FALSE));
     $inputs->narrow('poles')
       ->when(Condition::equals('fly', TRUE))
-      ->constrain('Range', ['min' => 2])
+      ->constrain(Schema::any()->minimum(2))
       ->because(t('A rain fly takes two poles at least.'));
   }
 
@@ -2115,16 +2182,31 @@ naming the container's key, so it declares what it reads instead, a
 final class ComplianceStructure implements StructureInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->reads('capacity', 'integer', required: TRUE);
+    $inputs->reads('capacity', Schema::integer()->required());
 
-    $inputs->add('license', License::class, t('Event license'));
+    $inputs->add('license', Schema::of(License::class)
+      ->title(t('Event license')));
 
-    $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
+    $inputs->add('stewards', Schema::integer()
+      ->title(t('Stewards'))
+      ->default(1)
+      ->required());
   }
 
+  /**
+   * One steward for every fifty people, at least one.
+   */
   #[RefinesInput('stewards')]
-  public static function stewardsForCapacity(DataDefinition $stewards, int $capacity): DataDefinition {
-    // ...
+  public static function stewardsForCapacity(int $capacity): Schema {
+    $n = max(1, (int) ceil($capacity / 50));
+    return Schema::any()
+      ->minimum($n)
+      ->description(new PluralTranslatableMarkup(
+        $n,
+        'At least 1 steward for @capacity attendees.',
+        'At least @count stewards for @capacity attendees.',
+        ['@capacity' => $capacity],
+      ));
   }
 
 }
@@ -2151,12 +2233,13 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   (`... when Capacity is 150.`), and the discard cascade follows it.
   Nothing stores, draws or accepts a port in the structure: it is the
   container's key, there.
-- **A port has a type and may be required.** `reads($port, $type,
-  required: TRUE)`; an optional port a container leaves unwired holds
-  nothing, so a refiner watching it never runs and a rule reads it as
-  absent. The type is a typed data type, and the wired key must have it
-  (`any` reads any key); or a shape's class, `reads('code', Sku::class)`,
-  and the wired key must then be declared with that shape, which it may
+- **A port has a type and may be required.** `reads($port, $schema)`,
+  `Schema::integer()->required()` for a required one; an optional port a
+  container leaves unwired holds nothing, so a refiner watching it never
+  runs and a rule reads it as absent. The schema's type is the port's,
+  and the wired key must have it (`Schema::any()` reads any key); or a
+  shape, `reads('code', Schema::of(Sku::class))`, and the wired key must
+  then be declared with that shape, which it may
   have narrowed ([Named shapes](declaring-a-resource.md#named-shapes)).
 - **The container wires each port** in `attach(..., reads: [port =>
   key])`, naming one of its own plain input keys. The build refuses a
@@ -2196,22 +2279,42 @@ stands among them:
 final class JournalResource implements ResourceInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Title'))->setRequired(TRUE);
+    $inputs->add('title', Schema::string()
+      ->title(t('Title'))
+      ->required());
 
-    $inputs->add('visibility', 'string', t('Visibility'), default: 'staff')
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => ['public' => t('Public'), 'staff' => t('Staff')]]);
+    $inputs->add('visibility', Schema::options([
+      'public' => t('Public'),
+      'staff' => t('Staff'),
+    ])
+      ->title(t('Visibility'))
+      ->default('staff')
+      ->required());
 
     $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'visibility']);
 
     $inputs->mixIn(TimestampsStructure::class);
 
-    $inputs->add('revision', 'integer', t('Revision'), default: 1);
+    $inputs->add('revision', Schema::integer()
+      ->title(t('Revision'))
+      ->default(1)
+      ->minimum(1));
 
-    // ...
+    $inputs->add('published', Schema::bool()
+      ->title(t('Published'))
+      ->default(FALSE));
+
+    $inputs->attach('archive', ArchiveStructure::class, t('Archive'));
+
     $inputs->narrow('revision')
       ->when(Condition::absent('created'))
-      ->constrain('Range', ['max' => 1]);
+      ->constrain(Schema::any()->maximum(1))
+      ->because(t('A journal never created is on its first revision.'));
+
+    $inputs->narrow('created')
+      ->when(Condition::equals('published', TRUE))
+      ->require()
+      ->because(t('A published journal says when it was created.'));
   }
 
 }
@@ -2412,9 +2515,12 @@ verb reads what it needs of an entry and refuses the rest:
 
 ```php
 // SpotlightResource, example 12
-$inputs->add('component', 'string', t('Component'), default: 'surface_examples:card')
-  ->setRequired(TRUE);
+$inputs->add('component', Schema::string()
+  ->title(t('Component'))
+  ->default('surface_examples:card')
+  ->required());
 $inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
+$inputs->attachVariants('slots', by: 'component', label: t('Slots'), from: ComponentSlots::class);
 
 // ComponentProps, the main module's, built by the class resolver
 final class ComponentProps implements SiteListInterface {
@@ -2596,21 +2702,23 @@ the variants' placeholder may become another type
 `attachList('key', Child::class, t('Label'), min: 1, max: 4)` is a
 collection: a key whose value is a list, every item of which is an
 instance of the child, labeled as `attach()` labels its key. It returns
-the list definition at the key, a core `ListDataDefinition` whose item
-is the child's map, so the owner describes it with the core setters, as
-`attach()` returns its map.
+the blueprint, as `attach()` does, and takes the key's `description:`
+and `required:` as named arguments.
 `min` and `max` are the list's `Count`; a NULL `max` is unlimited. The
 child is named the way `attach()` names one, by class or by a derived
 resource's id, and a derived resource's inputs callable may call it too.
 
 ```php
 // CellarResource, in the test module
-$inputs->attachList('racks', SpiceRackResource::class, 'Spice racks', min: 1, max: 4)
-  ->setDescription('One rack to four.');
+$inputs->attachList('racks', SpiceRackResource::class, 'Spice racks', min: 1, max: 4,
+  description: 'One rack to four.');
 
+/**
+ * A small cellar holds two racks at most: the parent narrows its list.
+ */
 #[RefinesInput('racks')]
-public static function fewerRacksWhenSmall(DataDefinitionInterface $racks, string $size): DataDefinitionInterface {
-  // A small cellar holds two racks at most: the parent narrows its list.
+public static function fewerRacksWhenSmall(string $size): Schema {
+  return $size === 'small' ? Schema::any()->maxItems(2) : Schema::any();
 }
 ```
 
@@ -2633,7 +2741,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **The list is the parent's.** Its `Count` and any other constraint on
   the list itself belong to the parent: a `#[RefinesInput]` method of
   the parent on the key may narrow them, and an operation may with
-  `withConstraint()`. A refiner of the list that narrows inside its item
+  `withConstraint()`. A refiner of the list whose answer holds `items`
   is refused when the data surface is refined, naming the key. A list
   starts empty.
 - **Access answers once for the list.** The child's operation access is
@@ -2662,7 +2770,7 @@ the things:
 
 ```php
 // HoneypotSettingsResource, in the honeypot port
-$inputs->addEach('form_settings', 'boolean', from: ProtectedForms::class, label: t('Honeypot Enabled Forms'), default: FALSE);
+$inputs->addEach('form_settings', Schema::bool()->default(FALSE), from: ProtectedForms::class, label: t('Honeypot Enabled Forms'));
 
 // ProtectedForms, a service
 final class ProtectedForms implements SiteListInterface {
@@ -2680,16 +2788,14 @@ final class ProtectedForms implements SiteListInterface {
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-- **The spelling.** `addEach($key, $type, from:, label:, default:)`
-  declares one value per thing, each as `add()` declares a key: a type
-  of the type table or a shape, labeled with the thing's label, starting
-  from the thing's default or else `default:`. `$type` may be the
-  entry's definition instead, as `addList()` takes its item's, copied
-  for every thing. The map's label is required, since its values have
-  no structure to borrow one from. An entry that refers to an entity is
-  the id's type with `SurfaceValidReference`, as any reference key is,
-  `addEach('pages',
-  DataDefinition::create('integer')->addConstraint('SurfaceValidReference',
+- **The spelling.** `addEach($key, $schema, from:, label:)` declares one
+  value per thing, each with the schema `add()` would take for a key:
+  a type of the type table or a shape, labeled with the thing's label,
+  starting from the thing's default or else the schema's `default()`.
+  The map's label is required, since its values have no structure to
+  borrow one from. An entry that refers to an entity is the id's type
+  with a `drupal:SurfaceValidReference` check, as any reference key is,
+  `addEach('pages', Schema::integer()->check('drupal:SurfaceValidReference',
   ['entityTypeId' => 'node', 'bundles' => ['page']]), from: Slots::class,
   label: t('Pages'))`, its type checked against the entity type's id
   when the resource is built; as a property, `#[Each('integer', from:,
@@ -2697,8 +2803,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   ['drupal:SurfaceValidReference' => [...]]])]`. `entity:node` as the type is refused, as `add()` refuses it.
   `attachEach($key, Structure::class, from:, label:)` holds the
   structure at every thing, as `attach()` holds one, its label optional
-  as `attach()`'s is. Both return the map at the key, for the owner to
-  describe.
+  as `attach()`'s is. Both return the blueprint and take the key's
+  `description:` as a named argument.
 - **The provider** implements `SiteListInterface`, the one interface
   [variants from the site](#variants-from-the-site) name too: `list()`
   answers a `SiteList`, an id and a label per thing in order, and for
@@ -2808,11 +2914,11 @@ the same provider; the entry `<id>` reads the sibling's entry `<id>`:
 
 ```php
 // TicketSalesResource, example 9
-$inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, label: t('On sale'), default: FALSE);
+$inputs->addEach('on_sale', Schema::bool()->default(FALSE), from: TicketTypes::class, label: t('On sale'));
 $inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, label: t('Limits'), reads: ['selling' => 'on_sale']);
 
 // TicketLimitStructure
-$inputs->reads('selling', 'boolean');
+$inputs->reads('selling', Schema::bool());
 $inputs->narrow('per_order')->when(Condition::equals('selling', FALSE))->doesNotApply();
 ```
 
@@ -2900,7 +3006,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   label, permission, default, and parameters, each the name of a key the
   resource declares, `['id']`), each built by a `ResourceCallable` handed
   the resolved arguments by name. A parameter takes its key's
-  definition and no type of its own: the operation receives the key's
+  schema and no type of its own: the operation receives the key's
   value, and loading what it names is the storage's (the content entity
   storage loads the entity by its id, and an id that names nothing is a
   not found at `id`). A parameter typed `name => type`, `entity:<type>`

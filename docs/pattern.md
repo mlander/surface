@@ -128,16 +128,17 @@ method.
   fieldset is drawn), and offer more values on a fixed choice list with
   `extendChoices()`. It cannot remove a key or change its type. Inputs
   and outputs use the same two interfaces.
-- **A `#[RefinesInput('bundle')]` method takes the key's definition
-  first, then one parameter per sibling it watches**, matched by name
+- **A `#[RefinesInput('bundle')]` method takes one parameter per
+  sibling it watches**, matched by name
   to that sibling's key: one that names no declared key fails at build,
   so a renamed parameter never silently stops watching. Its signature is its dependency declaration, the way an
   operation method's is. `ExampleBlockStructure::fieldOfBundle()` watches
   the entity type and the bundle. It runs once every watched sibling has
   a value (a key its alter mounted is never waited for), and again when
-  any of them changes. It returns the definition tightened with plain
-  core API, and the framework checks the result is narrower, so a
-  refinement cannot widen, retype, or add or remove a map property. It
+  any of them changes. It returns a schema of what those values add to
+  the key, and the module applies it so that of two rules the stricter
+  stands: a refinement cannot widen, retype, or add or remove a map
+  property. It
   receives only what it named, so it is a pure function of its
   arguments, unless it declares itself a runtime refiner
   (`runtime: TRUE`): a rule no schema can state, such as a lookup or
@@ -161,35 +162,71 @@ method.
 )]
 final class FieldInstanceResource implements ResourceInterface {
 
+  // create(), reuse() and update(), its three operations, are under
+  // "Operations: create, reuse, update" below.
+
   public static function defineInputs(BlueprintInterface $inputs): void {
     // Which field this is.
-    $inputs->add('entity_type', 'string', t('Entity type'))->setRequired(TRUE);
+    $inputs->add('entity_type', Schema::string()
+      ->title(t('Entity type'))
+      ->description(t('The machine name of the entity type the field is on.'))
+      ->check('drupal:PluginExists', [
+        'manager' => 'entity_type.manager',
+        'interface' => FieldableEntityInterface::class,
+      ])
+      ->required());
 
-    $inputs->add('bundle', 'string', t('Bundle'))->setRequired(TRUE);
+    $inputs->add('bundle', Schema::string()
+      ->title(t('Bundle'))
+      ->description(t('The bundle the field is on, for example article or page.'))
+      ->required());
 
-    $inputs->add('field_type', 'string', t('Field type'))->setRequired(TRUE);
+    $inputs->add('field_type', Schema::string()
+      ->title(t('Field type'))
+      ->description(t('The field type, which decides what the settings are.'))
+      ->required());
 
-    $inputs->add('field_name', 'string', t('Machine name'))->setRequired(TRUE);
+    // What a field storage's name may be, which its constructor refuses
+    // otherwise with an exception rather than a violation.
+    $inputs->add('field_name', Schema::string()
+      ->title(t('Machine name'))
+      ->description(t('The machine name of the field storage, for example field_tags.'))
+      ->maxLength(FieldStorageConfig::NAME_MAX_LENGTH)
+      ->check('drupal:Regex', [
+        'pattern' => '/^[_a-z]+[_a-z0-9]*$/D',
+        'message' => t('The machine name must start with a lowercase letter or underscore, and contain only lowercase letters, numbers and underscores.'),
+      ])
+      ->required());
 
     // The field itself.
-    $inputs->add('label', 'string', t('Label'))->setRequired(TRUE);
+    $inputs->add('label', Schema::string()
+      ->title(t('Label'))
+      ->description(t('The human readable label for the field on this bundle.'))
+      ->required());
 
-    $inputs->add('description', 'string', t('Help text'));
+    $inputs->add('description', Schema::string()
+      ->title(t('Help text'))
+      ->description(t('Help text to display for the field.')));
 
-    $inputs->add('required', 'boolean', t('Required field'), default: FALSE);
+    $inputs->add('required', Schema::bool()
+      ->title(t('Required field'))
+      ->description(t('Whether the field is required.'))
+      ->default(FALSE));
 
     // Its parts.
-    $inputs->attach('storage', FieldStorageResource::class, t('Field storage'));
+    $inputs->attach('storage', FieldStorageResource::class, t('Field storage'),
+      description: t('What every bundle using this field shares.'));
 
-    $inputs->attachVariants('settings', by: 'field_type', label: t('Field settings'));
+    $inputs->attachVariants('settings', by: 'field_type', label: t('Field settings'), from: FieldSettingsSchemaVariants::class,
+      description: t('Settings for this field on this bundle, described by the field type itself.'));
   }
 
   /**
    * The bundle must belong to the chosen entity type.
    */
   #[RefinesInput('bundle')]
-  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
-    return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type]);
+  public static function bundleOfEntityType(string $entity_type): Schema {
+    return Schema::any()->check('drupal:EntityBundleExists', ['entityTypeId' => $entity_type]);
   }
 
 }
@@ -197,9 +234,6 @@ final class FieldInstanceResource implements ResourceInterface {
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-(The real class adds descriptions, a `PluginExists` on the entity type
-and the machine name's own `Regex` and `Length`, and three operations,
-below.)
 
 ## Reading a class
 
@@ -210,16 +244,17 @@ below.)
   properties, no `$this`.
 - **`defineInputs()` is a flat list.** No `if`, no loop. Wanting one
   means a second class, a child, or an operation.
-- **Name, type and label sit on one line.** `add()` takes those three
-  and returns the core definition, so the rest is plain core API.
-  `addList()` is the same for a list of values, `addMap()` for a map,
-  and `addDefinition()` the long form, for one value. The verbs that
+- **A key is its name and its schema.** `add()` takes the two and
+  returns the blueprint, so the key is complete at the call. A list is
+  `Schema::list()` in `add()`, a map `addMap()`, and `addDefinition()`
+  takes a Typed Data definition a host reader holds. The verbs that
   attach take the label with the key too, after the structure:
-  optional, the structure's own when left out. The label is
-  `t('...')`, a literal string.
+  optional, the structure's own when left out, and the key's
+  description as `description:`. The label is `t('...')`, a literal
+  string.
 - **It is ordered like the thing it describes.** Identity first, the
   thing's own keys next, its parts last.
-- **`defineInputs()` never mentions a sibling.** A constraint written
+- **`defineInputs()` never mentions a sibling.** A rule written
   there is fully known with no values. Anything that reads another
   key's value is a `#[RefinesInput]` method.
 - **One refiner, one rule, one name.** `bundleOfEntityType()`,
@@ -365,17 +400,17 @@ key stays open, and it is still the same resource.
 
 ## Allowed values
 
-A key says what it allows on its own definition, as a constraint. The
-blueprint has no verb for options.
+A key says what it allows in its own schema. The blueprint has no verb
+for options.
 
-| The list is | Constraint | Example |
+| The list is | Schema | Example |
 | --- | --- | --- |
-| Fixed | core `Choice`, or `LabeledChoice` for labels | `ExampleBlockStructure`'s `presentation` |
-| Live, from site state | a constraint whose options resolver fetches the list | `SurfaceExamplesBundleField` on the example block's `field` |
-| Already modelled by core | the core constraint | `EntityBundleExists` on `bundle`, attached by a refiner because it needs the entity type |
+| Fixed | `Schema::options([...])` with labels, `Schema::enum([...])` without | the example formatter's `casing` |
+| Live, from site state | a named check whose options resolver fetches the list | `drupal:SurfaceExamplesBundleField` on the example block's `field` |
+| Already modelled by core | the core constraint as a named check | `drupal:EntityBundleExists` on `bundle`, added by a refiner because it needs the entity type |
 
 **A refiner never calls a service.** A list that depends on a value is
-a constraint with the value as an option. The refiner points; the
+a named check with the value as an option. The refiner points; the
 options resolver fetches ([Options and resolvers](options.md)). That is
 what lets a resource or structure stay a class of static methods. It is
 also what lets the
@@ -401,17 +436,32 @@ can say who alters a class without running anything.
 #[Alters(ExampleBlockStructure::class)]
 final class ExampleBlockAlter implements AltersInputsInterface {
 
+  use StringTranslationTrait;
+
+  public const GRID_LIMIT = 20;
+
+  // __construct() is left out: it is not part of the surface.
+
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('badge', 'string', $this->t('Badge'), default: 'star');
+    $inputs->add('badge', Schema::options([
+      'star' => $this->t('Star'),
+      'flame' => $this->t('Flame'),
+    ])
+      ->title($this->t('Badge'))
+      ->description($this->t('A badge rendered beside the headline.'))
+      ->default('star'));
     $inputs->describe('headline', description: $this->t('Shown above the featured content, beside its badge.'));
+    $inputs->describe('third_party_settings.surface_examples_extras', label: $this->t('Extras'));
   }
 
   /**
    * In a grid, at most twenty items.
    */
   #[RefinesInput('limit')]
-  public static function shortInGrid(DataDefinitionInterface $limit, string $presentation): DataDefinitionInterface {
-    // ...
+  public static function shortInGrid(string $presentation): Schema {
+    return $presentation === 'grid'
+      ? Schema::any()->maximum(self::GRID_LIMIT)
+      : Schema::any();
   }
 
 }
@@ -523,22 +573,8 @@ argument, and the plugin implements `StructureInterface`: its static
 host builds the data surface from the plugin class without constructing
 it.
 
-```php
-#[FieldFormatter(id: 'surface_examples_plugins_string', label: new TranslatableMarkup('Surface API example formatter'), field_types: ['string'])]
-#[UsesStructure]
-final class ExampleFormatter extends TypedFormatterBase implements StructureInterface, DefinesOutputsInterface {
-
-  public static function defineInputs(BlueprintInterface $inputs): void { /* prefix, casing, variant */ }
-
-  public static function defineOutputs(BlueprintInterface $outputs): void { /* text, classes */ }
-
-  #[RefinesInput('variant')]
-  public static function variantsOfCasing(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface { /* ... */ }
-
-  public function formatValue(FieldItemInterface $item, array $settings): array { /* ... */ }
-
-}
-```
+The example formatter is one; its class, whole, is on
+[Declaring a resource](declaring-a-resource.md#on-a-plugin).
 
 Such a structure is found through the plugin definitions, not a
 directory. Its id is `<host type>:<plugin id>`
@@ -581,8 +617,7 @@ identity key the child declares; the storage class supplies it on load,
 generates it on commit for a new item, and turns order into weights in
 `prepare()`. The caller never sees a weight. A child's refiners run per
 item in its own frame. Rules across items (no duplicates, at most five)
-are constraints on the returned list definition, declared by the
-parent. Add, remove and reorder are value changes, since the whole list
+are rules on the list, declared by the parent. Add, remove and reorder are value changes, since the whole list
 is submitted; they are not operations. Changing one item without
 resending the list is a later question, probably an operation on the
 child.
@@ -642,6 +677,7 @@ concept. The naming of sources and resolvers is undecided.
 | A class in `src/Alter/` with `#[Alters]` | a build event subscriber holding the full builder |
 | `#[Resource(storage:, access:)]` | the provider triple: `getSurface()`, `surfaceAccess()`, `getSurfaceStorage()` |
 | `defineOutputs()`, never refined | `setOutputDefinition()` plus output refiners |
+| `add($key, Schema)`, the key complete at the call; a refiner returns what the values add | `add($key, $type, $label)` returning a Typed Data definition for chained setters; a refiner handed the definition to write on |
 | `#[UsesStructure]` on the plugin, naming a structure or being one | `declareSurface()` on the plugin class itself |
 
 The rework kept the module's builder and changed what an author writes

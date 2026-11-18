@@ -40,13 +40,18 @@ Beside the inputs, in the same class, on `DefinesOutputsInterface`:
 final class ExampleFormatter extends TypedFormatterBase implements StructureInterface, DefinesOutputsInterface {
 
   public static function defineOutputs(BlueprintInterface $outputs): void {
-    $outputs->add('text', 'string', t('Text'))
-      ->setDescription(t('The field value, prefixed and cased as the settings ask.'))
-      ->setRequired(TRUE);
+    $outputs->add('text', Schema::string()
+      ->title(t('Text'))
+      ->description(t('The field value, prefixed and cased as the settings ask.'))
+      ->required());
 
-    $outputs->addList('classes', DataDefinition::create('string')->setLabel(t('Class')), t('Classes'))
-      ->setDescription(t('The classes the chosen variant puts on the wrapper. Absent when no variant is chosen.'));
+    $outputs->add('classes', Schema::list(Schema::string()->title(t('Class')))
+      ->title(t('Classes'))
+      ->description(t('The classes the chosen variant puts on the wrapper. Absent when no variant is chosen.')));
   }
+
+  // defineInputs(), the refiner and formatValue() are on
+  // Declaring a resource, under "On a plugin".
 
 }
 ```
@@ -64,7 +69,7 @@ documented:
 
 | | Input | Output |
 | --- | --- | --- |
-| **Default value** | Declared, merged under stored values by `accept()`. | Refused. A default is what a value starts from when nobody sent one, and nobody sends an output. A definition carrying `default_value`, at any depth, is refused when it is added and again at seal. |
+| **Default value** | Declared, merged under stored values by `accept()`. | Refused. A default is what a value starts from when nobody sent one, and nobody sends an output. A key whose schema has a `default`, at any depth, is refused when it is added and again at seal. |
 | **Locking** | Fixes the value to what storage holds. | Refused. Locking narrows what a caller may send. |
 | **Refinement** | `#[RefinesInput]` methods narrow it against its siblings. | Refused: a `#[RefinesInput]` naming an output key is refused when the resource or structure is built. A refinement narrows what may be sent, and nobody sends an output. |
 

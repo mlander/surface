@@ -49,7 +49,7 @@ license at its mount:
 ```php
 $inputs->narrow('capacity')
   ->when(Condition::absent('license'))
-  ->constrain('Range', ['max' => 100])
+  ->constrain(Schema::keywords(['maximum' => 100]))
   ->because($this->t('Up to 100 without an event license.'));
 ```
 

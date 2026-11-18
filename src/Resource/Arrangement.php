@@ -24,7 +24,7 @@ namespace Drupal\surface\Resource;
  *
  * @code
  * $workflow = ArrangementGroup::details('workflow', t('Publishing options'), collapsed: TRUE);
- * $inputs->add('status', 'boolean', t('Published'), default: TRUE);
+ * $inputs->add('status', Schema::bool()->title(t('Published'))->default(TRUE));
  * $inputs->describe('status', group: $workflow);
  * @endcode
  *

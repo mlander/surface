@@ -241,7 +241,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
 
     <section class="chapter" id="ch-surface" hidden>
       <h2>The resource</h2>
-      <p>One class declares the inputs and the operations that read and write them. Each key is an ordinary typed data definition with ordinary constraints.</p>
+      <p>One class declares the inputs and the operations that read and write them. Each key is a Portable Schema, checked with Drupal's ordinary constraints.</p>
       <p>Its storage, underneath, loads the current values and commits the new ones, so the resource never knows where they are kept.</p>
       <pre class="code" data-code="surface"></pre>
       <p class="drawn">Drawn from example <a href="https://github.com/mlander/surface/blob/next/modules/surface_examples/README.md#example-3-made-of-parts" target="_blank" rel="noopener">3</a>: <a href="https://github.com/mlander/surface/blob/next/modules/surface_examples/src/Resource/RegistrationStep3Resource.php" target="_blank" rel="noopener"><code>RegistrationStep3Resource.php</code></a>, <a href="https://github.com/mlander/surface/blob/next/modules/surface_examples/src/Storage/RegistrationStep3Storage.php" target="_blank" rel="noopener"><code>RegistrationStep3Storage.php</code></a>. Explained in <a href="https://github.com/mlander/surface/blob/next/docs/declaring-a-resource.md" target="_blank" rel="noopener">Declaring a resource</a>.</p>
@@ -273,7 +273,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
 
     <section class="chapter" id="ch-rules" hidden>
       <h2>Declare the rule</h2>
-      <p>A rule whose condition and effect a schema can state is declared as data beside the keys. Compliance holds the capacity at 100 with <code>narrow('capacity')-&gt;when(Condition::absent('license'))-&gt;constrain('Range', ['max' =&gt; 100])</code>. The room's ceiling stays a coded refiner, <code>capacityOfRoom()</code>, which the emitter runs once per room to list its answers.</p>
+      <p>A rule whose condition and effect a schema can state is declared as data beside the keys. Compliance holds the capacity at 100 with <code>narrow('capacity')-&gt;when(Condition::absent('license'))-&gt;constrain(Schema::keywords(['maximum' =&gt; 100]))</code>. The room's ceiling stays a coded refiner, <code>capacityOfRoom()</code>, which the emitter runs once per room to list its answers.</p>
       <p>A rule is not run: the full schema writes it as an <code>if</code> / <code>then</code> and lists it under <code>x-surface.rules</code>, so the capacity is stated exactly. The stewards watch the capacity, a number no list covers, so they stay <code>refine</code>: a client asks again with its values.</p>
       <p>A key can also not apply. While the bulletin goes out monthly, its send day is not on the form or in the documents, and storage keeps the stored day.</p>
       <pre class="code" data-code="rules"></pre>
@@ -394,7 +394,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
   // an invalid sibling.
   $inputs->narrow('capacity')
     ->when(Condition::absent('license'))
-    ->constrain('Range', ['max' => 100])
+    ->constrain(Schema::keywords(['maximum' => 100]))
     ->because($this->t('Up to 100 without an event license.'));
 }`,
     today: `// 1. The form
@@ -423,13 +423,16 @@ function compliance_form_alter(&$form, $form_state, $form_id) {
 final class RegistrationStep3Resource implements ResourceInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Event title'))
-      ->setRequired(TRUE);
-    $inputs->add('venue', 'string', t('Venue'))
-      ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
-    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1]);
+    $inputs->add('title', Schema::string()
+      ->title(t('Event title'))
+      ->required());
+    $inputs->add('venue', Schema::options(Venues::VENUES)
+      ->title(t('Venue'))
+      ->required());
+    $inputs->add('capacity', Schema::integer()
+      ->title(t('Capacity'))
+      ->minimum(1)
+      ->default(50));
     // open, room, pricing, ticket, contact
   }
 
@@ -447,13 +450,8 @@ final class PaidTicketStructure implements StructureInterface {
   // price, currency
 }`,
     refine: `#[RefinesInput('room')]
-public static function roomInVenue(
-  DataDefinitionInterface $room,
-  string $venue,
-): DataDefinitionInterface {
-  return $room->addConstraint('LabeledChoice', [
-    'choices' => Venues::rooms($venue),
-  ]);
+public static function roomInVenue(string $venue): Schema {
+  return Schema::options(Venues::rooms($venue));
 }`,
     alter: `#[Alters(RegistrationStep3Resource::class)]
 final class RegistrationComplianceAlter implements AltersInputsInterface {
@@ -465,7 +463,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     $inputs->describe('third_party_settings.surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
     $inputs->narrow('capacity')
       ->when(Condition::absent('license'))
-      ->constrain('Range', ['max' => 100])
+      ->constrain(Schema::keywords(['maximum' => 100]))
       ->because($this->t('Up to 100 without an event license.'));
   }
 
@@ -528,8 +526,8 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     "then": { "properties": { "lead": { "type": "object",
       "properties": { "email": { ... } }, "required": ["email"] } } } } ]`,
     siteKeys: `// TicketSalesResource::defineInputs()
-$inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, label: t('On sale'), default: FALSE)
-  ->setDescription(t('Which ticket types can be bought.'));
+$inputs->addEach('on_sale', Schema::bool()->default(FALSE), from: TicketTypes::class, label: t('On sale'),
+  description: t('Which ticket types can be bought.'));
 
 // TicketTypes, the provider
 public function list(): SiteList {

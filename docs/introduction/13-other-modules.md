@@ -27,10 +27,11 @@ final class TeaserBadgeAlter implements AltersInputsInterface {
   use StringTranslationTrait;
 
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('badge', 'string', $this->t('Badge'));
+    $inputs->add('badge', Schema::string()
+      ->title($this->t('Badge')));
     $inputs->narrow('limit')
       ->when(Condition::present('badge'))
-      ->constrain('Range', ['max' => 20]);
+      ->constrain(Schema::any()->maximum(20));
   }
 
 }

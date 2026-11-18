@@ -107,7 +107,8 @@ build(FieldInstanceResource::class, $context):
          the owner's link holds its class name and calls static methods,
          an alter's holds the alter service, whose runtime refiners
          may be instance methods
-       a method watching nothing runs now, checked narrower
+       a method watching nothing runs now; its answer is applied, and
+         refused if it would widen what the key declares
      then the rules each declared with narrow() (bindRules), after its
        contributor's methods: checked against the keys, the wall and
        the narrowing check as written; the keys a condition reads become
@@ -159,8 +160,9 @@ refine($values)                                  Surface::refine()
   for each key whose watched siblings all hold values (a key an alter
   mounted, which only that alter watches, is read at its path and not
   waited for): its chain of
-  RefinesInputRefiner links (owner's, then alters'), each handed a deep
-  clone and checked narrower; a key's DeclaredRefiner links run whether
+  RefinesInputRefiner links (owner's, then alters'), each answer applied
+  to a copy of the key's schema, the stricter rule standing; a key's
+  DeclaredRefiner links run whether
   or not its siblings hold values, reading them as they stand; each child refined in its own frame
 ```
 

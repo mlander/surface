@@ -33,8 +33,8 @@ public function extractValue(array $element, FormStateInterface $form_state, Sch
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-`Schema` is Portable Schema's (`PortableSchema\Builder\Schema`), the schema
-inline. `WidgetContext` says what the schema does not say of itself: its
+`Schema` is Portable Schema's (`PortableSchema\Builder\Schema`), the key's
+schema inline. `WidgetContext` says what the schema does not say of itself: its
 JSON Pointer in the values, whether the object holding it lists it in
 `required`, whether the envelope lists its value as stale, whether an
 element around it is locked, whether it is drawn inside a collection's
@@ -128,7 +128,7 @@ definition; the drawer draws the schema its word names.
 | `list` | 8 | A list of single values with no list of allowed values, whose item a widget draws: keywords, a list of free strings or numbers. | a `fieldset` of rows, "Remove" beside each, "Add another" under them |
 | `time` | 9 | A `string` that asks for a time. | a time input |
 | `date` | 9 | A `string` that asks for a date. | a date input |
-| `string` | 10 | `string`, `email`, `uri`, `duration_iso8601`; the words `text`, `textarea` and `email`. | `textfield`, `email`, `url`; `textarea` when multiline; `password` for a secret (`writeOnly`); `#size` and `#rows` from the hints `options.size` and `options.rows` |
+| `string` | 10 | `string`, `email`, `uri`, `duration_iso8601`; the words `text`, `textarea` and `email`. | `textfield`, `email`, `url`; `textarea` when the key asks for it; `password` for a secret (`writeOnly`); `#size` and `#rows` from the hints `options.size` and `options.rows` |
 | `number` | 10 | `integer`, `float`, `decimal`, `timestamp`, `timespan`. | `number`, `#step` 1, or any for a float or a decimal |
 | `checkbox` | 10 | `boolean`. | `checkbox`, never `#required` |
 | `datetime` | 10 | `datetime_iso8601`. | core's `datetime`, a date and a time input in the site's time zone; read back as the ISO 8601 string, its offset kept |
@@ -199,22 +199,33 @@ the stock widgets have a rule (why: [decision](decisions.md#a-widget-is-chosen-f
   widget draws, added and removed over AJAX. Each item keeps its own
   element's hints, and a refusal of one is shown on its row.
 
-A definition asks for an element with core's own setting, in the words
-the served contract's `x-portable-ui.widget` uses:
+A key asks for an element with `ui(widget:)` on its schema, in the
+words the served contract's `x-portable-ui.widget` uses:
 
 ```php
-$inputs->add('handling', 'string', t('Handling'))
-  ->setSetting('widget', 'radios')
-  ->addConstraint('LabeledChoice', ['choices' => [...]]);
+$inputs->add('handling', Schema::options([
+  'standard' => t('Standard'),
+  'fragile' => t('Fragile'),
+])
+  ->title(t('Handling'))
+  ->ui(widget: 'radios'));
 
-$inputs->addList('days', $day, t('Days'))
-  ->setSetting('widget', 'select');   // a multiple select, at any length
+// A multiple select, at any length.
+$inputs->add('days', Schema::list($day)
+  ->title(t('Days'))
+  ->ui(widget: 'select'));
 
-$inputs->add('opens', 'string', t('Opens at'))
-  ->setSetting('widget', 'time');     // the Regex is still the rule
+// The pattern is still the rule.
+$inputs->add('opens', Schema::string()
+  ->title(t('Opens at'))
+  ->pattern('^([01]\d|2[0-3]):[0-5]\d$')
+  ->ui(widget: 'time'));
 
-$inputs->add('reviewed_on', 'string', t('Reviewed on'))
-  ->setSetting('widget', 'date');     // both schemas say `format: date`
+// Both schemas say `format: date`.
+$inputs->add('reviewed_on', Schema::string()
+  ->title(t('Reviewed on'))
+  ->pattern('^\d{4}-\d{2}-\d{2}$')
+  ->ui(widget: 'date'));
 ```
 
 `checkboxes`, `radios`, `select`, `time` and `date` are the words the stock
@@ -228,11 +239,11 @@ widget that claims the definition does not answer to is refused when the
 element is built ("... asks for the radios widget, which does not draw a
 key of type list of string; the select widget does."), rather than drawn
 as something it did not ask for. A widget of a module's own answers to
-its plugin ID, so `setSetting('widget', 'my_module_color')` asks for one
-whose `isApplicable()` reads that setting.
+its plugin ID, so `ui(widget: 'my_module_color')` asks for one
+whose `drawsSchema()` reads that word.
 
 The select widget claims a key whose list is **empty** too. A refiner
-that narrows a list to nothing (`'choices' => []`), or a resolver that
+that narrows a list to nothing (`Schema::enum([])`), or a resolver that
 finds nothing on a site, leaves a select offering its empty option and
 nothing else, and the constraint refuses any value: a list of nothing is
 still a list, never a text field to type into. A key that does not
@@ -242,8 +253,8 @@ apply at all is not narrowed to nothing: its refiner answers
 
 What the stock widgets do beyond the obvious: defaults populate at every
 depth, and constraint options reach the element, so the browser enforces
-what the definition declares. `Length`'s `max` becomes the `maxlength`
-attribute on the string widget and `Range`'s `min` and `max` become
+what the key declares. `maxLength` becomes the `maxlength`
+attribute on the string widget and `minimum` and `maximum` become
 `#min` and `#max` on the number widget. Those are hints for the browser,
 not checks: the number widget clears core's `#element_validate`, whose
 own wording ("must be lower than or equal to") would otherwise replace
@@ -261,9 +272,9 @@ null cannot clear
 [decision](decisions.md#a-key-its-storage-always-holds)). Radios show nothing checked where a select
 shows that empty option, and a `- None -` radio only where the key may
 be cleared. The string
-widget picks its element type from the definition (`textarea` when the
-definition carries the `multiline` type setting, otherwise `email`,
-`url` or `textfield` from the data type). A textarea gets no
+widget picks its element type from the key's schema (`textarea` when
+the key asks for `ui(widget: 'textarea')`, otherwise `email`, `url` or
+`textfield` from its type and format). A textarea gets no
 `maxlength`. No widget draws a declared example as a placeholder: an
 empty field showing a value reads as filled. A placeholder, a prefix, a
 suffix, a help text, a weight and a group are the key's
@@ -439,7 +450,7 @@ forms:
 | Claim | Serves |
 | --- | --- |
 | `['type' => 'string']` | every key of that data type |
-| `['type' => 'string', 'format' => 'color']` | every key of that type whose `format` setting is that word, `->setSetting('format', 'color')` |
+| `['type' => 'string', 'format' => 'color']` | every key of that type whose `format` is that word, `->format('color')` |
 | `['shape' => 'event.license']` | every key of that [shape](declaring-a-resource.md#named-shapes) |
 
 A claim of a list or a map is refused when the plugins are discovered:
@@ -448,7 +459,7 @@ and a map is a fieldset of its keys.
 
 How the emitter chooses (`WidgetChoice::claimed()`):
 
-1. **A key whose owner asks for a widget**, `setSetting('widget', ...)`,
+1. **A key whose owner asks for a widget**, `ui(widget: ...)`,
    is drawn by that widget, and no claim is asked. The owner wins.
 2. **The claims**, the highest `priority` first, then by plugin ID. The
    first widget whose claim matches the key and whose

@@ -7,7 +7,7 @@ namespace Drupal\surface\Resource\Attribute;
 /**
  * On a key's property: example values, both documents' `examples`.
  *
- * The spelling of DefinitionMetadata::setExamples().
+ * The spelling of examples() on a key's schema.
  *
  * @code
  * #[Examples('Harbour Kitchen')]

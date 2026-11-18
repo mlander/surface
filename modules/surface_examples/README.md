@@ -973,7 +973,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     // an invalid sibling.
     $inputs->narrow('capacity')
       ->when(Condition::absent('license'))
-      ->constrain('Range', ['max' => 100])
+      ->constrain(Schema::keywords(['maximum' => 100]))
       ->because($this->t('Up to 100 without an event license.'));
   }
 
@@ -1314,7 +1314,7 @@ final class BulletinResource implements ResourceInterface {
 
     $inputs->narrow('items')
       ->when(Condition::equals('frequency', 'weekly'))
-      ->constrain('Range', ['max' => 5])
+      ->constrain(Schema::keywords(['maximum' => 5]))
       ->because(t('Up to 5 in a weekly issue.'));
   }
 

@@ -34,7 +34,8 @@ object that holds a group of them for a form, an HTTP API and a tool to
 validate against, so each of those describes the same values again and
 the copies can disagree.
 [Built on typed data](docs/on-typed-data.md) says what the module adds
-to core's definitions to hold such a group, and why each part is needed.
+on top of core's typed data to hold such a group, each key a Portable
+Schema, and why each part is needed.
 
 ## Requirements
 
