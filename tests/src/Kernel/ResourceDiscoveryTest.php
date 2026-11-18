@@ -5,17 +5,20 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\block\Entity\Block;
+use Drupal\node\Entity\NodeType;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourceCollectorPass;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface_examples_extras\Alter\ExampleBlockAlter;
 use Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock;
 use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
-use Drupal\surface_examples_extras\Alter\ExampleBlockAlter;
 use Drupal\surface_resource_test\Access\RecipeAccess;
+use Drupal\surface_resource_test\Alter\EditOnlyRecipeAlter;
+use Drupal\surface_resource_test\Alter\RecipeAlter;
 use Drupal\surface_resource_test\OutsideDiscovery\BothKindsClass;
-use Drupal\surface_resource_test\Shape\Sku;
 use Drupal\surface_resource_test\OutsideDiscovery\DefaultOperationStructure;
 use Drupal\surface_resource_test\OutsideDiscovery\HomelessResource;
+use Drupal\surface_resource_test\OutsideDiscovery\InstanceDefineInputsStructure;
 use Drupal\surface_resource_test\OutsideDiscovery\OperationAlter;
 use Drupal\surface_resource_test\OutsideDiscovery\OperationOfAlter;
 use Drupal\surface_resource_test\OutsideDiscovery\OutputsAlter;
@@ -23,15 +26,13 @@ use Drupal\surface_resource_test\OutsideDiscovery\RecipeByIdAlter;
 use Drupal\surface_resource_test\OutsideDiscovery\SkuByIdAlter;
 use Drupal\surface_resource_test\OutsideDiscovery\UnknownIdAlter;
 use Drupal\surface_resource_test\OutsideDiscovery\WatchesRefinerStructure;
-use Drupal\surface_resource_test\OutsideDiscovery\InstanceDefineInputsStructure;
 use Drupal\surface_resource_test\OutsideDiscovery\WrongKindStructure;
 use Drupal\surface_resource_test\Plugin\Block\StickyNoteBlock;
-use Drupal\surface_resource_test\Structure\HerbGarnishStructure;
 use Drupal\surface_resource_test\Resource\RecipeResource;
-use Drupal\surface_resource_test\Alter\EditOnlyRecipeAlter;
-use Drupal\surface_resource_test\Alter\RecipeAlter;
+use Drupal\surface_resource_test\Shape\Sku;
 use Drupal\surface_resource_test\Storage\RecipeStorage;
-use Drupal\node\Entity\NodeType;
+use Drupal\surface_resource_test\Structure\HerbGarnishStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -336,13 +337,13 @@ class ResourceDiscoveryTest extends SurfaceKernelTestBase {
 
     // The limit is refined against the presentation, after the owner.
     $this->assertSame(['limit' => ['presentation']], array_intersect_key($surface->entries()->refinements(), ['limit' => TRUE]));
-    $range = static fn (array $values): array => $surface->refine($values)->getDefinition('limit')->getConstraints()['Range'];
+    $range = static fn (array $values): array => DerivedDefinition::at($surface->refine($values), 'limit')->getConstraints()['Range'];
     $this->assertSame(['min' => 1, 'max' => ExampleBlockAlter::GRID_LIMIT], $range(['presentation' => 'grid']));
     $this->assertSame(['min' => 1, 'max' => 50], $range(['presentation' => 'list']));
 
     // And it rewords the headline, the one change to an owner's key an
     // alter may make: its help text, not its width.
-    $headline = $surface->getDefinition('headline');
+    $headline = DerivedDefinition::at($surface, 'headline');
     $this->assertSame('Shown above the featured content, beside its badge.', (string) $headline->getDescription());
     $this->assertSame('Headline', (string) $headline->getLabel());
     $this->assertSame(['max' => 50], $headline->getConstraints()['Length']);

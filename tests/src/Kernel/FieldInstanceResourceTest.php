@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\entity_test\EntityTestHelper;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\field\FieldConfigInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Resource\OperationContext;
@@ -12,10 +16,7 @@ use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
 use Drupal\surface_examples_field\Resource\FieldInstanceResource;
 use Drupal\surface_examples_field\Resource\FieldStorageResource;
-use Drupal\entity_test\EntityTestHelper;
-use Drupal\field\Entity\FieldConfig;
-use Drupal\field\Entity\FieldStorageConfig;
-use Drupal\field\FieldConfigInterface;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -137,7 +138,7 @@ class FieldInstanceResourceTest extends SurfaceKernelTestBase {
     // The field type offers exactly the types the variants are for:
     // the declared ones first, then every UI field type the provider
     // lists, each labeled.
-    $choices = ChoiceSet::of($surface->getDefinition('field_type'))->values;
+    $choices = ChoiceSet::of(DerivedDefinition::at($surface, 'field_type'))->values;
     $this->assertSame('address', $choices[0]);
     $this->assertContains('string', $choices);
     $this->assertSame($surface->entries()->entry('settings')?->variants?->variantIds(), $choices);
@@ -145,7 +146,7 @@ class FieldInstanceResourceTest extends SurfaceKernelTestBase {
     $this->assertSame(AddressFieldSettingsResource::class, $entry->variants->variant('address')->source);
     // Advertised as the address settings, not as a placeholder: the one
     // value the field type can hold has already chosen.
-    $settings = $surface->getDefinition('settings');
+    $settings = DerivedDefinition::at($surface, 'settings');
     $this->assertInstanceOf(MapDataDefinition::class, $settings);
     $this->assertNull(DefinitionMetadata::variantsBy($settings));
     $this->assertSame(['available_countries', 'langcode_override', 'field_overrides'], array_keys($settings->getPropertyDefinitions()));
@@ -158,13 +159,13 @@ class FieldInstanceResourceTest extends SurfaceKernelTestBase {
   public function testAddLeavesTheVariantToTheFieldType(): void {
     $surface = $this->resources()->buildOperation(FieldInstanceResource::class, 'create', ['entity_test', 'entity_test']);
     $this->assertFalse($surface->isLocked('field_type'));
-    $this->assertSame('field_type', DefinitionMetadata::variantsBy($surface->getDefinition('settings')));
-    $resolved = $surface->refine(['field_type' => 'address'])->getDefinition('settings');
+    $this->assertSame('field_type', DefinitionMetadata::variantsBy(DerivedDefinition::at($surface, 'settings')));
+    $resolved = DerivedDefinition::at($surface->refine(['field_type' => 'address']), 'settings');
     $this->assertInstanceOf(MapDataDefinition::class, $resolved);
     $this->assertArrayHasKey('field_overrides', $resolved->getPropertyDefinitions());
     // And the bundle is refined by the entity type, in the parent's frame.
-    $this->assertSame(['entityTypeId' => 'entity_test'], $surface->refine(['entity_type' => 'entity_test'])
-      ->getDefinition('bundle')->getConstraints()['EntityBundleExists']);
+    $this->assertSame(['entityTypeId' => 'entity_test'], DerivedDefinition::at($surface->refine(['entity_type' => 'entity_test']), 'bundle')
+      ->getConstraints()['EntityBundleExists']);
   }
 
   /**
@@ -356,7 +357,7 @@ class FieldInstanceResourceTest extends SurfaceKernelTestBase {
     $context = FieldInstanceResource::update('entity_test', 'entity_test', 'field_address');
     $this->assertSame(['cardinality' => ['Range' => ['min' => 3]]], $context->forChild('storage')->constraints());
     $surface = $this->resources()->build(FieldInstanceResource::class, $context);
-    $cardinality = $surface->entries()->entry('storage')->attachment->child->getDefinition('cardinality');
+    $cardinality = DerivedDefinition::at($surface->entries()->entry('storage')->attachment->child, 'cardinality');
     $this->assertSame(['min' => 3], $cardinality->getConstraints()['Range']);
 
     $resource_storage = $this->resources()->storage(FieldInstanceResource::class, $context, $surface);

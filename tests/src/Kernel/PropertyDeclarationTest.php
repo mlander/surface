@@ -21,6 +21,7 @@ use Drupal\surface_property_test\OutsideDiscovery\UnknownGroup;
 use Drupal\surface_property_test\Plugin\Block\PropertyNoteBlock;
 use Drupal\surface_property_test\Structure\EntryPropertiesStructure;
 use Drupal\surface_property_test\Structure\RefinedPropertiesStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Kernel\Reader\RecordingBlueprint;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -176,8 +177,8 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
     $definition = $this->container->get('surface.resource_registry')->getDefinition(RefinedPropertiesStructure::class);
     $this->assertSame(['limit'], array_map(static fn ($refiner) => $refiner->key, $definition->refiners));
     $built = $this->container->get('surface.resources')->build('property_test.refined' . self::SUFFIX, new OperationContext('configure'));
-    $this->assertSame(['min' => 1, 'max' => 10], $built->refine(['size' => 'small'])->getDefinition('limit')->getConstraints()['Range']);
-    $this->assertSame(['min' => 1, 'max' => 100], $built->refine(['size' => 'large'])->getDefinition('limit')->getConstraints()['Range']);
+    $this->assertSame(['min' => 1, 'max' => 10], DerivedDefinition::at($built->refine(['size' => 'small']), 'limit')->getConstraints()['Range']);
+    $this->assertSame(['min' => 1, 'max' => 100], DerivedDefinition::at($built->refine(['size' => 'large']), 'limit')->getConstraints()['Range']);
   }
 
   /**
@@ -207,7 +208,7 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
     $this->assertNotNull($roles);
     $this->assertSame(['alpha', 'beta'], $roles->entries()->names());
     foreach (['alpha' => 'Alpha', 'beta' => 'Beta'] as $entry => $label) {
-      $definition = $roles->getDefinition($entry);
+      $definition = DerivedDefinition::at($roles, $entry);
       $this->assertSame('string', $definition?->getDataType());
       $this->assertSame($label, (string) $definition->getLabel());
       $this->assertSame(['entityTypeId' => 'user_role'], $definition->getConstraints()['SurfaceValidReference'] ?? NULL);

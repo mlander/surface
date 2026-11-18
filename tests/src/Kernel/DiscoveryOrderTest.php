@@ -73,12 +73,12 @@ class DiscoveryOrderTest extends SurfaceKernelTestBase {
    * Tests that the plugin hosts asked again, cached, change nothing.
    */
   public function testBothOrdersAgree(): void {
-    $first = array_keys($this->container->get('surface.resource_registry')->entries());
+    $first = array_keys($this->container->get('surface.resource_registry')->getDefinitions());
     // The rebuilt container is this test's again: register() keeps it.
     $this->container->get('kernel')->rebuildContainer();
     $this->container->get('cache.discovery')->deleteAll();
     $this->container->get('surface.resource_plugins')->ownStructures();
-    $this->assertSame($first, array_keys($this->container->get('surface.resource_registry')->entries()));
+    $this->assertSame($first, array_keys($this->container->get('surface.resource_registry')->getDefinitions()));
   }
 
   /**

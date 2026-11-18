@@ -8,30 +8,31 @@ use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Pipeline\UnknownKeysException;
+use Drupal\surface\Plugin\tool\Tool\ResourceOperationTool;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\Resources;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
-use Drupal\surface_resource_test\Structure\Broken\MisnamingLarderStructure;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_resource_test\Resource\Larder\LarderResource;
 use Drupal\surface_resource_test\Resource\Larder\SpiceRackResource;
 use Drupal\surface_resource_test\Resource\Pantry\LabelResource;
 use Drupal\surface_resource_test\Resource\Pantry\PantryResource;
-use Drupal\surface_resource_test\Structure\Pantry\ShelfStructure;
 use Drupal\surface_resource_test\Storage\LarderStorage;
-use Drupal\surface\Plugin\tool\Tool\ResourceOperationTool;
-use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface_resource_test\Structure\Broken\MisnamingLarderStructure;
+use Drupal\surface_resource_test\Structure\Pantry\ShelfStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolInterface;
 use Drupal\tool\TypedData\MapInputDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 use Symfony\Component\HttpFoundation\InputBag;
 use Symfony\Component\HttpFoundation\Request;
-use PortableSchema\Builder\Schema;
 
 /**
  * Tests a child invoked through an operation of its own, and its access.
@@ -281,7 +282,7 @@ class ChildOperationTest extends SurfaceKernelTestBase {
 
     // By the context's id: the rack's own edit, which knows no shelf.
     $this->assertSame(['shelf', 'spices', 'label'], $rack->entries()->names());
-    $this->assertSame(['min' => 0, 'max' => 40], $rack->getDefinition('spices')->getConstraints()['Range']);
+    $this->assertSame(['min' => 0, 'max' => 40], DerivedDefinition::at($rack, 'spices')->getConstraints()['Range']);
     $this->assertFalse($rack->isLocked('shelf'));
 
     // By name: restock, handed TOP, knows top, its own known key winning
@@ -290,7 +291,7 @@ class ChildOperationTest extends SurfaceKernelTestBase {
     $this->assertSame(['shelf', 'spices', 'label', 'third_party_settings'], $spare->entries()->names());
     $this->assertTrue($spare->isLocked('shelf'));
     $this->assertSame('top', $spare->getDefault('shelf'));
-    $this->assertSame(['min' => 0, 'max' => 40], $spare->getDefinition('spices')->getConstraints()['Range']);
+    $this->assertSame(['min' => 0, 'max' => 40], DerivedDefinition::at($spare, 'spices')->getConstraints()['Range']);
 
     // By the context's id again: adding a larder names nothing, and the
     // rack has its own create.
@@ -298,14 +299,14 @@ class ChildOperationTest extends SurfaceKernelTestBase {
     foreach (['rack', 'spare_rack'] as $key) {
       $child = self::child($add, $key);
       $this->assertSame(['shelf', 'spices', 'label'], $child->entries()->names(), $key);
-      $this->assertSame(['min' => 0, 'max' => 10], $child->getDefinition('spices')->getConstraints()['Range'], $key);
+      $this->assertSame(['min' => 0, 'max' => 10], DerivedDefinition::at($child, 'spices')->getConstraints()['Range'], $key);
     }
 
     // By the parent's kind: copying a larder creates, the rack has no
     // copy, so its create.
     $copy = $this->resources()->buildOperation(LarderResource::class, 'copy');
     foreach (['rack', 'spare_rack'] as $key) {
-      $this->assertSame(['min' => 0, 'max' => 10], self::child($copy, $key)->getDefinition('spices')->getConstraints()['Range'], $key);
+      $this->assertSame(['min' => 0, 'max' => 10], DerivedDefinition::at(self::child($copy, $key), 'spices')->getConstraints()['Range'], $key);
     }
 
     // A context that knows no larder cannot invoke the rack's edit, which
@@ -313,7 +314,7 @@ class ChildOperationTest extends SurfaceKernelTestBase {
     // edit: both are passed over, and the rack sees the larder's context.
     $bare = $this->resources()->build(LarderResource::class, new OperationContext('update'));
     foreach (['rack', 'spare_rack'] as $key) {
-      $this->assertSame(['min' => 0, 'max' => 40], self::child($bare, $key)->getDefinition('spices')->getConstraints()['Range'], $key);
+      $this->assertSame(['min' => 0, 'max' => 40], DerivedDefinition::at(self::child($bare, $key), 'spices')->getConstraints()['Range'], $key);
     }
 
     // The access answer of a child reaches the parent's cacheability.
@@ -541,7 +542,7 @@ class ChildOperationTest extends SurfaceKernelTestBase {
     $this->assertTrue($stock->isLocked('spare_rack'));
     // Each handed context is taken as it is: browse's smaller range, and
     // the shelf restock knows, locked.
-    $this->assertSame(['min' => 0, 'max' => 10], self::child($stock, 'rack')->getDefinition('spices')->getConstraints()['Range']);
+    $this->assertSame(['min' => 0, 'max' => 10], DerivedDefinition::at(self::child($stock, 'rack'), 'spices')->getConstraints()['Range']);
     $spare = self::child($stock, 'spare_rack');
     $this->assertTrue($spare->isLocked('shelf'));
     $this->assertSame('top', $spare->getDefault('shelf'));

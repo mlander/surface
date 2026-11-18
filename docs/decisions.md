@@ -16708,3 +16708,24 @@ alone.
   writes `add($key, Schema::...)` for a value, a list and a map; a map
   whose key is digits alone, which an object schema cannot name, is
   still `addMap()`.
+
+### A data surface answers schemas
+
+`DefinitionMap` is `Entries`: the entries of a data surface, each
+holding its key's schema. `SurfaceInterface::entries()` and
+`outputEntries()` replace `getDefinitions()` and
+`getOutputDefinitions()`, and `getSchema($key)` replaces
+`getDefinition($key)`. Iterating the entries, `get()` and array access
+give each key's schema. `getPortDefinition()` is gone
+(`getPortSchema()` answers), and `withPorts()` takes the ports' schemas.
+
+- **The build cache names its format.** A cache id carries
+  `Resources::BUILD_FORMAT` (`entries`), so a row written before the
+  rename is never read.
+- **`Entries::toArray()` still gives definitions, for the edges.** The
+  value baseline's own walk reads it as definitions, and that class is
+  not edited in this stream. It yields schemas when an entry holds its
+  schema alone.
+- **Tests read a definition at the edge.** `Drupal\Tests\surface\
+  DerivedDefinition` gives the definition of a data surface's key from
+  its entry, for the tests that hold a fact a definition states.

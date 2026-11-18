@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Storage\StorageLayoutInterface;
 use PortableSchema\Builder\Schema;
 
@@ -160,17 +159,6 @@ interface SurfaceInterface extends CacheableDependencyInterface {
    *   The key's schema, or NULL when the data surface declares no such key.
    */
   public function getSchema(string $name): ?Schema;
-
-  /**
-   * Gets one definition, or NULL if the data surface does not declare it.
-   *
-   * @param string $name
-   *   The definition key.
-   *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
-   *   The definition, or NULL when the data surface declares no such key.
-   */
-  public function getDefinition(string $name): ?DataDefinitionInterface;
 
   /**
    * Returns whether a key's value is fixed by the data surface.

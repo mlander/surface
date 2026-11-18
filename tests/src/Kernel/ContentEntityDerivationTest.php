@@ -4,20 +4,21 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Core\Entity\Entity\EntityFormDisplay;
+use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Plugin\SurfaceWidget\AutocompleteWidget;
 use Drupal\surface\Reference\References;
-use Drupal\surface\Contract\WidgetChoice;
-use Drupal\Core\Entity\Entity\EntityFormDisplay;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourceCollectorPass;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_examples_entity\Access\ContentEntityAccess;
 use Drupal\surface_examples_entity\Access\FieldItemAccess;
 use Drupal\surface_examples_entity\Resource\ContentEntityResources;
 use Drupal\surface_examples_entity\Resource\FieldItemStructures;
 use Drupal\surface_examples_entity\Storage\ContentEntityStorage;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -153,7 +154,7 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $this->assertNotNull($title);
     $this->assertSame('field.item:node.page.title', $title->id);
     $this->assertSame('field.item:node.page.title', $title->source);
-    $this->assertSame('integer', $surface->outputEntries()->toArray()['id']->getDataType());
+    $this->assertSame('integer', DerivedDefinition::in($surface->outputEntries(), 'id')->getDataType());
 
     $item = $this->registry()->getDefinition('field.item:node.page.body');
     $this->assertSame(FieldItemStructures::class, $item->deriver);
@@ -172,7 +173,7 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
       if (!$surface->entries()->has($name)) {
         continue;
       }
-      foreach (static::child($surface, $name)->entries() as $key => $definition) {
+      foreach (DerivedDefinition::all(static::child($surface, $name)->entries()) as $key => $definition) {
         $types[$name][$key] = $definition->getDataType();
       }
     }
@@ -199,7 +200,7 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
       'changed' => ['value' => 'integer'],
     ], $types);
 
-    $constraint = static fn (string $field, string $key, string $name): ?array => static::child($surface, $field)->getDefinition($key)?->getConstraints()[$name] ?? NULL;
+    $constraint = static fn (string $field, string $key, string $name): ?array => DerivedDefinition::at(static::child($surface, $field), $key)?->getConstraints()[$name] ?? NULL;
     // What the field type and its settings narrow, carried.
     $this->assertSame(40, $constraint('field_string', 'value', 'Length')['max']);
     $this->assertSame(60, $constraint('field_text', 'value', 'Length')['max']);
@@ -211,7 +212,7 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $this->assertSame(['1.5'], $constraint('field_list_float', 'value', 'LabeledChoice')['choices']);
     $this->assertSame('/^\d{4}-\d{2}-\d{2}$/D', $constraint('field_date', 'value', 'Regex')['pattern']);
     // A link's uri is held to what a link field takes, not the format.
-    $this->assertArrayHasKey('SurfaceLinkUri', static::child($surface, 'field_link')->getDefinition('uri')->getConstraints());
+    $this->assertArrayHasKey('SurfaceLinkUri', DerivedDefinition::at(static::child($surface, 'field_link'), 'uri')->getConstraints());
     $this->assertSame('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/D', $constraint('field_datetime', 'value', 'Regex')['pattern']);
     // Every enabled format, or the ones the field allows.
     $this->assertSame(['basic', 'plain_text', 'trusted'], $constraint('field_text', 'format', 'LabeledChoice')['choices']);
@@ -224,10 +225,10 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $this->assertSame(['tags'], $reference['bundles']);
     $this->assertSame('default:taxonomy_term', $reference['handler']);
     $this->assertSame(['tags' => 'tags'], $reference['handlerSettings']['target_bundles']);
-    $this->assertSame(['entityType' => 'taxonomy_term', 'bundles' => ['tags']], References::target(static::child($surface, 'field_term')->getDefinition('target_id')));
+    $this->assertSame(['entityType' => 'taxonomy_term', 'bundles' => ['tags']], References::target(DerivedDefinition::at(static::child($surface, 'field_term'), 'target_id')));
     // A reference field core's autocomplete draws asks for it, listed or
     // not, its matching handed on; the form and the hint agree.
-    $uid = static::child($this->add('page'), 'uid')->getDefinition('target_id');
+    $uid = DerivedDefinition::at(static::child($this->add('page'), 'uid'), 'target_id');
     $this->assertNotNull($this->options()->resolve($uid), 'Few enough users to list.');
     $this->assertSame('autocomplete', $uid->getSetting('widget'));
     $this->assertSame('CONTAINS', $uid->getSetting('match_operator'));
@@ -239,16 +240,16 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $this->assertSame('autocomplete', $target['x-portable-ui']['widget']);
     $this->assertSame(['entityTypeId' => 'user'], $target['portable-check']['drupal:SurfaceValidReference']);
     $this->assertArrayNotHasKey('x-portable-links', $target, 'No lookup without the HTTP door.');
-    $terms = $this->options()->resolve(static::child($surface, 'field_term')->getDefinition('target_id'));
+    $terms = $this->options()->resolve(DerivedDefinition::at(static::child($surface, 'field_term'), 'target_id'));
     $this->assertNotNull($terms);
     $this->assertSame(['Larder', 'Pantry'], array_values(array_map('strval', $terms->options)));
 
     // One property: the field's label; several: each property's.
-    $this->assertSame('String', (string) static::child($surface, 'field_string')->getDefinition('value')?->getLabel());
-    $this->assertSame('Text format', (string) static::child($surface, 'field_text')->getDefinition('format')?->getLabel());
+    $this->assertSame('String', (string) DerivedDefinition::at(static::child($surface, 'field_string'), 'value')?->getLabel());
+    $this->assertSame('Text format', (string) DerivedDefinition::at(static::child($surface, 'field_text'), 'format')?->getLabel());
     // Required on the main property when the field is.
-    $this->assertTrue(static::child($surface, 'title')->getDefinition('value')?->isRequired());
-    $this->assertFalse(static::child($surface, 'field_text')->getDefinition('format')?->isRequired());
+    $this->assertTrue(DerivedDefinition::at(static::child($surface, 'title'), 'value')?->isRequired());
+    $this->assertFalse(DerivedDefinition::at(static::child($surface, 'field_text'), 'format')?->isRequired());
   }
 
   /**

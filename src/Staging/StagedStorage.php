@@ -6,6 +6,7 @@ namespace Drupal\surface\Staging;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Pipeline\CreatingStorageInterface;
 use Drupal\surface\Pipeline\DeletingStorageInterface;
 use Drupal\surface\Pipeline\Fingerprint;
@@ -471,7 +472,7 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
     if (!$local && ($prepared !== NULL || !$this->committed)) {
       return $this->adapter->outputs($surface, $values, $prepared);
     }
-    $outputs = $surface->outputEntries()->toArray();
+    $outputs = iterator_to_array($surface->outputEntries());
     if ($outputs === []) {
       return [];
     }
@@ -481,7 +482,7 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
     $answered = $values + $this->context->known;
     foreach ($this->address as $key => $address) {
       if (($answered[$key] ?? NULL) === NULL && isset($outputs[$key])) {
-        $answered[$key] = $outputs[$key]->getDataType() === 'integer' ? (int) $address : (string) $address;
+        $answered[$key] = SchemaFacts::dataType($outputs[$key]) === 'integer' ? (int) $address : (string) $address;
       }
     }
     return array_intersect_key(array_filter($answered, static fn (mixed $value): bool => $value !== NULL), $outputs);

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
@@ -12,11 +11,13 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Pipeline\ResultDocument;
+use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\Pipeline\Violation;
-use Drupal\surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -265,7 +266,7 @@ class RefinementIsolationTest extends SurfaceKernelTestBase {
    *   What each key says, by key.
    */
   protected static function described(SurfaceInterface $surface): array {
-    return array_map(static::describe(...), $surface->entries()->toArray());
+    return array_map(static::describe(...), DerivedDefinition::all($surface->entries()));
   }
 
   /**

@@ -11,6 +11,7 @@ use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Pipeline\Outbound;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\SurfaceInterface;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -97,7 +98,7 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
    */
   public function testLeafTypesReadAsTheirType(): void {
     $read = $this->read(self::DOCUMENT);
-    $definition = static fn (string $key): DataDefinitionInterface => $read->getDefinition($key);
+    $definition = static fn (string $key): DataDefinitionInterface => DerivedDefinition::at($read, $key);
 
     $this->assertSame('email', $definition('email')->getDataType());
     $this->assertSame(['max' => 254], $definition('email')->getConstraint('Length'), 'The length the library holds an email to is a Length.');
@@ -138,9 +139,9 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
     $link = $read->entries()->entry('link')->attachment;
     $this->assertSame('portable:link', $link->id, 'The structure is the library type.');
     $this->assertSame(['uri', 'title'], $link->child->entries()->names());
-    $this->assertTrue($link->child->getDefinition('uri')->isRequired());
-    $this->assertSame('string', $link->child->getDefinition('title')->getDataType(), 'A type of the library inside reads too.');
-    $this->assertSame('Link', $read->getDefinition('link')->getLabel());
+    $this->assertTrue(DerivedDefinition::at($link->child, 'uri')->isRequired());
+    $this->assertSame('string', DerivedDefinition::at($link->child, 'title')->getDataType(), 'A type of the library inside reads too.');
+    $this->assertSame('Link', DerivedDefinition::at($read, 'link')->getLabel());
   }
 
   /**
@@ -148,8 +149,8 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
    */
   public function testAnUnknownIdIsNoted(): void {
     $read = $this->read(self::DOCUMENT);
-    $this->assertSame('any', $read->getDefinition('nothing')->getDataType());
-    $this->assertSame(['schema' => ['$ref' => 'portable:nothing']], $read->getDefinition('nothing')->getConstraint('JsonSchema'));
+    $this->assertSame('any', DerivedDefinition::at($read, 'nothing')->getDataType());
+    $this->assertSame(['schema' => ['$ref' => 'portable:nothing']], DerivedDefinition::at($read, 'nothing')->getConstraint('JsonSchema'));
     $notes = $this->container->get('surface.schema_reader')->notes(self::DOCUMENT);
     $this->assertSame('Not read: the library has no portable:nothing.', $notes['/properties/nothing/$ref']);
     $this->assertSame('Read in place: portable:label, from the library, is the key\'s own.', $notes['/properties/name/$ref']);
@@ -190,8 +191,8 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
       ],
     ];
     $read = $this->read($document);
-    $this->assertTrue(DefinitionMetadata::isSecret($read->getDefinition('password')), 'The library says writeOnly.');
-    $this->assertFalse(DefinitionMetadata::isSecret($read->getDefinition('note')), 'A default is data, which says no key.');
+    $this->assertTrue(DefinitionMetadata::isSecret(DerivedDefinition::at($read, 'password')), 'The library says writeOnly.');
+    $this->assertFalse(DefinitionMetadata::isSecret(DerivedDefinition::at($read, 'note')), 'A default is data, which says no key.');
     $this->assertFalse(SchemaReader::holdsNoSecret(SchemaReader::prepared($document), static fn (): bool => FALSE));
     $this->assertSame(['note' => 'kept'], Outbound::project($read, ['password' => 'hunter2', 'note' => 'kept']), 'A secret is never returned.');
     $written = $this->container->get('surface.contract_emitter')->emitFull($read, 'test.library')->document['schema'];
@@ -216,18 +217,18 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
       ],
       '$defs' => ['address' => ['$ref' => 'portable:email', 'title' => 'address', 'maxLength' => 100]],
     ]);
-    $emails = $read->getDefinition('emails');
+    $emails = DerivedDefinition::at($read, 'emails');
     $this->assertInstanceOf(ListDataDefinitionInterface::class, $emails);
     $this->assertSame('email', $emails->getItemDefinition()->getDataType());
     $this->assertSame(['max' => 254], $emails->getItemDefinition()->getConstraint('Length'));
-    $times = $read->getDefinition('times');
+    $times = DerivedDefinition::at($read, 'times');
     $this->assertInstanceOf(ListDataDefinitionInterface::class, $times);
     $this->assertSame('timestamp', $times->getItemDefinition()->getDataType());
 
-    $this->assertSame('email', $read->getDefinition('contact')->getDataType(), 'A def that is a type of the library is that type.');
-    $this->assertSame('Contact', $read->getDefinition('contact')->getLabel());
-    $this->assertSame(['max' => 100], $read->getDefinition('contact')->getConstraint('Length'), 'What the def says beside the type narrows it.');
-    $others = $read->getDefinition('others');
+    $this->assertSame('email', DerivedDefinition::at($read, 'contact')->getDataType(), 'A def that is a type of the library is that type.');
+    $this->assertSame('Contact', DerivedDefinition::at($read, 'contact')->getLabel());
+    $this->assertSame(['max' => 100], DerivedDefinition::at($read, 'contact')->getConstraint('Length'), 'What the def says beside the type narrows it.');
+    $others = DerivedDefinition::at($read, 'others');
     $this->assertInstanceOf(ListDataDefinitionInterface::class, $others);
     $this->assertSame('email', $others->getItemDefinition()->getDataType());
     $this->assertSame(['max' => 100], $others->getItemDefinition()->getConstraint('Length'));
@@ -245,7 +246,7 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
         'additionalProperties' => FALSE,
         'properties' => ['when' => ['anyOf' => $any]],
       ]);
-      $this->assertSame('timestamp', $read->getDefinition('when')->getDataType());
+      $this->assertSame('timestamp', DerivedDefinition::at($read, 'when')->getDataType());
       $this->assertSame([], $this->refused($read, ['when' => 5]));
       $this->assertSame([], $this->refused($read, ['when' => NULL]), 'Null is allowed.');
       $this->assertNotSame([], $this->refused($read, ['when' => 'not a timestamp']));
@@ -265,7 +266,7 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
       'additionalProperties' => FALSE,
       'properties' => ['by_name' => ['type' => 'object', 'additionalProperties' => ['$ref' => 'portable:email']]],
     ]);
-    $kept = $read->getDefinition('by_name')->getConstraint('JsonSchema')['schema'];
+    $kept = DerivedDefinition::at($read, 'by_name')->getConstraint('JsonSchema')['schema'];
     $email = ['type' => 'string', 'format' => 'email', 'maxLength' => 254];
     $this->assertSame(['type' => 'object', 'additionalProperties' => $email], $kept);
     $this->assertSame([], $this->refused($read, ['by_name' => ['ada' => 'ada@example.com']]));
@@ -294,14 +295,14 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
     $this->assertSame('Not read: a structure of the library is read as the library states it.', $notes['/properties/link/required']);
 
     $read = $this->read($document);
-    $this->assertSame('email', $read->getDefinition('as_uri')->getDataType());
-    $this->assertSame('email', $read->getDefinition('as_number')->getDataType());
-    $this->assertSame('integer', $read->getDefinition('weight')->getDataType());
-    $this->assertSame(['schema' => ['format' => 'int32']], $read->getDefinition('weight')->getConstraint('JsonSchema'), 'A format no row reads is kept.');
-    $this->assertSame(['schema' => ['format' => 'int64']], $read->getDefinition('big')->getConstraint('JsonSchema'), 'A format the row states none of is kept beside the type.');
-    $this->assertSame(['min' => -self::SAFE, 'max' => self::SAFE], $read->getDefinition('big')->getConstraint('Range'));
+    $this->assertSame('email', DerivedDefinition::at($read, 'as_uri')->getDataType());
+    $this->assertSame('email', DerivedDefinition::at($read, 'as_number')->getDataType());
+    $this->assertSame('integer', DerivedDefinition::at($read, 'weight')->getDataType());
+    $this->assertSame(['schema' => ['format' => 'int32']], DerivedDefinition::at($read, 'weight')->getConstraint('JsonSchema'), 'A format no row reads is kept.');
+    $this->assertSame(['schema' => ['format' => 'int64']], DerivedDefinition::at($read, 'big')->getConstraint('JsonSchema'), 'A format the row states none of is kept beside the type.');
+    $this->assertSame(['min' => -self::SAFE, 'max' => self::SAFE], DerivedDefinition::at($read, 'big')->getConstraint('Range'));
     $this->assertSame([], $this->refused($read, ['weight' => 3, 'big' => 4]), 'The check reads a format it does not know as an annotation.');
-    $this->assertFalse($read->entries()->entry('link')->attachment->child->getDefinition('title')->isRequired(), 'The library\'s structure as it states it.');
+    $this->assertFalse(DerivedDefinition::at($read->entries()->entry('link')->attachment->child, 'title')->isRequired(), 'The library\'s structure as it states it.');
   }
 
   /**

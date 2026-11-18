@@ -5,17 +5,18 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\surface\SurfaceInterface;
+use Drupal\node\Entity\NodeType;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\surface_examples_compliance\Alter\RegistrationComplianceAlter;
+use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
 use Drupal\surface_resource_test\Structure\Broken\FickleStructure;
 use Drupal\surface_resource_test\Structure\Broken\ServiceReadingStructure;
 use Drupal\surface_resource_test\Structure\Crate\CrateStructure;
 use Drupal\surface_resource_test\Structure\StockroomStructure;
-use Drupal\node\Entity\NodeType;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -112,7 +113,7 @@ class StaticRefinerEnforcementTest extends SurfaceKernelTestBase {
    */
   public function testTranslatingStaticRefinerPassesTheGuard(): void {
     $this->assertTrue((bool) ini_get('zend.assertions'), 'The suite runs with assertions on.');
-    $name = $this->configure(ServiceReadingStructure::class)->refine(['kind' => 'short'])->getDefinition('name');
+    $name = DerivedDefinition::at($this->configure(ServiceReadingStructure::class)->refine(['kind' => 'short']), 'name');
     $this->assertSame(['max' => 10], $name->getConstraints()['Length']);
     $this->assertInstanceOf(TranslatableMarkup::class, $name->getDescription());
     $this->assertSame('Up to 10 characters for a short name.', (string) $name->getDescription());
@@ -143,7 +144,7 @@ class StaticRefinerEnforcementTest extends SurfaceKernelTestBase {
     $this->container->get('state')->set(ServiceReadingStructure::LIMIT, 7);
     ini_set('zend.assertions', '0');
     try {
-      $size = $surface->refine(['shelf' => 'top'])->getDefinition('size');
+      $size = DerivedDefinition::at($surface->refine(['shelf' => 'top']), 'size');
     }
     finally {
       ini_set('zend.assertions', '1');

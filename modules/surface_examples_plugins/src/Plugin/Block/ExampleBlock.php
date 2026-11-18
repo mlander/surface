@@ -6,6 +6,7 @@ namespace Drupal\surface_examples_plugins\Plugin\Block;
 
 use Drupal\Core\Block\Attribute\Block;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Plugin\Block\TypedBlockBase;
 use Drupal\surface\Resource\Attribute\UsesStructure;
 use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
@@ -36,9 +37,9 @@ final class ExampleBlock extends TypedBlockBase {
   public function build(): array {
     $configuration = $this->getConfiguration();
     $items = [];
-    foreach ($this->getSurface()->entries() as $name => $definition) {
+    foreach ($this->getSurface()->entries() as $name => $schema) {
       $items[] = $this->t('@label: @value', [
-        '@label' => $definition->getLabel() ?? $name,
+        '@label' => SchemaFacts::label($schema) ?? $name,
         '@value' => $this->describeValue($configuration[$name] ?? NULL),
       ]);
     }

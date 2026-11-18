@@ -312,13 +312,6 @@ final class Surface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function getDefinition(string $name): ?DataDefinitionInterface {
-    return $this->definitions->get($name);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function isLocked(string $name): bool {
     return $this->definitions->isLocked($name);
   }

@@ -88,7 +88,7 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
     $registry = $this->container->get('surface.resource_registry');
 
     $roots = [];
-    foreach (array_keys($typed->entries()) as $name) {
+    foreach (array_keys($typed->getDefinitions()) as $name) {
       $name = (string) $name;
       $kind = $reader->rootKind($name);
       if ($kind !== 'mapping' && $name !== $kind) {

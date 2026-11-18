@@ -22,6 +22,7 @@ use Drupal\surface\ResourceBuild\ShapeBlueprint;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -81,37 +82,37 @@ class AddSchemaTest extends SurfaceKernelTestBase {
     $built = $this->built();
     $this->assertSame(['name', 'size', 'kept', 'loose', 'tags', 'where', 'contact', 'module', 'slug', 'sender', 'other'], $built->entries()->names());
 
-    $name = $built->getDefinition('name');
+    $name = DerivedDefinition::at($built, 'name');
     $this->assertSame('string', $name->getDataType());
     $this->assertSame('Name', (string) $name->getLabel());
     $this->assertTrue($name->isRequired(), 'No default and no null: required, by the dialect\'s rule.');
     $this->assertSame(['max' => 20], $name->getConstraint('Length'));
 
-    $this->assertFalse($built->getDefinition('size')->isRequired(), 'A default: optional.');
+    $this->assertFalse(DerivedDefinition::at($built, 'size')->isRequired(), 'A default: optional.');
     $this->assertSame(10, $built->getDefault('size'));
-    $this->assertTrue($built->getDefinition('kept')->isRequired(), 'Required with a default, as asked.');
-    $this->assertFalse($built->getDefinition('loose')->isRequired(), 'Optional with no default, as asked.');
+    $this->assertTrue(DerivedDefinition::at($built, 'kept')->isRequired(), 'Required with a default, as asked.');
+    $this->assertFalse(DerivedDefinition::at($built, 'loose')->isRequired(), 'Optional with no default, as asked.');
 
-    $tags = $built->getDefinition('tags');
+    $tags = DerivedDefinition::at($built, 'tags');
     $this->assertInstanceOf(ListDataDefinitionInterface::class, $tags, 'A list schema is a list.');
     $this->assertSame(['max' => 3], $tags->getConstraint('Count'));
     $this->assertSame(['max' => 8], $tags->getItemDefinition()->getConstraint('Length'));
 
-    $where = $built->getDefinition('where');
+    $where = DerivedDefinition::at($built, 'where');
     $this->assertInstanceOf(MapDataDefinition::class, $where, 'An object schema is a map.');
     $this->assertSame(['city', 'zip'], array_keys($where->getPropertyDefinitions()));
     $this->assertTrue($where->getPropertyDefinition('city')?->isRequired());
 
-    $this->assertSame('email', $built->getDefinition('contact')->getDataType(), 'A reference to a def the schema holds finds it: its defs are the object\'s.');
+    $this->assertSame('email', DerivedDefinition::at($built, 'contact')->getDataType(), 'A reference to a def the schema holds finds it: its defs are the object\'s.');
 
-    $this->assertSame(['type' => 'module'], $built->getDefinition('module')->getConstraint('ExtensionExists'), 'A drupal: check of a plugin the site has is that constraint, with its options.');
-    $this->assertSame(['pattern' => '/^[a-z]+$/', 'message' => 'Lowercase letters only.'], $built->getDefinition('slug')->getConstraint('Regex'), 'The check\'s message is the constraint\'s message.');
+    $this->assertSame(['type' => 'module'], DerivedDefinition::at($built, 'module')->getConstraint('ExtensionExists'), 'A drupal: check of a plugin the site has is that constraint, with its options.');
+    $this->assertSame(['pattern' => '/^[a-z]+$/', 'message' => 'Lowercase letters only.'], DerivedDefinition::at($built, 'slug')->getConstraint('Regex'), 'The check\'s message is the constraint\'s message.');
 
-    $sender = $built->getDefinition('sender');
+    $sender = DerivedDefinition::at($built, 'sender');
     $this->assertSame('email', $sender->getDataType(), 'portable:email is the email type.');
     $this->assertSame(['max' => 254], $sender->getConstraint('Length'), 'What the library says beyond the row is the constraint it is written from.');
 
-    $this->assertSame('{"schema":{"portable-check":{"acme:thing":{}}}}', json_encode($built->getDefinition('other')->getConstraint('JsonSchema')), 'A check of no plugin of the site is kept.');
+    $this->assertSame('{"schema":{"portable-check":{"acme:thing":{}}}}', json_encode(DerivedDefinition::at($built, 'other')->getConstraint('JsonSchema')), 'A check of no plugin of the site is kept.');
   }
 
   /**
@@ -288,13 +289,13 @@ class AddSchemaTest extends SurfaceKernelTestBase {
    */
   public function testCheckBesideItsKeywordKeepsBoth(): void {
     $built = $this->rules();
-    $this->assertSame(['max' => 5, 'min' => 2], $built->getDefinition('length')->getConstraint('Length'));
-    $this->assertSame(['max' => 5], $built->getDefinition('strict')->getConstraint('Length'), 'The stricter max, the keyword\'s.');
-    $this->assertSame(['min' => 1, 'max' => 9], $built->getDefinition('range')->getConstraint('Range'));
-    $this->assertSame(['pattern' => '/b$/'], $built->getDefinition('regex')->getConstraint('Regex'));
-    $this->assertSame(['schema' => ['pattern' => '^a']], $built->getDefinition('regex')->getConstraint('JsonSchema'));
-    $this->assertSame(['choices' => ['a', 'c']], $built->getDefinition('choice')->getConstraint('Choice'));
-    $this->assertSame(['schema' => ['enum' => ['a', 'b']]], $built->getDefinition('choice')->getConstraint('JsonSchema'));
+    $this->assertSame(['max' => 5, 'min' => 2], DerivedDefinition::at($built, 'length')->getConstraint('Length'));
+    $this->assertSame(['max' => 5], DerivedDefinition::at($built, 'strict')->getConstraint('Length'), 'The stricter max, the keyword\'s.');
+    $this->assertSame(['min' => 1, 'max' => 9], DerivedDefinition::at($built, 'range')->getConstraint('Range'));
+    $this->assertSame(['pattern' => '/b$/'], DerivedDefinition::at($built, 'regex')->getConstraint('Regex'));
+    $this->assertSame(['schema' => ['pattern' => '^a']], DerivedDefinition::at($built, 'regex')->getConstraint('JsonSchema'));
+    $this->assertSame(['choices' => ['a', 'c']], DerivedDefinition::at($built, 'choice')->getConstraint('Choice'));
+    $this->assertSame(['schema' => ['enum' => ['a', 'b']]], DerivedDefinition::at($built, 'choice')->getConstraint('JsonSchema'));
 
     $properties = $this->emitted($built)['properties'];
     $this->assertSame(2, $properties['length']['minLength']);
@@ -357,13 +358,13 @@ class AddSchemaTest extends SurfaceKernelTestBase {
     $properties = $this->emitted($built)['properties'];
     $this->assertSame(['integer', 'null'], $properties['size']['type']);
     $this->assertSame([1, 2, NULL], array_column($properties['size']['oneOf'], 'const'), 'A select of the values, and null.');
-    $this->assertSame(['choices' => [1, 2]], $built->getDefinition('size')->getConstraint('Choice'));
+    $this->assertSame(['choices' => [1, 2]], DerivedDefinition::at($built, 'size')->getConstraint('Choice'));
     $this->assertSame(['integer', 'null'], $properties['count']['type']);
     $this->assertSame(['object', 'null'], $properties['place']['type']);
     $this->assertSame(['city'], array_keys($properties['place']['properties']));
     $this->assertSame('portable:link', $built->entries()->entry('link')->attachment?->id, 'A type of the library that is an object is its structure.');
     foreach (['size', 'count', 'place', 'link'] as $key) {
-      $this->assertFalse($built->getDefinition($key)->isRequired(), $key . ' allows null: optional.');
+      $this->assertFalse(DerivedDefinition::at($built, $key)->isRequired(), $key . ' allows null: optional.');
       $this->assertSame([], $this->codes($built, [$key => NULL]), $key . ' takes null.');
     }
     $this->assertSame(['enum'], $this->codes($built, ['size' => 4]));
@@ -413,7 +414,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
     $this->assertInstanceOf(TranslatableMarkup::class, $blueprint->definitionOf('x')?->getLabel());
     $this->assertInstanceOf(TranslatableMarkup::class, $blueprint->definitionOf('x')->getDescription());
     $this->assertInstanceOf(TranslatableMarkup::class, $blueprint->definitionOf('pick')?->getConstraint('LabeledChoice')['choices']['a'], 'An option\'s label too.');
-    $this->assertInstanceOf(TranslatableMarkup::class, $this->built()->getDefinition('name')->getLabel(), 'Through the build.');
+    $this->assertInstanceOf(TranslatableMarkup::class, DerivedDefinition::at($this->built(), 'name')->getLabel(), 'Through the build.');
   }
 
   /**
@@ -567,7 +568,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
       $blueprint->add('code', Schema::string()->title('Code')->pattern('^[a-z]+$')->message('pattern', new TranslatableMarkup($source)));
       $this->assertInstanceOf(TranslatableMarkup::class, $blueprint->definitionOf('code')?->getConstraints()['Regex']['message'], $case);
       $surface = $builder->seal();
-      $definition = $surface->getDefinition('code');
+      $definition = DerivedDefinition::at($surface, 'code');
       $this->assertSame($source, $definition->getConstraints()['Regex']['message'], $case);
       $this->assertSame($source, ConstraintMessages::source($definition->getConstraints()['Regex']['message']), $case);
       $schema = (array) Schemas::decoded($this->container->get('surface.definition_schema')->published(DefinitionSchema::of($definition), FALSE));

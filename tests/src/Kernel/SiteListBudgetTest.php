@@ -428,7 +428,7 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
     $this->assertInstanceOf(MapInputDefinition::class, $inputs[OperationInputs::VALUES]);
     $this->assertFalse($inputs[OperationInputs::VALUES]->isRequired());
     $this->assertSame([], $inputs[OperationInputs::VALUES]->getPropertyDefinitions());
-    $this->assertSame([OperationInputs::SCHEMA, OperationInputs::VALUES], array_keys($definition->outputEntries()));
+    $this->assertSame([OperationInputs::SCHEMA, OperationInputs::VALUES], array_keys($definition->getOutputDefinitions()));
 
     // The write tool's listing states the panels open, naming the tool.
     $panels = $manager->getDefinition('surface:resource_test.poster:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['panels'];

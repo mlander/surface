@@ -460,8 +460,8 @@ final class DoorCorpusRecorder {
         $paths[] = "$at.nope";
       }
     };
-    foreach ($surface->entries() as $name => $definition) {
-      $walk($definition, $prefix . $name, 0);
+    foreach ($surface->entries()->entries() as $name => $entry) {
+      $walk($entry->definition(), $prefix . $name, 0);
     }
     return array_values(array_unique($paths));
   }

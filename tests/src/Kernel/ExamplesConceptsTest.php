@@ -8,6 +8,7 @@ use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\SchemaResolver;
@@ -18,12 +19,13 @@ use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface\Variants\ComponentProps;
 use Drupal\surface_examples\CodeLines;
+use Drupal\surface_examples\ConceptCalls;
 use Drupal\surface_examples\ConceptPanel;
 use Drupal\surface_examples\Controller\ExamplesController;
 use Drupal\surface_examples\Entity\EventVenue;
 use Drupal\surface_examples\ExamplePanels;
-use Drupal\surface_examples\ConceptCalls;
 use Drupal\surface_examples\Hook\SpotlightBlockHooks;
 use Drupal\surface_examples\Resource\BulletinResource;
 use Drupal\surface_examples\Resource\CateringByMethodResource;
@@ -41,13 +43,13 @@ use Drupal\surface_examples\Resource\WebhookResource;
 use Drupal\surface_examples\Series;
 use Drupal\surface_examples\Storage\CateringStorage;
 use Drupal\surface_examples\Variants\CredentialSources;
-use Drupal\surface\Variants\ComponentProps;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolOperation;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use Symfony\Component\HttpFoundation\Request;
 use PortableSchema\Builder\Schema;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Tests examples 7 to 13: one small resource per concept, then a block.
@@ -505,23 +507,25 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $this->assertSame(['body'], $slots->variants['surface_examples:card']->child->entries()->names());
     $this->assertSame(['actions'], $slots->variants['surface_examples:hero']->child->entries()->names());
     $this->assertContains('config:core.extension', $built->getCacheTags());
-    $this->assertSame('Card', (string) $this->options()->resolve($built->getDefinition('component'))->options['surface_examples:card']);
+    $this->assertSame('Card', (string) $this->options()->resolve(DerivedDefinition::at($built, 'component'))->options['surface_examples:card']);
 
     // The card's props, read: each a key with its type and constraints.
     $card = $variants->variants['surface_examples:card']->child;
     $this->assertSame(['heading', 'tone', 'link'], $card->entries()->names());
-    $this->assertTrue($card->getDefinition('heading')->isRequired());
-    $this->assertSame(['max' => 80], $card->getDefinition('heading')->getConstraint('Length'));
+    $this->assertTrue(DerivedDefinition::at($card, 'heading')->isRequired());
+    $this->assertSame(['max' => 80], DerivedDefinition::at($card, 'heading')->getConstraint('Length'));
     $this->assertSame([
       'choices' => ['plain', 'highlight'],
       'labels' => ['plain' => 'Plain', 'highlight' => 'Highlighted'],
-    ], $card->getDefinition('tone')->getConstraint('LabeledChoice'));
+    ], DerivedDefinition::at($card, 'tone')->getConstraint('LabeledChoice'));
     $this->assertSame('plain', $card->getDefault('tone'));
-    $this->assertSame('uri', $card->getDefinition('link')->getPropertyDefinition('url')->getDataType());
+    $link = DerivedDefinition::at($card, 'link');
+    $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $link);
+    $this->assertSame('uri', $link->getPropertyDefinition('url')->getDataType());
     $hero = $variants->variants['surface_examples:hero']->child;
-    $this->assertSame(['min' => 0, 'max' => 100], $hero->getDefinition('overlay')->getConstraint('Range'));
+    $this->assertSame(['min' => 0, 'max' => 100], DerivedDefinition::at($hero, 'overlay')->getConstraint('Range'));
     $cta = $variants->variants['surface_examples:call_to_action']->child;
-    $this->assertSame(['max' => 3], $cta->getDefinition('tags')->getConstraint('Count'));
+    $this->assertSame(['max' => 3], DerivedDefinition::at($cta, 'tags')->getConstraint('Count'));
 
     // Both documents state the components as variants.
     $full = $this->full(SpotlightResource::class);

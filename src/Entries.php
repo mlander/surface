@@ -14,7 +14,7 @@ use PortableSchema\Builder\Schema;
  *
  * One collection in place of the parallel arrays a data surface used to
  * hold.
- * Every key is an Entry carrying its definition, who introduced
+ * Every key is an Entry carrying its schema, who introduced
  * it, whether it is locked, what it refines against, whose values it
  * offers and whose refiners narrow it, so nothing can name a key one of
  * those arrays had never heard of.
@@ -27,16 +27,15 @@ use PortableSchema\Builder\Schema;
  * names(), and the entry a with() replaces keeps its place.
  *
  * Reading it is deliberately easy and writing it is impossible.
- * Iterating yields name => definition, which is the shape every call
- * site that used to read the definitions array expects, and array
- * access answers the same question; set and unset throw, because a
- * sealed data surface has already been advertised.
+ * Iterating yields name => schema, and array access answers the same
+ * question; set and unset throw, because a sealed data surface has
+ * already been advertised.
  *
  * @see \Drupal\surface\Entry
  * @see \Drupal\surface\SurfaceInterface::entries()
  *
- * @implements \IteratorAggregate<string, \Drupal\Core\TypedData\DataDefinitionInterface>
- * @implements \ArrayAccess<string, \Drupal\Core\TypedData\DataDefinitionInterface>
+ * @implements \IteratorAggregate<string, \PortableSchema\Builder\Schema>
+ * @implements \ArrayAccess<string, \PortableSchema\Builder\Schema>
  */
 final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
 
@@ -404,16 +403,16 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
   }
 
   /**
-   * Gets one definition.
+   * Gets one key's schema.
    *
    * @param string $name
-   *   The definition key.
+   *   The key.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
-   *   The definition, or NULL when the map declares no such key.
+   * @return \PortableSchema\Builder\Schema|null
+   *   The key's schema, or NULL when there is no such key.
    */
-  public function get(string $name): ?DataDefinitionInterface {
-    return ($this->entries[$name] ?? NULL)?->definition();
+  public function get(string $name): ?Schema {
+    return ($this->entries[$name] ?? NULL)?->schema();
   }
 
   /**
@@ -704,27 +703,28 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
   }
 
   /**
-   * Gets the definitions as a plain array, keyed by definition key.
+   * Gets the definitions as a plain array, keyed by key.
    *
-   * For the callers that read the definitions themselves. One that reads
-   * only the keys asks keys(), which asks no entry for its definition.
+   * For the edges that read the definitions themselves, until an entry
+   * holds its schema alone. Every other reader iterates the entries,
+   * which yields schemas, or asks keys().
    *
    * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
    *   The definitions, in declaration order.
    */
   public function toArray(): array {
-    return array_map(
-      static fn (Entry $entry): DataDefinitionInterface => $entry->definition(),
-      $this->entries,
-    );
+    return array_map(static fn (Entry $entry): DataDefinitionInterface => $entry->definition(), $this->entries);
   }
 
   /**
    * {@inheritdoc}
+   *
+   * @return \Traversable<string, \PortableSchema\Builder\Schema>
+   *   Each key's schema, by key, in declaration order.
    */
   public function getIterator(): \Traversable {
     foreach ($this->entries as $name => $entry) {
-      yield $name => $entry->definition();
+      yield $name => $entry->schema();
     }
   }
 
@@ -745,7 +745,7 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
   /**
    * {@inheritdoc}
    */
-  public function offsetGet(mixed $offset): ?DataDefinitionInterface {
+  public function offsetGet(mixed $offset): ?Schema {
     return $this->get((string) $offset);
   }
 
@@ -756,7 +756,7 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
    *   Always: a sealed data surface has been advertised and cannot change.
    */
   public function offsetSet(mixed $offset, mixed $value): void {
-    throw new \LogicException('A definition map cannot be written to: the data surface has been sealed and advertised, and widening is a build-time act.');
+    throw new \LogicException('The entries cannot be written to: the data surface has been sealed and advertised, and widening is a build-time act.');
   }
 
   /**
@@ -766,7 +766,7 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
    *   Always: a sealed data surface has been advertised and cannot change.
    */
   public function offsetUnset(mixed $offset): void {
-    throw new \LogicException('A definition map cannot be written to: the data surface has been sealed and advertised, and removing a key would contradict what it advertised.');
+    throw new \LogicException('The entries cannot be written to: the data surface has been sealed and advertised, and removing a key would contradict what it advertised.');
   }
 
 }

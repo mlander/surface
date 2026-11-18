@@ -6,12 +6,13 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Variants\ComponentProps;
 use Drupal\surface\Variants\ComponentSlots;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface_examples\Resource\SpotlightResource;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -130,7 +131,7 @@ class ComponentsOfferedTest extends SurfaceKernelTestBase {
     $slots = $resolver->getInstanceFromDefinition(ComponentSlots::class);
     $this->assertSame(self::EXAMPLES, $slots->expected(['title' => 'Anything']), 'A slot that expects nothing in particular offers what the site offers.');
     $this->assertSame(['surface_examples:call_to_action'], $slots->expected($slots->metadata('surface_examples:hero')['actions']), 'A slot that names its components keeps them.');
-    $component = $this->spotlight()->getDefinition('component');
+    $component = DerivedDefinition::at($this->spotlight(), 'component');
     $this->assertSame(self::EXAMPLES, array_map('strval', array_keys($this->container->get('surface.options')->resolve($component)->options)), 'The chooser offers what the lists offer.');
 
     // One id, beside a provider.

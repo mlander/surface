@@ -91,7 +91,7 @@ class PerformanceBudgetTest extends SurfaceKernelTestBase {
    * definition) fails here.
    */
   public function testDiscoveryEntriesStayWithinBounds(): void {
-    $this->container->get('surface.resource_registry')->entries();
+    $this->container->get('surface.resource_registry')->getDefinitions();
     $hash = hash('xxh3', serialize($this->container->getParameter(ResourceCollectorPass::PARAMETER)));
     $bin = $this->container->get('cache.discovery');
     $index = $bin->get('surface:resources:index:' . $hash);

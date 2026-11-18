@@ -7,14 +7,15 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\surface\Surface;
-use Drupal\surface\Entries;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Entries;
+use Drupal\surface\Surface;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_test\AnyToIntegerRefiner;
 use Drupal\surface_test\RogueRefiner;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests the data surface value object: refinement contract, defaults, locking.
@@ -73,13 +74,13 @@ class SurfaceTest extends SurfaceKernelTestBase {
 
     // No dependency value: nothing refines.
     $this->assertSame($surface, $surface->refine([]));
-    $this->assertArrayNotHasKey('Choice', $surface->getDefinition('variant')->getConstraints());
+    $this->assertArrayNotHasKey('Choice', DerivedDefinition::at($surface, 'variant')->getConstraints());
 
     // Refined: the owner narrows the open key to the casing's variants.
     $refined = $surface->refine(['casing' => 'uppercase']);
-    $this->assertSame(['bold', 'strong'], $refined->getDefinition('variant')->getConstraints()['Choice']['choices']);
+    $this->assertSame(['bold', 'strong'], DerivedDefinition::at($refined, 'variant')->getConstraints()['Choice']['choices']);
     // The advertised data surface is untouched.
-    $this->assertArrayNotHasKey('Choice', $surface->getDefinition('variant')->getConstraints());
+    $this->assertArrayNotHasKey('Choice', DerivedDefinition::at($surface, 'variant')->getConstraints());
 
     // Validation runs against the refined definitions.
     $this->assertCount(0, $this->pipeline()->validate($surface, ['casing' => 'uppercase', 'variant' => 'bold']));
@@ -110,7 +111,7 @@ class SurfaceTest extends SurfaceKernelTestBase {
     $placeholder = DataDefinition::create('any');
     DefinitionMetadata::setVariantsBy($placeholder, 'kind');
     $refined = $surface($placeholder)->refine(['kind' => 'count']);
-    $this->assertSame('integer', $refined->getDefinition('value')->getDataType());
+    $this->assertSame('integer', DerivedDefinition::at($refined, 'value')->getDataType());
 
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('the data type changed from any to integer');

@@ -874,8 +874,8 @@ final class OpenApiDocument {
     $parameters = [];
     foreach ($operation->parameters as $parameter) {
       $path = in_array($parameter->name, $inPath, TRUE);
-      $key = $built->getDefinition($parameter->name);
-      $said = $key === NULL ? '' : (string) ($key->getDescription() ?? $key->getLabel() ?? '');
+      $key = $built->getSchema($parameter->name);
+      $said = $key === NULL ? '' : (string) (SchemaFacts::description($key) ?? SchemaFacts::label($key) ?? '');
       $description = match (TRUE) {
         $said !== '' => $said,
         $path => (string) $this->t('The identity of the thing: the @name the operation takes.', ['@name' => $parameter->name]),

@@ -7,11 +7,12 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_resource_test\Resource\Journal\JournalResource;
 use Drupal\surface_resource_test\Resource\Journal\LedgerResource;
 use Drupal\surface_resource_test\Structure\Broken\MixesMountingStructure;
@@ -22,13 +23,13 @@ use Drupal\surface_resource_test\Structure\Broken\MixinGuardStructure;
 use Drupal\surface_resource_test\Structure\Broken\MixinResourceStructure;
 use Drupal\surface_resource_test\Structure\Broken\MixinRulesOutStructure;
 use Drupal\surface_resource_test\Structure\Broken\MixinUnwiredStructure;
-use Drupal\surface_resource_test\Structure\Broken\MixinWiresMemberStructure;
 use Drupal\surface_resource_test\Structure\Broken\MixinWiresChildStructure;
+use Drupal\surface_resource_test\Structure\Broken\MixinWiresMemberStructure;
 use Drupal\surface_resource_test\Structure\Broken\MixinWithChildStructure;
 use Drupal\surface_resource_test\Structure\Broken\TwoMixinsClashStructure;
 use Drupal\surface_resource_test\Structure\Mixin\EntryStructure;
 use Drupal\surface_resource_test\Structure\Mixin\HarnessedStructure;
-use Drupal\surface\Tool\OperationInputs;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -189,7 +190,7 @@ class MixinsTest extends SurfaceKernelTestBase {
    */
   protected static function at(SurfaceInterface $surface, string $path): ?DataDefinitionInterface {
     $parents = explode('.', $path);
-    $definition = $surface->getDefinition((string) array_shift($parents));
+    $definition = DerivedDefinition::at($surface, (string) array_shift($parents));
     foreach ($parents as $property) {
       $definition = $definition?->getPropertyDefinition($property);
     }
@@ -233,7 +234,7 @@ class MixinsTest extends SurfaceKernelTestBase {
       'published' => FALSE,
       'archive' => NULL,
     ], $this->container->get('surface.resources')->defaults(JournalResource::class), 'The members\' declared defaults are the owner\'s.');
-    $this->assertSame('Seconds since the epoch.', (string) $journal->getDefinition('created')->getDescription(), 'The timestamps\' alter applies where they are mixed in.');
+    $this->assertSame('Seconds since the epoch.', (string) DerivedDefinition::at($journal, 'created')->getDescription(), 'The timestamps\' alter applies where they are mixed in.');
     $this->assertSame('Seconds since the epoch.', (string) self::at($this->built(LedgerResource::class), 'stamps.created')->getDescription(), 'And where they are attached.');
 
     // Stored flat: the members beside the owner's own keys.
@@ -289,22 +290,22 @@ class MixinsTest extends SurfaceKernelTestBase {
   public function testRefinementInTheOwnersFrame(): void {
     $journal = $this->built(JournalResource::class);
     // The ownership's coded refiner reads its port at the visibility.
-    $this->assertTrue(DoesNotApply::marks($journal->refine(['visibility' => 'public'])->getDefinition('shared')));
-    $this->assertFalse(DoesNotApply::marks($journal->refine(['visibility' => 'staff'])->getDefinition('shared')));
+    $this->assertTrue(DoesNotApply::marks(DerivedDefinition::at($journal->refine(['visibility' => 'public']), 'shared')));
+    $this->assertFalse(DoesNotApply::marks(DerivedDefinition::at($journal->refine(['visibility' => 'staff']), 'shared')));
     // Its declared rule reads the port at the visibility too.
-    $this->assertSame(32, $journal->refine(['visibility' => 'staff'])->getDefinition('owner')->getConstraints()['Length']['max']);
-    $this->assertArrayNotHasKey('Length', $journal->refine(['visibility' => 'public'])->getDefinition('owner')->getConstraints());
+    $this->assertSame(32, DerivedDefinition::at($journal->refine(['visibility' => 'staff']), 'owner')->getConstraints()['Length']['max']);
+    $this->assertArrayNotHasKey('Length', DerivedDefinition::at($journal->refine(['visibility' => 'public']), 'owner')->getConstraints());
     // The timestamps relate their own members.
-    $this->assertSame(1700000000, $journal->refine(['created' => 1700000000])->getDefinition('changed')->getConstraints()['Range']['min']);
-    $this->assertTrue($journal->refine(['created' => 5])->getDefinition('changed')->isRequired());
-    $this->assertFalse($journal->refine([])->getDefinition('changed')->isRequired());
+    $this->assertSame(1700000000, DerivedDefinition::at($journal->refine(['created' => 1700000000]), 'changed')->getConstraints()['Range']['min']);
+    $this->assertTrue(DerivedDefinition::at($journal->refine(['created' => 5]), 'changed')->isRequired());
+    $this->assertFalse(DerivedDefinition::at($journal->refine([]), 'changed')->isRequired());
     // The owner's rule reads a member, as one of its own keys.
-    $this->assertSame(1, $journal->refine(['created' => NULL])->getDefinition('revision')->getConstraints()['Range']['max']);
-    $this->assertSame(1, $journal->refine([])->getDefinition('revision')->getConstraints()['Range']['max'] ?? NULL);
-    $this->assertArrayNotHasKey('max', $journal->refine(['created' => 5])->getDefinition('revision')->getConstraints()['Range']);
+    $this->assertSame(1, DerivedDefinition::at($journal->refine(['created' => NULL]), 'revision')->getConstraints()['Range']['max']);
+    $this->assertSame(1, DerivedDefinition::at($journal->refine([]), 'revision')->getConstraints()['Range']['max'] ?? NULL);
+    $this->assertArrayNotHasKey('max', DerivedDefinition::at($journal->refine(['created' => 5]), 'revision')->getConstraints()['Range']);
     // The owner's rule narrows a member, as one of its own keys.
-    $this->assertTrue($journal->refine(['published' => TRUE])->getDefinition('created')->isRequired());
-    $this->assertFalse($journal->refine(['published' => FALSE])->getDefinition('created')->isRequired());
+    $this->assertTrue(DerivedDefinition::at($journal->refine(['published' => TRUE]), 'created')->isRequired());
+    $this->assertFalse(DerivedDefinition::at($journal->refine(['published' => FALSE]), 'created')->isRequired());
 
     $this->assertSame([], $this->refusals($journal, []));
     $this->assertSame(
@@ -521,8 +522,8 @@ class MixinsTest extends SurfaceKernelTestBase {
     $this->assertCount(1, $map->mixins());
     $this->assertSame(['reference', 'created', 'changed'], $map->mixins()[0]->keys);
     $this->assertSame(['changed' => ['created']], $map->refinementPaths(), 'The timestamps refine in the entry\'s frame, two levels down.');
-    $this->assertSame(5, $entry->refine(['created' => 5])->getDefinition('changed')->getConstraints()['Range']['min']);
-    $this->assertSame('Seconds since the epoch.', (string) $entry->getDefinition('created')->getDescription());
+    $this->assertSame(5, DerivedDefinition::at($entry->refine(['created' => 5]), 'changed')->getConstraints()['Range']['min']);
+    $this->assertSame('Seconds since the epoch.', (string) DerivedDefinition::at($entry, 'created')->getDescription());
 
     $emitter = $this->container->get('surface.contract_emitter');
     $full = json_decode((string) json_encode($emitter->emitFull($entry, 'resource_test.entry')->document['schema']), TRUE);

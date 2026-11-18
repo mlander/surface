@@ -52,7 +52,7 @@ final class SurfaceTestCondition extends TypedConditionPluginBase {
     $configuration = $this->getConfiguration();
     // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
     $options = \Drupal::service('surface.options')
-      ->resolve($this->getSurface()->getDefinition('mode'))
+      ->resolve($this->getSurface()->getSchema('mode'))
       ->options ?? [];
     return $this->t('@mode @threshold', [
       '@mode' => $options[$configuration['mode']] ?? $configuration['mode'],

@@ -8,10 +8,11 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_resource_test\Resource\Venue\HallResource;
 use Drupal\surface_resource_test\Resource\Venue\VenueResource;
 use Drupal\surface_resource_test\Structure\Broken\AlterAttachTargetStructure;
@@ -25,7 +26,7 @@ use Drupal\surface_resource_test\Structure\Broken\WiresMissingKeyStructure;
 use Drupal\surface_resource_test\Structure\Broken\WiresUnknownPortStructure;
 use Drupal\surface_resource_test\Structure\Broken\WiresWrongTypeStructure;
 use Drupal\surface_resource_test\Structure\Seating\SeatingStructure;
-use Drupal\surface\Tool\OperationInputs;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -169,7 +170,7 @@ class PortsTest extends SurfaceKernelTestBase {
    */
   protected static function at(SurfaceInterface $surface, string $path): ?DataDefinitionInterface {
     $parents = explode('.', $path);
-    $definition = $surface->getDefinition((string) array_shift($parents));
+    $definition = DerivedDefinition::at($surface, (string) array_shift($parents));
     foreach ($parents as $property) {
       $definition = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($property) : NULL;
     }
@@ -318,7 +319,7 @@ class PortsTest extends SurfaceKernelTestBase {
     $this->assertSame(['centre', 'side', 'none'], self::offered($refined, 'chairs.aisle'), 'The chairs read the arrangement, which holds nothing here.');
     $this->assertSame(40, self::at($hall->refine(['arrangement' => 'theatre', 'guests' => 50]), 'chairs.rows')->getConstraints()['Range']['max'], 'The chairs\' guests port is unwired: it holds nothing, and the rule reading it never holds.');
     $glued = $hall->refine(['third_party_settings' => ['surface_resource_test' => ['aisle' => 'none']]]);
-    $this->assertSame(300, $glued->getDefinition('guests')->getConstraints()['Range']['max'], 'The adapter\'s rule reads the structure\'s aisle.');
+    $this->assertSame(300, DerivedDefinition::at($glued, 'guests')->getConstraints()['Range']['max'], 'The adapter\'s rule reads the structure\'s aisle.');
     $no_ushers = ['rows' => 20, 'aisle' => 'side', 'ushers' => NULL];
     $overflow = self::hall('standing', 'banquet', 250, ['rows' => 5], $no_ushers);
     $messages = [];

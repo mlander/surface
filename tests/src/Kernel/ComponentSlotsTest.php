@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\UnknownKeysException;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Variants\ComponentSlots;
 use Drupal\surface_examples_component_block\Structure\ComponentBlockStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -115,7 +116,7 @@ class ComponentSlotsTest extends SurfaceKernelTestBase {
    */
   protected function offered(SurfaceInterface $slot): array {
     $nested = $slot->entries()->entry('component')->attachment->child;
-    return array_map('strval', array_keys($this->options()->resolve($nested->getDefinition('component'))->options));
+    return array_map('strval', array_keys($this->options()->resolve(DerivedDefinition::at($nested, 'component'))->options));
   }
 
   /**
@@ -155,7 +156,7 @@ class ComponentSlotsTest extends SurfaceKernelTestBase {
     $actions = $this->slot($built, 'surface_examples:hero', 'actions');
     $this->assertSame(['kind', 'text', 'component', 'components'], $actions->entries()->names());
     $this->assertSame(['surface_examples:call_to_action'], $this->offered($actions));
-    $count = $actions->getDefinition('components')->getConstraint('Count');
+    $count = DerivedDefinition::at($actions, 'components')->getConstraint('Count');
     $this->assertSame(['max' => 2], $count);
     $this->assertSame(['surface_examples:card', 'surface_examples:hero'], $this->offered($this->slot($built, 'surface_examples:section', 'content')));
     $body = $this->slot($built, 'surface_examples:card', 'body');
@@ -179,7 +180,7 @@ class ComponentSlotsTest extends SurfaceKernelTestBase {
     }
     $capped = $this->slot($frame, $component, 'inner');
     $this->assertSame(['kind', 'text'], $capped->entries()->names(), 'At the cap the slot holds text alone.');
-    $this->assertSame(['text'], array_map('strval', array_keys($this->options()->resolve($capped->getDefinition('kind'))->options)));
+    $this->assertSame(['text'], array_map('strval', array_keys($this->options()->resolve(DerivedDefinition::at($capped, 'kind'))->options)));
 
     // The same in the full schema: a def per depth, text alone at the cap.
     $full = $this->container->get('surface.contract_emitter')->emitFull($this->container->get('surface.resources')->buildStatic(ComponentBlockStructure::class, new OperationContext('configure')), 'block.surface_component')->document['schema'];

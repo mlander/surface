@@ -7,10 +7,11 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\NotEmitted;
 use Drupal\surface\Pipeline\ViolationSet;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -97,7 +98,7 @@ class OutputsTest extends SurfaceKernelTestBase {
    *   The allowed values.
    */
   protected function choices(SurfaceInterface $surface, string $name): array {
-    return $surface->outputEntries()->get($name)->getConstraints()['Choice']['choices'] ?? [];
+    return DerivedDefinition::in($surface->outputEntries(), $name)->getConstraints()['Choice']['choices'] ?? [];
   }
 
   /**
@@ -108,8 +109,8 @@ class OutputsTest extends SurfaceKernelTestBase {
 
     $outputs = $surface->outputEntries();
     $this->assertSame(['text', 'note', 'meta', 'tags'], $outputs->names());
-    $this->assertTrue($outputs->get('text')->isRequired());
-    $this->assertFalse($outputs->get('note')->isRequired());
+    $this->assertTrue(DerivedDefinition::in($outputs, 'text')->isRequired());
+    $this->assertFalse(DerivedDefinition::in($outputs, 'note')->isRequired());
     // No output refines against anything.
     $this->assertSame([], $outputs->refinements());
 

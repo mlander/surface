@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\surface\Entry;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_examples\Resource\TicketSalesResource;
 use Drupal\surface_resource_test\Structure\Broken\EntryPortOtherListStructure;
 use Drupal\surface_resource_test\Structure\Broken\EntryPortPlainKeyStructure;
@@ -14,8 +16,7 @@ use Drupal\surface_resource_test\Structure\Broken\EntryPortStructuresStructure;
 use Drupal\surface_resource_test\Structure\Broken\EntryPortTypeStructure;
 use Drupal\surface_resource_test\Structure\Broken\EntryPortUnmatchedStructure;
 use Drupal\surface_resource_test\Structure\Broken\EntryPortUnreadStructure;
-use Drupal\surface\Tool\OperationInputs;
-use Drupal\surface\Resource\OperationContext;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -109,7 +110,7 @@ class EntryPortsTest extends SurfaceKernelTestBase {
     $limits = $sales->refine($values)->entries()->entry('limits');
     $entry = $limits->attachment->bound($values)->entries()->entry($type);
     $child = $entry->attachment->bound([]);
-    return !DoesNotApply::marks($child->refine($child->getDefaultValues())->getDefinition($key));
+    return !DoesNotApply::marks(DerivedDefinition::at($child->refine($child->getDefaultValues()), $key));
   }
 
   /**

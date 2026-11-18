@@ -15,8 +15,9 @@ use PHPUnit\Framework\Attributes\Group;
  * (which an alias, a `use` line, a fully qualified name and a class name
  * in a string all spell), the typed data manager's service id or its
  * `\Drupal` accessor, typed config's service id or manager, or one of
- * Surface's three definition helpers, its own declaration of one
- * included. The scan reads the `.php`, `.module`, `.install` and `.inc`
+ * Surface's two definition helpers, its own declaration of one included
+ * (Entries, which was DefinitionMap, holds schemas and is no token since
+ * 2026-11-18). The scan reads the `.php`, `.module`, `.install` and `.inc`
  * files at the module's root, under `src` and under `modules/<module>`
  * (any `tests` directory left out), and the `.services.yml` files of the
  * module and its submodules, where a services file counts when it names
@@ -76,7 +77,6 @@ class TypedDataFootprintTest extends UnitTestCase {
     'TypedConfigManager',
     'DefinitionMetadata',
     'DefinitionTypedData',
-    'Entries',
   ];
 
   /**

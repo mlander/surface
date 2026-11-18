@@ -11,6 +11,7 @@ use Drupal\surface_resource_test\OutsideDiscovery\EastWordingAlter;
 use Drupal\surface_resource_test\OutsideDiscovery\NorthWordingAlter;
 use Drupal\surface_resource_test\OutsideDiscovery\SouthWordingAlter;
 use Drupal\surface_resource_test\Resource\Relay\PlainRelayResource;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -67,7 +68,7 @@ class AlterWordingTest extends SurfaceKernelTestBase {
       'alters' => $alters,
     ], $this->container->get('cache.discovery'));
     $resources = $this->container->get('surface.resources')->withRegistry($registry, $this->container->get('class_resolver'));
-    return $resources->buildOperation(PlainRelayResource::class, 'configure')->getDefinition('token');
+    return DerivedDefinition::at($resources->buildOperation(PlainRelayResource::class, 'configure'), 'token');
   }
 
   /**

@@ -11,13 +11,14 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface_intro_test\Structure\TeaserBlockStructure;
+use Drupal\surface_resource_test\Alter\SkuAlter;
 use Drupal\surface_resource_test\OutsideDiscovery\Labels\ClayPotStructure;
 use Drupal\surface_resource_test\OutsideDiscovery\Labels\PlanterStructure;
 use Drupal\surface_resource_test\OutsideDiscovery\Labels\SoilStructure;
 use Drupal\surface_resource_test\OutsideDiscovery\Labels\StonePotStructure;
-use Drupal\surface_resource_test\Alter\SkuAlter;
 use Drupal\surface_resource_test\Shape\Sku;
 use Drupal\surface_test\Structure\GatedFieldSettingsStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Traits\SchemaRoundTripTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -140,7 +141,7 @@ final class ResourceLabelsTest extends SurfaceKernelTestBase {
    * Tests a variant is offered by its structure's label, under its own.
    */
   public function testVariantIsOfferedByWhatItIsCalled(): void {
-    $kind = $this->planters()->buildStatic(PlanterStructure::class, new OperationContext('configure'))->getDefinition('kind');
+    $kind = DerivedDefinition::at($this->planters()->buildStatic(PlanterStructure::class, new OperationContext('configure')), 'kind');
     $set = ChoiceSet::of($kind);
     $this->assertNotNull($set);
     $this->assertSame('LabeledChoice', $set->constraint);

@@ -303,7 +303,7 @@ class VenueResourceTest extends SurfaceKernelTestBase {
     }
     $this->assertFalse($tools->hasDefinition(self::TOOL . 'list:read'), 'A read has no read tool beside it.');
     $this->assertFalse($tools->hasDefinition(self::TOOL . 'reorder:read'), 'Nor has an update beside the default: the venues have one read, the default update\'s.');
-    $this->assertSame(['items', 'total'], array_slice(array_keys($tools->getDefinition(self::TOOL . 'list')->outputEntries()), -2), 'The listing answers its outputs after the one result shape.');
+    $this->assertSame(['items', 'total'], array_slice(array_keys($tools->getDefinition(self::TOOL . 'list')->getOutputDefinitions()), -2), 'The listing answers its outputs after the one result shape.');
 
     $page = $this->call('list', ['values' => ['offset' => 1, 'limit' => 1]]);
     $this->assertTrue($page['success'], $page['message']);

@@ -11,10 +11,11 @@ use Drupal\surface\Widget\SurfaceWidgetManager;
 use Drupal\surface_widget_test\OutsideDiscovery\ValidatingWidget;
 use Drupal\surface_widget_test\Plugin\SurfaceWidget\PairWidget;
 use Drupal\surface_widget_test\Structure\DeepWrongWidgetStructure;
-use Drupal\surface_widget_test\Structure\PairStructure;
-use Drupal\surface_widget_test\Structure\WrongWidgetStructure;
 use Drupal\surface_widget_test\Structure\MisfitHolderStructure;
 use Drupal\surface_widget_test\Structure\PairsStructure;
+use Drupal\surface_widget_test\Structure\PairStructure;
+use Drupal\surface_widget_test\Structure\WrongWidgetStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -68,8 +69,8 @@ class WidgetAskTest extends SurfaceKernelTestBase {
    */
   public function testTheStructureAsksForItsWidget(): void {
     $built = $this->built(PairsStructure::class);
-    $this->assertSame('widget_test_pair', $built->getDefinition('asked')->getSetting('widget'));
-    $this->assertSame('fieldset', $built->getDefinition('owned')->getSetting('widget'), 'The owner\'s ask at the key wins.');
+    $this->assertSame('widget_test_pair', DerivedDefinition::at($built, 'asked')->getSetting('widget'));
+    $this->assertSame('fieldset', DerivedDefinition::at($built, 'owned')->getSetting('widget'), 'The owner\'s ask at the key wins.');
     $manager = $this->container->get('surface.widget_choice');
     $this->assertInstanceOf(PairWidget::class, $manager->forSchema($built->entries()->entry('asked')->schema()));
 

@@ -19,6 +19,7 @@ use Drupal\surface_resource_test\OutsideDiscovery\Texts\DraftTextsShape;
 use Drupal\surface_resource_test\OutsideDiscovery\Texts\LibraryTextsShape;
 use Drupal\surface_resource_test\OutsideDiscovery\Texts\TextsMade;
 use Drupal\surface_schema_test\Shape\MarkAction;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Kernel\Fixture\FakeLanguageTranslator;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
@@ -309,7 +310,7 @@ class ShapeTextsTest extends SurfaceKernelTestBase {
     (new ResourceBlueprint($builder, $this->container->get('typed_data_manager')))->add('code', Schema::string()
       ->check('drupal:Regex', ['pattern' => '/^[a-z]+$/'])
       ->message('check.drupal:Regex', TextsMade::t('Lowercase only.')));
-    $this->assertSame(['pattern' => '/^[a-z]+$/', 'message' => 'Lowercase only.'], $builder->seal()->getDefinition('code')->getConstraints()['Regex'], 'And so does an add() key.');
+    $this->assertSame(['pattern' => '/^[a-z]+$/', 'message' => 'Lowercase only.'], DerivedDefinition::at($builder->seal(), 'code')->getConstraints()['Regex'], 'And so does an add() key.');
   }
 
   /**

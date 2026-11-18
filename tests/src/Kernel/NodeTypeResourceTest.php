@@ -4,26 +4,27 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Form\FormState;
+use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\surface\SurfaceInterface;
+use Drupal\node\Entity\NodeType;
+use Drupal\node\NodeTypeInterface;
 use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\Pipeline\StorageViolationsException;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\Pipeline\ViolationSummary;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\ResourceBuild\StorageAdapter;
-use Drupal\surface_examples_extras\NodeTypeReviewSettings;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_examples_extras\Alter\NodeTypeAlter;
+use Drupal\surface_examples_extras\NodeTypeReviewSettings;
 use Drupal\surface_examples_node_type\Access\NodeTypeAccess;
 use Drupal\surface_examples_node_type\Hook\NodeTypeResourceHooks;
 use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
 use Drupal\surface_examples_node_type\Storage\NodeTypeStorage;
-use Drupal\node\Entity\NodeType;
-use Drupal\node\NodeTypeInterface;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -171,14 +172,14 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
     $this->assertFalse($surface->isLocked('type'));
     // The stock uniqueness the build adds to a create's identity, asking
     // the node type storage.
-    $unique = $surface->getDefinition('type')->getConstraints()['SurfaceUnique'] ?? NULL;
+    $unique = DerivedDefinition::at($surface, 'type')->getConstraints()['SurfaceUnique'] ?? NULL;
     $this->assertIsArray($unique);
     $this->assertSame(NodeTypeStorage::class, $unique['storage']);
     $this->assertSame('type', $unique['key']);
     $this->assertSame('content type', (string) $unique['thing']);
     // Computed from the name unless sent: a machine_name of 32 at most.
-    $this->assertSame('machine_name', DefinitionMetadata::configTypeOf($surface->getDefinition('type')));
-    $this->assertSame(['max' => 32], $surface->getDefinition('type')->getConstraints()['Length']);
+    $this->assertSame('machine_name', DefinitionMetadata::configTypeOf(DerivedDefinition::at($surface, 'type')));
+    $this->assertSame(['max' => 32], DerivedDefinition::at($surface, 'type')->getConstraints()['Length']);
 
     // The defaults a new content type starts from, as declared.
     $defaults = $surface->getDefaultValues();
@@ -231,7 +232,7 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
     $this->assertTrue($surface->isLocked('type'));
     $this->assertSame('article', $surface->getDefault('type'));
     // No uniqueness check against yourself on edit.
-    $this->assertArrayNotHasKey('SurfaceUnique', $surface->getDefinition('type')->getConstraints());
+    $this->assertArrayNotHasKey('SurfaceUnique', DerivedDefinition::at($surface, 'type')->getConstraints());
 
     // Current values come from the storage, not from the built resource.
     $stored = $storage->load($surface);
@@ -416,7 +417,7 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
   public function testAlterStoresTheReviewSettingsInTheirOwnLayout(): void {
     $extras = 'surface_examples_extras';
     [$surface, $storage] = $this->served($this->resources()->operation(NodeTypeResource::class, 'create'));
-    $mount = $surface->getDefinition('third_party_settings');
+    $mount = DerivedDefinition::at($surface, 'third_party_settings');
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $mount);
     $module = $mount->getPropertyDefinition($extras);
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $module);

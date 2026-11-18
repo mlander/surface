@@ -143,7 +143,7 @@ class ToolDefinitionsPerResourceTest extends SurfaceKernelTestBase {
       $this->lock->taken = FALSE;
       ResourceOperationToolDeriver::create($this->container, 'surface')->getDerivativeDefinitions($base);
     };
-    $tools->entries();
+    $tools->getDefinitions();
     $this->assertSame([
       ['acquire', ResourceOperationToolDeriver::LOCK],
       ['wait', ResourceOperationToolDeriver::LOCK],
@@ -151,8 +151,8 @@ class ToolDefinitionsPerResourceTest extends SurfaceKernelTestBase {
       ['acquire', ResourceOperationToolDeriver::LOCK],
       ['release', ResourceOperationToolDeriver::LOCK],
     ], $this->lock->asked, 'After the wait this request read what the other wrote, and derived nothing.');
-    $this->assertArrayHasKey('surface:entity.content:node.page:update', $tools->entries());
-    $this->assertArrayHasKey('surface:entity.content:node.kitchen:read', $tools->entries());
+    $this->assertArrayHasKey('surface:entity.content:node.page:update', $tools->getDefinitions());
+    $this->assertArrayHasKey('surface:entity.content:node.kitchen:read', $tools->getDefinitions());
   }
 
 }

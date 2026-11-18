@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\block\Entity\Block;
 use Drupal\Core\Form\EnforcedResponseException;
 use Drupal\Core\Form\FormState;
-use Drupal\block\Entity\Block;
+use Drupal\node\Entity\NodeType;
+use Drupal\surface\Pipeline\Storage\PluginConfigurationStorage;
 use Drupal\surface\Pipeline\ViolationSummary;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface\Pipeline\Storage\PluginConfigurationStorage;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock;
 use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
-use Drupal\node\Entity\NodeType;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
@@ -121,7 +122,7 @@ class ExampleBlockTest extends SurfaceKernelTestBase {
     $this->assertSame(
       array_keys($options),
       array_keys($this->container->get('surface.options')->resolve(
-        $this->createBlock()->getSurface()->getDefinition('entity_type'),
+        DerivedDefinition::at($this->createBlock()->getSurface(), 'entity_type'),
       )->options),
     );
     // Every offered value carries the label the definition gives it,
@@ -172,16 +173,16 @@ class ExampleBlockTest extends SurfaceKernelTestBase {
    */
   public function testAnInvalidEntityTypeLeavesTheBundleUnrefined(): void {
     $surface = $this->container->get('surface.resources')->build(ExampleBlockStructure::class, new OperationContext('configure'));
-    $advertised = $surface->getDefinition('bundle');
-    $bundle = $surface->refine(['entity_type' => 'no_such_type'])->getDefinition('bundle');
+    $advertised = DerivedDefinition::at($surface, 'bundle');
+    $bundle = DerivedDefinition::at($surface->refine(['entity_type' => 'no_such_type']), 'bundle');
     $this->assertArrayNotHasKey('EntityBundleExists', $bundle->getConstraints());
     $this->assertSame($advertised->getConstraints(), $bundle->getConstraints());
     $this->assertSame('Choose an entity type to see its bundles.', (string) $bundle->getDescription());
     // The field watches the entity type too, and is held back with it.
-    $field = $surface->refine(['entity_type' => 'no_such_type', 'bundle' => 'article'])->getDefinition('field');
+    $field = DerivedDefinition::at($surface->refine(['entity_type' => 'no_such_type', 'bundle' => 'article']), 'field');
     $this->assertArrayNotHasKey('SurfaceExamplesBundleField', $field->getConstraints());
 
-    $bundle = $surface->refine(['entity_type' => 'node'])->getDefinition('bundle');
+    $bundle = DerivedDefinition::at($surface->refine(['entity_type' => 'node']), 'bundle');
     $this->assertSame(['entityTypeId' => 'node'], $bundle->getConstraints()['EntityBundleExists']);
   }
 

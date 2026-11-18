@@ -170,7 +170,7 @@ class SiteListToolDoorTest extends SurfaceKernelTestBase {
     $this->assertStringEndsWith(self::NONE_STORED, (string) $panels->getDescription());
     $this->assertCount(8, $values->getPropertyDefinition('layout')->getConstraint('Choice')['choices'] ?? []);
     // The read tool says the same, and a narrowing tool is derived.
-    $read = $manager->getDefinition('surface:resource_test.poster:read')->outputEntries()[OperationInputs::VALUES];
+    $read = $manager->getDefinition('surface:resource_test.poster:read')->getOutputDefinitions()[OperationInputs::VALUES];
     $this->assertSame([], $read->getPropertyDefinition('panels')->getPropertyDefinitions());
     $this->assertStringEndsWith(self::NONE_STORED, (string) $read->getPropertyDefinition('panels')->getDescription());
     $this->assertTrue($manager->hasDefinition(self::WRITE . ':schema'));

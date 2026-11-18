@@ -134,7 +134,7 @@ class BuildMemoTest extends SurfaceKernelTestBase {
     $node = Node::create(['type' => 'page', 'title' => 'One', 'field_description' => 'First']);
     $node->save();
     $tools = $this->container->get('plugin.manager.tool');
-    $tools->entries();
+    $tools->getDefinitions();
     $this->resources()->forgetBuilds();
     [$built, $reused] = $this->counted(function () use ($tools, $node): void {
       $tool = $tools->createInstance('surface:entity.content:node.page:update');

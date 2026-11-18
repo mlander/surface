@@ -270,7 +270,7 @@ abstract class ValueBaselineTestBase extends SurfaceKernelTestBase {
    */
   protected function walked(): \Generator {
     $names = [];
-    foreach ($this->container->get('surface.resource_registry')->entries() as $definition) {
+    foreach ($this->container->get('surface.resource_registry')->getDefinitions() as $definition) {
       $names[$definition->id] = $definition->name();
     }
     $resources = $this->container->get('surface.resources');

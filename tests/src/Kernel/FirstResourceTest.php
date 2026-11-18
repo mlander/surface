@@ -10,9 +10,10 @@ use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_examples_first\Resource\NewsletterResource;
 use Drupal\surface_examples_first\Resource\StoreResource;
-use Drupal\surface\Tool\OperationInputs;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Unit\FirstResourceDocsTest;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -148,10 +149,10 @@ class FirstResourceTest extends SurfaceKernelTestBase {
     $resources = $this->container->get('surface.resources');
     $built = $resources->buildStatic(NewsletterResource::class, $resources->operation(NewsletterResource::class, 'configure'));
     foreach ($built->entries()->names() as $name) {
-      $this->assertInstanceOf(TranslatableMarkup::class, $built->getDefinition($name)->getLabel(), $name);
+      $this->assertInstanceOf(TranslatableMarkup::class, DerivedDefinition::at($built, $name)->getLabel(), $name);
     }
-    $this->assertInstanceOf(TranslatableMarkup::class, $built->getDefinition(NewsletterResource::MAX_RECIPIENTS)->getDescription());
-    $labels = $built->getDefinition(NewsletterResource::FREQUENCY)->getConstraint('LabeledChoice')['choices'];
+    $this->assertInstanceOf(TranslatableMarkup::class, DerivedDefinition::at($built, NewsletterResource::MAX_RECIPIENTS)->getDescription());
+    $labels = DerivedDefinition::at($built, NewsletterResource::FREQUENCY)->getConstraint('LabeledChoice')['choices'];
     $this->assertSame(['weekly', 'monthly'], array_keys($labels));
     $this->assertContainsOnlyInstancesOf(TranslatableMarkup::class, $labels);
   }

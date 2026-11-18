@@ -6,15 +6,16 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\surface\SurfaceInterface;
+use Drupal\node\Entity\Node;
+use Drupal\node\NodeInterface;
 use Drupal\surface\Pipeline\UnknownKeysException;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface_entity_test\Alter\EntityContentAlter;
 use Drupal\surface_entity_test\Hook\EntityTestHooks;
 use Drupal\surface_entity_test\Structure\TelephoneItemStructure;
-use Drupal\surface_entity_test\Alter\EntityContentAlter;
-use Drupal\node\Entity\Node;
-use Drupal\node\NodeInterface;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -211,7 +212,7 @@ class ContentEntityAccessTest extends SurfaceKernelTestBase {
     }
     $this->assertSame([], $registry->getAlters('field.item:node.page.title'));
     $edit = $this->edit();
-    $mount = $edit->getDefinition('third_party_settings');
+    $mount = DerivedDefinition::at($edit, 'third_party_settings');
     $this->assertInstanceOf(MapDataDefinition::class, $mount);
     $own = $mount->getPropertyDefinition('surface_entity_test');
     $this->assertInstanceOf(MapDataDefinition::class, $own);
@@ -232,7 +233,7 @@ class ContentEntityAccessTest extends SurfaceKernelTestBase {
     $this->assertSame([TelephoneItemStructure::class . '::shortNumbers()'], array_map(static fn ($refiner): string => $refiner->describe(), $phone->refiners));
 
     $edit = $this->edit();
-    $value = $edit->entries()->entry('field_phone')?->attachment?->child->getDefinition('value');
+    $value = DerivedDefinition::at($edit->entries()->entry('field_phone')?->attachment?->child, 'value');
     $this->assertNotNull($value);
     $this->assertSame('Digits, spaces and a leading plus.', (string) $value->getDescription());
     $this->assertSame('/^\+?[0-9 ]+$/D', $value->getConstraints()['Regex']['pattern']);

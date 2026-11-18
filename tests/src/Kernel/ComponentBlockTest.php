@@ -10,6 +10,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Variants\ComponentSlots;
 use Drupal\surface_examples_component_block\Plugin\Block\ComponentBlock;
 use Drupal\surface_examples_component_block\Structure\ComponentBlockStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -144,15 +145,15 @@ class ComponentBlockTest extends SurfaceKernelTestBase {
   public function testTheStructureIsComponentPropsAndSlots(): void {
     $built = $this->container->get('surface.resources')->build(ComponentBlockStructure::class, new OperationContext('configure'));
     $this->assertSame(['component', 'props', 'slots'], $built->entries()->names());
-    $this->assertFalse($built->getDefinition('component')->isRequired(), 'The block is built before anything is chosen, so no component is required.');
+    $this->assertFalse(DerivedDefinition::at($built, 'component')->isRequired(), 'The block is built before anything is chosen, so no component is required.');
     $this->assertNull($built->getDefault('component'));
     $this->assertSame(self::COMPONENTS, array_keys($built->entries()->entry('props')->variants->variants));
     $this->assertSame(self::COMPONENTS, array_keys($built->entries()->entry('slots')->variants->variants), 'The slots offer the same components: one with none is a variant with no keys.');
     $this->assertContains('config:core.extension', $built->getCacheTags());
-    $this->assertSame('Hero', (string) $this->options()->resolve($built->getDefinition('component'))->options['surface_examples:hero']);
+    $this->assertSame('Hero', (string) $this->options()->resolve(DerivedDefinition::at($built, 'component'))->options['surface_examples:hero']);
     $card = $built->entries()->entry('props')->variants->variants['surface_examples:card']->child;
     $this->assertSame(['heading', 'tone', 'link'], $card->entries()->names());
-    $this->assertTrue($card->getDefinition('heading')->isRequired());
+    $this->assertTrue(DerivedDefinition::at($card, 'heading')->isRequired());
 
     // One key per slot, each its kind and what that kind holds.
     $slots = array_map(static fn ($variant): array => $variant->child->entries()->names(), $built->entries()->entry('slots')->variants->variants);

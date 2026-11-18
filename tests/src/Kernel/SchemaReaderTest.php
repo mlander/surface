@@ -11,11 +11,12 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\SchemaReader;
-use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -145,7 +146,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
         "plain": {"type": "string"}
       }}
       JSON));
-    $types = array_map(static fn ($definition): string => $definition->getDataType(), $read->entries()->toArray());
+    $types = array_map(static fn ($definition): string => $definition->getDataType(), DerivedDefinition::all($read->entries()));
     $this->assertSame([
       'title' => 'string',
       'note' => 'string',
@@ -158,22 +159,22 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       'when' => 'datetime_iso8601',
       'plain' => 'string',
     ], $types);
-    $title = $read->getDefinition('title');
+    $title = DerivedDefinition::at($read, 'title');
     $this->assertSame('Title', (string) $title->getLabel());
     $this->assertSame('What it is called.', (string) $title->getDescription());
     $this->assertTrue($title->isRequired());
     $this->assertSame(['Spring meetup'], DefinitionMetadata::getExamples($title));
-    $this->assertTrue($read->getDefinition('mail')->isRequired());
-    $this->assertFalse($read->getDefinition('note')->isRequired());
-    $this->assertNull($read->getDefinition('plain')->getLabel(), 'A property with no title has no label.');
+    $this->assertTrue(DerivedDefinition::at($read, 'mail')->isRequired());
+    $this->assertFalse(DerivedDefinition::at($read, 'note')->isRequired());
+    $this->assertNull(DerivedDefinition::at($read, 'plain')->getLabel(), 'A property with no title has no label.');
     $this->assertSame(3, $read->getDefault('count'));
     $this->assertTrue($read->getDefault('open'));
     // An optional key whose type refuses null: held where it starts from a
     // value, as a key its storage always holds; cleared by null where not.
-    $this->assertTrue(DefinitionMetadata::isAlwaysHeld($read->getDefinition('count')));
-    $this->assertTrue(DefinitionMetadata::isAlwaysHeld($read->getDefinition('open')));
-    $this->assertFalse(DefinitionMetadata::isAlwaysHeld($read->getDefinition('plain')));
-    $this->assertFalse(DefinitionMetadata::isAlwaysHeld($read->getDefinition('note')));
+    $this->assertTrue(DefinitionMetadata::isAlwaysHeld(DerivedDefinition::at($read, 'count')));
+    $this->assertTrue(DefinitionMetadata::isAlwaysHeld(DerivedDefinition::at($read, 'open')));
+    $this->assertFalse(DefinitionMetadata::isAlwaysHeld(DerivedDefinition::at($read, 'plain')));
+    $this->assertFalse(DefinitionMetadata::isAlwaysHeld(DerivedDefinition::at($read, 'note')));
   }
 
   /**
@@ -207,7 +208,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
         "days": {"type": "array", "items": {"type": "string", "enum": ["mon", "tue"]}, "minItems": 1, "maxItems": 2}
       }}
       JSON));
-    $constraints = static fn (string $key): array => $read->getDefinition($key)->getConstraints();
+    $constraints = static fn (string $key): array => DerivedDefinition::at($read, $key)->getConstraints();
     $this->assertSame(['choices' => ['s', 'm', 'l']], $constraints('size')['Choice']);
     $this->assertSame([
       'choices' => ['plain', 'loud'],
@@ -218,7 +219,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       'labels' => ['hall' => 'Hall', 'room' => 'Room'],
       'descriptions' => ['hall' => 'The big one.'],
     ], $constraints('venue')['LabeledChoice']);
-    $this->assertSame('integer', $read->getDefinition('level')->getDataType(), 'A list of values with no type is of their type.');
+    $this->assertSame('integer', DerivedDefinition::at($read, 'level')->getDataType(), 'A list of values with no type is of their type.');
     $this->assertSame(['choices' => [1, 2], 'labels' => ['1' => 'One', '2' => 'Two']], $constraints('level')['LabeledChoice']);
     $this->assertSame(['choices' => ['yes']], $constraints('only')['Choice']);
     $this->assertSame(['min' => 1, 'max' => 400], $constraints('seats')['Range']);
@@ -244,7 +245,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $this->assertSame([
       'constraints' => [['Length' => ['max' => 2]], ['Regex' => ['pattern' => '/^[a-z]+$/D']]],
     ], $constraints('either')['AtLeastOneOf']);
-    $days = $read->getDefinition('days');
+    $days = DerivedDefinition::at($read, 'days');
     $this->assertInstanceOf(ListDataDefinitionInterface::class, $days);
     $this->assertSame(['min' => 1, 'max' => 2], $days->getConstraint('Count'));
     $this->assertSame(['choices' => ['mon', 'tue']], $days->getItemDefinition()->getConstraint('Choice'));
@@ -289,8 +290,8 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $map = $read->entries();
     $this->assertTrue($map->isLocked('id'));
     $this->assertSame('main', $read->getDefault('id'));
-    $this->assertTrue(DefinitionMetadata::isSecret($read->getDefinition('key')));
-    $address = $read->getDefinition('address');
+    $this->assertTrue(DefinitionMetadata::isSecret(DerivedDefinition::at($read, 'key')));
+    $address = DerivedDefinition::at($read, 'address');
     $this->assertInstanceOf(MapDataDefinition::class, $address);
     $this->assertNull($map->entry('address')->attachment, 'A plain object is a map, not a child.');
     $this->assertTrue($address->getPropertyDefinition('street')->isRequired());
@@ -300,7 +301,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $this->assertSame('person', $home->id);
     $this->assertSame($home->source, $work->source, 'One def is one structure, wherever it is used.');
     $this->assertSame('person', $map->entry('people')->list->item->id);
-    $this->assertSame(['max' => 3], $read->getDefinition('people')->getConstraint('Count'));
+    $this->assertSame(['max' => 3], DerivedDefinition::at($read, 'people')->getConstraint('Count'));
     $this->assertSame(['stamps'], array_map(static fn ($mixin): string => (string) $mixin->structure->id, $map->mixins()));
     $this->assertSame(['id', 'key', 'address', 'home', 'work', 'people', 'stamped'], $map->names());
 
@@ -407,10 +408,10 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       "patternProperties": {"^x-": {"type": "string"}},
       "dependentRequired": {"odd": ["either"]}}
       JSON));
-    $constraints = static fn (string $key): array => $read->getDefinition($key)->getConstraints();
+    $constraints = static fn (string $key): array => DerivedDefinition::at($read, $key)->getConstraints();
     $this->assertSame(['schema' => ['contains' => ['const' => 'news']]], $constraints('tags')['JsonSchema']);
     $this->assertSame(['schema' => ['not' => ['multipleOf' => 2]]], $constraints('odd')['JsonSchema']);
-    $this->assertSame('any', $read->getDefinition('either')->getDataType());
+    $this->assertSame('any', DerivedDefinition::at($read, 'either')->getDataType());
     $this->assertSame(['schema' => ['type' => ['string', 'integer']]], $constraints('either')['JsonSchema']);
     $this->assertSame(['schema' => ['type' => 'object']], $constraints('meta')['JsonSchema']);
     $this->assertSame(['schema' => ['$ref' => 'https://example.com/schemas/thing.json']], $constraints('elsewhere')['JsonSchema']);
@@ -456,7 +457,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       }}
       JSON);
     $read = $this->read($document);
-    $constraints = static fn (string $key): array => $read->getDefinition($key)->getConstraints();
+    $constraints = static fn (string $key): array => DerivedDefinition::at($read, $key)->getConstraints();
     $this->assertArrayNotHasKey('JsonSchema', $constraints('name'));
     $this->assertArrayNotHasKey('JsonSchema', $constraints('own'));
     $this->assertSame(['schema' => ['not' => ['multipleOf' => 2]]], $constraints('odd')['JsonSchema']);
@@ -516,12 +517,12 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
         "other": {"type": "string", "not": {"pattern": "^x"}, "x-surface": {"patternMessage": "Not starting with x.", "widget": "textarea"}}
       }}
       JSON));
-    $constraints = static fn (string $key): array => $read->getDefinition($key)->getConstraints();
+    $constraints = static fn (string $key): array => DerivedDefinition::at($read, $key)->getConstraints();
     $this->assertSame(['schema' => ['contains' => ['const' => 'news']]], $constraints('tags')['JsonSchema']);
     $this->assertSame('Lower case letters only.', $constraints('code')['Regex']['message']);
     $this->assertSame('Not starting with x.', $constraints('other')['Regex']['message']);
     $this->assertFalse($constraints('other')['Regex']['match']);
-    $this->assertTrue($read->getDefinition('other')->getSetting('multiline'), 'The rest of its x-surface is read as before.');
+    $this->assertTrue(DerivedDefinition::at($read, 'other')->getSetting('multiline'), 'The rest of its x-surface is read as before.');
     $this->assertSame(['tags check.drupal:JsonSchema.not_valid'], $this->refused($read, ['tags' => ['a']]));
   }
 
@@ -559,7 +560,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       {"$schema": "http://json-schema.org/draft-07/schema#", "type": "object", "additionalProperties": false,
        "properties": {"size": {"type": "integer", "minimum": 0, "exclusiveMinimum": true}}}
       JSON));
-    $this->assertSame(['min' => 1], $read->getDefinition('size')->getConstraint('Range'));
+    $this->assertSame(['min' => 1], DerivedDefinition::at($read, 'size')->getConstraint('Range'));
   }
 
   /**
@@ -606,10 +607,10 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       JSON));
     // A constraint given no options is held as given none once the
     // declaration is done (BlueprintAdapterBase::settleOptions()).
-    $this->assertSame(['Count' => ['min' => 1], 'UniqueItems' => NULL], array_diff_key($read->getDefinition('tags')->getConstraints(), ['NotNull' => TRUE]), 'After the bounds, where the emitter writes it.');
-    $this->assertSame([], $read->getDefinition('rows')->getConstraints()['UniqueItems']);
-    $this->assertArrayNotHasKey('UniqueItems', $read->getDefinition('any')->getConstraints());
-    $this->assertArrayNotHasKey('JsonSchema', $read->getDefinition('any')->getConstraints());
+    $this->assertSame(['Count' => ['min' => 1], 'UniqueItems' => NULL], array_diff_key(DerivedDefinition::at($read, 'tags')->getConstraints(), ['NotNull' => TRUE]), 'After the bounds, where the emitter writes it.');
+    $this->assertSame([], DerivedDefinition::at($read, 'rows')->getConstraints()['UniqueItems']);
+    $this->assertArrayNotHasKey('UniqueItems', DerivedDefinition::at($read, 'any')->getConstraints());
+    $this->assertArrayNotHasKey('JsonSchema', DerivedDefinition::at($read, 'any')->getConstraints());
     $this->assertSame([], $this->reader()->notes(static::json('{"type": "object", "additionalProperties": false, "properties": {"tags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}}}')), 'Nothing is kept or dropped.');
 
     $full = $this->container->get('surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
@@ -649,8 +650,8 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       '/properties/deadline/properties/inner/portable-check/drupal:ComplexData' => 'Not read: a constraint the server checks is known by its plugin alone.',
     ], $this->reader()->notes($document));
     $read = $this->read($document);
-    $this->assertSame(['schema' => ['minProperties' => 1]], $read->getDefinition('deadline')->getConstraints()['JsonSchema']);
-    $this->assertArrayNotHasKey('SurfaceExamplesExtrasReviewDeadline', $read->getDefinition('deadline')->getConstraints());
+    $this->assertSame(['schema' => ['minProperties' => 1]], DerivedDefinition::at($read, 'deadline')->getConstraints()['JsonSchema']);
+    $this->assertArrayNotHasKey('SurfaceExamplesExtrasReviewDeadline', DerivedDefinition::at($read, 'deadline')->getConstraints());
   }
 
   /**
@@ -675,7 +676,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       }}
       JSON));
     $type = ['NotNull' => TRUE, 'PrimitiveType' => TRUE];
-    $constraints = static fn (string $key): array => array_diff_key($read->getDefinition($key)->getConstraints(), $type);
+    $constraints = static fn (string $key): array => array_diff_key(DerivedDefinition::at($read, $key)->getConstraints(), $type);
     $this->assertSame(['Length' => ['min' => 1]], $constraints('name'), 'minLength: 1 is the literal Length.');
     $this->assertSame('{"Uuid":null}', json_encode($constraints('id')), 'Given no options: held as none.');
     $this->assertSame(['JsonSchema' => ['schema' => ['pattern' => '^[a-z]+$', 'not' => ['pattern' => '^x']]]], $constraints('code'), 'Two Regex constraints, of which a definition holds one: kept whole.');
@@ -732,14 +733,14 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
         "day": {"type": "string", "format": "date", "not": {"pattern": "^1"}}
       }}
       JSON));
-    $code = $read->getDefinition('code')->getConstraints()['JsonSchema']['schema'];
+    $code = DerivedDefinition::at($read, 'code')->getConstraints()['JsonSchema']['schema'];
     $this->assertSame(['allOf' => [['minLength' => 3], ['pattern' => '^a$', 'not' => ['pattern' => '^b']]]], $code);
-    $tags = $read->getDefinition('tags')->getConstraints()['JsonSchema']['schema'];
+    $tags = DerivedDefinition::at($read, 'tags')->getConstraints()['JsonSchema']['schema'];
     $this->assertSame(['allOf' => [['maxItems' => 3], ['minLength' => 2]]], $tags);
     $this->assertNotSame([], $this->refused($read, ['code' => 'a']), 'The carried minLength still holds.');
     $this->assertNotSame([], $this->refused($read, ['code' => 'b']), 'The kept pattern still holds.');
 
-    $day = $read->getDefinition('day')->getConstraints();
+    $day = DerivedDefinition::at($read, 'day')->getConstraints();
     $this->assertSame(['pattern' => '/^1/D', 'match' => FALSE], $day['Regex']);
     $this->assertSame(['pattern' => '^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$'], $day['JsonSchema']['schema']);
     $this->assertNotSame([], $this->refused($read, ['day' => '1999-11-10']), 'The pattern it must not match holds.');
@@ -792,9 +793,9 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $this->assertSame(SchemaReader::prepared($new), SchemaReader::prepared($old), 'Prepared, the old spelling is the new one.');
     $read = [$this->read($old, 'test.old'), $this->read($new, 'test.new')];
     $said = static fn (SurfaceInterface $surface): array => array_map(static fn (string $key): array => [
-      DefinitionMetadata::arrangementOf($surface->getDefinition($key))?->toArray(),
-      $surface->getDefinition($key)->getSetting('widget'),
-      $surface->getDefinition($key)->getSetting('multiline'),
+      DefinitionMetadata::arrangementOf(DerivedDefinition::at($surface, $key))?->toArray(),
+      DerivedDefinition::at($surface, $key)->getSetting('widget'),
+      DerivedDefinition::at($surface, $key)->getSetting('multiline'),
     ], ['rate', 'deposit', 'opens', 'size', 'notes']);
     $this->assertSame($said($read[1]), $said($read[0]));
     $this->assertSame([
@@ -810,9 +811,9 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       'prefix' => '$',
       'suffix' => 'an hour',
       'help' => 'Whole dollars.',
-    ], DefinitionMetadata::arrangementOf($read[1]->getDefinition('rate'))->toArray());
-    $this->assertSame(['group' => ['id' => 'hours', 'label' => 'Hours', 'as' => 'fieldset'], 'weight' => 2], DefinitionMetadata::arrangementOf($read[1]->getDefinition('opens'))->toArray());
-    $this->assertSame('radios', $read[1]->getDefinition('size')->getSetting('widget'));
+    ], DefinitionMetadata::arrangementOf(DerivedDefinition::at($read[1], 'rate'))->toArray());
+    $this->assertSame(['group' => ['id' => 'hours', 'label' => 'Hours', 'as' => 'fieldset'], 'weight' => 2], DefinitionMetadata::arrangementOf(DerivedDefinition::at($read[1], 'opens'))->toArray());
+    $this->assertSame('radios', DerivedDefinition::at($read[1], 'size')->getSetting('widget'));
     $notes = $this->reader()->notes($new);
     $this->assertSame('Not read: the options resolver decides it from the key\'s list of values.', $notes['/properties/size/x-portable-ui/options/emptyOption'] ?? NULL);
   }
@@ -863,10 +864,10 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $this->assertSame(SchemaReader::prepared($new), SchemaReader::prepared($old), 'Prepared, the old spelling is the new one.');
     $read = [$this->read($old, 'test.old'), $this->read($new, 'test.new')];
     foreach ($read as $surface) {
-      $this->assertSame(['entityTypeId' => 'user'], $surface->getDefinition('contact')->getConstraints()['SurfaceValidReference']);
-      $this->assertSame('integer', $surface->getDefinition('contact')->getDataType());
-      $this->assertArrayNotHasKey('Choice', $surface->getDefinition('contact')->getConstraints(), 'Its candidates are the site\'s, not a list read.');
-      $this->assertSame(['entityTypeId' => 'user', 'bundles' => ['user']], $surface->getDefinition('author')->getConstraints()['SurfaceValidReference'], 'The bundles, respelled as the plugin\'s option.');
+      $this->assertSame(['entityTypeId' => 'user'], DerivedDefinition::at($surface, 'contact')->getConstraints()['SurfaceValidReference']);
+      $this->assertSame('integer', DerivedDefinition::at($surface, 'contact')->getDataType());
+      $this->assertArrayNotHasKey('Choice', DerivedDefinition::at($surface, 'contact')->getConstraints(), 'Its candidates are the site\'s, not a list read.');
+      $this->assertSame(['entityTypeId' => 'user', 'bundles' => ['user']], DerivedDefinition::at($surface, 'author')->getConstraints()['SurfaceValidReference'], 'The bundles, respelled as the plugin\'s option.');
     }
 
     // The bare id's link, as the emitter writes it with the HTTP door.
@@ -912,8 +913,8 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       JSON);
     $surface = $this->read($document);
     foreach (['ghost', 'loose'] as $key) {
-      $this->assertSame('integer', $surface->getDefinition($key)->getDataType(), $key);
-      $this->assertArrayNotHasKey('SurfaceValidReference', $surface->getDefinition($key)->getConstraints(), $key . ': no reference read.');
+      $this->assertSame('integer', DerivedDefinition::at($surface, $key)->getDataType(), $key);
+      $this->assertArrayNotHasKey('SurfaceValidReference', DerivedDefinition::at($surface, $key)->getConstraints(), $key . ': no reference read.');
     }
     $notes = $this->reader()->notes($document);
     $this->assertSame('Not read: it refers to no_such_type, an entity type this site does not have, so the constraint the server checks is known by its plugin alone.', $notes['/properties/ghost/portable-check/drupal:SurfaceValidReference'] ?? NULL, json_encode($notes));
@@ -940,7 +941,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
           }}
       }}
       JSON));
-    $address = $read->getDefinition('address');
+    $address = DerivedDefinition::at($read, 'address');
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $address);
     $address = $address->getPropertyDefinitions();
     $this->assertSame([
@@ -967,8 +968,8 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       }}
       JSON);
     $read = $this->read($document);
-    $this->assertNull(DefinitionMetadata::arrangementOf($read->getDefinition('rate')), 'Nothing of it is read.');
-    $this->assertSame(['group' => ['id' => 'odd', 'label' => 'Odd', 'as' => 'fieldset'], 'weight' => 2], DefinitionMetadata::arrangementOf($read->getDefinition('deposit'))->toArray());
+    $this->assertNull(DefinitionMetadata::arrangementOf(DerivedDefinition::at($read, 'rate')), 'Nothing of it is read.');
+    $this->assertSame(['group' => ['id' => 'odd', 'label' => 'Odd', 'as' => 'fieldset'], 'weight' => 2], DefinitionMetadata::arrangementOf(DerivedDefinition::at($read, 'deposit'))->toArray());
     $notes = $this->reader()->notes($document);
     $this->assertSame('Not read: a weight is a whole number.', $notes['/properties/rate/x-portable-ui/weight'] ?? NULL);
     $this->assertSame('Not read: a text is a string.', $notes['/properties/rate/x-portable-ui/options/help'] ?? NULL);
@@ -990,11 +991,11 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       }}
       JSON));
     $checks = array_flip(['Regex', 'Sequentially', 'AtLeastOneOf', 'JsonSchema']);
-    $rules = static fn (string $key): array => array_intersect_key($read->getDefinition($key)->getConstraints(), $checks);
+    $rules = static fn (string $key): array => array_intersect_key(DerivedDefinition::at($read, $key)->getConstraints(), $checks);
     $this->assertSame(['Regex' => ['pattern' => '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D']], $rules('marked'), "RFC 3339's date, once.");
     $this->assertSame(['Regex' => ['pattern' => '/^\d{4}-\d{2}-\d{2}$/D']], $rules('patterned'), 'Beside a pattern, the pattern alone.');
     foreach (['marked', 'patterned', 'bare'] as $key) {
-      $this->assertSame('date', $read->getDefinition($key)->getSetting('widget'), $key . ' is drawn as a date input.');
+      $this->assertSame('date', DerivedDefinition::at($read, $key)->getSetting('widget'), $key . ' is drawn as a date input.');
     }
   }
 
@@ -1025,9 +1026,9 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $this->assertSame(['shown' => 'listed'], $contact->reads);
     $this->assertSame(['shown'], array_keys($contact->child->entries()->ports()));
     $this->assertSame(['shown'], $contact->child->entries()->dependencies('email'), "The rule the container stated is the child's, on its port.");
-    $this->assertSame('radios', $read->getDefinition('badge')->getSetting('widget'));
-    $this->assertTrue($read->getDefinition('notes')->getSetting('multiline'));
-    $this->assertSame(['schema' => ['uniqueItems' => TRUE]], $read->getDefinition('kept')->getConstraint('JsonSchema'));
+    $this->assertSame('radios', DerivedDefinition::at($read, 'badge')->getSetting('widget'));
+    $this->assertTrue(DerivedDefinition::at($read, 'notes')->getSetting('multiline'));
+    $this->assertSame(['schema' => ['uniqueItems' => TRUE]], DerivedDefinition::at($read, 'kept')->getConstraint('JsonSchema'));
   }
 
 }

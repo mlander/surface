@@ -36,14 +36,13 @@ class EntriesTest extends UnitTestCase {
    */
   public function testDeclarationOrderIsPreserved(): void {
     $map = Entries::fromArrays([
-      'zebra' => DataDefinition::create('string'),
-      'aardvark' => DataDefinition::create('string'),
-      'moose' => DataDefinition::create('string'),
+      'zebra' => Schema::keywords(['type' => 'string']),
+      'aardvark' => Schema::keywords(['type' => 'string']),
+      'moose' => Schema::keywords(['type' => 'string']),
     ]);
 
     $this->assertSame(['zebra', 'aardvark', 'moose'], $map->names());
     $this->assertSame(['zebra', 'aardvark', 'moose'], array_keys(iterator_to_array($map)));
-    $this->assertSame(['zebra', 'aardvark', 'moose'], array_keys($map->toArray()));
     $this->assertSame(['zebra', 'aardvark', 'moose'], array_keys($map->keys()));
     $this->assertCount(3, $map);
   }
@@ -72,18 +71,18 @@ class EntriesTest extends UnitTestCase {
   }
 
   /**
-   * Tests that iterating hands back name => definition.
+   * Tests that iterating hands back name => schema.
    */
-  public function testIterationYieldsDefinitions(): void {
-    $title = DataDefinition::create('string')->setLabel('Title');
-    $map = Entries::fromArrays(['title' => $title]);
+  public function testIterationYieldsSchemas(): void {
+    $schema = Schema::keywords(['type' => 'string', 'title' => 'Title']);
+    $map = Entries::fromArrays(['title' => $schema]);
 
-    foreach ($map as $name => $definition) {
+    foreach ($map as $name => $yielded) {
       $this->assertSame('title', $name);
-      $this->assertSame($title, $definition);
+      $this->assertSame($schema, $yielded);
     }
-    $this->assertSame($title, $map->get('title'));
-    $this->assertSame($title, $map['title']);
+    $this->assertSame($schema, $map->get('title'));
+    $this->assertSame($schema, $map['title']);
     $this->assertTrue(isset($map['title']));
     $this->assertNull($map->get('nothing'));
     $this->assertFalse($map->has('nothing'));
@@ -231,12 +230,12 @@ class EntriesTest extends UnitTestCase {
 
     $this->assertNotSame($map, $next);
     $this->assertSame(['kind', 'detail', 'note'], $next->names());
-    $this->assertSame($narrowed, $next->get('detail'));
+    $this->assertSame($narrowed, $next->entry('detail')->definition());
     // Everything else about the key is settled at build time.
     $this->assertTrue($next->isLocked('detail'));
     $this->assertSame(['kind'], $next->dependencies('detail'));
     // And the map it came from is untouched.
-    $this->assertNotSame($narrowed, $map->get('detail'));
+    $this->assertNotSame($narrowed, $map->entry('detail')->definition());
   }
 
   /**
@@ -257,8 +256,8 @@ class EntriesTest extends UnitTestCase {
     $map = Entries::fromArrays(['kind' => DataDefinition::create('string')]);
 
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('A definition map cannot be written to');
-    $map['extra'] = DataDefinition::create('string');
+    $this->expectExceptionMessage('The entries cannot be written to');
+    $map['extra'] = Schema::keywords(['type' => 'string']);
   }
 
   /**
@@ -268,7 +267,7 @@ class EntriesTest extends UnitTestCase {
     $map = Entries::fromArrays(['kind' => DataDefinition::create('string')]);
 
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('A definition map cannot be written to');
+    $this->expectExceptionMessage('The entries cannot be written to');
     unset($map['kind']);
   }
 

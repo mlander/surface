@@ -20,6 +20,7 @@ use Drupal\surface\Variants;
 use Drupal\surface\Variants\ConfigSchemaTypes;
 use Drupal\surface_reader_test\Resource\ConditionHostResource;
 use Drupal\surface_reader_test\Storage\ConditionHostStorage;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Kernel\Reader\RecordingBlueprint;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\SchemaRoundTripTrait;
@@ -234,7 +235,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
       'settings' => ['use_site_logo' => TRUE],
     ];
     $typed->createFromNameAndData('block.block.branding', $block)->get('settings')->getElements();
-    $this->assertArrayNotHasKey('type', $typed->entries()['block.settings.system_branding_block'], 'Merged for a value, the definition has lost its type.');
+    $this->assertArrayNotHasKey('type', $typed->getDefinitions()['block.settings.system_branding_block'], 'Merged for a value, the definition has lost its type.');
 
     $parent = $reader->structure('block.settings.system_branding_block', '', 'block_settings');
     $same = $reader->structure('block.settings.system_branding_block', '', 'block.settings.*');
@@ -451,8 +452,8 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $resources = $this->container->get('surface.resources');
     $fields = $resources->buildStatic($reader->structure('views.field.[plugin_id]'), new OperationContext('configure'))
       ->entries()->entry(ConfigSchemaReader::CHOSEN)->variants;
-    $field = $fields->variant('field')->child->getDefinition('separator');
-    $roles = $fields->variant('user_roles')->child->getDefinition('separator');
+    $field = DerivedDefinition::at($fields->variant('field')->child, 'separator');
+    $roles = DerivedDefinition::at($fields->variant('user_roles')->child, 'separator');
     $this->assertSame(['string', 'string'], [$field->getDataType(), $roles->getDataType()]);
     $this->assertArrayHasKey('Regex', $field->getConstraints(), 'The field\'s separator is a label, held to its Regex.');
     $this->assertArrayNotHasKey('Regex', $roles->getConstraints(), 'The roles\' separator is a plain string.');
@@ -462,8 +463,8 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $map = $built->entries();
     $this->assertSame(['kind', ConfigSchemaReader::CHOSEN], $map->names());
     $signals = $map->entry(ConfigSchemaReader::CHOSEN)->variants;
-    $this->assertSame('string', $signals->variant('word')->child->getDefinition('pattern')->getDataType());
-    $this->assertSame('map', $signals->variant('timed')->child->getDefinition('pattern')->getDataType(), 'A mapping in the timed signal.');
+    $this->assertSame('string', DerivedDefinition::at($signals->variant('word')->child, 'pattern')->getDataType());
+    $this->assertSame('map', DerivedDefinition::at($signals->variant('timed')->child, 'pattern')->getDataType(), 'A mapping in the timed signal.');
     $refusals = function (array $value) use ($built): array {
       try {
         $accepted = $this->pipeline()->accept($built, $value, []);
@@ -545,9 +546,9 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $name = $reader->structure('surface_reader_test.counted');
     $built = $this->container->get('surface.resources')->buildStatic($name, new OperationContext('configure'));
     $map = $built->entries();
-    $this->assertSame(['min' => 1, 'max' => 3], $map->get('tags')->getConstraints()['Count']);
+    $this->assertSame(['min' => 1, 'max' => 3], DerivedDefinition::in($map, 'tags')->getConstraints()['Count']);
     $this->assertNotNull($map->entry('stops')->list, 'A collection.');
-    $this->assertSame(['min' => 1, 'max' => 3], $map->get('stops')->getConstraints()['Count']);
+    $this->assertSame(['min' => 1, 'max' => 3], DerivedDefinition::in($map, 'stops')->getConstraints()['Count']);
     $refusals = function (array $value) use ($built): array {
       $accepted = $this->pipeline()->accept($built, $value, []);
       $messages = [];
@@ -596,7 +597,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $name = $reader->structure('surface_reader_test.open');
     $built = $this->container->get('surface.resources')->buildStatic($name, new OperationContext('configure'));
     $this->assertSame(['langcode', 'kind', 'loose', 'nested'], $built->entries()->names());
-    $this->assertSame('any', $built->getDefinition('loose')->getDataType());
+    $this->assertSame('any', DerivedDefinition::at($built, 'loose')->getDataType());
     $refusals = function (array $value) use ($built): array {
       $accepted = $this->pipeline()->accept($built, $value, []);
       $messages = [];

@@ -13,10 +13,11 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
-use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Form\ContractPanel;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\ResourceBuild\OperationRoute;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface_examples\CodeLines;
 use Drupal\surface_examples\ExamplePanels;
@@ -25,14 +26,14 @@ use Drupal\surface_examples\Form\RegistrationStep2ClassicForm;
 use Drupal\surface_examples\Resource\RegistrationStep1Resource;
 use Drupal\surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
-use Drupal\surface\Form\ContractPanel;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\Role;
 use Drupal\user\RoleInterface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use Symfony\Component\HttpFoundation\Request;
 use PortableSchema\Builder\Schema;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Tests the examples' steps 1 to 3, and the contract panel under them.
@@ -205,11 +206,11 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     $this->assertSame(['venue'], $surface->entries()->dependencies('room'));
     $this->assertSame(['room'], $surface->entries()->dependencies('capacity'));
 
-    $rooms = $this->options()->resolve($surface->refine(['venue' => 'harbour'])->getDefinition('room'));
+    $rooms = $this->options()->resolve(DerivedDefinition::at($surface->refine(['venue' => 'harbour']), 'room'));
     $this->assertSame(['harbour_auditorium', 'harbour_deck'], array_keys($rooms->options));
     $this->assertSame(['title', 'open', 'venue', 'room', 'capacity'], $surface->entries()->names());
-    $this->assertNull($surface->getDefinition('capacity')->getDescription());
-    $capacity = $surface->refine(['venue' => 'library', 'room' => 'library_garden'])->getDefinition('capacity');
+    $this->assertNull(DerivedDefinition::at($surface, 'capacity')->getDescription());
+    $capacity = DerivedDefinition::at($surface->refine(['venue' => 'library', 'room' => 'library_garden']), 'capacity');
     $this->assertSame(['min' => 1, 'max' => 30], $capacity->getConstraints()['Range']);
     $this->assertSame('Up to 30 for the Garden room.', (string) $capacity->getDescription());
 
@@ -295,10 +296,10 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     $entry = $surface->entries()->entry('ticket');
     $this->assertSame('pricing', $entry->variants?->by);
     $this->assertSame(['free', 'paid'], $entry->variants->variantIds());
-    $paid = $surface->refine(['pricing' => 'paid'])->getDefinition('ticket');
+    $paid = DerivedDefinition::at($surface->refine(['pricing' => 'paid']), 'ticket');
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $paid);
     $this->assertSame(['price', 'currency'], array_keys($paid->getPropertyDefinitions()));
-    $free = $surface->refine(['pricing' => 'free'])->getDefinition('ticket');
+    $free = DerivedDefinition::at($surface->refine(['pricing' => 'free']), 'ticket');
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $free);
     $this->assertSame(['note'], array_keys($free->getPropertyDefinitions()));
 

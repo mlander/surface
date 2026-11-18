@@ -7,43 +7,44 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceInterface;
+use Drupal\node\Entity\NodeType;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\UsesStructure;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
 use Drupal\surface\ResourceBuild\ResourceBlueprintAdditions;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock;
 use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
 use Drupal\surface_examples_plugins\Structure\GridPresentationStructure;
 use Drupal\surface_examples_plugins\Structure\ListPresentationStructure;
+use Drupal\surface_resource_test\Alter\InstanceRefinerAlter;
+use Drupal\surface_resource_test\Alter\StrictMountWatcherAlter;
+use Drupal\surface_resource_test\Resource\Broken\UndeclaredIdentityResource;
+use Drupal\surface_resource_test\Resource\RecipeResource;
+use Drupal\surface_resource_test\Storage\RecipeStorage;
 use Drupal\surface_resource_test\Structure\Broken\AttachingStructure;
-use Drupal\surface_resource_test\Structure\Broken\NosyChildStructure;
-use Drupal\surface_resource_test\Structure\Broken\NosyParentStructure;
-use Drupal\surface_resource_test\Structure\Broken\RefinesAttachedStructure;
-use Drupal\surface_resource_test\Structure\Broken\SelfAttachingStructure;
-use Drupal\surface_resource_test\Structure\Broken\UnofferedVariantStructure;
-use Drupal\surface_resource_test\Structure\Broken\Kit\KitListByStructure;
-use Drupal\surface_resource_test\Structure\Broken\Kit\KitUndeclaredByStructure;
-use Drupal\surface_resource_test\Structure\Broken\WatchesAttachedStructure;
 use Drupal\surface_resource_test\Structure\Broken\ClashingOperationStructure;
 use Drupal\surface_resource_test\Structure\Broken\InstanceAlterRefinerStructure;
 use Drupal\surface_resource_test\Structure\Broken\InstanceRefinerStructure;
+use Drupal\surface_resource_test\Structure\Broken\Kit\KitListByStructure;
+use Drupal\surface_resource_test\Structure\Broken\Kit\KitUndeclaredByStructure;
+use Drupal\surface_resource_test\Structure\Broken\NosyChildStructure;
+use Drupal\surface_resource_test\Structure\Broken\NosyParentStructure;
+use Drupal\surface_resource_test\Structure\Broken\RefinesAttachedStructure;
 use Drupal\surface_resource_test\Structure\Broken\RefinesOutputStructure;
-use Drupal\surface_resource_test\Resource\Broken\UndeclaredIdentityResource;
+use Drupal\surface_resource_test\Structure\Broken\SelfAttachingStructure;
 use Drupal\surface_resource_test\Structure\Broken\StrictMountWatcherStructure;
-use Drupal\surface_resource_test\Alter\InstanceRefinerAlter;
-use Drupal\surface_resource_test\Alter\StrictMountWatcherAlter;
-use Drupal\surface_resource_test\Structure\Broken\WatchesUndeclaredStructure;
 use Drupal\surface_resource_test\Structure\Broken\TakesDefinitionStructure;
+use Drupal\surface_resource_test\Structure\Broken\UnofferedVariantStructure;
+use Drupal\surface_resource_test\Structure\Broken\WatchesAttachedStructure;
+use Drupal\surface_resource_test\Structure\Broken\WatchesUndeclaredStructure;
 use Drupal\surface_resource_test\Structure\Broken\WideningRefinerStructure;
 use Drupal\surface_resource_test\Structure\MountWatcherStructure;
-use Drupal\surface_resource_test\Resource\RecipeResource;
-use Drupal\surface_resource_test\Storage\RecipeStorage;
 use Drupal\surface_test\Alter\ForeignMountWatcherAlter;
-use Drupal\node\Entity\NodeType;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Kernel\Fixture\CountingResources;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -191,7 +192,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
   public function testContextConstraintsNarrow(): void {
     $context = RecipeResource::create('main')->withConstraint('servings', Schema::any()->minimum(2)->maximum(12));
     $surface = $this->resources()->build(RecipeResource::class, $context);
-    $this->assertSame(['min' => 2, 'max' => 12], $surface->getDefinition('servings')->getConstraints()['Range']);
+    $this->assertSame(['min' => 2, 'max' => 12], DerivedDefinition::at($surface, 'servings')->getConstraints()['Range']);
     $this->assertContains('servings', $this->pipeline()->validate($surface, ['servings' => 1] + $surface->getDefaultValues() + ['name' => 'x'])->keys());
 
     $this->expectException(\LogicException::class);
@@ -205,7 +206,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
    */
   public function testRefinerDispatch(): void {
     $surface = $this->resources()->build(RecipeResource::class, RecipeResource::create('main'));
-    $choices = static fn (SurfaceInterface $refined): array => $refined->getDefinition('dish')->getConstraints()['Choice']['choices'];
+    $choices = static fn (SurfaceInterface $refined): array => DerivedDefinition::at($refined, 'dish')->getConstraints()['Choice']['choices'];
 
     // The dish is refined by the owner (watching course, by name) and by
     // the alter (watching vegetarian). The engine gates per key, so it
@@ -218,12 +219,12 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
 
     // Two watched siblings, in parameter order, each arriving as the type
     // the parameter declares even from raw form input.
-    $range = static fn (array $values): array => $surface->refine($values)->getDefinition('servings')->getConstraints()['Range'];
+    $range = static fn (array $values): array => DerivedDefinition::at($surface->refine($values), 'servings')->getConstraints()['Range'];
     $this->assertSame(['min' => 1, 'max' => 12], $range(['course' => 'main', 'vegetarian' => '0']));
     $this->assertSame(['min' => 1, 'max' => 6], $range(['course' => 'dessert', 'vegetarian' => '1']));
 
     // A refiner that watches nothing ran once, at build.
-    $this->assertSame(['max' => 40], $surface->getDefinition('name')->getConstraints()['Length']);
+    $this->assertSame(['max' => 40], DerivedDefinition::at($surface, 'name')->getConstraints()['Length']);
 
     // The refiners ride inside the built resource, alter service and all.
     // The resource's own ride as its class name: its refiners are static,
@@ -343,12 +344,12 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
     $this->assertSame(['size' => [$kind], 'third_party_settings.surface_resource_test.detail' => [$kind]], $definitions->refinementPaths());
 
     // Unanswered, the kind holds nothing back: it is handed as NULL.
-    $detail = fn (array $values): array => $this->mounted($surface->refine($values)->getDefinition('third_party_settings'))['detail']->getConstraints();
+    $detail = fn (array $values): array => $this->mounted(DerivedDefinition::at($surface->refine($values), 'third_party_settings'))['detail']->getConstraints();
     $this->assertSame(['max' => 10], $detail([])['Length']);
     $with = ['third_party_settings' => ['surface_resource_test' => ['kind' => 'large']]];
     $this->assertArrayNotHasKey('Length', $detail($with));
-    $this->assertSame(['max' => 100], $surface->refine($with)->getDefinition('size')->getConstraints()['Range']);
-    $this->assertArrayNotHasKey('Range', $surface->refine([])->getDefinition('size')->getConstraints());
+    $this->assertSame(['max' => 100], DerivedDefinition::at($surface->refine($with), 'size')->getConstraints()['Range']);
+    $this->assertArrayNotHasKey('Range', DerivedDefinition::at($surface->refine([]), 'size')->getConstraints());
 
     $this->enableModules(['surface_test']);
     $this->expectException(\LogicException::class);
@@ -365,10 +366,10 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
    */
   public function testVariantsNothingDeclaresChooseNothing(): void {
     $surface = $this->resources()->build(AttachingStructure::class, new OperationContext('configure'));
-    $this->assertNull(DefinitionMetadata::variantsBy($surface->getDefinition('type')));
-    $this->assertSame('type', DefinitionMetadata::variantsBy($surface->getDefinition('settings')));
+    $this->assertNull(DefinitionMetadata::variantsBy(DerivedDefinition::at($surface, 'type')));
+    $this->assertSame('type', DefinitionMetadata::variantsBy(DerivedDefinition::at($surface, 'settings')));
     $this->assertSame([], $surface->entries()->entry('settings')->variants->variantIds());
-    $this->assertSame(['choices' => []], $surface->getDefinition('type')->getConstraints()['Choice']);
+    $this->assertSame(['choices' => []], DerivedDefinition::at($surface, 'type')->getConstraints()['Choice']);
     $this->assertContains('type', $this->pipeline()->validate($surface, ['type' => 'anything'])->keys());
   }
 
@@ -425,7 +426,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
    */
   public function testAltersApply(): void {
     $add = $this->resources()->buildOperation(RecipeResource::class, 'create', ['main']);
-    $this->assertSame(['garnish'], array_keys($this->mounted($add->getDefinition('third_party_settings'))));
+    $this->assertSame(['garnish'], array_keys($this->mounted(DerivedDefinition::at($add, 'third_party_settings'))));
     $this->assertSame('parsley', $add->getDefaultValues()['third_party_settings']['surface_resource_test']['garnish']);
     // Outputs are the operation's: no alter adds to them.
     $this->assertSame(['id'], array_keys($add->outputEntries()->toArray()));
@@ -433,7 +434,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
     // The edit-only alter applies where it says, and nowhere else. Alters
     // apply in discovery order, which is class name order within a module.
     $edit = $this->resources()->buildOperation(RecipeResource::class, 'update', ['main', 'stew']);
-    $this->assertSame(['revision_note', 'garnish'], array_keys($this->mounted($edit->getDefinition('third_party_settings'))));
+    $this->assertSame(['revision_note', 'garnish'], array_keys($this->mounted(DerivedDefinition::at($edit, 'third_party_settings'))));
   }
 
   /**

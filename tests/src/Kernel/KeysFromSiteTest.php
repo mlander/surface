@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
-use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\SiteList;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_resource_test\Keys\Broken\DottedKeys;
 use Drupal\surface_resource_test\Keys\Broken\SchemaKeys;
 use Drupal\surface_resource_test\Keys\WorkshopBenches;
@@ -20,8 +22,7 @@ use Drupal\surface_resource_test\Structure\Broken\DefaultedEntryStructure;
 use Drupal\surface_resource_test\Structure\Broken\UncacheableKeysStructure;
 use Drupal\surface_resource_test\Structure\Broken\UnwiredEntryStructure;
 use Drupal\surface_resource_test\Structure\Workshop\BenchStructure;
-use Drupal\surface\Tool\OperationInputs;
-use Drupal\surface\Resource\OperationContext;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -145,7 +146,7 @@ class KeysFromSiteTest extends SurfaceKernelTestBase {
     $this->assertNull($benches->source, 'The map is its owner\'s, of no class.');
     $entries = $benches->child->entries();
     $this->assertSame(['lathe', 'press', 'saw'], array_keys($entries->toArray()));
-    $this->assertSame(['Lathe', 'Drill press', 'Band saw'], array_map(static fn ($definition): string => (string) $definition->getLabel(), array_values($entries->toArray())));
+    $this->assertSame(['Lathe', 'Drill press', 'Band saw'], array_map(static fn ($definition): string => (string) $definition->getLabel(), array_values(DerivedDefinition::all($entries))));
     foreach (['lathe', 'press', 'saw'] as $id) {
       $this->assertSame(BenchStructure::class, $entries->entry($id)->attachment->source);
       $this->assertSame('resource_test.workshop.bench', $entries->entry($id)->attachment->id);
@@ -155,10 +156,10 @@ class KeysFromSiteTest extends SurfaceKernelTestBase {
     // The lights: a boolean per bench, the blueprint's default for each.
     $lights = $map->entry('lights')->attachment->child;
     $this->assertSame(['lathe' => FALSE, 'press' => FALSE, 'saw' => FALSE], $lights->getDefaultValues());
-    $this->assertSame('boolean', $lights->entries()->toArray()['saw']->getDataType());
+    $this->assertSame('boolean', DerivedDefinition::at($lights, 'saw')->getDataType());
 
     // The codes: the shape at every entry, as its alter left it.
-    $codes = $map->entry('codes')->attachment->child->entries()->toArray();
+    $codes = DerivedDefinition::all($map->entry('codes')->attachment->child->entries());
     $this->assertSame('resource_test.sku', DefinitionMetadata::shapeOf($codes['lathe']));
     $this->assertSame(['max' => 12], $codes['lathe']->getConstraints()['Length']);
     $this->assertArrayHasKey('Regex', $codes['lathe']->getConstraints());

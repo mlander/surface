@@ -10,16 +10,17 @@ use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Form\SurfaceFormBuilder;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Pipeline\SurfaceResult;
 use Drupal\surface\Pipeline\ViolationSummary;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_examples\ExampleCalls;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\surface_examples_compliance\Structure\ComplianceStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -116,7 +117,7 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
    *   Its definition.
    */
   protected function mounted(SurfaceInterface $surface, string $key): DataDefinitionInterface {
-    $mount = $surface->getDefinition('third_party_settings');
+    $mount = DerivedDefinition::at($surface, 'third_party_settings');
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $mount);
     $module = $mount->getPropertyDefinition(self::MODULE);
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $module);
@@ -179,7 +180,7 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
    */
   public function testTheAlterAddsItsKeysAndWatchesItsOwnLicense(): void {
     $surface = $this->surface();
-    $this->assertSame('Public event title', (string) $surface->getDefinition('title')->getLabel());
+    $this->assertSame('Public event title', (string) DerivedDefinition::at($surface, 'title')->getLabel());
     $this->assertSame('Event license', (string) $this->mounted($surface, 'license')->getLabel());
     $this->assertFalse($this->mounted($surface, 'license')->isRequired());
     $this->assertTrue($this->mounted($surface, 'stewards')->isRequired());
@@ -307,11 +308,11 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
    */
   public function testWithoutLicenseTheCapacityStopsAtOneHundred(): void {
     $surface = $this->surface();
-    $capacity = $surface->refine(self::EVENT)->getDefinition('capacity');
+    $capacity = DerivedDefinition::at($surface->refine(self::EVENT), 'capacity');
     $this->assertSame(['min' => 1, 'max' => 100], $capacity->getConstraints()['Range']);
     $this->assertSame('Up to 100 without an event license.', (string) $capacity->getDescription());
 
-    $capacity = $surface->refine(self::EVENT + self::compliance('2048'))->getDefinition('capacity');
+    $capacity = DerivedDefinition::at($surface->refine(self::EVENT + self::compliance('2048')), 'capacity');
     $this->assertSame(['min' => 1, 'max' => 400], $capacity->getConstraints()['Range']);
     $this->assertSame('Up to 400 for the Main hall.', (string) $capacity->getDescription());
 
@@ -319,16 +320,16 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
     // lower one: a rule only tightens, and says why only where it did, so
     // the room keeps its owner's words, license or not.
     $small = ['room' => 'library_reading', 'venue' => 'library'] + self::EVENT;
-    $capacity = $surface->refine($small)->getDefinition('capacity');
+    $capacity = DerivedDefinition::at($surface->refine($small), 'capacity');
     $this->assertSame(60, $capacity->getConstraints()['Range']['max']);
     $this->assertSame('Up to 60 for the Reading room.', (string) $capacity->getDescription());
-    $capacity = $surface->refine($small + self::compliance('2048'))->getDefinition('capacity');
+    $capacity = DerivedDefinition::at($surface->refine($small + self::compliance('2048')), 'capacity');
     $this->assertSame(60, $capacity->getConstraints()['Range']['max']);
     $this->assertSame('Up to 60 for the Reading room.', (string) $capacity->getDescription());
 
     // A room seating more than a hundred gets the rule's words.
     $deck = ['room' => 'harbour_deck', 'venue' => 'harbour'] + self::EVENT;
-    $this->assertSame('Up to 100 without an event license.', (string) $surface->refine($deck)->getDefinition('capacity')->getDescription());
+    $this->assertSame('Up to 100 without an event license.', (string) DerivedDefinition::at($surface->refine($deck), 'capacity')->getDescription());
 
     $this->assertSame([], $this->refusals(['capacity' => 100] + self::compliance(NULL, 2)));
     $this->assertSame(['capacity'], $this->refusals(['capacity' => 150] + self::compliance(NULL, 3)));
@@ -434,15 +435,15 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
    */
   public function testClosedRoomIsRefused(): void {
     $state = $this->container->get('state');
-    $rooms = fn (array $values): array => array_keys($this->options()->resolve($this->surface()->refine($values)->getDefinition('room'))->options);
+    $rooms = fn (array $values): array => array_keys($this->options()->resolve(DerivedDefinition::at($this->surface()->refine($values), 'room'))->options);
     $this->assertSame(['riverside_main', 'riverside_east'], $rooms(self::EVENT));
 
     $state->set('surface_examples_compliance.closed_rooms', ['riverside_east']);
     $this->assertSame(['riverside_main'], $rooms(self::EVENT));
-    $this->assertSame('The East room is closed.', (string) $this->surface()->refine(self::EVENT)->getDefinition('room')->getDescription());
+    $this->assertSame('The East room is closed.', (string) DerivedDefinition::at($this->surface()->refine(self::EVENT), 'room')->getDescription());
     $this->assertSame(['harbour_auditorium', 'harbour_deck'], $rooms(['venue' => 'harbour'] + self::EVENT));
     $state->set('surface_examples_compliance.closed_rooms', ['riverside_east', 'riverside_main']);
-    $this->assertSame('The Main hall and the East room are closed.', (string) $this->surface()->refine(self::EVENT)->getDefinition('room')->getDescription());
+    $this->assertSame('The Main hall and the East room are closed.', (string) DerivedDefinition::at($this->surface()->refine(self::EVENT), 'room')->getDescription());
     $state->set('surface_examples_compliance.closed_rooms', ['riverside_east']);
 
     $result = $this->submit(['room' => 'riverside_east', 'capacity' => 50] + self::compliance(NULL) + self::EVENT);
@@ -544,7 +545,7 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
    */
   public function testAnInvalidLicenseIsNoLicense(): void {
     $surface = $this->surface();
-    $capacity = $surface->refine(self::EVENT + self::compliance('EV-2048'))->getDefinition('capacity');
+    $capacity = DerivedDefinition::at($surface->refine(self::EVENT + self::compliance('EV-2048')), 'capacity');
     $this->assertSame(['min' => 1, 'max' => 100], $capacity->getConstraints()['Range']);
     $this->assertSame('Up to 100 without an event license.', (string) $capacity->getDescription());
 

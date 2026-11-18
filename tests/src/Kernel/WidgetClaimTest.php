@@ -6,11 +6,12 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\Resource\OperationContext;
 use Drupal\surface_widget_test\Plugin\SurfaceWidget\ColorPickerWidget;
 use Drupal\surface_widget_test\Structure\SwatchStructure;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -137,9 +138,9 @@ class WidgetClaimTest extends SurfaceKernelTestBase {
     $hinted['properties']['name']['x-portable-ui']['options']['shade'] = 'dark';
     $reader = $this->container->get('surface.schema_reader');
     $read = $this->container->get('surface.resources')->build($reader->structure($hinted, 'test.settings_read'), new OperationContext('configure'));
-    $this->assertSame(30, $read->getDefinition('name')->getSetting('size'));
-    $this->assertSame(4, $read->getDefinition('notes')->getSetting('rows'));
-    $this->assertSame(['#336699', '#ffffff'], $read->getDefinition('accent')->getSetting('palette'));
+    $this->assertSame(30, DerivedDefinition::at($read, 'name')->getSetting('size'));
+    $this->assertSame(4, DerivedDefinition::at($read, 'notes')->getSetting('rows'));
+    $this->assertSame(['#336699', '#ffffff'], DerivedDefinition::at($read, 'accent')->getSetting('palette'));
     $this->assertSame('Not read: no widget the word names publishes a setting of that name.', $reader->notes($hinted)['/properties/name/x-portable-ui/options/shade'] ?? NULL);
   }
 

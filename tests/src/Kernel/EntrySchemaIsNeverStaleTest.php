@@ -155,7 +155,7 @@ class EntrySchemaIsNeverStaleTest extends SurfaceKernelTestBase {
     }
     $tools = $this->container->get('plugin.manager.tool');
     $tools->clearCachedDefinitions();
-    $this->assertNotEmpty($tools->entries(), 'The tool definitions are built.');
+    $this->assertNotEmpty($tools->getDefinitions(), 'The tool definitions are built.');
 
     $stale = [];
     foreach ($entries as $entry) {

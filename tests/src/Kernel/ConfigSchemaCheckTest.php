@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceInterface;
+use Drupal\node\Entity\NodeType;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Reference\ReferenceStorageLayout;
 use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_examples_node_type\Storage\NodeTypeStorage;
 use Drupal\surface_schema_test\Storage\AliasSettingsStorage;
 use Drupal\surface_schema_test\Storage\NarrowedStorage;
-use Drupal\node\Entity\NodeType;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -213,10 +214,10 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
     NodeType::create(['type' => 'page', 'name' => 'Basic page'])->save();
     $edit = $resources->build('node.type', $resources->operation('node.type', 'update', ['type' => NodeType::load('page')]));
     foreach ([$add, $edit] as $built) {
-      $this->assertTrue(DefinitionMetadata::isAlwaysHeld($built->getDefinition('new_revision')), 'Not nullable in core\'s schema: always held.');
-      $this->assertTrue(DefinitionMetadata::isAlwaysHeld($built->getDefinition('display_submitted')));
-      $this->assertFalse(DefinitionMetadata::isAlwaysHeld($built->getDefinition('description')), 'Nullable in core\'s schema: may be cleared.');
-      $regex = $built->getDefinition('name')->getConstraints()['Regex'];
+      $this->assertTrue(DefinitionMetadata::isAlwaysHeld(DerivedDefinition::at($built, 'new_revision')), 'Not nullable in core\'s schema: always held.');
+      $this->assertTrue(DefinitionMetadata::isAlwaysHeld(DerivedDefinition::at($built, 'display_submitted')));
+      $this->assertFalse(DefinitionMetadata::isAlwaysHeld(DerivedDefinition::at($built, 'description')), 'Nullable in core\'s schema: may be cleared.');
+      $regex = DerivedDefinition::at($built, 'name')->getConstraints()['Regex'];
       $this->assertSame('/([^\PC])/u', $regex['pattern']);
       $this->assertFalse($regex['match']);
     }

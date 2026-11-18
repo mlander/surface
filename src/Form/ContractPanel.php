@@ -292,7 +292,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       if ($chosen !== NULL) {
         $child = $entry->variants->variant($chosen)->child;
         $held = is_array($values[$entry->name] ?? NULL) ? $values[$entry->name] : [];
-        $this->propertyRows($rows, $path, $entry->variants->definitionFor($chosen, $child->refine($held)), $child->entries()->toArray(), []);
+        $this->propertyRows($rows, $path, $entry->variants->definitionFor($chosen, $child->refine($held)), array_map(static fn (Entry $entry): DataDefinitionInterface => $entry->definition(), $child->entries()->entries()), []);
       }
       return;
     }

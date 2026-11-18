@@ -7,23 +7,24 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\surface\Form\SurfacePluginForm;
+use Drupal\surface\Pipeline\Storage\PluginConfigurationStorage;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Resource\Attribute\UsesStructure;
-use Drupal\surface\Pipeline\Storage\PluginConfigurationStorage;
-use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
 use Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter;
 use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
+use Drupal\surface_resource_test\Alter\StickyNoteAlter;
 use Drupal\surface_resource_test\PlainThresholdPlugin;
 use Drupal\surface_resource_test\Plugin\Action\ThresholdAction;
 use Drupal\surface_resource_test\Plugin\Block\StickyNoteBlock;
 use Drupal\surface_resource_test\Plugin\Condition\ThresholdCondition;
 use Drupal\surface_resource_test\Resource\PinnedNoteResource;
 use Drupal\surface_resource_test\Structure\ThresholdStructure;
-use Drupal\surface_resource_test\Alter\StickyNoteAlter;
-use Drupal\field\Entity\FieldConfig;
-use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -137,7 +138,7 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
     $this->assertStringNotContainsString('O:' . strlen(ExampleFormatter::class) . ':"' . ExampleFormatter::class . '"', $serialized);
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
     $restored = unserialize($serialized);
-    $this->assertSame(['muted', 'quiet'], $this->variants($restored->refine(['casing' => 'lowercase'])->getDefinition('variant')));
+    $this->assertSame(['muted', 'quiet'], $this->variants(DerivedDefinition::at($restored->refine(['casing' => 'lowercase']), 'variant')));
   }
 
   /**
@@ -168,10 +169,10 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
     $this->assertSame('yellow', $block->getConfiguration()['color']);
     $this->assertSame('Sticky', $block->getConfiguration()['note']);
     // The alter that names the block class applies.
-    $this->assertSame('Written on the note.', (string) $surface->getDefinition('note')->getDescription());
+    $this->assertSame('Written on the note.', (string) DerivedDefinition::at($surface, 'note')->getDescription());
     // The static refiner runs.
-    $this->assertSame(['max' => 10], $surface->refine(['color' => 'pink'])->getDefinition('note')->getConstraints()['Length']);
-    $this->assertSame(['max' => 40], $surface->refine(['color' => 'yellow'])->getDefinition('note')->getConstraints()['Length']);
+    $this->assertSame(['max' => 10], DerivedDefinition::at($surface->refine(['color' => 'pink']), 'note')->getConstraints()['Length']);
+    $this->assertSame(['max' => 40], DerivedDefinition::at($surface->refine(['color' => 'yellow']), 'note')->getConstraints()['Length']);
 
     $result = $this->pipeline()->submit($surface, ['color' => 'pink', 'note' => 'Far too long a note'], $block->getSurfaceStorage());
     $this->assertFalse($result->committed);
@@ -233,8 +234,8 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
     $this->assertSame(10, $configuration['threshold']);
     $this->assertTrue($condition->evaluate());
 
-    $this->assertSame(0, $this->range($surface->refine(['mode' => 'at_least'])->getDefinition('threshold'))['min']);
-    $this->assertSame(1, $this->range($surface->refine(['mode' => 'at_most'])->getDefinition('threshold'))['min']);
+    $this->assertSame(0, $this->range(DerivedDefinition::at($surface->refine(['mode' => 'at_least']), 'threshold'))['min']);
+    $this->assertSame(1, $this->range(DerivedDefinition::at($surface->refine(['mode' => 'at_most']), 'threshold'))['min']);
 
     $form = $condition->buildConfigurationForm([], new FormState());
     $this->assertArrayHasKey('threshold', $form);
