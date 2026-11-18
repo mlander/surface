@@ -16705,3 +16705,54 @@ alone.
   writes `add($key, Schema::...)` for a value, a list and a map; a map
   whose key is digits alone, which an object schema cannot name, is
   still `addMap()`.
+
+## Slice 34, the second review's fixes (2026-11-18)
+
+### A map is held as a map by its schema, whatever its names
+
+- **Numbers as names.** PHP holds the names "0" and "1" as the keys of a
+  list, so `conformOutput()` decides list against map from the schema,
+  never from whether the keys run from 0, and hands the validator every
+  map as an object, as the input path does. A map that names "0" and "1"
+  takes `['1' => 'b']` and `['0' => 'a', '1' => 'b']`, at an output, in a
+  list, in a map and as the output keys themselves, and the watched-value
+  check answers for it. The written schema is read through
+  `Schemas::data()`, since an object whose names are all numbers is
+  written as a `\stdClass`.
+- **A list for a map** is one that names none of the map's properties,
+  and is refused whole with `type`, as before. A list given for a map
+  that names no keys is still refused so: PHP cannot tell `[1, 'x']` from
+  a map named "0" and "1", and the hand corpus pins the refusal.
+  (`Conforming::walked()`, `OutputsConformanceTest`)
+
+### A list's secret items
+
+`Schema::list(Schema::string()->writeOnly(TRUE))` marks each item secret
+(built in the remnants, see [An author's list may hold secret
+items](#every-verb-returns-the-blueprint)). At an output it is refused at
+declaration, `"rows.*"`, as a secret property in a list of maps or in a
+map in a map is; at an input the item is secret. A test now pins both.
+(`SurfaceBuilder::assertOutputDeclarable()`, `OutputsConformanceTest`)
+
+### A list of open objects at an output
+
+`Schema::list(Schema::object())` handed to an outputs blueprint is a list
+of maps that name no keys, as a list of objects with properties is a
+list of plain maps ([A list of objects at an
+output](#authoring-takes-a-schema)). Each item is served and held as
+`type: object`, never null ([An item is never
+null](#an-item-is-never-null)); an object that says more than a map can
+(`additionalProperties`, a reference) is read as before. At an input it
+stays a collection of children. (`SchemaReader::isOutputMaps()`,
+`OutputsDocument::typed()`)
+
+### Null on an output's items is refused, not kept
+
+An author's list of maps at an output whose items allow null
+(`->with('type', ['object', 'null'])`) is refused at
+`/properties/<key>/items/type`, where it was served without null. The
+review asked for null to be kept; an item is never null in either schema,
+so the part not read as written is refused instead. Keeping it would need
+a fact on the item that the built schema and the emitter carry
+(`PropertySchema::neverNull()`). A list of nullable scalars is still read
+without null at both sides, as before. (`SchemaReader::value()`)
