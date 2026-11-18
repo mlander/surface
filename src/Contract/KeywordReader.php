@@ -507,6 +507,11 @@ final class KeywordReader {
         if (static::text($items->get('title')) !== NULL) {
           $item['label'] = $items->get('title');
         }
+        if (Secrets::marked($items)) {
+          // A list whose every item is a secret, as a definition's item
+          // marked secret is.
+          $item['secret'] = TRUE;
+        }
       }
       $list = ['type' => 'list'];
       $foreign = [];

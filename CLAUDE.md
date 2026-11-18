@@ -364,8 +364,9 @@ the record of the rework that brought the module to the pattern.
   With `Compute::UNLESS_SENT` the key is computed only when left out (null
   or `''` read as left out) and a sent value is kept: not `readOnly`,
   offered by the write tool, `x-surface.computed.when: unless_sent`. A
-  machine name is that pair: `compute('id', 'machine_name', t('Machine
-  name'), from: ['label'], using: MachineName::class, when:
+  machine name is that pair: `compute('id',
+  Schema::of('drupal:config/machine_name')->title(t('Machine name')),
+  from: ['label'], using: MachineName::class, when:
   Compute::UNLESS_SENT)` on the identity key, with core's `machine_name`
   config schema type for the pattern and length, `SurfaceUnique` added
   to the identity key of every `creates` operation (the storage answers
@@ -1128,8 +1129,8 @@ fills it: optional on `attach()`, `attachList()`, `attachVariants()`
 and `attachEach()`, NULL leaving the structure's own, required on
 `addEach()`, whose values have none to borrow
 (`docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for`).
-Each returns the core definition at the key, which the owner describes
-with the core setters; `describe()` rewords a key for an alter that does not own it,
+Each returns the blueprint; the owner words the key with the verb's
+`description:` and `required:` arguments; `describe()` rewords a key for an alter that does not own it,
 and arranges a key (group, weight, placeholder, prefix, suffix, help)
 for its owner or an alter, after the key is declared; a second alter
 setting a fact another alter set on the key is refused at build.

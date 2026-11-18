@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Resource;
 
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Refinement\Rule;
 use PortableSchema\Builder\Schema;
 
@@ -32,7 +29,7 @@ interface BlueprintAdditionsInterface {
    * Adds a map of keys held here alone: an anonymous object.
    *
    * The callable is handed a blueprint whose keys are the map's, declared
-   * with add(), addList(), addMap() and addDefinition(), and worded and
+   * with add(), addMap() and addDefinition(), and worded and
    * arranged with describe(); what they start from is the
    * map's default. Both documents write the map inline, `type: object`
    * with its properties, and no def. The cost: no alter can address it,
@@ -62,11 +59,9 @@ interface BlueprintAdditionsInterface {
    *   Declares the map's keys, called at once, and again each time the
    *   build fills a map that needs a frame.
    * @param string|\Stringable|null $description
-   *   The key's description, as setDescription() on the definition
-   *   returned would write it; NULL for none.
+   *   The key's description; NULL for none.
    *
-   * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map, already part of the blueprint.
+   * @return $this
    *
    * @throws \LogicException
    *   When the key is already declared; for an alter's keys or outputs,
@@ -77,22 +72,17 @@ interface BlueprintAdditionsInterface {
    * @see docs/declaring-a-resource.md#an-anonymous-map
    * @see docs/decisions.md#an-anonymous-map
    */
-  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): MapDataDefinition;
+  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): static;
 
   /**
-   * Adds a list of values: name, item, label.
+   * Adds a list whose item is a plain map: name, item, label.
    *
-   * A multi-select, a list of free strings, a list of shapes: a list is
-   * a key, declared as add() declares one, with no core constructor in
-   * the author's way. Returns the list definition, so the rest
-   * (required, a Count, a description, a widget setting) is plain core
-   * API, as for add().
-   *
-   * @code
-   * $inputs->addList('keywords', 'string', t('Keywords'), default: []);
-   * $inputs->addList('days', $day, t('Days open'), default: ['mon'])
-   *   ->setRequired(TRUE);
-   * @endcode
+   * A list of values is add()'s, Schema::list(...). A list of objects at
+   * an input is a collection of children, so a list whose every item is
+   * a plain map with no child of its own is the one list no schema
+   * states yet: it is declared here, its item a map's definition. Not to
+   * be written for anything add() states: see
+   * docs/decisions.md#authoring-takes-a-schema.
    *
    * A list of structures is a collection, attachList(); a map of values
    * per thing the site has is addEach().
@@ -109,15 +99,14 @@ interface BlueprintAdditionsInterface {
    * @param mixed $default
    *   The default value, a list; NULL declares none.
    *
-   * @return \Drupal\Core\TypedData\ListDataDefinition
-   *   The list, already part of the blueprint.
+   * @return $this
    *
    * @throws \LogicException
    *   When the key is already declared; for a class that is no shape (a
    *   resource or structure is attachList()'s), and, for an alter of a
    *   shape, always.
    */
-  public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): ListDataDefinition;
+  public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): static;
 
   /**
    * Adds a key, the long form.
@@ -125,10 +114,10 @@ interface BlueprintAdditionsInterface {
    * For one value whose definition the caller builds: a DataDefinition of
    * one of the types add() takes, with settings or constraints of its
    * own. A map or a list is refused, naming the verb that declares it
-   * (addMap() or attach(), addList()), so every object a blueprint holds
-   * is declared by a verb that is one JSON Schema construct. Like every
-   * declaring verb, it returns what it declared, for the owner to go on
-   * labeling with the core setters.
+   * (addMap() or attach(), add()), so every object a blueprint holds
+   * is declared by a verb that is one JSON Schema construct. The
+   * definition is complete when it is handed in: the blueprint is
+   * returned.
    *
    * @param string $key
    *   The key.
@@ -137,18 +126,13 @@ interface BlueprintAdditionsInterface {
    * @param mixed $default
    *   The default value; NULL declares none.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The definition declared, the one handed in.
-   *
-   * @template T of \Drupal\Core\TypedData\DataDefinitionInterface
-   * @phpstan-param T $definition
-   * @phpstan-return T
+   * @return $this
    *
    * @throws \LogicException
    *   When the key is declared already, when the definition is a map or a
    *   list, or when its type is one add() refuses.
    */
-  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface;
+  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static;
 
   /**
    * Adds a key stated as a Portable Schema.
@@ -167,11 +151,10 @@ interface BlueprintAdditionsInterface {
    * constraints they are written from, `title` the label. A
    * `drupal:<plugin id>` check is that constraint with its options, and
    * `Schema::of('portable:email')` the email type. The schema is complete
-   * at the call, so the blueprint is returned: the definition is the
-   * module's, and the document served for it says what the definition
-   * means, a key that null may clear included. A boolean schema is
-   * refused. A schema held as an array is handed in as
-   * Schema::from($array).
+   * at the call, so the blueprint is returned, and the document served
+   * for the key says what the schema means, a key that null may clear
+   * included. A boolean schema is refused. A schema held as an array is
+   * handed in as Schema::from($array).
    *
    * A key that refers to an entity carries the SurfaceValidReference
    * check naming the entity type and the bundles it may be of; the build
@@ -184,45 +167,32 @@ interface BlueprintAdditionsInterface {
    *   ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'event_venue']));
    * @endcode
    *
-   * The old spelling, a type, a label and a default
-   * (`add('name', 'string', t('Name'))`, returning the core definition),
-   * is still read until its last callers are converted, and is not to be
-   * written: see docs/decisions.md#authoring-takes-a-schema.
-   *
    * @param string $key
    *   The key.
-   * @param \PortableSchema\Builder\Schema|string $schema
-   *   What it holds. A key is required where the schema is marked
-   *   `required()`, and only there. A string is the old spelling's type.
-   * @param string|\Stringable|null $label
-   *   The old spelling's label; NULL with a schema.
-   * @param mixed $default
-   *   The old spelling's default; NULL with a schema, whose `default`
-   *   says it.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   What it holds, its `title` the label and its `default` what it
+   *   starts from. A key is required where the schema is marked
+   *   `required()`, and only there.
    *
-   * @return \Drupal\Core\TypedData\DataDefinition|$this
-   *   The blueprint, for a schema; the definition, for the old spelling.
-   *
-   * @phpstan-return ($schema is \PortableSchema\Builder\Schema ? static : \Drupal\Core\TypedData\DataDefinition)
+   * @return $this
    *
    * @throws \LogicException
    *   When the key is declared already, or the schema needs what this
    *   blueprint does not declare (a child in an alter's blueprint).
    * @throws \InvalidArgumentException
-   *   For a boolean schema, for what a document cannot hold, and for a
-   *   label or a default handed beside a schema.
+   *   For a boolean schema, and for what a document cannot hold.
    *
    * @see docs/decisions.md#authoring-takes-a-schema
    * @see docs/options.md#a-key-that-refers-to-an-entity
    */
-  public function add(string $key, Schema|string $schema, string|\Stringable|null $label = NULL, mixed $default = NULL): DataDefinition|static;
+  public function add(string $key, Schema $schema): static;
 
   /**
    * Rewords or arranges a key anyone declared.
    *
-   * An owner arranges its own keys here, after declaring them, and words
-   * them with the core setters on what add() and attach() return. An
-   * alter rewords and arranges a key it does not own here.
+   * An owner words its own keys in their schemas and the verbs'
+   * arguments, and arranges them here, after declaring them. An alter
+   * rewords and arranges a key it does not own here.
    *
    * Label, description, arrangement and, for a mount, placement: the one
    * change to an existing key an alter may make, because it changes
@@ -316,8 +286,7 @@ interface BlueprintAdditionsInterface {
    * on an owner's key) may read the structure's keys by their names; what
    * they allow stays the structure's.
    *
-   * Returns the map definition at the key, as add() returns its
-   * definition, so the owner describes it with the core setters. The
+   * The owner words the key with $label, $description and $required. The
    * child fills its properties when it is built.
    *
    * @code
@@ -336,22 +305,18 @@ interface BlueprintAdditionsInterface {
    *   The child's ports, each mapped to the container's key it reads: an
    *   owner's key by its name.
    * @param string|\Stringable|null $description
-   *   The key's description, as setDescription() on the definition
-   *   returned would write it; NULL for none.
+   *   The key's description; NULL for none.
    * @param bool $required
-   *   TRUE to require the key, as setRequired(TRUE) on the definition
-   *   returned would.
+   *   TRUE to require the key.
    * @param string|null $storedAs
    *   How a reference the child holds is stored, the value of
    *   References::STORED_AS (References::BY_ID); NULL to say nothing.
    * @param string|null $widget
-   *   The word of the widget that draws the child here, as setSetting(
-   *   'widget', ...) on the definition returned would write it, checked at
-   *   the build as every key's widget setting is (`fieldset`); NULL to
-   *   leave the structure's own.
+   *   The word of the widget that draws the child here, checked at the
+   *   build as every key's widget setting is (`fieldset`); NULL to leave
+   *   the structure's own.
    *
-   * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map at the key, already part of the blueprint.
+   * @return $this
    *
    * @throws \LogicException
    *   When the key is already declared; for outputs; for an alter, at
@@ -359,7 +324,7 @@ interface BlueprintAdditionsInterface {
    *   wiring is checked when the parent is built: see
    *   docs/resources.md#ports.
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): MapDataDefinition;
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): static;
 
   /**
    * A collection at a key: a list whose every item is the child.
@@ -378,9 +343,7 @@ interface BlueprintAdditionsInterface {
    * $max declare, is the parent's to narrow with a #[RefinesInput]
    * method on the key, and its value is a list of item maps, in order.
    *
-   * Returns the list definition at the key, whose item is the child's
-   * map, as attach() returns the map: the owner describes it with the
-   * core setters, and may add list constraints of its own.
+   * The owner words the key with $label, $description and $required.
    *
    * @param string $key
    *   The key the collection sits at.
@@ -393,14 +356,11 @@ interface BlueprintAdditionsInterface {
    * @param int|null $max
    *   The most items, or NULL for unlimited.
    * @param string|\Stringable|null $description
-   *   The key's description, as setDescription() on the definition
-   *   returned would write it; NULL for none.
+   *   The key's description; NULL for none.
    * @param bool $required
-   *   TRUE to require the key, as setRequired(TRUE) on the definition
-   *   returned would.
+   *   TRUE to require the key.
    *
-   * @return \Drupal\Core\TypedData\ListDataDefinition
-   *   The list at the key, already part of the blueprint.
+   * @return $this
    *
    * @throws \LogicException
    *   When the key is already declared, or (for an alter, whose mount
@@ -409,7 +369,7 @@ interface BlueprintAdditionsInterface {
    * @throws \InvalidArgumentException
    *   When a bound is negative, or $min is above $max.
    */
-  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): ListDataDefinition;
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): static;
 
   /**
    * Offers more values on a key someone else declared, as an alter.

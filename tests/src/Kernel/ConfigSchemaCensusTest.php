@@ -152,7 +152,7 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
         continue;
       }
       $seen[$id] = TRUE;
-      $inputs = new RecordingBlueprint();
+      $inputs = new RecordingBlueprint($this->container->get('typed_data_manager'));
       $reading = $reader->read([$type, $path, $less], $inputs);
       $tally['structures'][$id] = $depth;
       if ($from === 'views.view.*') {
@@ -252,11 +252,11 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
     // The largest, timed: its root frame read alone, every structure it
     // reaches read once, and its first build above.
     $start = hrtime(TRUE);
-    $reader->read('views.view.*', new RecordingBlueprint());
+    $reader->read('views.view.*', new RecordingBlueprint($this->container->get('typed_data_manager')));
     $read_ms = (hrtime(TRUE) - $start) / 1e6;
     $start = hrtime(TRUE);
     foreach ($views['arguments'] as $arguments) {
-      $reader->read($arguments, new RecordingBlueprint());
+      $reader->read($arguments, new RecordingBlueprint($this->container->get('typed_data_manager')));
     }
     $reach_ms = (hrtime(TRUE) - $start) / 1e6;
     $build_ms = $tally['build_ms']['views.view.*'];

@@ -16,6 +16,7 @@ use Drupal\surface_resource_test\Shape\Sku;
 use Drupal\surface_resource_test\Structure\Workshop\BenchStructure;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests addList(): a list of values is declared as add() declares a key.
@@ -56,7 +57,7 @@ class AddListTest extends SurfaceKernelTestBase {
     $builder = new SurfaceBuilder();
     $inputs = new ResourceBlueprint($builder, $this->container->get('typed_data_manager'));
 
-    $keywords = $inputs->addList('keywords', 'string', 'Keywords', default: []);
+    $keywords = $inputs->addList('keywords', 'string', 'Keywords', default: [])->shellAt('keywords');
     $this->assertInstanceOf(ListDataDefinition::class, $keywords);
     $this->assertSame('list', $keywords->getDataType());
     $this->assertSame('string', $keywords->getItemDefinition()->getDataType());
@@ -65,12 +66,15 @@ class AddListTest extends SurfaceKernelTestBase {
     $this->assertSame($keywords, $builder->getDefinition('keywords'), 'The list is part of the blueprint.');
 
     $day = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['mon', 'tue']]);
-    $days = $inputs->addList('days', $day, 'Days')->setRequired(TRUE);
+    $days = $inputs->addList('days', $day, 'Days')->shellAt('days');
+    assert($days instanceof ListDataDefinition);
+    $days->setRequired(TRUE);
     $this->assertSame($day, $days->getItemDefinition(), 'An item definition is the item.');
     $this->assertTrue($days->isRequired());
     $this->assertFalse(DefinitionMetadata::hasDefaultValue($days), 'A NULL default declares none.');
 
-    $codes = $inputs->addList('codes', Sku::class, 'Codes');
+    $codes = $inputs->addList('codes', Sku::class, 'Codes')->shellAt('codes');
+    assert($codes instanceof ListDataDefinition);
     $this->assertSame('resource_test.sku', DefinitionMetadata::shapeOf($codes->getItemDefinition()), 'A shape\'s class makes every item the shape.');
     $this->assertArrayHasKey('Regex', $codes->getItemDefinition()->getConstraints());
     $this->assertArrayHasKey('codes.*', $inputs->shapedKeys(), 'The item is held to the shape as a key declared with it is.');
@@ -82,7 +86,7 @@ class AddListTest extends SurfaceKernelTestBase {
   public function testAlterAddsList(): void {
     $builder = new SurfaceBuilder();
     $alter = new ResourceBlueprintAdditions($builder, $this->container->get('typed_data_manager'), 'first_module');
-    $tags = $alter->addList('tags', 'string', 'Tags', default: ['a']);
+    $tags = $alter->addList('tags', 'string', 'Tags', default: ['a'])->shellAt('tags');
     $this->assertSame($tags, $builder->getThirdPartyDefinition('first_module', 'tags'));
     $this->assertSame(['a'], DefinitionMetadata::getDefaultValue($tags));
   }
@@ -94,7 +98,7 @@ class AddListTest extends SurfaceKernelTestBase {
     $refusals = [
       'a key added twice' => [
         static function (ResourceBlueprint $inputs): void {
-          $inputs->add('tags', 'string', 'Tags');
+          $inputs->add('tags', Schema::string()->title('Tags'));
           $inputs->addList('tags', 'string', 'Tags');
         },
         'The input "tags" was already added to this blueprint.',

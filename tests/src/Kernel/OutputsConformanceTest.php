@@ -152,7 +152,7 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
       'token' => static fn (SurfaceBuilder $builder) => $builder->setOutputDefinition('token', $token()),
       'meta.token' => static fn (SurfaceBuilder $builder) => $builder->setOutputDefinition('meta', MapDataDefinition::create()->setPropertyDefinition('token', $token())),
       'added' => static function (SurfaceBuilder $builder) use ($typed): void {
-        DefinitionMetadata::setSecret((new ResourceBlueprint($builder, $typed, TRUE))->add('added', 'string', 'Token'));
+        DefinitionMetadata::setSecret((new ResourceBlueprint($builder, $typed, TRUE))->addTyped('added', 'string', 'Token'));
       },
       'schema' => static function (SurfaceBuilder $builder) use ($typed): void {
         (new ResourceBlueprint($builder, $typed, TRUE))->add('schema', Schema::string()->title('Token')->writeOnly(TRUE));

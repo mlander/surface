@@ -16,6 +16,7 @@ use Drupal\surface\ResourceBuild\Shapes;
 use Drupal\surface_resource_test\Compute\Broken\TransliteratedCode;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests the stock MachineName and the `machine_name` type it computes.
@@ -102,8 +103,8 @@ class MachineNameTest extends SurfaceKernelTestBase {
   public function testTheTypeIsCoresConfigSchemaType(): void {
     $shapes = new Shapes($this->container->get('surface.resource_registry'), $this->container->get('class_resolver'), $this->container->get('config.typed'));
     $blueprint = (new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager')))->useShapes($shapes);
-    $blueprint->add('label', 'string', 'Name');
-    $key = $blueprint->compute('id', 'machine_name', 'Machine name', from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT);
+    $blueprint->add('label', Schema::string()->title('Name'));
+    $key = $blueprint->computeTyped('id', 'machine_name', 'Machine name', from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT);
     $this->assertSame('string', $key->getDataType(), 'The string underneath.');
     $this->assertSame('machine_name', DefinitionMetadata::configTypeOf($key));
     $constraints = $key->getConstraints();

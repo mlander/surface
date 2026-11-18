@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\PropertyDeclaration;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
@@ -24,6 +21,7 @@ use Drupal\surface_property_test\OutsideDiscovery\UnknownGroup;
 use Drupal\surface_property_test\Plugin\Block\PropertyNoteBlock;
 use Drupal\surface_property_test\Structure\EntryPropertiesStructure;
 use Drupal\surface_property_test\Structure\RefinedPropertiesStructure;
+use Drupal\Tests\surface\Kernel\Reader\RecordingBlueprint;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -153,23 +151,20 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
     // Read twice, the class calls the same verbs with the same arguments.
     $readings = [];
     foreach ([1, 2] as $reading) {
-      $calls = [];
-      $record = static function (string $verb, array $arguments, mixed $answer) use (&$calls): mixed {
-        $plain = static fn (mixed $argument): mixed => $argument instanceof \Stringable ? (string) $argument : $argument;
-        $calls[] = [$verb, array_map($plain, $arguments)];
-        return $answer;
-      };
-      $blueprint = $this->createMock(BlueprintInterface::class);
-      $blueprint->method('add')->willReturnCallback(static fn (mixed ...$arguments): DataDefinition => $record('add', $arguments, DataDefinition::create('integer')));
-      $blueprint->method('attach')->willReturnCallback(static fn (mixed ...$arguments): MapDataDefinition => $record('attach', $arguments, MapDataDefinition::create()));
+      $blueprint = new RecordingBlueprint($this->container->get('typed_data_manager'));
       PropertyDeclaration::inputs(Booking::class, $blueprint);
-      $readings[$reading] = $calls;
+      $readings[$reading] = array_map(static fn (array $record): array => [
+        $record['verb'],
+        $record['definition']->getDataType(),
+        (string) $record['definition']->getLabel(),
+        $record['default'] ?? NULL,
+        $record['child'] ?? NULL,
+      ], $blueprint->recorded);
     }
     $this->assertSame([
-      ['add', ['seats', 'integer', 'Seats', 1]],
-      // A mock is handed every argument: since part 32.9 attach() takes
-      // description:, required:, storedAs: and widget: besides.
-      ['attach', ['row', EntryPropertiesStructure::class, 'Row', [], NULL, FALSE, NULL, NULL]],
+      // A value key the attributes declare is held as its definition.
+      'seats' => ['declare', 'integer', 'Seats', 1, NULL],
+      'row' => ['attach', 'map', 'Row', NULL, EntryPropertiesStructure::class],
     ], $readings[1]);
     $this->assertSame($readings[1], $readings[2]);
   }
@@ -222,7 +217,7 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
       $this->fail('An entry typed as no id of its entity type was not refused.');
     }
     catch (\LogicException $e) {
-      $this->assertSame('property_test.broken.mistyped_roles declares each entry of "roles" as a reference to user_role with the integer type, and an id of user_role is a string: declare it addEach(\'roles\', DataDefinition::create(\'string\')->addConstraint(\'SurfaceValidReference\', [...]), from: ..., label: ...), or #[Each(\'string\', ...)].', $e->getMessage());
+      $this->assertSame('property_test.broken.mistyped_roles declares each entry of "roles" as a reference to user_role with the integer type, and an id of user_role is a string: declare it addEach(\'roles\', Schema::string()->check(\'drupal:SurfaceValidReference\', [...]), from: ..., label: ...), or #[Each(\'string\', ...)].', $e->getMessage());
     }
   }
 
@@ -257,7 +252,7 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
   public function testWhatVerbRefusesIsItsOwn(): void {
     $method = NULL;
     try {
-      $this->blueprint()->add('anything', 'any', 'Anything');
+      $this->blueprint()->addTyped('anything', 'any', 'Anything');
     }
     catch (\LogicException $e) {
       $method = $e->getMessage();

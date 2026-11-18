@@ -344,17 +344,17 @@ class ComputedKeysTest extends SurfaceKernelTestBase {
         $this->assertStringContainsString($message, $e->getMessage());
       }
     };
-    $refused(fn () => $blueprint(TRUE)->compute('code', 'string', 'Code', ['first'], BadgeCode::class), 'declares a computed output');
-    $refused(fn () => $blueprint(owner: ThresholdStructure::class)->compute('code', 'string', 'Code', ['first'], BadgeCode::class), 'is in a structure');
-    $inputs = $blueprint();
-    $inputs->add('first', 'string', 'First name');
-    $refused(fn () => $inputs->compute('code', 'string', 'Code', ['nickname'], BadgeCode::class), 'is computed from "nickname", which is no key declared before it');
-    $refused(fn () => $inputs->compute('code', 'string', 'Code', [], BadgeCode::class), 'names no key it is computed from');
-    $refused(fn () => $inputs->compute('code', 'string', 'Code', ['first'], DataDefinition::class), 'which implements no');
-    $refused(fn () => $inputs->compute('code', 'string', 'Code', ['first'], BadgeCode::class, 'always'), 'says when: "always"; it is Compute::ON_CREATE, Compute::ON_CHANGE or Compute::UNLESS_SENT.');
-    $refused(fn () => $inputs->compute('codes', 'map', 'Codes', ['first'], BadgeCode::class), 'add("codes", "map") declares a key of the map type, which JSON Schema has no type for');
-    $definition = $inputs->compute('code', 'string', 'Code', ['first'], BadgeCode::class);
-    $this->assertEquals(new Computed(['first'], BadgeCode::class), Computed::of($definition));
+    $refused(fn () => $blueprint(TRUE)->compute('code', Schema::string()->title('Code'), ['first'], BadgeCode::class), 'declares a computed output');
+    $refused(fn () => $blueprint(owner: ThresholdStructure::class)->compute('code', Schema::string()->title('Code'), ['first'], BadgeCode::class), 'is in a structure');
+    $builder = new SurfaceBuilder();
+    $inputs = new ResourceBlueprint($builder, $typed, FALSE, $registry);
+    $inputs->add('first', Schema::string()->title('First name'));
+    $refused(fn () => $inputs->compute('code', Schema::string()->title('Code'), ['nickname'], BadgeCode::class), 'is computed from "nickname", which is no key declared before it');
+    $refused(fn () => $inputs->compute('code', Schema::string()->title('Code'), [], BadgeCode::class), 'names no key it is computed from');
+    $refused(fn () => $inputs->compute('code', Schema::string()->title('Code'), ['first'], DataDefinition::class), 'which implements no');
+    $refused(fn () => $inputs->compute('code', Schema::string()->title('Code'), ['first'], BadgeCode::class, 'always'), 'says when: "always"; it is Compute::ON_CREATE, Compute::ON_CHANGE or Compute::UNLESS_SENT.');
+    $inputs->compute('code', Schema::string()->title('Code'), ['first'], BadgeCode::class);
+    $this->assertEquals(new Computed(['first'], BadgeCode::class), Computed::of($builder->getDefinition('code')));
   }
 
 }

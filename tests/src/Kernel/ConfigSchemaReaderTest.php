@@ -268,9 +268,9 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
    */
   public function testPlacedBlockRead(): void {
     $reader = $this->container->get(ConfigSchemaReader::class);
-    $inputs = new RecordingBlueprint();
+    $inputs = new RecordingBlueprint($this->container->get('typed_data_manager'));
     $reading = $reader->read('block.block.*', $inputs);
-    $keys = $inputs->keys;
+    $keys = $inputs->recorded;
     $this->assertSame('attachVariants', $keys['settings']['verb']);
     $this->assertSame('plugin', $keys['settings']['by']);
     $this->assertSame(ConfigSchemaTypes::class, $keys['settings']['from']);
@@ -313,11 +313,11 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
    */
   public function testOwnKeyTypeHoldsItsVariantsAtConfiguration(): void {
     $reader = $this->container->get(ConfigSchemaReader::class);
-    $inputs = new RecordingBlueprint();
+    $inputs = new RecordingBlueprint($this->container->get('typed_data_manager'));
     $reader->read('condition.plugin.[id]', $inputs);
     $fallback = array_keys($reader->keysOf('condition.plugin'));
-    $this->assertSame([...$fallback, ConfigSchemaReader::CHOSEN], array_keys($inputs->keys), 'The keys every condition holds, then the key the chosen one is asked under.');
-    $chosen = $inputs->keys[ConfigSchemaReader::CHOSEN];
+    $this->assertSame([...$fallback, ConfigSchemaReader::CHOSEN], array_keys($inputs->recorded), 'The keys every condition holds, then the key the chosen one is asked under.');
+    $chosen = $inputs->recorded[ConfigSchemaReader::CHOSEN];
     $this->assertSame('attachVariants', $chosen['verb']);
     $this->assertSame(['id', ConfigSchemaTypes::class], [$chosen['by'], $chosen['from']], 'The variants the id chooses.');
     $this->assertSame(['type' => 'condition.plugin.[id]'], $chosen['arguments'], 'Bound to the expression.');
@@ -587,7 +587,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
    */
   public function testKeyNoShapeIsReadForIsOpen(): void {
     $reader = $this->container->get(ConfigSchemaReader::class);
-    $reading = $reader->read('surface_reader_test.open', new RecordingBlueprint());
+    $reading = $reader->read('surface_reader_test.open', new RecordingBlueprint($this->container->get('typed_data_manager')));
     $left = $reading->left();
     $this->assertStringContainsString('the schema checks nothing here, so the key is declared open', $left['loose'][0] ?? '');
     $this->assertStringContainsString('a key outside this frame', $left['nested.options'][0] ?? '');
@@ -649,11 +649,11 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $this->enableModules(['views']);
     $this->container->get('config.typed')->clearCachedDefinitions();
     $reader = $this->container->get(ConfigSchemaReader::class);
-    $inputs = new RecordingBlueprint();
+    $inputs = new RecordingBlueprint($this->container->get('typed_data_manager'));
     $reader->read('views.argument.[plugin_id]', $inputs);
     foreach (['summary_options', 'validate_options'] as $key) {
-      $this->assertArrayHasKey($key, $inputs->keys, $key . ' is declared.');
-      $this->assertSame('any', $inputs->keys[$key]['definition']->getDataType());
+      $this->assertArrayHasKey($key, $inputs->recorded, $key . ' is declared.');
+      $this->assertSame('any', $inputs->recorded[$key]['definition']->getDataType());
     }
   }
 

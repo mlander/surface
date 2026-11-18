@@ -502,9 +502,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): MapDataDefinition {
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): static {
     if ($description !== NULL || $required || $storedAs !== NULL || $widget !== NULL) {
-      return static::stated($this->attach($key, $structure, $label, $reads), $description, $required, $storedAs, References::STORED_AS, $widget);
+      static::stated($this->attach($key, $structure, $label, $reads)->shellAt($key), $description, $required, $storedAs, References::STORED_AS, $widget);
+      return $this;
     }
     $this->assertUnwiredInMixin($structure, $key, $reads);
     return parent::attach($key, $structure, $label, $reads);
@@ -523,9 +524,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#an-anonymous-map.
    */
-  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): MapDataDefinition {
+  public function addMap(string $key, string|\Stringable $label, callable $define, string|\Stringable|null $description = NULL): static {
     if ($description !== NULL) {
-      return static::stated($this->addMap($key, $label, $define), $description);
+      static::stated($this->addMap($key, $label, $define)->shellAt($key), $description);
+      return $this;
     }
     if ($this->capture !== NULL) {
       $shell = $this->reserveChild('addMap', $key);
@@ -534,7 +536,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
         $this->captured = TRUE;
         $define($this->capture[1]);
       }
-      return $shell;
+      return $this;
     }
     try {
       return parent::addMap($key, $label, $define);
@@ -549,7 +551,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       $declared = $frame->path === $key ? $frame->declared : [];
       $this->attachments[$key] = $this->registry->defineMap($owner->id . '.' . $key, $owner->module, $this->owner, $key, $declared);
       $this->wirings[$key] = [];
-      return $shell;
+      return $this;
     }
   }
 
@@ -611,9 +613,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    */
-  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
+  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): static {
     if ($description !== NULL || $required || $storedAs !== NULL) {
-      return static::stated($this->attachVariants($key, $by, $label, $from, $arguments), $description, $required, $storedAs, Variants::STORED_AS);
+      static::stated($this->attachVariants($key, $by, $label, $from, $arguments)->shellAt($key), $description, $required, $storedAs, Variants::STORED_AS);
+      return $this;
     }
     $this->assertHoldsNoChild('attaches variants', $key);
     if ($from !== NULL && !is_subclass_of($from, SiteListInterface::class)) {
@@ -638,7 +641,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       }
       DefinitionMetadata::setVariantsFrom($shell, $from);
     }
-    return static::labeled($shell, $label);
+    static::labeled($shell, $label);
+    return $this;
   }
 
   /**
@@ -834,17 +838,16 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @param string|\Stringable|null $label
    *   The map's label, or NULL to leave each variant's.
    *
-   * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map at the key.
+   * @return $this
    *
    * @internal
    *   For SchemaReader alone.
    */
-  public function attachReadVariants(string $key, string $by, array $variants, string|\Stringable|null $label = NULL): MapDataDefinition {
-    $shell = $this->attachVariants($key, by: $by, label: $label);
+  public function attachReadVariants(string $key, string $by, array $variants, string|\Stringable|null $label = NULL): static {
+    $this->attachVariants($key, by: $by, label: $label);
     $this->readVariants[$key] = $variants;
-    DefinitionMetadata::setReadVariants($shell);
-    return $shell;
+    DefinitionMetadata::setReadVariants($this->shellAt($key));
+    return $this;
   }
 
   /**
@@ -917,32 +920,36 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    */
-  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, string|\Stringable|null $description = NULL): MapDataDefinition {
-    if ($description !== NULL) {
-      return static::stated($this->addEach($key, $type, $from, $label), $description);
-    }
-    $default = NULL;
-    if ($type instanceof Schema && ($shape = $this->shapeEntry($type)) !== NULL) {
+  public function addEach(string $key, Schema $type, string $from, string|\Stringable $label, string|\Stringable|null $description = NULL): static {
+    if (($shape = $this->shapeEntry($type)) !== NULL) {
       // Each entry is the shape the schema refers to, as add() reads its
       // class: Schema::of(Shape::class), its default beside it.
-      $default = $type->get('default');
-      $type = $shape;
+      $this->addEachTyped($key, $shape, $from, $label, $type->get('default'));
     }
-    elseif ($type instanceof Schema) {
+    else {
       // What every entry is, as a schema: its default inside it.
       $schema = $this->schemaOfOne('addEach', $key, $type);
-      $default = ValueSchema::factsOf($schema)['default_value'] ?? NULL;
-      $type = DefinitionFromSchema::of($schema);
+      $this->addEachTyped($key, DefinitionFromSchema::of($schema), $from, $label, ValueSchema::factsOf($schema)['default_value'] ?? NULL);
     }
+    if ($description !== NULL) {
+      static::stated($this->shellAt($key), $description);
+    }
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function addEachTyped(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition {
     $this->assertHoldsNoChild('declares keys from the site', $key);
     if ($type instanceof DataDefinitionInterface) {
       if (!LeafTypes::isLeaf($type)) {
-        throw new \LogicException(sprintf('addEach("%s") was handed a %s as its entry: each entry is one value, addEach(\'%s\', \'<type>\', from: ..., label: ...) or the definition of one value; a group of keys per entry is a child, attachEach(\'%s\', <structure>::class, from: ..., label: ...).', $key, $type instanceof ListDataDefinitionInterface ? 'list' : 'map', $key, $key));
+        throw new \LogicException(sprintf('addEach("%s") was handed a %s as its entry: each entry is one value, addEach(\'%s\', Schema::string(), from: ..., label: ...) or another schema of one value; a group of keys per entry is a child, attachEach(\'%s\', <structure>::class, from: ..., label: ...).', $key, $type instanceof ListDataDefinitionInterface ? 'list' : 'map', $key, $key));
       }
       LeafTypes::assertHeld(sprintf('addEach("%s")', $key), $type);
     }
     elseif (LeafTypes::refersToEntity($type)) {
-      throw new \LogicException(sprintf('addEach("%s", "%s") declares each entry with an entity type string, which JSON Schema has no type for: an entry that refers to an entity is the id typed as the entity type keeps it, with the SurfaceValidReference constraint, addEach(\'%s\', DataDefinition::create(\'integer\')->addConstraint(\'SurfaceValidReference\', [\'entityTypeId\' => \'<entity type>\']), from: ..., label: ...).', $key, $type, $key));
+      throw new \LogicException(sprintf('addEach("%s", "%s") declares each entry with an entity type string, which JSON Schema has no type for: an entry that refers to an entity is the id typed as the entity type keeps it, with the SurfaceValidReference check, addEach(\'%s\', Schema::integer()->check(\'drupal:SurfaceValidReference\', [\'entityTypeId\' => \'<entity type>\']), from: ..., label: ...).', $key, $type, $key));
     }
     elseif (str_contains($type, '\\') && !Shapes::isShape($type)) {
       throw new \LogicException(is_subclass_of($type, DefinesInputsInterface::class)
@@ -964,13 +971,15 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    */
-  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL): MapDataDefinition {
+  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL): static {
     if ($description !== NULL) {
-      return static::stated($this->attachEach($key, $structure, $from, $label, $reads), $description);
+      static::stated($this->attachEach($key, $structure, $from, $label, $reads)->shellAt($key), $description);
+      return $this;
     }
     $this->assertHoldsNoChild('attaches a child per thing the site has', $key);
     static::assertNoShape('attachEach', $key, $structure);
-    return static::labeled($this->reserveEach('attachEach', $key, $structure, $from, NULL, TRUE, $reads), $label);
+    static::labeled($this->reserveEach('attachEach', $key, $structure, $from, NULL, TRUE, $reads), $label);
+    return $this;
   }
 
   /**
@@ -1165,11 +1174,50 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * Decision: see
    * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
    */
-  public function compute(string $key, string|Schema $type, string|\Stringable|null $label = NULL, array $from = [], string $using = '', string $when = Compute::ON_CREATE): DataDefinition|static {
-    $refuse = fn (string $why): \LogicException => new \LogicException(sprintf('compute("%s") on %s %s', $key, $this->name($this->owner), $why));
-    if (!$type instanceof Schema && $label === NULL) {
-      throw $refuse('names no label: compute() with a type takes its label, or a schema whose title() is it.');
+  public function compute(string $key, Schema $schema, array $from = [], string $using = '', string $when = Compute::ON_CREATE): static {
+    $computed = $this->computed($key, $from, $using, $when);
+    // The key as a schema: declared complete, then marked computed.
+    $this->add($key, $schema);
+    if (!$this->builder->writeSchema($key, static fn (array $facts): array => ['surface_computed' => $computed] + $facts)) {
+      $definition = $this->builder->getDefinition($key);
+      assert($definition !== NULL);
+      DefinitionMetadata::setComputed($definition, $computed);
     }
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function computeTyped(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition {
+    $computed = $this->computed($key, $from, $using, $when);
+    // A map is refused by addTyped(): no row of the type table is one.
+    $definition = $this->addTyped($key, $type, $label);
+    DefinitionMetadata::setComputed($definition, $computed);
+    return $definition;
+  }
+
+  /**
+   * Holds a computed key to what compute() takes.
+   *
+   * @param string $key
+   *   The key.
+   * @param string[] $from
+   *   The keys it is computed from.
+   * @param string $using
+   *   The class that computes it.
+   * @param string $when
+   *   When it is computed.
+   *
+   * @return \Drupal\surface\Computed
+   *   What the key is marked with.
+   *
+   * @throws \LogicException
+   *   When the key cannot be computed here, or from, using or when is
+   *   none compute() takes.
+   */
+  protected function computed(string $key, array $from, string $using, string $when): Computed {
+    $refuse = fn (string $why): \LogicException => new \LogicException(sprintf('compute("%s") on %s %s', $key, $this->name($this->owner), $why));
     if ($this->outputs) {
       throw $refuse('declares a computed output: an output is emitted, never stored, so it has nothing to compute; a computed key is an input the caller does not type.');
     }
@@ -1193,21 +1241,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
         throw $refuse(sprintf('is computed from "%s", which is no key declared before it in this blueprint.', $source));
       }
     }
-    $computed = new Computed($from, $using, $when);
-    if ($type instanceof Schema) {
-      // The key as a schema: declared complete, then marked computed.
-      $this->add($key, $type);
-      if (!$this->builder->writeSchema($key, static fn (array $facts): array => ['surface_computed' => $computed] + $facts)) {
-        $definition = $this->builder->getDefinition($key);
-        assert($definition !== NULL);
-        DefinitionMetadata::setComputed($definition, $computed);
-      }
-      return $this;
-    }
-    // A map is refused by add(): no row of the type table is one.
-    $definition = $this->add($key, $type, $label);
-    DefinitionMetadata::setComputed($definition, $computed);
-    return $definition;
+    return new Computed($from, $using, $when);
   }
 
   /**

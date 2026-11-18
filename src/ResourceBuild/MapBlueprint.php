@@ -7,7 +7,6 @@ namespace Drupal\surface\ResourceBuild;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\DefinitionMetadata;
@@ -15,8 +14,6 @@ use Drupal\surface\Refinement\Rule;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\Compute;
 use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\Variants;
-use Drupal\surface\Reference\References;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -119,30 +116,21 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): MapDataDefinition {
-    if ($description !== NULL || $required || $storedAs !== NULL || $widget !== NULL) {
-      return static::stated($this->attach($key, $structure, $label, $reads), $description, $required, $storedAs, References::STORED_AS, $widget);
-    }
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): static {
     throw $this->framed(sprintf('attach("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): ListDataDefinition {
-    if ($description !== NULL || $required) {
-      return static::stated($this->attachList($key, $structure, $label, $min, $max), $description, $required);
-    }
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): static {
     throw $this->framed(sprintf('attachList("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): MapDataDefinition {
-    if ($description !== NULL || $required || $storedAs !== NULL) {
-      return static::stated($this->attachVariants($key, $by, $label, $from, $arguments), $description, $required, $storedAs, Variants::STORED_AS);
-    }
+  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL): static {
     throw $this->framed(sprintf('attachVariants("%s")', $key));
   }
 
@@ -156,34 +144,42 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
   /**
    * {@inheritdoc}
    */
-  public function addEach(string $key, string|DataDefinitionInterface|Schema $type, string $from, string|\Stringable $label, string|\Stringable|null $description = NULL): MapDataDefinition {
-    if ($description !== NULL) {
-      return static::stated($this->addEach($key, $type, $from, $label), $description);
-    }
+  public function addEach(string $key, Schema $type, string $from, string|\Stringable $label, string|\Stringable|null $description = NULL): static {
     throw $this->framed(sprintf('addEach("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL): MapDataDefinition {
-    if ($description !== NULL) {
-      return static::stated($this->attachEach($key, $structure, $from, $label, $reads), $description);
-    }
+  public function addEachTyped(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition {
+    throw $this->framed(sprintf('addEach("%s")', $key));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL): static {
     throw $this->framed(sprintf('attachEach("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function reads(string $port, string|Schema $type, bool $required = FALSE): static {
+  public function reads(string $port, Schema $schema): static {
     throw $this->framed(sprintf('reads("%s")', $port));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function compute(string $key, string|Schema $type, string|\Stringable|null $label = NULL, array $from = [], string $using = '', string $when = Compute::ON_CREATE): DataDefinition|static {
+  public function compute(string $key, Schema $schema, array $from = [], string $using = '', string $when = Compute::ON_CREATE): static {
+    throw $this->framed(sprintf('compute("%s")', $key));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function computeTyped(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition {
     throw $this->framed(sprintf('compute("%s")', $key));
   }
 

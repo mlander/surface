@@ -19,6 +19,7 @@ use Drupal\surface_resource_test\Resource\Studio\StudioResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests a key's arrangement: declared once, read by every door.
@@ -196,12 +197,12 @@ class ArrangementTest extends SurfaceKernelTestBase {
     $typed_data = $this->container->get('typed_data_manager');
     $builder = new SurfaceBuilder();
     $owner = new ResourceBlueprint($builder, $typed_data);
-    $title = $owner->add('title', 'string', 'Title');
+    $title = $owner->addTyped('title', 'string', 'Title');
     // The owner arranges its own key, found by its name once declared.
     $owner->describe('title', placeholder: 'A short title', help: 'Shown in lists.');
     $this->assertSame(['placeholder' => 'A short title', 'help' => 'Shown in lists.'], DefinitionMetadata::arrangementOf($title)->toArray());
     $alter = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
-    $alter->add('badge', 'string', 'Badge');
+    $alter->add('badge', Schema::string()->title('Badge'));
 
     // Reworded and placed: allowed, over what the owner said.
     $alter->describe('title', group: ArrangementGroup::fieldset('basics', 'Basics'), help: 'Shown in every list.');
@@ -227,7 +228,7 @@ class ArrangementTest extends SurfaceKernelTestBase {
 
     // Outputs are never drawn.
     $outputs = new ResourceBlueprint($builder, $typed_data, outputs: TRUE);
-    $outputs->add('shown', 'string', 'Shown');
+    $outputs->add('shown', Schema::string()->title('Shown'));
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('outputs are never drawn, so they have nothing to arrange');
     $outputs->describe('shown', weight: 1);
@@ -269,9 +270,9 @@ class ArrangementTest extends SurfaceKernelTestBase {
     $typed_data = $this->container->get('typed_data_manager');
     $builder = new SurfaceBuilder();
     $owner = new ResourceBlueprint($builder, $typed_data);
-    $owner->add('opens', 'string', 'Opens');
+    $owner->add('opens', Schema::string()->title('Opens'));
     $owner->describe('opens', group: ArrangementGroup::fieldset('hours', 'Hours'));
-    $owner->add('closes', 'string', 'Closes');
+    $owner->add('closes', Schema::string()->title('Closes'));
     $owner->describe('closes', group: ArrangementGroup::details('hours', 'Hours'));
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('The keys opens and closes name the group "hours" and draw it differently');

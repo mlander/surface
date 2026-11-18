@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\surface\ResourceBuild;
 
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\ArrangementGroup;
+use Drupal\surface\Resource\Compute;
 use Drupal\surface\Reference\References;
 
 /**
@@ -182,9 +183,10 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    *
    * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    */
-  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): MapDataDefinition {
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = [], string|\Stringable|null $description = NULL, bool $required = FALSE, ?string $storedAs = NULL, ?string $widget = NULL): static {
     if ($description !== NULL || $required || $storedAs !== NULL || $widget !== NULL) {
-      return static::stated($this->attach($key, $structure, $label, $reads), $description, $required, $storedAs, References::STORED_AS, $widget);
+      static::stated($this->attach($key, $structure, $label, $reads)->shellAt($key), $description, $required, $storedAs, References::STORED_AS, $widget);
+      return $this;
     }
     static::assertNoShape('attach', $key, $structure);
     $this->assertWithinMixin('attaches ' . $structure, NULL);
@@ -210,15 +212,17 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
     }
     $this->attachments[$key] = $structure;
     $this->wirings[$key] = $reads;
-    return static::labeled($this->builder->reserveThirdPartyMount($this->provider), $label);
+    $this->shells[$key] = static::labeled($this->builder->reserveThirdPartyMount($this->provider), $label);
+    return $this;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): ListDataDefinition {
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL, string|\Stringable|null $description = NULL, bool $required = FALSE): static {
     if ($description !== NULL || $required) {
-      return static::stated($this->attachList($key, $structure, $label, $min, $max), $description, $required);
+      static::stated($this->attachList($key, $structure, $label, $min, $max)->shellAt($key), $description, $required);
+      return $this;
     }
     throw new \LogicException(sprintf(
       'The %s alter cannot attach a collection of %s at "%s" yet: an alter attaches a structure at its own mount, third_party_settings.%s, and a collection under the mount is not built.',
@@ -340,6 +344,21 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
     // The provider's namespace is this blueprint's alone, so the keys it has
     // added are the whole answer.
     return FALSE;
+  }
+
+
+  /**
+   * {@inheritdoc}
+   */
+  public function addEachTyped(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition {
+    throw new \LogicException(sprintf('addEach("%s") declares keys from the site, which only an owner\'s own blueprint holds.', $key));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function computeTyped(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition {
+    throw new \LogicException(sprintf('compute("%s") declares a computed key, which only an owner\'s own blueprint holds.', $key));
   }
 
 }

@@ -25,6 +25,7 @@ use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests a key resolved at use: declared, read through resolved(), unstated.
@@ -180,12 +181,12 @@ class ResolvedKeysTest extends SurfaceKernelTestBase {
     $refused(fn () => $blueprint(TRUE)->resolve('token', ['vault_id'], VaultToken::class), 'resolves an output');
     // A structure resolves among its own keys, as a resource does.
     $structure = $blueprint(owner: ThresholdStructure::class);
-    $structure->add('token', 'string', 'Token');
-    $structure->add('vault_id', 'string', 'Vault entry');
+    $structure->add('token', Schema::string()->title('Token'));
+    $structure->add('vault_id', Schema::string()->title('Vault entry'));
     $structure->resolve('token', ['vault_id'], VaultToken::class);
     $inputs = $blueprint();
-    $token = $inputs->add('token', 'string', 'Token');
-    $inputs->add('vault_id', 'string', 'Vault entry');
+    $token = $inputs->addTyped('token', 'string', 'Token');
+    $inputs->add('vault_id', Schema::string()->title('Vault entry'));
     $inputs->addMap('settings', 'Settings', static function (BlueprintInterface $map): void {});
     $refused(fn () => $inputs->resolve('secret', ['vault_id'], VaultToken::class), 'resolve("secret") in this blueprint names a key nothing has declared');
     $refused(fn () => $inputs->resolve('token', ['vault'], VaultToken::class), 'is resolved from "vault", which is no key declared');
@@ -270,9 +271,9 @@ class ResolvedKeysTest extends SurfaceKernelTestBase {
   public function testAnAltersKeysAreReadFromItsMount(): void {
     $typed = $this->container->get('typed_data_manager');
     $builder = new SurfaceBuilder();
-    (new ResourceBlueprint($builder, $typed))->add('token', 'string', 'Token');
+    (new ResourceBlueprint($builder, $typed))->add('token', Schema::string()->title('Token'));
     $vault = new ResourceBlueprintAdditions($builder, $typed, 'vault');
-    $vault->add('vault_id', 'string', 'Vault entry');
+    $vault->add('vault_id', Schema::string()->title('Vault entry'));
     try {
       (new ResourceBlueprintAdditions($builder, $typed, 'other'))->resolve('token', from: ['vault_id'], using: VaultToken::class);
       $this->fail('Another module\'s key is no source of this alter\'s.');

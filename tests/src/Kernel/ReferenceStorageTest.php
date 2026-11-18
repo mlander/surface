@@ -319,18 +319,18 @@ class ReferenceStorageTest extends SurfaceKernelTestBase {
     };
     $blueprint = new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'));
     foreach (['entity:node', 'entity:node:article', 'entity'] as $type) {
-      $refused(fn () => $blueprint->addEach('pages', $type, from: ReferenceSlots::class, label: 'Pages'), sprintf('addEach("pages", "%s") declares each entry with an entity type string', $type), "addEach('pages', DataDefinition::create('integer')->addConstraint('SurfaceValidReference', ['entityTypeId' => '<entity type>']), from: ..., label: ...)");
+      $refused(fn () => $blueprint->addEachTyped('pages', $type, from: ReferenceSlots::class, label: 'Pages'), sprintf('addEach("pages", "%s") declares each entry with an entity type string', $type), "addEach('pages', Schema::integer()->check('drupal:SurfaceValidReference', ['entityTypeId' => '<entity type>']), from: ..., label: ...)");
     }
-    $refused(fn () => $blueprint->addEach('pages', MapDataDefinition::create(), from: ReferenceSlots::class, label: 'Pages'), 'addEach("pages") was handed a map as its entry', "attachEach('pages', <structure>::class, from: ..., label: ...)");
+    $refused(fn () => $blueprint->addEachTyped('pages', MapDataDefinition::create(), from: ReferenceSlots::class, label: 'Pages'), 'addEach("pages") was handed a map as its entry', "attachEach('pages', <structure>::class, from: ..., label: ...)");
     $page = DataDefinition::create('integer')->addConstraint(References::CONSTRAINT, [
       'entityTypeId' => 'node',
       'bundles' => ['page'],
     ]);
-    $blueprint->addEach('pages', $page, from: ReferenceSlots::class, label: 'Pages');
+    $blueprint->addEachTyped('pages', $page, from: ReferenceSlots::class, label: 'Pages');
     $this->assertSame($page, $blueprint->fromSite()['pages']['each']);
 
     // Checked as any reference key is, naming the entry and the spelling.
-    $refused(fn () => $this->container->get('surface.references')->settle('test', 'pages', DataDefinition::create('string')->addConstraint(References::CONSTRAINT, ['entityTypeId' => 'node']), TRUE), 'test declares each entry of "pages" as a reference to node with the string type, and an id of node is an integer: declare it addEach(\'pages\', DataDefinition::create(\'integer\')->addConstraint(\'SurfaceValidReference\', [...]), from: ..., label: ...), or #[Each(\'integer\', ...)].');
+    $refused(fn () => $this->container->get('surface.references')->settle('test', 'pages', DataDefinition::create('string')->addConstraint(References::CONSTRAINT, ['entityTypeId' => 'node']), TRUE), 'test declares each entry of "pages" as a reference to node with the string type, and an id of node is an integer: declare it addEach(\'pages\', Schema::integer()->check(\'drupal:SurfaceValidReference\', [...]), from: ..., label: ...), or #[Each(\'integer\', ...)].');
 
     // Built, each entry is the id with the constraint, as any reference
     // key is, and marked for the storage that keeps a uuid.

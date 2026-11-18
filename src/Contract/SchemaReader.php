@@ -2395,8 +2395,8 @@ final class SchemaReader {
         throw new \InvalidArgumentException(sprintf('%s: a property is a schema, an object or a boolean.', $at));
       }
       if (isset($chosen[$name])) {
-        $shell = $this->framing($inputs, 'variants')->attachReadVariants($name, $chosen[$name]['by'], $chosen[$name]['variants'], static::title($property));
-        $this->describeShell($shell, $property, $name, in_array($name, $required, TRUE), $at);
+        $this->framing($inputs, 'variants')->attachReadVariants($name, $chosen[$name]['by'], $chosen[$name]['variants'], static::title($property));
+        $this->describeShell($inputs, $property, $name, in_array($name, $required, TRUE));
       }
       elseif (isset($variants[$name])) {
         $this->variantsKey($name, $property, $variants[$name], in_array($name, $required, TRUE), $at, $inputs, $root, $properties);
@@ -3070,8 +3070,8 @@ final class SchemaReader {
         'label' => $labels[(string) $value] ?? NULL,
       ];
     }
-    $shell = $this->framing($inputs, 'variants')->attachReadVariants($name, $found['by'], $variants, static::title($property));
-    $this->describeShell($shell, $property, $name, $required, $pointer);
+    $this->framing($inputs, 'variants')->attachReadVariants($name, $found['by'], $variants, static::title($property));
+    $this->describeShell($inputs, $property, $name, $required);
   }
 
   /**
@@ -3156,18 +3156,18 @@ final class SchemaReader {
   /**
    * Describes the map a child is held in, labeled by the verb.
    *
-   * @param \Drupal\Core\TypedData\MapDataDefinition $shell
-   *   The map attach() handed back.
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
+   *   The blueprint the verb declared the key in.
    * @param \PortableSchema\Builder\Schema $property
    *   The key's schema.
    * @param string $name
    *   The key.
    * @param bool $required
    *   Whether the frame requires it.
-   * @param string $pointer
-   *   The key's pointer.
    */
-  protected function describeShell(MapDataDefinition $shell, Schema $property, string $name, bool $required, string $pointer): void {
+  protected function describeShell(BlueprintAdditionsInterface $inputs, Schema $property, string $name, bool $required): void {
+    $shell = BlueprintAdapterBase::of($inputs)->shellAt($name);
+    assert($shell instanceof DataDefinition);
     if (static::text($property->get('description')) !== NULL) {
       $shell->setDescription($property->get('description'));
     }
@@ -3207,8 +3207,8 @@ final class SchemaReader {
     $library = $this->libraryOf($property, $pointer);
     if ($library !== NULL && $library['object']) {
       // An object of the library: the structure its document is.
-      $shell = $inputs->attach($name, $this->libraryStructure($library['id'], $inputs), static::title($property));
-      $this->describeShell($shell, $property, $name, $required, $pointer);
+      $inputs->attach($name, $this->libraryStructure($library['id'], $inputs), static::title($property));
+      $this->describeShell($inputs, $property, $name, $required);
       $said = ['$ref', 'title', 'description', ContractEmitter::EXTENSION, ...PortableKeywords::KEYWORDS];
       foreach (array_diff_key($property->all(), array_flip($said)) as $keyword => $value) {
         $this->note(static::below($pointer, (string) $keyword), 'Not read: a structure of the library is read as the library states it.');
@@ -3231,8 +3231,8 @@ final class SchemaReader {
             $this->note(static::below('', '$defs', $def_name, ContractEmitter::EXTENSION, 'ports', (string) $port, 'required'), sprintf('Read optional where %s attaches it unwired.', $pointer));
           }
         }
-        $shell = $inputs->attach($name, $this->structureAt($inputs, $def_name, $from, static::below('', '$defs', $def_name)), static::title($property), $reads);
-        $this->describeShell($shell, $property, $name, $required, $pointer);
+        $inputs->attach($name, $this->structureAt($inputs, $def_name, $from, static::below('', '$defs', $def_name)), static::title($property), $reads);
+        $this->describeShell($inputs, $property, $name, $required);
         return;
       }
       $shape = $this->shape($def_name, $inputs);
@@ -3253,9 +3253,15 @@ final class SchemaReader {
     $not_null = array_values(array_diff($types, ['null']));
     $nested = $property->get('properties');
     if ($not_null === ['object'] && is_array($nested) && $nested !== []) {
-      if ($this->isPlainMap($property)) {
-        $map = $this->map($property, $pointer, $root);
+      // An author's plain map may say what it starts from as a whole, the
+      // map its keys start from or an empty one.
+      $map_default = $this->authored && is_array($property->get('default')) ? $property->get('default') : NULL;
+      if ($this->isPlainMap($map_default === NULL ? $property : $property->without('default'))) {
+        $map = $this->map($property->without('default'), $pointer, $root);
         static::declareRead($inputs, $name, $this->finished($map, $property, $required, in_array('null', $types, TRUE)));
+        if ($map_default !== NULL) {
+          DefinitionMetadata::setDefaultValue(BlueprintAdapterBase::of($inputs)->shellAt($name), $map_default);
+        }
         return;
       }
       if (array_diff(array_keys($property->all()), [...self::MAP, 'allOf']) === [] && Schemas::boolean($property->get('additionalProperties')) === FALSE) {
@@ -3263,17 +3269,17 @@ final class SchemaReader {
         // (a structure, a rule, which its `allOf` states): an anonymous
         // map, written inline again.
         // Decision: see docs/decisions.md#an-anonymous-map.
-        $shell = $inputs->addMap($name, static::title($property) ?? $name, function (BlueprintInterface $map) use ($name, $property, $pointer, $root): void {
+        $inputs->addMap($name, static::title($property) ?? $name, function (BlueprintInterface $map) use ($name, $property, $pointer, $root): void {
           if (!$map instanceof ResourceBlueprint) {
             throw new NeedsFrame($name);
           }
           $this->frame($property, $pointer, $map, $root);
         });
-        $this->describeShell($shell, $property, $name, $required, $pointer);
+        $this->describeShell($inputs, $property, $name, $required);
         return;
       }
-      $shell = $inputs->attach($name, $this->structureAt($inputs, $this->framing($inputs, 'a structure')->ownerId() . '.' . $name, $this->document, $pointer), static::title($property));
-      $this->describeShell($shell, $property, $name, $required, $pointer);
+      $inputs->attach($name, $this->structureAt($inputs, $this->framing($inputs, 'a structure')->ownerId() . '.' . $name, $this->document, $pointer), static::title($property));
+      $this->describeShell($inputs, $property, $name, $required);
       return;
     }
     $items = $property->get('items');
@@ -3430,10 +3436,10 @@ final class SchemaReader {
    */
   protected static function declareRead(BlueprintAdditionsInterface $inputs, string $name, DataDefinitionInterface $read, mixed $default = NULL): void {
     if ($read instanceof ListDataDefinitionInterface) {
-      $declared = $inputs->addList($name, $read->getItemDefinition(), $read->getLabel() ?? $name, $default);
+      $inputs->addList($name, $read->getItemDefinition(), $read->getLabel() ?? $name, $default);
     }
     elseif ($read instanceof ComplexDataDefinitionInterface) {
-      $declared = $inputs->addMap($name, $read->getLabel() ?? $name, static function (BlueprintInterface $map) use ($read): void {
+      $inputs->addMap($name, $read->getLabel() ?? $name, static function (BlueprintInterface $map) use ($read): void {
         foreach ($read->getPropertyDefinitions() as $key => $property) {
           static::declareRead($map, (string) $key, $property, DefinitionMetadata::hasDefaultValue($property) ? DefinitionMetadata::getDefaultValue($property) : NULL);
         }
@@ -3443,6 +3449,8 @@ final class SchemaReader {
       $inputs->addDefinition($name, $read, $default);
       return;
     }
+    $declared = BlueprintAdapterBase::of($inputs)->shellAt($name);
+    assert($declared instanceof DataDefinition);
     assert($read instanceof DataDefinition);
     $said = $read->toArray();
     foreach ($said as $keyword => $value) {
@@ -3573,7 +3581,7 @@ final class SchemaReader {
    *   NULL for $pointer.
    */
   protected function shapedKey(string $name, Schema $property, Schema $def, string $shape, bool $required, string $pointer, BlueprintAdditionsInterface $inputs, ?string $secretAt = NULL): void {
-    $definition = $inputs->add($name, $shape, static::title($property) ?? '');
+    $definition = BlueprintAdapterBase::of($inputs)->addTyped($name, $shape, static::title($property) ?? '');
     $site = array_diff_key($property->all(), ['$ref' => TRUE, 'title' => TRUE]);
     if (Secrets::marked($property)) {
       // A key declared with a shape is secret where its shape is: what is
@@ -3664,7 +3672,9 @@ final class SchemaReader {
     foreach ($unread as $keyword) {
       $this->note(static::below($pointer, $keyword), 'Not read: a collection holds a whole number of items, and they differ or not.');
     }
-    $list = $inputs->attachList($name, $child, static::title($property), $bounds['min'] ?? NULL, $bounds['max'] ?? NULL);
+    $inputs->attachList($name, $child, static::title($property), $bounds['min'] ?? NULL, $bounds['max'] ?? NULL);
+    $list = BlueprintAdapterBase::of($inputs)->shellAt($name);
+    assert($list instanceof DataDefinition);
     if ($unique) {
       $list->addConstraint('UniqueItems', []);
     }

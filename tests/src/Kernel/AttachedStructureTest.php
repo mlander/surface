@@ -28,6 +28,7 @@ use Drupal\surface_resource_test\Storage\PantryStorage;
 use Drupal\surface_resource_test\Storage\PantryTinStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests children: attach(), attachVariants(), and what each does.
@@ -282,7 +283,7 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
       ->setRequired(TRUE)
       ->addConstraint('Range', ['max' => 5]));
     $first = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
-    $first->add('badge', 'string', 'Badge');
+    $first->add('badge', Schema::string()->title('Badge'));
     $second = new ResourceBlueprintAdditions($builder, $typed_data, 'second_module');
 
     // An owner's key, by name: wording only.
@@ -320,8 +321,8 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
     $typed_data = $this->container->get('typed_data_manager');
     $first = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
     $second = new ResourceBlueprintAdditions($builder, $typed_data, 'surface_resource_test');
-    $first->add('badge', 'string', 'Badge');
-    $second->add('ribbon', 'string', 'Ribbon');
+    $first->add('badge', Schema::string()->title('Badge'));
+    $second->add('ribbon', Schema::string()->title('Ribbon'));
     $first->describe('third_party_settings.first_module', label: 'Badges', description: 'How the title is decorated.');
     $mount = $builder->seal()->getDefinition('third_party_settings');
     $this->assertInstanceOf(MapDataDefinition::class, $mount);
@@ -355,14 +356,14 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
     $typed_data = $this->container->get('typed_data_manager');
     $builder = new SurfaceBuilder();
     $owner = new ResourceBlueprint($builder, $typed_data);
-    $owner->add('title', 'string', 'Title');
-    $owner->add('capacity', 'integer', 'Capacity');
+    $owner->add('title', Schema::string()->title('Title'));
+    $owner->add('capacity', Schema::integer()->title('Capacity'));
     $first = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
     $second = new ResourceBlueprintAdditions($builder, $typed_data, 'second_module');
     $outputs = new ResourceBlueprint(new SurfaceBuilder(), $typed_data, outputs: TRUE);
-    $first->add('badge', 'string', 'Badge');
-    $second->add('ribbon', 'string', 'Ribbon');
-    $outputs->add('shown', 'string', 'Shown');
+    $first->add('badge', Schema::string()->title('Badge'));
+    $second->add('ribbon', Schema::string()->title('Ribbon'));
+    $outputs->add('shown', Schema::string()->title('Shown'));
 
     $first->describe('third_party_settings.first_module', label: 'Badges', after: 'capacity');
     $mounts = $builder->seal()->getDefinition('third_party_settings');
