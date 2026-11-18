@@ -61,10 +61,10 @@ the record of the rework that brought the module to the pattern.
   `field:<type>.<field>:<op>`), asked after the permission about the
   entity the context knows or per item of a collection, the access class
   narrowing on top (example 17,
-  `docs/decisions.md#a-gate-is-borrowed-never-copied`). On the class, repeatable, when the context needs nothing
+  `docs/decisions.md#a-gate-is-borrowed-never-copied`). On the class, repeatable, when the operation context needs nothing
   more (the default; no method); on a static method returning an
   `OperationContext` when it needs more, the attribute's id and
-  `creates` stamped on it and a context saying otherwise refused
+  `creates` stamped on it and an operation context saying otherwise refused
   (`docs/decisions.md#an-operation-on-the-class`), the one exception an
   update, read or delete of a thing a stage creates, which
   `ResourcesInterface::operation(..., $stage)` builds as the create's
@@ -1806,4 +1806,4 @@ action in `src/Plugin/Action/` (`StageDeleteAction`), its confirm page
 and the delete form's cosmetics in `src/Form/`
 (`StageDeleteConfirmForm`, `EntityFormCosmetics`), the shipped
 `system.action` in `config/install/`, and its hand-written action
-configuration schema in `config/schema/`, which no generator writes.
+config schema in `config/schema/`, which no generator writes.

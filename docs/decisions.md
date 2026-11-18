@@ -6886,7 +6886,7 @@ format core is asked to replace with data definitions
   schema is never narrower; one written before the resource changed is
   refused until it is written again, and the generator builds without
   the check (`Resources::declaration()`). The node type resource, which
-  the architecture review found restating core's schema less strictly,
+  the architecture review found restating core's config schema less strictly,
   states core's control-character patterns now, and `NodeTypeResourceStorage`
   says from the schema that its two booleans always hold a value.
 - **An entity type a module declares** (added 2026-10-23, example 15). A
@@ -7326,7 +7326,7 @@ Five parts, each an existing mechanism:
   machine name is not valid.") is a refusal's sentence, so no
   `patternMessage` is stated for it. Why the config schema type and not
   a shape of this module's: a config entity's id is a `machine_name` in
-  core's schema already, so the resource and its storage name one type.
+  core's config schema already, so the resource and its storage name one type.
 - **When it is computed, `Compute::UNLESS_SENT`.** Left out of a call,
   or sent null or empty, it is computed as `ON_CREATE` computes it,
   while storage holds nothing for it; sent, it is kept as sent and
@@ -7518,11 +7518,11 @@ resource's.
   the generator writes each key at its own name, so it refuses a storage
   with `STORED_AT` by name rather than write a wrong one.
 
-What it shows: core's schema says only `type: integer, label: 'Max
+What it shows: core's config schema says only `type: integer, label: 'Max
 age'`. The resource declares the title, the description and the list of
 fourteen periods with their labels once; the form, the tool, the MCP
 listing, the OpenAPI document and the React page read them from it, and
-core's schema stays as core wrote it. Rejected: a storage layout
+core's config schema stays as core wrote it. Rejected: a storage layout
 (`StorageLayoutInterface`) that moves keys, which works on the values
 alone and cannot keep the siblings, and cannot tell the check where to
 look; a constant naming the map the keys share, which a key at another
@@ -13646,7 +13646,7 @@ key. `ConfigObjectResourceStorage` answers by core's own rule, read from the
 config schema with what is stored: a value may be NULL unless the
 object's schema is fully validatable (the `FullyValidatable` constraint
 at its root) and the key does not say `nullable: true`, which is where
-core's schema refuses NULL. A schema that is not fully validatable lets
+core's config schema refuses NULL. A schema that is not fully validatable lets
 any key hold NULL, so its keys may be cleared, as before; a storage that
 does not say, or a key no schema describes, may be cleared too. Opting a
 config object into this is its schema's `FullyValidatable`, which also
@@ -17012,3 +17012,63 @@ keywords to write: `constrain: ['maxLength' => 4]` for a constraint the
 table writes as keywords, the list of keywords a rule states otherwise.
 Before, the package's message named none of them.
 (`PropertyDeclaration::constrained()`)
+
+## Names
+
+### No name reuses a Drupal term with another meaning
+
+Decided 2026-11-16, built 2026-11-17 (slice 35). A Drupal developer
+reads a Surface name in Drupal's sense, so a name that Drupal uses for
+something else is renamed. "node" became "schema" first (slice 32.9).
+The rest:
+
+- **Storage classes.** `ConfigEntityStorage` and
+  `BaseFieldOverrideStorage` had the short names of core's entity
+  storage handlers; with `ConfigObjectStorage` they are
+  `ConfigEntityResourceStorage`, `BaseFieldOverrideResourceStorage` and
+  `ConfigObjectResourceStorage`. The examples' storages whose names read
+  as core's handlers end the same way (`NodeTypeResourceStorage`,
+  `BlockPlacementResourceStorage`, `FieldStorageResourceStorage`,
+  `FieldInstanceResourceStorage`, `VenueResourceStorage`,
+  `PerformanceResourceStorage`, `AddressFieldSettingsResourceStorage`).
+- **Storage layouts.** "Layout" is Layout Builder's and the block
+  layout's word. A `StorageLayoutInterface` is a "storage layout" in
+  prose, and `FlatVariantsLayout`, `ReviewDeadlineLayout` and
+  `CheckedListLayout` end in `StorageLayout`.
+- **The declaring class and its provider.** "Owner" is the user an
+  entity belongs to. What declares a resource, structure or key is its
+  "declaring class" (`ResourceBlueprint::declaringClassId()`,
+  `Emission::withDeclaringClass()`, `Variants::declaringVariants()`,
+  `SurfaceInterface::DECLARING_CLASS`), and the module that ships it is
+  its "provider", Drupal's word for the module a plugin comes from.
+  `drush surface:contract-diff --format=json` names the field
+  `declaring_class`.
+- **How-tos.** A recipe is a Drupal recipe. The page of snippets is
+  [How-to: common settings](how-to.md).
+- **Prose.** Drupal's schema is "config schema"; the Key module's key is
+  a "Key module key"; a resource is not a REST resource plugin, and the
+  HTTP door serves it without the REST module; an `OperationContext` is
+  an "operation context".
+
+Kept, and why:
+
+- An entity's owner and a stage's owner (the account that opened it)
+  are Drupal's sense: the stage record's `owner` key, `Stage::$owner`,
+  "edit own content".
+- The test modules' key named `owner` (the journal's ownership mixin,
+  the value baseline's `/guarded/owner`) is data.
+- The contributor id `'#owner'` stays: it is a value an entry holds,
+  spelled so no module can claim it, not a word anyone reads.
+  `VariantMismatchException::getOwners()` stays: the value baseline's
+  recorder calls it, and that recorder may not change.
+  `FlatOwnerClashStructure` keeps the name of its id,
+  `resource_test.broken.flat_owner_clash`.
+- `MinutesLayout` (the mount test module's) and the poster's
+  `*Layouts` lists were not in the rename's scope.
+- The dated records, the history files and the served change reasons in
+  the contract fixtures keep the words they were written with.
+- `Refinement\Condition`, "stage" and `OperationContext` keep their
+  names (the user's answer of 2026-11-16).
+
+The build cache's ids carry a format (`Resources::BUILD_FORMAT`), so a
+build cached before a serialized class was renamed is not read.

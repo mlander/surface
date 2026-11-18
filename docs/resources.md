@@ -258,7 +258,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 ## Operations: create, update, and the rest
 
 A resource never mentions create or update. The difference is how much is
-already known, and that is a **context**, an `OperationContext`:
+already known, and that is an **operation context**, an `OperationContext`:
 
 - `#[Resource(identity: [...])]` names the identity keys. An identity
   key the context knows is locked to that value; one it does not know
@@ -1401,7 +1401,7 @@ is answer access, below, which locks or leaves out keys for an account
 or once the thing is known, as any access answer does, and rule an
 declaring class's key out while a key of its own holds a value, which narrows.
 Example 14's module that manages keys rules the webhook's pasted key out
-once a managed key is chosen at its mount,
+once a Key module key is chosen at its mount,
 `narrow('api_key')->when(Condition::present('key_id'))->doesNotApply()`,
 and says what the webhook's code reads in its place, below
 (why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
@@ -1419,11 +1419,11 @@ $inputs->narrow('api_key')
 $inputs->resolve('api_key', from: ['key_id'], using: ManagedKeyValue::class);
 ```
 
-The first rules the pasted key out once a managed key is chosen. The
+The first rules the pasted key out once a Key module key is chosen. The
 second resolves `api_key` at use: the code that uses the webhook reads
 its values with `Resources::resolved()`, and there `api_key` holds what
-`ManagedKeyValue::compute(['key_id' => ...])` answers, the managed key's
-value. The webhook's code, `WebhookSigner`, names no managed key:
+`ManagedKeyValue::compute(['key_id' => ...])` answers, the Key module key's
+value. The webhook's code, `WebhookSigner`, names no Key module key:
 
 ```php
 $values = $this->resources->resolved('event.webhook');
@@ -1432,7 +1432,7 @@ return hash_hmac('sha256', (string) json_encode($payload), $values['api_key']);
 
 What is stored: `api_key` as pasted, and `key_id` at the alter's mount,
 `third_party_settings.surface_examples_keys.key_id`. What is not: the
-managed key's value, which is read each time `resolved()` is called and
+Key module key's value, which is read each time `resolved()` is called and
 never written back. While a key in `from:` holds nothing (NULL, the empty
 string or no value) the resolve is skipped and the stored value stands;
 a name the class knows no value for resolves to NULL, and the stored

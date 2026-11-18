@@ -1,4 +1,4 @@
-# Written by hand, as an adopter's or core's schema is, and narrower than
+# Written by hand, as an adopter's or core's config schema is, and narrower than
 # the resource that stores in it: the build refuses that resource, naming
 # each key the schema says less for.
 surface_schema_test.narrowed:

@@ -92,8 +92,8 @@ final class NodeTypeResource implements ResourceInterface {
    * that draws them reads them; the cosmetic layer only borrows core's
    * vertical tabs to hold them.
    *
-   * Core's schema stores the name as a label, which may not span lines or
-   * hold a control character, and the description and the help as text,
+   * Core's config schema stores the name as a label, which may not span lines
+   * or hold a control character, and the description and the help as text,
    * which may hold line breaks and tabs and no other control character:
    * the Regex constraints say so too, so no door offers what the node
    * type's schema refuses. The machine name is computed from the name

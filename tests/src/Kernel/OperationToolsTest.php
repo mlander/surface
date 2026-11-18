@@ -357,7 +357,7 @@ class OperationToolsTest extends SurfaceKernelTestBase {
     $this->assertArrayNotHasKey('prepared', $result->getContextValues());
 
     // A dry run is refused for what storage would refuse, which the
-    // resource states as core's schema does.
+    // resource states as core's config schema does.
     $tool = $this->tool('surface:node.type:create');
     $tool->setInputValue(OperationInputs::VALUES, ['name' => "Two\nlines", 'type' => 'two_lines'] + self::NODE_TYPE_REQUIRED);
     $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);

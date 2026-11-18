@@ -370,7 +370,7 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a name core's schema refuses is refused by the resource first.
+   * Tests a name core's config schema refuses is refused by the resource first.
    *
    * The node type's schema is fully validatable, and a required label may
    * not hold a line break. The resource states the same pattern, since the

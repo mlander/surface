@@ -383,7 +383,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 `surface_examples_performance` is the shipped case: three settings of
 core's performance form, stored in core's `system.performance` and held
-to core's schema as core wrote it
+to core's config schema as core wrote it
 (why: [decision](decisions.md#a-resource-may-hold-some-keys-of-a-config-object-it-does-not-own)).
 
 #### A key stored otherwise than it is asked for

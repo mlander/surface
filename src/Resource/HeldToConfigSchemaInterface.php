@@ -28,7 +28,7 @@ interface HeldToConfigSchemaInterface {
    * Names the config schema type the stored keys are held to.
    *
    * @return string
-   *   A config object's name, or a pattern core's schema names, such as
+   *   A config object's name, or a pattern core's config schema names, such as
    *   `node.type.*`.
    */
   public function configSchemaType(): string;

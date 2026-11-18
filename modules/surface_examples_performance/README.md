@@ -38,7 +38,7 @@ the write came from the form, the tool or HTTP.
 
 ## What the schema does not say
 
-Core's schema for the page cache's maximum age says only that it is an
+Core's config schema for the page cache's maximum age says only that it is an
 integer labeled "Max age". Three facts the form shows are in the form's
 code alone, so nothing else can read them:
 
@@ -62,7 +62,7 @@ $inputs->add(self::MAX_AGE, 'integer', t('Browser and proxy cache maximum age'),
 `$periods` holds the same fourteen values core's form offers, each
 labeled by `formatInterval()`, and 0 labeled `<no caching>`.
 
-The storage is held to core's schema unchanged. When the resource is
+The storage is held to core's config schema unchanged. When the resource is
 built, the storage's `widerThanSchema()` compares each key with the
 property at its path in `system.schema.yml`, and the build refuses a
 resource that allows a value the schema refuses. So the resource cannot
@@ -81,6 +81,6 @@ public const STORED_AT = [
 
 See [A key stored under a path](../../docs/storage.md#a-key-stored-under-a-path).
 
-Core's schema does not mark `system.performance` fully validatable, so
+Core's config schema does not mark `system.performance` fully validatable, so
 by core's rule any of its keys may hold nothing. The resource marks the
 three keys required, so a call that sends null for one is refused.

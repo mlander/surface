@@ -21,7 +21,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * #[UsesStructure] is listed as that structure, and its config schema is
  * not read; any other plugin is read from its schema. The test module's
  * sticky note block is its own structure, and its threshold condition
- * names one: each is listed by ConfigSchemaTypes through core's schema,
+ * names one: each is listed by ConfigSchemaTypes through core's config schema,
  * `block.block.*` at `settings` (variants at a key) and
  * `condition.plugin.[id]` (variants at `configuration`), and each is
  * built as declared.

@@ -24,7 +24,8 @@ singleton. It may live in a config
 object, a config entity, State, a plugin's settings or a content entity;
 only its storage knows which. Never instantiated: no constructor, no
 service. The class implements `Resource\ResourceInterface`, in
-`src/Resource/` or `src/Structure/`.
+`src/Resource/` or `src/Structure/`. A resource (`ResourceInterface`) is not a REST resource plugin:
+the HTTP door serves it without the REST module.
 
 Introduced in [Resources](introduction/02-resources.md). Reference:
 [Declaring a resource or structure](declaring-a-resource.md),
@@ -542,15 +543,15 @@ Not in the introduction. Reference:
 [On a plugin](declaring-a-resource.md#on-a-plugin),
 [Plugins](resources.md#plugins).
 
-### Context
+### Operation context
 
-A context says where a resource or structure is being asked for: which
-operation, and what is already known.
+An operation context says where a resource or structure is being asked
+for: which operation, and what is already known.
 
 Precisely: an `OperationContext`: where a resource or structure is
 being asked for. Its id (the operation id, or a host's own verb such
 as `configure`), whether it creates, which identity keys are known, and
-any narrowing or child contexts the operation adds. Built by an
+any narrowing or child operation contexts the operation adds. Built by an
 operation (or bare, by a plugin host), applied once by the build step,
 and never seen by a method that fills a blueprint or by a refiner.
 

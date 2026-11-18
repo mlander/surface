@@ -200,8 +200,8 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
   /**
    * Tests the node type resource is held to core's node.type.* schema.
    *
-   * Core's schema is fully validatable, stores the name as a label and the
-   * description and the help as text, each refusing control characters,
+   * Core's config schema is fully validatable, stores the name as a label and
+   * the description and the help as text, each refusing control characters,
    * and calls neither boolean nullable. The resource as the architecture
    * review found it restated the schema less strictly: the build would
    * refuse it now, naming each of those keys. As shipped, it states the

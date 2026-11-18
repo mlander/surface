@@ -93,7 +93,7 @@ class PerformanceSurfaceTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the resource is held to core's schema, which refuses nothing.
+   * Tests the resource is held to core's config schema, which refuses nothing.
    */
   public function testHeldToCoresSchema(): void {
     $resources = $this->container->get('surface.resources');
