@@ -281,7 +281,7 @@ class ShapesTest extends SurfaceKernelTestBase {
     $this->assertInstanceOf(DataDefinition::class, $shape);
     $this->assertSame(['Regex' => self::PATTERN, 'Length' => ['max' => 12]], self::declared($shape));
     $this->assertNull(DefinitionMetadata::shapeOf($shape));
-    $this->assertEquals($shape, DefinitionMetadata::shapeDefinition($spare));
+    $this->assertEquals($shape->toArray(), DefinitionMetadata::shapeDefinition($spare)->toArray());
     // With no alter, the shape as declared.
     $this->assertSame(['Regex' => self::PATTERN], self::declared(Shapes::unaltered(Sku::class)));
     $this->assertSame('Letters and digits.', (string) Shapes::unaltered(Sku::class)->getDescription());
