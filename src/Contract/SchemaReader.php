@@ -4030,6 +4030,10 @@ final class SchemaReader {
       $item_library = $this->libraryOf($items, static::below($pointer, 'items'));
       if ($this->isOutputMaps($items)) {
         // A list of objects at an output: a list of maps.
+        if (in_array('null', $item_types, TRUE)) {
+          // Decision: see docs/decisions.md#an-item-is-never-null.
+          $this->note(static::below($pointer, 'items', 'type'), 'Not read: an item of a list is never null. Leave null out of the items\' type; a list that may hold nothing is optional, or allows null on the list itself.');
+        }
         $item = $this->map($items, static::below($pointer, 'items'), $root);
         if (static::text($items->get('title')) !== NULL) {
           $item->setLabel($items->get('title'));

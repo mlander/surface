@@ -256,6 +256,26 @@ class OutputsConformanceTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests null on the items of an output's list of objects is refused.
+   *
+   * An item is never null in either schema, so an author's schema that
+   * allows null on the items of a list of maps is refused at the part not
+   * read as written, rather than served without null.
+   */
+  public function testNullableItemsOfAListOfMapsAreRefused(): void {
+    $typed = $this->container->get('typed_data_manager');
+    foreach (['a map' => Schema::object(['id' => Schema::string()->required()]), 'an open map' => Schema::object()] as $what => $item) {
+      try {
+        (new ResourceBlueprint(new SurfaceBuilder(), $typed, TRUE))->add('rows', Schema::list($item->with('type', ['object', 'null'])));
+        $this->fail(sprintf('Null items of %s are refused.', $what));
+      }
+      catch (\InvalidArgumentException $e) {
+        $this->assertStringContainsString('/properties/rows/items/type: Not read: an item of a list is never null.', $e->getMessage(), $what);
+      }
+    }
+  }
+
+  /**
    * Holds outputs to a surface, each violation as its path and code.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
