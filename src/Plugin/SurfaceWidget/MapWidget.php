@@ -9,10 +9,10 @@ use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Render\Element;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\KeyFacts;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\SurfaceWidgetManager;
 use Drupal\surface\Widget\WidgetContext;
@@ -73,7 +73,7 @@ final class MapWidget extends SurfaceWidgetBase implements ContainerFactoryPlugi
    * {@inheritdoc}
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    return DefinitionSchema::isComplex($schema);
+    return KeyFacts::type($schema) === 'object';
   }
 
   /**

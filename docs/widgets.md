@@ -124,7 +124,7 @@ definition; the drawer draws the schema its word names.
 | `radios` | -15 | One value that resolves to a list of allowed values and asks for radios. | `radios`; `- None -` a radio only where the key may be cleared |
 | `select` | -10 | Any definition whose constraints resolve to a list of allowed values, an empty one included: one value, and a list the checkboxes leave (more than twelve, or asking for a select). See [Options and resolvers](options.md). | `select`; a list's `#multiple`, never `#required`; an `item` showing the one value a deciding key's variants offer |
 | `autocomplete` | -5 | A key that refers to one entity type, its id with `SurfaceValidReference`, or the id of a key of any entity type once its entity type is chosen, whose candidates are not listed: more than `surface.settings:reference_list_limit` ([Options](options.md#a-key-that-refers-to-an-entity)). | core's `entity_autocomplete`, its handler and selection settings the check's options where they carry them, else the host's answer (`WidgetContext::selection()`: a reference field's handler and settings, which the document does not carry); read back as the id in brackets, `Riverside Hall (riverside)` as `riverside`; core's own check of what was typed taken off |
-| `fieldset` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a variant for a choice with nothing more to say, renders as an empty container and answers an empty map. A list of maps inside it is the form builder's, drawn as a collection in its place ([below](#a-list-of-maps-is-a-collection)). | `details` |
+| `fieldset` | 5 | A map (`KeyFacts::type()` is `object`). One that declares no property, such as a variant for a choice with nothing more to say, renders as an empty container and answers an empty map. A list of maps inside it is the form builder's, drawn as a collection in its place ([below](#a-list-of-maps-is-a-collection)). | `details` |
 | `list` | 8 | A list of single values with no list of allowed values, whose item a widget draws: keywords, a list of free strings or numbers. | a `fieldset` of rows, "Remove" beside each, "Add another" under them |
 | `time` | 9 | A `string` that asks for a time. | a time input |
 | `date` | 9 | A `string` that asks for a date. | a date input |
@@ -333,6 +333,8 @@ pointer, relative to the state handed over.
 ## Writing a widget
 
 ```php
+use Drupal\surface\KeyFacts;
+
 #[SurfaceWidget(
   id: 'my_module_color',
   label: new TranslatableMarkup('Color'),
@@ -341,8 +343,8 @@ pointer, relative to the state handed over.
 final class ColorWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
 
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    return SchemaFacts::dataType($schema) === 'string'
-      && SchemaFacts::setting($schema, 'my_module_color') === TRUE;
+    return KeyFacts::type($schema) === 'portable:string'
+      && KeyFacts::setting($schema, 'my_module_color') === TRUE;
   }
 
   public function isApplicable(Schema $schema, WidgetContext $context): bool {
@@ -362,10 +364,22 @@ final class ColorWidget extends SurfaceWidgetBase implements SchemaWidgetInterfa
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 `drawsSchema()` is the emitter's question: it is asked in weight
-order, about the key's schema (the data type and settings the key
-was declared with, `SchemaFacts::dataType()` and `SchemaFacts::setting()`),
-and the widget that says yes first is the word the document
-carries. `isApplicable()` is the drawer's, asked only of a schema whose word
+order, about the key's schema, and the widget that says yes first is the
+word the document carries. `Drupal\surface\KeyFacts` reads what a widget
+asks of the schema, static and with no service:
+
+- `type()`: the type the key holds, by the Portable Schema library's id
+  (`portable:string`, `portable:integer`, `portable:number`,
+  `portable:boolean`, `portable:email`, `portable:uri`,
+  `portable:date-time`, `portable:timestamp`), `array` for a list,
+  `object` for a map, and `any` for any other value;
+- `setting()`: one setting of the key, from its `x-surface-settings`
+  or from the options its `x-portable-ui` sets for the widget, by name;
+- `isList()` and `item()`: whether the key holds a list, and the schema
+  of its items.
+
+Every other fact is a keyword of the schema, read with `$schema->get()`
+(`title`, `maxLength`, `format`). `isApplicable()` is the drawer's, asked only of a schema whose word
 names no widget that draws it. `baseElement()` supplies what every
 element wants from a schema (`#title` from `title`, `#description` from
 `description`, `#required` from the owner's `required`), so a widget

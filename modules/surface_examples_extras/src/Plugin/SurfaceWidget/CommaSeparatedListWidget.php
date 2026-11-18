@@ -7,10 +7,9 @@ namespace Drupal\surface_examples_extras\Plugin\SurfaceWidget;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
+use Drupal\surface\KeyFacts;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
 use PortableSchema\Builder\Schema;
@@ -48,10 +47,10 @@ final class CommaSeparatedListWidget extends SurfaceWidgetBase implements Schema
    * {@inheritdoc}
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    $item = DefinitionSchema::itemOf($schema);
-    return DefinitionSchema::isList($schema)
-      && SchemaFacts::setting($schema, self::SETTING) === TRUE
-      && $item !== NULL && SchemaFacts::dataType($item) === 'string';
+    $item = KeyFacts::item($schema);
+    return $item !== NULL
+      && KeyFacts::setting($schema, self::SETTING) === TRUE
+      && KeyFacts::type($item) === 'portable:string';
   }
 
   /**

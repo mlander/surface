@@ -16670,3 +16670,22 @@ nothing (" is required."). A label of `''` is no label, as
 (`Validating::missingInMap()`, `Sentences::ofError()`). A label of `'0'`
 is the author's text and stays ("0 is required."): a number label is
 refused at authoring, so `'0'` is always a string the author chose.
+
+### Widgets read a key through KeyFacts
+
+Decided 2026-11-17. A widget or a refiner outside the module read a
+key's schema through `SchemaFacts`, which is `@internal` and names Typed
+Data's types. `Drupal\surface\KeyFacts` is the public reader (`@api`,
+static, pure): `type()` names the type by the Portable Schema library's
+id (`portable:string` and the seven others), `array` for a list,
+`object` for a map and `any` for any other value, never by a Typed Data
+id; `setting()` gives one setting by name, from `x-surface-settings` or
+from the options the key's `x-portable-ui` sets for its widget, both read
+into the same settings; `isList()` and `item()` answer for a list. Every
+other fact is a keyword of the schema. The stock widgets and the
+extras' `CommaSeparatedListWidget` read through it where it answers what
+they ask. What it does not answer stays on `SchemaFacts`: a type the
+library has no id for (`decimal`, `timespan`, `duration_iso8601`, the
+three types `NotDrawnWidget` leaves out), the `any` type told apart
+from those, the key a variants placeholder is chosen by, and whether a
+key holds one variant, is fixed or holds a value (`OptionsWidget`).

@@ -324,11 +324,13 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  * specialized widget undercuts a generic per-type one by declaring a lower
  * weight.
  *
- * A widget reads the definition and nothing else. It never reads the data
+ * A widget reads the key's schema and nothing else. It never reads the data
  * surface, the host or the storage: everything it needs (type, label,
- * description, whether the value is required, the values it allows) is on
- * the definition, which is what makes one definition render the same way
- * wherever it appears.
+ * description, whether the value is required, the values it allows) is in
+ * the schema, which is what makes one key render the same way wherever it
+ * appears. \Drupal\surface\KeyFacts reads the key's type, a setting,
+ * whether it holds a list and the schema of its items; every other fact is
+ * a keyword of the schema.
  *
  * @code
  * #[SurfaceWidget(
@@ -336,15 +338,19 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  *   label: new TranslatableMarkup('Color'),
  *   weight: 5,
  * )]
- * final class ColorWidget extends SurfaceWidgetBase {
+ * final class ColorWidget extends SurfaceWidgetBase implements SchemaWidgetInterface {
  *
- *   public function isApplicable(DataDefinitionInterface $definition): bool {
- *     return $definition->getDataType() === 'string'
- *       && $definition->getSetting('my_module_color') === TRUE;
+ *   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
+ *     return KeyFacts::type($schema) === 'portable:string'
+ *       && KeyFacts::setting($schema, 'my_module_color') === TRUE;
  *   }
  *
- *   public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
- *     return $this->baseElement($definition) + [
+ *   public function isApplicable(Schema $schema, WidgetContext $context): bool {
+ *     return static::types($schema) === ['string'];
+ *   }
+ *
+ *   public function buildElement(Schema $schema, mixed $value, WidgetContext $context): array {
+ *     return $this->baseElement($schema, $context) + [
  *       '#type' => 'color',
  *       '#default_value' => $value ?? '#000000',
  *     ];

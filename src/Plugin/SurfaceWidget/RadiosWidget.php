@@ -6,10 +6,9 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
+use Drupal\surface\KeyFacts;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Widget\ChoiceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
@@ -54,7 +53,7 @@ final class RadiosWidget extends ChoiceWidgetBase implements SchemaWidgetInterfa
    *   TRUE when it is one value and asks for radios.
    */
   public static function drawsOne(Schema $schema): bool {
-    return !DefinitionSchema::isList($schema) && SchemaFacts::setting($schema, 'widget') === 'radios';
+    return !KeyFacts::isList($schema) && KeyFacts::setting($schema, 'widget') === 'radios';
   }
 
   /**

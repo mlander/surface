@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
-use Drupal\surface\Attribute\SurfaceWidget;
+use Drupal\surface\KeyFacts;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
 use PortableSchema\Builder\Schema;
@@ -45,7 +45,7 @@ final class NotDrawnWidget extends SurfaceWidgetBase implements SchemaWidgetInte
    * {@inheritdoc}
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    $value = DefinitionSchema::isList($schema) ? DefinitionSchema::itemOf($schema) : $schema;
+    $value = KeyFacts::isList($schema) ? KeyFacts::item($schema) : $schema;
     return $value !== NULL && in_array(SchemaFacts::dataType($value), self::TYPES, TRUE);
   }
 

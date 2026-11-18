@@ -6,10 +6,10 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
+use Drupal\surface\KeyFacts;
 use Drupal\surface\Options\OptionSet;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Widget\ChoiceWidgetBase;
@@ -122,7 +122,7 @@ final class OptionsWidget extends ChoiceWidgetBase implements SchemaWidgetInterf
    *   TRUE when it is drawn fixed.
    */
   public static function drawsFixed(Schema $schema, OptionSet $set, mixed $value): bool {
-    return !DefinitionSchema::isList($schema)
+    return !KeyFacts::isList($schema)
       && (SchemaFacts::isOneVariant($schema) || SchemaFacts::isFixed($schema))
       && SchemaFacts::holdsValue($schema)
       && count($set->options) === 1

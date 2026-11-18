@@ -6,10 +6,9 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\DefinitionSchema;
-use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
+use Drupal\surface\KeyFacts;
 use Drupal\surface\Options\OptionSet;
 use Drupal\surface\Widget\ChoiceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
@@ -67,10 +66,10 @@ final class CheckboxesWidget extends ChoiceWidgetBase implements SchemaWidgetInt
    *   offers at most MAXIMUM_OPTIONS values.
    */
   public static function drawsList(Schema $schema, OptionSet $set): bool {
-    if (!DefinitionSchema::isList($schema)) {
+    if (!KeyFacts::isList($schema)) {
       return FALSE;
     }
-    $asked = SchemaFacts::setting($schema, 'widget');
+    $asked = KeyFacts::setting($schema, 'widget');
     return $asked === 'checkboxes' || ($asked === NULL && count($set->options) <= self::MAXIMUM_OPTIONS);
   }
 
@@ -78,7 +77,7 @@ final class CheckboxesWidget extends ChoiceWidgetBase implements SchemaWidgetInt
    * {@inheritdoc}
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    $set = DefinitionSchema::isList($schema) ? $choice->optionSet($schema) : NULL;
+    $set = KeyFacts::isList($schema) ? $choice->optionSet($schema) : NULL;
     return $set !== NULL && static::drawsList($schema, $set);
   }
 

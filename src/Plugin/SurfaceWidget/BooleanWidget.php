@@ -6,9 +6,9 @@ namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Attribute\SurfaceWidget;
-use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
+use Drupal\surface\KeyFacts;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
 use PortableSchema\Builder\Schema;
@@ -27,7 +27,7 @@ final class BooleanWidget extends SurfaceWidgetBase implements SchemaWidgetInter
    * {@inheritdoc}
    */
   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
-    return SchemaFacts::dataType($schema) === 'boolean';
+    return KeyFacts::type($schema) === 'portable:boolean';
   }
 
   /**

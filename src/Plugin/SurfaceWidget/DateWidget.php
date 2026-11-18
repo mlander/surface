@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Drupal\surface\Plugin\SurfaceWidget;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\surface\Contract\SchemaFacts;
+use Drupal\surface\Attribute\SurfaceWidget;
 use Drupal\surface\Contract\SchemaWidgetInterface;
 use Drupal\surface\Contract\WidgetChoice;
-use Drupal\surface\Attribute\SurfaceWidget;
+use Drupal\surface\KeyFacts;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface\Widget\WidgetContext;
 use PortableSchema\Builder\Schema;
@@ -43,7 +43,7 @@ final class DateWidget extends SurfaceWidgetBase implements SchemaWidgetInterfac
    *   TRUE for a string that asks for one.
    */
   public static function draws(Schema $schema): bool {
-    return SchemaFacts::dataType($schema) === 'string' && SchemaFacts::setting($schema, 'widget') === 'date';
+    return KeyFacts::type($schema) === 'portable:string' && KeyFacts::setting($schema, 'widget') === 'date';
   }
 
   /**
