@@ -170,8 +170,10 @@ class TypedDataFootprintTest extends UnitTestCase {
    * ExampleBlockStructure name no Typed Data. Lowered on 2026-11-17 to 86:
    * a list of objects at an output is read as a list of maps, so
    * VenueListingStructure and RetitleResource name no Typed Data.
+   * Lowered on 2026-11-18 to 84: StageChangesStructure::write() returns a
+   * Schema, so the two Stage structures name no Typed Data.
    */
-  public const OUTSIDE_THE_EDGES = 86;
+  public const OUTSIDE_THE_EDGES = 84;
 
   /**
    * Finds the files that use Typed Data.

@@ -83,8 +83,6 @@ storage src/Storage/FlatVariantsLayout.php
 storage src/Storage/HeldToConfigSchemaTrait.php
 storage src/Storage/MissingConfigInstaller.php
 edge src/Storage/SchemaViolations.php
-model src/Structure/StageAppliedStructure.php
-model src/Structure/StageChangesStructure.php
 model src/Surface.php
 model src/SurfaceBuilder.php
 model src/SurfaceInterface.php
