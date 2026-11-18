@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Example 9's ticket sales settings, in their own config object.
  */
-final class TicketSalesStorage extends ConfigObjectStorage {
+final class TicketSalesStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

@@ -314,7 +314,7 @@ which serves the real contract.
     one pure static step per version on the declaring class, as a stub
     nothing calls. To build: the pipeline converting what `load()` hands
     it before `accept()`, step by step from the ledger's version; the
-    ledger as the storage's (`ConfigObjectStorage` keeping
+    ledger as the storage's (`ConfigObjectResourceStorage` keeping
     `_surface.versions` beside `_core`, described for every config
     object by altering core's `config_object` type; a config entity's in
     its `third_party_settings.surface`); a refusal for a version
@@ -457,7 +457,7 @@ renames sit in A because they are cheapest before new code exists.
   and the leftover-words decision; then merge `next` to `main`, the React
   local resolution included.
 - **A, from the first fresh-eyes run (2026-10-18, `docs/fresh-eyes-2026-10-18.md`),
-  before the merge** — DONE 2026-10-18: `ConfigObjectStorage`, the pinned
+  before the merge** — DONE 2026-10-18: `ConfigObjectResourceStorage`, the pinned
   pages `docs/first-resource.md` and `docs/second-resource.md` on
   `surface_examples_first`, `docs/concepts.md`, the guesses documented where
   the log asked, the two contradictions, the three bugs, and defaults
@@ -864,7 +864,7 @@ renames sit in A because they are cheapest before new code exists.
    `docs/decisions.md#a-placed-block-is-a-resource`: `surface_examples_block`'s
    `block.placement`, placed, configured, moved within its theme and
    removed through four tools, HTTP with `DELETE` for a delete, and a
-   form; `ConfigEntityStorage` a resource's storage, `NodeTypeStorage`
+   form; `ConfigEntityResourceStorage` a resource's storage, `NodeTypeResourceStorage`
    rebuilt on it; open: context-aware plugins, moving between themes,
    Layout Builder). And base field items shared
    across bundles (11 of a basic page's 14 field items are base fields,
@@ -1330,7 +1330,7 @@ renames sit in A because they are cheapest before new code exists.
     (`docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection`).
     Example 15 at `/surface-examples/15`: a config entity type the
     examples module declares, `event_venue`, with a resource over it from
-    the start, `event.venue`, on a `VenueStorage`. Closes the listing gap
+    the start, `event.venue`, on a `VenueResourceStorage`. Closes the listing gap
     the placement unit left (item 16): an operation may take the keys of
     a structure of its own (`#[Operation(values:)]`); a listing is a read
     only operation with outputs, answered from its storage's prepare,

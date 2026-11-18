@@ -12,7 +12,7 @@ use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
-use Drupal\surface_examples_performance\Storage\PerformanceStorage;
+use Drupal\surface_examples_performance\Storage\PerformanceResourceStorage;
 use PortableSchema\Builder\Schema;
 
 /**
@@ -29,7 +29,7 @@ use PortableSchema\Builder\Schema;
 #[Resource('system.performance',
   label: new TranslatableMarkup('Performance settings'),
   description: new TranslatableMarkup('How long browsers and proxies may cache a page, and whether CSS and JavaScript files are aggregated, as core keeps them in system.performance.'),
-  storage: PerformanceStorage::class,
+  storage: PerformanceResourceStorage::class,
 )]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure performance'),

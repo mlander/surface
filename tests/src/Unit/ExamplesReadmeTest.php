@@ -112,7 +112,7 @@ class ExamplesReadmeTest extends UnitTestCase {
       'Structure/VenueListingStructure',
       'Structure/VenueReorderStructure',
       'Structure/VenueOrderStructure',
-      'Storage/VenueStorage',
+      'Storage/VenueResourceStorage',
       'Access/VenueAccess',
     ];
     foreach ($venues as $class) {

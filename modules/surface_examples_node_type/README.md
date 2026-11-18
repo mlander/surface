@@ -31,12 +31,12 @@ has with the stock `SurfaceUnique` constraint, "A content type named
 article already exists.", and the generated form draws it as core's
 machine name element beside the name.
 
-`Storage\NodeTypeStorage` loads by the machine name the context knows and
+`Storage\NodeTypeResourceStorage` loads by the machine name the context knows and
 creates or updates by whether it creates. It writes the node type
 config entity, and the base field overrides that hold the title label
 and the three workflow defaults, in the order core's own form writes
 them and only where a value moved. The overrides are read, planned and
-written by the engine's `BaseFieldOverrideStorage`, through its
+written by the engine's `BaseFieldOverrideResourceStorage`, through its
 `values()`, `plan()` and `write()`. `Access\NodeTypeAccess` is what the
 operation's permission cannot say: the node type entity's own answer.
 

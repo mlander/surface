@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_storage_test\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * A simple config object keeping one key under a path, beside another.
@@ -13,7 +13,7 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  * declares, the way core's system.performance keeps the page cache's
  * maximum age beside settings other forms edit.
  */
-final class NestedSettingsStorage extends ConfigObjectStorage {
+final class NestedSettingsStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

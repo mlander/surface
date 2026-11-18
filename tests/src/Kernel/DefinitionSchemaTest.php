@@ -28,7 +28,7 @@ use Drupal\surface\ResourceBuild\Shapes;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface_examples\Shape\PhoneNumber;
-use Drupal\surface_examples\Storage\VenueStorage;
+use Drupal\surface_examples\Storage\VenueResourceStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -136,7 +136,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
    */
   protected static function unique(): array {
     return [
-      'storage' => VenueStorage::class,
+      'storage' => VenueResourceStorage::class,
       'key' => 'id',
       'thing' => 'venue',
       'reason' => UniqueConstraint::reason('venue'),

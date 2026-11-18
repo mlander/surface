@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Example 19's event setup, in its own config object.
@@ -12,7 +12,7 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  * The object always exists, from config/install, or on a site that had
  * the module from surface_examples_post_update_install_event_setup().
  */
-final class EventSetupStorage extends ConfigObjectStorage {
+final class EventSetupStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

@@ -23,7 +23,7 @@ use Drupal\surface_examples_extras\NodeTypeReviewSettings;
 use Drupal\surface_examples_node_type\Access\NodeTypeAccess;
 use Drupal\surface_examples_node_type\Hook\NodeTypeResourceHooks;
 use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
-use Drupal\surface_examples_node_type\Storage\NodeTypeStorage;
+use Drupal\surface_examples_node_type\Storage\NodeTypeResourceStorage;
 use Drupal\Tests\surface\DerivedDefinition;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -34,7 +34,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * NodeTypeResource with its two operations: add knows nothing, so the
  * machine name is open and must be unique; edit knows the machine name,
- * so it is locked. NodeTypeStorage writes the node type entity and the
+ * so it is locked. NodeTypeResourceStorage writes the node type entity and the
  * base field overrides behind it, loading by the identity the context
  * knows; NodeTypeAccess answers what the operation's permission cannot.
  * The extras module's review settings arrive through NodeTypeAlter, and
@@ -155,7 +155,7 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
     $definition = $this->container->get('surface.resource_registry')->getDefinition('node.type');
     $this->assertSame(NodeTypeResource::class, $definition->class);
     $this->assertSame(['type'], $definition->identity);
-    $this->assertSame(NodeTypeStorage::class, $definition->storage);
+    $this->assertSame(NodeTypeResourceStorage::class, $definition->storage);
     $this->assertSame(NodeTypeAccess::class, $definition->access);
     $operations = $this->container->get('surface.resource_registry')->getOperations(NodeTypeResource::class);
     $this->assertSame(['create', 'update', 'read'], array_keys($operations));
@@ -174,7 +174,7 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
     // the node type storage.
     $unique = DerivedDefinition::at($surface, 'type')->getConstraints()['SurfaceUnique'] ?? NULL;
     $this->assertIsArray($unique);
-    $this->assertSame(NodeTypeStorage::class, $unique['storage']);
+    $this->assertSame(NodeTypeResourceStorage::class, $unique['storage']);
     $this->assertSame('type', $unique['key']);
     $this->assertSame('content type', (string) $unique['thing']);
     // Computed from the name unless sent: a machine_name of 32 at most.
@@ -336,14 +336,14 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
 
     $this->assertInstanceOf(StorageAdapter::class, $storage);
     $prepared = $storage->preview($result->prepared);
-    $this->assertSame([NodeTypeStorage::NODE_TYPE, NodeTypeStorage::OVERRIDES], array_keys($prepared));
-    $node_type = $prepared[NodeTypeStorage::NODE_TYPE];
+    $this->assertSame([NodeTypeResourceStorage::NODE_TYPE, NodeTypeResourceStorage::OVERRIDES], array_keys($prepared));
+    $node_type = $prepared[NodeTypeResourceStorage::NODE_TYPE];
     $this->assertSame('Dry run', $node_type['name']);
     $this->assertSame('dry_run', $node_type['type']);
     // Stored as core's own form stores an empty description: as none.
     $this->assertNull($node_type['description']);
     $this->assertTrue($node_type['new_revision']);
-    $overrides = $prepared[NodeTypeStorage::OVERRIDES];
+    $overrides = $prepared[NodeTypeResourceStorage::OVERRIDES];
     $this->assertSame(['title', 'promote'], array_keys($overrides));
     $this->assertSame('node.dry_run.title', $overrides['title']['id']);
     $this->assertSame('Dish', $overrides['title']['label']);
@@ -363,7 +363,7 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
     $this->assertTrue($result->committed, ViolationSummary::fromViolations($result->violations));
     $stored = $this->container->get('config.factory')->get('node.type.dry_run')->getRawData();
     $this->assertSame(
-      array_diff_key($result->prepared->artifact[NodeTypeStorage::NODE_TYPE], ['dependencies' => TRUE]),
+      array_diff_key($result->prepared->artifact[NodeTypeResourceStorage::NODE_TYPE], ['dependencies' => TRUE]),
       array_diff_key($stored, ['dependencies' => TRUE]),
     );
     $this->assertSame('Dish', (string) $this->nodeFields('dry_run')['title']->getLabel());
@@ -398,7 +398,7 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
     // The storage alone says the same, with nothing else in between.
     $this->expectException(StorageViolationsException::class);
     $this->expectExceptionMessage('Labels are not allowed to span multiple lines or contain control characters.');
-    $this->container->get('class_resolver')->getInstanceFromDefinition(NodeTypeStorage::class)
+    $this->container->get('class_resolver')->getInstanceFromDefinition(NodeTypeResourceStorage::class)
       ->prepare($this->resources()->operation(NodeTypeResource::class, 'create'), [
         'name' => "Two\nlines",
         'type' => 'two_lines',

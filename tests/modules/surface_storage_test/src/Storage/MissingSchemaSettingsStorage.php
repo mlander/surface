@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_storage_test\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * A simple config object that no config schema describes.
  */
-final class MissingSchemaSettingsStorage extends ConfigObjectStorage {
+final class MissingSchemaSettingsStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

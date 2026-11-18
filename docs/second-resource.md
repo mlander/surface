@@ -53,12 +53,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples_first\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Keeps the store location in its config object.
  */
-final class StoreStorage extends ConfigObjectStorage {
+final class StoreStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

@@ -29,7 +29,7 @@ first resource's (`surface_examples_first`); a dash where none does.
 | --- | --- | --- | --- | --- | --- |
 | **1** Resource, `#[Resource]` | [Resources](introduction/02-resources.md) | What thing do I want a form, a tool and a schema for? | Never: everything starts here. | 1 | `/admin/config/services/surface-newsletter`, `/surface-examples/1` |
 | **1** Operation, `#[Operation]` | [Operations](introduction/09-operations.md) | How is it asked for, what does a call do (`description`), which permission gates it, whose access it borrows for the thing a call is about, per item of a list too (`gate:`, [Resources](resources.md#a-gate-borrowed-from-another-thing)), and does a call create (`creates`), change nothing (`readOnly`), destroy what is there (`destructive`) or remove the thing, taking no values (`deletes`)? ([Resources](resources.md#operations-create-update-and-the-rest)) | Never: a route and a tool are made from one. On the class it needs no method; leave `creates`, `readOnly`, `destructive` and `deletes` out when a call does none of them; whether it is safe to repeat is derived. | 1, 10, 15, 17 | `/admin/config/services/surface-newsletter`; read only, `/surface-examples/10/check`; a listing and a reorder, `/surface-examples/15`; gates, `/surface-examples/17` (with `surface_examples_retitle`) |
-| **1** Storage, `ConfigObjectStorage` | [Storage](introduction/10-storage.md) | Where do its values live? | A settings page: subclass `ConfigObjectStorage`, name the config object, and write its config schema and install file from the resource with `drush surface:config-schema --write` ([Storage](storage.md#a-schema-generated-from-the-resource)), done. A config entity: subclass `ConfigEntityStorage`, name the entity type and the property each key is stored under ([Storage](storage.md#a-config-entity)); for an entity type of your own, the same command writes its schema too. | 1, 15 | `/admin/config/services/surface-newsletter`; a config entity, `/surface-examples/15`, and `/admin/structure/block/surface/add` (with `surface_examples_block`) |
+| **1** Storage, `ConfigObjectResourceStorage` | [Storage](introduction/10-storage.md) | Where do its values live? | A settings page: subclass `ConfigObjectResourceStorage`, name the config object, and write its config schema and install file from the resource with `drush surface:config-schema --write` ([Storage](storage.md#a-schema-generated-from-the-resource)), done. A config entity: subclass `ConfigEntityResourceStorage`, name the entity type and the property each key is stored under ([Storage](storage.md#a-config-entity)); for an entity type of your own, the same command writes its schema too. | 1, 15 | `/admin/config/services/surface-newsletter`; a config entity, `/surface-examples/15`, and `/admin/structure/block/surface/add` (with `surface_examples_block`) |
 | **1** `defineInputs()` and `add()` | [Keys](introduction/05-keys.md), [Rules on a key](introduction/06-rules-on-a-key.md) | What keys does it take, of what type, allowing what (a rule), defaulting to what? A site sets its own default over the declared one in `surface.defaults` ([Declaring a resource](declaring-a-resource.md#a-sites-own-defaults)). | Never. | 1 | `/admin/config/services/surface-newsletter` |
 | Shape, `#[Document]` and `Schema::of()` | [Shapes](introduction/04-shapes.md) | Is one value, such as an event license, asked for at several keys with the same type, pattern and words? ([Declaring a resource](declaring-a-resource.md#named-shapes)) | The value is asked for at one key: write its rules there. | 4, 8 | `/surface-examples/8/desk` |
 | Declared rule, `narrow()->when(Condition::...)` | [Rules between keys](introduction/07-rules-between-keys.md) | Does one key narrow when another holds a value, by a condition a schema can state, such as no license, no more than a hundred? ([Refinement](refinement.md#declaring-a-rule)) | Declare the rule when its condition and effect fit the vocabulary; write a refiner when the effect must be computed (the stewards for a capacity, `ceil(capacity / 50)`) or the condition is runtime. | 4, 7, 14 | `/surface-examples/7` |
@@ -96,7 +96,7 @@ directory. `NamespacesDocsTest` fails when a snippet names a class of
 the module that it does not import and this table does not list.
 
 A class in `Storage\` is one you name on `#[Resource(storage:)]` or
-extend (`ConfigObjectStorage`, `ConfigEntityStorage`), or one such a
+extend (`ConfigObjectResourceStorage`, `ConfigEntityResourceStorage`), or one such a
 class works with: a layout, the secret codec, `SchemaViolations`. The
 storages the engine writes through for a plugin's host or State implement
 the pipeline's `SurfaceStorageInterface` and live in
@@ -115,7 +115,7 @@ refused.
 | `AttachEach` | `use Drupal\surface\Resource\Attribute\AttachEach;` |
 | `AttachList` | `use Drupal\surface\Resource\Attribute\AttachList;` |
 | `AttachVariants` | `use Drupal\surface\Resource\Attribute\AttachVariants;` |
-| `BaseFieldOverrideStorage` | `use Drupal\surface\Pipeline\Storage\BaseFieldOverrideStorage;` |
+| `BaseFieldOverrideResourceStorage` | `use Drupal\surface\Pipeline\Storage\BaseFieldOverrideResourceStorage;` |
 | `BlueprintAdditionsInterface` | `use Drupal\surface\Resource\BlueprintAdditionsInterface;` |
 | `BlueprintInterface` | `use Drupal\surface\Resource\BlueprintInterface;` |
 | `ClosedSiteListInterface` | `use Drupal\surface\Resource\ClosedSiteListInterface;` |
@@ -126,8 +126,8 @@ refused.
 | `Computed` | `use Drupal\surface\Resource\Attribute\Computed;` |
 | `ComputesValueInterface` | `use Drupal\surface\Resource\ComputesValueInterface;` |
 | `Condition` | `use Drupal\surface\Refinement\Condition;` |
-| `ConfigEntityStorage` | `use Drupal\surface\Storage\ConfigEntityStorage;` |
-| `ConfigObjectStorage` | `use Drupal\surface\Storage\ConfigObjectStorage;` |
+| `ConfigEntityResourceStorage` | `use Drupal\surface\Storage\ConfigEntityResourceStorage;` |
+| `ConfigObjectResourceStorage` | `use Drupal\surface\Storage\ConfigObjectResourceStorage;` |
 | `ConfigSchemaGenerator` | `use Drupal\surface\Storage\ConfigSchemaGenerator;` |
 | `DeclaresByProperties` | `use Drupal\surface\Resource\DeclaresByProperties;` |
 | `DefinesOutputsInterface` | `use Drupal\surface\Resource\DefinesOutputsInterface;` |

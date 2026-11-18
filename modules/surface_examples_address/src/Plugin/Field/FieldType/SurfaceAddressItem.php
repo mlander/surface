@@ -36,7 +36,7 @@ use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
  *
  * The distance between the resource's input layout and the stored layout
  * is AddressStorageLayout, handed to the field settings storage here and
- * used by the resource's own storage, AddressFieldSettingsStorage, for
+ * used by the resource's own storage, AddressFieldSettingsResourceStorage, for
  * callers that address the field by its identity instead.
  *
  * The static default field settings stay the parent's. They include the

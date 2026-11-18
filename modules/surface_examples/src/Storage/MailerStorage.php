@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Example 14: where the mailer settings are kept.
  */
-final class MailerStorage extends ConfigObjectStorage {
+final class MailerStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

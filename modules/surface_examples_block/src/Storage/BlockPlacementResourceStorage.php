@@ -15,7 +15,7 @@ use Drupal\surface\Pipeline\StorageViolationsException;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface\Storage\ConfigEntityStorage;
+use Drupal\surface\Storage\ConfigEntityResourceStorage;
 use Drupal\surface_examples_block\Variants\BlockPluginStructures;
 use Drupal\Core\Session\AccountInterface;
 
@@ -23,7 +23,8 @@ use Drupal\Core\Session\AccountInterface;
  * A placed block lives on its block config entity, `block.block.<id>`.
  *
  * Its machine name, status, weight, theme, region and plugin are the
- * entity's own properties (ConfigEntityStorage). The rest is shaped here:
+ * entity's own properties (ConfigEntityResourceStorage). The rest is shaped
+ * here:
  *
  * - **The settings.** The block's settings array holds the keys every
  *   block has and the plugin's own. The label and whether it shows are
@@ -45,7 +46,7 @@ use Drupal\Core\Session\AccountInterface;
  *
  * Decision: see docs/decisions.md#a-placed-block-is-a-resource.
  */
-final class BlockPlacementStorage extends ConfigEntityStorage {
+final class BlockPlacementResourceStorage extends ConfigEntityResourceStorage {
 
   /**
    * {@inheritdoc}
@@ -79,7 +80,7 @@ final class BlockPlacementStorage extends ConfigEntityStorage {
   protected const LABEL_SHOWN = BlockPluginInterface::BLOCK_LABEL_VISIBLE;
 
   /**
-   * Constructs a BlockPlacementStorage.
+   * Constructs a BlockPlacementResourceStorage.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager, autowired.

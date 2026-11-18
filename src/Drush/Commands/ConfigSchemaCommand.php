@@ -18,8 +18,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * Writes the config schema and install file of each config object resource.
  *
  * For every resource stored in a simple config object (a subclass of
- * ConfigObjectStorage), the schema entry of its object and the values it
- * is installed with are derived from the resource
+ * ConfigObjectResourceStorage), the schema entry of its object and the values
+ * it is installed with are derived from the resource
  * (\Drupal\surface\Storage\ConfigSchemaGenerator). By default the
  * command writes nothing: it prints how each file of the named modules
  * differs from what it would write, and fails when any does, so a check

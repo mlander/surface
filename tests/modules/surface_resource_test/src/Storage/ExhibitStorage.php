@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Where the exhibit lives: one config object, its provenance flat in it.
  */
-final class ExhibitStorage extends ConfigObjectStorage {
+final class ExhibitStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

@@ -26,7 +26,7 @@ use Drupal\Core\Session\AccountInterface;
  * Committed after its parent, so a field being added exists by the time
  * its settings are written.
  */
-final class AddressFieldSettingsStorage implements ResourceStorageInterface {
+final class AddressFieldSettingsResourceStorage implements ResourceStorageInterface {
 
   /**
    * The config schema type the address field's settings are stored as.
@@ -34,7 +34,7 @@ final class AddressFieldSettingsStorage implements ResourceStorageInterface {
   protected const SCHEMA = 'field.field_settings.address';
 
   /**
-   * Constructs an AddressFieldSettingsStorage.
+   * Constructs an AddressFieldSettingsResourceStorage.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager, autowired.

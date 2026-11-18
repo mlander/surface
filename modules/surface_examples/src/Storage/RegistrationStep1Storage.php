@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Example 1's registration settings, in their own config object.
@@ -12,7 +12,7 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  * Each example keeps its own object, so the examples never write over each
  * other. The object always exists, from config/install.
  */
-final class RegistrationStep1Storage extends ConfigObjectStorage {
+final class RegistrationStep1Storage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

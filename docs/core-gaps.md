@@ -524,8 +524,8 @@ than permanent) is
 runtime, and is marked there and settled when the thing is loaded
 (`AccessAnswer::kindOf()`, `StaticRuntimeAccessTest`; [Static and runtime access](resources.md#static-and-runtime-access)). A write
 validates the whole config object against its schema before anything is
-saved (`ConfigObjectStorage::prepare()` in
-`src/Storage/ConfigObjectStorage.php`; [A simple config object](storage.md#a-simple-config-object)). In the honeypot port, three
+saved (`ConfigObjectResourceStorage::prepare()` in
+`src/Storage/ConfigObjectResourceStorage.php`; [A simple config object](storage.md#a-simple-config-object)). In the honeypot port, three
 `validateForm()` rules that used to run only in the form, and one
 permission, now hold at the route, the form, the tool and the HTTP API
 alike ([the log](adopters-2026-10-19.md#what-was-expressed-better)).
@@ -577,7 +577,7 @@ declares a `third_party_settings` sequence typed
 object, under `third_party_settings.<module>`; the owner's schema
 declares that sequence, typed by module name, and the module that adds
 keys describes its own part. The storage refuses a module's keys that no
-schema describes (`ConfigObjectStorageTest::testMountedSettingsNeedTheirOwnSchema`;
+schema describes (`ConfigObjectResourceStorageTest::testMountedSettingsNeedTheirOwnSchema`;
 [Keys another module mounts](storage.md#keys-another-module-mounts); a
 whole alter with both schemas is quoted in
 [Resources](resources.md#a-whole-alter)).
@@ -782,7 +782,7 @@ the one core should adopt, or that content entities fit the same way.
 | `required` mixes non-empty, nullable and present | `NULL` and `''` mean not configured; anything else is a value ([Value semantics](semantics.md#configured-or-not)) | No issue named here |
 | Nothing says a value is fixed in this context | The identity keys an operation knows are locked by the resource, not by a definition flag | Possibly nothing; revisit |
 | A simple config object records no dependencies | A config object's references to content are stored by uuid, so they deploy, but an export and an uninstall do not know what they name; a config entity's are recorded under `dependencies` ([A reference is stored by uuid](storage.md#a-reference-is-stored-by-uuid)) | No issue named here |
-| A config entity's dependencies come only from its class | Core recalculates them on every save from plugins and third party settings; a key that refers to an entity is neither, so a save through `ConfigEntityStorage` adds them in a presave hook, and a save made any other way drops them | No issue named here |
+| A config entity's dependencies come only from its class | Core recalculates them on every save from plugins and third party settings; a key that refers to an entity is neither, so a save through `ConfigEntityResourceStorage` adds them in a presave hook, and a save made any other way drops them | No issue named here |
 
 The contributed Tool API has gaps of its own: it reads `Choice` and
 `AllowedValues` by plugin id, so a subclass such as `LabeledChoice`

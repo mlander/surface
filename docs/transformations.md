@@ -101,7 +101,7 @@ content type's storage class never learns the alter exists. A resource
 that owns its storage translates in its own storage class instead, as
 the address field's settings storage does through `AddressStorageLayout`:
 
-<!-- excerpt: modules/surface_examples_address/src/Storage/AddressFieldSettingsStorage.php -->
+<!-- excerpt: modules/surface_examples_address/src/Storage/AddressFieldSettingsResourceStorage.php -->
 
 ```php
 public function load(OperationContext $context): array {
@@ -300,7 +300,7 @@ object's save, a config entity's or a content entity's presave, insert
 and update. A write that changes nothing saves nothing, so it fires
 nothing:
 
-<!-- excerpt: src/Storage/ConfigObjectStorage.php -->
+<!-- excerpt: src/Storage/ConfigObjectResourceStorage.php -->
 
 ```php
 // A write that changes nothing saves nothing: no save event, and
@@ -412,10 +412,10 @@ $outputs->add('total', Schema::integer()
 
 A listing is a read only operation, which is never committed, so its
 outputs are what its storage's `prepare()` answered
-(why: [decision](decisions.md#who-produces-outputs)). `VenueStorage`
+(why: [decision](decisions.md#who-produces-outputs)). `VenueResourceStorage`
 computes them there:
 
-<!-- excerpt: modules/surface_examples/src/Storage/VenueStorage.php -->
+<!-- excerpt: modules/surface_examples/src/Storage/VenueResourceStorage.php -->
 
 ```php
 return [
@@ -433,10 +433,10 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 ### The storage's prepare: what the store keeps for itself
 
 `prepare()` may add a value the store needs and no caller supplies.
-`ConfigObjectStorage` adds the language code core requires on a config
+`ConfigObjectResourceStorage` adds the language code core requires on a config
 object with translatable values:
 
-<!-- excerpt: src/Storage/ConfigObjectStorage.php -->
+<!-- excerpt: src/Storage/ConfigObjectResourceStorage.php -->
 
 ```php
 if ($this->typed($name, $whole)?->hasTranslatableElements()) {
@@ -447,7 +447,7 @@ if ($this->typed($name, $whole)?->hasTranslatableElements()) {
 
 The value is the store's, not the resource's: a resource never declares
 `langcode`, `load()` leaves it out, and no door answers it.
-`ConfigEntityStorage` does the same with a config entity's dependencies,
+`ConfigEntityResourceStorage` does the same with a config entity's dependencies,
 calculated on the rehearsed copy. This is the right home for a value
 that belongs to how a thing is stored. It is the wrong home for a value
 a caller should see: one that `prepare()` derives is in no contract and

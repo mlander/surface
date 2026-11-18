@@ -383,7 +383,7 @@ public function storedSchema(): array {
 }
 ```
 
-The storage, a `ConfigObjectStorage` subclass, names it in `layout()`:
+The storage, a `ConfigObjectResourceStorage` subclass, names it in `layout()`:
 
 <!-- excerpt: tests/modules/surface_schema_test/src/Storage/AliasSettingsStorage.php -->
 
@@ -453,7 +453,7 @@ $inputs->compute(
 ```
 
 `id` is the resource's identity, `#[Resource(identity: ['id'])]`, and its
-storage a `ConfigEntityStorage`. That is all it takes:
+storage a `ConfigEntityResourceStorage`. That is all it takes:
 
 - `Schema::of('drupal:config/machine_name')` names core's config schema type: the pattern
   `^[a-z0-9_]+$` and a Length of 166, both stated in the schema, which

@@ -3800,8 +3800,8 @@ final class EventVenue extends ConfigEntityBase {
 }
 ```
 
-The resource is the venue by its machine name, on a `VenueStorage`, a
-`ConfigEntityStorage`. Create, update and delete are about one venue. Listing
+The resource is the venue by its machine name, on a `VenueResourceStorage`, a
+`ConfigEntityResourceStorage`. Create, update and delete are about one venue. Listing
 and reordering are about the venues together, so they name none: each
 takes the keys of a structure of its own, which `structure:` on its
 `#[Operation]` names. The listing is read only; the reorder is an update
@@ -3812,7 +3812,7 @@ over the collection. Neither is a new kind of operation.
 ```php
 #[Resource('event.venue',
   identity: ['id'],
-  storage: VenueStorage::class,
+  storage: VenueResourceStorage::class,
   access: VenueAccess::class,
 )]
 #[Operation('create',
@@ -3859,7 +3859,7 @@ final class VenueResource implements ResourceInterface {
     permission: self::ADMINISTER,
   )]
   public static function update(string $id): OperationContext {
-    $venue = \Drupal::classResolver(VenueStorage::class)->named($id, 'The "update" operation of event.venue');
+    $venue = \Drupal::classResolver(VenueResourceStorage::class)->named($id, 'The "update" operation of event.venue');
     return new OperationContext(known: ['id' => (string) $venue->id()]);
   }
 
@@ -3874,7 +3874,7 @@ final class VenueResource implements ResourceInterface {
     deletes: TRUE,
   )]
   public static function delete(string $id): OperationContext {
-    $venue = \Drupal::classResolver(VenueStorage::class)->named($id, 'The "delete" operation of event.venue');
+    $venue = \Drupal::classResolver(VenueResourceStorage::class)->named($id, 'The "delete" operation of event.venue');
     return new OperationContext(known: ['id' => (string) $venue->id()]);
   }
 
@@ -4108,10 +4108,10 @@ reorder loads every venue's id and weight; its `prepare()` refuses an id
 that names no venue or is named twice, by its place in the list, and
 rehearses the rest; `commit()` saves them, in that one write.
 
-<!-- code: src/Storage/VenueStorage.php -->
+<!-- code: src/Storage/VenueResourceStorage.php -->
 
 ```php
-final class VenueStorage extends ConfigEntityStorage {
+final class VenueResourceStorage extends ConfigEntityResourceStorage {
 
   /**
    * {@inheritdoc}
@@ -4139,7 +4139,7 @@ final class VenueStorage extends ConfigEntityStorage {
   public const REORDER = 'reorder';
 
   /**
-   * Constructs a VenueStorage.
+   * Constructs a VenueResourceStorage.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager, autowired.
@@ -4308,7 +4308,7 @@ final class VenueStorage extends ConfigEntityStorage {
    *
    * @throws \Drupal\surface\Pipeline\StorageViolationsException
    *   When another venue holds the slug, a room id is held twice, here or
-   *   by another venue, or as ConfigEntityStorage refuses.
+   *   by another venue, or as ConfigEntityResourceStorage refuses.
    */
   protected function venue(OperationContext $context, array $values, AccountInterface $account): array {
     $own = $context->known['id'] ?? $values['id'] ?? NULL;
@@ -4403,9 +4403,9 @@ final class VenueAccess implements OperationAccessInterface {
       // Static: the account alone, or no venue to ask about.
       return AccessResult::allowed()->cachePerPermissions();
     }
-    $venue = $this->entityTypeManager->getStorage(VenueStorage::ENTITY_TYPE_ID)->load($id);
+    $venue = $this->entityTypeManager->getStorage(VenueResourceStorage::ENTITY_TYPE_ID)->load($id);
     if (!$venue instanceof EventVenue) {
-      return AccessResult::allowed()->cachePerPermissions()->addCacheTags(['config:' . VenueStorage::ENTITY_TYPE_ID . '_list']);
+      return AccessResult::allowed()->cachePerPermissions()->addCacheTags(['config:' . VenueResourceStorage::ENTITY_TYPE_ID . '_list']);
     }
     // Runtime: what is stored, under the venue's own tag.
     $answer = $venue->status() ? AccessResult::allowed() : AccessResult::forbidden('The venue is disabled, and only an account that administers the venues reads it.');
@@ -4682,7 +4682,7 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples/src/Structure/VenueListingStructure.php`](src/Structure/VenueListingStructure.php) | what the listing takes, a page and a filter, and what it answers, the page and the total | 35 |
 | [`modules/surface_examples/src/Structure/VenueReorderStructure.php`](src/Structure/VenueReorderStructure.php) | what the reorder takes: a list of venues and their weights | 13 |
 | [`modules/surface_examples/src/Structure/VenueOrderStructure.php`](src/Structure/VenueOrderStructure.php) | an item of that list: a venue and its new weight | 15 |
-| [`modules/surface_examples/src/Storage/VenueStorage.php`](src/Storage/VenueStorage.php) | the storage: a ConfigEntityStorage, which reads the listing, writes the reorder in one commit, and holds a slug to one venue | 151 |
+| [`modules/surface_examples/src/Storage/VenueResourceStorage.php`](src/Storage/VenueResourceStorage.php) | the storage: a ConfigEntityResourceStorage, which reads the listing, writes the reorder in one commit, and holds a slug to one venue | 151 |
 | [`modules/surface_examples/src/Access/VenueAccess.php`](src/Access/VenueAccess.php) | the access class: a disabled venue is only for an account that administers the venues | 17 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.event_venue.*` | the entity type's config schema, generated from the resource | 82 |
 | [`modules/surface_examples/config/install/surface_examples.event_venue.riverside.yml`](config/install/surface_examples.event_venue.riverside.yml) | Riverside Hall, shipped | 18 |

@@ -74,7 +74,7 @@ the record of the rework that brought the module to the pattern.
   objects: a method's is typed with a scalar named for a key of its
   resource (`string $id`), a class type refused at discovery
   (`OperationParameter::fromReflection()`), and the operation loads its
-  subject through its resource's storage (`ConfigEntityStorage::named()`,
+  subject through its resource's storage (`ConfigEntityResourceStorage::named()`,
   `ContentEntityStorage::entity()`), which refuses a value that names
   nothing; `OperationArguments` loads nothing, and no surface route
   converts a parameter an operation takes, every door handing the raw
@@ -171,7 +171,7 @@ the record of the rework that brought the module to the pattern.
 - **Layout**: how a storage lays accepted values out where that differs
   from how they are asked for, `StorageLayoutInterface`; an alter hands
   one for its mount with `AltersStorageLayoutInterface::storageLayout()`,
-  and a `ConfigObjectStorage` subclass answers one from `layout()`. A
+  and a `ConfigObjectResourceStorage` subclass answers one from `layout()`. A
   layout implementing `StoredSchemaInterface` says each translated key's
   stored schema, which the build's check skips and the config schema
   generator writes, both through the storage's `translatedKeys()`
@@ -1512,7 +1512,7 @@ so the rule is this sentence. `npm test` is not part of
   for this repository's modules), and the contract baselines under
   `tests/fixtures/contracts/` by `drush surface:contract-diff
   --write`, and the config schema and install files of every resource
-  stored in a `ConfigObjectStorage`, and the schema of a config entity
+  stored in a `ConfigObjectResourceStorage`, and the schema of a config entity
   type a module declares and stores a resource in, by `drush
   surface:config-schema --write` (the test modules' through
   `ConfigSchemaDriftTest` with `SURFACE_CONFIG_SCHEMA_WRITE=1`), and

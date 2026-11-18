@@ -29,8 +29,8 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Attachment;
 use Drupal\surface\Collection;
 use Drupal\surface\Port;
-use Drupal\surface\Storage\ConfigEntityStorage;
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigEntityResourceStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 use Drupal\surface\Variants;
 use PortableSchema\Builder\Schema;
 
@@ -1245,8 +1245,8 @@ final class Attaching {
       }
       $storage = $this->registry->hasDefinition($parent['class']) ? $this->registry->getDefinition($parent['class'])->storage : NULL;
     }
-    if ($storage !== NULL && !is_a($storage, ConfigObjectStorage::class, TRUE) && !is_a($storage, ConfigEntityStorage::class, TRUE)) {
-      throw new \LogicException(sprintf('%s stores the variants at "%s" flat (Variants::STORED_AS), and %s, which stores it, is no config storage: the layout that stores them beside their deciding key is applied to ConfigObjectStorage and ConfigEntityStorage alone. Store them under the key, or lay them out in the storage itself.', $id, $key, $storage));
+    if ($storage !== NULL && !is_a($storage, ConfigObjectResourceStorage::class, TRUE) && !is_a($storage, ConfigEntityResourceStorage::class, TRUE)) {
+      throw new \LogicException(sprintf('%s stores the variants at "%s" flat (Variants::STORED_AS), and %s, which stores it, is no config storage: the layout that stores them beside their deciding key is applied to ConfigObjectResourceStorage and ConfigEntityResourceStorage alone. Store them under the key, or lay them out in the storage itself.', $id, $key, $storage));
     }
   }
 

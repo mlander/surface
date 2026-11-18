@@ -13,17 +13,17 @@ use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
-use Drupal\surface\Storage\ConfigEntityStorage;
+use Drupal\surface\Storage\ConfigEntityResourceStorage;
 use Drupal\surface_examples\Entity\EventVenue;
 use Drupal\surface_examples\Resource\VenueResource;
 
 /**
  * Example 15: a venue lives on its config entity, and so do all of them.
  *
- * Add, edit and remove are ConfigEntityStorage's, by the venue's machine
- * name, with two rules of its own: a slug is held once across the venues,
- * since a link names a venue by it, and so is a room id, since example 2
- * offers a room by it. The two operations over
+ * Add, edit and remove are ConfigEntityResourceStorage's, by the venue's
+ * machine name, with two rules of its own: a slug is held once across the
+ * venues, since a link names a venue by it, and so is a room id, since example
+ * 2 offers a room by it. The two operations over
  * the venues together are read and written here:
  *
  * - **list** loads nothing, since a query has nothing stored, and its
@@ -41,7 +41,7 @@ use Drupal\surface_examples\Resource\VenueResource;
  * Decision: see
  * docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
  */
-final class VenueStorage extends ConfigEntityStorage {
+final class VenueResourceStorage extends ConfigEntityResourceStorage {
 
   /**
    * {@inheritdoc}
@@ -69,7 +69,7 @@ final class VenueStorage extends ConfigEntityStorage {
   public const REORDER = 'reorder';
 
   /**
-   * Constructs a VenueStorage.
+   * Constructs a VenueResourceStorage.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager, autowired.
@@ -238,7 +238,7 @@ final class VenueStorage extends ConfigEntityStorage {
    *
    * @throws \Drupal\surface\Pipeline\StorageViolationsException
    *   When another venue holds the slug, a room id is held twice, here or
-   *   by another venue, or as ConfigEntityStorage refuses.
+   *   by another venue, or as ConfigEntityResourceStorage refuses.
    */
   protected function venue(OperationContext $context, array $values, AccountInterface $account): array {
     $own = $context->known['id'] ?? $values['id'] ?? NULL;

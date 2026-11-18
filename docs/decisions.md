@@ -180,9 +180,9 @@ grep:
 - `Pipeline\Omitted` → `Pipeline\NotEmitted`;
 - `AccessAnswer::answer()` → `AccessAnswer::getAnswer()`;
 - `Storage\StateStorage` → `Pipeline\Storage\StateStorage`;
-- `Storage\ConfigEntityStorage` → `Pipeline\Storage\ConfigEntityStorage` (back in `Storage\` on 2026-10-23, a resource's storage: [A placed block is a resource](#a-placed-block-is-a-resource));
+- `Storage\ConfigEntityResourceStorage` → `Pipeline\Storage\ConfigEntityResourceStorage` (back in `Storage\` on 2026-10-23, a resource's storage: [A placed block is a resource](#a-placed-block-is-a-resource));
 - `Storage\FieldSettingsStorage` → `Pipeline\Storage\FieldSettingsStorage`;
-- `Storage\BaseFieldOverrideStorage` → `Pipeline\Storage\BaseFieldOverrideStorage`;
+- `Storage\BaseFieldOverrideResourceStorage` → `Pipeline\Storage\BaseFieldOverrideResourceStorage`;
 - `Storage\PluginConfigurationStorage` → `Pipeline\Storage\PluginConfigurationStorage`;
 - `Storage\CompositeStorage` → `Pipeline\Storage\CompositeStorage`;
 - `Licence` → `License`, "Event licence" → "Event license";
@@ -574,7 +574,7 @@ its members are declared into is not one; a named scalar shape, a
 the two never share a name. How accepted values are laid out in storage, where that
 differs from how they are asked for, is a **layout**:
 `StorageLayoutInterface`, and `AltersStorageLayoutInterface::storageLayout()`
-for an alter's mount (and, *added 2026-10-27*, `ConfigObjectStorage::layout()`
+for an alter's mount (and, *added 2026-10-27*, `ConfigObjectResourceStorage::layout()`
 for a config object, [A layout is the storage's one word on its
 shape](#a-layout-is-the-storages-one-word-on-its-shape)). "Shape" is the named type, of three kinds, and in
 code names the third, `#[Shape]`. (`ResourceBlueprint`,
@@ -1847,7 +1847,7 @@ code computes it at request time. The choices, and why:
 A known key that is not one of `#[Resource(identity:)]` is not locked;
 it stays on the context for the storage and the access class to read.
 `FieldStorageResource::update()` knows the field storage's entity type and
-field name this way, which `FieldStorageStorage` loads by, while
+field name this way, which `FieldStorageResourceStorage` loads by, while
 `field_type`, its one
 identity key, is locked. (Before storage settings existed, the field
 type was known the same way; it became identity when it started
@@ -2045,7 +2045,7 @@ its subject through its resource's storage.
   loads nothing; an entity a PHP caller hands over is named by its id.
   The venue, placed block, content type and the test modules'
   operations take the id and ask their storage.
-- **The load by identity.** `ConfigEntityStorage::named($id,
+- **The load by identity.** `ConfigEntityResourceStorage::named($id,
   $operation)` loads the config entity an id names and refuses one that
   names nothing with a `NamesNothingException` at the identity key,
   which every door answers as not found for an account the operation
@@ -2079,7 +2079,7 @@ its subject through its resource's storage.
   converter answered not found to every account before access was
   asked.
 
-(`OperationParameter`, `OperationArguments`, `ConfigEntityStorage::named()`,
+(`OperationParameter`, `OperationArguments`, `ConfigEntityResourceStorage::named()`,
 `Gates`, `RouteAccessTest`, `GatesTest`, `VenueResourceTest`)
 
 ### A plain route default pins an operation parameter
@@ -2506,8 +2506,8 @@ document, refusal or stored value changed.
   purpose). The edge files are named in the test, each with its reason:
   the host readers `TypedDataReader`, `ConfigSchemaReader` and
   `FieldItemDerivation`; host storage that validates its own typed
-  values, `SchemaViolations`, `ConfigObjectStorage` and
-  `ConfigEntityStorage`; the runner; the Tool API's `InputDefinitions`;
+  values, `SchemaViolations`, `ConfigObjectResourceStorage` and
+  `ConfigEntityResourceStorage`; the runner; the Tool API's `InputDefinitions`;
   and `ConfigSchemaGenerator`. The test fails on a file that uses Typed
   Data and is not listed, on a listed file that no longer does, on a
   line with no role or a repeated path, on an `edge` line the test does
@@ -3042,9 +3042,9 @@ built on the untouched tree. No file under `src` changed.
   asked.
 
 Not covered, and pinned elsewhere:
-- Storage layouts: `FlatVariantsLayoutTest`, `ConfigEntityStorageTest`
+- Storage layouts: `FlatVariantsLayoutTest`, `ConfigEntityResourceStorageTest`
   and `NodeTypeToolComparisonTest`.
-- `prepare()` and `commit()`: `ConfigObjectStorageTest` and
+- `prepare()` and `commit()`: `ConfigObjectResourceStorageTest` and
   `SurfaceStorageAccessorTest`.
 - The tool door's own input casting: the tests that use
   `DoorAgreementTrait`.
@@ -4363,8 +4363,8 @@ the two faults below, fixed on purpose.
   `Variants\ConfigSchemaTypes`, `DefinitionMetadata` itself,
   `DefinitionSchema`'s own read.
 - *Core's config and entity APIs*: the storage adapters
-  (`ConfigObjectStorage`, `ConfigEntityStorage`, `FieldSettingsStorage`,
-  `BaseFieldOverrideStorage`, the examples' field storages),
+  (`ConfigObjectResourceStorage`, `ConfigEntityResourceStorage`, `FieldSettingsStorage`,
+  `BaseFieldOverrideResourceStorage`, the examples' field storages),
   `DefinitionTypedData`, `SurfaceFieldTypeTrait`,
   `HeldToConfigSchemaTrait::mountedLayouts()`, the `getClass()` reads.
 - *Shells*: every site that reads a key holding a child frame from its
@@ -6516,14 +6516,14 @@ core's own-key form into it. Each choice, and why:
 - **The wire trade, accepted.** The contract asks for the chosen keys
   one level under the key where the YAML holds them flat beside the
   deciding key. The block example's visibility conditions did this by
-  hand, in both directions, in `BlockPlacementStorage` until 2026-11-06
+  hand, in both directions, in `BlockPlacementResourceStorage` until 2026-11-06
   ([A placed block is a resource](#a-placed-block-is-a-resource)); the
   layout does it for every config storage, at any depth the sealed
   surface holds, with no transform an owner writes.
 - **Read back by exclusion, the chosen variant alone.** On read, every
   stored key at the level that is not one of the owner's own there is
   gathered under the key, which needs no settled variant and no schema,
-  as `BlockPlacementStorage::fromEntity()` gathered a condition's
+  as `BlockPlacementResourceStorage::fromEntity()` gathered a condition's
   settings by hand until the block example took the setting. Of what is
   gathered, the chosen variant's keys and the secrets the other variants
   keep (`Variants::keptSecrets()`) are read under the key; naming the
@@ -6784,13 +6784,13 @@ settings). (`StorageAdapter::commit()`)
 
 ### A config object is named on a subclass
 
-`ConfigObjectStorage` is abstract, and a module names its config object
+`ConfigObjectResourceStorage` is abstract, and a module names its config object
 in a subclass's `CONFIG` constant, the way the examples' storage classes
 did before it existed. A storage class is an autowired service, one per
 class, so it cannot be handed a name per resource; an argument on
 `#[Resource]` would put a storage detail on the resource, which the
 pattern keeps out of it. The subclass is three lines, and it is where a
-settings resource's storage grows if it needs to. (`ConfigObjectStorage`)
+settings resource's storage grows if it needs to. (`ConfigObjectResourceStorage`)
 
 ### A config object is described by its resource
 
@@ -6806,7 +6806,7 @@ format core is asked to replace with data definitions
 ([core gaps, step 2](core-gaps.md#step-2-operations-and-access-for-simple-config)).
 
 - **Written, committed, checked.** `drush surface:config-schema`
-  writes, for every resource a `ConfigObjectStorage` stores, the
+  writes, for every resource a `ConfigObjectResourceStorage` stores, the
   object's entry in `config/schema/<module>.schema.yml` and its
   `config/install` file; without `--write` it prints the difference and
   fails when there is one. `ConfigSchemaDriftTest` holds the shipped
@@ -6887,10 +6887,10 @@ format core is asked to replace with data definitions
   refused until it is written again, and the generator builds without
   the check (`Resources::declaration()`). The node type resource, which
   the architecture review found restating core's schema less strictly,
-  states core's control-character patterns now, and `NodeTypeStorage`
+  states core's control-character patterns now, and `NodeTypeResourceStorage`
   says from the schema that its two booleans always hold a value.
 - **An entity type a module declares** (added 2026-10-23, example 15). A
-  resource whose `ConfigEntityStorage` names an entity type its own
+  resource whose `ConfigEntityResourceStorage` names an entity type its own
   module declares gets that type's entry, `<module>.<config prefix>.*`,
   a fully validatable `config_entity` whose mapping is each key the
   storage maps to a property, by the property's name, by the same rules;
@@ -6981,7 +6981,7 @@ entry and install file, from an interview or from one of two sources,
 
 ### The whole object is checked
 
-`ConfigObjectStorage::prepare()` validates the written values laid over
+`ConfigObjectResourceStorage::prepare()` validates the written values laid over
 the stored object, not the written keys alone, with violations filed
 under the keys being written. A type that resolves through a sibling and
 core's language code rule, which is checked at the root, only judge the
@@ -6991,7 +6991,7 @@ settings that resolve to no schema type are refused, since config
 validation lets data no schema describes through silently. A config object with
 no schema at all is a `\LogicException`, not a violation: it is the
 developer's to fix, before any person sees the form.
-(`ConfigObjectStorage::prepare()`, `ConfigObjectStorage::mountsWithoutSchema()`)
+(`ConfigObjectResourceStorage::prepare()`, `ConfigObjectResourceStorage::mountsWithoutSchema()`)
 
 ### Who produces outputs
 
@@ -7208,7 +7208,7 @@ Three choices settle it:
   runtime one could not be run ahead, and would need a mark of its
   own in both documents for a value the client cannot predict. A changed
   time reads the clock: it stays a storage's to add in `prepare()`, as
-  the language code `ConfigObjectStorage` adds is.
+  the language code `ConfigObjectResourceStorage` adds is.
 - **When it runs, `when:`.** `Compute::ON_CREATE`, the default, computes
   it while storage holds nothing for it, which is how a thing being
   created starts, and keeps what is stored after: a slug a link points
@@ -7367,7 +7367,7 @@ Five parts, each an existing mechanism:
   refusal names the id and the thing, code `taken`: "A venue named
   riverside already exists." Both documents name it under
   `checkedOnServer` with its reason, "Refused when a venue named this
-  already exists." `ConfigEntityStorage` answers both, and its
+  already exists." `ConfigEntityResourceStorage` answers both, and its
   `prepare()` refuses a taken id in the same sentence for a caller that
   skips validation. Why on the deletable storage: a storage that
   removes a thing by its identity loads it by that identity, so it can
@@ -7423,7 +7423,7 @@ to drop the key from the check. The config schema generator read none of
 them, so it wrote the asked shape, which the stored list does not
 match, and such a module kept its schema written by hand.
 
-- **The seam `FieldSettingsStorage` already had.** `ConfigObjectStorage`
+- **The seam `FieldSettingsStorage` already had.** `ConfigObjectResourceStorage`
   asks a protected `layout(): ?StorageLayoutInterface`, NULL by default,
   which a subclass overrides: `load()` reads through its
   `fromStorage()`, `prepare()` writes through its `toStorage()` before
@@ -7464,7 +7464,7 @@ Rejected: the generator reading `load()` and `prepare()` by running them
 on sample values, which guesses at a shape a class states in one line;
 a schema override per key on the resource, which puts a storage fact on
 the resource the pattern keeps it out of; and `layout()` on
-`ConfigEntityStorage`, which maps keys to properties and has
+`ConfigEntityResourceStorage`, which maps keys to properties and has
 `fromEntity()` and `toEntity()` for the rest, with no case yet.
 
 *Amended 2026-10-27:* an alter's layout of its mount
@@ -7481,7 +7481,7 @@ stored.
 
 *Open:* `configSchemaPaths()`, for a key stored under another name, is
 still its own override.
-(`ConfigObjectStorage::layout()`, `StoredSchemaInterface`,
+(`ConfigObjectResourceStorage::layout()`, `StoredSchemaInterface`,
 `HeldToConfigSchemaTrait::translatedKeys()`, `ConfigSchemaGenerator::translated()`,
 `Resources::storageInstance()`, `ReferenceStorageTest`,
 `ConfigSchemaCheckTest`)
@@ -7493,7 +7493,7 @@ objects keep settings several forms edit, at paths:
 `system.performance` keeps the page cache's maximum age at
 `cache.page.max_age`, beside `css.compress`, `js.compress` and
 `fast_404.*`, which no form of core's performance page edits. A
-`ConfigObjectStorage` stored each key at its own top-level name, and the
+`ConfigObjectResourceStorage` stored each key at its own top-level name, and the
 check resolved one level of the schema, so such an object could not be a
 resource's.
 
@@ -7530,10 +7530,10 @@ depth (`cache.page.max_age` beside `css.preprocess`) does not fit.
 
 This answers the open point of [A layout is the storage's one word on
 its shape](#a-layout-is-the-storages-one-word-on-its-shape) for a config
-object; `ConfigEntityStorage` still answers `configSchemaPaths()` itself.
-(`ConfigObjectStorage::STORED_AT`, `HeldToConfigSchemaTrait::schemaAt()`,
-`ConfigSchemaGenerator::describe()`, `PerformanceStorage`,
-`ConfigObjectStorageTest`, `PerformanceSurfaceTest`)
+object; `ConfigEntityResourceStorage` still answers `configSchemaPaths()` itself.
+(`ConfigObjectResourceStorage::STORED_AT`, `HeldToConfigSchemaTrait::schemaAt()`,
+`ConfigSchemaGenerator::describe()`, `PerformanceResourceStorage`,
+`ConfigObjectResourceStorageTest`, `PerformanceSurfaceTest`)
 
 ### A config object stores a reference by uuid
 
@@ -7544,7 +7544,7 @@ A content entity's id differs between environments: node 7 on a
 development site is another node, or none, on the site its config is
 imported into. A config entity's id is its machine name and deploys as
 it is. So a reference key whose target is a content entity type, stored
-by a config storage (`ConfigObjectStorage` or `ConfigEntityStorage`), is
+by a config storage (`ConfigObjectResourceStorage` or `ConfigEntityResourceStorage`), is
 stored as the entity's uuid; a config entity's stays its id.
 
 - **The wire does not change.** The documents, the tool and HTTP take
@@ -7604,7 +7604,7 @@ stored as the entity's uuid; a config entity's stays its id.
   in config. Right only for config that never leaves its site, or where
   each site gives the entity the same id by other means (a migration
   that keeps ids); the reference then deploys as wrong as an id does.
-- **Dependencies.** A config entity saved through `ConfigEntityStorage`
+- **Dependencies.** A config entity saved through `ConfigEntityResourceStorage`
   depends on what its keys refer to, as core's own config entities do: a
   config entity by its config name under `config`, a content entity as
   `<entity type>:<bundle>:<uuid>` under `content`. `StorageAdapter`
@@ -8178,7 +8178,7 @@ refused, code `does_not_apply`.
 
 ### Config is staged, and apply resets what its rollback leaves behind
 
-Decided 2026-11-08. `ConfigObjectStorage` and `ConfigEntityStorage`
+Decided 2026-11-08. `ConfigObjectResourceStorage` and `ConfigEntityResourceStorage`
 implement `Pipeline\TransactionalStorageInterface`, so a stage takes a
 write to a config object or a config entity, and every subclass's. The
 config table's rows go through the database connection apply's
@@ -8243,8 +8243,8 @@ and field definitions a bundle entity's save rebuilt, and State's cache.
   store, stays as the rolled back write left it: no core API rebuilds it.
 
 (`Staging\ConfigWrites`, `Storage\StageStorage::replay()`,
-`Storage\ConfigObjectStorage::rolledBack()`,
-`Storage\ConfigEntityStorage::rolledBack()`, `StagedConfigTest`)
+`Storage\ConfigObjectResourceStorage::rolledBack()`,
+`Storage\ConfigEntityResourceStorage::rolledBack()`, `StagedConfigTest`)
 
 ### A secret is sealed in the stage record by its recorded paths
 
@@ -12513,9 +12513,9 @@ form, each validated as any resource is. Each choice, and why:
   block layout submits checkboxes. Rejected: a map keyed by condition
   id, since keys from the site attach one structure per map and each
   condition's settings differ.
-- **`ConfigEntityStorage` is a resource's storage.** Abstract, its
+- **`ConfigEntityResourceStorage` is a resource's storage.** Abstract, its
   subclass naming `ENTITY_TYPE_ID` and `PROPERTIES` (a key to a
-  property, or to `['method' => 'setX']`), as `ConfigObjectStorage`
+  property, or to `['method' => 'setX']`), as `ConfigObjectResourceStorage`
   names its config object. `prepare()` copies the stored entity from its
   exported array (a clone shares the plugin collections of the entity
   the request holds), shapes the values onto it, calculates the
@@ -12523,8 +12523,8 @@ form, each validated as any resource is. Each choice, and why:
   for a config entity is its validation; `commit()` saves that array.
   The engine's class of the same name in `Pipeline\Storage\` is gone: no
   host used it, and the naming review had found one short name for
-  three classes, core's included. `BlockPlacementStorage` adds the
-  settings, the visibility and the label to it; `NodeTypeStorage` is
+  three classes, core's included. `BlockPlacementResourceStorage` adds the
+  settings, the visibility and the label to it; `NodeTypeResourceStorage` is
   rebuilt on it, its base field overrides beside, with no change to any
   document.
 - **A delete takes no values.** `#[Operation(deletes: TRUE)]`, beside
@@ -12553,16 +12553,16 @@ moving a block between themes; Layout Builder's components; a block in
 a region its theme hides, which an update reads as stale; a block setting
 whose sequence is a keyed map, read as a list; the create form without
 JavaScript for a plugin's settings, which are drawn once the plugin is
-chosen. (`BlockPlacementResource`, `BlockPlacementStorage`,
+chosen. (`BlockPlacementResource`, `BlockPlacementResourceStorage`,
 `BlockPluginStructures`, `ConditionPluginStructures`,
 `ConfigSchemaDocument`, `VisibilityConditionStructure`,
 `ThemeRegionOptions`, `AnyThemeRegionConstraint`, `ExtensionExistsOptions`,
-`Storage\ConfigEntityStorage`,
+`Storage\ConfigEntityResourceStorage`,
 `DeletableStorageInterface`, `DeletingStorageInterface`,
 `SiteList::add(..., structure:)`, `BlockPlacementResourceTest`,
 `BlockPlacementToolsTest`, `BlockPlacementApiTest`,
 `BlockPlacementFormTest`, `BlockPlacementReactTest`,
-`ConfigEntityStorageTest`)
+`ConfigEntityResourceStorageTest`)
 
 *Changed 2026-11-04:* a plugin with no declared structure is no longer
 written as JSON Schema. `BlockPluginStructures` and
@@ -12624,7 +12624,7 @@ apart as `<id>@<n>`, as for defaults.
 `ConfigSchemaReaderTest::testOwnIsTheTypeLessItsFrameType()`)
 
 *Changed 2026-11-06:* `VisibilityConditionStructure` stores its
-`settings` flat (`Variants::STORED_AS`), so what `BlockPlacementStorage`'s
+`settings` flat (`Variants::STORED_AS`), so what `BlockPlacementResourceStorage`'s
 two visibility loops did to lay a condition's settings beside its id and
 gather them back went with the layout, the loops keeping the conditions
 keyed by id and a list of strings as core's map of each value to itself
@@ -12666,7 +12666,7 @@ listed, and how they are put in order.
   never committed, so its outputs are what its storage's `prepare()`
   answered under an output's name ([Who produces
   outputs](#who-produces-outputs)): prepare is the last stage a read
-  runs, and one with no side effects. `VenueStorage` reads the venues
+  runs, and one with no side effects. `VenueResourceStorage` reads the venues
   there, lighter first, and answers the page and the total. The tool
   answers them beside the one result shape.
 - **`GET` on a collection picks the listing when one is declared.** The
@@ -12749,7 +12749,7 @@ than an offset; a `sort` input. (`Operation::$values`,
 `StorageAdapter::outputs()`, `ServedPaths::listing()`,
 `ServedPaths::defaults()`, `ResourceApiController::listing()`,
 `OpenApiDocument::listed()`, `ConfigSchemaGenerator::describeEntityType()`,
-`SurfaceOptions::isStatedByList()`, `VenueResource`, `VenueStorage`,
+`SurfaceOptions::isStatedByList()`, `VenueResource`, `VenueResourceStorage`,
 `VenueAccess`, `EventVenue`, `VenueResourceTest`, `VenueApiTest`)
 
 ### A reference is an id with a list the site decides, listed or looked up
@@ -13023,7 +13023,7 @@ constraint carries.
 ### What the examples are made of
 
 Each example of `surface_examples` keeps its settings in a config
-object of its own and names a subclass of `ConfigObjectStorage`
+object of its own and names a subclass of `ConfigObjectResourceStorage`
 that says which; an example's resource repeats the previous example's
 keys rather than extending its class, so each example reads alone on
 screen. The machine names keep the word step (`registration_step2`,
@@ -13614,7 +13614,7 @@ make it one:
   changes against what storage held (a map by its own keys, a list
   whole), on a dry run too, which is then a plan; with none, on a thing
   that exists, the pipeline does not call `commit()`, and
-  `ConfigObjectStorage::commit()` saves nothing when the data is as
+  `ConfigObjectResourceStorage::commit()` saves nothing when the data is as
   stored, so no config save event fires and an export does not differ.
   The result is still `committed` (the call went through, and storage
   holds what was accepted); `changed()` says whether anything moved.
@@ -13624,7 +13624,7 @@ make it one:
 (`SurfacePipeline::kept()`, `SurfacePipeline::heldAlike()`,
 `SurfacePipeline::isDefault()`,
 `SurfacePipeline::changes()`, `SurfaceResult::$changes`,
-`ConfigObjectStorage::commit()`, `ReadWriteRoundTripTest`)
+`ConfigObjectResourceStorage::commit()`, `ReadWriteRoundTripTest`)
 
 ### A key its storage always holds
 
@@ -13642,7 +13642,7 @@ can. A storage implementing `Resource\KnowsClearableKeysInterface`
 answers `mayClear()` per key, and the build step marks each optional
 scalar or list key it answers FALSE for (`DefinitionMetadata::setAlwaysHeld()`),
 in the resource and in every part its storage stores under the part's
-key. `ConfigObjectStorage` answers by core's own rule, read from the
+key. `ConfigObjectResourceStorage` answers by core's own rule, read from the
 config schema with what is stored: a value may be NULL unless the
 object's schema is fully validatable (the `FullyValidatable` constraint
 at its root) and the key does not say `nullable: true`, which is where
@@ -13675,7 +13675,7 @@ On a key so marked:
 A required key is not marked: it holds a value already. A secret is
 not either: sent nothing it keeps what it holds, whatever its storage.
 (`DefinitionMetadata::holdsValue()`, `Binding::markAlwaysHeld()`,
-`ConfigObjectStorage::mayClear()`, `Validating::cannotBeCleared()`,
+`ConfigObjectResourceStorage::mayClear()`, `Validating::cannotBeCleared()`,
 `PropertySchema::nullable()`, `StockWidgetsTest::testKeyItsStorageAlwaysHolds()`,
 `AdvertisedSchemaAcceptanceTest::testOpeningHours()`)
 
@@ -16505,7 +16505,7 @@ was accepted. The table, change by change, is [Evolving a resource](evolution.md
   pipeline runs the steps on what `load()` hands it, before `accept()`
   reads it as what is stored, so every door reads converted values;
   storage stamps the declared versions at commit, since it owns the
-  layout and so where the stamp lives (`ConfigObjectStorage` beside
+  layout and so where the stamp lives (`ConfigObjectResourceStorage` beside
   `_core`, as `_surface.versions`). The stamp travels with the data,
   so an import of an older export is converted again on read and
   environments converge in recorded order. Only up-steps: going back is

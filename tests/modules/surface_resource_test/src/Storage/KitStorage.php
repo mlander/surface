@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Stores the kit fixture, the chosen variant's keys flat beside its kind.
  */
-final class KitStorage extends ConfigObjectStorage {
+final class KitStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

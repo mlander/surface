@@ -10,7 +10,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
-use Drupal\surface_examples_address\Storage\AddressFieldSettingsStorage;
+use Drupal\surface_examples_address\Storage\AddressFieldSettingsResourceStorage;
 use Drupal\surface_examples_field\Resource\FieldInstanceResource;
 use PortableSchema\Builder\Schema;
 
@@ -39,9 +39,9 @@ use PortableSchema\Builder\Schema;
  * for anything, which is what lets a resource hold no services.
  *
  * @see \Drupal\surface_examples_address\Plugin\Field\FieldType\SurfaceAddressItem
- * @see \Drupal\surface_examples_address\Storage\AddressFieldSettingsStorage
+ * @see \Drupal\surface_examples_address\Storage\AddressFieldSettingsResourceStorage
  */
-#[Resource('field.settings.address', storage: AddressFieldSettingsStorage::class)]
+#[Resource('field.settings.address', storage: AddressFieldSettingsResourceStorage::class)]
 #[Variant(of: FieldInstanceResource::class, at: 'settings', for: 'address')]
 final class AddressFieldSettingsResource implements ResourceInterface {
 

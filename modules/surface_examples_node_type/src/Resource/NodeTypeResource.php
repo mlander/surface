@@ -15,7 +15,7 @@ use Drupal\surface\Resource\Compute;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_node_type\Access\NodeTypeAccess;
-use Drupal\surface_examples_node_type\Storage\NodeTypeStorage;
+use Drupal\surface_examples_node_type\Storage\NodeTypeResourceStorage;
 use Drupal\node\NodePreviewMode;
 use PortableSchema\Builder\Schema;
 
@@ -47,7 +47,7 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('Content type'),
   description: new TranslatableMarkup('A content type: its name, machine name, description and help text, the label of its title field, and the defaults its new content starts from.'),
   identity: ['type'],
-  storage: NodeTypeStorage::class,
+  storage: NodeTypeResourceStorage::class,
   access: NodeTypeAccess::class,
 )]
 #[Operation('create',
@@ -79,7 +79,7 @@ final class NodeTypeResource implements ResourceInterface {
     permission: self::PERMISSION,
   )]
   public static function update(string $type): OperationContext {
-    $node_type = \Drupal::classResolver(NodeTypeStorage::class)->named($type, 'The "update" operation of node.type');
+    $node_type = \Drupal::classResolver(NodeTypeResourceStorage::class)->named($type, 'The "update" operation of node.type');
     return new OperationContext(known: ['type' => (string) $node_type->id()]);
   }
 

@@ -35,7 +35,7 @@ use Drupal\Core\Session\AccountInterface;
  * resource names the subclass:
  *
  * @code
- * final class ImageStyleStorage extends ConfigEntityStorage {
+ * final class ImageStyleResourceStorage extends ConfigEntityResourceStorage {
  *   public const ENTITY_TYPE_ID = 'image_style';
  *   public const PROPERTIES = ['name' => 'name', 'label' => 'label'];
  * }
@@ -90,7 +90,7 @@ use Drupal\Core\Session\AccountInterface;
  * A subclass whose commit() has effects outside the database, such as
  * files written or deleted or a call to another service, is not undone
  * when apply rolls back. Such a subclass should not rely on staging, or
- * undoes those effects in rolledBack(). PerformanceStorage in
+ * undoes those effects in rolledBack(). PerformanceResourceStorage in
  * surface_examples_performance is the shipped example: its commit()
  * deletes the CSS and JavaScript aggregates, which a rollback leaves
  * deleted, and which the next page that needs them builds again.
@@ -99,7 +99,7 @@ use Drupal\Core\Session\AccountInterface;
  *
  * @see docs/storage.md#a-config-entity
  */
-abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsClearableKeysInterface, HeldToConfigSchemaInterface, TransactionalStorageInterface {
+abstract class ConfigEntityResourceStorage implements DeletableStorageInterface, KnowsClearableKeysInterface, HeldToConfigSchemaInterface, TransactionalStorageInterface {
 
   use DependencySerializationTrait;
   use HeldToConfigSchemaTrait;
@@ -148,7 +148,7 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
   protected const OWNED = ['uuid', 'dependencies', '_core'];
 
   /**
-   * Constructs a ConfigEntityStorage.
+   * Constructs a ConfigEntityResourceStorage.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager, autowired.
@@ -274,7 +274,7 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
    * @code
    * #[Operation('update', label: new TranslatableMarkup('Edit a venue'))]
    * public static function update(string $id): OperationContext {
-   *   $venue = \Drupal::classResolver(VenueStorage::class)
+   *   $venue = \Drupal::classResolver(VenueResourceStorage::class)
    *     ->named($id, 'The "update" operation of event.venue');
    *   return new OperationContext(known: ['id' => (string) $venue->id()]);
    * }

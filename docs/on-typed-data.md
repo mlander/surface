@@ -196,7 +196,7 @@ to use it. The edges are:
   [1.1](core-gaps.md#11-a-typed-data-prototype-keyed-by-its-definition)).
 - **Storage.** A config object is validated whole against its config
   schema through typed config before it is saved
-  (`ConfigObjectStorage::prepare()`, through
+  (`ConfigObjectResourceStorage::prepare()`, through
   `createFromNameAndData()->validate()`).
 - **The read and its inverse.** `DefinitionSchema::of()` reads a
   definition into a schema; `DefinitionFromSchema::of()` derives a

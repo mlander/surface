@@ -25,7 +25,7 @@ reasoning, is in `ADOPTION.md` at the module root.
 | [C](#group-c-one-plugin-two-sets-of-settings) | Field types: storage and instance settings on one plugin | **Half built.** Instance settings ported; storage settings described and written by the field tools, with no Field UI host. |
 | [D](#group-d-multiple-named-forms) | A form class resolved per operation | **Built.** One generic form class. |
 | [E](#group-e-config-entities) | Config entity forms | **Built for one.** Node types ported. |
-| [F](#group-f-simple-config-forms) | `ConfigFormBase` with `#config_target` | **Storage built.** `ConfigObjectStorage`; no core form ported, and `#config_target` is not read. |
+| [F](#group-f-simple-config-forms) | `ConfigFormBase` with `#config_target` | **Storage built.** `ConfigObjectResourceStorage`; no core form ported, and `#config_target` is not read. |
 | [G](#group-g-field-widgets-collecting-content) | A widget as the form bridge for a field item's values | **Designed, not built.** |
 | [H](#group-h-different-shape-later) | Families whose shape does not fit yet | Out of scope. |
 
@@ -155,7 +155,7 @@ field type the UI offers, from `field.storage_settings.<type>` through
 them: a string's `max_length` is `storage.settings.max_length` on
 `surface:field.instance:create`. `$has_data` is read where it bites:
 `FieldStorageResource`'s update operation keeps cardinality from
-shrinking, and `FieldStorageStorage` refuses at prepare a settings change
+shrinking, and `FieldStorageResourceStorage` refuses at prepare a settings change
 that alters the columns of a field with data. What is untouched is the
 field type's own `storageSettingsForm()`; address has no storage settings.
 
@@ -187,7 +187,7 @@ Today `EntityForm::copyFormValuesToEntity()` sets every form value on the
 entity untyped, config entities have no `validate()`, and
 `Config::save()` casts but never validates.
 
-**Built for two.** `ConfigEntityStorage` maps the resource's keys to
+**Built for two.** `ConfigEntityResourceStorage` maps the resource's keys to
 entity properties or setter methods, named on a subclass, applies
 mounted third-party settings through `setThirdPartySetting()`, runs
 typed-config validation on the unsaved entity's export array, refuses an
@@ -198,8 +198,8 @@ block one, `block.placement`, its plugin choosing its settings
 `surface_examples_node_type` is the other: one resource,
 `NodeTypeResource`, with a create and an update operation, the machine
 name locked on an update because the update operation knows it, and its storage,
-`NodeTypeStorage`, writing the node type entity plus its base field
-overrides (through the engine's `BaseFieldOverrideStorage`); two routes
+`NodeTypeResourceStorage`, writing the node type entity plus its base field
+overrides (through the engine's `BaseFieldOverrideResourceStorage`); two routes
 serve it through `SurfaceOperationForm`, with no form class.
 
 Two things that port settled, and both generalize. Ordering is part of a
@@ -221,7 +221,7 @@ defaults from config, `toConfig` and `fromConfig` transforms,
 typed-config validation, violations mapped to elements. What it lacks is
 a form that is *generated* and a contract readable outside PHP.
 
-**Storage built, no core form ported.** `ConfigObjectStorage` keeps a
+**Storage built, no core form ported.** `ConfigObjectResourceStorage` keeps a
 singleton resource's values in one simple config object, which a
 subclass names: prepare lays the values over what is stored and
 validates the whole object against its config schema, and commit writes
@@ -266,7 +266,7 @@ yet.
 | --- | --- |
 | Views plugins | `defineOptions()` is a definition language of its own; state is `$this->options`, forms are by reference. Worth ingesting eventually, but not an adapter job. |
 | Menu link forms | Write to the menu tree table, not config, and have their own `extractFormValues()`. |
-| Image toolkits | Write to a `system.image.<toolkit>` config object with no plugin configuration. `ConfigObjectStorage` (Group F) fits; not ported. |
+| Image toolkits | Write to a `system.image.<toolkit>` config object with no plugin configuration. `ConfigObjectResourceStorage` (Group F) fits; not ported. |
 | Migrate | No configuration forms at all. |
 | Layout Builder inline blocks | Configuration holds a serialized content entity. |
 

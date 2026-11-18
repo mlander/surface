@@ -21,7 +21,7 @@ use PHPUnit\Framework\Attributes\Group;
  * One of the engine's destinations: several storage classes at once. It
  * reads what it stores back in the data surface's shape, it shapes values
  * without writing, and it writes only when told to. The config entity
- * storage is a resource's storage now (ConfigEntityStorageTest).
+ * storage is a resource's storage now (ConfigEntityResourceStorageTest).
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]

@@ -72,8 +72,8 @@ src/Resource/Attribute/               #[Resource], #[Structure], #[Operation],
 modules/surface_examples_field/src/
   Resource/FieldInstanceResource.php  the generic field resource
   Resource/FieldStorageResource.php   its storage, attached at `storage`
-  Storage/FieldInstanceStorage.php    where its values go
-  Storage/FieldStorageStorage.php
+  Storage/FieldInstanceResourceStorage.php    where its values go
+  Storage/FieldStorageResourceStorage.php
   Access/FieldInstanceAccess.php      the part of access that needs the subject
   FieldSettingsSchemaVariants.php     settings for field types with no class
 
@@ -87,7 +87,7 @@ modules/surface_examples_plugins/src/
 
 modules/surface_examples_address/src/
   Resource/AddressFieldSettingsResource.php  a variant at the field's settings
-  Storage/AddressFieldSettingsStorage.php    and stores them itself
+  Storage/AddressFieldSettingsResourceStorage.php    and stores them itself
 
 modules/surface_examples_node_type/src/
   Resource/NodeTypeResource.php       a content type, with create and update
@@ -157,7 +157,7 @@ method.
 ```php
 #[Resource('field.instance',
   identity: ['entity_type', 'bundle', 'field_name', 'field_type'],
-  storage: FieldInstanceStorage::class,
+  storage: FieldInstanceResourceStorage::class,
   access: FieldInstanceAccess::class,
 )]
 final class FieldInstanceResource implements ResourceInterface {
@@ -307,7 +307,7 @@ and the value it is for, so a new field type brings its settings with it
 and the field resource never changes:
 
 ```php
-#[Resource('field.settings.address', storage: AddressFieldSettingsStorage::class)]
+#[Resource('field.settings.address', storage: AddressFieldSettingsResourceStorage::class)]
 #[Variant(of: FieldInstanceResource::class, at: 'settings', for: 'address')]
 final class AddressFieldSettingsResource implements ResourceInterface {
 ```

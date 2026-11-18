@@ -11,7 +11,7 @@ use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
@@ -23,7 +23,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * core's performance form does, so the next page builds them under the
  * new settings.
  */
-final class PerformanceStorage extends ConfigObjectStorage {
+final class PerformanceResourceStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}
@@ -40,7 +40,7 @@ final class PerformanceStorage extends ConfigObjectStorage {
   ];
 
   /**
-   * Constructs a PerformanceStorage.
+   * Constructs a PerformanceResourceStorage.
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
    *   The config factory, autowired.

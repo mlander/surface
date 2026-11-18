@@ -29,12 +29,12 @@ use Drupal\Core\Session\AccountInterface;
  * settings, whichever variant described them, are stored here under
  * `settings`, as the storage's own.
  */
-final class FieldStorageStorage implements ResourceStorageInterface {
+final class FieldStorageResourceStorage implements ResourceStorageInterface {
 
   use StringTranslationTrait;
 
   /**
-   * Constructs a FieldStorageStorage.
+   * Constructs a FieldStorageResourceStorage.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager, autowired.

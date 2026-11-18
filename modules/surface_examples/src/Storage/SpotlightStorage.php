@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Example 12's spotlight: the component and its props, in one object.
@@ -14,7 +14,7 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  * chosen component's variant holds them to its props before anything is
  * written.
  */
-final class SpotlightStorage extends ConfigObjectStorage {
+final class SpotlightStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

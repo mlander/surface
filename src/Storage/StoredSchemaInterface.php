@@ -7,7 +7,7 @@ namespace Drupal\surface\Storage;
 /**
  * A layout that says the config schema of each key it translates.
  *
- * A config storage's layout (ConfigObjectStorage::layout()) stores some
+ * A config storage's layout (ConfigObjectResourceStorage::layout()) stores some
  * keys otherwise than they are asked for: a checkbox per type, stored as
  * the list of the types checked. The build holds the resource to the
  * config schema its storage writes, and the config schema generator
@@ -25,7 +25,7 @@ namespace Drupal\surface\Storage;
  * Decision: see
  * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
  *
- * @see \Drupal\surface\Storage\ConfigObjectStorage::layout()
+ * @see \Drupal\surface\Storage\ConfigObjectResourceStorage::layout()
  */
 interface StoredSchemaInterface extends StorageLayoutInterface {
 

@@ -61,13 +61,13 @@ use Drupal\surface\Pipeline\PreparedValues;
  *
  * A storage class with a bundle of its own to write delegates here
  * through plan() and write(), the three verbs' bodies without the
- * pipeline's wrapping: NodeTypeStorage writes a content type's title
+ * pipeline's wrapping: NodeTypeResourceStorage writes a content type's title
  * label and workflow defaults this way.
  *
- * @see \Drupal\surface_examples_node_type\Storage\NodeTypeStorage
+ * @see \Drupal\surface_examples_node_type\Storage\NodeTypeResourceStorage
  * @see docs/storage.md
  */
-final class BaseFieldOverrideStorage implements SurfaceStorageInterface {
+final class BaseFieldOverrideResourceStorage implements SurfaceStorageInterface {
 
   use DependencySerializationTrait;
 
@@ -99,7 +99,7 @@ final class BaseFieldOverrideStorage implements SurfaceStorageInterface {
   protected ?array $fields = NULL;
 
   /**
-   * Constructs a BaseFieldOverrideStorage.
+   * Constructs a BaseFieldOverrideResourceStorage.
    *
    * @param \Drupal\Core\Entity\EntityFieldManagerInterface $fieldManager
    *   The entity field manager, which answers what a bundle's fields

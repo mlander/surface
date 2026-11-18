@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Example 14: where the webhook settings are kept.
  */
-final class WebhookStorage extends ConfigObjectStorage {
+final class WebhookStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

@@ -5,14 +5,14 @@ declare(strict_types=1);
 
 namespace Drupal\{{ r.module }}\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
 {% for line in r.storage_summary %}
  *{{ line ? ' ' ~ line : '' }}
 {% endfor %}
  */
-final class {{ r.storage_class }} extends ConfigObjectStorage {
+final class {{ r.storage_class }} extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

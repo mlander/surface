@@ -20,7 +20,7 @@ use Drupal\surface\Reference\References;
 use Drupal\surface\Resource\DeletableStorageInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceStorageInterface;
-use Drupal\surface\Storage\ConfigEntityStorage;
+use Drupal\surface\Storage\ConfigEntityResourceStorage;
 use Drupal\surface\Storage\FlatVariantsLayout;
 use Drupal\surface\Entry;
 
@@ -49,8 +49,8 @@ use Drupal\surface\Entry;
  * and a key with variants needs its sibling to know which variant it
  * holds.
  *
- * A config storage (ConfigObjectStorage, ConfigEntityStorage) stores a
- * reference to a content entity by its uuid: ReferenceStorageLayout is
+ * A config storage (ConfigObjectResourceStorage, ConfigEntityResourceStorage)
+ * stores a reference to a content entity by its uuid: ReferenceStorageLayout is
  * applied here, outside every other layout, in the layout values are
  * asked for, and the dependencies of what a config entity's keys refer to
  * are added to what its storage rehearsed. Where a key's variants are
@@ -270,7 +270,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
       throw new StorageViolationsException(new ViolationSet($refused));
     }
     assert(isset($artifact));
-    if ($this->storage instanceof ConfigEntityStorage && $references !== NULL) {
+    if ($this->storage instanceof ConfigEntityResourceStorage && $references !== NULL) {
       // The dependencies a save of the entity carries: what its keys refer
       // to, beside what it calculated of its own.
       $artifact['dependencies'] = static::withDependencies((array) ($artifact['dependencies'] ?? []), $references->dependencies($values));

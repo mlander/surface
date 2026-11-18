@@ -8,10 +8,10 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\node\Entity\NodeType;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Reference\ReferenceStorageLayout;
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface_examples_node_type\Storage\NodeTypeStorage;
+use Drupal\surface_examples_node_type\Storage\NodeTypeResourceStorage;
 use Drupal\surface_schema_test\Storage\AliasSettingsStorage;
 use Drupal\surface_schema_test\Storage\NarrowedStorage;
 use Drupal\Tests\surface\DerivedDefinition;
@@ -117,7 +117,7 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
       $this->container->get('config.typed'),
       $this->container->get('language_manager'),
       $this->container->get('string_translation'),
-    ) extends ConfigObjectStorage {
+    ) extends ConfigObjectResourceStorage {
 
       /**
        * {@inheritdoc}
@@ -166,7 +166,7 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
       $this->container->get('config.typed'),
       $this->container->get('language_manager'),
       $this->container->get('string_translation'),
-    ) extends ConfigObjectStorage {
+    ) extends ConfigObjectResourceStorage {
 
       /**
        * {@inheritdoc}
@@ -222,7 +222,7 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
       $this->assertFalse($regex['match']);
     }
 
-    $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(NodeTypeStorage::class);
+    $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(NodeTypeResourceStorage::class);
     $this->assertSame([], $storage->widerThanSchema($add));
     // The node type's keys as the review found them: no pattern, and the
     // booleans clearable, which the schema refuses.

@@ -12,7 +12,7 @@ use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
-use Drupal\surface_examples_block\Storage\BlockPlacementStorage;
+use Drupal\surface_examples_block\Storage\BlockPlacementResourceStorage;
 use Drupal\surface_examples_block\Structure\VisibilityConditionStructure;
 use Drupal\surface_examples_block\Variants\BlockPluginStructures;
 use PortableSchema\Builder\Schema;
@@ -37,7 +37,7 @@ use PortableSchema\Builder\Schema;
   label: new TranslatableMarkup('Placed block'),
   description: new TranslatableMarkup('A block placed in a region of a theme under a machine name: its label, the settings its plugin takes, its weight, its status and when it shows.'),
   identity: ['id'],
-  storage: BlockPlacementStorage::class,
+  storage: BlockPlacementResourceStorage::class,
 )]
 #[Operation('create',
   label: new TranslatableMarkup('Place a block'),
@@ -66,7 +66,7 @@ final class BlockPlacementResource implements ResourceInterface {
     permission: self::PERMISSION,
   )]
   public static function update(string $id): OperationContext {
-    $block = \Drupal::classResolver(BlockPlacementStorage::class)->named($id, 'The "update" operation of block.placement');
+    $block = \Drupal::classResolver(BlockPlacementResourceStorage::class)->named($id, 'The "update" operation of block.placement');
     assert($block instanceof BlockInterface);
     return (new OperationContext(known: ['id' => (string) $block->id()]))
       ->withConstraint('theme', Schema::enum([$block->getTheme()]));
@@ -83,7 +83,7 @@ final class BlockPlacementResource implements ResourceInterface {
     deletes: TRUE,
   )]
   public static function delete(string $id): OperationContext {
-    $block = \Drupal::classResolver(BlockPlacementStorage::class)->named($id, 'The "delete" operation of block.placement');
+    $block = \Drupal::classResolver(BlockPlacementResourceStorage::class)->named($id, 'The "delete" operation of block.placement');
     return new OperationContext(known: ['id' => (string) $block->id()]);
   }
 

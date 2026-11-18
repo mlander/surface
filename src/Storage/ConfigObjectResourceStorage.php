@@ -33,7 +33,7 @@ use Drupal\Core\Session\AccountInterface;
  * the subclass:
  *
  * @code
- * final class NewsletterStorage extends ConfigObjectStorage {
+ * final class NewsletterStorage extends ConfigObjectResourceStorage {
  *   public const CONFIG = 'surface_examples_first.newsletter';
  * }
  * @endcode
@@ -88,14 +88,14 @@ use Drupal\Core\Session\AccountInterface;
  * A subclass whose commit() has effects outside the database, such as
  * files written or deleted or a call to another service, is not undone
  * when apply rolls back. Such a subclass should not rely on staging, or
- * undoes those effects in rolledBack(). PerformanceStorage in
+ * undoes those effects in rolledBack(). PerformanceResourceStorage in
  * surface_examples_performance is the shipped example: its commit()
  * deletes the CSS and JavaScript aggregates, which a rollback leaves
  * deleted, and which the next page that needs them builds again.
  *
  * @see docs/storage.md#a-simple-config-object
  */
-abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsClearableKeysInterface, HeldToConfigSchemaInterface, TransactionalStorageInterface {
+abstract class ConfigObjectResourceStorage implements ResourceStorageInterface, KnowsClearableKeysInterface, HeldToConfigSchemaInterface, TransactionalStorageInterface {
 
   use DependencySerializationTrait;
   use HeldToConfigSchemaTrait;
@@ -154,7 +154,7 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
   protected array $clearable = [];
 
   /**
-   * Constructs a ConfigObjectStorage.
+   * Constructs a ConfigObjectResourceStorage.
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
    *   The config factory, autowired.

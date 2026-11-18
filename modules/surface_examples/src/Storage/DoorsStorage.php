@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Example 11's door settings, which always hold the badges and greeters.
@@ -14,7 +14,7 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  * how this storage knows the badges may not hold nothing and the notes
  * may.
  */
-final class DoorsStorage extends ConfigObjectStorage {
+final class DoorsStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

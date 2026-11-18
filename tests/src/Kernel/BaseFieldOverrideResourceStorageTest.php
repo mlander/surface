@@ -7,7 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\Pipeline\Storage\BaseFieldOverrideStorage;
+use Drupal\surface\Pipeline\Storage\BaseFieldOverrideResourceStorage;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -25,7 +25,7 @@ use PHPUnit\Framework\Attributes\Group;
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class BaseFieldOverrideStorageTest extends SurfaceKernelTestBase {
+class BaseFieldOverrideResourceStorageTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -62,11 +62,11 @@ class BaseFieldOverrideStorageTest extends SurfaceKernelTestBase {
    * @param array $map
    *   The override map, defaulting to the name base field's label.
    *
-   * @return \Drupal\surface\Pipeline\Storage\BaseFieldOverrideStorage
+   * @return \Drupal\surface\Pipeline\Storage\BaseFieldOverrideResourceStorage
    *   The storage.
    */
-  protected function storage(array $map = ['name_label' => ['field' => 'name']]): BaseFieldOverrideStorage {
-    return new BaseFieldOverrideStorage(
+  protected function storage(array $map = ['name_label' => ['field' => 'name']]): BaseFieldOverrideResourceStorage {
+    return new BaseFieldOverrideResourceStorage(
       $this->container->get('entity_field.manager'),
       'entity_test',
       'entity_test',
@@ -114,14 +114,14 @@ class BaseFieldOverrideStorageTest extends SurfaceKernelTestBase {
     // A submission that says nothing about the key leaves it alone.
     $storage = $this->storage();
     $prepared = $storage->prepare($surface, []);
-    $this->assertSame([], $prepared->artifact[BaseFieldOverrideStorage::SAVE]);
-    $this->assertSame([], $prepared->artifact[BaseFieldOverrideStorage::DELETE]);
+    $this->assertSame([], $prepared->artifact[BaseFieldOverrideResourceStorage::SAVE]);
+    $this->assertSame([], $prepared->artifact[BaseFieldOverrideResourceStorage::DELETE]);
 
     // NULL removes the override, and the bundle reads the base field.
     $storage = $this->storage();
     $prepared = $storage->prepare($surface, ['name_label' => NULL]);
-    $this->assertCount(1, $prepared->artifact[BaseFieldOverrideStorage::DELETE]);
-    $this->assertSame([], $prepared->artifact[BaseFieldOverrideStorage::SAVE]);
+    $this->assertCount(1, $prepared->artifact[BaseFieldOverrideResourceStorage::DELETE]);
+    $this->assertSame([], $prepared->artifact[BaseFieldOverrideResourceStorage::SAVE]);
     // Preparing removed nothing: the artifact is a plan.
     $this->assertNotNull($this->storedOverride());
 
@@ -132,7 +132,7 @@ class BaseFieldOverrideStorageTest extends SurfaceKernelTestBase {
     // Clearing what is already clear is not an error and writes nothing.
     $storage = $this->storage();
     $prepared = $storage->prepare($surface, ['name_label' => NULL]);
-    $this->assertSame([], $prepared->artifact[BaseFieldOverrideStorage::DELETE]);
+    $this->assertSame([], $prepared->artifact[BaseFieldOverrideResourceStorage::DELETE]);
   }
 
   /**
@@ -183,14 +183,14 @@ class BaseFieldOverrideStorageTest extends SurfaceKernelTestBase {
       $surface,
       ['name_label' => 'Given name'],
       $this->storage([
-        'name_label' => ['field' => 'name', 'property' => BaseFieldOverrideStorage::LABEL],
-        'name_default' => ['field' => 'name', 'property' => BaseFieldOverrideStorage::DEFAULT_VALUE],
+        'name_label' => ['field' => 'name', 'property' => BaseFieldOverrideResourceStorage::LABEL],
+        'name_default' => ['field' => 'name', 'property' => BaseFieldOverrideResourceStorage::DEFAULT_VALUE],
       ]),
     );
 
     $storage = $this->storage([
-      'name_label' => ['field' => 'name', 'property' => BaseFieldOverrideStorage::LABEL],
-      'name_default' => ['field' => 'name', 'property' => BaseFieldOverrideStorage::DEFAULT_VALUE],
+      'name_label' => ['field' => 'name', 'property' => BaseFieldOverrideResourceStorage::LABEL],
+      'name_default' => ['field' => 'name', 'property' => BaseFieldOverrideResourceStorage::DEFAULT_VALUE],
     ]);
 
     $this->expectException(\InvalidArgumentException::class);

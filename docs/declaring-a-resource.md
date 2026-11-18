@@ -1458,7 +1458,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   no `readOnly`; it is never in `required`, and the write tool offers it.
 - **Held once.** Where the key is the identity a create names and the
   storage can say whether a thing is stored under it
-  (`DeletableStorageInterface::exists()`, which `ConfigEntityStorage`
+  (`DeletableStorageInterface::exists()`, which `ConfigEntityResourceStorage`
   answers), the build adds the stock `SurfaceUnique` to it: "A venue
   named riverside already exists.", code `check.drupal:SurfaceUnique.taken`, named under
   `portable-check`. No resource writes a uniqueness rule of its own.

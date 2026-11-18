@@ -14,7 +14,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_field\Access\FieldInstanceAccess;
 use Drupal\surface_examples_field\FieldSettingsSchemaVariants;
-use Drupal\surface_examples_field\Storage\FieldInstanceStorage;
+use Drupal\surface_examples_field\Storage\FieldInstanceResourceStorage;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use PortableSchema\Builder\Schema;
@@ -53,7 +53,7 @@ use PortableSchema\Builder\Schema;
  */
 #[Resource('field.instance',
   identity: ['entity_type', 'bundle', 'field_name', 'field_type'],
-  storage: FieldInstanceStorage::class,
+  storage: FieldInstanceResourceStorage::class,
   access: FieldInstanceAccess::class,
 )]
 final class FieldInstanceResource implements ResourceInterface {

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Stores the pack fixture, the chosen variant's keys under its load.
  */
-final class PackStorage extends ConfigObjectStorage {
+final class PackStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

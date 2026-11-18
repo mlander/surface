@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Keeps the hall in its config object.
  */
-final class HallStorage extends ConfigObjectStorage {
+final class HallStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

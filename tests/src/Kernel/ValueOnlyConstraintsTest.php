@@ -13,7 +13,7 @@ use Drupal\node\Entity\NodeType;
 use Drupal\surface\Pipeline\ViolationMessage;
 use Drupal\surface\Plugin\Validation\Constraint\UniqueConstraint;
 use Drupal\surface\Validation\ConstraintRunner;
-use Drupal\surface_examples\Storage\VenueStorage;
+use Drupal\surface_examples\Storage\VenueResourceStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -103,7 +103,7 @@ class ValueOnlyConstraintsTest extends KernelTestBase {
       'targets' => ['event_venue' => [], 'node' => [], 'user_role' => []],
     ];
     $venue = [
-      'storage' => VenueStorage::class,
+      'storage' => VenueResourceStorage::class,
       'key' => 'id',
       'thing' => 'venue',
       'reason' => UniqueConstraint::reason('venue'),

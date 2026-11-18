@@ -216,8 +216,8 @@ Step 6   storage built with ITS context: its identity locked, field_type
            field.field_settings.<type>, sit in the variants' table too
 
   $storage = $resources->storage(FieldInstanceResource::class, $context, $built);
-      FieldInstanceStorage, routing storage to FieldStorageStorage and the
-      address settings to AddressFieldSettingsStorage
+      FieldInstanceResourceStorage, routing storage to FieldStorageResourceStorage and the
+      address settings to AddressFieldSettingsResourceStorage
 
   $pipeline->submit($built, $values, $storage)
       load     each level loads its own slice and the adapter assembles it
@@ -241,7 +241,7 @@ variants stay an `any` placeholder until `field_type` has a value, then
 resolve to that type's variant. The storage child sees the field's context id,
 `creates` and known identity, so its own `field_type` is open too: a
 caller describing the storage's settings names the type there, and
-`FieldStorageStorage` refuses one that differs from the field's. When the
+`FieldStorageResourceStorage` refuses one that differs from the field's. When the
 values are committed, the storage learns the field's accepted name and
 type as identity, is created first, and the field is created on it.
 Same resource, same alters, same children.

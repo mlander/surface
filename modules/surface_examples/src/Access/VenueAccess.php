@@ -12,7 +12,7 @@ use Drupal\surface\Resource\OperationAccessInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface_examples\Entity\EventVenue;
 use Drupal\surface_examples\Resource\VenueResource;
-use Drupal\surface_examples\Storage\VenueStorage;
+use Drupal\surface_examples\Storage\VenueResourceStorage;
 
 /**
  * Example 15: a disabled venue is for those who administer the venues.
@@ -45,9 +45,9 @@ final class VenueAccess implements OperationAccessInterface {
       // Static: the account alone, or no venue to ask about.
       return AccessResult::allowed()->cachePerPermissions();
     }
-    $venue = $this->entityTypeManager->getStorage(VenueStorage::ENTITY_TYPE_ID)->load($id);
+    $venue = $this->entityTypeManager->getStorage(VenueResourceStorage::ENTITY_TYPE_ID)->load($id);
     if (!$venue instanceof EventVenue) {
-      return AccessResult::allowed()->cachePerPermissions()->addCacheTags(['config:' . VenueStorage::ENTITY_TYPE_ID . '_list']);
+      return AccessResult::allowed()->cachePerPermissions()->addCacheTags(['config:' . VenueResourceStorage::ENTITY_TYPE_ID . '_list']);
     }
     // Runtime: what is stored, under the venue's own tag.
     $answer = $venue->status() ? AccessResult::allowed() : AccessResult::forbidden('The venue is disabled, and only an account that administers the venues reads it.');

@@ -50,7 +50,7 @@ use Symfony\Component\Yaml\Yaml;
  * The resource is the one description of a config object; its config
  * schema and the values it is installed with are derived from it, until
  * core can read a data definition as the schema. For every resource whose
- * storage is a ConfigObjectStorage of an object its own module provides
+ * storage is a ConfigObjectResourceStorage of an object its own module provides
  * (another module's object keeps its owner's schema, which the resource is
  * held to), sealed as declared:
  *
@@ -81,7 +81,7 @@ use Symfony\Component\Yaml\Yaml;
  *   default, for a key the file does not give; nothing for one with
  *   neither (an empty list for a list).
  *
- * For every resource whose storage is a ConfigEntityStorage over an
+ * For every resource whose storage is a ConfigEntityResourceStorage over an
  * entity type the resource's own module declares, the entity type's entry,
  * `<module>.<config prefix>.*`, a `config_entity` that is fully
  * validatable, its mapping each key the storage maps to a property, by the
@@ -99,7 +99,7 @@ use Symfony\Component\Yaml\Yaml;
  * default is in the layout it is asked for; see
  * docs/recipes.md#asked-as-checkboxes-stored-as-a-list-of-ids.
  *
- * A storage that keeps a key under a dotted path (ConfigObjectStorage's
+ * A storage that keeps a key under a dotted path (ConfigObjectResourceStorage's
  * STORED_AT) stores to a schema written by hand, beside keys the resource
  * does not declare, so describe() refuses it rather than write each key at
  * its own name; see docs/storage.md#a-key-stored-under-a-path.
@@ -296,14 +296,14 @@ final class ConfigSchemaGenerator {
       if ($definition->isDerived() || $definition->storage === NULL) {
         continue;
       }
-      if (is_subclass_of($definition->storage, ConfigObjectStorage::class) && !static::owns($definition->module, (string) constant($definition->storage . '::CONFIG'))) {
+      if (is_subclass_of($definition->storage, ConfigObjectResourceStorage::class) && !static::owns($definition->module, (string) constant($definition->storage . '::CONFIG'))) {
         // Another module's object: its owner's schema describes it, and the
         // resource is held to that schema (HeldToConfigSchemaInterface).
         // Decision: see
         // docs/decisions.md#the-generator-writes-what-the-first-page-shows.
         continue;
       }
-      if (is_subclass_of($definition->storage, ConfigObjectStorage::class) || $this->entityType($definition) !== NULL) {
+      if (is_subclass_of($definition->storage, ConfigObjectResourceStorage::class) || $this->entityType($definition) !== NULL) {
         $found[(string) $name] = $definition;
       }
     }
@@ -317,12 +317,12 @@ final class ConfigSchemaGenerator {
    *   The resource.
    *
    * @return \Drupal\Core\Config\Entity\ConfigEntityTypeInterface|null
-   *   The entity type its ConfigEntityStorage names, when the resource's
-   *   module declares it; NULL for any other storage, and for an entity
-   *   type of core or of another module, which has a schema of its own.
+   *   The entity type its ConfigEntityResourceStorage names, when the
+   *   resource's module declares it; NULL for any other storage, and for an
+   *   entity type of core or of another module, which has a schema of its own.
    */
   protected function entityType(ResourceDefinition $definition): ?ConfigEntityTypeInterface {
-    if ($this->entityTypeManager === NULL || !is_subclass_of((string) $definition->storage, ConfigEntityStorage::class)) {
+    if ($this->entityTypeManager === NULL || !is_subclass_of((string) $definition->storage, ConfigEntityResourceStorage::class)) {
       return NULL;
     }
     $type = $this->entityTypeManager->getDefinition((string) constant($definition->storage . '::ENTITY_TYPE_ID'), FALSE);
@@ -432,7 +432,7 @@ final class ConfigSchemaGenerator {
    */
   protected function translatedBy(ResourceDefinition $definition, SurfaceInterface $built): array {
     $storage = $this->resources->storageInstance($definition->name());
-    return $storage instanceof ConfigObjectStorage || $storage instanceof ConfigEntityStorage ? $storage->translatedKeys($built) : [];
+    return $storage instanceof ConfigObjectResourceStorage || $storage instanceof ConfigEntityResourceStorage ? $storage->translatedKeys($built) : [];
   }
 
   /**
@@ -532,7 +532,7 @@ final class ConfigSchemaGenerator {
     $this->alwaysHeld = array_map('strval', [...$always_held, ...$definition->identity]);
     $this->translated = $this->translatedBy($definition, $built);
     $storage = (string) $definition->storage;
-    assert(is_subclass_of($storage, ConfigEntityStorage::class));
+    assert(is_subclass_of($storage, ConfigEntityResourceStorage::class));
     $properties = array_filter($storage::properties(), 'is_string');
     $entries = [];
     $written = $this->mapping($built->entries(), $type->getConfigPrefix(), $definition, $entries, $existing['schema']);
@@ -621,7 +621,7 @@ final class ConfigSchemaGenerator {
     $mapping = [];
     foreach ($map->entries() as $name => $entry) {
       $name = (string) $name;
-      if ($top && $name === ConfigObjectStorage::THIRD_PARTY) {
+      if ($top && $name === ConfigObjectResourceStorage::THIRD_PARTY) {
         $mapping[$name] = $this->thirdParty($entry, $prefix, $owner, $entries, $existing);
         continue;
       }
@@ -1053,8 +1053,8 @@ final class ConfigSchemaGenerator {
         $name = $config . '.third_party.' . $module;
         $mounted = $entry->mounted[(string) $module] ?? NULL;
         $mapping = $mounted !== NULL
-          ? $this->mapping($mounted->child->entries(), $name, $owner, $entries, $existing, absent: TRUE, ruledOut: $ruled[(string) $module] ?? [], at: ConfigObjectStorage::THIRD_PARTY . '.' . $module . '.')
-          : $this->plainMapping(static::propertyOf($entry->schema(), (string) $module), $part, TRUE, ConfigObjectStorage::THIRD_PARTY . '.' . $module);
+          ? $this->mapping($mounted->child->entries(), $name, $owner, $entries, $existing, absent: TRUE, ruledOut: $ruled[(string) $module] ?? [], at: ConfigObjectResourceStorage::THIRD_PARTY . '.' . $module . '.')
+          : $this->plainMapping(static::propertyOf($entry->schema(), (string) $module), $part, TRUE, ConfigObjectResourceStorage::THIRD_PARTY . '.' . $module);
         $entries[] = [
           'module' => (string) $module,
           'name' => $name,
@@ -1343,7 +1343,7 @@ final class ConfigSchemaGenerator {
         $values[$name] = array_key_exists($name, $existing) ? $existing[$name] : (($this->translated[$at . $name]['type'] ?? NULL) === 'sequence' ? [] : NULL);
         continue;
       }
-      if ($name === ConfigObjectStorage::THIRD_PARTY) {
+      if ($name === ConfigObjectResourceStorage::THIRD_PARTY) {
         // Stored once a module's keys are sent: installed only where the
         // file says so.
         if (array_key_exists($name, $existing)) {

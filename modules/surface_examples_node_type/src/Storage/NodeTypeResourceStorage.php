@@ -10,11 +10,11 @@ use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\surface\Pipeline\Storage\BaseFieldOverrideStorage;
+use Drupal\surface\Pipeline\Storage\BaseFieldOverrideResourceStorage;
 use Drupal\surface\Pipeline\StorageViolationsException;
 use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface\Storage\ConfigEntityStorage;
+use Drupal\surface\Storage\ConfigEntityResourceStorage;
 use Drupal\surface\Storage\SchemaViolations;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodePreviewMode;
@@ -24,8 +24,8 @@ use Drupal\Core\Session\AccountInterface;
 /**
  * Where a content type's values live: the entity, and its base fields.
  *
- * A config entity storage (ConfigEntityStorage) for the node type, by its
- * machine name, plus a second destination it rehearses and writes beside
+ * A config entity storage (ConfigEntityResourceStorage) for the node type, by
+ * its machine name, plus a second destination it rehearses and writes beside
  * the entity:
  *
  * - The node type config entity, for the keys it owns: plain properties
@@ -38,7 +38,7 @@ use Drupal\Core\Session\AccountInterface;
  *   stores it, and each is read back through its getter.
  * - Base field overrides on the bundle, for the title label and the three
  *   workflow defaults, which are not stored on the node type at all.
- *   Read, planned and written by the engine's BaseFieldOverrideStorage,
+ *   Read, planned and written by the engine's BaseFieldOverrideResourceStorage,
  *   which compares before writing, as core's form does, so a value that
  *   did not move writes no override. Written after the node type, in the
  *   order core's own content type form writes them, because they belong
@@ -49,7 +49,7 @@ use Drupal\Core\Session\AccountInterface;
  * (mayClear()), and the build refuses the resource where it advertises
  * more than that schema (widerThanSchema()).
  */
-final class NodeTypeStorage extends ConfigEntityStorage {
+final class NodeTypeResourceStorage extends ConfigEntityResourceStorage {
 
   /**
    * {@inheritdoc}
@@ -78,10 +78,10 @@ final class NodeTypeStorage extends ConfigEntityStorage {
    * The resource's keys stored as base field overrides, and where.
    */
   protected const OVERRIDES_MAP = [
-    'title_label' => ['field' => 'title', 'property' => BaseFieldOverrideStorage::LABEL],
-    'status' => ['field' => 'status', 'property' => BaseFieldOverrideStorage::DEFAULT_VALUE],
-    'promote' => ['field' => 'promote', 'property' => BaseFieldOverrideStorage::DEFAULT_VALUE],
-    'sticky' => ['field' => 'sticky', 'property' => BaseFieldOverrideStorage::DEFAULT_VALUE],
+    'title_label' => ['field' => 'title', 'property' => BaseFieldOverrideResourceStorage::LABEL],
+    'status' => ['field' => 'status', 'property' => BaseFieldOverrideResourceStorage::DEFAULT_VALUE],
+    'promote' => ['field' => 'promote', 'property' => BaseFieldOverrideResourceStorage::DEFAULT_VALUE],
+    'sticky' => ['field' => 'sticky', 'property' => BaseFieldOverrideResourceStorage::DEFAULT_VALUE],
   ];
 
   /**
@@ -98,7 +98,7 @@ final class NodeTypeStorage extends ConfigEntityStorage {
   public const OVERRIDES = 'base_field_overrides';
 
   /**
-   * Constructs a NodeTypeStorage.
+   * Constructs a NodeTypeResourceStorage.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager, autowired.
@@ -205,7 +205,7 @@ final class NodeTypeStorage extends ConfigEntityStorage {
     $plan = $this->overrides($bundle)->plan(array_intersect_key($values, self::OVERRIDES_MAP));
     $override_type = $this->entityTypeManager->getDefinition('base_field_override');
     $prefix = $override_type instanceof ConfigEntityTypeInterface ? $override_type->getConfigPrefix() : 'core.base_field_override';
-    foreach ($plan[BaseFieldOverrideStorage::SAVE] as $name => $exported) {
+    foreach ($plan[BaseFieldOverrideResourceStorage::SAVE] as $name => $exported) {
       $paths = [];
       foreach (self::OVERRIDES_MAP as $key => $target) {
         if ($target['field'] === $name) {
@@ -220,7 +220,7 @@ final class NodeTypeStorage extends ConfigEntityStorage {
     }
     return [
       self::NODE_TYPE => $record,
-      self::OVERRIDES => $plan[BaseFieldOverrideStorage::SAVE] + array_fill_keys($plan[BaseFieldOverrideStorage::DELETE], NULL),
+      self::OVERRIDES => $plan[BaseFieldOverrideResourceStorage::SAVE] + array_fill_keys($plan[BaseFieldOverrideResourceStorage::DELETE], NULL),
     ];
   }
 
@@ -240,8 +240,8 @@ final class NodeTypeStorage extends ConfigEntityStorage {
     $overrides = is_array($prepared[self::OVERRIDES] ?? NULL) ? $prepared[self::OVERRIDES] : [];
     if ($overrides !== []) {
       $this->overrides((string) $record['type'])->write([
-        BaseFieldOverrideStorage::SAVE => array_filter($overrides, 'is_array'),
-        BaseFieldOverrideStorage::DELETE => array_keys(array_filter($overrides, 'is_null')),
+        BaseFieldOverrideResourceStorage::SAVE => array_filter($overrides, 'is_array'),
+        BaseFieldOverrideResourceStorage::DELETE => array_keys(array_filter($overrides, 'is_null')),
       ]);
     }
   }
@@ -252,11 +252,11 @@ final class NodeTypeStorage extends ConfigEntityStorage {
    * @param string $bundle
    *   The content type, which need not exist yet.
    *
-   * @return \Drupal\surface\Pipeline\Storage\BaseFieldOverrideStorage
+   * @return \Drupal\surface\Pipeline\Storage\BaseFieldOverrideResourceStorage
    *   The storage, for the title label and the workflow defaults.
    */
-  protected function overrides(string $bundle): BaseFieldOverrideStorage {
-    return new BaseFieldOverrideStorage($this->entityFieldManager, self::BUNDLE_OF, $bundle, self::OVERRIDES_MAP);
+  protected function overrides(string $bundle): BaseFieldOverrideResourceStorage {
+    return new BaseFieldOverrideResourceStorage($this->entityFieldManager, self::BUNDLE_OF, $bundle, self::OVERRIDES_MAP);
   }
 
   /**

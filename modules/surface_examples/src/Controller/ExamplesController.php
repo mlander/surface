@@ -43,7 +43,7 @@ use Drupal\surface_examples\Storage\RegistrationStep1Storage;
 use Drupal\surface_examples\Storage\RegistrationStep2Storage;
 use Drupal\surface_examples\Storage\MailerStorage;
 use Drupal\surface_examples\Storage\SpotlightStorage;
-use Drupal\surface_examples\Storage\VenueStorage;
+use Drupal\surface_examples\Storage\VenueResourceStorage;
 use Drupal\surface_examples\Storage\WebhookStorage;
 use Drupal\surface_examples\WebhookSigner;
 use Drupal\surface_examples\Structure\ManagedCredentialStructure;
@@ -870,7 +870,7 @@ final class ExamplesController extends ControllerBase {
       VenueListingStructure::class,
       VenueReorderStructure::class,
       VenueOrderStructure::class,
-      VenueStorage::class,
+      VenueResourceStorage::class,
     ]));
   }
 

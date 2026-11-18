@@ -10,7 +10,7 @@ config_test.dynamic.*.third_party.surface_storage_test:
       type: string
       label: 'Note'
 
-# Two simple config objects for ConfigObjectStorage: one holding a
+# Two simple config objects for ConfigObjectResourceStorage: one holding a
 # translatable value, so core asks for a language code, and one holding
 # none. The first mounts other modules' settings the way a settings
 # resource does: a sequence whose type is named by the module key, each
@@ -49,7 +49,7 @@ surface_storage_test.plain:
       label: 'Limit'
 
 # A fully validatable object keeping the limit under a path, beside a
-# note no resource declares, for ConfigObjectStorage's STORED_AT.
+# note no resource declares, for ConfigObjectResourceStorage's STORED_AT.
 surface_storage_test.nested:
   type: config_object
   label: 'Nested settings'

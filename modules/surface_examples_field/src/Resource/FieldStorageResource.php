@@ -12,7 +12,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_field\FieldStorageSettingsSchemaVariants;
-use Drupal\surface_examples_field\Storage\FieldStorageStorage;
+use Drupal\surface_examples_field\Storage\FieldStorageResourceStorage;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\field\FieldStorageConfigInterface;
 use PortableSchema\Builder\Schema;
@@ -49,7 +49,7 @@ use PortableSchema\Builder\Schema;
  */
 #[Resource('field.storage',
   identity: ['entity_type', 'field_name', 'field_type'],
-  storage: FieldStorageStorage::class,
+  storage: FieldStorageResourceStorage::class,
 )]
 final class FieldStorageResource implements ResourceInterface {
 

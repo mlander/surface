@@ -159,7 +159,7 @@ and a unit, and stores the seconds core's form stores. The conversion is
 alter, `NodeTypeAlter`, hands the resource by implementing
 `AltersStorageLayoutInterface`. The built resource carries it, and the
 storage adapter applies it to that module's settings and nothing else:
-`toStorage()` before `NodeTypeStorage` writes them, `fromStorage()` after
+`toStorage()` before `NodeTypeResourceStorage` writes them, `fromStorage()` after
 it reads them, so an edit reads 604800 back as one week. Business days
 convert by the same `NodeTypeReviewSettings::seconds()` the form uses,
 and do not round-trip to their own unit: stored seconds carry no unit,
@@ -179,7 +179,7 @@ through a constraint on the amount and unit together, run as the check
 days on their converted seconds like any other unit: twenty-two are
 thirty calendar days and accepted, twenty-three are thirty-one and
 refused. The config schema's own Range on the stored seconds is a
-second gate: `NodeTypeStorage::prepare()` holds the node type it would
+second gate: `NodeTypeResourceStorage::prepare()` holds the node type it would
 save, third party settings included, to `node.type.*` before anything
 is written.
 

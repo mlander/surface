@@ -10,7 +10,7 @@ use Drupal\surface\Form\SurfaceFormPanelInterface;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * The panels under an example's form: the contract, and today.
@@ -104,7 +104,7 @@ final class ExamplePanels implements SurfaceFormPanelInterface {
       $panels[self::FILES] = ['#weight' => -0.5] + $this->filesPanel->build($number);
     }
     $storage = (string) $definition->storage;
-    if (is_a($storage, ConfigObjectStorage::class, TRUE)) {
+    if (is_a($storage, ConfigObjectResourceStorage::class, TRUE)) {
       // The full schema the contract panel shows, asked for again rather
       // than read back out of its render array: static against static.
       $full = $this->emitter->emitFull($this->resources->buildStatic($served->resource, $served->context), $definition->id, $served->operation->id, $served->operation->label, operation: $served->operation->facts());

@@ -34,8 +34,8 @@ use Drupal\surface\Staging\StageRecord;
 use Drupal\surface\Staging\StageStoreInterface;
 use Drupal\surface\Storage\SecretCodecInterface;
 use Drupal\surface\Storage\StageStorage;
-use Drupal\surface\Storage\ConfigEntityStorage;
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigEntityResourceStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * The build step, over the engine's builder and factory.
@@ -1522,7 +1522,7 @@ final class Resources implements ResourcesInterface {
       $gates,
       // Decision: see
       // docs/decisions.md#a-config-object-stores-a-reference-by-uuid.
-      $storage instanceof ConfigObjectStorage || $storage instanceof ConfigEntityStorage ? $this->declaring->references() : NULL,
+      $storage instanceof ConfigObjectResourceStorage || $storage instanceof ConfigEntityResourceStorage ? $this->declaring->references() : NULL,
     );
   }
 

@@ -211,7 +211,7 @@ class ExampleFilesTest extends UnitTestCase {
               $this->assertArrayHasKey($base . 'schema/' . $module . '.schema.yml#' . $config[1], $example['files'], sprintf('Example %d lists %s without its config schema.', $number, $path));
             }
             else {
-              $this->assertStringNotContainsString('ConfigObjectStorage', self::source($storage), sprintf('%s is a config object storage and names no config object.', $storage));
+              $this->assertStringNotContainsString('ConfigObjectResourceStorage', self::source($storage), sprintf('%s is a config object storage and names no config object.', $storage));
             }
           }
           foreach ($variants[$path] ?? [] as $variant) {

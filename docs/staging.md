@@ -534,8 +534,8 @@ into a stage anyway from PHP is refused at prepare, code
 database connection alone, so the transaction apply opens undoes the
 write whole; what they put in caches or in memory is undone in
 `rolledBack()`. The content entity storage of the entity example
-implements it, and so do the two config storages, `ConfigObjectStorage`
-and `ConfigEntityStorage`, for every subclass.
+implements it, and so do the two config storages, `ConfigObjectResourceStorage`
+and `ConfigEntityResourceStorage`, for every subclass.
 
 Its one method, `rolledBack()`, is called after an apply rolls back, on
 the storage of every write whose commit had started. A storage drops
@@ -606,8 +606,8 @@ call:
 
 ## Config in a stage
 
-A config object (`ConfigObjectStorage`) and a config entity
-(`ConfigEntityStorage`) are staged as any thing is: the write is
+A config object (`ConfigObjectResourceStorage`) and a config entity
+(`ConfigEntityResourceStorage`) are staged as any thing is: the write is
 validated against the config schema and rehearsed at staging and again
 at apply, a read through the stage answers the staged view, and apply
 saves the config in position order. A config object is one thing with

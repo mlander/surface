@@ -378,7 +378,7 @@ final class Series {
           self::MODULE . 'src/Structure/VenueListingStructure.php' => t('what the listing takes, a page and a filter, and what it answers, the page and the total'),
           self::MODULE . 'src/Structure/VenueReorderStructure.php' => t('what the reorder takes: a list of venues and their weights'),
           self::MODULE . 'src/Structure/VenueOrderStructure.php' => t('an item of that list: a venue and its new weight'),
-          self::MODULE . 'src/Storage/VenueStorage.php' => t('the storage: a ConfigEntityStorage, which reads the listing, writes the reorder in one commit, and holds a slug to one venue'),
+          self::MODULE . 'src/Storage/VenueResourceStorage.php' => t('the storage: a ConfigEntityResourceStorage, which reads the listing, writes the reorder in one commit, and holds a slug to one venue'),
           self::MODULE . 'src/Access/VenueAccess.php' => t('the access class: a disabled venue is only for an account that administers the venues'),
           self::SCHEMA . 'surface_examples.event_venue.*' => t("the entity type's config schema, generated from the resource"),
           self::INSTALL . 'surface_examples.event_venue.riverside.yml' => t('Riverside Hall, shipped'),

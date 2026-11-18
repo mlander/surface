@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\surface_storage_test\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * A simple config object holding nothing translatable.
  *
  * So it is stored without a language code.
  */
-final class PlainSettingsStorage extends ConfigObjectStorage {
+final class PlainSettingsStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

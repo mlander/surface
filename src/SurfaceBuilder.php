@@ -823,7 +823,7 @@ final class SurfaceBuilder {
    * @throws \LogicException
    *   When the builder is already sealed.
    *
-   * @see \Drupal\surface\Pipeline\Storage\ConfigEntityStorage
+   * @see \Drupal\surface\Pipeline\Storage\ConfigEntityResourceStorage
    */
   public function setThirdPartyLayout(string $provider, StorageLayoutInterface $layout): static {
     $this->assertMutable();

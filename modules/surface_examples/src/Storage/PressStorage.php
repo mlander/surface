@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Example 8's press page settings, in their own config object.
  */
-final class PressStorage extends ConfigObjectStorage {
+final class PressStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

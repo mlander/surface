@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Keeps the bulletin in its config object.
  */
-final class BulletinStorage extends ConfigObjectStorage {
+final class BulletinStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

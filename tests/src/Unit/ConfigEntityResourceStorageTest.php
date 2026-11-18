@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Unit;
 
-use Drupal\surface\Storage\ConfigEntityStorage;
+use Drupal\surface\Storage\ConfigEntityResourceStorage;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -16,13 +16,13 @@ use PHPUnit\Framework\Attributes\Group;
  * anything else is refused by name, before any entity is touched.
  */
 #[Group('surface')]
-class ConfigEntityStorageTest extends UnitTestCase {
+class ConfigEntityResourceStorageTest extends UnitTestCase {
 
   /**
    * Tests the three spellings of an entry.
    */
   public function testTheMapIsNormalized(): void {
-    $plain = new class() extends ConfigEntityStorage {
+    $plain = new class() extends ConfigEntityResourceStorage {
 
       public const PROPERTIES = ['id', 'label'];
 
@@ -31,7 +31,7 @@ class ConfigEntityStorageTest extends UnitTestCase {
 
     };
     $this->assertSame(['id' => 'id', 'label' => 'label'], $plain::properties(), 'A plain entry is stored under its own name.');
-    $keyed = new class() extends ConfigEntityStorage {
+    $keyed = new class() extends ConfigEntityResourceStorage {
 
       public const PROPERTIES = [
         'name' => 'label',
@@ -52,7 +52,7 @@ class ConfigEntityStorageTest extends UnitTestCase {
    * Tests an entry naming neither a property nor a method is refused.
    */
   public function testBrokenEntryIsRefused(): void {
-    $storage = new class() extends ConfigEntityStorage {
+    $storage = new class() extends ConfigEntityResourceStorage {
 
       public const PROPERTIES = ['kind' => ['setter' => 'setKind']];
 

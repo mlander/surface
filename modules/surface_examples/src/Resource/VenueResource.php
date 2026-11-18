@@ -14,7 +14,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Access\VenueAccess;
 use Drupal\surface_examples\Slugify;
-use Drupal\surface_examples\Storage\VenueStorage;
+use Drupal\surface_examples\Storage\VenueResourceStorage;
 use Drupal\surface_examples\Structure\VenueListingStructure;
 use Drupal\surface_examples\Structure\VenueReorderStructure;
 use Drupal\surface_examples\Structure\VenueRoomStructure;
@@ -33,7 +33,7 @@ use PortableSchema\Builder\Schema;
  */
 #[Resource('event.venue',
   identity: ['id'],
-  storage: VenueStorage::class,
+  storage: VenueResourceStorage::class,
   access: VenueAccess::class,
 )]
 #[Operation('create',
@@ -80,7 +80,7 @@ final class VenueResource implements ResourceInterface {
     permission: self::ADMINISTER,
   )]
   public static function update(string $id): OperationContext {
-    $venue = \Drupal::classResolver(VenueStorage::class)->named($id, 'The "update" operation of event.venue');
+    $venue = \Drupal::classResolver(VenueResourceStorage::class)->named($id, 'The "update" operation of event.venue');
     return new OperationContext(known: ['id' => (string) $venue->id()]);
   }
 
@@ -95,7 +95,7 @@ final class VenueResource implements ResourceInterface {
     deletes: TRUE,
   )]
   public static function delete(string $id): OperationContext {
-    $venue = \Drupal::classResolver(VenueStorage::class)->named($id, 'The "delete" operation of event.venue');
+    $venue = \Drupal::classResolver(VenueResourceStorage::class)->named($id, 'The "delete" operation of event.venue');
     return new OperationContext(known: ['id' => (string) $venue->id()]);
   }
 

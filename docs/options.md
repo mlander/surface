@@ -471,7 +471,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   handler's, as the field configures it
   ([entities](entities.md#holes), item 10).
 - **In config, a content entity by its uuid.** A config storage
-  (`ConfigObjectStorage`, `ConfigEntityStorage`) stores a reference to a
+  (`ConfigObjectResourceStorage`, `ConfigEntityResourceStorage`) stores a reference to a
   content entity as its uuid, since a content entity's id differs
   between sites, and a reference to a config entity as its id, its
   machine name. Every door still sends and answers the id; only the

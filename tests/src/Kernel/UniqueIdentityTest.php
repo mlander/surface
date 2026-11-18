@@ -9,7 +9,7 @@ use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface_examples\Entity\EventVenue;
 use Drupal\surface_examples\Resource\VenueResource;
-use Drupal\surface_examples\Storage\VenueStorage;
+use Drupal\surface_examples\Storage\VenueResourceStorage;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -209,7 +209,7 @@ class UniqueIdentityTest extends SurfaceKernelTestBase {
    * Tests the storage refuses a taken id in the same words, asked directly.
    */
   public function testTheStorageSaysItInTheSameWords(): void {
-    $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(VenueStorage::class);
+    $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(VenueResourceStorage::class);
     $this->assertTrue($storage->exists(new OperationContext(known: ['id' => 'riverside'])));
     $this->assertFalse($storage->exists(new OperationContext(known: ['id' => 'nowhere'])));
     $this->assertSame('venue', (string) $storage->singularLabel());

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Stores the campsite fixture, each pitch's gear flat beside its kind.
  */
-final class CampsiteStorage extends ConfigObjectStorage {
+final class CampsiteStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_reader_test\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Stores the condition host, the chosen condition's keys beside its id.
  */
-final class ConditionHostStorage extends ConfigObjectStorage {
+final class ConditionHostStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

@@ -21,7 +21,7 @@ description and a permission, in one of two places. These are
   label: new TranslatableMarkup('Placed block'),
   description: new TranslatableMarkup('A block placed in a region of a theme under a machine name: its label, the settings its plugin takes, its weight, its status and when it shows.'),
   identity: ['id'],
-  storage: BlockPlacementStorage::class,
+  storage: BlockPlacementResourceStorage::class,
 )]
 #[Operation('create',
   label: new TranslatableMarkup('Place a block'),
@@ -43,7 +43,7 @@ Inside the class, the permission they share and the two methods:
     permission: self::PERMISSION,
   )]
   public static function update(string $id): OperationContext {
-    $block = \Drupal::classResolver(BlockPlacementStorage::class)->named($id, 'The "update" operation of block.placement');
+    $block = \Drupal::classResolver(BlockPlacementResourceStorage::class)->named($id, 'The "update" operation of block.placement');
     assert($block instanceof BlockInterface);
     return (new OperationContext(known: ['id' => (string) $block->id()]))
       ->withConstraint('theme', Schema::enum([$block->getTheme()]));
@@ -57,7 +57,7 @@ Inside the class, the permission they share and the two methods:
     deletes: TRUE,
   )]
   public static function delete(string $id): OperationContext {
-    $block = \Drupal::classResolver(BlockPlacementStorage::class)->named($id, 'The "delete" operation of block.placement');
+    $block = \Drupal::classResolver(BlockPlacementResourceStorage::class)->named($id, 'The "delete" operation of block.placement');
     return new OperationContext(known: ['id' => (string) $block->id()]);
   }
 ```

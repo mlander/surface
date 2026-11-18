@@ -13,8 +13,8 @@ namespace Drupal\surface\Pipeline;
  * through the database connection alone, so the one transaction an
  * apply opens undoes every write whole; and what they put in caches or
  * in memory beside the database is undone in rolledBack(). The config
- * storages (ConfigObjectStorage, ConfigEntityStorage) declare it: config
- * rows are the database's, and apply itself resets what config keeps
+ * storages (ConfigObjectResourceStorage, ConfigEntityResourceStorage) declare
+ * it: config rows are the database's, and apply itself resets what config keeps
  * beside them for every config name an apply wrote. A storage that
  * writes State, or changes a table's schema, does not: State keeps a
  * cache a rollback leaves behind, and MySQL commits a schema change at

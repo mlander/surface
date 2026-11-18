@@ -34,7 +34,7 @@ These are the two attributes in full, the settings' from
   label: new TranslatableMarkup('Content type'),
   description: new TranslatableMarkup('A content type: its name, machine name, description and help text, the label of its title field, and the defaults its new content starts from.'),
   identity: ['type'],
-  storage: NodeTypeStorage::class,
+  storage: NodeTypeResourceStorage::class,
   access: NodeTypeAccess::class,
 )]
 ```

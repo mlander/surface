@@ -73,8 +73,8 @@ $inputs->attachList('visibility', VisibilityConditionStructure::class, t('Visibi
   (`#[Operation(deletes: TRUE, destructive: TRUE)]`). Each asks
   "administer blocks".
 
-`Storage\BlockPlacementStorage` extends the main module's
-`ConfigEntityStorage`: the entity's own properties by name, and the label,
+`Storage\BlockPlacementResourceStorage` extends the main module's
+`ConfigEntityResourceStorage`: the entity's own properties by name, and the label,
 the plugin's settings and the visibility shaped onto the block's
 settings and visibility as core stores them. It holds the whole block to
 `block.block.*` before anything is written, calculates the dependencies a
@@ -123,7 +123,7 @@ region named header_nope."), props of another component by their path
 | --- | --- |
 | `Kernel\BlockPlacementResourceTest` | The keys and what each offers; the plugins less those reading a context; the region narrowed by the theme, with its cacheability; the settings variants, declared and read from a config schema; the visibility conditions with their context mapping; the theme held on an update; both documents pinned whole and in part. |
 | `Kernel\BlockPlacementToolsTest` | The four tools, their inputs and kinds; create as a dry run and for real, a taken machine name; a region of another theme, props of another component and a condition twice refused; update and read; delete as a dry run and for real. |
-| `Kernel\ConfigEntityStorageTest`, `Unit\ConfigEntityStorageTest` | The storage it extends. |
+| `Kernel\ConfigEntityResourceStorageTest`, `Unit\ConfigEntityResourceStorageTest` | The storage it extends. |
 | `Functional\BlockPlacementApiTest` | POST 201 with `Location`, GET with `ETag`, PATCH and a stale `If-Match`, a refusal as problem details, DELETE rehearsed and done, a body refused, 404 once gone, 405 on the collection, the session's token. |
 | `Functional\BlockPlacementFormTest` | A block placed through the form and seen rendered, a region of another theme refused, edited, removed after a confirmation. |
 | `FunctionalJavascript\BlockPlacementReactTest` | The React page: a plugin's settings and a theme's regions drawn as they are chosen, a block placed, the page moved to its update, a change saved. |

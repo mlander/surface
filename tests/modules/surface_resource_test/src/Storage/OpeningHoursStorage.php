@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_resource_test\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Keeps the opening hours in their config object, which always holds three.
@@ -12,7 +12,7 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  * The after-hours flag, the keywords and the holidays are never cleared:
  * their generated schema calls them not nullable.
  */
-final class OpeningHoursStorage extends ConfigObjectStorage {
+final class OpeningHoursStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}

@@ -25,10 +25,10 @@ use PortableSchema\Builder\Schema;
  * the same everywhere, so a reference to one stays its id.
  *
  * The engine applies this layout to every resource stored in a config
- * storage, ConfigObjectStorage or ConfigEntityStorage (StorageAdapter),
- * outside any layout the storage declares, in the layout values are asked
- * for: every door sends and answers the id, and only the config holds the
- * uuid.
+ * storage, ConfigObjectResourceStorage or ConfigEntityResourceStorage
+ * (StorageAdapter), outside any layout the storage declares, in the layout
+ * values are asked for: every door sends and answers the id, and only the
+ * config holds the uuid.
  *
  * - A key that refers to one content entity type (a user, or a schema of
  *   the article bundle) is stored as the entity's uuid, its config schema
@@ -124,7 +124,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * Gives the config schema of each key a resource stores as a uuid.
    *
    * What the config schema check and the generator read
-   * (ConfigObjectStorage::translatedKeys()): a key that refers to one
+   * (ConfigObjectResourceStorage::translatedKeys()): a key that refers to one
    * content entity type. A bare `entity` key is left out: it is stored as
    * two strings, as it is asked for.
    *

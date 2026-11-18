@@ -7,7 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\surface_examples_extras\Alter\NodeTypeAlter;
 use Drupal\surface_examples_node_type\Access\NodeTypeAccess;
 use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
-use Drupal\surface_examples_node_type\Storage\NodeTypeStorage;
+use Drupal\surface_examples_node_type\Storage\NodeTypeResourceStorage;
 use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
 use Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter;
 use Drupal\surface_examples_workflow\Alter\ProgramWorkflowAlter;
@@ -146,7 +146,7 @@ class ResourceCatalogTest extends SurfaceKernelTestBase {
     $this->assertSame(NodeTypeResource::class, $node_type['class']);
     $this->assertSame('surface_examples_node_type', $node_type['module']);
     $this->assertSame(['type'], $node_type['identity']);
-    $this->assertSame(NodeTypeStorage::class, $node_type['storage']);
+    $this->assertSame(NodeTypeResourceStorage::class, $node_type['storage']);
     $this->assertSame(NodeTypeAccess::class, $node_type['access']);
     $this->assertSame([
       [

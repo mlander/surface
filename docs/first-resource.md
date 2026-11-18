@@ -118,12 +118,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples_first\Storage;
 
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 
 /**
  * Keeps the newsletter settings in their config object.
  */
-final class NewsletterStorage extends ConfigObjectStorage {
+final class NewsletterStorage extends ConfigObjectResourceStorage {
 
   /**
    * {@inheritdoc}
@@ -133,7 +133,7 @@ final class NewsletterStorage extends ConfigObjectStorage {
 }
 ```
 
-`ConfigObjectStorage` reads the object, checks each save against the
+`ConfigObjectResourceStorage` reads the object, checks each save against the
 schema above, and writes it. The subclass names the object, and that is
 all it does. It lives in `src/Storage/` and nothing registers it: the
 resource names it, and that is how it is found.

@@ -95,7 +95,7 @@ version it is written in, is not the one served.
 | A required key added, with no default, to an operation that acts on what is stored (an update, a read) | compatible, with a note | Nothing loads differently: a thing stored before holds nothing there, so its next write must supply the key, and the pipeline refuses one that does not in the key's own words. Where the value can be derived from what is stored, raise the version and migrate it in instead, so no write is asked for it. | An edit of a thing stored before it sends it once, and an edit of one that holds it may leave it out, since a key left out keeps what is stored (an update tool requires nothing at its door; why: [decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)). | `required key added: a write must now supply <key> where nothing is stored` (a note) |
 | A required key added, with no default, to a create | breaking | Nothing. | Every create an old client sends leaves it out, and nothing is stored for it to keep, so every one is refused. Give the key a default, or allow it with a reason. | `required key added with no default: a create that leaves <key> out is refused` |
 | A required key added, with no default, to a structure described alone | breaking | As for its containers. | It states no operation, so the lint cannot tell whether a container creates it, and judges it as a create; each container's own document judges the same key in that container's kind. | `required key added with no default: a container that creates this structure and leaves <key> out is refused` |
-| A key removed | breaking | A migration drops it; `ConfigObjectStorage` otherwise keeps it stored, unread, since it lays values over what is stored. | Sending it is refused as an unknown key. | `key removed` |
+| A key removed | breaking | A migration drops it; `ConfigObjectResourceStorage` otherwise keeps it stored, unread, since it lays values over what is stored. | Sending it is refused as an unknown key. | `key removed` |
 | A key renamed | breaking | A migration moves the value. | The old name is refused as unknown; the new one is asked for. | `key removed` beside `optional key added` |
 | A constraint tightened | breaking | A value stored outside it is refused at the next write, naming the key, since the pipeline validates what it keeps as well as what is sent: a migration brings it inside, or the author shows none is stored. | A value it sent before is refused. | `maximum lowered`, `pattern added`, `checked on the server now` |
 | An optional key made required | breaking | A stored value holding nothing is refused at the next write, and that nothing may be a `null` stored on purpose, since `null` cleared it: a migration fills it. | A create that leaves it out is refused, and so is the `null` a client sent to clear it. | `made required` |
@@ -259,7 +259,7 @@ What the runner will do:
   owner's map and allowed to change only its members).
 - **The ledger is the storage's.** A storage owns the layout, so it
   says where the stamp lives, and stamps the declared versions at
-  commit. `ConfigObjectStorage` keeps `_surface.versions`, keyed by
+  commit. `ConfigObjectResourceStorage` keeps `_surface.versions`, keyed by
   id, beside `_core`, owning it as it owns `_core` and `langcode`:
   `load()` leaves it out, `commit()` writes it, the module describes it
   for every config object by altering core's `config_object` type, and

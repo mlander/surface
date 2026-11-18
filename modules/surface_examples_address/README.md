@@ -31,7 +31,7 @@ Four pieces:
   type's definition to build it, and supplies the storage bound to the
   field config entity Field UI is editing. It declares no keys of its
   own.
-- `Storage\AddressFieldSettingsStorage`: the resource's own storage, for a
+- `Storage\AddressFieldSettingsResourceStorage`: the resource's own storage, for a
   caller that addresses the field by its identity rather than holding
   it: the field instance resource routes its settings here, after the
   field itself is stored. Its prepare holds the settings, in the layout

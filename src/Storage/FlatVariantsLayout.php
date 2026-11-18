@@ -20,10 +20,10 @@ use Drupal\surface\Variants;
  * describe (`condition.plugin.[id]`, a views handler).
  *
  * The engine applies this layout to every resource stored in a config
- * storage, ConfigObjectStorage or ConfigEntityStorage (StorageAdapter),
- * beside ReferenceStorageLayout and in the layout values are asked for:
- * fromStorage() before the references are read, toStorage() after they
- * are written; the layouts alters give their mounts are applied outside
+ * storage, ConfigObjectResourceStorage or ConfigEntityResourceStorage
+ * (StorageAdapter), beside ReferenceStorageLayout and in the layout values are
+ * asked for: fromStorage() before the references are read, toStorage() after
+ * they are written; the layouts alters give their mounts are applied outside
  * it, as stored.
  *
  * - toStorage(): at each level holding a flat key, the map under the key
@@ -100,7 +100,7 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
    * Gives the stored schema of each key a resource stores flat.
    *
    * What the config schema check and the generator read
-   * (ConfigObjectStorage::translatedKeys()).
+   * (ConfigObjectResourceStorage::translatedKeys()).
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource.
@@ -161,7 +161,7 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
    * At the top level alone, where the stored schema holds every variant's
    * keys, each nullable (ConfigSchemaGenerator). On a config object it
    * changes nothing: commit() sets the keys prepared and keeps every other
-   * key the object holds (ConfigObjectStorage::commit()). It holds the
+   * key the object holds (ConfigObjectResourceStorage::commit()). It holds the
    * rule for a storage that writes the object whole, and for a member its
    * access omitted, which a write does not name either; StorageAdapter
    * restores one lower down by its stored path (storedPath()). Lower down

@@ -26,7 +26,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ConfigEntityStorageTest extends SurfaceKernelTestBase {
+class ConfigEntityResourceStorageTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}

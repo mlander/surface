@@ -21,10 +21,10 @@ use Drupal\Core\Session\AccountInterface;
  * routed there and they never arrive here; a variant without one is
  * stored here, under 'settings', as given.
  */
-final class FieldInstanceStorage implements ResourceStorageInterface {
+final class FieldInstanceResourceStorage implements ResourceStorageInterface {
 
   /**
-   * Constructs a FieldInstanceStorage.
+   * Constructs a FieldInstanceResourceStorage.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager, autowired.

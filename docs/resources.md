@@ -283,7 +283,7 @@ already known, and that is a **context**, an `OperationContext`:
   typed with a scalar and named for the key it holds (`string $id`,
   `string $type`): a parameter typed with a class or an interface is
   refused at discovery, and the operation loads what a value names
-  through its resource's storage, `ConfigEntityStorage::named()` for a
+  through its resource's storage, `ConfigEntityResourceStorage::named()` for a
   config entity, which refuses a value that names nothing
   (why: [decision](decisions.md#an-operation-is-handed-values-never-objects)).
   The method returns an
@@ -354,7 +354,7 @@ The content type resource is the worked example:
   label: new TranslatableMarkup('Content type'),
   description: new TranslatableMarkup('A content type: its name, machine name, description and help text, the label of its title field, and the defaults its new content starts from.'),
   identity: ['type'],
-  storage: NodeTypeStorage::class,
+  storage: NodeTypeResourceStorage::class,
   access: NodeTypeAccess::class,
 )]
 #[Operation('create',
@@ -372,7 +372,7 @@ final class NodeTypeResource implements ResourceInterface {
     permission: self::PERMISSION,
   )]
   public static function update(string $type): OperationContext {
-    $node_type = \Drupal::classResolver(NodeTypeStorage::class)->named($type, 'The "update" operation of node.type');
+    $node_type = \Drupal::classResolver(NodeTypeResourceStorage::class)->named($type, 'The "update" operation of node.type');
     return new OperationContext(known: ['type' => (string) $node_type->id()]);
   }
 
@@ -585,7 +585,7 @@ structure's inputs are what it takes and its outputs what it answers
   them to the config schema the storage writes to.
 - **A read answers its outputs.** A read only operation is never
   committed, so its outputs are what its storage's `prepare()` answered
-  under an output's name (why: [decision](decisions.md#who-produces-outputs)): `VenueStorage` reads the
+  under an output's name (why: [decision](decisions.md#who-produces-outputs)): `VenueResourceStorage` reads the
   venues there and answers the page and the total. Its tool answers them
   beside the one result shape; on HTTP, `GET` on the collection runs it
   and answers them alone ([a listing](served-contract.md#a-listing)).
@@ -922,7 +922,7 @@ it along the tree:
   module's mount, `third_party_settings.<module>`, and nothing else:
   `toStorage()` before the storage class prepares, `fromStorage()` after
   it reads. `NodeTypeAlter` in the extras module asks for a review
-  deadline as an amount and a unit; `NodeTypeStorage` writes the seconds
+  deadline as an amount and a unit; `NodeTypeResourceStorage` writes the seconds
   core's form writes, and never knows the extras module exists.
 
 ## Prepare
@@ -951,20 +951,20 @@ made as, which a storage that records who wrote reads there
   input keys that own them, which the pipeline returns like its own;
   a routed child's are filed under the key it sits at. Every level is
   prepared before anything is thrown, so one answer names them all.
-- What each storage class here checks: `NodeTypeStorage` builds the
+- What each storage class here checks: `NodeTypeResourceStorage` builds the
   unsaved node type (a copy of the stored one, or a new one) and each
   base field override that would move, and holds them to `node.type.*`
   (fully validatable: a name with a line break is refused, as core's
   form refuses it) and to the override's schema; empty description and
   help are stored as none, as core's form stores them.
-  `FieldStorageStorage` and `FieldInstanceStorage` build the unsaved
+  `FieldStorageResourceStorage` and `FieldInstanceResourceStorage` build the unsaved
   storage and field (a field being added on a storage being added beside
   it is checked against an unsaved stand-in built from the same
   identity) and hold them to `field.storage.*` and `field.field.*`;
-  `FieldStorageStorage` also refuses a field type other than its
+  `FieldStorageResourceStorage` also refuses a field type other than its
   field's, and, once the field has data, a settings change that would
   alter its database columns, which the SQL storage would otherwise
-  throw on at save. `AddressFieldSettingsStorage` holds the settings, in
+  throw on at save. `AddressFieldSettingsResourceStorage` holds the settings, in
   the layout the field stores, to `field.field_settings.address`.
 - What a prepare returns is what is stored: the node type's prepared
   array is the config the commit writes, uuid included.
@@ -1314,7 +1314,7 @@ write to it. On a config entity core describes
 its part as for any third-party setting. On a simple config object the
 owner's schema declares `third_party_settings` as a sequence typed by the
 module key, and the mounting module's declares its part, both written
-from the resources when generated; `ConfigObjectStorage` refuses a mount
+from the resources when generated; `ConfigObjectResourceStorage` refuses a mount
 no schema describes ([Storage](storage.md#keys-another-module-mounts)).
 
 `ExampleBlockAlter` in the extras example module does the three things most
@@ -1882,7 +1882,7 @@ $inputs->attachVariants('settings', by: 'field_type', label: t('Field settings')
 $inputs->attachVariants('settings', by: 'field_type', label: t('Storage settings'), from: FieldStorageSettingsSchemaVariants::class);
 
 // AddressFieldSettingsResource, in surface_examples_address
-#[Resource('field.settings.address', storage: AddressFieldSettingsStorage::class)]
+#[Resource('field.settings.address', storage: AddressFieldSettingsResourceStorage::class)]
 #[Variant(of: FieldInstanceResource::class, at: 'settings', for: 'address')]
 ```
 
@@ -1971,7 +1971,7 @@ storage layout, not a way to compose. Stored flat is experimental: see
 [Variants stored flat](storage.md#variants-stored-flat). The blueprint
 states what is asked, and the named argument `storedAs: Variants::FLAT`
 on `attachVariants()` says how it is kept. `Storage\FlatVariantsLayout` applies it for the config
-storages, `ConfigObjectStorage` and `ConfigEntityStorage`, beside the
+storages, `ConfigObjectResourceStorage` and `ConfigEntityResourceStorage`, beside the
 layout that stores a reference by uuid. It is the shape core gives a
 condition's settings and a views handler's options, and the block
 example stores each visibility condition's settings so, in the block's

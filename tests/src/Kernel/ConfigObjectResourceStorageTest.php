@@ -10,7 +10,7 @@ use Drupal\surface\Surface;
 use Drupal\surface\Entries;
 use Drupal\surface\Pipeline\StorageViolationsException;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectResourceStorage;
 use Drupal\surface_storage_test\Storage\NestedSettingsStorage;
 use Drupal\surface_storage_test\Storage\PlainSettingsStorage;
 use Drupal\surface_storage_test\Storage\TranslatableSettingsStorage;
@@ -30,7 +30,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ConfigObjectStorageTest extends SurfaceKernelTestBase {
+class ConfigObjectResourceStorageTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -44,13 +44,13 @@ class ConfigObjectStorageTest extends SurfaceKernelTestBase {
   /**
    * Makes one of the fixture storage classes, as autowiring would.
    *
-   * @param class-string<\Drupal\surface\Storage\ConfigObjectStorage> $class
+   * @param class-string<\Drupal\surface\Storage\ConfigObjectResourceStorage> $class
    *   The storage class.
    *
-   * @return \Drupal\surface\Storage\ConfigObjectStorage
+   * @return \Drupal\surface\Storage\ConfigObjectResourceStorage
    *   The storage.
    */
-  protected function storage(string $class): ConfigObjectStorage {
+  protected function storage(string $class): ConfigObjectResourceStorage {
     return new $class(
       $this->container->get('config.factory'),
       $this->container->get('config.typed'),
@@ -72,7 +72,7 @@ class ConfigObjectStorageTest extends SurfaceKernelTestBase {
   /**
    * Prepares values and returns what the storage refused.
    *
-   * @param \Drupal\surface\Storage\ConfigObjectStorage $storage
+   * @param \Drupal\surface\Storage\ConfigObjectResourceStorage $storage
    *   The storage.
    * @param array $values
    *   The values.
@@ -80,7 +80,7 @@ class ConfigObjectStorageTest extends SurfaceKernelTestBase {
    * @return array<string, string>
    *   Each violation's full path => its message, rendered.
    */
-  protected function refusals(ConfigObjectStorage $storage, array $values): array {
+  protected function refusals(ConfigObjectResourceStorage $storage, array $values): array {
     try {
       $storage->prepare($this->context(), $values, new AnonymousUserSession());
     }

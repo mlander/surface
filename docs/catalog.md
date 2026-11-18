@@ -90,7 +90,7 @@ Refused. `docs/resources.md` says how each part works.
 - Description: A block placed in a region of a theme under a machine name: its label, the settings its plugin takes, its weight, its status and when it shows.
 - Kind: resource
 - Identity: `id`
-- Storage: `Drupal\surface_examples_block\Storage\BlockPlacementStorage`
+- Storage: `Drupal\surface_examples_block\Storage\BlockPlacementResourceStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Provided by |
@@ -436,7 +436,7 @@ Refused. `docs/resources.md` says how each part works.
 
 - Kind: resource
 - Identity: `id`
-- Storage: `Drupal\surface_examples\Storage\VenueStorage`
+- Storage: `Drupal\surface_examples\Storage\VenueResourceStorage`
 - Access: `Drupal\surface_examples\Access\VenueAccess`
 
 | Operation | Label | Needs | Creates | Permission | On its own | Provided by |
@@ -514,7 +514,7 @@ Refused. `docs/resources.md` says how each part works.
 
 - Kind: resource
 - Identity: `entity_type`, `bundle`, `field_name`, `field_type`
-- Storage: `Drupal\surface_examples_field\Storage\FieldInstanceStorage`
+- Storage: `Drupal\surface_examples_field\Storage\FieldInstanceResourceStorage`
 - Access: `Drupal\surface_examples_field\Access\FieldInstanceAccess`
 
 | Operation | Label | Needs | Creates | Permission | On its own | Provided by |
@@ -539,7 +539,7 @@ Refused. `docs/resources.md` says how each part works.
 - Description: An entity field containing a postal address
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\surface_examples_address\Storage\AddressFieldSettingsStorage`
+- Storage: `Drupal\surface_examples_address\Storage\AddressFieldSettingsResourceStorage`
 - Access: the operation's permission alone
 - Used by: `field_type:address`; configured through the plugin's host, never on its own.
 
@@ -549,7 +549,7 @@ Refused. `docs/resources.md` says how each part works.
 
 - Kind: resource
 - Identity: `entity_type`, `field_name`, `field_type`
-- Storage: `Drupal\surface_examples_field\Storage\FieldStorageStorage`
+- Storage: `Drupal\surface_examples_field\Storage\FieldStorageResourceStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Provided by |
@@ -618,7 +618,7 @@ Refused. `docs/resources.md` says how each part works.
 - Description: A content type: its name, machine name, description and help text, the label of its title field, and the defaults its new content starts from.
 - Kind: resource
 - Identity: `type`
-- Storage: `Drupal\surface_examples_node_type\Storage\NodeTypeStorage`
+- Storage: `Drupal\surface_examples_node_type\Storage\NodeTypeResourceStorage`
 - Access: `Drupal\surface_examples_node_type\Access\NodeTypeAccess`
 
 | Operation | Label | Needs | Creates | Permission | On its own | Provided by |
@@ -785,7 +785,7 @@ Refused. `docs/resources.md` says how each part works.
 - Description: How long browsers and proxies may cache a page, and whether CSS and JavaScript files are aggregated, as core keeps them in system.performance.
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\surface_examples_performance\Storage\PerformanceStorage`
+- Storage: `Drupal\surface_examples_performance\Storage\PerformanceResourceStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Provided by |

@@ -13,7 +13,7 @@ use Drupal\Core\Config\Entity\ConfigEntityInterface;
  * its plugins and its third party settings; a key that refers to another
  * entity is neither, and the entity class, which core expects to add the
  * rest (calculateDependencies()), is not this module's. So
- * ConfigEntityStorage::commit() saves through during(), handing it what
+ * ConfigEntityResourceStorage::commit() saves through during(), handing it what
  * the rehearsal found the keys refer to, and the presave hook, which core
  * invokes after the entity recalculated its own, adds them
  * (ReferenceDependencyHooks). A save made any other way recalculates

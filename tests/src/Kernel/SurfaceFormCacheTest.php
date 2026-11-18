@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\surface\Pipeline\Storage\BaseFieldOverrideStorage;
+use Drupal\surface\Pipeline\Storage\BaseFieldOverrideResourceStorage;
 use Drupal\surface\Pipeline\Storage\CompositeStorage;
 use Drupal\surface\Pipeline\Storage\FieldSettingsStorage;
 use Drupal\surface\Pipeline\Storage\StateStorage;
@@ -123,7 +123,7 @@ class SurfaceFormCacheTest extends SurfaceKernelTestBase {
     $storages = [
       'state' => $state_storage,
       'field settings' => new FieldSettingsStorage($field),
-      'base field override' => new BaseFieldOverrideStorage(
+      'base field override' => new BaseFieldOverrideResourceStorage(
         $this->container->get('entity_field.manager'),
         'entity_test',
         'entity_test',

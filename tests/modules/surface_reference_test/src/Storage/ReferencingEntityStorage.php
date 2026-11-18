@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_reference_test\Storage;
 
-use Drupal\surface\Storage\ConfigEntityStorage;
+use Drupal\surface\Storage\ConfigEntityResourceStorage;
 
 /**
  * Keeps the referencing resource on a config_test entity.
@@ -12,7 +12,7 @@ use Drupal\surface\Storage\ConfigEntityStorage;
  * The node is stored in its style, by uuid, and the role in its size, by
  * id: two string properties of the test entity.
  */
-final class ReferencingEntityStorage extends ConfigEntityStorage {
+final class ReferencingEntityStorage extends ConfigEntityResourceStorage {
 
   /**
    * {@inheritdoc}
