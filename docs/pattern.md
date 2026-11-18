@@ -407,7 +407,7 @@ for options.
 | --- | --- | --- |
 | Fixed | `Schema::options([...])` with labels, `Schema::enum([...])` without | the example formatter's `casing` |
 | Live, from site state | a named check whose options resolver fetches the list | `drupal:SurfaceExamplesBundleField` on the example block's `field` |
-| Already modelled by core | the core constraint as a named check | `drupal:EntityBundleExists` on `bundle`, added by a refiner because it needs the entity type |
+| Already modeled by core | the core constraint as a named check | `drupal:EntityBundleExists` on `bundle`, added by a refiner because it needs the entity type |
 
 **A refiner never calls a service.** A list that depends on a value is
 a named check with the value as an option. The refiner points; the
