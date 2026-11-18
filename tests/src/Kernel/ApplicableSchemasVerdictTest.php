@@ -65,6 +65,47 @@ class ApplicableSchemasVerdictTest extends SurfaceKernelTestBase {
   protected const READ = ['type', 'pattern', 'maxLength', 'minLength', 'format'];
 
   /**
+   * The keywords that hold schemas by name, or a list of schemas.
+   */
+  protected const SCHEMAS_BY_NAME = [
+    'properties',
+    '$defs',
+    'definitions',
+    'patternProperties',
+    'dependentSchemas',
+    'allOf',
+    'anyOf',
+    'oneOf',
+    'prefixItems',
+  ];
+
+  /**
+   * The keywords that hold one schema.
+   */
+  protected const SCHEMA_AT = [
+    'items',
+    'additionalProperties',
+    'not',
+    'if',
+    'then',
+    'else',
+    'contains',
+    'propertyNames',
+  ];
+
+  /**
+   * The values every schema is probed with, but the two maps.
+   */
+  protected const PROBES = [
+    NULL, TRUE, FALSE, 0, 1, -1, 1.0, 1.5,
+    '', 'a', 'ab', 'abc', 'abcd', 'abcde', 'A b', 'ß', '😀😀', '1', 'true',
+    [], ['a'], [1, 2],
+    'a@example.com', 'not an email', 'https://example.com/x', 'internal:/node/1', 'example.com',
+    '2024-01-02', '2024-02-30', '2024-01-02T03:04:05Z', '2024-01-02T03:04:05',
+    '00000000-0000-4000-8000-000000000000', 'g0000000-0000-4000-8000-000000000000',
+  ];
+
+  /**
    * The dialect's verdict for each schema and value, by both encoded.
    *
    * @var array<string, bool>
@@ -165,46 +206,62 @@ class ApplicableSchemasVerdictTest extends SurfaceKernelTestBase {
   public function testMixedTypeBranches(): void {
     $check = ['portable-check' => ['drupal:EntityBundleExists' => ['entityTypeId' => 'user']]];
     $string = ['type' => 'string', 'minLength' => 2, 'maxLength' => 4, 'pattern' => '^[a-z]+$'] + $check;
+    $boolean = ['type' => 'boolean'];
+    $b = static fn (array $schema): array => ['type' => 'object', 'properties' => ['b' => $schema]];
     $documents = [
-      'anyOf string or boolean' => ['type' => 'object', 'properties' => ['b' => ['anyOf' => [$string, ['type' => 'boolean']]]]],
-      'oneOf string or integer' => ['type' => 'object', 'properties' => ['b' => ['oneOf' => [$string, ['type' => 'integer', 'maximum' => 9]]]]],
-      'nested anyOf' => ['type' => 'object', 'properties' => ['b' => ['anyOf' => [['anyOf' => [$string, ['type' => 'null']]], ['type' => ['boolean', 'number']]]]]],
+      'anyOf string or boolean' => $b(['anyOf' => [$string, $boolean]]),
+      'oneOf string or integer' => $b(['oneOf' => [$string, ['type' => 'integer', 'maximum' => 9]]]),
+      'nested anyOf' => $b([
+        'anyOf' => [
+          ['anyOf' => [$string, ['type' => 'null']]],
+          ['type' => ['boolean', 'number']],
+        ],
+      ]),
       'branch by ref' => [
         '$defs' => ['s' => $string, 'u' => ['type' => 'string', 'format' => 'uuid']],
-        'type' => 'object',
-        'properties' => ['b' => ['anyOf' => [['$ref' => '#/$defs/s'], ['$ref' => '#/$defs/u'], ['type' => 'boolean']]]],
-      ],
+      ] + $b(['anyOf' => [['$ref' => '#/$defs/s'], ['$ref' => '#/$defs/u'], $boolean]]),
       'then and else' => [
         'type' => 'object',
         'properties' => ['kind' => ['type' => 'string'], 'b' => []],
         'if' => ['properties' => ['kind' => ['const' => 's']]],
         'then' => ['properties' => ['b' => $string]],
-        'else' => ['properties' => ['b' => ['type' => 'boolean']]],
+        'else' => ['properties' => ['b' => $boolean]],
       ],
       'variants of a map' => [
         'type' => 'object',
         'properties' => [
-          'settings' => ['anyOf' => [
-            ['type' => 'object', 'properties' => ['x' => $string]],
-            ['type' => 'object', 'properties' => ['x' => ['type' => 'boolean']]],
-            ['type' => 'null'],
-          ]],
+          'settings' => [
+            'anyOf' => [
+              ['type' => 'object', 'properties' => ['x' => $string]],
+              ['type' => 'object', 'properties' => ['x' => $boolean]],
+              ['type' => 'null'],
+            ],
+          ],
           'other' => $string,
         ],
       ],
-      'formats in branches' => ['type' => 'object', 'properties' => ['b' => ['anyOf' => [
-        ['type' => 'string', 'format' => 'email'],
-        ['type' => 'string', 'format' => 'date-time'],
-        ['type' => 'string', 'format' => 'date'],
-        ['type' => 'string', 'format' => 'uri'],
-        ['type' => 'integer'],
-      ]]]],
-      'list of mixed items' => ['type' => 'object', 'properties' => ['b' => ['type' => 'array', 'items' => ['anyOf' => [$string, ['type' => 'boolean']]]]]],
+      'formats in branches' => $b([
+        'anyOf' => [
+          ['type' => 'string', 'format' => 'email'],
+          ['type' => 'string', 'format' => 'date-time'],
+          ['type' => 'string', 'format' => 'date'],
+          ['type' => 'string', 'format' => 'uri'],
+          ['type' => 'integer'],
+        ],
+      ]),
+      'list of mixed items' => $b(['type' => 'array', 'items' => ['anyOf' => [$string, $boolean]]]),
+    ];
+    // The data each document is walked with: the probe at each place.
+    $placed = static fn (mixed $probe): array => [
+      ['b' => $probe, 'kind' => 's'],
+      ['b' => $probe, 'kind' => 'x'],
+      ['settings' => (object) ['x' => $probe], 'other' => $probe],
+      ['b' => [$probe, 'ab']],
     ];
     $differ = [];
     foreach ($documents as $label => $document) {
       foreach (self::probes($document) as $n => $probe) {
-        foreach ([['b' => $probe, 'kind' => 's'], ['b' => $probe, 'kind' => 'x'], ['settings' => (object) ['x' => $probe], 'other' => $probe], ['b' => [$probe, 'ab']]] as $m => $data) {
+        foreach ($placed($probe) as $m => $data) {
           $differ = [...$differ, ...$this->walked($document, (object) $data, "$label | probe $n | data $m")];
         }
       }
@@ -337,13 +394,13 @@ class ApplicableSchemasVerdictTest extends SurfaceKernelTestBase {
         continue;
       }
       // A map of schemas by name, or a list of schemas.
-      if (in_array($keyword, ['properties', '$defs', 'definitions', 'patternProperties', 'dependentSchemas', 'allOf', 'anyOf', 'oneOf', 'prefixItems'], TRUE)) {
+      if (in_array($keyword, self::SCHEMAS_BY_NAME, TRUE)) {
         foreach ($member as $name => $one) {
           $found += self::schemasIn($one, "$pointer/$keyword/$name");
         }
         continue;
       }
-      if (in_array($keyword, ['items', 'additionalProperties', 'not', 'if', 'then', 'else', 'contains', 'propertyNames'], TRUE)) {
+      if (in_array($keyword, self::SCHEMA_AT, TRUE)) {
         $found += self::schemasIn($member, "$pointer/$keyword");
       }
     }
@@ -364,8 +421,7 @@ class ApplicableSchemasVerdictTest extends SurfaceKernelTestBase {
    *   The values, as the validator is handed them.
    */
   protected static function probes(array $schema): array {
-    $probes = [NULL, TRUE, FALSE, 0, 1, -1, 1.0, 1.5, '', 'a', 'ab', 'abc', 'abcd', 'abcde', 'A b', 'ß', '😀😀', '1', 'true', [], ['a'], [1, 2], new \stdClass(), (object) ['a' => 1]];
-    $probes = [...$probes, 'a@example.com', 'not an email', 'https://example.com/x', 'internal:/node/1', 'example.com', '2024-01-02', '2024-02-30', '2024-01-02T03:04:05Z', '2024-01-02T03:04:05', '00000000-0000-4000-8000-000000000000', 'g0000000-0000-4000-8000-000000000000'];
+    $probes = [...self::PROBES, new \stdClass(), (object) ['a' => 1]];
     foreach (['minLength', 'maxLength'] as $bound) {
       if (is_int($schema[$bound] ?? NULL)) {
         foreach ([-1, 0, 1] as $step) {

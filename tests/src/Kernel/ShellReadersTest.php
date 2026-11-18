@@ -219,7 +219,7 @@ class ShellReadersTest extends SurfaceKernelTestBase {
   /**
    * Tests a map is refused as a secret, so no key holding a child is one.
    */
-  public function testASecretShellIsRefused(): void {
+  public function testSecretMapIsRefused(): void {
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('A secret holds one scalar value, so the complex definition "map" cannot be marked secret.');
     DefinitionMetadata::setSecret(MapDataDefinition::create()->setLabel('Secret'));
@@ -261,7 +261,8 @@ class ShellReadersTest extends SurfaceKernelTestBase {
       }
     }
 
-    $placed = \Closure::bind(static fn (SurfaceInterface $surface): array => static::placed($surface, [1 => [NULL, NULL]]), NULL, CompiledFlow::class);
+    $whole = [1 => [NULL, NULL]];
+    $placed = \Closure::bind(static fn (SurfaceInterface $surface): array => static::placed($surface, $whole), NULL, CompiledFlow::class);
     $answers['CompiledFlow::placed groups'] = array_keys($placed($surface)[1]);
 
     $generator = $this->container->get('surface.config_schema');
