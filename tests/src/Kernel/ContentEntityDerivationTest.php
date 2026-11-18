@@ -100,7 +100,7 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
    *   The child.
    */
   protected static function child(SurfaceInterface $surface, string $key): SurfaceInterface {
-    $attachment = $surface->getDefinitions()->entry($key)?->attachment;
+    $attachment = $surface->entries()->entry($key)?->attachment;
     assert($attachment !== NULL, $key);
     return $attachment->child;
   }
@@ -145,15 +145,15 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
         'entity_type', 'bundle', 'id',
         'title', 'field_description', 'body', 'uid', 'created', 'status', 'promote', 'revision_log',
       ],
-      array_keys($surface->getDefinitions()->entries()),
+      array_keys($surface->entries()->entries()),
     );
     $this->assertTrue($surface->isLocked('id'));
     $this->assertNull($surface->getDefault('id'));
-    $title = $surface->getDefinitions()->entry('title')?->attachment;
+    $title = $surface->entries()->entry('title')?->attachment;
     $this->assertNotNull($title);
     $this->assertSame('field.item:node.page.title', $title->id);
     $this->assertSame('field.item:node.page.title', $title->source);
-    $this->assertSame('integer', $surface->getOutputDefinitions()->toArray()['id']->getDataType());
+    $this->assertSame('integer', $surface->outputEntries()->toArray()['id']->getDataType());
 
     $item = $this->registry()->getDefinition('field.item:node.page.body');
     $this->assertSame(FieldItemStructures::class, $item->deriver);
@@ -169,10 +169,10 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $surface = $this->add('kitchen');
     $types = [];
     foreach (array_keys(static::KITCHEN) + ['changed' => 'changed'] as $name) {
-      if (!$surface->getDefinitions()->has($name)) {
+      if (!$surface->entries()->has($name)) {
         continue;
       }
-      foreach (static::child($surface, $name)->getDefinitions() as $key => $definition) {
+      foreach (static::child($surface, $name)->entries() as $key => $definition) {
         $types[$name][$key] = $definition->getDataType();
       }
     }
@@ -232,7 +232,7 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $this->assertSame('autocomplete', $uid->getSetting('widget'));
     $this->assertSame('CONTAINS', $uid->getSetting('match_operator'));
     $this->assertSame(10, $uid->getSetting('match_limit'));
-    $uid_schema = static::child($this->add('page'), 'uid')->getDefinitions()->entry('target_id')->schema();
+    $uid_schema = static::child($this->add('page'), 'uid')->entries()->entry('target_id')->schema();
     $this->assertInstanceOf(AutocompleteWidget::class, $this->container->get('class_resolver')->getInstanceFromDefinition(WidgetChoice::class)->forSchema($uid_schema));
     $hinted = $this->container->get('surface.contract_emitter')->emitFull($this->add('page'), 'entity.content:node.page', 'create', widgets: TRUE)->document['schema'];
     $target = $hinted['$defs']['field.item:node.page.uid']['properties']['target_id'];
@@ -329,7 +329,7 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $this->assertFalse($bin->get('surface:resources:index:' . $hash));
     $this->assertFalse($bin->get('surface:resources:entry:' . $hash . ':entity.content:node.page'));
     $this->assertTrue($this->registry()->hasDefinition('field.item:node.page.field_subtitle'));
-    $this->assertSame('field.item:node.page.field_subtitle', $this->add('page')->getDefinitions()->entry('field_subtitle')?->attachment?->id);
+    $this->assertSame('field.item:node.page.field_subtitle', $this->add('page')->entries()->entry('field_subtitle')?->attachment?->id);
   }
 
   /**
@@ -341,7 +341,7 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
   public function testBareContextBuilds(): void {
     $surface = $this->resources()->build('entity.content:node.page', new OperationContext('update'));
     $this->assertFalse($surface->isLocked('id'));
-    $this->assertSame(['value'], array_keys(static::child($surface, 'title')->getDefinitions()->toArray()));
+    $this->assertSame(['value'], array_keys(static::child($surface, 'title')->entries()->toArray()));
   }
 
 }

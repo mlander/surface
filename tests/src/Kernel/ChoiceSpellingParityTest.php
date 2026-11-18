@@ -9,7 +9,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\Narrowing;
 use PHPUnit\Framework\Attributes\Group;
@@ -285,7 +285,7 @@ class ChoiceSpellingParityTest extends SurfaceKernelTestBase {
    *   The data surface.
    */
   protected function surface(array $options): SurfaceInterface {
-    return new Surface(DefinitionMap::fromArrays(
+    return new Surface(Entries::fromArrays(
       definitions: ['badge' => $this->definition($options)],
     ));
   }

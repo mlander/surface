@@ -720,12 +720,12 @@ final class References {
    */
   protected function placeAt(SurfaceInterface $surface, array $path, ?string $entity_type_id): ?Entry {
     $name = array_shift($path);
-    $entry = $name === NULL ? NULL : $surface->getDefinitions()->entry($name);
+    $entry = $name === NULL ? NULL : $surface->entries()->entry($name);
     if ($entry === NULL) {
       return NULL;
     }
     $child = $entry->attachment?->child;
-    if ($child !== NULL && $path === [] && $child->getDefinitions()->has('id')) {
+    if ($child !== NULL && $path === [] && $child->entries()->has('id')) {
       // A reference to any entity type names its id.
       $path = ['id'];
     }
@@ -739,7 +739,7 @@ final class References {
     if (SchemaFacts::setting($entry->schema(), self::TARGETS) === NULL) {
       return NULL;
     }
-    $types = $surface->getDefinitions()->entry(self::TYPE_KEY);
+    $types = $surface->entries()->entry(self::TYPE_KEY);
     $type = $types === NULL ? NULL : SchemaFacts::constraints($types->schema())[self::TYPE_CONSTRAINT] ?? NULL;
     if ($entity_type_id === NULL || !is_array($type)) {
       return NULL;
@@ -748,7 +748,7 @@ final class References {
     if (!isset($allowed[$entity_type_id])) {
       return NULL;
     }
-    $refined = $surface->refine([self::TYPE_KEY => $entity_type_id], FALSE)->getDefinitions()->entry($name);
+    $refined = $surface->refine([self::TYPE_KEY => $entity_type_id], FALSE)->entries()->entry($name);
     return $refined === NULL ? NULL : static::referring($refined);
   }
 

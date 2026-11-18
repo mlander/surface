@@ -10,7 +10,7 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
 use Drupal\surface\Storage\StoredSchemaInterface;
@@ -118,7 +118,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    *   The layout, or NULL when no key may be stored by uuid.
    */
   public static function forSurface(SurfaceInterface $surface, References $references, array $skip = []): ?self {
-    return static::holds($surface->getDefinitions(), $skip) ? new self($surface, $references, $skip) : NULL;
+    return static::holds($surface->entries(), $skip) ? new self($surface, $references, $skip) : NULL;
   }
 
   /**
@@ -140,7 +140,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    */
   public static function storedSchemaOf(SurfaceInterface $surface): array {
     $schema = [];
-    static::listUuidKeys($surface->getDefinitions(), '', $schema);
+    static::listUuidKeys($surface->entries(), '', $schema);
     return $schema;
   }
 
@@ -158,7 +158,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * entity is left as it is, for the config schema to refuse.
    */
   public function toStorage(array $values): array {
-    return $this->map($this->surface->getDefinitions(), $values, TRUE, TRUE);
+    return $this->map($this->surface->entries(), $values, TRUE, TRUE);
   }
 
   /**
@@ -168,7 +168,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * names no entity reads as nothing stored.
    */
   public function fromStorage(array $settings): array {
-    return $this->map($this->surface->getDefinitions(), $settings, FALSE, TRUE);
+    return $this->map($this->surface->entries(), $settings, FALSE, TRUE);
   }
 
   /**
@@ -191,7 +191,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    *   The values, each such reference kept.
    */
   public function keepUnresolved(array $values, array $stored): array {
-    return $this->keep($this->surface->getDefinitions(), $values, $stored, TRUE);
+    return $this->keep($this->surface->entries(), $values, $stored, TRUE);
   }
 
   /**
@@ -209,7 +209,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    */
   public function dependencies(array $values): array {
     $found = [];
-    $this->collect($this->surface->getDefinitions(), $values, TRUE, $found);
+    $this->collect($this->surface->entries(), $values, TRUE, $found);
     $dependencies = [];
     foreach ($found as $entity) {
       $dependencies[$entity->getConfigDependencyKey()][] = $entity->getConfigDependencyName();
@@ -226,7 +226,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Answers whether a map holds a key that may be stored by uuid.
    *
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The keys.
    * @param string[] $skip
    *   Keys left alone.
@@ -234,7 +234,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * @return bool
    *   TRUE when one does, at any depth.
    */
-  protected static function holds(DefinitionMap $map, array $skip = []): bool {
+  protected static function holds(Entries $map, array $skip = []): bool {
     foreach ($map->entries() as $name => $entry) {
       if (in_array((string) $name, $skip, TRUE)) {
         continue;
@@ -282,7 +282,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * @param \Drupal\surface\Entry $entry
    *   The key.
    *
-   * @return array<string, \Drupal\surface\DefinitionMap>
+   * @return array<string, \Drupal\surface\Entries>
    *   An attached structure's keys, a collection's item's, a map of keys
    *   from the site's entries, each variant a class declares, and each
    *   structure an alter mounted, by variant id or module; empty for any
@@ -290,10 +290,10 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    */
   protected static function children(Entry $entry): array {
     if ($entry->list !== NULL) {
-      return ['' => $entry->list->child()->getDefinitions()];
+      return ['' => $entry->list->child()->entries()];
     }
     if ($entry->attachment !== NULL) {
-      return static::bare($entry) === NULL ? ['' => $entry->attachment->child->getDefinitions()] : [];
+      return static::bare($entry) === NULL ? ['' => $entry->attachment->child->entries()] : [];
     }
     if ($entry->variants !== NULL) {
       if (DefinitionMetadata::variantsFrom($entry->variants->shell) !== NULL) {
@@ -301,13 +301,13 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
       }
       $maps = [];
       foreach ($entry->variants->variants as $id => $variant) {
-        $maps[(string) $id] = $variant->child->getDefinitions();
+        $maps[(string) $id] = $variant->child->entries();
       }
       return $maps;
     }
     $maps = [];
     foreach ($entry->mounted as $module => $mounted) {
-      $maps[(string) $module] = $mounted->child->getDefinitions();
+      $maps[(string) $module] = $mounted->child->entries();
     }
     return $maps;
   }
@@ -328,7 +328,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
     }
     // The author keeps the id on the key the structure is attached at, or
     // the structure on its own id.
-    $id = $entry->attachment->child->getDefinitions()->entry(self::ID)?->schema();
+    $id = $entry->attachment->child->entries()->entry(self::ID)?->schema();
     if ($id === NULL || SchemaFacts::setting($id, References::TARGETS) === NULL || SchemaFacts::setting($entry->schema(), References::STORED_AS) === References::BY_ID || SchemaFacts::setting($id, References::STORED_AS) === References::BY_ID) {
       return NULL;
     }
@@ -338,14 +338,14 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Lists the keys of a map stored as a uuid, with their schema.
    *
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The keys.
    * @param string $prefix
    *   Their path, a dotted path and a dot; empty at the top.
    * @param array<string, array> $config_schema
    *   The keys found, added to.
    */
-  protected static function listUuidKeys(DefinitionMap $map, string $prefix, array &$config_schema): void {
+  protected static function listUuidKeys(Entries $map, string $prefix, array &$config_schema): void {
     foreach ($map->entries() as $name => $entry) {
       $path = $prefix . $name;
       $schema = $entry->schema();
@@ -409,10 +409,10 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
       }
       return;
     }
-    $entries = $entry->attachment?->child->getDefinitions()->entries() ?? [];
+    $entries = $entry->attachment?->child->entries()->entries() ?? [];
     $first = reset($entries);
     if ($first !== FALSE && $first->attachment !== NULL) {
-      static::listUuidKeys($first->attachment->child->getDefinitions(), $path . '.*.', $schema);
+      static::listUuidKeys($first->attachment->child->entries(), $path . '.*.', $schema);
     }
   }
 
@@ -440,7 +440,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Translates the references of one map's values, either way.
    *
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The keys.
    * @param array $values
    *   Their values.
@@ -452,7 +452,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * @return array
    *   The values, translated.
    */
-  protected function map(DefinitionMap $map, array $values, bool $to, bool $top = FALSE): array {
+  protected function map(Entries $map, array $values, bool $to, bool $top = FALSE): array {
     foreach ($map->entries() as $name => $entry) {
       $name = (string) $name;
       if (!array_key_exists($name, $values) || ($top && in_array($name, $this->skip, TRUE))) {
@@ -472,7 +472,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
         continue;
       }
       if ($entry->list !== NULL) {
-        $item = $entry->list->child()->getDefinitions();
+        $item = $entry->list->child()->entries();
         foreach ($value as $delta => $one) {
           if (is_array($one)) {
             $values[$name][$delta] = $this->map($item, $one, $to);
@@ -597,7 +597,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Keeps each unresolved reference of one map that a write holds nothing for.
    *
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The keys.
    * @param array $values
    *   What is written, in storage layout.
@@ -609,7 +609,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * @return array
    *   The values.
    */
-  protected function keep(DefinitionMap $map, array $values, array $stored, bool $top = FALSE): array {
+  protected function keep(Entries $map, array $values, array $stored, bool $top = FALSE): array {
     foreach ($map->entries() as $name => $entry) {
       $name = (string) $name;
       if (!array_key_exists($name, $values) || !array_key_exists($name, $stored) || ($top && in_array($name, $this->skip, TRUE))) {
@@ -656,7 +656,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Collects the entities one map's references name.
    *
-   * @param \Drupal\surface\DefinitionMap $map
+   * @param \Drupal\surface\Entries $map
    *   The keys.
    * @param array $values
    *   Their values, ids.
@@ -665,7 +665,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * @param \Drupal\Core\Entity\EntityInterface[] $found
    *   The entities, added to.
    */
-  protected function collect(DefinitionMap $map, array $values, bool $top, array &$found): void {
+  protected function collect(Entries $map, array $values, bool $top, array &$found): void {
     foreach ($map->entries() as $name => $entry) {
       $name = (string) $name;
       if (!array_key_exists($name, $values) || ($top && in_array($name, $this->skip, TRUE))) {
@@ -683,7 +683,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
       if (!is_array($value)) {
         continue;
       }
-      $id = $entry->attachment?->child->getDefinitions()->entry(self::ID)?->schema();
+      $id = $entry->attachment?->child->entries()->entry(self::ID)?->schema();
       if ($entry->list === NULL && $id !== NULL && SchemaFacts::setting($id, References::TARGETS) !== NULL) {
         if (is_string($value[self::TYPE] ?? NULL) && isset($value[self::ID]) && $value[self::ID] !== '') {
           $entity = $this->entity($value[self::TYPE], $value[self::ID]);
@@ -696,7 +696,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
       if ($entry->list !== NULL) {
         foreach ($value as $one) {
           if (is_array($one)) {
-            $this->collect($entry->list->child()->getDefinitions(), $one, FALSE, $found);
+            $this->collect($entry->list->child()->entries(), $one, FALSE, $found);
           }
         }
         continue;

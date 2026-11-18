@@ -85,13 +85,13 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
    */
   public function testAttachByClass(): void {
     $surface = $this->pantry();
-    $entry = $surface->getDefinitions()->entry('shelf');
+    $entry = $surface->entries()->entry('shelf');
     $this->assertSame(ShelfStructure::class, $entry->attachment->source);
-    $this->assertSame(LabelResource::class, $surface->getDefinitions()->entry('label')->attachment->source);
+    $this->assertSame(LabelResource::class, $surface->entries()->entry('label')->attachment->source);
 
     // Declared where defineInputs() put it, as a map of the child's keys,
     // the child's own alter included under its module, as on any structure.
-    $this->assertSame(['pantry', 'kind', 'shelf', 'label', 'kind_settings'], $surface->getDefinitions()->names());
+    $this->assertSame(['pantry', 'kind', 'shelf', 'label', 'kind_settings'], $surface->entries()->names());
     $shelf = $surface->getDefinition('shelf');
     $this->assertInstanceOf(MapDataDefinition::class, $shelf);
     $this->assertSame(['unit', 'height', 'third_party_settings'], array_keys($shelf->getPropertyDefinitions()));
@@ -147,7 +147,7 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
    */
   public function testOpenVariantsAreAdvertisedAndResolve(): void {
     $surface = $this->pantry();
-    $entry = $surface->getDefinitions()->entry('kind_settings');
+    $entry = $surface->entries()->entry('kind_settings');
     $this->assertSame('kind', $entry->variants->by);
     $this->assertEqualsCanonicalizing(['jar', 'tin'], $entry->variants->variantIds());
     $this->assertSame(JarStructure::class, $entry->variants->variant('jar')->source);
@@ -162,7 +162,7 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
     // The deciding key keeps the list it declared, which names only values
     // a variant is for.
     $this->assertEqualsCanonicalizing(['jar', 'tin'], $surface->getDefinition('kind')->getConstraints()['Choice']['choices']);
-    $this->assertSame(['kind_settings' => ['kind']], $surface->getDefinitions()->refinements());
+    $this->assertSame(['kind_settings' => ['kind']], $surface->entries()->refinements());
     // It starts as the variant the deciding key starts on.
     $this->assertSame(['lid' => 'screw', 'volume' => 500], $surface->getDefault('kind_settings'));
 

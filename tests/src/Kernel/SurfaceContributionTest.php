@@ -232,7 +232,7 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
       refinements: ['variant' => ['casing']],
     );
     $builder->addRefiner('variant', new ConstraintRewritingRefiner(['Length' => ['min' => 1, 'max' => 40]]));
-    $refined = $builder->seal()->refine(['casing' => 'uppercase'])->getDefinitions()->entry('variant');
+    $refined = $builder->seal()->refine(['casing' => 'uppercase'])->entries()->entry('variant');
     $this->assertNotNull($refined);
     $this->assertSame(2, $refined->schema()->get('minLength'));
     $this->assertSame(10, $refined->schema()->get('maxLength'));

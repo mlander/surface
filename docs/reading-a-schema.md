@@ -262,7 +262,7 @@ schema left over is a `JsonSchema` constraint:
 - **on the frame**, for what is said of the object as a whole (a
   conditional, `dependentSchemas`, `patternProperties`), holding the
   frame's accepted values to it; a frame keeps it on its definition
-  map (`DefinitionMap::frameConstraints()`), and the pipeline checks it
+  map (`Entries::frameConstraints()`), and the pipeline checks it
   after the keys.
 
 The pipeline checks each with opis/json-schema, as a standard validator

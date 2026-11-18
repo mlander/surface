@@ -288,7 +288,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     // The review is mixed in: the press page's own keys, its def in allOf.
     $this->assertSame(['$ref' => '#/$defs/event.review'], $press['allOf'][0]);
     $surface = $this->container->get('surface.resources')->buildOperation(PressResource::class, 'configure');
-    $this->assertSame(['public', 'contact', 'reviewed_on', 'reviewed_by'], $surface->getDefinitions()->names());
+    $this->assertSame(['public', 'contact', 'reviewed_on', 'reviewed_by'], $surface->entries()->names());
 
     // Through the forms: the review stored flat, two volunteers in a list.
     $this->formAt('surface_examples.step8');
@@ -497,19 +497,19 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
    */
   public function testTwelveReadsEachComponentsProps(): void {
     $built = $this->container->get('surface.resources')->buildOperation(SpotlightResource::class, 'configure');
-    $variants = $built->getDefinitions()->entry('props')->variants;
+    $variants = $built->entries()->entry('props')->variants;
     $ours = array_values(array_filter(array_keys($variants->variants), static fn (string $id): bool => str_starts_with($id, 'surface_examples:')));
     $this->assertSame(self::COMPONENTS, $ours, 'The four components this module ships are four variants.');
-    $slots = $built->getDefinitions()->entry('slots')->variants;
+    $slots = $built->entries()->entry('slots')->variants;
     $this->assertSame(array_keys($variants->variants), array_keys($slots->variants), 'The same component chooses its slots.');
-    $this->assertSame(['body'], $slots->variants['surface_examples:card']->child->getDefinitions()->names());
-    $this->assertSame(['actions'], $slots->variants['surface_examples:hero']->child->getDefinitions()->names());
+    $this->assertSame(['body'], $slots->variants['surface_examples:card']->child->entries()->names());
+    $this->assertSame(['actions'], $slots->variants['surface_examples:hero']->child->entries()->names());
     $this->assertContains('config:core.extension', $built->getCacheTags());
     $this->assertSame('Card', (string) $this->options()->resolve($built->getDefinition('component'))->options['surface_examples:card']);
 
     // The card's props, read: each a key with its type and constraints.
     $card = $variants->variants['surface_examples:card']->child;
-    $this->assertSame(['heading', 'tone', 'link'], $card->getDefinitions()->names());
+    $this->assertSame(['heading', 'tone', 'link'], $card->entries()->names());
     $this->assertTrue($card->getDefinition('heading')->isRequired());
     $this->assertSame(['max' => 80], $card->getDefinition('heading')->getConstraint('Length'));
     $this->assertSame([

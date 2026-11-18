@@ -265,7 +265,7 @@ class RefinementIsolationTest extends SurfaceKernelTestBase {
    *   What each key says, by key.
    */
   protected static function described(SurfaceInterface $surface): array {
-    return array_map(static::describe(...), $surface->getDefinitions()->toArray());
+    return array_map(static::describe(...), $surface->entries()->toArray());
   }
 
   /**

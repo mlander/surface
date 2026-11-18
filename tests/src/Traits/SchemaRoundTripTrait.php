@@ -285,7 +285,7 @@ trait SchemaRoundTripTrait {
       return FALSE;
     }
     $seen[spl_object_id($surface)] = TRUE;
-    foreach ($surface->getDefinitions()->entries() as $entry) {
+    foreach ($surface->entries()->entries() as $entry) {
       $children = [
         ...($entry->attachment === NULL ? [] : [$entry->attachment->child]),
         ...array_map(static fn ($variant): SurfaceInterface => $variant->child, $entry->variants->variants ?? []),

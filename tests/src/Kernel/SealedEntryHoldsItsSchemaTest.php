@@ -26,7 +26,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests a sealed entry holds its schema, and derives a definition on demand.
  *
  * The seal makes every entry schema-first (SurfaceBuilder::seal(),
- * DefinitionMap::fromArrays() with schemaFirst, Entry::sealed()): its schema
+ * Entries::fromArrays() with schemaFirst, Entry::sealed()): its schema
  * is the source, read from the definition its source gave, or for a key
  * that holds a child frame composed of the key's own facts around the
  * schemas its child's entries hold, and its definition is derived from the
@@ -155,7 +155,7 @@ class SealedEntryHoldsItsSchemaTest extends SurfaceKernelTestBase {
     }
     $seen[spl_object_id($surface)] = TRUE;
     $walked = 1;
-    foreach (['in' => $surface->getDefinitions(), 'out' => $surface->getOutputDefinitions()] as $side => $map) {
+    foreach (['in' => $surface->entries(), 'out' => $surface->outputEntries()] as $side => $map) {
       foreach ($map->entries() as $name => $entry) {
         $here = "$at $side:$name";
         $each($entry, $here);
@@ -240,7 +240,7 @@ class SealedEntryHoldsItsSchemaTest extends SurfaceKernelTestBase {
     // The one entry kept definition-first, m1 of the ruled hand surface,
     // serializes its definition, and core's map keeps no properties on
     // sleep: its NotAMapDefinition wakes without them, as any entry made
-    // definition-first of it does (DefinitionMap::fromArrays() without
+    // definition-first of it does (Entries::fromArrays() without
     // schemaFirst). It is not read here.
     $this->assertSame(['hand ruled in:m1: kept definition-first'], array_slice($differ, 0, 20), 'Every woken schema-first entry answers schema() and definition() as before.');
     $this->assertGreaterThan(1000, $compared);
@@ -295,7 +295,7 @@ class SealedEntryHoldsItsSchemaTest extends SurfaceKernelTestBase {
     ]);
     $builder->attach('holder', new Attachment($child));
     $surface = $builder->seal();
-    $entries = $surface->getDefinitions();
+    $entries = $surface->entries();
     $this->assertFalse($entries->entry('own')->isSchemaFirst(), 'A key of its own class stays definition-first.');
     $this->assertTrue($entries->entry('plain')->isSchemaFirst());
     $holder = $entries->entry('holder');
@@ -303,7 +303,7 @@ class SealedEntryHoldsItsSchemaTest extends SurfaceKernelTestBase {
     $whole = $holder->definition();
     $this->assertInstanceOf(MapDataDefinition::class, $whole);
     $this->assertSame(['own', 'plain'], array_keys($whole->getPropertyDefinitions()), 'Its definition is made whole.');
-    $this->assertSame($child->getDefinitions()->entry('own')->definition(), $whole->getPropertyDefinition('own'), 'Of the child\'s own definitions.');
+    $this->assertSame($child->entries()->entry('own')->definition(), $whole->getPropertyDefinition('own'), 'Of the child\'s own definitions.');
     $this->assertTrue(DefinitionSchema::same($holder->schema(), DefinitionSchema::of($holder->definition())));
     $values = ['own' => 'a', 'plain' => 3, 'holder' => ['own' => 'b', 'plain' => 'c']];
     $accepted = $this->pipeline()->accept($surface, $values, $surface->getDefaultValues());
@@ -330,7 +330,7 @@ class SealedEntryHoldsItsSchemaTest extends SurfaceKernelTestBase {
     $asked = [];
     $count = 0;
     foreach (['surface' => $surface] + $children as $at => $each) {
-      foreach ($each->getDefinitions()->entries() as $name => $entry) {
+      foreach ($each->entries()->entries() as $name => $entry) {
         $count++;
         $this->assertTrue($entry->isSchemaFirst(), "$at.$name is schema-first.");
         // The mount's keys are deep copies of the structure's definitions
@@ -342,16 +342,16 @@ class SealedEntryHoldsItsSchemaTest extends SurfaceKernelTestBase {
     }
     $this->assertSame([], $asked, 'No entry the seal made holds a definition.');
     $this->assertSame(12, $count);
-    $entries = $surface->getDefinitions();
+    $entries = $surface->entries();
     $holder = $children['holder'];
     $place = $entries->entry('place')->schema();
-    foreach ($holder->getDefinitions()->entries() as $name => $entry) {
+    foreach ($holder->entries()->entries() as $name => $entry) {
       $this->assertSame($entry->schema(), DefinitionSchema::propertyOf($place, (string) $name), "place.$name is its entry's schema.");
     }
     $item = DefinitionSchema::itemOf($entries->entry('rows')->schema());
-    $this->assertSame($holder->getDefinitions()->entry('inner')?->schema(), $item === NULL ? NULL : DefinitionSchema::propertyOf($item, 'inner'), 'rows.*.inner is its entry\'s schema.');
+    $this->assertSame($holder->entries()->entry('inner')?->schema(), $item === NULL ? NULL : DefinitionSchema::propertyOf($item, 'inner'), 'rows.*.inner is its entry\'s schema.');
     $pick = $entries->entry('pick')->schema();
-    foreach ($children['leaf']->getDefinitions()->entries() as $name => $entry) {
+    foreach ($children['leaf']->entries()->entries() as $name => $entry) {
       $this->assertSame($entry->schema(), DefinitionSchema::propertyOf($pick, (string) $name), "pick.$name is the chosen variant's entry's schema.");
     }
   }
@@ -365,7 +365,7 @@ class SealedEntryHoldsItsSchemaTest extends SurfaceKernelTestBase {
    */
   public function testShellsOwnDefaultIsServed(): void {
     [$surface] = static::everyShell();
-    $this->assertSame(['title' => 'Home'], SchemaFacts::default($surface->getDefinitions()->entry('place')->schema()));
+    $this->assertSame(['title' => 'Home'], SchemaFacts::default($surface->entries()->entry('place')->schema()));
     $map = $this->container->get('surface.input_definitions')->fromSurface($surface, 'Every shell', '');
     $this->assertSame(['title' => 'Home'], $map->getPropertyDefinition('place')?->getDefaultValue(), 'The attached shell\'s own default.');
     $this->assertSame([['title' => 'First']], $map->getPropertyDefinition('rows')?->getDefaultValue(), 'The collection\'s own default.');
@@ -381,7 +381,7 @@ class SealedEntryHoldsItsSchemaTest extends SurfaceKernelTestBase {
    */
   public function testWrittenDefinitionIsRefusedAtTheNextAsk(): void {
     [$surface] = static::everyShell();
-    $entries = $surface->getDefinitions();
+    $entries = $surface->entries();
     $kind = $entries->entry('kind');
     $label = $kind->definition();
     $this->assertInstanceOf(DataDefinition::class, $label);
@@ -414,7 +414,7 @@ class SealedEntryHoldsItsSchemaTest extends SurfaceKernelTestBase {
    * Tests a deferred child settled at the seal hands its messages as sources.
    *
    * A variant held unsettled is built when the seal composes the key that
-   * chose it (Entry::sealed(), inside DefinitionMap::fromArrays()), after
+   * chose it (Entry::sealed(), inside Entries::fromArrays()), after
    * the parent's ConstraintMessages::sources() and assertGroupsAgree() ran.
    * The child was sealed by its own seal, which rewrote its t() message to
    * its source string, so the validator is handed that string: on the
@@ -463,9 +463,9 @@ class SealedEntryHoldsItsSchemaTest extends SurfaceKernelTestBase {
     $this->assertNull($deferred->settled(), 'The variant is held unsettled until the seal.');
     $surface = $builder->seal();
     $this->assertNotNull($deferred->settled(), 'The seal settled it to compose the chosen key.');
-    $own = SchemaFacts::constraints($deferred->settled()->getDefinitions()->entry('code')->schema())['Length']['maxMessage'] ?? NULL;
+    $own = SchemaFacts::constraints($deferred->settled()->entries()->entry('code')->schema())['Length']['maxMessage'] ?? NULL;
     $this->assertSame('Three at most.', $own, 'The child\'s key holds the message as its source.');
-    $code = DefinitionSchema::propertyOf($surface->getDefinitions()->entry('pick')->schema(), 'code');
+    $code = DefinitionSchema::propertyOf($surface->entries()->entry('pick')->schema(), 'code');
     $this->assertNotNull($code);
     $this->assertSame('Three at most.', SchemaFacts::constraints($code)['Length']['maxMessage'] ?? NULL, 'The parent\'s composed schema holds it as its source too.');
     $refused = [];

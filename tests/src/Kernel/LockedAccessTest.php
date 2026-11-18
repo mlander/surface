@@ -145,10 +145,10 @@ class LockedAccessTest extends SurfaceKernelTestBase {
     $this->assertTrue($this->resources()->access(CabinetResource::class, $context)->isAllowed());
     $built = $this->resources()->build(CabinetResource::class, $context);
     $this->assertSame('The cabinet may be audited, not changed.', (string) $built->lockedWhole());
-    foreach ($built->getDefinitions()->names() as $key) {
+    foreach ($built->entries()->names() as $key) {
       $this->assertTrue($built->isLocked($key), $key);
       // Held to what is stored, not fixed to a declared default.
-      $this->assertTrue($built->getDefinitions()->isHeld($key), $key);
+      $this->assertTrue($built->entries()->isHeld($key), $key);
     }
 
     // Every write door is refused by name before anything is written.
@@ -215,7 +215,7 @@ class LockedAccessTest extends SurfaceKernelTestBase {
     $this->actAs('keep cabinet');
     $built = $this->resources()->buildOperation(CabinetResource::class, 'update');
     // Offered: both values can be chosen.
-    $offered = $built->getDefinitions()->entry('lock_settings')?->variants?->variantIds() ?? [];
+    $offered = $built->entries()->entry('lock_settings')?->variants?->variantIds() ?? [];
     sort($offered);
     $this->assertSame(['code', 'key'], $offered);
     $code = static::variant($built, 'code');
@@ -360,7 +360,7 @@ class LockedAccessTest extends SurfaceKernelTestBase {
    *   The variant.
    */
   protected static function variant(SurfaceInterface $built, string $value): SurfaceInterface {
-    $variants = $built->getDefinitions()->entry('lock_settings')?->variants;
+    $variants = $built->entries()->entry('lock_settings')?->variants;
     assert($variants !== NULL);
     return $variants->variant($value)->child;
   }

@@ -187,7 +187,7 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
 
     // The capacity watches the owner's room and the alter's own license,
     // by its path; the mount watches the capacity, for the stewards.
-    $definitions = $surface->getDefinitions();
+    $definitions = $surface->entries();
     $this->assertSame(['room', self::LICENSE], $definitions->dependencies('capacity'));
     $this->assertSame(['capacity'], $definitions->dependencies('third_party_settings'));
     $this->assertSame(['room', self::LICENSE], $definitions->refinementPaths()['capacity']);
@@ -202,7 +202,7 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
     $this->assertSame(ComplianceStructure::class, $mounted->source);
     $this->assertSame('registration.compliance', $mounted->id);
     $this->assertSame(['capacity' => 'capacity'], $mounted->reads);
-    $this->assertSame(['capacity'], array_keys($mounted->child->getDefinitions()->ports()));
+    $this->assertSame(['capacity'], array_keys($mounted->child->entries()->ports()));
   }
 
   /**

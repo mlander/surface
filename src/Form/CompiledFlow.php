@@ -676,7 +676,7 @@ final class CompiledFlow {
     $first = array_key_first($steps);
     $at = [];
     $groups = [];
-    foreach ($surface->getDefinitions()->entries() as $key => $entry) {
+    foreach ($surface->entries()->entries() as $key => $entry) {
       $key = (string) $key;
       $group = SchemaFacts::arrangement($entry->schema())?->group?->id;
       if ($group !== NULL) {
@@ -731,7 +731,7 @@ final class CompiledFlow {
           : sprintf('The %s route\'s flow draws the group "%s" of the "%s" operation of %s at step %d, and the operation has no such group: name one of %s.', $name, $group, $operation, $resource, $number, $groups === [] ? 'its groups, and it declares none, or leave "group" out to draw it whole' : '"' . implode('", "', array_keys($groups)) . '"');
       }
     }
-    $declared = array_map('strval', array_keys(iterator_to_array($surface->getDefinitions())));
+    $declared = array_map('strval', array_keys(iterator_to_array($surface->entries())));
     foreach ($steps as $number => [, $keys]) {
       foreach (array_diff($keys ?? [], $declared) as $key) {
         return sprintf('The %s route\'s flow draws the key "%s" at step %d, and the "%s" operation of %s has no such key: name one of "%s".', $name, $key, $number, $operation, $resource, implode('", "', $declared));
@@ -757,7 +757,7 @@ final class CompiledFlow {
    *   The refined key and the key it depends on; NULL when none is.
    */
   protected static function outOfOrder(SurfaceInterface $surface, array $at): ?array {
-    foreach ($surface->getDefinitions()->refinements() as $target => $dependencies) {
+    foreach ($surface->entries()->refinements() as $target => $dependencies) {
       if (!isset($at[$target])) {
         continue;
       }
@@ -779,7 +779,7 @@ final class CompiledFlow {
    * apply to, that deletes, or that is read-only; a group step naming no
    * group of the operation's top level, a key it does not have, or a step
    * that draws no key; a key drawn at a step before a
-   * key its refinement depends on (DefinitionMap::refinements()); and for
+   * key its refinement depends on (Entries::refinements()); and for
    * a create, a required key with no default that is drawn after the
    * first step, since every step is validated as a whole write. Steps
    * over another resource are asked by stepRefusal() and servedAt().
@@ -813,7 +813,7 @@ final class CompiledFlow {
       return sprintf('The %s route\'s flow draws "%s" at step %d, before "%s" at step %d, and "%s" is refined by the value of "%s": draw "%s" at the same step or an earlier one.', $name, $target, $at[$target], $first, $at[$first], $target, $first, $first);
     }
     if ($operation->creates) {
-      $definitions = $surface->getDefinitions();
+      $definitions = $surface->entries();
       foreach ($definitions->entries() as $key => $entry) {
         $key = (string) $key;
         // A key the build locks, or computes from others, is no input.

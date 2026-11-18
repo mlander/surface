@@ -8,7 +8,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Surface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface_test\AnyToIntegerRefiner;
@@ -98,7 +98,7 @@ class SurfaceTest extends SurfaceKernelTestBase {
    */
   public function testOnlyThePlaceholderBecomesAnything(): void {
     $surface = static fn (DataDefinitionInterface $value): Surface => new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: [
           'kind' => DataDefinition::create('string'),
           'value' => $value,
@@ -139,7 +139,7 @@ class SurfaceTest extends SurfaceKernelTestBase {
   public function testNestedViolationPaths(): void {
     $map = MapDataDefinition::create()->setLabel('Settings');
     $map->setPropertyDefinition('sub', DataDefinition::create('string')->addConstraint('Length', ['max' => 3]));
-    $surface = new Surface(DefinitionMap::fromArrays(definitions: ['settings' => $map]));
+    $surface = new Surface(Entries::fromArrays(definitions: ['settings' => $map]));
 
     $errors = $this->pipeline()->validate($surface, ['settings' => ['sub' => 'too long']]);
     $this->assertSame('sub', $errors->byKey('settings')[0]->path);
@@ -160,7 +160,7 @@ class SurfaceTest extends SurfaceKernelTestBase {
     $empty = MapDataDefinition::create()->setLabel('Empty');
     $empty->setPropertyDefinition('nothing', DataDefinition::create('string'));
 
-    $surface = new Surface(DefinitionMap::fromArrays(definitions: ['settings' => $outer, 'empty' => $empty]));
+    $surface = new Surface(Entries::fromArrays(definitions: ['settings' => $outer, 'empty' => $empty]));
     // Properties that declare nothing are left out at the nested level.
     $this->assertSame(['provider' => ['badge' => 'star']], $surface->getDefault('settings'));
     // A map with nothing to assemble has no default, and every
@@ -176,7 +176,7 @@ class SurfaceTest extends SurfaceKernelTestBase {
     DefinitionMetadata::setDefaultValue($declared, ['provider' => ['note' => 'fixed']]);
     $this->assertSame(
       ['provider' => ['badge' => 'star', 'note' => 'fixed']],
-      (new Surface(DefinitionMap::fromArrays(definitions: ['settings' => $declared])))->getDefault('settings'),
+      (new Surface(Entries::fromArrays(definitions: ['settings' => $declared])))->getDefault('settings'),
     );
   }
 
@@ -224,7 +224,7 @@ class SurfaceTest extends SurfaceKernelTestBase {
   public function testUnknownKeysRefused(): void {
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('"missing" is not a data surface definition.');
-    DefinitionMap::fromArrays(
+    Entries::fromArrays(
       definitions: ['a' => DataDefinition::create('string')],
       locked: ['missing'],
     );

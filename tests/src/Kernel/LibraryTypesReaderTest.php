@@ -135,9 +135,9 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
    */
   public function testObjectTypeReadsAsStructure(): void {
     $read = $this->read(self::DOCUMENT);
-    $link = $read->getDefinitions()->entry('link')->attachment;
+    $link = $read->entries()->entry('link')->attachment;
     $this->assertSame('portable:link', $link->id, 'The structure is the library type.');
-    $this->assertSame(['uri', 'title'], $link->child->getDefinitions()->names());
+    $this->assertSame(['uri', 'title'], $link->child->entries()->names());
     $this->assertTrue($link->child->getDefinition('uri')->isRequired());
     $this->assertSame('string', $link->child->getDefinition('title')->getDataType(), 'A type of the library inside reads too.');
     $this->assertSame('Link', $read->getDefinition('link')->getLabel());
@@ -301,7 +301,7 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
     $this->assertSame(['schema' => ['format' => 'int64']], $read->getDefinition('big')->getConstraint('JsonSchema'), 'A format the row states none of is kept beside the type.');
     $this->assertSame(['min' => -self::SAFE, 'max' => self::SAFE], $read->getDefinition('big')->getConstraint('Range'));
     $this->assertSame([], $this->refused($read, ['weight' => 3, 'big' => 4]), 'The check reads a format it does not know as an annotation.');
-    $this->assertFalse($read->getDefinitions()->entry('link')->attachment->child->getDefinition('title')->isRequired(), 'The library\'s structure as it states it.');
+    $this->assertFalse($read->entries()->entry('link')->attachment->child->getDefinition('title')->isRequired(), 'The library\'s structure as it states it.');
   }
 
   /**

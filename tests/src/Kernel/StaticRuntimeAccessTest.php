@@ -224,7 +224,7 @@ class StaticRuntimeAccessTest extends SurfaceKernelTestBase {
     // A static lock: applied in both builds.
     $this->actAs('inspector');
     foreach ([FALSE, TRUE] as $alone) {
-      $map = $this->exhibit($alone)->getDefinitions();
+      $map = $this->exhibit($alone)->entries();
       $this->assertTrue($map->isLocked('loan'));
       $this->assertTrue($map->isHeld('source') && $map->isHeld('acquired'));
       $this->assertFalse($map->isRuntimeAccess('loan'));
@@ -233,23 +233,23 @@ class StaticRuntimeAccessTest extends SurfaceKernelTestBase {
     // A static omission: applied in both builds.
     $this->actAs('archivist');
     foreach ([FALSE, TRUE] as $alone) {
-      $this->assertSame(['title', 'status', 'room'], $this->exhibit($alone)->getDefinitions()->names());
+      $this->assertSame(['title', 'status', 'room'], $this->exhibit($alone)->entries()->names());
     }
     // A runtime lock: applied in the build, set aside for the account.
     $this->actAs('keeper');
     $this->seal();
-    $map = $this->exhibit()->getDefinitions();
+    $map = $this->exhibit()->entries();
     $this->assertTrue($map->isLocked('loan') && $map->isHeld('source'));
     $this->assertFalse($map->isRuntimeAccess('loan'), 'Built with every answer applied, nothing is marked.');
-    $alone = $this->exhibit(TRUE)->getDefinitions();
+    $alone = $this->exhibit(TRUE)->entries();
     $this->assertFalse($alone->isLocked('loan') || $alone->isLocked('source'));
     $this->assertTrue($alone->isRuntimeAccess('loan') && $alone->isRuntimeAccess('source') && $alone->isRuntimeAccess('acquired'));
     $this->assertFalse($alone->isRuntimeAccess('title'));
     // A runtime omission: the same.
     $this->seal('open');
     $this->container->get('state')->set(ExhibitAccess::WITHDRAWN, TRUE);
-    $this->assertSame(['title', 'status', 'room'], $this->exhibit()->getDefinitions()->names());
-    $this->assertSame(['title', 'status', 'room', 'source', 'acquired', 'loan'], $this->exhibit(TRUE)->getDefinitions()->names());
+    $this->assertSame(['title', 'status', 'room'], $this->exhibit()->entries()->names());
+    $this->assertSame(['title', 'status', 'room', 'source', 'acquired', 'loan'], $this->exhibit(TRUE)->entries()->names());
   }
 
   /**
@@ -361,11 +361,11 @@ class StaticRuntimeAccessTest extends SurfaceKernelTestBase {
     // The insurance alone, inside an open loan.
     $this->container->get('state')->set(ExhibitAccess::WITHDRAWN, FALSE);
     $this->container->get('state')->set(InsuranceAccess::LAPSED, TRUE);
-    $loan = $this->exhibit()->getDefinitions()->entry('loan')->attachment->child;
-    $this->assertSame(['lender', 'until'], $loan->getDefinitions()->names());
-    $loan = $this->exhibit(TRUE)->getDefinitions()->entry('loan')->attachment->child;
-    $this->assertSame(['lender', 'until', 'insurance'], $loan->getDefinitions()->names());
-    $this->assertTrue($loan->getDefinitions()->isRuntimeAccess('insurance'));
+    $loan = $this->exhibit()->entries()->entry('loan')->attachment->child;
+    $this->assertSame(['lender', 'until'], $loan->entries()->names());
+    $loan = $this->exhibit(TRUE)->entries()->entry('loan')->attachment->child;
+    $this->assertSame(['lender', 'until', 'insurance'], $loan->entries()->names());
+    $this->assertTrue($loan->entries()->isRuntimeAccess('insurance'));
   }
 
   /**

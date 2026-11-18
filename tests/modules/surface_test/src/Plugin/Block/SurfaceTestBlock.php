@@ -30,7 +30,7 @@ final class SurfaceTestBlock extends TypedBlockBase {
   public function build(): array {
     $configuration = $this->getConfiguration();
     $items = [];
-    foreach ($this->getSurface()->getDefinitions() as $name => $definition) {
+    foreach ($this->getSurface()->entries() as $name => $definition) {
       $items[] = $definition->getLabel() . ': ' . var_export($configuration[$name] ?? NULL, TRUE);
     }
     return [

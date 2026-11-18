@@ -8,7 +8,7 @@ use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Surface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
@@ -130,7 +130,7 @@ abstract class SurfaceKernelTestBase extends KernelTestBase {
       ...($refiners['variant'][SurfaceInterface::OWNER] ?? []),
     ];
     return new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: $definitions,
         refinements: ['variant' => ['casing']],
         locked: $locked,

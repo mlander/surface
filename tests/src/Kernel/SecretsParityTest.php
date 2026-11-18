@@ -214,14 +214,14 @@ class SecretsParityTest extends SurfaceKernelTestBase {
     $frame = $surface;
     $held = $values;
     foreach ($segments as $i => $segment) {
-      $entry = $frame->getDefinitions()->entry($segment);
+      $entry = $frame->entries()->entry($segment);
       if ($entry === NULL) {
         return 'none';
       }
       if ($entry->variants !== NULL && isset($segments[$i + 1])) {
         $key = $segments[$i + 1];
         foreach ($entry->variants->variants as $variant) {
-          $other = $variant->child->getDefinitions()->entry($key);
+          $other = $variant->child->entries()->entry($key);
           if ($document && $other !== NULL && DefinitionMetadata::isSecret($other->definition())) {
             return 'another variant';
           }

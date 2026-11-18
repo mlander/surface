@@ -498,12 +498,12 @@ class FieldToolsTest extends SurfaceKernelTestBase {
     $this->assertContains('integer', $choices);
 
     $surface = $this->container->get('surface.resources')->build(FieldInstanceResource::class, new OperationContext('configure'));
-    $variants = $surface->getDefinitions()->entry('settings')?->variants;
+    $variants = $surface->entries()->entry('settings')?->variants;
     $this->assertNotNull($variants);
     $this->assertSame(AddressFieldSettingsResource::class, $variants->variant('address')->source);
     $this->assertStringStartsWith('schema:field.instance.settings.string:', (string) $variants->variant('string')->source);
-    $this->assertSame([], $variants->variant('string')->child->getDefinitions()->names());
-    $this->assertSame(['min', 'max', 'prefix', 'suffix'], $variants->variant('integer')->child->getDefinitions()->names());
+    $this->assertSame([], $variants->variant('string')->child->entries()->names());
+    $this->assertSame(['min', 'max', 'prefix', 'suffix'], $variants->variant('integer')->child->entries()->names());
   }
 
   /**

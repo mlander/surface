@@ -89,7 +89,7 @@ trait SealedShellsTrait {
    *   The definition.
    */
   protected static function oldSeal(SurfaceInterface $surface, string $key, DataDefinitionInterface $shell): DataDefinitionInterface {
-    $entry = $surface->getDefinitions()->entry($key);
+    $entry = $surface->entries()->entry($key);
     return match (TRUE) {
       $entry->attachment !== NULL && $shell instanceof MapDataDefinition => Attachment::mapOf($shell, $entry->attachment->child),
       $entry->list !== NULL && $shell instanceof ListDataDefinition => Collection::listOf($shell, $entry->list->item->child),

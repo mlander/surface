@@ -63,7 +63,7 @@ final class OutputsDocument {
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface, whose output entries are read
-   *   (SurfaceInterface::getOutputDefinitions()).
+   *   (SurfaceInterface::outputEntries()).
    * @param \Drupal\surface\Contract\Emission|null $emission
    *   The walk whose cacheability collects what the document depends on;
    *   NULL for one of its own, and then the document is kept for the
@@ -73,7 +73,7 @@ final class OutputsDocument {
    *   The document; NULL for a data surface that declares no outputs.
    */
   public function of(SurfaceInterface $surface, ?Emission $emission = NULL): ?Schema {
-    $outputs = $surface->getOutputDefinitions();
+    $outputs = $surface->outputEntries();
     if ($emission === NULL && $this->built->offsetExists($outputs)) {
       return $this->built[$outputs] ?: NULL;
     }

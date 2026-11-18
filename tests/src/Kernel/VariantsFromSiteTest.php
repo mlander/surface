@@ -122,7 +122,7 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
    */
   public function testOneVariantPerLayout(): void {
     $poster = $this->poster();
-    $entry = $poster->getDefinitions()->entry('panels');
+    $entry = $poster->entries()->entry('panels');
     $this->assertNotNull($entry->variants);
     $this->assertSame(['banner', 'grid', 'strip'], array_keys($entry->variants->variants));
     $this->assertSame(PosterLayouts::class, DefinitionMetadata::variantsFrom($entry->variants->shell));
@@ -135,13 +135,13 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
     // The banner is its class: the provider's schema for it is not read.
     $banner = $entry->variants->variants['banner'];
     $this->assertSame(BannerPanelsStructure::class, $banner->source);
-    $this->assertSame(['headline'], $banner->child->getDefinitions()->names());
+    $this->assertSame(['headline'], $banner->child->entries()->names());
 
     // The grid is its schema, draft-04 read as 2020-12: an exclusive
     // minimum on an integer is the next one in.
     $grid = $entry->variants->variants['grid'];
     $this->assertSame('resource_test.poster.panels.grid', $grid->id);
-    $this->assertSame(['columns', 'gap'], $grid->child->getDefinitions()->names());
+    $this->assertSame(['columns', 'gap'], $grid->child->entries()->names());
     $columns = $grid->child->getDefinition('columns');
     $this->assertSame('integer', $columns->getDataType());
     $this->assertTrue($columns->isRequired());
@@ -177,7 +177,7 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
     ]);
     Cache::invalidateTags([PosterLayouts::TAG]);
     $again = $this->poster();
-    $this->assertSame(['banner', 'grid', 'strip', 'column'], array_keys($again->getDefinitions()->entry('panels')->variants->variants));
+    $this->assertSame(['banner', 'grid', 'strip', 'column'], array_keys($again->entries()->entry('panels')->variants->variants));
     $full = $emitter->emitFull($again, 'resource_test.poster')->document['schema'];
     $this->assertSame('#/$defs/resource_test.poster.panels.column', $full['properties']['panels']['x-surface']['variants']['column']);
   }

@@ -212,7 +212,7 @@ trait SurfaceFieldTypeTrait {
     // Current values come through the storage, so the form shows the
     // input layout of what is stored rather than the storage layout, and
     // an in-progress refinement rebuild overlays what was just chosen.
-    $stored = array_intersect_key($storage->load($surface), $surface->getDefinitions()->keys());
+    $stored = array_intersect_key($storage->load($surface), $surface->entries()->keys());
     $values = $this->surfaceFormValues($surface, $stored, $form_state);
     $element = $this->surfaceFormBuilder()->buildSurfaceForm(
       $surface,

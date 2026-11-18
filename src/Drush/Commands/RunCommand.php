@@ -258,7 +258,7 @@ final class RunCommand extends Command {
    */
   protected function prepared(OperationRun $run, OutputInterface $output, DrushStyle $io, bool $json): int {
     $takes = [];
-    foreach ($run->surface()->getDefinitions()->entries() as $key => $entry) {
+    foreach ($run->surface()->entries()->entries() as $key => $entry) {
       $schema = $entry->schema();
       $takes[(string) $key] = [
         'type' => SchemaFacts::dataType($schema),

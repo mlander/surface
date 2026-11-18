@@ -91,7 +91,7 @@ use PortableSchema\Builder\Schema;
  * docs/decisions.md#an-entry-holds-the-form-its-source-gave and
  * docs/decisions.md#a-sealed-entry-holds-its-schema.
  *
- * @see \Drupal\surface\DefinitionMap
+ * @see \Drupal\surface\Entries
  *   The ordered collection of entries a data surface is sealed with.
  */
 final class Entry {
@@ -409,7 +409,7 @@ final class Entry {
    *   The new entry.
    *
    * @internal
-   *   The seal's alone, through DefinitionMap::fromArrays() with
+   *   The seal's alone, through Entries::fromArrays() with
    *   schemaFirst.
    */
   public function sealed(?string $chosen = NULL): static {
@@ -443,7 +443,7 @@ final class Entry {
    *   mount, whose definition is whole already.
    *
    * @internal
-   *   The seal's alone, through DefinitionMap::fromArrays() with
+   *   The seal's alone, through Entries::fromArrays() with
    *   schemaFirst.
    */
   public function whole(?string $chosen = NULL): static {
@@ -707,7 +707,7 @@ final class Entry {
     // its child's keys are placed in it.
     if ($map instanceof ComplexDataDefinitionInterface && !$map instanceof ListDataDefinitionInterface && (DefinitionSchema::isMap($map) || $sealed !== NULL)) {
       $held = $map->getPropertyDefinitions();
-      foreach ($sealed?->getDefinitions()->entries() ?? [] as $name => $entry) {
+      foreach ($sealed?->entries()->entries() ?? [] as $name => $entry) {
         if (!isset($held[$name])) {
           $schemas[(string) $name] = $entry->schema();
         }
@@ -715,13 +715,13 @@ final class Entry {
       foreach ($held as $name => $property) {
         $name = (string) $name;
         foreach ($children as $child) {
-          $entry = $child->getDefinitions()->entry($name);
+          $entry = $child->entries()->entry($name);
           if ($entry !== NULL && $entry->definition() === $property) {
             $schemas[$name] = $entry->schema();
             continue 2;
           }
         }
-        $entry = $byName?->getDefinitions()->entry($name);
+        $entry = $byName?->entries()->entry($name);
         if ($entry !== NULL) {
           $schemas[$name] = $entry->schema();
         }

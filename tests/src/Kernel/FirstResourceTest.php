@@ -147,7 +147,7 @@ class FirstResourceTest extends SurfaceKernelTestBase {
     $this->setUpCurrentUser(admin: TRUE);
     $resources = $this->container->get('surface.resources');
     $built = $resources->buildStatic(NewsletterResource::class, $resources->operation(NewsletterResource::class, 'configure'));
-    foreach ($built->getDefinitions()->names() as $name) {
+    foreach ($built->entries()->names() as $name) {
       $this->assertInstanceOf(TranslatableMarkup::class, $built->getDefinition($name)->getLabel(), $name);
     }
     $this->assertInstanceOf(TranslatableMarkup::class, $built->getDefinition(NewsletterResource::MAX_RECIPIENTS)->getDescription());

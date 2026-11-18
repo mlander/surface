@@ -234,7 +234,7 @@ final class Validating {
   protected function validateLevel(SurfaceInterface $surface, array $values, array $current): array {
     $refined = $surface->refine($values);
     $errors = [];
-    foreach ($refined->getDefinitions()->entries() as $name => $entry) {
+    foreach ($refined->entries()->entries() as $name => $entry) {
       $name = (string) $name;
       // A key's facts are read from its schema, asked once: with assertions
       // on, each ask reads the definition again. A key that holds a child
@@ -321,7 +321,7 @@ final class Validating {
         // deciding key holds a value that names none, that key's own
         // Choice says so; when it holds nothing, this does.
         if (!ValueState::isConfigured($values[$entry->variants->by] ?? NULL)) {
-          $by = $refined->getDefinitions()->entry($entry->variants->by);
+          $by = $refined->entries()->entry($entry->variants->by);
           $errors[] = new Violation($name, '', $this->t('@label depends on @by, which holds no value.', [
             '@label' => SchemaFacts::label($schema) ?? $name,
             '@by' => Named::key(($by === NULL ? NULL : SchemaFacts::label($by->schema())) ?? $entry->variants->by, $this->frame[0] . $entry->variants->by),
@@ -355,7 +355,7 @@ final class Validating {
         // What a rule made required is said below, with the rest.
         $refusals[] = new Violation($name, (string) $path, $this->t('@label is required.', ['@label' => $label]), Violation::REQUIRED);
       }
-      if ($refusals !== [] && $this->isStale($schema, $value, $name, $current, $refined->getDefinitions()->dependencies($name), $values)) {
+      if ($refusals !== [] && $this->isStale($schema, $value, $name, $current, $refined->entries()->dependencies($name), $values)) {
         // The whole key is reported as stale and not re-judged. What
         // else its constraints would say is about a value this run is
         // not changing and could not have chosen — it is what storage
@@ -369,7 +369,7 @@ final class Validating {
     // What the validator refused of this level as a whole: a schema read
     // into it, a check on it. Its keys' own presence is the module's to
     // judge (required, does not apply, a variant's keys), above.
-    $keys = $surface->getDefinitions()->entries();
+    $keys = $surface->entries()->entries();
     foreach ($this->taken(rtrim($this->frame[0], '.'), FALSE) as [, $found]) {
       $property = is_string($found->params['property'] ?? NULL) ? $found->params['property'] : NULL;
       if (in_array($found->code, [Violation::REQUIRED, 'unknownProperty'], TRUE) && $property !== NULL && isset($keys[$property])) {
@@ -457,7 +457,7 @@ final class Validating {
     }
     $named = [];
     foreach ($violations as $violation) {
-      $entry = $violation->key === '' ? NULL : $surface->getDefinitions()->entry($violation->key);
+      $entry = $violation->key === '' ? NULL : $surface->entries()->entry($violation->key);
       $schema = $entry?->schema();
       $computed = $schema === NULL ? NULL : SchemaFacts::compute($schema);
       // A key computed unless sent holding a value its sources do not give
@@ -553,7 +553,7 @@ final class Validating {
    *   The refusals, each saying what is allowed where that applies.
    */
   protected function sayingWhatIsAllowed(array $refusals, SurfaceInterface $surface, SurfaceInterface $refined, string $name, array $values, array $choices): array {
-    $entry = $refined->getDefinitions()->entry($name);
+    $entry = $refined->entries()->entry($name);
     if ($refusals === [] || $entry === NULL) {
       return $refusals;
     }
@@ -814,7 +814,7 @@ final class Validating {
     // The key the options service is handed, its schema; nothing else is
     // read. A path that names no place inside the key says the key's own
     // choices, and a name that is no entry says none.
-    $entry = $refined->getDefinitions()->entry($name);
+    $entry = $refined->entries()->entry($name);
     $below = $entry === NULL || $path === '' ? NULL : static::below($entry->schema(), explode('.', $path));
     $key = $below ?? $entry?->schema();
     $set = $key === NULL ? NULL : $this->options->resolve($key);
@@ -917,7 +917,7 @@ final class Validating {
   protected function isRequired(SurfaceInterface $surface, SurfaceInterface $refined, string $name, string $path, string|\Stringable $label, array $values): TranslatableMarkup {
     $parents = $path === '' ? [$name] : [$name, ...explode('.', $path)];
     $declared = static::schemaAt($surface, $parents);
-    $entry = $refined->getDefinitions()->entry($name);
+    $entry = $refined->entries()->entry($name);
     $dependencies = $path === '' ? ($entry->dependencies ?? []) : ($entry->paths[$path] ?? $entry->dependencies ?? []);
     if ($entry?->variants !== NULL) {
       $dependencies = array_values(array_diff($dependencies, [$entry->variants->by]));
@@ -971,7 +971,7 @@ final class Validating {
    */
   protected function doesNotApply(SurfaceInterface $surface, SurfaceInterface $refined, string $name, string $path, array $values): TranslatableMarkup {
     $parents = $path === '' ? [$name] : [$name, ...explode('.', $path)];
-    $entry = $refined->getDefinitions()->entry($name);
+    $entry = $refined->entries()->entry($name);
     $dependencies = $path === '' ? ($entry->dependencies ?? []) : ($entry->paths[$path] ?? $entry->dependencies ?? []);
     if ($entry?->variants !== NULL) {
       // What chooses a variant is not what rules the key out.
@@ -1132,7 +1132,7 @@ final class Validating {
    */
   public static function schemaAt(SurfaceInterface $surface, array $parents): ?Schema {
     $first = (string) array_shift($parents);
-    $entry = $surface->getDefinitions()->entry($first);
+    $entry = $surface->entries()->entry($first);
     if ($entry === NULL) {
       // A port: the container's key it reads.
       return $parents === [] ? $surface->getPortSchema($first) : NULL;

@@ -565,7 +565,7 @@ class DefinitionRoundTripTest extends SurfaceKernelTestBase {
     }
     $walked->attach($surface, TRUE);
     $count = 1;
-    foreach (['in' => $surface->getDefinitions(), 'out' => $surface->getOutputDefinitions()] as $side => $map) {
+    foreach (['in' => $surface->entries(), 'out' => $surface->outputEntries()] as $side => $map) {
       foreach ($map->entries() as $name => $entry) {
         $here = "$at $side:$name";
         if (!$tops->contains($entry->definition())) {

@@ -144,7 +144,7 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
    */
   public function testMapNeedingFrameIsReadAgainTheSame(): void {
     $built = $this->container->get('surface.resources')->buildStatic('property_test.maps' . self::SUFFIX, new OperationContext('configure'));
-    $this->assertSame(['coordinates', 'booking'], $built->getDefinitions()->names());
+    $this->assertSame(['coordinates', 'booking'], $built->entries()->names());
     $full = $this->container->get('surface.contract_emitter')->emitFull($built, 'property_test.maps' . self::SUFFIX, 'configure')->document['schema'];
     $this->assertSame(['seats', 'row'], array_keys($full['properties']['booking']['properties']));
 
@@ -188,7 +188,7 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
     $this->assertSame('property_test.note' . self::SUFFIX, $definition->id);
     $this->assertSame(['block:surface_property_test_property_note'], $this->container->get('surface.resource_plugins')->usedBy(PropertyNoteBlock::class));
     $built = $this->container->get('surface.resources')->build('property_test.note' . self::SUFFIX, new OperationContext('configure'));
-    $this->assertSame(['color', 'note'], $built->getDefinitions()->names());
+    $this->assertSame(['color', 'note'], $built->entries()->names());
     $resources = $this->container->get('surface.resources');
     $this->assertSame($resources->defaults('property_test.note'), $resources->defaults('property_test.note' . self::SUFFIX));
     $this->assertSame(['color' => 'yellow', 'note' => 'Sticky'], $resources->defaults('property_test.note' . self::SUFFIX));
@@ -203,9 +203,9 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
    */
   public function testEachItemConstraintIsOnEveryEntry(): void {
     $resources = $this->container->get('surface.resources');
-    $roles = $resources->buildStatic('property_test.children.properties', new OperationContext('configure'))->getDefinitions()->entry('roles')?->attachment?->child;
+    $roles = $resources->buildStatic('property_test.children.properties', new OperationContext('configure'))->entries()->entry('roles')?->attachment?->child;
     $this->assertNotNull($roles);
-    $this->assertSame(['alpha', 'beta'], $roles->getDefinitions()->names());
+    $this->assertSame(['alpha', 'beta'], $roles->entries()->names());
     foreach (['alpha' => 'Alpha', 'beta' => 'Beta'] as $entry => $label) {
       $definition = $roles->getDefinition($entry);
       $this->assertSame('string', $definition?->getDataType());

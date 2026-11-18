@@ -101,7 +101,7 @@ final class Mixing {
         continue;
       }
       $built = $this->attaching->buildResource($structure->name(), $child_context, []);
-      $map = $built->getDefinitions();
+      $map = $built->entries();
       $locked = $access !== NULL && $access->isLocked();
       $present = [];
       foreach ($blueprint->declarationOrder() as $key) {

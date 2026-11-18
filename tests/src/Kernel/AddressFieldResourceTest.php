@@ -216,7 +216,7 @@ class AddressFieldResourceTest extends SurfaceKernelTestBase {
    * Tests that the resource carries the meaning the schema cannot.
    */
   public function testResourceCarriesLabelsAndChoices(): void {
-    $definitions = $this->surface()->getDefinitions();
+    $definitions = $this->surface()->entries();
     $this->assertSame(
       ['available_countries', 'langcode_override', 'field_overrides'],
       $definitions->names(),
@@ -531,7 +531,7 @@ class AddressFieldResourceTest extends SurfaceKernelTestBase {
   public function testResourceIsDeclaredOnTheClass(): void {
     $declared = $this->container->get('surface.resources')
       ->build(AddressFieldSettingsResource::class, new OperationContext('field_settings'))
-      ->getDefinitions()
+      ->entries()
       ->toArray();
 
     $this->assertSame(
@@ -579,7 +579,7 @@ class AddressFieldResourceTest extends SurfaceKernelTestBase {
    * Tests the two live lists resolving from the constraints that name them.
    */
   public function testLiveListsResolveFromTheirConstraints(): void {
-    $definitions = $this->surface()->getDefinitions();
+    $definitions = $this->surface()->entries();
     $options = $this->container->get('surface.options');
 
     $countries = $options->resolve($this->itemOf($definitions['available_countries']));

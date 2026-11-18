@@ -186,7 +186,7 @@ final class Computed {
    *   The values, each computed key holding its value.
    */
   public static function apply(SurfaceInterface $surface, array $values, array $stored): array {
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $schema = $entry->schema();
       $computed = SchemaFacts::compute($schema);
       if ($computed !== NULL && !$entry->locked && !($computed->takesSent() && ValueState::isConfigured($values[$name] ?? NULL))) {

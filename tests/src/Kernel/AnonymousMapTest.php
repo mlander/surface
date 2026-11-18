@@ -92,7 +92,7 @@ class AnonymousMapTest extends SurfaceKernelTestBase {
    * Tests a plain map is a map, and one holding a structure a structure.
    */
   public function testWhatEachMapIs(): void {
-    $definitions = $this->built()->getDefinitions();
+    $definitions = $this->built()->entries();
     $where = $definitions->entry('where');
     $this->assertNull($where->attachment, 'A map of plain keys is a map definition at the key.');
     $this->assertInstanceOf(MapDataDefinition::class, $where->definition());
@@ -103,10 +103,10 @@ class AnonymousMapTest extends SurfaceKernelTestBase {
     $this->assertNotNull($kit, 'A map holding a structure is a structure with no id, attached at the key.');
     $this->assertTrue(ResourceRegistry::isMap($kit->source));
     $this->assertSame(self::RESOURCE . '.kit', $kit->id);
-    $spare = $kit->child->getDefinitions()->entry('spare')->attachment;
+    $spare = $kit->child->entries()->entry('spare')->attachment;
     $this->assertTrue(ResourceRegistry::isMap($spare->source), 'Two levels deep.');
     $this->assertSame(self::RESOURCE . '.kit.spare', $spare->id);
-    $this->assertSame(BenchStructure::class, $spare->child->getDefinitions()->entry('bench')->attachment->source);
+    $this->assertSame(BenchStructure::class, $spare->child->entries()->entry('bench')->attachment->source);
   }
 
   /**

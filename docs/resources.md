@@ -2527,7 +2527,7 @@ final class ComponentProps implements SiteListInterface {
 
   public function list(): SiteList {
     $variants = (new SiteList())->addCacheTags(['config:core.extension']);
-    $components = $this->components->getDefinitions();
+    $components = $this->components->entries();
     ksort($components);
     foreach ($components as $id => $component) {
       $variants->add((string) $id, (string) ($component['name'] ?? $id), schema: self::props($component['props'] ?? []));

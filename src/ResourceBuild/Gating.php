@@ -1219,7 +1219,7 @@ final class Gating {
    */
   protected function childAnswers(ResourceDefinition $parent, OperationContext $context, AccountInterface $account, SurfaceInterface $built): array {
     $answers = [];
-    foreach ($built->getDefinitions()->entries() as $key => $entry) {
+    foreach ($built->entries()->entries() as $key => $entry) {
       $key = (string) $key;
       $attachment = $entry->attachment ?? $entry->list?->item;
       if ($attachment === NULL && $entry->variants !== NULL && $built->isLocked($entry->variants->by)) {

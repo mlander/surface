@@ -7,7 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Surface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\SurfacePipeline;
 use Drupal\surface\Pipeline\Sentences;
@@ -55,7 +55,7 @@ class LabeledChoiceTest extends SurfaceKernelTestBase {
    */
   protected function surface(): SurfaceInterface {
     return new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: [
           'mode' => DataDefinition::create('integer')
             ->setLabel('Mode')
@@ -174,7 +174,7 @@ class LabeledChoiceTest extends SurfaceKernelTestBase {
     $this->assertSame([0 => 'Disabled', 1 => 'Optional', 2 => 'Required'], $labels->labels);
 
     $surface = new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: [
           'mode' => DataDefinition::create('integer')
             ->setLabel('Mode')

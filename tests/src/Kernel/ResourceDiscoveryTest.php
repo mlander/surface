@@ -335,7 +335,7 @@ class ResourceDiscoveryTest extends SurfaceKernelTestBase {
     );
 
     // The limit is refined against the presentation, after the owner.
-    $this->assertSame(['limit' => ['presentation']], array_intersect_key($surface->getDefinitions()->refinements(), ['limit' => TRUE]));
+    $this->assertSame(['limit' => ['presentation']], array_intersect_key($surface->entries()->refinements(), ['limit' => TRUE]));
     $range = static fn (array $values): array => $surface->refine($values)->getDefinition('limit')->getConstraints()['Range'];
     $this->assertSame(['min' => 1, 'max' => ExampleBlockAlter::GRID_LIMIT], $range(['presentation' => 'grid']));
     $this->assertSame(['min' => 1, 'max' => 50], $range(['presentation' => 'list']));

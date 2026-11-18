@@ -226,7 +226,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $reader = $this->container->get(ConfigSchemaReader::class);
     $registry = $this->container->get('surface.resource_registry');
     $resources = $this->container->get('surface.resources');
-    $names = fn (string $name): array => $resources->buildStatic($name, new OperationContext('configure'))->getDefinitions()->names();
+    $names = fn (string $name): array => $resources->buildStatic($name, new OperationContext('configure'))->entries()->names();
 
     $typed = $this->container->get('config.typed');
     $block = [
@@ -234,7 +234,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
       'settings' => ['use_site_logo' => TRUE],
     ];
     $typed->createFromNameAndData('block.block.branding', $block)->get('settings')->getElements();
-    $this->assertArrayNotHasKey('type', $typed->getDefinitions()['block.settings.system_branding_block'], 'Merged for a value, the definition has lost its type.');
+    $this->assertArrayNotHasKey('type', $typed->entries()['block.settings.system_branding_block'], 'Merged for a value, the definition has lost its type.');
 
     $parent = $reader->structure('block.settings.system_branding_block', '', 'block_settings');
     $same = $reader->structure('block.settings.system_branding_block', '', 'block.settings.*');
@@ -345,7 +345,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
 
     // A condition's own key under the key, accepted; under another, refused.
     $built = $this->container->get('surface.resources')->buildStatic($name, new OperationContext('configure'));
-    $this->assertTrue($built->getDefinitions()->entry(ConfigSchemaReader::CHOSEN)->variants->storedFlat());
+    $this->assertTrue($built->entries()->entry(ConfigSchemaReader::CHOSEN)->variants->storedFlat());
     $refusals = function (array $value) use ($built): array {
       $accepted = $this->pipeline()->accept($built, $value, []);
       $messages = [];
@@ -383,16 +383,16 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $reader = $this->container->get(ConfigSchemaReader::class);
     $name = $reader->structure('surface_reader_test.handler.[plugin_id]');
     $built = $this->container->get('surface.resources')->buildStatic($name, new OperationContext('configure'));
-    $map = $built->getDefinitions();
+    $map = $built->entries();
     $this->assertSame(['plugin_id', ConfigSchemaReader::CHOSEN], $map->names());
     $handlers = $map->entry(ConfigSchemaReader::CHOSEN)->variants;
     $this->assertSame('plugin_id', $handlers?->by);
     $this->assertSame(['formatted', 'plain'], $handlers->variantIds());
-    $formatted = $handlers->variant('formatted')->child->getDefinitions();
+    $formatted = $handlers->variant('formatted')->child->entries();
     $this->assertSame(['format', 'settings'], $formatted->names());
     $this->assertSame('format', $formatted->entry('settings')->variants?->by);
     $this->assertSame(['bold', 'italic'], $formatted->entry('settings')->variants->variantIds());
-    $this->assertSame(['size'], $handlers->variant('plain')->child->getDefinitions()->names());
+    $this->assertSame(['size'], $handlers->variant('plain')->child->entries()->names());
     $refusals = function (array $value) use ($built): array {
       $accepted = $this->pipeline()->accept($built, $value, []);
       $messages = [];
@@ -450,7 +450,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $reader = $this->container->get(ConfigSchemaReader::class);
     $resources = $this->container->get('surface.resources');
     $fields = $resources->buildStatic($reader->structure('views.field.[plugin_id]'), new OperationContext('configure'))
-      ->getDefinitions()->entry(ConfigSchemaReader::CHOSEN)->variants;
+      ->entries()->entry(ConfigSchemaReader::CHOSEN)->variants;
     $field = $fields->variant('field')->child->getDefinition('separator');
     $roles = $fields->variant('user_roles')->child->getDefinition('separator');
     $this->assertSame(['string', 'string'], [$field->getDataType(), $roles->getDataType()]);
@@ -459,7 +459,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
 
     $name = $reader->structure('surface_reader_test.signal.[kind]');
     $built = $resources->buildStatic($name, new OperationContext('configure'));
-    $map = $built->getDefinitions();
+    $map = $built->entries();
     $this->assertSame(['kind', ConfigSchemaReader::CHOSEN], $map->names());
     $signals = $map->entry(ConfigSchemaReader::CHOSEN)->variants;
     $this->assertSame('string', $signals->variant('word')->child->getDefinition('pattern')->getDataType());
@@ -544,7 +544,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $reader = $this->container->get(ConfigSchemaReader::class);
     $name = $reader->structure('surface_reader_test.counted');
     $built = $this->container->get('surface.resources')->buildStatic($name, new OperationContext('configure'));
-    $map = $built->getDefinitions();
+    $map = $built->entries();
     $this->assertSame(['min' => 1, 'max' => 3], $map->get('tags')->getConstraints()['Count']);
     $this->assertNotNull($map->entry('stops')->list, 'A collection.');
     $this->assertSame(['min' => 1, 'max' => 3], $map->get('stops')->getConstraints()['Count']);
@@ -595,7 +595,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
 
     $name = $reader->structure('surface_reader_test.open');
     $built = $this->container->get('surface.resources')->buildStatic($name, new OperationContext('configure'));
-    $this->assertSame(['langcode', 'kind', 'loose', 'nested'], $built->getDefinitions()->names());
+    $this->assertSame(['langcode', 'kind', 'loose', 'nested'], $built->entries()->names());
     $this->assertSame('any', $built->getDefinition('loose')->getDataType());
     $refusals = function (array $value) use ($built): array {
       $accepted = $this->pipeline()->accept($built, $value, []);

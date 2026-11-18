@@ -418,12 +418,12 @@ final class Declaring {
       ...array_keys($blueprint->fromSite()),
     ];
     foreach ([...$children, ...$mixed] as $key) {
-      if ($built->getDefinitions()->entry((string) $key) === NULL) {
+      if ($built->entries()->entry((string) $key) === NULL) {
         $omitted[] = $prefix . $key;
       }
     }
     // And inside a child this storage stores, by its path.
-    foreach ($built->getDefinitions()->entries() as $key => $entry) {
+    foreach ($built->entries()->entries() as $key => $entry) {
       $child = $entry->attachment?->source === NULL ? NULL : $this->registry->getDefinition((string) $entry->attachment->source);
       if ($child !== NULL && $child->storage === NULL) {
         array_push($omitted, ...$this->omittedKeys($child, $entry->attachment->child, $prefix . $key . '.'));

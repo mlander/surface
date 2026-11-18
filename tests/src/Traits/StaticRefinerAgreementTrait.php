@@ -83,7 +83,7 @@ trait StaticRefinerAgreementTrait {
       // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
       $schema = Schemas::decoded(SchemaResolver::inline(Schema::from($schema)));
     }
-    $definitions = $surface->getDefinitions();
+    $definitions = $surface->entries();
     // What the full schema itself is refined against: the locked keys,
     // which no value can change.
     $known = $values ?? [];
@@ -207,7 +207,7 @@ trait StaticRefinerAgreementTrait {
     }
     $compared = 0;
     foreach ($rules as $key => $conditions) {
-      $entry = $surface->getDefinitions()->entry($key);
+      $entry = $surface->entries()->entry($key);
       $this->assertNotNull($entry, sprintf('%s states a rule for "%s", which it does not declare.', $label, $key));
       $this->assertArrayNotHasKey('declared', $schema['properties'][$key]['x-surface'] ?? [], sprintf('In %s, "%s" carries no marker of its own: the frame\'s `rules` lists its conditionals.', $label, $key));
       // Every value a condition names, either side of every bound, nothing,

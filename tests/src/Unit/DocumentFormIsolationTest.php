@@ -25,7 +25,7 @@ class DocumentFormIsolationTest extends UnitTestCase {
    */
   protected const REFUSED = [
     'Drupal\surface\SurfaceInterface',
-    'Drupal\surface\DefinitionMap',
+    'Drupal\surface\Entries',
     'Drupal\surface\DefinitionMetadata',
     'Drupal\surface\Entry',
     'Drupal\surface\Variants',

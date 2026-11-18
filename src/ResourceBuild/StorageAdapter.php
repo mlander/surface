@@ -157,10 +157,10 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
     // Read back before anything is narrowed to the data surface's keys: a
     // variant's keys stored flat are none of them until they are gathered.
     $loaded = self::asked($surface, $this->loaded($this->context), $this->flatLayout($surface));
-    $values = array_intersect_key($loaded, $surface->getDefinitions()->keys());
+    $values = array_intersect_key($loaded, $surface->entries()->keys());
     $values = $this->referenceLayout($surface)?->fromStorage($values) ?? $values;
     foreach ($this->routes as $key => $routes) {
-      $entry = $surface->getDefinitions()->entry($key);
+      $entry = $surface->entries()->entry($key);
       $id = $entry === NULL ? NULL : $this->routeOf($entry, $values + $surface->getDefaultValues());
       if ($id !== NULL && isset($routes[$id])) {
         // Nothing stored apart is nothing stored: the key is left out, so
@@ -237,7 +237,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
     $children = [];
     $refused = [];
     foreach ($this->routes as $key => $routes) {
-      $entry = $surface->getDefinitions()->entry($key);
+      $entry = $surface->entries()->entry($key);
       $id = $entry === NULL ? NULL : $this->routeOf($entry, $values);
       if ($id === NULL || !isset($routes[$id])) {
         // A variant without storage of its own: the parent stores it.
@@ -449,7 +449,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    *   a data surface that declares none.
    */
   public function outputs(SurfaceInterface $surface, array $values, ?PreparedValues $prepared = NULL): array {
-    $outputs = $surface->getOutputDefinitions()->keys();
+    $outputs = $surface->outputEntries()->keys();
     if ($outputs === []) {
       return [];
     }

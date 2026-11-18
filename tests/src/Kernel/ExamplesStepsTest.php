@@ -202,12 +202,12 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
    */
   public function testStepTwoNarrowsRoomByVenueAndCapacityByRoom(): void {
     $surface = $this->surface(RegistrationStep2Resource::class);
-    $this->assertSame(['venue'], $surface->getDefinitions()->dependencies('room'));
-    $this->assertSame(['room'], $surface->getDefinitions()->dependencies('capacity'));
+    $this->assertSame(['venue'], $surface->entries()->dependencies('room'));
+    $this->assertSame(['room'], $surface->entries()->dependencies('capacity'));
 
     $rooms = $this->options()->resolve($surface->refine(['venue' => 'harbour'])->getDefinition('room'));
     $this->assertSame(['harbour_auditorium', 'harbour_deck'], array_keys($rooms->options));
-    $this->assertSame(['title', 'open', 'venue', 'room', 'capacity'], $surface->getDefinitions()->names());
+    $this->assertSame(['title', 'open', 'venue', 'room', 'capacity'], $surface->entries()->names());
     $this->assertNull($surface->getDefinition('capacity')->getDescription());
     $capacity = $surface->refine(['venue' => 'library', 'room' => 'library_garden'])->getDefinition('capacity');
     $this->assertSame(['min' => 1, 'max' => 30], $capacity->getConstraints()['Range']);
@@ -292,7 +292,7 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
    */
   public function testStepThreeResolvesTheTicketAndValidatesTheContact(): void {
     $surface = $this->surface(RegistrationStep3Resource::class);
-    $entry = $surface->getDefinitions()->entry('ticket');
+    $entry = $surface->entries()->entry('ticket');
     $this->assertSame('pricing', $entry->variants?->by);
     $this->assertSame(['free', 'paid'], $entry->variants->variantIds());
     $paid = $surface->refine(['pricing' => 'paid'])->getDefinition('ticket');

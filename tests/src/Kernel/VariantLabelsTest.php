@@ -121,7 +121,7 @@ class VariantLabelsTest extends SurfaceKernelTestBase {
   public function testDeclaredListNarrows(): void {
     $surface = self::attached(DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['tin', 'jar']]), ['jar' => 'Glass jar']);
     $this->assertSame(['choices' => ['tin', 'jar']], $surface->getDefinition('kind')->getConstraints()['Choice'], 'Its own list, in its own order, with no labels merged in.');
-    $this->assertSame(['jar', 'tin'], $surface->getDefinitions()->entry('settings')->variants->variantIds(), 'A variant the list leaves out is not offered.');
+    $this->assertSame(['jar', 'tin'], $surface->entries()->entry('settings')->variants->variantIds(), 'A variant the list leaves out is not offered.');
   }
 
   /**

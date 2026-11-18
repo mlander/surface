@@ -415,7 +415,7 @@ final class KeyPaths {
     while ($definition === NULL) {
       $settled = $settled || $frame->lockedWhole() !== NULL;
       $first = $segments[$depth];
-      $entry = $frame->getDefinitions()->entry($first);
+      $entry = $frame->entries()->entry($first);
       if ($entry === NULL) {
         throw $this->noKey($where, $path);
       }
@@ -556,7 +556,7 @@ final class KeyPaths {
     $paths = [];
     foreach ($values as $key => $value) {
       $key = (string) $key;
-      $entry = $surface->getDefinitions()->entry($key);
+      $entry = $surface->entries()->entry($key);
       $child = $entry !== NULL && $entry->variants === NULL && $entry->list === NULL && DefinitionMetadata::eachOf($entry->definition()) === NULL ? $entry->attachment : NULL;
       $paths += match (TRUE) {
         // A value that is no array is held whole: no schema is read for it.

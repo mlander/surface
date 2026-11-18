@@ -166,16 +166,16 @@ class VariantsHoldTest extends SurfaceKernelTestBase {
    */
   public function testVariantHoldsChildren(): void {
     $pack = $this->pack();
-    $map = $pack->getDefinitions();
+    $map = $pack->entries();
     $this->assertSame(self::PACK_KEYS, $map->names());
     $load = $map->entry('load')->variants;
     $this->assertSame('carry', $load->by);
     $this->assertSame(['day', 'frame'], $load->variantIds(), 'In the order discovery found them.');
-    $frame = $load->variant('frame')->child->getDefinitions();
+    $frame = $load->variant('frame')->child->entries();
     $this->assertSame(['capacity', 'belt', 'pockets'], $frame->names());
     $this->assertSame('resource_test.pack.belt', $frame->entry('belt')->attachment?->id, 'The hip belt, a child at a fixed key.');
     $this->assertSame('resource_test.pack.pocket', $frame->entry('pockets')->list?->item->id, 'The pockets, a collection.');
-    $day = $load->variant('day')->child->getDefinitions();
+    $day = $load->variant('day')->child->entries();
     $this->assertSame(['capacity', 'cover'], $day->names());
     $this->assertSame('resource_test.pack.day.cover', $day->entry('cover')->attachment?->id, 'The rain cover, a structure with no id.');
 
@@ -317,8 +317,8 @@ class VariantsHoldTest extends SurfaceKernelTestBase {
   public function testAnOmittedVariantTakesItsChildren(): void {
     $this->setUpCurrentUser([], ['administer site configuration', 'hide frame pack']);
     $pack = $this->pack();
-    $this->assertSame(self::PACK_KEYS, $pack->getDefinitions()->names());
-    $this->assertSame(['day'], $pack->getDefinitions()->entry('load')->variants->variantIds(), 'The frame pack is not offered.');
+    $this->assertSame(self::PACK_KEYS, $pack->entries()->names());
+    $this->assertSame(['day'], $pack->entries()->entry('load')->variants->variantIds(), 'The frame pack is not offered.');
     $resources = $this->container->get('surface.resources');
     $context = $resources->operation(PackResource::class, 'configure');
     $load = ['capacity' => 20, 'cover' => ['pouch' => ['name' => 'Fold']]];
@@ -362,12 +362,12 @@ class VariantsHoldTest extends SurfaceKernelTestBase {
    */
   public function testVariantHoldsVariants(): void {
     $shelter = $this->shelter();
-    $map = $shelter->getDefinitions();
+    $map = $shelter->entries();
     $this->assertSame(self::SHELTER_KEYS, $map->names());
     $kinds = $map->entry('shelter')->variants;
     $this->assertSame('kind', $kinds->by);
     $this->assertSame(['hut', 'tarp'], $kinds->variantIds());
-    $hut = $kinds->variant('hut')->child->getDefinitions();
+    $hut = $kinds->variant('hut')->child->entries();
     $this->assertSame(['roof', 'covering'], $hut->names());
     $covering = $hut->entry('covering')->variants;
     $this->assertNotNull($covering, 'The hut\'s variants at the covering.');
@@ -534,8 +534,8 @@ class VariantsHoldTest extends SurfaceKernelTestBase {
   public function testOneVariantHeldByTwoOwners(): void {
     $resources = $this->container->get('surface.resources');
     $camp = $resources->build(CampStructure::class, new OperationContext('configure'));
-    $this->assertSame(['site', 'camp'], $camp->getDefinitions()->names());
-    $ids = static fn (SurfaceInterface $owner, string $key): array => array_values(array_map(static fn ($variant): ?string => $variant->id, $owner->getDefinitions()->entry($key)->variants->variant('hut')->child->getDefinitions()->entry('covering')->variants->variants));
+    $this->assertSame(['site', 'camp'], $camp->entries()->names());
+    $ids = static fn (SurfaceInterface $owner, string $key): array => array_values(array_map(static fn ($variant): ?string => $variant->id, $owner->entries()->entry($key)->variants->variant('hut')->child->entries()->entry('covering')->variants->variants));
     $this->assertSame($ids($this->shelter(), 'shelter'), $ids($camp, 'camp'));
     $slate = ['roof' => 'slate', 'covering' => ['tiles' => 2]];
     $accepted = $this->pipeline()->accept($camp, ['site' => 'hut', 'camp' => $slate], []);
@@ -595,7 +595,7 @@ class VariantsHoldTest extends SurfaceKernelTestBase {
     $woken = $resources->buildDeclared($class, $context);
     $this->assertSame($cached + 1, $resources->buildCounts()['cached']);
     $this->assertNotSame($fresh, $woken);
-    $this->assertSame($fresh->getDefinitions()->names(), $woken->getDefinitions()->names());
+    $this->assertSame($fresh->entries()->names(), $woken->entries()->names());
     $this->assertSame($document, $emitted($woken));
   }
 

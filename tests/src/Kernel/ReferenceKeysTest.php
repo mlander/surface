@@ -172,18 +172,18 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
 
     // Of any type: a structure the example declares, its entity type
     // filtered by the structure's own declaration.
-    $thing = $built->getDefinitions()->entry('thing');
+    $thing = $built->entries()->entry('thing');
     $this->assertNotNull($thing->attachment);
     $this->assertSame('event.sponsorship.thing', $thing->attachment->id);
     $child = $thing->attachment->child;
-    $this->assertSame(['entity_type', 'id'], $child->getDefinitions()->names());
+    $this->assertSame(['entity_type', 'id'], $child->entries()->names());
     $this->assertSame(['interface' => ContentEntityInterface::class], $child->getDefinition('entity_type')->getConstraints()[References::TYPE_CONSTRAINT]);
     $this->assertSame('string', $child->getDefinition('id')->getDataType(), 'Entity types keep their ids as integers or strings: any id is a string.');
     // Its refiner narrows the id by the constraint every reference key
     // carries, so one mechanism serves all three.
     $refined = $child->refine(['entity_type' => 'node'], FALSE)->getDefinition('id');
     $this->assertSame(['entityTypeId' => 'node'], $refined->getConstraints()[References::CONSTRAINT]);
-    $credit = $built->getDefinitions()->entry('credit')->attachment->child;
+    $credit = $built->entries()->entry('credit')->attachment->child;
     $this->assertSame(['entityTypeId' => 'node', 'bundles' => ['article']], $credit->refine(['entity_type' => 'node'], FALSE)->getDefinition('id')->getConstraints()[References::CONSTRAINT], 'A bundle list narrows the id of each entity type it names.');
 
     // What the build refuses of a reference key, and the type strings
@@ -249,7 +249,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
    */
   public function testAnEntityTypeReadFromCode(): void {
     $references = $this->container->get('surface.references');
-    $types = $this->container->get('entity_type.manager')->getDefinitions();
+    $types = $this->container->get('entity_type.manager')->entries();
     $content = clone $types['node'];
     $content->set('id', 'zz_content');
     $config = clone $types['event_venue'];

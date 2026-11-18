@@ -285,7 +285,7 @@ class ShapesTest extends SurfaceKernelTestBase {
     $this->assertSame(['Regex' => self::PATTERN], self::declared(Shapes::unaltered(Sku::class)));
     $this->assertSame('Letters and digits.', (string) Shapes::unaltered(Sku::class)->getDescription());
     // The shelf tag's port reads the shape, wired to the stock code.
-    $this->assertSame('resource_test.sku', $this->container->get('surface.resources')->build(ShelfTagStructure::class, new OperationContext('configure'))->getDefinitions()->ports()['code']->shape);
+    $this->assertSame('resource_test.sku', $this->container->get('surface.resources')->build(ShelfTagStructure::class, new OperationContext('configure'))->entries()->ports()['code']->shape);
   }
 
   /**

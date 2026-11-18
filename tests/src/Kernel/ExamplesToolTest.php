@@ -319,7 +319,7 @@ class ExamplesToolTest extends SurfaceKernelTestBase {
     $surface = $resources->build(RegistrationStep3Resource::class, $resources->operation(RegistrationStep3Resource::class, 'configure'));
     $derived = new \ReflectionProperty(Entry::class, 'definition');
     $unread = [];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $this->assertTrue($entry->isSchemaFirst());
       if ($derived->getValue($entry) === NULL) {
         $unread[(string) $name] = $entry;

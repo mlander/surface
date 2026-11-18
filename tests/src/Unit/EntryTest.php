@@ -12,7 +12,7 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Attachment;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\Schemas;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\ResourceBuild\Location;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
@@ -186,7 +186,7 @@ class EntryTest extends UnitTestCase {
   public function testShellComposesItsSchema(): void {
     $children = static::children('City');
     $child = $this->createMock(SurfaceInterface::class);
-    $child->method('getDefinitions')->willReturn($children);
+    $child->method('entries')->willReturn($children);
     $definition = Attachment::mapOf(MapDataDefinition::create()->setLabel('Where'), $child);
     $entry = new Entry('where', $definition, attachment: new Attachment($child));
     $schema = $entry->schema();
@@ -200,7 +200,7 @@ class EntryTest extends UnitTestCase {
     // the refined child's entries' schemas (Surface::refineNested()).
     $refined_children = static::children('Town');
     $refined = $this->createMock(SurfaceInterface::class);
-    $refined->method('getDefinitions')->willReturn($refined_children);
+    $refined->method('entries')->willReturn($refined_children);
     $narrowed = $entry->withSchema(DefinitionSchema::withProperties($schema, static::schemas($refined_children)));
     $this->assertTrue($narrowed->isSchemaFirst(), 'The refined shell is schema-first.');
     $this->assertSame('Town', DefinitionSchema::propertyOf($narrowed->schema(), 'city')?->get('title'));
@@ -218,13 +218,13 @@ class EntryTest extends UnitTestCase {
   public function testRefinedShellKeepsItsChild(): void {
     $children = static::children('City');
     $child = $this->createMock(SurfaceInterface::class);
-    $child->method('getDefinitions')->willReturn($children);
+    $child->method('entries')->willReturn($children);
     $child->method('withPorts')->willReturnSelf();
     $definition = Attachment::mapOf(MapDataDefinition::create()->setLabel('Where'), $child);
     $entry = new Entry('where', $definition, attachment: new Attachment($child, reads: ['venue' => 'venue']));
     $refined_children = static::children('Town');
     $refined = $this->createMock(SurfaceInterface::class);
-    $refined->method('getDefinitions')->willReturn($refined_children);
+    $refined->method('entries')->willReturn($refined_children);
     $composed = $entry->withSchema(DefinitionSchema::withProperties($entry->schema(), static::schemas($refined_children)));
     $bound = $composed->readingFrom(['venue' => 'hall']);
     $this->assertNotNull($bound);
@@ -257,7 +257,7 @@ class EntryTest extends UnitTestCase {
   public function testTheSameSource(): void {
     $schema = DefinitionSchema::of(static::map());
     $child = $this->createMock(SurfaceInterface::class);
-    $child->method('getDefinitions')->willReturn(static::children('City'));
+    $child->method('entries')->willReturn(static::children('City'));
     $child->method('withPorts')->willReturnSelf();
     $sealed = Entry::ofSchema('where', $schema, attachment: new Attachment($child, reads: ['venue' => 'venue']));
     $this->assertTrue($sealed->sameSource($sealed), 'An entry and itself.');
@@ -295,7 +295,7 @@ class EntryTest extends UnitTestCase {
   public function testPortCopyCarriesTheRefinementMark(): void {
     $schema = DefinitionSchema::of(static::map());
     $child = $this->createMock(SurfaceInterface::class);
-    $child->method('getDefinitions')->willReturn(static::children('City'));
+    $child->method('entries')->willReturn(static::children('City'));
     $sealed = Entry::ofSchema('where', $schema, attachment: new Attachment($child, reads: ['venue' => 'venue']));
     $this->assertFalse($sealed->readingFrom(['venue' => 'hall'])?->madeByRefinement(), 'A copy of a sealed entry: no mark.');
     $composed = $sealed->withSchema(DefinitionSchema::withProperties($schema, static::schemas(static::children('Town'))), TRUE);
@@ -308,13 +308,13 @@ class EntryTest extends UnitTestCase {
   /**
    * Gets a child's entries' schemas, by name.
    *
-   * @param \Drupal\surface\DefinitionMap $entries
+   * @param \Drupal\surface\Entries $entries
    *   The entries.
    *
    * @return array<string, \PortableSchema\Builder\Schema>
    *   Each entry's schema.
    */
-  protected static function schemas(DefinitionMap $entries): array {
+  protected static function schemas(Entries $entries): array {
     $schemas = [];
     foreach ($entries->entries() as $name => $entry) {
       $schemas[(string) $name] = $entry->schema();
@@ -328,11 +328,11 @@ class EntryTest extends UnitTestCase {
    * @param string $label
    *   The city's label.
    *
-   * @return \Drupal\surface\DefinitionMap
+   * @return \Drupal\surface\Entries
    *   The entries.
    */
-  protected static function children(string $label): DefinitionMap {
-    return new DefinitionMap([
+  protected static function children(string $label): Entries {
+    return new Entries([
       new Entry('city', DataDefinition::create('string')->setLabel($label)->setRequired(TRUE)),
       new Entry('rooms', DataDefinition::create('integer')->setLabel('Rooms')),
     ]);
@@ -355,7 +355,7 @@ class EntryTest extends UnitTestCase {
     $this->assertSame($schema, $entry->withDefinition($definition)->schema(), 'The same definition keeps the schema.');
 
     $child = $this->createMock(SurfaceInterface::class);
-    $child->method('getDefinitions')->willReturn(new DefinitionMap([]));
+    $child->method('entries')->willReturn(new Entries([]));
     $wired = new Entry('where', $definition, attachment: new Attachment($child, reads: ['venue' => 'venue']));
     $read = $wired->schema();
     $bound = $wired->readingFrom(['venue' => 'hall']);
@@ -496,7 +496,7 @@ class EntryTest extends UnitTestCase {
   public function testCopiesKeepTheSource(): void {
     $schema = DefinitionSchema::of(static::map());
     $child = $this->createMock(SurfaceInterface::class);
-    $child->method('getDefinitions')->willReturn(new DefinitionMap([]));
+    $child->method('entries')->willReturn(new Entries([]));
     $entry = Entry::ofSchema('where', $schema, attachment: new Attachment($child, reads: ['venue' => 'venue']));
     $derived = $entry->definition();
 

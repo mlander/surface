@@ -66,7 +66,7 @@ class ConstraintMessageTranslationTest extends SurfaceKernelTestBase {
    */
   public function testTheBuildHandsTheValidatorTheSource(): void {
     $built = $this->container->get('surface.resources')->buildOperation('event.doors', 'configure');
-    $this->assertSame(self::MESSAGE, $built->getDefinitions()->get('opens')->getConstraints()['Regex']['message'], 'The message written with t() is its source string.');
+    $this->assertSame(self::MESSAGE, $built->entries()->get('opens')->getConstraints()['Regex']['message'], 'The message written with t() is its source string.');
 
     $license = DefinitionMetadata::shapeDefinition(Shapes::unaltered(License::class));
     $this->assertNotNull($license);

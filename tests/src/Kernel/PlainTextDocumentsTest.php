@@ -9,7 +9,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface_test\ModeSubsetRefiner;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -50,7 +50,7 @@ class PlainTextDocumentsTest extends SurfaceKernelTestBase {
    *   The data surface.
    */
   protected function surface(): SurfaceInterface {
-    return new Surface(DefinitionMap::fromArrays(
+    return new Surface(Entries::fromArrays(
       definitions: [
         'scope' => DataDefinition::create('string')
           ->setLabel($this->t('Double quotation marks (@value)', ['@value' => '"'])),

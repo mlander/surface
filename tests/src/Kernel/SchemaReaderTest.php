@@ -145,7 +145,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
         "plain": {"type": "string"}
       }}
       JSON));
-    $types = array_map(static fn ($definition): string => $definition->getDataType(), $read->getDefinitions()->toArray());
+    $types = array_map(static fn ($definition): string => $definition->getDataType(), $read->entries()->toArray());
     $this->assertSame([
       'title' => 'string',
       'note' => 'string',
@@ -286,7 +286,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       }}
       JSON);
     $read = $this->read($document);
-    $map = $read->getDefinitions();
+    $map = $read->entries();
     $this->assertTrue($map->isLocked('id'));
     $this->assertSame('main', $read->getDefault('id'));
     $this->assertTrue(DefinitionMetadata::isSecret($read->getDefinition('key')));
@@ -312,7 +312,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       ['outer' => static::object(['inner' => ['$ref' => '#/$defs/person']])],
       ['$defs' => ['person' => $document['$defs']['person']]],
     ));
-    $this->assertSame('test.read.outer', $nested->getDefinitions()->entry('outer')->attachment->id);
+    $this->assertSame('test.read.outer', $nested->entries()->entry('outer')->attachment->id);
   }
 
   /**
@@ -334,12 +334,12 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
          "then": {"properties": {"detail": {"type": "object", "additionalProperties": false, "properties": {"length": {"type": "integer"}}}}}}
       ]}
       JSON));
-    $variants = $read->getDefinitions()->entry('detail')->variants;
+    $variants = $read->entries()->entry('detail')->variants;
     $this->assertSame('kind', $variants->by);
     $this->assertSame(['box', 'tube'], array_keys($variants->variants));
     $this->assertSame('test.read.detail.box', $variants->variants['box']->id);
-    $this->assertSame(['width'], $variants->variants['box']->child->getDefinitions()->names());
-    $this->assertSame([], $read->getDefinitions()->frameConstraints(), "Both conditionals are the variants' own.");
+    $this->assertSame(['width'], $variants->variants['box']->child->entries()->names());
+    $this->assertSame([], $read->entries()->frameConstraints(), "Both conditionals are the variants' own.");
   }
 
   /**
@@ -366,7 +366,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       ]}
       JSON);
     $read = $this->read($document);
-    $map = $read->getDefinitions();
+    $map = $read->entries();
     $this->assertSame(['frequency'], $map->dependencies('send_day'));
     $this->assertSame(['frequency'], $map->dependencies('items'));
     $this->assertSame(['license'], $map->dependencies('note'));
@@ -419,7 +419,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
         'patternProperties' => ['^x-' => ['type' => 'string']],
         'dependentRequired' => ['odd' => ['either']],
       ],
-    ], $read->getDefinitions()->frameConstraints());
+    ], $read->entries()->frameConstraints());
 
     // Both documents name them, with the keywords and the schema itself.
     $full = $this->container->get('surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
@@ -490,7 +490,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
        "patternProperties": {"^x-": {"type": "string"}},
        "portable-check": {"drupal:JsonSchema": {"schema": {"minProperties": 1}}}}
       JSON));
-    $this->assertCount(2, $read->getDefinitions()->frameConstraints());
+    $this->assertCount(2, $read->entries()->frameConstraints());
     $emitter = $this->container->get('surface.contract_emitter');
     $full = $emitter->emitFull($read, 'test.read')->document['schema'];
     $this->assertSame(['allOf' => [['minProperties' => 1], ['patternProperties' => ['^x-' => ['type' => 'string']]]]], $full['portable-check']['drupal:JsonSchema']['schema']);
@@ -1021,10 +1021,10 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
          "then": {"properties": {"contact": {"type": "object", "properties": {"email": {"type": "string"}}, "required": ["email"]}}}}
       ]}
       JSON));
-    $contact = $read->getDefinitions()->entry('contact')->attachment;
+    $contact = $read->entries()->entry('contact')->attachment;
     $this->assertSame(['shown' => 'listed'], $contact->reads);
-    $this->assertSame(['shown'], array_keys($contact->child->getDefinitions()->ports()));
-    $this->assertSame(['shown'], $contact->child->getDefinitions()->dependencies('email'), "The rule the container stated is the child's, on its port.");
+    $this->assertSame(['shown'], array_keys($contact->child->entries()->ports()));
+    $this->assertSame(['shown'], $contact->child->entries()->dependencies('email'), "The rule the container stated is the child's, on its port.");
     $this->assertSame('radios', $read->getDefinition('badge')->getSetting('widget'));
     $this->assertTrue($read->getDefinition('notes')->getSetting('multiline'));
     $this->assertSame(['schema' => ['uniqueItems' => TRUE]], $read->getDefinition('kept')->getConstraint('JsonSchema'));

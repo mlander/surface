@@ -12,7 +12,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Surface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
@@ -103,7 +103,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
     }
 
     return new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: $definitions,
         locked: $locked,
       ),
@@ -223,7 +223,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
     $kind = DataDefinition::create('string')->setLabel('Kind')->setRequired(TRUE);
     DefinitionMetadata::setDefaultValue($kind, 'fixed');
     $surface = new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: [
           'kind' => $kind,
           'detail' => DataDefinition::create('string')->setLabel('Detail'),
@@ -353,7 +353,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
       'choices' => ['news', 'tips', 'events'],
       'labels' => ['news' => 'News', 'tips' => 'Tips', 'events' => 'Events'],
     ]);
-    return new Surface(DefinitionMap::fromArrays(definitions: ['tags' => $tags]));
+    return new Surface(Entries::fromArrays(definitions: ['tags' => $tags]));
   }
 
   /**
@@ -425,7 +425,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
         'labels' => [0 => 'Disabled', 1 => 'Optional', 2 => 'Required'],
       ]);
     $surface = new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: [
           'scope' => DataDefinition::create('string')->setLabel('Scope'),
           'mode' => $mode,
@@ -620,7 +620,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
     $map = MapDataDefinition::create()->setLabel('Extras')->setRequired(TRUE);
     $map->setPropertyDefinition('badge', DataDefinition::create('string')->setLabel('Badge'));
     $surface = new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: [
           'extras' => $map,
           'detail' => DataDefinition::create('string')->setLabel('Detail'),
@@ -646,7 +646,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
    */
   public function testLockedElementSaysWhy(): void {
     $surface = new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: [
           'plain' => DataDefinition::create('string')->setLabel('Plain'),
           'described' => DataDefinition::create('string')
@@ -672,7 +672,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
    */
   public function testEmptyOptionSetIsSelectOfNothing(): void {
     $surface = new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: [
           'badge' => DataDefinition::create('string')
             ->setLabel('Badge')
@@ -698,7 +698,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
    */
   public function testUnregisteredConstraintDoesNotBreakWidgetSelection(): void {
     $surface = new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: [
           'badge' => DataDefinition::create('string')
             ->setLabel('Badge')
@@ -718,7 +718,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
    */
   public function testOptionsCarryTheirCacheability(): void {
     $surface = new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: [
           'badge' => DataDefinition::create('string')
             ->setLabel('Badge')
@@ -837,7 +837,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
    */
   protected function dependencySurface(): SurfaceInterface {
     return new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: [
           'kind' => DataDefinition::create('string')->setLabel('Kind'),
           'detail' => DataDefinition::create('string')->setLabel('Detail'),

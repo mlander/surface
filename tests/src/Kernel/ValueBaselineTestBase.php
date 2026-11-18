@@ -270,7 +270,7 @@ abstract class ValueBaselineTestBase extends SurfaceKernelTestBase {
    */
   protected function walked(): \Generator {
     $names = [];
-    foreach ($this->container->get('surface.resource_registry')->getDefinitions() as $definition) {
+    foreach ($this->container->get('surface.resource_registry')->entries() as $definition) {
       $names[$definition->id] = $definition->name();
     }
     $resources = $this->container->get('surface.resources');
@@ -436,7 +436,7 @@ abstract class ValueBaselineTestBase extends SurfaceKernelTestBase {
         }
       }
     };
-    $walk($surface->getDefinitions()->toArray(), '');
+    $walk($surface->entries()->toArray(), '');
     $places = array_map(static fn (array $place): array => $place['types'], ValueCorpus::places($document));
     $stated = [];
     foreach ($types as $pointer => $type) {

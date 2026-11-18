@@ -76,7 +76,7 @@ class TypedDataFootprintTest extends UnitTestCase {
     'TypedConfigManager',
     'DefinitionMetadata',
     'DefinitionTypedData',
-    'DefinitionMap',
+    'Entries',
   ];
 
   /**

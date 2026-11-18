@@ -116,7 +116,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
       'bundle' => ['entity_type'],
       'field' => ['entity_type', 'bundle'],
       'presentation_settings' => ['presentation'],
-    ], $this->exampleStructure()->getDefinitions()->refinements());
+    ], $this->exampleStructure()->entries()->refinements());
   }
 
   /**
@@ -155,10 +155,10 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
     $this->assertInstanceOf(ExampleBlock::class, $block);
     $this->assertSame([ExampleBlockStructure::class], $counting->builds);
     $this->assertSame(
-      array_keys($this->exampleStructure()->getDefinitions()->toArray()),
-      array_keys($block->getSurface()->getDefinitions()->toArray()),
+      array_keys($this->exampleStructure()->entries()->toArray()),
+      array_keys($block->getSurface()->entries()->toArray()),
     );
-    $variants = $block->getSurface()->getDefinitions()->entry('presentation_settings')?->variants;
+    $variants = $block->getSurface()->entries()->entry('presentation_settings')?->variants;
     $this->assertNotNull($variants);
     $this->assertSame(ListPresentationStructure::class, $variants->variant('list')->source);
     $this->assertSame(GridPresentationStructure::class, $variants->variant('grid')->source);
@@ -182,7 +182,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
     // is still the same resource.
     $open = $this->resources()->build(RecipeResource::class, new OperationContext('create'));
     $this->assertFalse($open->isLocked('kitchen'));
-    $this->assertSame(array_keys($add->getDefinitions()->toArray()), array_keys($open->getDefinitions()->toArray()));
+    $this->assertSame(array_keys($add->entries()->toArray()), array_keys($open->entries()->toArray()));
   }
 
   /**
@@ -210,7 +210,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
     // The dish is refined by the owner (watching course, by name) and by
     // the alter (watching vegetarian). The engine gates per key, so it
     // runs once both have values; until then it is as advertised.
-    $this->assertSame(['dish' => ['course', 'vegetarian'], 'servings' => ['course', 'vegetarian']], $surface->getDefinitions()->refinements());
+    $this->assertSame(['dish' => ['course', 'vegetarian'], 'servings' => ['course', 'vegetarian']], $surface->entries()->refinements());
     $this->assertCount(5, $choices($surface->refine(['course' => 'main'])));
     $this->assertSame(['fish', 'risotto'], $choices($surface->refine(['course' => 'main', 'vegetarian' => FALSE])));
     // The owner narrows to the course, then the alter takes the fish out.
@@ -338,7 +338,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
   public function testAnAlterWatchesOnlyTheKeysItMounted(): void {
     $kind = 'third_party_settings.surface_resource_test.kind';
     $surface = $this->resources()->build(MountWatcherStructure::class, new OperationContext('configure'));
-    $definitions = $surface->getDefinitions();
+    $definitions = $surface->entries();
     $this->assertSame(['size' => [$kind], 'third_party_settings' => [$kind]], $definitions->refinements());
     $this->assertSame(['size' => [$kind], 'third_party_settings.surface_resource_test.detail' => [$kind]], $definitions->refinementPaths());
 
@@ -367,7 +367,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
     $surface = $this->resources()->build(AttachingStructure::class, new OperationContext('configure'));
     $this->assertNull(DefinitionMetadata::variantsBy($surface->getDefinition('type')));
     $this->assertSame('type', DefinitionMetadata::variantsBy($surface->getDefinition('settings')));
-    $this->assertSame([], $surface->getDefinitions()->entry('settings')->variants->variantIds());
+    $this->assertSame([], $surface->entries()->entry('settings')->variants->variantIds());
     $this->assertSame(['choices' => []], $surface->getDefinition('type')->getConstraints()['Choice']);
     $this->assertContains('type', $this->pipeline()->validate($surface, ['type' => 'anything'])->keys());
   }
@@ -428,7 +428,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
     $this->assertSame(['garnish'], array_keys($this->mounted($add->getDefinition('third_party_settings'))));
     $this->assertSame('parsley', $add->getDefaultValues()['third_party_settings']['surface_resource_test']['garnish']);
     // Outputs are the operation's: no alter adds to them.
-    $this->assertSame(['id'], array_keys($add->getOutputDefinitions()->toArray()));
+    $this->assertSame(['id'], array_keys($add->outputEntries()->toArray()));
 
     // The edit-only alter applies where it says, and nowhere else. Alters
     // apply in discovery order, which is class name order within a module.

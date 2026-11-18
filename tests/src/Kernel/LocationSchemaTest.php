@@ -191,7 +191,7 @@ class LocationSchemaTest extends SurfaceKernelTestBase {
             $this->assertNotNull($parent, "$at, $how: its parent place is declared.");
             if ($parent->frame !== NULL) {
               // A key of a frame: that frame's entry holds the schema.
-              $entry = $parent->frame->getDefinitions()->entry($last);
+              $entry = $parent->frame->entries()->entry($last);
               $this->assertNotNull($entry, "$at, $how");
               $this->assertSame(static::json($entry->schema()), static::json($schema), "$at, $how: the schema of the entry at the key.");
               if ($closure !== NULL && $entry->definition() === $location->definition()) {
@@ -458,7 +458,7 @@ class LocationSchemaTest extends SurfaceKernelTestBase {
     }
     $seen[spl_object_id($surface)] = TRUE;
     $read = 0;
-    foreach ([$surface->getDefinitions(), $surface->getOutputDefinitions()] as $map) {
+    foreach ([$surface->entries(), $surface->outputEntries()] as $map) {
       foreach ($map->entries() as $entry) {
         $entry->schema();
         $read++;

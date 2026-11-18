@@ -348,7 +348,7 @@ final class SiteCatalog {
       return;
     }
     $seen[spl_object_id($surface)] = TRUE;
-    foreach ($surface->getDefinitions()->entries() as $entry) {
+    foreach ($surface->entries()->entries() as $entry) {
       $children = [
         ...($entry->attachment === NULL ? [] : [$entry->attachment]),
         ...array_values($entry->mounted),
@@ -359,7 +359,7 @@ final class SiteCatalog {
         static::settle($attachment->child, $seen);
       }
     }
-    foreach ($surface->getDefinitions()->mixins() as $mixin) {
+    foreach ($surface->entries()->mixins() as $mixin) {
       static::settle($mixin->structure->child, $seen);
     }
   }
@@ -611,7 +611,7 @@ final class SiteCatalog {
       }
     }
     $keys = [];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $name = (string) $name;
       $path = $prefix . $name;
       $definition = $entry->definition();

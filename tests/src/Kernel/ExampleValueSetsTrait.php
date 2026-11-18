@@ -99,7 +99,7 @@ trait ExampleValueSetsTrait {
    *   The values, with the items.
    */
   protected static function withItems(SurfaceInterface $surface, array $values): array {
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $held = $values[$name] ?? NULL;
       if (is_array($held) && $held !== []) {
         continue;
@@ -264,7 +264,7 @@ trait ExampleValueSetsTrait {
    */
   protected static function pointers(SurfaceInterface $surface, array $values, string $pointer = ''): array {
     $pointers = [$pointer, Location::append($pointer, 'nothing_declares_this')];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $at = Location::append($pointer, (string) $name);
       $value = $values[$name] ?? NULL;
       if ($entry->list !== NULL) {

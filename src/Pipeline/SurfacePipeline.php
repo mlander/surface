@@ -149,7 +149,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
   public function document(SurfaceInterface $surface, array $values): \stdClass {
     $document = new \stdClass();
     foreach ($values as $name => $value) {
-      $entry = $surface->getDefinitions()->entry((string) $name);
+      $entry = $surface->entries()->entry((string) $name);
       if ($value === NULL && $entry !== NULL && Secrets::marked($entry->schema())) {
         // A secret that holds nothing is written left out: null is no value
         // of it, and both schemas say so.
@@ -213,7 +213,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
     $defaults = NULL;
     $kept = [];
     $unwritten = [];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $name = (string) $name;
       if (!array_key_exists($name, $values)) {
         if (array_key_exists($name, $current)) {
@@ -512,7 +512,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
     // docs/decisions.md#apply-builds-for-the-current-user-and-writes-as-the-owner.
     $changes = match (TRUE) {
       $surface->changesNothing() => [],
-      count($surface->getDefinitions()) === 0 => [''],
+      count($surface->entries()) === 0 => [''],
       default => static::changes($write, $current),
     };
     try {

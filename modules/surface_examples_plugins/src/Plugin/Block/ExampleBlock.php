@@ -36,7 +36,7 @@ final class ExampleBlock extends TypedBlockBase {
   public function build(): array {
     $configuration = $this->getConfiguration();
     $items = [];
-    foreach ($this->getSurface()->getDefinitions() as $name => $definition) {
+    foreach ($this->getSurface()->entries() as $name => $definition) {
       $items[] = $this->t('@label: @value', [
         '@label' => $definition->getLabel() ?? $name,
         '@value' => $this->describeValue($configuration[$name] ?? NULL),

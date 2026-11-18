@@ -251,7 +251,7 @@ class TypedBlockBaseTest extends SurfaceKernelTestBase {
   public function testTheRefinerSignatureIsTheRefinementEdge(): void {
     $this->assertSame(
       ['casing'],
-      $this->createBlock()->getSurface()->getDefinitions()->entry('variant')?->dependencies,
+      $this->createBlock()->getSurface()->entries()->entry('variant')?->dependencies,
     );
   }
 

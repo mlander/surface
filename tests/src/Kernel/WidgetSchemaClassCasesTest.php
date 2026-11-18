@@ -122,7 +122,7 @@ class WidgetSchemaClassCasesTest extends SurfaceKernelTestBase {
       }
 
     });
-    $refined = $builder->seal()->refine(['size' => 'small'])->getDefinitions()->entry('tags');
+    $refined = $builder->seal()->refine(['size' => 'small'])->entries()->entry('tags');
     $this->assertNotNull($refined);
     return [
       'not a map' => DefinitionSchema::of($not_a_map),

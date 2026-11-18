@@ -100,8 +100,8 @@ class ComponentSlotsTest extends SurfaceKernelTestBase {
    *   The slot's structure.
    */
   protected function slot(SurfaceInterface $frame, string $component, string $slot): SurfaceInterface {
-    $slots = $frame->getDefinitions()->entry('slots')->variants->variants[$component]->child;
-    return $slots->getDefinitions()->entry($slot)->attachment->child;
+    $slots = $frame->entries()->entry('slots')->variants->variants[$component]->child;
+    return $slots->entries()->entry($slot)->attachment->child;
   }
 
   /**
@@ -114,7 +114,7 @@ class ComponentSlotsTest extends SurfaceKernelTestBase {
    *   Their ids, in order.
    */
   protected function offered(SurfaceInterface $slot): array {
-    $nested = $slot->getDefinitions()->entry('component')->attachment->child;
+    $nested = $slot->entries()->entry('component')->attachment->child;
     return array_map('strval', array_keys($this->options()->resolve($nested->getDefinition('component'))->options));
   }
 
@@ -153,15 +153,15 @@ class ComponentSlotsTest extends SurfaceKernelTestBase {
     // of two at most, and the section's content the components tagged.
     $built = $this->block();
     $actions = $this->slot($built, 'surface_examples:hero', 'actions');
-    $this->assertSame(['kind', 'text', 'component', 'components'], $actions->getDefinitions()->names());
+    $this->assertSame(['kind', 'text', 'component', 'components'], $actions->entries()->names());
     $this->assertSame(['surface_examples:call_to_action'], $this->offered($actions));
     $count = $actions->getDefinition('components')->getConstraint('Count');
     $this->assertSame(['max' => 2], $count);
     $this->assertSame(['surface_examples:card', 'surface_examples:hero'], $this->offered($this->slot($built, 'surface_examples:section', 'content')));
     $body = $this->slot($built, 'surface_examples:card', 'body');
-    $this->assertSame(['kind', 'text'], $body->getDefinitions()->names(), 'An empty list expects no component: text alone.');
+    $this->assertSame(['kind', 'text'], $body->entries()->names(), 'An empty list expects no component: text alone.');
     $single = $this->slot($built, self::NEST, 'single');
-    $this->assertSame(['kind', 'text', 'component'], $single->getDefinitions()->names(), 'One at most: text or one component, no list.');
+    $this->assertSame(['kind', 'text', 'component'], $single->entries()->names(), 'One at most: text or one component, no list.');
   }
 
   /**
@@ -173,12 +173,12 @@ class ComponentSlotsTest extends SurfaceKernelTestBase {
     $component = self::NEST;
     for ($depth = 1; $depth < ComponentSlots::DEPTH; $depth++) {
       $slot = $this->slot($frame, $component, 'inner');
-      $this->assertSame(['kind', 'text', 'component', 'components'], $slot->getDefinitions()->names(), "At depth $depth the slot holds components.");
+      $this->assertSame(['kind', 'text', 'component', 'components'], $slot->entries()->names(), "At depth $depth the slot holds components.");
       $this->assertSame([self::NEST], $this->offered($slot));
-      $frame = $slot->getDefinitions()->entry('component')->attachment->child;
+      $frame = $slot->entries()->entry('component')->attachment->child;
     }
     $capped = $this->slot($frame, $component, 'inner');
-    $this->assertSame(['kind', 'text'], $capped->getDefinitions()->names(), 'At the cap the slot holds text alone.');
+    $this->assertSame(['kind', 'text'], $capped->entries()->names(), 'At the cap the slot holds text alone.');
     $this->assertSame(['text'], array_map('strval', array_keys($this->options()->resolve($capped->getDefinition('kind'))->options)));
 
     // The same in the full schema: a def per depth, text alone at the cap.

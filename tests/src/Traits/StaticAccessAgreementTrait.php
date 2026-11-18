@@ -98,8 +98,8 @@ trait StaticAccessAgreementTrait {
   protected function assertSchemaStatesAccess(SurfaceInterface $alone, array $schema, string $label, bool $frozen = FALSE): int {
     $compared = 0;
     $properties = is_array($schema['properties'] ?? NULL) ? $schema['properties'] : [];
-    $this->assertSame($alone->getDefinitions()->names(), array_keys($properties), sprintf('%s: the full schema states every key the account may see and no other.', $label));
-    foreach ($alone->getDefinitions()->entries() as $name => $entry) {
+    $this->assertSame($alone->entries()->names(), array_keys($properties), sprintf('%s: the full schema states every key the account may see and no other.', $label));
+    foreach ($alone->entries()->entries() as $name => $entry) {
       $property = is_array($properties[$name]) ? $properties[$name] : [];
       $locked = $entry->locked || $frozen;
       // A computed key is read only too: nobody types it. One computed
@@ -131,8 +131,8 @@ trait StaticAccessAgreementTrait {
    */
   protected function assertStaticMarksHold(SurfaceInterface $alone, SurfaceInterface $built, string $label): int {
     $compared = 0;
-    $at_runtime = $built->getDefinitions();
-    foreach ($alone->getDefinitions()->entries() as $name => $entry) {
+    $at_runtime = $built->entries();
+    foreach ($alone->entries()->entries() as $name => $entry) {
       $now = $at_runtime->entry((string) $name);
       if ($entry->runtimeAccess) {
         continue;
@@ -145,7 +145,7 @@ trait StaticAccessAgreementTrait {
       }
     }
     foreach ($at_runtime->names() as $name) {
-      $this->assertNotNull($alone->getDefinitions()->entry($name), sprintf('%s: the full schema leaves "%s" out, and the build has it.', $label, $name));
+      $this->assertNotNull($alone->entries()->entry($name), sprintf('%s: the full schema leaves "%s" out, and the build has it.', $label, $name));
     }
     return $compared;
   }

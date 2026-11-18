@@ -11,7 +11,7 @@ use Drupal\surface\ConstraintMessages;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Contract\Schemas;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\MapBlueprint;
@@ -79,7 +79,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
    */
   public function testKeysAreTheDefinitionsTheirSchemasSay(): void {
     $built = $this->built();
-    $this->assertSame(['name', 'size', 'kept', 'loose', 'tags', 'where', 'contact', 'module', 'slug', 'sender', 'other'], $built->getDefinitions()->names());
+    $this->assertSame(['name', 'size', 'kept', 'loose', 'tags', 'where', 'contact', 'module', 'slug', 'sender', 'other'], $built->entries()->names());
 
     $name = $built->getDefinition('name');
     $this->assertSame('string', $name->getDataType());
@@ -272,7 +272,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
     $definition = $blueprint->definitionOf('open');
     $this->assertInstanceOf(MapDataDefinition::class, $definition);
     $this->assertSame(['city'], array_keys($definition->getPropertyDefinitions()));
-    $surface = new Surface(DefinitionMap::fromArrays(definitions: ['open' => $definition]));
+    $surface = new Surface(Entries::fromArrays(definitions: ['open' => $definition]));
     $schema = $this->container->get('surface.contract_emitter')->emit($surface, [], 'test')->document['schema'];
     $open = json_decode((string) json_encode($schema), TRUE)['properties']['open'];
     $this->assertFalse($open['additionalProperties']);
@@ -361,7 +361,7 @@ class AddSchemaTest extends SurfaceKernelTestBase {
     $this->assertSame(['integer', 'null'], $properties['count']['type']);
     $this->assertSame(['object', 'null'], $properties['place']['type']);
     $this->assertSame(['city'], array_keys($properties['place']['properties']));
-    $this->assertSame('portable:link', $built->getDefinitions()->entry('link')->attachment?->id, 'A type of the library that is an object is its structure.');
+    $this->assertSame('portable:link', $built->entries()->entry('link')->attachment?->id, 'A type of the library that is an object is its structure.');
     foreach (['size', 'count', 'place', 'link'] as $key) {
       $this->assertFalse($built->getDefinition($key)->isRequired(), $key . ' allows null: optional.');
       $this->assertSame([], $this->codes($built, [$key => NULL]), $key . ' takes null.');

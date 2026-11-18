@@ -201,7 +201,7 @@ class MixinsTest extends SurfaceKernelTestBase {
    */
   public function testMembersAreTheOwnersKeys(): void {
     $journal = $this->built(JournalResource::class);
-    $map = $journal->getDefinitions();
+    $map = $journal->entries();
     $this->assertSame(self::KEYS, $map->names());
     $this->assertSame([], $map->ports(), 'A mixed-in structure\'s port is no port of its owner\'s.');
     $mixins = $map->mixins();
@@ -212,7 +212,7 @@ class MixinsTest extends SurfaceKernelTestBase {
     $this->assertSame('resource_test.timestamps', $mixins[1]->structure->id);
     $this->assertSame(['created', 'changed'], $mixins[1]->keys);
     $this->assertSame([], $mixins[1]->reads);
-    $this->assertSame(['owner', 'shared'], $mixins[0]->structure->child->getDefinitions()->names(), 'Built by itself, for its def.');
+    $this->assertSame(['owner', 'shared'], $mixins[0]->structure->child->entries()->names(), 'Built by itself, for its def.');
     $this->assertSame([
       'owner' => ['visibility'],
       'shared' => ['visibility'],
@@ -220,7 +220,7 @@ class MixinsTest extends SurfaceKernelTestBase {
       'changed' => ['created'],
       'revision' => ['created'],
     ], $map->refinementPaths(), 'Each port read at the owner\'s key it is wired to; the owner\'s rules read and narrow members.');
-    $this->assertSame(['shelf', 'circle', 'owner', 'shared', 'stamps'], $map->entry('archive')->attachment->child->getDefinitions()->names(), 'The archive mixes the ownership in, in its own frame.');
+    $this->assertSame(['shelf', 'circle', 'owner', 'shared', 'stamps'], $map->entry('archive')->attachment->child->entries()->names(), 'The archive mixes the ownership in, in its own frame.');
 
     $this->assertSame([
       'title' => NULL,
@@ -355,7 +355,7 @@ class MixinsTest extends SurfaceKernelTestBase {
   public function testAccessLocksOrOmitsTheMembers(): void {
     $this->setUpCurrentUser([], ['administer site configuration', 'inspect ownership']);
     $journal = $this->built(JournalResource::class);
-    $map = $journal->getDefinitions();
+    $map = $journal->entries();
     $this->assertTrue($map->isLocked('owner') && $map->isHeld('owner'));
     $this->assertTrue($map->isLocked('shared') && $map->isHeld('shared'));
     $this->assertFalse($map->isLocked('created'));
@@ -371,9 +371,9 @@ class MixinsTest extends SurfaceKernelTestBase {
 
     $this->setUpCurrentUser([], ['administer site configuration', 'hide ownership']);
     $journal = $this->built(JournalResource::class);
-    $this->assertSame(['title', 'visibility', 'created', 'changed', 'revision', 'published', 'archive'], $journal->getDefinitions()->names());
-    $this->assertSame(['resource_test.timestamps'], array_map(static fn ($mixin) => $mixin->structure->id, $journal->getDefinitions()->mixins()));
-    $this->assertSame(['shelf', 'circle', 'stamps'], $journal->getDefinitions()->entry('archive')->attachment->child->getDefinitions()->names());
+    $this->assertSame(['title', 'visibility', 'created', 'changed', 'revision', 'published', 'archive'], $journal->entries()->names());
+    $this->assertSame(['resource_test.timestamps'], array_map(static fn ($mixin) => $mixin->structure->id, $journal->entries()->mixins()));
+    $this->assertSame(['shelf', 'circle', 'stamps'], $journal->entries()->entry('archive')->attachment->child->entries()->names());
     $resources = $this->container->get('surface.resources');
     $context = $resources->operation(JournalResource::class, 'configure');
     $result = $this->pipeline()->submit($journal, ['title' => 'Kept apart'], $resources->storage(JournalResource::class, $context, $journal));
@@ -387,11 +387,11 @@ class MixinsTest extends SurfaceKernelTestBase {
 
     // The stricter of the archive's answer and the ownership's.
     $this->setUpCurrentUser([], ['administer site configuration', 'inspect archive']);
-    $archive = $this->built(JournalResource::class)->getDefinitions()->entry('archive');
+    $archive = $this->built(JournalResource::class)->entries()->entry('archive');
     $this->assertTrue($archive->locked, 'The archive locked: everything in it, the ownership\'s members with it.');
     $this->setUpCurrentUser([], ['administer site configuration', 'hide archive', 'inspect ownership']);
-    $this->assertNull($this->built(JournalResource::class)->getDefinitions()->entry('archive'), 'The archive omitted: the ownership\'s lock inside it is gone with it.');
-    $this->assertTrue($this->built(JournalResource::class)->getDefinitions()->isHeld('owner'), 'At the top, the ownership still answers for its own members.');
+    $this->assertNull($this->built(JournalResource::class)->entries()->entry('archive'), 'The archive omitted: the ownership\'s lock inside it is gone with it.');
+    $this->assertTrue($this->built(JournalResource::class)->entries()->isHeld('owner'), 'At the top, the ownership still answers for its own members.');
   }
 
   /**
@@ -516,7 +516,7 @@ class MixinsTest extends SurfaceKernelTestBase {
    */
   public function testStructureMixesAnotherIn(): void {
     $entry = $this->container->get('surface.resources')->build(EntryStructure::class, new OperationContext('configure'));
-    $map = $entry->getDefinitions();
+    $map = $entry->entries();
     $this->assertSame(['line', 'reference', 'created', 'changed'], $map->names());
     $this->assertCount(1, $map->mixins());
     $this->assertSame(['reference', 'created', 'changed'], $map->mixins()[0]->keys);
@@ -551,7 +551,7 @@ class MixinsTest extends SurfaceKernelTestBase {
    */
   public function testMixedInStructureHoldsChildren(): void {
     $harnessed = $this->container->get('surface.resources')->build(HarnessedStructure::class, new OperationContext('configure'));
-    $map = $harnessed->getDefinitions();
+    $map = $harnessed->entries();
     $this->assertSame(['name', 'straps', 'belt', 'pockets', 'cover', 'notes'], $map->names(), 'Where the call stands, in the harness\'s order.');
     $this->assertSame(['straps', 'belt', 'pockets', 'cover'], $map->mixins()[0]->keys);
     $this->assertSame('resource_test.pack.belt', $map->entry('belt')->attachment?->id);

@@ -88,7 +88,7 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
     $registry = $this->container->get('surface.resource_registry');
 
     $roots = [];
-    foreach (array_keys($typed->getDefinitions()) as $name) {
+    foreach (array_keys($typed->entries()) as $name) {
       $name = (string) $name;
       $kind = $reader->rootKind($name);
       if ($kind !== 'mapping' && $name !== $kind) {
@@ -239,7 +239,7 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
       }
       $start = hrtime(TRUE);
       try {
-        $definitions = $resources->buildStatic($reader->structure(substr($structure, strlen(ConfigSchemaReader::PREFIX))), new OperationContext('configure'))->getDefinitions();
+        $definitions = $resources->buildStatic($reader->structure(substr($structure, strlen(ConfigSchemaReader::PREFIX))), new OperationContext('configure'))->entries();
         $chosen = $definitions->entry(ConfigSchemaReader::CHOSEN)?->variants;
         $tally['own_variants'][$structure] = count(array_map(static fn (string $value): SurfaceInterface => $chosen->variant($value)->child, $chosen?->variantIds() ?? []));
       }

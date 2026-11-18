@@ -231,7 +231,7 @@ final class Variants {
    *   The keys the variant does not take, in the value's order.
    */
   public function strangers(string $id, array $value): array {
-    $declared = $this->variant($id)->child->getDefinitions()->keys();
+    $declared = $this->variant($id)->child->entries()->keys();
     return array_map('strval', array_keys(array_diff_key($value, $declared)));
   }
 
@@ -312,7 +312,7 @@ final class Variants {
       foreach ($this->variants as $other => $variant) {
         // One not built yet that is known to hold no secret is not built
         // to be asked.
-        $entry = (string) $other === $id || $variant->holdsNoSecretUnsettled() ? NULL : $variant->child->getDefinitions()->entry((string) $key);
+        $entry = (string) $other === $id || $variant->holdsNoSecretUnsettled() ? NULL : $variant->child->entries()->entry((string) $key);
         if ($entry !== NULL && Secrets::marked($entry->schema())) {
           // A secret that holds nothing has nothing to keep.
           if ($value[$key] !== NULL && $value[$key] !== '') {
@@ -338,7 +338,7 @@ final class Variants {
    */
   public function ownSecrets(string $id, array $value): array {
     $own = [];
-    foreach ($this->variant($id)->child->getDefinitions()->entries() as $key => $entry) {
+    foreach ($this->variant($id)->child->entries()->entries() as $key => $entry) {
       if (array_key_exists($key, $value) && Secrets::marked($entry->schema())) {
         $own[$key] = $value[$key];
       }
@@ -369,7 +369,7 @@ final class Variants {
         continue;
       }
       foreach ($keys as $key) {
-        if ($variant->child->getDefinitions()->has($key)) {
+        if ($variant->child->entries()->has($key)) {
           $owners[$key][] = (string) $id;
         }
       }

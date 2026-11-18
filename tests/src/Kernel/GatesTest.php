@@ -207,7 +207,7 @@ class GatesTest extends SurfaceKernelTestBase {
     $batch = $resources->operation(GatedBatchResource::class, 'update');
     $this->assertFalse($resources->isRuntimeAtTheTop(GatedBatchResource::class, $batch, $this->container->get('current_user')), 'Per item, nothing at the top waits.');
     $static = $resources->buildStatic(GatedBatchResource::class, $batch);
-    $this->assertTrue($static->getDefinitions()->entry('items')->isRefinedAtRuntime() || $static->getDefinitions()->isRuntimeAccess('items'));
+    $this->assertTrue($static->entries()->entry('items')->isRefinedAtRuntime() || $static->entries()->isRuntimeAccess('items'));
     $full = $this->container->get('surface.contract_emitter')->emitFull($static, 'gate_test.batch', 'update', 'Note many nodes')->document['schema'];
     $this->assertTrue($full['properties']['items']['x-surface']['live'] ?? FALSE, 'The full schema marks the list live.');
   }

@@ -736,7 +736,7 @@ final class OpenApiDocument {
    */
   protected static function references(SurfaceInterface $surface, string $prefix = ''): array {
     $found = [];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       if ($entry->variants !== NULL || $entry->list !== NULL) {
         continue;
       }
@@ -744,7 +744,7 @@ final class OpenApiDocument {
       $child = $entry->attachment?->child;
       if ($child !== NULL) {
         $inside = static::references($child, $at);
-        $id = $child->getDefinitions()->entry('id');
+        $id = $child->entries()->entry('id');
         if ($id !== NULL && in_array($at . '/id', $inside, TRUE) && SchemaFacts::setting($id->schema(), References::TARGETS) !== NULL) {
           $found[] = $at;
         }

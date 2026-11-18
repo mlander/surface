@@ -80,7 +80,7 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
     // What the schema is generated from is built all the same: the schema
     // on disk is what is being replaced.
     $declared = $resources->declaration('schema_test.narrowed', $context);
-    $this->assertSame(['code', 'limit', 'mode', 'size', 'note'], $declared->getDefinitions()->names());
+    $this->assertSame(['code', 'limit', 'mode', 'size', 'note'], $declared->entries()->names());
     $generated = $this->container->get('surface.config_schema')->files(['surface_schema_test']);
     $schema = $generated[$this->container->get('extension.list.module')->getPath('surface_schema_test') . '/config/schema/surface_schema_test.schema.yml'];
     $this->assertStringContainsString(<<<'YAML'
@@ -108,7 +108,7 @@ class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
     $resources = $this->container->get('surface.resources');
     $context = $resources->operation('schema_test.aliases', 'configure');
     $built = $resources->build('schema_test.aliases', $context);
-    $this->assertSame(['types', 'marks'], $built->getDefinitions()->names());
+    $this->assertSame(['types', 'marks'], $built->entries()->names());
     $this->assertSame([], $this->container->get('class_resolver')->getInstanceFromDefinition(AliasSettingsStorage::class)->widerThanSchema($built));
     // Not told, the check names each entry.
     $untold = new class(

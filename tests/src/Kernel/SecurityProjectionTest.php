@@ -430,13 +430,13 @@ class SecurityProjectionTest extends SurfaceKernelTestBase {
   public function testChildPermissionNothingCanNameIsRefused(): void {
     $resources = $this->container->get('surface.resources');
     $bare = new OperationContext('create');
-    $this->assertFalse($resources->build('field.instance', $bare)->getDefinitions()->has('storage'));
-    $this->assertTrue($resources->buildStatic('field.instance', $bare)->getDefinitions()->has('storage'), 'A static listing describes it as it may be.');
+    $this->assertFalse($resources->build('field.instance', $bare)->entries()->has('storage'));
+    $this->assertTrue($resources->buildStatic('field.instance', $bare)->entries()->has('storage'), 'A static listing describes it as it may be.');
     $named = $resources->operation('field.instance', 'create', [
       'entity_type' => 'entity_test',
       'bundle' => 'entity_test',
     ]);
-    $this->assertTrue($resources->build('field.instance', $named)->getDefinitions()->has('storage'));
+    $this->assertTrue($resources->build('field.instance', $named)->entries()->has('storage'));
   }
 
   /**

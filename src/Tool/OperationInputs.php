@@ -838,10 +838,10 @@ final class OperationInputs {
     if (!$computed) {
       // One computed unless sent is a value a caller may give.
       $computed = static function (string $name) use ($built): ?Computed {
-        $entry = $built->getDefinitions()->entry($name);
+        $entry = $built->entries()->entry($name);
         return $entry === NULL ? NULL : SchemaFacts::compute($entry->schema());
       };
-      $properties = array_filter($properties, static fn (string $name): bool => $computed($name)?->takesSent() !== FALSE || $built->getDefinitions()->isLocked($name), ARRAY_FILTER_USE_KEY);
+      $properties = array_filter($properties, static fn (string $name): bool => $computed($name)?->takesSent() !== FALSE || $built->entries()->isLocked($name), ARRAY_FILTER_USE_KEY);
     }
     $map->setPropertyDefinitions($properties);
     $map->setRequired(array_filter($properties, static fn (DataDefinitionInterface $property): bool => $property->isRequired()) !== []);
@@ -1008,7 +1008,7 @@ final class OperationInputs {
    */
   protected function takesNoKeys(ResourceDefinition $resource, OperationDefinition $operation): bool {
     $context = $operation->needsNothing() ? $this->resources->operation($resource->name(), $operation->id) : new OperationContext($operation->contextId());
-    return $this->listed($resource, $context, TRUE)->getDefinitions()->names() === [];
+    return $this->listed($resource, $context, TRUE)->entries()->names() === [];
   }
 
   /**
@@ -1230,7 +1230,7 @@ final class OperationInputs {
    */
   protected function parameterInput(OperationParameter $parameter, ResourceDefinition $resource, OperationDefinition $operation, ?SurfaceInterface $neutral = NULL): InputDefinitionInterface {
     $label = ucfirst(str_replace('_', ' ', $parameter->name));
-    $key = $neutral?->getDefinitions()->entry($parameter->name);
+    $key = $neutral?->entries()->entry($parameter->name);
     if ($key !== NULL && $key->attachment === NULL && $key->variants === NULL && $key->list === NULL) {
       $input = $this->inputDefinitions->fromSchema($key->schema());
       $input->setRequired(!$parameter->optional);

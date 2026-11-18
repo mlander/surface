@@ -512,7 +512,7 @@ final class Attaching {
       }
       $read = $listed[$sibling] ?? NULL;
       foreach (array_keys($wired) as $entry) {
-        $match = $read?->getDefinitions()->entry((string) $entry)?->schema();
+        $match = $read?->entries()->entry((string) $entry)?->schema();
         if ($match === NULL) {
           throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", which has no "%s" entry: %s listed it for one map and not the other.', $definition->id, $port, $id, $key, $sibling, $entry, $each['from']));
         }
@@ -672,7 +672,7 @@ final class Attaching {
     if ($access !== NULL) {
       $builder->addCacheableDependency($access);
     }
-    foreach ($attachment->child->getDefinitions()->entries() as $name => $entry) {
+    foreach ($attachment->child->entries()->entries() as $name => $entry) {
       if ($entry->isNested() || $entry->list !== NULL || $entry->mounted !== []) {
         throw new \LogicException(sprintf(
           'The %s alter of %s attaches %s at its mount, %s, and %s holds a child at "%s". A structure at a mount holds keys and maps, not children, for now.',
@@ -688,7 +688,7 @@ final class Attaching {
     $attachment = $attachment->withReads($reads, static::wiredKeys($builder, $reads));
     $builder->mountStructure($module, $attachment);
     $this->wirePorts($builder, $key . '.', $attachment, TRUE, sprintf('the %s alter of %s', $module, $definition->id));
-    return $attachment->child->getDefinitions()->names();
+    return $attachment->child->entries()->names();
   }
 
   /**
@@ -926,7 +926,7 @@ final class Attaching {
    *   The container, in words, for a cycle's refusal.
    */
   protected function wirePorts(SurfaceBuilder $builder, string $prefix, Attachment $attachment, bool $internal, string $container): void {
-    $map = $attachment->child->getDefinitions();
+    $map = $attachment->child->entries();
     $ports = $map->ports();
     $kinds = [
       SurfaceInterface::CODED => [FALSE, FALSE],
@@ -1295,11 +1295,11 @@ final class Attaching {
    *   For a key the owner holds there, or variants stored flat of its own.
    */
   public static function assertFlatVariantFits(string $owner, string $key, string $value, string $variant, SurfaceInterface $child, array $own): void {
-    $shared = array_values(array_intersect($child->getDefinitions()->names(), $own));
+    $shared = array_values(array_intersect($child->entries()->names(), $own));
     if ($shared !== []) {
       throw new \LogicException(sprintf('%s stores the variants at "%s" flat beside its own keys (Variants::STORED_AS), and the variant for "%s", %s, declares "%s", which %s declares too. Stored flat, the two would be one key: rename one, or store the variants under "%s".', $owner, $key, $value, $variant, $shared[0], $owner, $key));
     }
-    foreach ($child->getDefinitions()->entries() as $name => $entry) {
+    foreach ($child->entries()->entries() as $name => $entry) {
       if ($entry->variants?->storedFlat()) {
         throw new \LogicException(sprintf('%s stores the variants at "%s" flat (Variants::STORED_AS), and the variant for "%s", %s, stores the variants at "%s" flat too, at the same level. Read back, every key that is not the owner\'s is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.', $owner, $key, $value, $variant, $name));
       }

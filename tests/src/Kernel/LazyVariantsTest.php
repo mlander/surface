@@ -98,7 +98,7 @@ class LazyVariantsTest extends SurfaceKernelTestBase {
   protected function settled(SurfaceInterface $built): array {
     $settled = [];
     foreach (self::LISTED as $key) {
-      foreach ($built->getDefinitions()->entry($key)->variants->variants as $value => $variant) {
+      foreach ($built->entries()->entry($key)->variants->variants as $value => $variant) {
         $this->assertTrue($variant->isDeferred(), $key . ' ' . $value . ' is listed by the site.');
         $settled[$key][(string) $value] = $variant->isSettled();
       }
@@ -115,7 +115,7 @@ class LazyVariantsTest extends SurfaceKernelTestBase {
     $this->assertCount(4, $settled['props'], 'The four components the examples ship.');
     $this->assertSame([], array_filter([...array_values($settled['props']), ...array_values($settled['slots'])]));
     // What chooses them is spelled out without building any.
-    $this->assertCount(4, $built->getDefinitions()->entry('props')->variants->variantIds());
+    $this->assertCount(4, $built->entries()->entry('props')->variants->variantIds());
     $this->assertSame(0, $this->resources()->buildCounts()['settled']);
   }
 
@@ -158,13 +158,13 @@ class LazyVariantsTest extends SurfaceKernelTestBase {
     $built = $this->spotlight();
     $before = $built->getCacheTags();
     $this->assertEquals(CacheableMetadata::createFromObject($built), SettledCacheability::of($built), 'Nothing read, nothing added.');
-    $card = $built->getDefinitions()->entry('props')->variants->variant('surface_examples:card')->child;
+    $card = $built->entries()->entry('props')->variants->variant('surface_examples:card')->child;
     $read = SettledCacheability::of($built)->getCacheTags();
     foreach ([...$before, ...$card->getCacheTags()] as $tag) {
       $this->assertContains($tag, $read);
     }
     $this->assertSame($before, $built->getCacheTags(), 'What the build itself read stays what it was sealed with.');
-    $this->assertSame($card, $built->getDefinitions()->entry('props')->variants->variant('surface_examples:card')->child, 'Built once, then kept.');
+    $this->assertSame($card, $built->entries()->entry('props')->variants->variant('surface_examples:card')->child, 'Built once, then kept.');
   }
 
 }

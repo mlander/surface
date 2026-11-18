@@ -56,9 +56,9 @@ class WidgetClaimTest extends SurfaceKernelTestBase {
   public function testClaimServesTheKeyAndLosesToTheOwnersSetting(): void {
     $swatch = $this->swatch();
     $widgets = $this->container->get('surface.widget_choice');
-    $this->assertInstanceOf(ColorPickerWidget::class, $widgets->forSchema($swatch->getDefinitions()->entry('accent')->schema()), 'The higher priority of two claims serves the key.');
-    $this->assertNull($widgets->claimed($swatch->getDefinitions()->entry('trim')->schema()), 'A key whose owner asks for a widget is claimed by none.');
-    $this->assertNull($widgets->claimed($swatch->getDefinitions()->entry('caption')->schema()), 'A key no claim matches is claimed by none.');
+    $this->assertInstanceOf(ColorPickerWidget::class, $widgets->forSchema($swatch->entries()->entry('accent')->schema()), 'The higher priority of two claims serves the key.');
+    $this->assertNull($widgets->claimed($swatch->entries()->entry('trim')->schema()), 'A key whose owner asks for a widget is claimed by none.');
+    $this->assertNull($widgets->claimed($swatch->entries()->entry('caption')->schema()), 'A key no claim matches is claimed by none.');
 
     $form = $this->formBuilder()->buildSurfaceForm($swatch, $swatch->getDefaultValues(), new FormState());
     $this->assertSame('color', $form['accent']['#type']);

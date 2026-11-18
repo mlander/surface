@@ -117,7 +117,7 @@ class RuntimeRefinementTest extends SurfaceKernelTestBase {
    * Tests the build binds each kind apart, and the entry says which.
    */
   public function testTheBuildKeepsTheKindsApart(): void {
-    $definitions = $this->stockroom()->getDefinitions();
+    $definitions = $this->stockroom()->entries();
     $shelf = $definitions->entry('shelf');
     $this->assertSame(['aisle'], $shelf->dependencies);
     $this->assertSame(['aisle'], $shelf->staticDependencies());

@@ -265,7 +265,7 @@ class ExampleFormatterTest extends SurfaceKernelTestBase {
     );
     $this->assertSame(
       ['variant' => ['surface_examples_extras' => ['ribbon']]],
-      $surface->getDefinitions()->contributions(),
+      $surface->entries()->contributions(),
     );
 
     // Both refiners run, and the answer is the union of what each one
@@ -371,7 +371,7 @@ class ExampleFormatterTest extends SurfaceKernelTestBase {
   public function testOutputsAreDeclaredBesideTheSettings(): void {
     $surface = $this->createFormatter()->getSurface();
 
-    $outputs = $surface->getOutputDefinitions();
+    $outputs = $surface->outputEntries();
     $this->assertSame(['text', 'classes'], $outputs->names());
     $this->assertSame('string', $outputs->get('text')->getDataType());
     $this->assertTrue($outputs->get('text')->isRequired());
@@ -382,7 +382,7 @@ class ExampleFormatterTest extends SurfaceKernelTestBase {
     $this->assertInstanceOf(ListDataDefinition::class, $classes);
     $this->assertArrayNotHasKey('Choice', $classes->getItemDefinition()->getConstraints());
     $refined = $surface->refine(['casing' => 'uppercase', 'variant' => 'bold'])
-      ->getOutputDefinitions()->get('classes');
+      ->outputEntries()->get('classes');
     $this->assertInstanceOf(ListDataDefinition::class, $refined);
     $this->assertArrayNotHasKey('Choice', $refined->getItemDefinition()->getConstraints());
   }
@@ -400,7 +400,7 @@ class ExampleFormatterTest extends SurfaceKernelTestBase {
     $this->assertSame(ExampleFormatter::class, $definition[UsesStructure::DEFINITION_KEY]);
     $this->assertSame(
       ['prefix', 'casing', 'variant', 'third_party_settings'],
-      $this->createFormatter()->getSurface()->getDefinitions()->names(),
+      $this->createFormatter()->getSurface()->entries()->names(),
     );
     // The static defaults are the structure's own shape, alters left out.
     $this->assertSame(

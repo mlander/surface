@@ -117,7 +117,7 @@ class DefinitionReadServiceFreeTest extends SurfaceKernelTestBase {
   public function testTheReadAsksNoService(): void {
     $definitions = [];
     foreach ($this->examples() as [, , $surface]) {
-      foreach ([...$surface->getDefinitions()->entries(), ...$surface->getOutputDefinitions()->entries()] as $entry) {
+      foreach ([...$surface->entries()->entries(), ...$surface->outputEntries()->entries()] as $entry) {
         $definitions[] = $entry->definition();
         if ($entry->variants !== NULL) {
           $definitions[] = $entry->variants->shell;

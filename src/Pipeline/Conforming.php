@@ -90,7 +90,7 @@ final class Conforming {
    *   What a check threw, once the validation returned.
    */
   public function conformOutput(SurfaceInterface $surface, array $output): ViolationSet {
-    $outputs = $surface->getOutputDefinitions();
+    $outputs = $surface->outputEntries();
     $output = NotEmitted::strip($output);
     $errors = [];
     // The places an object was refused at, by full dotted path.
@@ -335,7 +335,7 @@ final class Conforming {
    */
   private static function schemaAt(SurfaceInterface $surface, string $full): ?Schema {
     $segments = explode('.', $full);
-    $schema = $surface->getOutputDefinitions()->entry((string) array_shift($segments))?->schema();
+    $schema = $surface->outputEntries()->entry((string) array_shift($segments))?->schema();
     foreach ($segments as $segment) {
       if ($schema === NULL) {
         return NULL;

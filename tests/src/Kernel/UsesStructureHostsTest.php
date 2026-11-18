@@ -129,8 +129,8 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
 
     // Built by id as well as by class, on the class, with no instance.
     $built = $this->container->get('surface.resources')->build('field_formatter:surface_examples_plugins_string', new OperationContext('configure'));
-    $this->assertSame(['prefix', 'casing', 'variant'], $built->getDefinitions()->names());
-    $this->assertSame(['text', 'classes'], $built->getOutputDefinitions()->names());
+    $this->assertSame(['prefix', 'casing', 'variant'], $built->entries()->names());
+    $this->assertSame(['text', 'classes'], $built->outputEntries()->names());
     // The refiner rides along as the class name, so a cached form holds
     // no formatter.
     $serialized = serialize($built);
@@ -163,7 +163,7 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
     $block = $this->container->get('plugin.manager.block')->createInstance('surface_resource_test_sticky_note');
     $this->assertInstanceOf(StickyNoteBlock::class, $block);
     $surface = $block->getSurface();
-    $this->assertSame(['color', 'note'], $surface->getDefinitions()->names());
+    $this->assertSame(['color', 'note'], $surface->entries()->names());
     // Defaults read off the block's own static defineInputs().
     $this->assertSame('yellow', $block->getConfiguration()['color']);
     $this->assertSame('Sticky', $block->getConfiguration()['note']);
@@ -187,7 +187,7 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
   public function testTheBlockHost(): void {
     $block = $this->container->get('plugin.manager.block')->createInstance('surface_resource_test_pinned_note');
     $surface = $block->getSurface();
-    $this->assertSame(['note'], $surface->getDefinitions()->names());
+    $this->assertSame(['note'], $surface->entries()->names());
     // Defaults reach the configuration through the host, beside the
     // host's own keys.
     $this->assertSame('Pinned', $block->getConfiguration()['note']);
@@ -212,8 +212,8 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
       'third_party_settings' => [],
     ]);
     $surface = $formatter->getSurface();
-    $this->assertSame(['prefix', 'casing', 'variant'], $surface->getDefinitions()->names());
-    $this->assertSame(['text', 'classes'], $surface->getOutputDefinitions()->names());
+    $this->assertSame(['prefix', 'casing', 'variant'], $surface->entries()->names());
+    $this->assertSame(['text', 'classes'], $surface->outputEntries()->names());
     $form = $formatter->settingsForm([], new FormState());
     $this->assertSame(['quiet' => 'Quiet', 'muted' => 'Muted'], array_map('strval', $form['variant']['#options']));
   }
@@ -225,7 +225,7 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
     $condition = $this->container->get('plugin.manager.condition')->createInstance('surface_resource_test_threshold', ['reading' => 20]);
     $this->assertInstanceOf(ThresholdCondition::class, $condition);
     $surface = $condition->getSurface();
-    $this->assertSame(['mode', 'threshold', 'reading'], $surface->getDefinitions()->names());
+    $this->assertSame(['mode', 'threshold', 'reading'], $surface->entries()->names());
     // The host's own key stays the host's.
     $configuration = $condition->getConfiguration();
     $this->assertSame('surface_resource_test_threshold', $configuration['id']);
@@ -273,7 +273,7 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
     $field->save();
     $item = $this->container->get('typed_data_manager')->create($field->getItemDefinition());
     $surface = $item->getFieldSurface();
-    $this->assertSame(['available_countries', 'langcode_override', 'field_overrides'], $surface->getDefinitions()->names());
+    $this->assertSame(['available_countries', 'langcode_override', 'field_overrides'], $surface->entries()->names());
     $this->assertSame(['available_countries' => [], 'langcode_override' => NULL, 'field_overrides' => []], $surface->getDefaultValues());
   }
 

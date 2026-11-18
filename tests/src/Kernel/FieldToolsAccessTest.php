@@ -237,7 +237,7 @@ class FieldToolsAccessTest extends SurfaceKernelTestBase {
 
     $item = $this->container->get('typed_data_manager')->create($field->getItemDefinition());
     $this->assertInstanceOf(SurfaceGatedItem::class, $item);
-    $this->assertSame(['note'], $item->getFieldSurface()->getDefinitions()->names());
+    $this->assertSame(['note'], $item->getFieldSurface()->entries()->names());
     $account = $this->createUser([self::PERMISSION]);
     $this->assertTrue($item->surfaceAccess(account: $account)->isAllowed());
     $this->setFieldTypeRefusal(TRUE);
@@ -260,10 +260,10 @@ class FieldToolsAccessTest extends SurfaceKernelTestBase {
     $arguments = ['entity_type' => 'entity_test', 'bundle' => 'entity_test'];
     $context = $resources->operation('field.instance', 'create', $arguments);
     $this->setFieldTypeRefusal(TRUE);
-    $built = $resources->build('field.instance', $context)->getDefinitions()->entry('settings');
+    $built = $resources->build('field.instance', $context)->entries()->entry('settings');
     $this->assertArrayNotHasKey('surface_gated', $built->variants->variants);
     $this->assertFalse($built->runtimeAccess);
-    $alone = $resources->buildStatic('field.instance', $context)->getDefinitions()->entry('settings');
+    $alone = $resources->buildStatic('field.instance', $context)->entries()->entry('settings');
     $this->assertArrayHasKey('surface_gated', $alone->variants->variants);
     $this->assertTrue($alone->runtimeAccess);
   }

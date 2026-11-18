@@ -33,12 +33,12 @@ use PortableSchema\Builder\Schema;
  * sealed data surface has already been advertised.
  *
  * @see \Drupal\surface\Entry
- * @see \Drupal\surface\SurfaceInterface::getDefinitions()
+ * @see \Drupal\surface\SurfaceInterface::entries()
  *
  * @implements \IteratorAggregate<string, \Drupal\Core\TypedData\DataDefinitionInterface>
  * @implements \ArrayAccess<string, \Drupal\Core\TypedData\DataDefinitionInterface>
  */
-final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countable {
+final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
 
   /**
    * The entries, keyed by definition key, in insertion order.
@@ -79,7 +79,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   private array $frameConstraints = [];
 
   /**
-   * Constructs a DefinitionMap.
+   * Constructs an Entries.
    *
    * This is where a data surface's shape is checked, once: afterwards every
    * reader can assume a key is declared exactly once and that every

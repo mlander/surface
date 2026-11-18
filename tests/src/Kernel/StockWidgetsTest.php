@@ -423,7 +423,7 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
     $typed = $this->container->get('typed_data_manager');
     $drawn = [];
     $lists = [];
-    foreach ($typed->getDefinitions() as $type => $plugin) {
+    foreach ($typed->entries() as $type => $plugin) {
       if (($plugin['provider'] ?? NULL) !== 'core' || $type === 'binary') {
         continue;
       }

@@ -42,7 +42,7 @@ use PortableSchema\Builder\Schema;
  * service, and it is kept from then on.
  *
  * Everything the data surface knows about one key lives on that key's
- * Entry inside the DefinitionMap, so there are no parallel arrays
+ * Entry inside the Entries, so there are no parallel arrays
  * left to fall out of step. The outputs are a second map of the same
  * type, read the same way and never refined. What is not per key (the
  * cacheability of the whole data surface and the storage layouts of what
@@ -66,7 +66,7 @@ final class Surface implements SurfaceInterface {
   /**
    * Constructs a Surface.
    *
-   * @param \Drupal\surface\DefinitionMap $definitions
+   * @param \Drupal\surface\Entries $definitions
    *   What the data surface advertises: one entry per key, in declaration
    *   order, carrying the definition, the contributor, the locked flag,
    *   the refinement edges, the contributed values and the refiner
@@ -74,7 +74,7 @@ final class Surface implements SurfaceInterface {
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   What the data surface itself depends on: everything the builder was
    *   told at build time, plus what each refiner that ran declared.
-   * @param \Drupal\surface\DefinitionMap $outputs
+   * @param \Drupal\surface\Entries $outputs
    *   What the host's execution emits: one entry per output key, in
    *   declaration order, carrying the definition and the contributor.
    *   Empty for a data surface that declares no outputs.
@@ -112,9 +112,9 @@ final class Surface implements SurfaceInterface {
    *   entries (Pipeline\Conforming); nothing else may call it.
    */
   public function __construct(
-    protected readonly DefinitionMap $definitions,
+    protected readonly Entries $definitions,
     protected readonly CacheableMetadata $cacheability = new CacheableMetadata(),
-    protected readonly DefinitionMap $outputs = new DefinitionMap([]),
+    protected readonly Entries $outputs = new Entries([]),
     protected readonly array $thirdPartyLayouts = [],
     protected readonly ?WatchedValueCheckInterface $watchedValueCheck = NULL,
     protected readonly array $ports = [],
@@ -174,7 +174,7 @@ final class Surface implements SurfaceInterface {
    * @internal
    */
   public static function holding(Schema $schema, string $name = 'value'): static {
-    return new static(new DefinitionMap([]), outputs: new DefinitionMap([Entry::ofSchema($name, $schema)]));
+    return new static(new Entries([]), outputs: new Entries([Entry::ofSchema($name, $schema)]));
   }
 
   /**
@@ -222,13 +222,12 @@ final class Surface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function withPorts(array $values, array $definitions = []): static {
+  public function withPorts(array $values, array $schemas = []): static {
     $declared = $this->definitions->ports();
     $values = array_intersect_key($values, $declared);
-    // A port's key is held as its schema: one handed as a definition is
-    // read here, once. An attachment hands the schemas it holds
-    // (Attachment::$wired), the same objects on every bind.
-    $schemas = array_map(static fn (Schema|DataDefinitionInterface $key): Schema => $key instanceof Schema ? $key : DefinitionSchema::of($key), array_intersect_key($definitions, $declared));
+    // An attachment hands the schemas it holds (Attachment::$wired), the
+    // same objects on every bind.
+    $schemas = array_intersect_key($schemas, $declared);
     if ($values === $this->ports && DefinitionSchema::same($schemas, $this->portSchemas)) {
       return $this;
     }
@@ -250,10 +249,10 @@ final class Surface implements SurfaceInterface {
    * @param array<string, mixed> $values
    *   What each holds.
    *
-   * @return \Drupal\surface\DefinitionMap
+   * @return \Drupal\surface\Entries
    *   The definitions, each such entry bound.
    */
-  protected function throughPorts(array $declared, array $values): DefinitionMap {
+  protected function throughPorts(array $declared, array $values): Entries {
     $through = array_keys(array_filter($declared, static fn (Port $port): bool => $port->through));
     if ($through === []) {
       return $this->definitions;
@@ -266,14 +265,6 @@ final class Surface implements SurfaceInterface {
       }
     }
     return $definitions;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getPortDefinition(string $port): ?DataDefinitionInterface {
-    $schema = $this->getPortSchema($port);
-    return $schema === NULL ? NULL : DefinitionFromSchema::of($schema);
   }
 
   /**
@@ -300,15 +291,22 @@ final class Surface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function getDefinitions(): DefinitionMap {
+  public function entries(): Entries {
     return $this->definitions;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function getOutputDefinitions(): DefinitionMap {
+  public function outputEntries(): Entries {
     return $this->outputs;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getSchema(string $name): ?Schema {
+    return $this->definitions->entry($name)?->schema();
   }
 
   /**
@@ -582,7 +580,7 @@ final class Surface implements SurfaceInterface {
       // The mark is read at each place on the way: from the refined key's
       // schema and the schemas below it, or, for a key whose source gave its
       // definition, from that definition and the ones below it.
-      $entry = $refined->getDefinitions()->entry((string) array_shift($parents));
+      $entry = $refined->entries()->entry((string) array_shift($parents));
       foreach ($entry === NULL ? [] : static::watchedPlaces($entry, $parents) as $place) {
         if ($place instanceof Schema ? SchemaFacts::doesNotApply($place) : DoesNotApply::marks($place)) {
           $ruled[] = $path;
@@ -675,7 +673,7 @@ final class Surface implements SurfaceInterface {
    * Makes the entry of a key its refiners answered for.
    *
    * Schema-first where every class its schema holds derives a definition
-   * (DefinitionMap::derivedClasses()). A key that holds a class no
+   * (Entries::derivedClasses()). A key that holds a class no
    * schema derives a definition of keeps one: what the answers wrote is
    * written on a copy of the key's definition (writtenOn()), and the
    * entry is definition-first, its schema the one the answers gave.
@@ -692,7 +690,7 @@ final class Surface implements SurfaceInterface {
    *   The refined entry.
    */
   protected static function refinedTo(Entry $entry, Entry $base, Schema $refined): Entry {
-    if (DefinitionMap::derivedClasses($refined)) {
+    if (Entries::derivedClasses($refined)) {
       return $base->withSchema($refined, TRUE);
     }
     return $base->withDefinition(static::writtenOn($entry->definition(), $entry->schema(), $refined), $refined);
@@ -726,7 +724,7 @@ final class Surface implements SurfaceInterface {
     if ($after === $before) {
       return $definition;
     }
-    if (DefinitionMap::derivedClasses($after)) {
+    if (Entries::derivedClasses($after)) {
       return DefinitionFromSchema::of($after);
     }
     $copy = clone $definition;
@@ -851,7 +849,7 @@ final class Surface implements SurfaceInterface {
       return $refined === NULL ? NULL : static::refinedTo($entry, $base, $refined);
     }
     $schema = $refined === NULL ? static::composedMount($entry, $base->schema(), $answers) : NULL;
-    if ($schema !== NULL && !$entry->madeByRefinement() && DefinitionMap::derivedClasses($schema)) {
+    if ($schema !== NULL && !$entry->madeByRefinement() && Entries::derivedClasses($schema)) {
       // Each structure's keys were held to the narrowing check when the
       // structure refined them, against the sealed structure's, and the
       // rest of the map is the sealed entry's: nothing the map says can be
@@ -951,7 +949,7 @@ final class Surface implements SurfaceInterface {
    */
   protected static function schemasOf(SurfaceInterface $child): array {
     $schemas = [];
-    foreach ($child->getDefinitions()->entries() as $name => $entry) {
+    foreach ($child->entries()->entries() as $name => $entry) {
       $schemas[(string) $name] = $entry->schema();
     }
     return $schemas;
@@ -1086,7 +1084,7 @@ final class Surface implements SurfaceInterface {
       // The place is found as watchedPlaces() finds it, and the check is
       // handed its schema: a place walked by its definition (a key whose
       // source gave one) is read into its schema, nothing is derived.
-      $entry = $refined->getDefinitions()->entry((string) array_shift($parents));
+      $entry = $refined->entries()->entry((string) array_shift($parents));
       if ($entry === NULL || $this->watchedValueCheck === NULL) {
         continue;
       }
@@ -1240,7 +1238,7 @@ final class Surface implements SurfaceInterface {
     // A key a refinement made, refined again, is held to the check: its
     // child is the sealed one, so its keys were checked against the sealed
     // child's, not against what that refinement made of them.
-    if ($schema !== NULL && !$locked && !$entry->madeByRefinement() && DefinitionMap::derivedClasses($schema)) {
+    if ($schema !== NULL && !$locked && !$entry->madeByRefinement() && Entries::derivedClasses($schema)) {
       return $base->withSchema($schema, TRUE);
     }
     if ($chosen === NULL) {

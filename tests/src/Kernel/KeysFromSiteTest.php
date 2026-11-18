@@ -136,14 +136,14 @@ class KeysFromSiteTest extends SurfaceKernelTestBase {
    */
   public function testOneKeyPerThing(): void {
     $workshop = $this->workshop();
-    $map = $workshop->getDefinitions();
+    $map = $workshop->entries();
     $this->assertSame(['closed', 'benches', 'lights', 'codes'], array_keys($map->toArray()));
 
     // The benches: the bench structure at every entry, built once.
     $benches = $map->entry('benches')->attachment;
     $this->assertNotNull($benches);
     $this->assertNull($benches->source, 'The map is its owner\'s, of no class.');
-    $entries = $benches->child->getDefinitions();
+    $entries = $benches->child->entries();
     $this->assertSame(['lathe', 'press', 'saw'], array_keys($entries->toArray()));
     $this->assertSame(['Lathe', 'Drill press', 'Band saw'], array_map(static fn ($definition): string => (string) $definition->getLabel(), array_values($entries->toArray())));
     foreach (['lathe', 'press', 'saw'] as $id) {
@@ -155,10 +155,10 @@ class KeysFromSiteTest extends SurfaceKernelTestBase {
     // The lights: a boolean per bench, the blueprint's default for each.
     $lights = $map->entry('lights')->attachment->child;
     $this->assertSame(['lathe' => FALSE, 'press' => FALSE, 'saw' => FALSE], $lights->getDefaultValues());
-    $this->assertSame('boolean', $lights->getDefinitions()->toArray()['saw']->getDataType());
+    $this->assertSame('boolean', $lights->entries()->toArray()['saw']->getDataType());
 
     // The codes: the shape at every entry, as its alter left it.
-    $codes = $map->entry('codes')->attachment->child->getDefinitions()->toArray();
+    $codes = $map->entry('codes')->attachment->child->entries()->toArray();
     $this->assertSame('resource_test.sku', DefinitionMetadata::shapeOf($codes['lathe']));
     $this->assertSame(['max' => 12], $codes['lathe']->getConstraints()['Length']);
     $this->assertArrayHasKey('Regex', $codes['lathe']->getConstraints());
@@ -173,10 +173,10 @@ class KeysFromSiteTest extends SurfaceKernelTestBase {
    */
   public function testLockedEntryIsHeld(): void {
     $workshop = $this->workshop();
-    $benches = $workshop->getDefinitions()->entry('benches')->attachment->child->getDefinitions();
+    $benches = $workshop->entries()->entry('benches')->attachment->child->entries();
     $this->assertTrue($benches->isLocked('press'));
     $this->assertFalse($benches->isLocked('lathe'));
-    $lights = $workshop->getDefinitions()->entry('lights')->attachment->child->getDefinitions();
+    $lights = $workshop->entries()->entry('lights')->attachment->child->entries();
     $this->assertTrue($lights->isLocked('press'));
     $this->assertSame(['press'], array_values(array_filter(['lathe', 'press', 'saw'], $lights->isLocked(...))));
 
@@ -271,7 +271,7 @@ class KeysFromSiteTest extends SurfaceKernelTestBase {
 
     $this->addBench('bench', 'Workbench');
     $again = $this->workshop();
-    $this->assertSame(['lathe', 'press', 'saw', 'bench'], array_keys($again->getDefinitions()->entry('lights')->attachment->child->getDefinitions()->toArray()));
+    $this->assertSame(['lathe', 'press', 'saw', 'bench'], array_keys($again->entries()->entry('lights')->attachment->child->entries()->toArray()));
     $full = $emitter->emitFull($again, 'resource_test.workshop')->document['schema'];
     $this->assertSame(['lathe', 'press', 'saw', 'bench'], array_keys($full['$defs']['resource_test.workshop.benches']['properties']));
   }

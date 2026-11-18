@@ -248,9 +248,9 @@ class ReferenceStoredByUuidTest extends SurfaceKernelTestBase {
     $built = $resources->build(SponsorshipResource::class, $resources->operation(SponsorshipResource::class, 'configure'));
     $derived = new \ReflectionProperty(Entry::class, 'definition');
     $unread = [];
-    foreach ($built->getDefinitions()->entries() as $name => $entry) {
+    foreach ($built->entries()->entries() as $name => $entry) {
       $this->assertTrue($entry->isSchemaFirst());
-      $children = $entry->attachment === NULL ? [] : $entry->attachment->child->getDefinitions()->entries();
+      $children = $entry->attachment === NULL ? [] : $entry->attachment->child->entries()->entries();
       foreach (['' => $entry] + $children as $below => $one) {
         if ($derived->getValue($one) === NULL) {
           $unread[$name . ($below === '' ? '' : '.' . $below)] = $one;

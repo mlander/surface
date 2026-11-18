@@ -71,7 +71,7 @@ class WidgetAskTest extends SurfaceKernelTestBase {
     $this->assertSame('widget_test_pair', $built->getDefinition('asked')->getSetting('widget'));
     $this->assertSame('fieldset', $built->getDefinition('owned')->getSetting('widget'), 'The owner\'s ask at the key wins.');
     $manager = $this->container->get('surface.widget_choice');
-    $this->assertInstanceOf(PairWidget::class, $manager->forSchema($built->getDefinitions()->entry('asked')->schema()));
+    $this->assertInstanceOf(PairWidget::class, $manager->forSchema($built->entries()->entry('asked')->schema()));
 
     $form = $this->formBuilder()->buildSurfaceForm($built, ['asked' => ['left' => 'L', 'right' => 'R']], new FormState());
     $this->assertSame(['widget-test-pair'], $form['asked']['#attributes']['class']);
@@ -140,15 +140,15 @@ class WidgetAskTest extends SurfaceKernelTestBase {
   public function testSchemaFirstBuildDerivesNoDefinitionWhereWidgetsAreAsked(): void {
     $derived = new \ReflectionProperty(Entry::class, 'definition');
     $pair = $this->built(PairStructure::class);
-    foreach ($pair->getDefinitions()->entries() as $name => $entry) {
+    foreach ($pair->entries()->entries() as $name => $entry) {
       $this->assertTrue($entry->isSchemaFirst());
       $this->assertNull($derived->getValue($entry), sprintf('The pair\'s "%s" asks for no widget and derives no definition at build.', $name));
     }
     $pairs = $this->built(PairsStructure::class);
-    foreach ($pairs->getDefinitions()->entries() as $name => $entry) {
+    foreach ($pairs->entries()->entries() as $name => $entry) {
       $this->assertTrue($entry->isSchemaFirst());
       $this->assertNull($derived->getValue($entry), sprintf('"%s" asks for a widget, whose claim takes the key\'s schema: no definition is derived.', $name));
-      foreach ($entry->attachment?->child->getDefinitions()->entries() ?? [] as $inside => $child_entry) {
+      foreach ($entry->attachment?->child->entries()->entries() ?? [] as $inside => $child_entry) {
         $this->assertNull($derived->getValue($child_entry), sprintf('The pair\'s "%s" inside "%s" derives no definition.', $inside, $name));
       }
     }

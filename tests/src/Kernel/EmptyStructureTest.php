@@ -74,7 +74,7 @@ class EmptyStructureTest extends SurfaceKernelTestBase {
     $resources = $this->container->get('surface.resources');
     $context = $resources->operation(self::LEDGER, 'touch', ['id' => 'a']);
     $built = $resources->build(self::LEDGER, $context);
-    $this->assertSame([], $built->getDefinitions()->names());
+    $this->assertSame([], $built->entries()->names());
     $this->assertFalse($built->changesNothing());
 
     // At the pipeline: committed, and the one change the whole write.

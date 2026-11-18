@@ -206,7 +206,7 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
         'display_submitted',
         'third_party_settings',
       ],
-      $surface->getDefinitions()->names(),
+      $surface->entries()->names(),
     );
 
     // A taken machine name is a violation, and a free one is not.

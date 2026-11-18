@@ -140,8 +140,8 @@ class FieldInstanceResourceTest extends SurfaceKernelTestBase {
     $choices = ChoiceSet::of($surface->getDefinition('field_type'))->values;
     $this->assertSame('address', $choices[0]);
     $this->assertContains('string', $choices);
-    $this->assertSame($surface->getDefinitions()->entry('settings')?->variants?->variantIds(), $choices);
-    $entry = $surface->getDefinitions()->entry('settings');
+    $this->assertSame($surface->entries()->entry('settings')?->variants?->variantIds(), $choices);
+    $entry = $surface->entries()->entry('settings');
     $this->assertSame(AddressFieldSettingsResource::class, $entry->variants->variant('address')->source);
     // Advertised as the address settings, not as a placeholder: the one
     // value the field type can hold has already chosen.
@@ -250,7 +250,7 @@ class FieldInstanceResourceTest extends SurfaceKernelTestBase {
       $account = $this->setUpCurrentUser([], $permissions);
       foreach ($contexts as $operation => $context) {
         $surface = $this->resources()->build(FieldInstanceResource::class, $context);
-        $storage = $surface->getDefinitions()->entry('storage');
+        $storage = $surface->entries()->entry('storage');
         $this->assertNotNull($storage?->attachment, "$operation, $who");
         $this->assertSame(FieldStorageResource::class, $storage->attachment->source, "$operation, $who");
         $this->assertFalse($surface->isLocked('storage'), "$operation, $who");
@@ -278,9 +278,9 @@ class FieldInstanceResourceTest extends SurfaceKernelTestBase {
     foreach (['entity_type', 'bundle', 'field_name', 'field_type'] as $key) {
       $this->assertTrue($surface->isLocked($key), $key);
     }
-    $storage = $surface->getDefinitions()->entry('storage');
+    $storage = $surface->entries()->entry('storage');
     $this->assertSame(FieldStorageResource::class, $storage->attachment->source);
-    $this->assertSame(['entity_type', 'field_name', 'field_type', 'cardinality', 'translatable', 'settings'], $storage->attachment->child->getDefinitions()->names());
+    $this->assertSame(['entity_type', 'field_name', 'field_type', 'cardinality', 'translatable', 'settings'], $storage->attachment->child->entries()->names());
     // The storage's edit knows the type, so its settings are resolved.
     $this->assertTrue($storage->attachment->child->isLocked('field_type'));
     $this->assertSame('address', $storage->attachment->child->getDefault('field_type'));
@@ -296,7 +296,7 @@ class FieldInstanceResourceTest extends SurfaceKernelTestBase {
         'storage',
         'settings',
       ],
-      $surface->getDefinitions()->names(),
+      $surface->entries()->names(),
     );
 
     // One submission: the storage's cardinality, through its own storage class,
@@ -356,7 +356,7 @@ class FieldInstanceResourceTest extends SurfaceKernelTestBase {
     $context = FieldInstanceResource::update('entity_test', 'entity_test', 'field_address');
     $this->assertSame(['cardinality' => ['Range' => ['min' => 3]]], $context->forChild('storage')->constraints());
     $surface = $this->resources()->build(FieldInstanceResource::class, $context);
-    $cardinality = $surface->getDefinitions()->entry('storage')->attachment->child->getDefinition('cardinality');
+    $cardinality = $surface->entries()->entry('storage')->attachment->child->getDefinition('cardinality');
     $this->assertSame(['min' => 3], $cardinality->getConstraints()['Range']);
 
     $resource_storage = $this->resources()->storage(FieldInstanceResource::class, $context, $surface);

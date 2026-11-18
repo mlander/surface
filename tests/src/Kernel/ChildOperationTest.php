@@ -152,7 +152,7 @@ class ChildOperationTest extends SurfaceKernelTestBase {
    *   The child.
    */
   protected static function child(SurfaceInterface $surface, string $key): SurfaceInterface {
-    $attachment = $surface->getDefinitions()->entry($key)?->attachment;
+    $attachment = $surface->entries()->entry($key)?->attachment;
     assert($attachment !== NULL);
     return $attachment->child;
   }
@@ -280,14 +280,14 @@ class ChildOperationTest extends SurfaceKernelTestBase {
     $spare = self::child($edit, 'spare_rack');
 
     // By the context's id: the rack's own edit, which knows no shelf.
-    $this->assertSame(['shelf', 'spices', 'label'], $rack->getDefinitions()->names());
+    $this->assertSame(['shelf', 'spices', 'label'], $rack->entries()->names());
     $this->assertSame(['min' => 0, 'max' => 40], $rack->getDefinition('spices')->getConstraints()['Range']);
     $this->assertFalse($rack->isLocked('shelf'));
 
     // By name: restock, handed TOP, knows top, its own known key winning
     // over what it was handed; and only there the restock alter's
     // supplier.
-    $this->assertSame(['shelf', 'spices', 'label', 'third_party_settings'], $spare->getDefinitions()->names());
+    $this->assertSame(['shelf', 'spices', 'label', 'third_party_settings'], $spare->entries()->names());
     $this->assertTrue($spare->isLocked('shelf'));
     $this->assertSame('top', $spare->getDefault('shelf'));
     $this->assertSame(['min' => 0, 'max' => 40], $spare->getDefinition('spices')->getConstraints()['Range']);
@@ -297,7 +297,7 @@ class ChildOperationTest extends SurfaceKernelTestBase {
     $add = $this->resources()->buildOperation(LarderResource::class, 'create');
     foreach (['rack', 'spare_rack'] as $key) {
       $child = self::child($add, $key);
-      $this->assertSame(['shelf', 'spices', 'label'], $child->getDefinitions()->names(), $key);
+      $this->assertSame(['shelf', 'spices', 'label'], $child->entries()->names(), $key);
       $this->assertSame(['min' => 0, 'max' => 10], $child->getDefinition('spices')->getConstraints()['Range'], $key);
     }
 
@@ -349,7 +349,7 @@ class ChildOperationTest extends SurfaceKernelTestBase {
   public function testOpenChild(): void {
     $this->actAs('stock spice rack');
     $edit = $this->edit();
-    $this->assertSame(['larder', 'note', 'rack', 'spare_rack'], $edit->getDefinitions()->names());
+    $this->assertSame(['larder', 'note', 'rack', 'spare_rack'], $edit->entries()->names());
     $this->assertFalse($edit->isLocked('rack'));
     $this->assertFalse($edit->isLocked('spare_rack'));
 
@@ -379,7 +379,7 @@ class ChildOperationTest extends SurfaceKernelTestBase {
     // keys, the restock operation's own permission being held.
     $this->actAs('stock spice rack', 'inspect spice rack');
     $edit = $this->edit();
-    $this->assertSame(['larder', 'note', 'rack', 'spare_rack'], $edit->getDefinitions()->names());
+    $this->assertSame(['larder', 'note', 'rack', 'spare_rack'], $edit->entries()->names());
     $this->assertTrue($edit->isLocked('rack'));
     $this->assertTrue($edit->isLocked('spare_rack'));
 
@@ -445,7 +445,7 @@ class ChildOperationTest extends SurfaceKernelTestBase {
   public function testOmittedChild(): void {
     $this->actAs('hide spice rack');
     $edit = $this->edit();
-    $this->assertSame(['larder', 'note'], $edit->getDefinitions()->names());
+    $this->assertSame(['larder', 'note'], $edit->entries()->names());
 
     // The parent is still open to the account; only the children went.
     $context = $this->resources()->operation(LarderResource::class, 'update', ['larder' => 'main']);
@@ -501,14 +501,14 @@ class ChildOperationTest extends SurfaceKernelTestBase {
     // forbidden, which at a child is omitted; restock's permission is not
     // held either.
     $this->actAs();
-    $this->assertSame(['larder', 'note'], $this->edit()->getDefinitions()->names());
+    $this->assertSame(['larder', 'note'], $this->edit()->entries()->names());
 
     // Inspecting alone: the rack is locked by its access class, the spare
     // rack omitted by the restock operation's permission before its class
     // is asked.
     $this->actAs('inspect spice rack');
     $edit = $this->edit();
-    $this->assertSame(['larder', 'note', 'rack'], $edit->getDefinitions()->names());
+    $this->assertSame(['larder', 'note', 'rack'], $edit->entries()->names());
     $this->assertTrue($edit->isLocked('rack'));
 
     // Asked on its own, the rack's locked answer lets the caller in, to a
@@ -534,9 +534,9 @@ class ChildOperationTest extends SurfaceKernelTestBase {
     // restock by name and omits the spare rack for want of it; stocking
     // hands restock whole, and both racks are locked by the access class.
     $this->actAs('inspect spice rack');
-    $this->assertSame(['larder', 'note', 'rack'], $this->edit()->getDefinitions()->names());
+    $this->assertSame(['larder', 'note', 'rack'], $this->edit()->entries()->names());
     $stock = $this->stock();
-    $this->assertSame(['larder', 'note', 'rack', 'spare_rack'], $stock->getDefinitions()->names());
+    $this->assertSame(['larder', 'note', 'rack', 'spare_rack'], $stock->entries()->names());
     $this->assertTrue($stock->isLocked('rack'));
     $this->assertTrue($stock->isLocked('spare_rack'));
     // Each handed context is taken as it is: browse's smaller range, and
@@ -567,7 +567,7 @@ class ChildOperationTest extends SurfaceKernelTestBase {
     // Hiding: both racks omitted, from the contracts and the form too.
     $this->actAs('hide spice rack');
     $stock = $this->stock();
-    $this->assertSame(['larder', 'note'], $stock->getDefinitions()->names());
+    $this->assertSame(['larder', 'note'], $stock->entries()->names());
     foreach ([FALSE, TRUE] as $full) {
       $contract = $this->contract($stock, $full, 'stock');
       $this->assertSame(['larder', 'note'], array_keys($contract->document['schema']['properties']));
@@ -581,12 +581,12 @@ class ChildOperationTest extends SurfaceKernelTestBase {
 
     // No rack permission at all: core's forbidden, omitted at a child.
     $this->actAs();
-    $this->assertSame(['larder', 'note'], $this->stock()->getDefinitions()->names());
+    $this->assertSame(['larder', 'note'], $this->stock()->entries()->names());
 
     // Stocking: both open.
     $this->actAs('stock spice rack');
     $stock = $this->stock();
-    $this->assertSame(['larder', 'note', 'rack', 'spare_rack'], $stock->getDefinitions()->names());
+    $this->assertSame(['larder', 'note', 'rack', 'spare_rack'], $stock->entries()->names());
     $this->assertFalse($stock->isLocked('rack'));
     $this->assertFalse($stock->isLocked('spare_rack'));
   }

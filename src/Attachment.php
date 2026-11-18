@@ -253,7 +253,7 @@ final class Attachment {
    */
   public static function mapOf(MapDataDefinition $shell, SurfaceInterface $child): MapDataDefinition {
     $map = clone $shell;
-    foreach ($child->getDefinitions() as $name => $definition) {
+    foreach ($child->entries() as $name => $definition) {
       $map->setPropertyDefinition((string) $name, $definition);
     }
     return $map;

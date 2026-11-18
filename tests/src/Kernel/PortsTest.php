@@ -204,18 +204,18 @@ class PortsTest extends SurfaceKernelTestBase {
    */
   public function testEachContainerWiresThePorts(): void {
     $seating = $this->built(SeatingStructure::class);
-    $ports = $seating->getDefinitions()->ports();
+    $ports = $seating->entries()->ports();
     $this->assertSame(['layout', 'guests'], array_keys($ports));
     $this->assertSame(['string', TRUE], [$ports['layout']->type, $ports['layout']->required]);
     $this->assertSame(['integer', FALSE], [$ports['guests']->type, $ports['guests']->required]);
-    $this->assertSame(['rows', 'aisle', 'ushers'], $seating->getDefinitions()->names(), 'A port is no key.');
+    $this->assertSame(['rows', 'aisle', 'ushers'], $seating->entries()->names(), 'A port is no key.');
     $this->assertSame(['rows' => 5, 'aisle' => NULL, 'ushers' => 0], $seating->getDefaultValues(), 'Nothing of a port is stored.');
 
-    $venue = $this->built(VenueResource::class)->getDefinitions();
+    $venue = $this->built(VenueResource::class)->entries();
     $this->assertSame(['layout' => 'layout', 'guests' => 'capacity'], $venue->entry('seating')->attachment->reads);
     $this->assertSame(['seating.rows' => ['capacity'], 'seating.aisle' => ['layout'], 'seating.ushers' => ['capacity']], $venue->refinementPaths(), 'The child\'s dependencies, at its paths in the container\'s frame, on the container\'s keys.');
 
-    $hall = $this->built(HallResource::class)->getDefinitions();
+    $hall = $this->built(HallResource::class)->entries();
     $this->assertSame(['layout' => 'arrangement'], $hall->entry('chairs')->attachment->reads, 'The guests port is optional, and left unwired.');
     $mounted = $hall->entry('third_party_settings')->mounted;
     $this->assertSame(['surface_resource_test'], array_keys($mounted));

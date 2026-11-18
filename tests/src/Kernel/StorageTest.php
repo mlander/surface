@@ -6,7 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Surface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Pipeline\Storage\CompositeStorage;
@@ -65,7 +65,7 @@ class StorageTest extends SurfaceKernelTestBase {
     ];
     DefinitionMetadata::setDefaultValue($definitions['name'], 'Drupal');
     DefinitionMetadata::setDefaultValue($definitions['slogan'], '');
-    return new Surface(DefinitionMap::fromArrays(definitions: $definitions));
+    return new Surface(Entries::fromArrays(definitions: $definitions));
   }
 
   /**

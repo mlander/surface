@@ -106,8 +106,8 @@ class EntryPortsTest extends SurfaceKernelTestBase {
    *   TRUE when it applies.
    */
   protected function applies(SurfaceInterface $sales, array $values, string $type, string $key): bool {
-    $limits = $sales->refine($values)->getDefinitions()->entry('limits');
-    $entry = $limits->attachment->bound($values)->getDefinitions()->entry($type);
+    $limits = $sales->refine($values)->entries()->entry('limits');
+    $entry = $limits->attachment->bound($values)->entries()->entry($type);
     $child = $entry->attachment->bound([]);
     return !DoesNotApply::marks($child->refine($child->getDefaultValues())->getDefinition($key));
   }
@@ -124,7 +124,7 @@ class EntryPortsTest extends SurfaceKernelTestBase {
       'limits.student.waiting_list' => ['on_sale.student'],
       'limits.speaker.per_order' => ['on_sale.speaker'],
       'limits.speaker.waiting_list' => ['on_sale.speaker'],
-    ], $sales->getDefinitions()->refinementPaths());
+    ], $sales->entries()->refinementPaths());
     $values = self::SHIPPED;
     $this->assertTrue($this->applies($sales, $values, 'student', 'per_order'));
     $this->assertFalse($this->applies($sales, $values, 'speaker', 'per_order'), 'The speaker type is not on sale.');
@@ -302,7 +302,7 @@ class EntryPortsTest extends SurfaceKernelTestBase {
     $values = self::SHIPPED;
 
     // The copy first, nothing asked before.
-    $limits = $fresh()->getDefinitions()->entry('limits');
+    $limits = $fresh()->entries()->entry('limits');
     $this->assertNotNull($limits);
     $this->assertTrue($limits->isSchemaFirst());
     $this->assertNull($derived->getValue($limits), 'Nothing asked the sealed entry yet.');
@@ -315,7 +315,7 @@ class EntryPortsTest extends SurfaceKernelTestBase {
     $this->assertTrue($limits->sameSource($copy), 'Either way round.');
 
     // The entry asked first.
-    $limits = $fresh()->getDefinitions()->entry('limits');
+    $limits = $fresh()->entries()->entry('limits');
     $this->assertNotNull($limits);
     $definition = $limits->definition();
     $this->assertSame($definition, $limits->readingFrom($values)?->definition());
@@ -325,10 +325,10 @@ class EntryPortsTest extends SurfaceKernelTestBase {
     $emitter = $this->container->get('surface.contract_emitter');
     $surface = $fresh();
     $first = json_encode($emitter->emit($surface, array_replace($surface->getDefaultValues(), $values), 'event.sales', 'configure')->document);
-    $surface->getDefinitions()->entry('limits')?->definition();
+    $surface->entries()->entry('limits')?->definition();
     $again = json_encode($emitter->emit($surface, array_replace($surface->getDefaultValues(), $values), 'event.sales', 'configure')->document);
     $other = $fresh();
-    $other->getDefinitions()->entry('limits')?->definition();
+    $other->entries()->entry('limits')?->definition();
     $asked = json_encode($emitter->emit($other, array_replace($other->getDefaultValues(), $values), 'event.sales', 'configure')->document);
     $this->assertSame($first, $again, 'A second read on the same build serves the same document.');
     $this->assertSame($first, $asked, 'And so does a build whose definition was asked before it was read.');

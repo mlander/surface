@@ -158,7 +158,7 @@ class ToolResultShapeTest extends SurfaceKernelTestBase {
   public function testOutputsAreDeclared(): void {
     $tools = $this->container->get('plugin.manager.tool');
     $edit = $tools->createInstance('surface:tool_test.cabinet:update');
-    $outputs = $edit->getOutputDefinitions();
+    $outputs = $edit->outputEntries();
     $this->assertSame(ResultDocument::KEYS, array_keys($outputs), 'The result shape, in its order, and nothing else: the cabinet declares no outputs of its own.');
     foreach ($outputs as $name => $output) {
       $this->assertNotSame('', (string) $output->getDescription(), $name);
@@ -176,7 +176,7 @@ class ToolResultShapeTest extends SurfaceKernelTestBase {
     // the same keys, nothing written and nothing changed.
     $count = $tools->createInstance('surface:tool_test.cabinet:count');
     $this->assertArrayNotHasKey(OperationInputs::DRY_RUN, $count->getInputDefinitions());
-    $outputs = $count->getOutputDefinitions();
+    $outputs = $count->outputEntries();
     $this->assertSame(ResultDocument::KEYS, array_keys($outputs));
     $this->assertArrayNotHasKey('prepared', $outputs);
     $answered = $this->runTool('count', ['drawers' => 9])->getContextValues();

@@ -156,7 +156,7 @@ class DeclaredNarrowingTest extends SurfaceKernelTestBase {
    * Tests each rule is bound as a refiner that gates nothing.
    */
   public function testTheRulesAreRefinersThatWaitForNothing(): void {
-    $definitions = $this->parcel()->getDefinitions();
+    $definitions = $this->parcel()->entries();
     $value = $definitions->entry('declared_value');
     $this->assertTrue($value->isDeclared());
     $this->assertFalse($value->isRefinedAtRuntime());

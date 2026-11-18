@@ -16,7 +16,7 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Pipeline\Outbound;
@@ -576,7 +576,7 @@ final class ContractEmitter {
    */
   protected function known(SurfaceInterface $surface): array {
     $known = [];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       // A key its access locked holds what is stored, which is no value
       // known ahead of time.
       if ($entry->locked && !$entry->held) {
@@ -628,18 +628,18 @@ final class ContractEmitter {
     $kinds = $emission->kinds();
     // A port holds what its container bound it to, read as a sibling is.
     // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
-    $ports = $declared->getDefinitions()->ports();
+    $ports = $declared->entries()->ports();
     $values = $declared->getPortValues() + $values;
     $refined = $declared->refine($values, $runtime ? SurfaceInterface::EVERY : $kinds);
     $cacheability->addCacheableDependency($refined);
-    $advertised = $declared->getDefinitions();
-    $now = $refined->getDefinitions();
+    $advertised = $declared->entries();
+    $now = $refined->entries();
     // What the static refiners alone answer for these values, which is
     // all a conditional may state: a runtime refiner is never run ahead.
     $static = $runtime && $this->conditionals->refinedAtRuntime($advertised) ? $declared->refine($values, $kinds) : $refined;
-    $ahead = $static->getDefinitions();
+    $ahead = $static->entries();
     // What the coded ones alone answer: whether their gate is open yet.
-    $coded = $runtime && $this->conditionals->hasRules($advertised) ? $declared->refine($values, SurfaceInterface::CODED)->getDefinitions() : $ahead;
+    $coded = $runtime && $this->conditionals->hasRules($advertised) ? $declared->refine($values, SurfaceInterface::CODED)->entries() : $ahead;
     $properties = [];
     $required = [];
     $conditions = [];
@@ -732,7 +732,7 @@ final class ContractEmitter {
           }
         }
         $entries = [];
-        foreach ($entry->attachment->child->getDefinitions()->entries() as $id => $each) {
+        foreach ($entry->attachment->child->entries()->entries() as $id => $each) {
           $entries[] = ['id' => (string) $id, 'label' => (string) SchemaFacts::label($each->schema())];
         }
         $properties[$name] = PortableUi::set($properties[$name], $this->propertySchema->hints(PortableUi::write('fieldset'), SchemaFacts::arrangement($entry->schema())));
@@ -1052,7 +1052,7 @@ final class ContractEmitter {
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
-   * @param \Drupal\surface\DefinitionMap $advertised
+   * @param \Drupal\surface\Entries $advertised
    *   The frame's definitions, which say which structures are mixed in.
    * @param \PortableSchema\Builder\Schema $schema
    *   The frame, described flat.
@@ -1062,7 +1062,7 @@ final class ContractEmitter {
    * @return \PortableSchema\Builder\Schema
    *   The frame, composed.
    */
-  protected function composed(DefinitionMap $advertised, Schema $schema, Emission $emission): Schema {
+  protected function composed(Entries $advertised, Schema $schema, Emission $emission): Schema {
     $owner = $emission->owner;
     $subschemas = $emission->subschemas;
     $flat = $schema->get('properties') ?? [];
@@ -1126,7 +1126,7 @@ final class ContractEmitter {
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
-   * @param \Drupal\surface\DefinitionMap $advertised
+   * @param \Drupal\surface\Entries $advertised
    *   The frame's definitions.
    * @param string $name
    *   The member.
@@ -1141,7 +1141,7 @@ final class ContractEmitter {
    *   TRUE for a member holding a child or variants that the frame states
    *   as its def does; FALSE otherwise, a plain member among them.
    */
-  protected static function childAsDeclared(DefinitionMap $advertised, string $name, Schema $property, Schema $def, Subschemas $subschemas): bool {
+  protected static function childAsDeclared(Entries $advertised, string $name, Schema $property, Schema $def, Subschemas $subschemas): bool {
     $entry = $advertised->entry($name);
     if ($property->isBoolean() || $def->isBoolean() || ($entry?->attachment === NULL && $entry?->list === NULL && $entry?->variants === NULL)) {
       return FALSE;
@@ -1170,11 +1170,11 @@ final class ContractEmitter {
     }
     $seen[spl_object_id($surface)] = TRUE;
     $ids = [];
-    foreach ($surface->getDefinitions()->mixins() as $mixin) {
+    foreach ($surface->entries()->mixins() as $mixin) {
       $ids[] = (string) ($mixin->structure->id ?? $mixin->structure->source);
       array_push($ids, ...$this->mixedIn($mixin->structure->child, $seen));
     }
-    foreach ($surface->getDefinitions()->entries() as $entry) {
+    foreach ($surface->entries()->entries() as $entry) {
       $children = match (TRUE) {
         // A list the site decides past its budget is stated by value, and
         // a variant of it only where a door chose it, which walks it then
@@ -1256,7 +1256,7 @@ final class ContractEmitter {
    *   or `refine`.
    */
   protected function site(SurfaceInterface $declared, SurfaceInterface $static, Entry $entry, Attachment $attachment, string $below, array $values, Emission $emission, ?Schema $inline = NULL): array {
-    $map = $attachment->child->getDefinitions();
+    $map = $attachment->child->entries();
     $ports = $map->ports();
     $held = $attachment->ports ?? $attachment->readFrom($values)->ports ?? [];
     $empty = array_filter($attachment->reads, static fn (string $port): bool => !ValueState::isConfigured($held[$port] ?? NULL), ARRAY_FILTER_USE_KEY);
@@ -1266,7 +1266,7 @@ final class ContractEmitter {
     }
     // The key as the static refiners leave it, by the entry that holds it,
     // whose schema is read once.
-    $holder = $static->getDefinitions()->entry($entry->name) ?? $entry;
+    $holder = $static->entries()->entry($entry->name) ?? $entry;
     $base = $inline ?? $this->conditionals->stated($entry, $holder->schema(), $emission);
     $markers = [];
     $branches = [];
@@ -1352,7 +1352,7 @@ final class ContractEmitter {
    *   Its through ports, by name.
    */
   protected static function throughPorts(SurfaceInterface $surface): array {
-    return array_filter($surface->getDefinitions()->ports(), static fn (Port $port): bool => $port->through);
+    return array_filter($surface->entries()->ports(), static fn (Port $port): bool => $port->through);
   }
 
   /**
@@ -1393,7 +1393,7 @@ final class ContractEmitter {
    */
   protected function eachReads(Attachment $attachment): array {
     $spelled = [];
-    foreach ($attachment->child->getDefinitions()->entries() as $entry) {
+    foreach ($attachment->child->entries()->entries() as $entry) {
       foreach ($entry->attachment->reads ?? [] as $port => $path) {
         $spelled[(string) $port] ??= $attachment->reads[explode('.', $path)[0]] ?? $path;
       }
@@ -1432,7 +1432,7 @@ final class ContractEmitter {
   protected function entrySites(SurfaceInterface $declared, SurfaceInterface $static, Entry $entry, Attachment $attachment, array $values, Emission $emission): array {
     $branches = [];
     $markers = [];
-    foreach ($attachment->child->getDefinitions()->entries() as $id => $inner) {
+    foreach ($attachment->child->entries()->entries() as $id => $inner) {
       $child = $inner->attachment;
       if ($child === NULL || $child->reads === []) {
         continue;
@@ -1449,8 +1449,8 @@ final class ContractEmitter {
       $markers += $marked;
       // A coded refiner reading a port is not enumerated at an entry:
       // the server answers it.
-      $ports = $child->child->getDefinitions()->ports();
-      foreach ($child->child->getDefinitions()->entries() as $key) {
+      $ports = $child->child->entries()->ports();
+      foreach ($child->child->entries()->entries() as $key) {
         if (array_intersect($key->codedDependencies(), array_keys($ports)) !== [] && $this->readsEmptyPort($key, $ports, $site->readFrom($values)->ports ?? [])) {
           $markers['refine'] = TRUE;
         }
@@ -1767,7 +1767,7 @@ final class ContractEmitter {
    *   TRUE when a key of it, or of a child inside it, is locked or marked.
    */
   protected function locksBelow(SurfaceInterface $surface): bool {
-    foreach ($surface->getDefinitions()->entries() as $entry) {
+    foreach ($surface->entries()->entries() as $entry) {
       $children = match (TRUE) {
         $entry->variants !== NULL => $entry->variants->variants,
         $entry->attachment !== NULL => [$entry->attachment],
@@ -1903,7 +1903,7 @@ final class ContractEmitter {
    *   TRUE when a link is written below it.
    */
   protected function linksBelow(SurfaceInterface $surface, bool $reached, CacheableMetadata $cacheability): bool {
-    foreach ($surface->getDefinitions()->entries() as $entry) {
+    foreach ($surface->entries()->entries() as $entry) {
       foreach ($entry->mounted as $mount) {
         if ($this->linksBelow($mount->child, FALSE, $cacheability)) {
           return TRUE;
@@ -2122,7 +2122,7 @@ final class ContractEmitter {
     assert($variants !== NULL);
     // The deciding key's schema, asked once, for the type each variant's
     // value is said in.
-    $by = $declared->getDefinitions()->entry($variants->by)?->schema();
+    $by = $declared->entries()->entry($variants->by)?->schema();
     $deciding = $values[$variants->by] ?? ($declaring && $declared->isLocked($variants->by) ? NULL : $declared->getDefault($variants->by));
     $chosen = $variants->chosen($deciding);
     $held = $values[$entry->name] ?? NULL;

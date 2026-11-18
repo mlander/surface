@@ -226,7 +226,7 @@ final class SiteListBudget {
       return FALSE;
     }
     $seen[spl_object_id($surface)] = TRUE;
-    foreach ($surface->getDefinitions()->entries() as $entry) {
+    foreach ($surface->entries()->entries() as $entry) {
       if ($test($entry)) {
         return TRUE;
       }
@@ -258,7 +258,7 @@ final class SiteListBudget {
     if ($entry->variants !== NULL) {
       return count($entry->variants->variants);
     }
-    return $entry->attachment === NULL ? 0 : count($entry->attachment->child->getDefinitions()->names());
+    return $entry->attachment === NULL ? 0 : count($entry->attachment->child->entries()->names());
   }
 
 }

@@ -140,7 +140,7 @@ final class EncryptedStorageLayout implements StorageLayoutInterface {
    */
   public static function secretKeys(SurfaceInterface $surface): array {
     $keys = [];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       if (Secrets::marked($entry->schema())) {
         $keys[] = (string) $name;
       }

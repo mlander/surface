@@ -154,7 +154,7 @@ class CollectionTest extends SurfaceKernelTestBase {
    *   The collection.
    */
   protected static function collection(SurfaceInterface $surface, string $key): Collection {
-    $list = $surface->getDefinitions()->entry($key)?->list;
+    $list = $surface->entries()->entry($key)?->list;
     assert($list !== NULL);
     return $list;
   }
@@ -174,7 +174,7 @@ class CollectionTest extends SurfaceKernelTestBase {
    */
   public function testShape(): void {
     $edit = $this->edit();
-    $this->assertSame(['larder', 'size', 'racks', 'shelves'], $edit->getDefinitions()->names());
+    $this->assertSame(['larder', 'size', 'racks', 'shelves'], $edit->entries()->names());
     $racks = $edit->getDefinition('racks');
     $this->assertInstanceOf(ListDataDefinition::class, $racks);
     $this->assertSame('Spice racks', (string) $racks->getLabel());
@@ -187,7 +187,7 @@ class CollectionTest extends SurfaceKernelTestBase {
     // No upper bound is no Count maximum.
     $this->assertSame(['max' => 3], $edit->getDefinition('shelves')->getConstraints()['Count']);
     // A collection is not an attached structure: the key is the parent's.
-    $entry = $edit->getDefinitions()->entry('racks');
+    $entry = $edit->entries()->entry('racks');
     $this->assertFalse($entry->isNested());
     $this->assertNull($entry->childFor([]));
     $this->assertSame(SpiceRackResource::class, $entry->list->item->source);
@@ -227,7 +227,7 @@ class CollectionTest extends SurfaceKernelTestBase {
     $this->assertFalse($locked->isLocked('shelves'));
     // Omitted leaves the key out.
     $this->actAs('hide spice rack');
-    $this->assertSame(['larder', 'size', 'shelves'], $this->edit()->getDefinitions()->names());
+    $this->assertSame(['larder', 'size', 'shelves'], $this->edit()->entries()->names());
   }
 
   /**

@@ -7,7 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Surface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\Pipeline\StorageViolationsException;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Storage\ConfigObjectStorage;
@@ -205,7 +205,7 @@ class ConfigObjectStorageTest extends SurfaceKernelTestBase {
     $this->assertFalse($storage->mayClear($this->context(), 'limit'), 'The schema at the path does not call it nullable.');
     $this->assertTrue($storage->mayClear($this->context(), 'title'));
 
-    $surface = static fn (int $max): Surface => new Surface(DefinitionMap::fromArrays(definitions: [
+    $surface = static fn (int $max): Surface => new Surface(Entries::fromArrays(definitions: [
       'limit' => DataDefinition::create('integer')
         ->setLabel('Limit')
         ->setRequired(TRUE)

@@ -142,8 +142,8 @@ class ContentEntityAccessTest extends SurfaceKernelTestBase {
   public function testHiddenFieldIsOmittedChild(): void {
     $this->actAs();
     $edit = $this->edit();
-    $this->assertNull($edit->getDefinitions()->entry(EntityTestHooks::HIDDEN));
-    $this->assertNotNull($edit->getDefinitions()->entry('title'));
+    $this->assertNull($edit->entries()->entry(EntityTestHooks::HIDDEN));
+    $this->assertNotNull($edit->entries()->entry('title'));
 
     try {
       $this->pipeline()->accept($edit, [EntityTestHooks::HIDDEN => ['value' => 'Seen']], []);
@@ -169,7 +169,7 @@ class ContentEntityAccessTest extends SurfaceKernelTestBase {
     $this->actAs(EntityTestHooks::BYPASS);
     $edit = $this->edit();
     $this->assertFalse($edit->isLocked(EntityTestHooks::LOCKED));
-    $this->assertNotNull($edit->getDefinitions()->entry(EntityTestHooks::HIDDEN));
+    $this->assertNotNull($edit->entries()->entry(EntityTestHooks::HIDDEN));
   }
 
   /**
@@ -184,7 +184,7 @@ class ContentEntityAccessTest extends SurfaceKernelTestBase {
   public function testInheritedFieldIsDescribedOpen(): void {
     $this->actAs();
     $bare = $this->resources()->build('entity.content:node.page', new OperationContext('update'));
-    $this->assertNotNull($bare->getDefinitions()->entry(EntityTestHooks::HIDDEN));
+    $this->assertNotNull($bare->entries()->entry(EntityTestHooks::HIDDEN));
     $this->assertFalse($bare->isLocked(EntityTestHooks::LOCKED));
   }
 
@@ -232,14 +232,14 @@ class ContentEntityAccessTest extends SurfaceKernelTestBase {
     $this->assertSame([TelephoneItemStructure::class . '::shortNumbers()'], array_map(static fn ($refiner): string => $refiner->describe(), $phone->refiners));
 
     $edit = $this->edit();
-    $value = $edit->getDefinitions()->entry('field_phone')?->attachment?->child->getDefinition('value');
+    $value = $edit->entries()->entry('field_phone')?->attachment?->child->getDefinition('value');
     $this->assertNotNull($value);
     $this->assertSame('Digits, spaces and a leading plus.', (string) $value->getDescription());
     $this->assertSame('/^\+?[0-9 ]+$/D', $value->getConstraints()['Regex']['pattern']);
     // Its own refiner, which watches nothing, ran when it was built.
     $this->assertSame(20, $value->getConstraints()['Length']['max']);
     // The field's own facts stay derived.
-    $this->assertSame('Phone', (string) $edit->getDefinitions()->entry('field_phone')?->definition()->getLabel());
+    $this->assertSame('Phone', (string) $edit->entries()->entry('field_phone')?->definition()->getLabel());
 
     // And the storage writes it by its property name.
     $context = $this->resources()->operation('entity.content:node.page', 'update', ['id' => $this->node->id()]);

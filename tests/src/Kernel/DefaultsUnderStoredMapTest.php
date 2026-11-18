@@ -123,7 +123,7 @@ class DefaultsUnderStoredMapTest extends SurfaceKernelTestBase {
     $resources = $this->container->get('surface.resources');
     $context = $resources->operation(self::RESOURCE, 'configure');
     $built = $resources->build(self::RESOURCE, $context);
-    $stored = array_intersect_key($resources->storage(self::RESOURCE, $context, $built)->load($built), $built->getDefinitions()->toArray());
+    $stored = array_intersect_key($resources->storage(self::RESOURCE, $context, $built)->load($built), $built->entries()->toArray());
     $this->assertSame(self::HELD, $stored);
     // One level deep, a stored map stood for its defaults whole.
     $this->assertSame(self::HELD['marks'], array_replace($built->getDefaultValues(), $stored)['marks']);

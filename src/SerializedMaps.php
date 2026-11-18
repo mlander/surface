@@ -36,7 +36,7 @@ final class SerializedMaps {
    * The classes walked into: what a sealed data surface is made of.
    */
   private const WALKED = [
-    DefinitionMap::class,
+    Entries::class,
     Entry::class,
     Variants::class,
     Collection::class,

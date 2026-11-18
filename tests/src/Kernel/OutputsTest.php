@@ -25,7 +25,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * **absent**, which is what a producer says with the NotEmitted sentinel
  * and what conformance judges against the required flag.
  *
- * @see \Drupal\surface\SurfaceInterface::getOutputDefinitions()
+ * @see \Drupal\surface\SurfaceInterface::outputEntries()
  * @see \Drupal\surface\Pipeline\SurfacePipelineInterface::conformOutput()
  * @see docs/outputs.md
  */
@@ -97,7 +97,7 @@ class OutputsTest extends SurfaceKernelTestBase {
    *   The allowed values.
    */
   protected function choices(SurfaceInterface $surface, string $name): array {
-    return $surface->getOutputDefinitions()->get($name)->getConstraints()['Choice']['choices'] ?? [];
+    return $surface->outputEntries()->get($name)->getConstraints()['Choice']['choices'] ?? [];
   }
 
   /**
@@ -106,7 +106,7 @@ class OutputsTest extends SurfaceKernelTestBase {
   public function testOutputsSealIntoTheirOwnMap(): void {
     $surface = $this->outputSurface();
 
-    $outputs = $surface->getOutputDefinitions();
+    $outputs = $surface->outputEntries();
     $this->assertSame(['text', 'note', 'meta', 'tags'], $outputs->names());
     $this->assertTrue($outputs->get('text')->isRequired());
     $this->assertFalse($outputs->get('note')->isRequired());
@@ -116,7 +116,7 @@ class OutputsTest extends SurfaceKernelTestBase {
     // The two halves do not leak into each other. The inputs know
     // nothing of the outputs, and the declared defaults — which only
     // inputs have — cover the inputs alone.
-    $this->assertSame(['mode'], $surface->getDefinitions()->names());
+    $this->assertSame(['mode'], $surface->entries()->names());
     $this->assertSame(['mode' => NULL], $surface->getDefaultValues());
 
     // Nothing an output declares is locked, and nothing can be.
@@ -135,8 +135,8 @@ class OutputsTest extends SurfaceKernelTestBase {
   public function testSurfaceWithoutOutputsAnswersEmpty(): void {
     $surface = $this->casingVariantSurface();
 
-    $this->assertCount(0, $surface->getOutputDefinitions());
-    $this->assertSame([], $surface->getOutputDefinitions()->names());
+    $this->assertCount(0, $surface->outputEntries());
+    $this->assertSame([], $surface->outputEntries()->names());
     $this->assertCount(0, $this->pipeline()->conformOutput($surface, []));
   }
 
@@ -208,7 +208,7 @@ class OutputsTest extends SurfaceKernelTestBase {
    */
   public function testOutputsAreNeverRefined(): void {
     $surface = $this->outputSurface();
-    $this->assertSame([], $surface->getOutputDefinitions()->refinements());
+    $this->assertSame([], $surface->outputEntries()->refinements());
     $this->assertSame(['short', 'long'], $this->choices($surface->refine(['mode' => 'plain']), 'note'));
   }
 

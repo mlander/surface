@@ -7,7 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\Surface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -55,7 +55,7 @@ class NamedChecksTest extends SurfaceKernelTestBase {
    *   The document's properties, decoded.
    */
   protected function emitted(array $definitions): array {
-    $surface = new Surface(DefinitionMap::fromArrays(definitions: $definitions));
+    $surface = new Surface(Entries::fromArrays(definitions: $definitions));
     $schema = $this->container->get('surface.contract_emitter')->emit($surface, [], 'test')->document['schema'];
     return json_decode((string) json_encode($schema['properties']), TRUE);
   }
@@ -205,7 +205,7 @@ class NamedChecksTest extends SurfaceKernelTestBase {
     $properties = $this->emitted($definitions);
     $this->assertSame(['drupal:Email' => []], $properties['mail']['portable-check']);
     $this->assertArrayNotHasKey('x-portable-messages', $properties['mail']);
-    $surface = new Surface(DefinitionMap::fromArrays(definitions: $definitions));
+    $surface = new Surface(Entries::fromArrays(definitions: $definitions));
     $pipeline = $this->container->get('surface.pipeline');
     $refused = [];
     foreach ($pipeline->validate($surface, $pipeline->accept($surface, ['mail' => 'a@b'])) as $violation) {

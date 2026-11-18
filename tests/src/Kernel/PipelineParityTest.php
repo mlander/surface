@@ -8,7 +8,7 @@ use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Surface;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Pipeline\UnknownKeysException;
@@ -77,7 +77,7 @@ class PipelineParityTest extends SurfaceKernelTestBase {
     DefinitionMetadata::setDefaultValue($definitions['flavor'], 'vanilla');
 
     return new Surface(
-      DefinitionMap::fromArrays(
+      Entries::fromArrays(
         definitions: $definitions,
         locked: ['flavor'],
       ),

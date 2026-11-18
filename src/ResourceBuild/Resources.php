@@ -144,6 +144,15 @@ use Drupal\surface\Storage\ConfigObjectStorage;
 final class Resources implements ResourcesInterface {
 
   /**
+   * The shape of what the build cache holds, named in its ids.
+   *
+   * Changed whenever a serialized build changes shape, so a row written
+   * by other code is not read: 'entries' since a data surface holds its
+   * keys as Entries (2026-11-18).
+   */
+  public const BUILD_FORMAT = 'entries';
+
+  /**
    * What builds reference keys, where withRegistry() was handed one.
    */
   protected ?References $heldReferences = NULL;
@@ -584,7 +593,8 @@ final class Resources implements ResourcesInterface {
    *
    * The memo key, which says the resource, the context and its
    * parameters, the kind of build and the reference limit, with the
-   * languages a label read from configuration is in.
+   * languages a label read from configuration is in, after the build
+   * format (BUILD_FORMAT): a row of another format is never read.
    *
    * @param string $resource
    *   The class, or its id.
@@ -600,7 +610,7 @@ final class Resources implements ResourcesInterface {
       return NULL;
     }
     $hash = hash('xxh3', serialize([$key, $this->languages()]));
-    return 'declared:' . $this->registry->getDefinition($resource)->id . ':' . $hash;
+    return 'declared:' . static::BUILD_FORMAT . ':' . $this->registry->getDefinition($resource)->id . ':' . $hash;
   }
 
   /**
@@ -665,7 +675,7 @@ final class Resources implements ResourcesInterface {
       return;
     }
     $seen[spl_object_id($surface)] = TRUE;
-    foreach ($surface->getDefinitions()->entries() as $entry) {
+    foreach ($surface->entries()->entries() as $entry) {
       $children = [
         ...($entry->attachment === NULL ? [] : [$entry->attachment]),
         ...array_values($entry->mounted),
@@ -688,7 +698,7 @@ final class Resources implements ResourcesInterface {
         }
       }
     }
-    foreach ($surface->getDefinitions()->mixins() as $mixin) {
+    foreach ($surface->entries()->mixins() as $mixin) {
       $child = $mixin->structure->settledChild();
       if ($mixin->structure->source !== NULL && ($definition = $this->registry->readDefinition($mixin->structure->source)) !== NULL) {
         $read[$mixin->structure->source] = $definition;
@@ -1073,7 +1083,7 @@ final class Resources implements ResourcesInterface {
         $walk($inner, $path . '.' . $segment);
       }
     };
-    foreach ($sealed->getDefinitions()->entries() as $name => $entry) {
+    foreach ($sealed->entries()->entries() as $name => $entry) {
       $walk($entry->schema(), (string) $name);
     }
   }
@@ -1486,7 +1496,7 @@ final class Resources implements ResourcesInterface {
    */
   protected function storageFor(ResourceDefinition $definition, OperationContext $context, SurfaceInterface $built, AccountInterface $account, ?ItemGates $gates = NULL): StorageAdapter {
     $routes = [];
-    foreach ($built->getDefinitions()->entries() as $key => $entry) {
+    foreach ($built->entries()->entries() as $key => $entry) {
       $children = $entry->attachment !== NULL
         ? [StorageAdapter::ATTACHED => $entry->attachment]
         : ($entry->variants !== NULL ? $entry->variants->variants : []);

@@ -181,7 +181,7 @@ final class Choices {
       $name = $segments[$i];
       $next = $segments[$i + 1];
       $here = $at . '/' . static::escape($name);
-      $entry = $frame->getDefinitions()->entry($name);
+      $entry = $frame->entries()->entry($name);
       if ($entry === NULL) {
         break;
       }
@@ -353,7 +353,7 @@ final class Choices {
     }
     elseif ($entry->attachment !== NULL && SchemaFacts::each($entry->schema()) !== NULL) {
       $list = $entry->attachment->child;
-      $values = array_map('strval', $list->getDefinitions()->names());
+      $values = array_map('strval', $list->entries()->names());
     }
     else {
       throw new UnknownChoiceException($pointer, UnknownChoiceException::NO_LIST);
@@ -396,7 +396,7 @@ final class Choices {
   protected static function walk(SurfaceInterface $frame, array $segments, int $i, string $at, Choices $choices): array {
     $name = $segments[$i];
     $here = $at . '/' . static::escape($name);
-    $entry = $frame->getDefinitions()->entry($name);
+    $entry = $frame->entries()->entry($name);
     if ($entry === NULL) {
       throw new UnknownChoiceException($here, UnknownChoiceException::NO_KEY);
     }

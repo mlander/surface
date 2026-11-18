@@ -550,7 +550,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $cases['ruled_out'] = $map('Ruled out')->setPropertyDefinition('gone', DoesNotApply::marked(DataDefinition::create('string')->setRequired(TRUE)));
     $cases['shaped'] = $map('Shaped')->setPropertyDefinition('phone', Shapes::unaltered(PhoneNumber::class));
     foreach ($this->examples() as [$id, , $surface]) {
-      foreach ($surface->getDefinitions()->entries() as $entry) {
+      foreach ($surface->entries()->entries() as $entry) {
         if ($id === 'event.mailer' && $entry->name === 'credential' && $entry->variants !== NULL) {
           $member = Surface::deepClone($entry->variants->definitionFor('pasted'));
           $member->addConstraint('Choice', ['choices' => ['x', 'y']]);
@@ -649,7 +649,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $this->assertSame(static::json($definitions->published(DefinitionSchema::of($loose))), static::json($definitions->published(DefinitionSchema::of($loose))), 'Two reads say the same.');
     $label = NULL;
     foreach ($this->examples() as [, , $surface]) {
-      foreach ($surface->getDefinitions()->entries() as $entry) {
+      foreach ($surface->entries()->entries() as $entry) {
         if (!$entry->isNested() && $entry->list === NULL && $entry->definition()->getDataType() === 'string') {
           $label = $entry;
           break 2;
@@ -666,7 +666,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
     $properties = 0;
     $listed = 0;
     foreach ($this->examples() as [, , $surface]) {
-      foreach ($surface->getDefinitions()->entries() as $entry) {
+      foreach ($surface->entries()->entries() as $entry) {
         $map = $entry->definition();
         if ($entry->isNested() || $entry->list !== NULL || !$map instanceof MapDataDefinition || $map->getPropertyDefinitions() === []) {
           continue;
@@ -723,7 +723,7 @@ class DefinitionSchemaTest extends SurfaceKernelTestBase {
       $this->assertIsArray($document, $id);
       $this->assertSame($operation, $document['operation'] ?? NULL, $id);
       $properties = $document['schema']['properties'] ?? [];
-      foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      foreach ($surface->entries()->entries() as $name => $entry) {
         $served = $properties[$name] ?? NULL;
         if (!is_array($served)) {
           continue;

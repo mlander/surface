@@ -334,7 +334,7 @@ class ReferenceStorageTest extends SurfaceKernelTestBase {
 
     // Built, each entry is the id with the constraint, as any reference
     // key is, and marked for the storage that keeps a uuid.
-    $pages = $this->container->get('surface.resources')->build(ReferenceSettingsResource::class, new OperationContext('configure'))->getDefinitions()->entry('pages')?->attachment?->child;
+    $pages = $this->container->get('surface.resources')->build(ReferenceSettingsResource::class, new OperationContext('configure'))->entries()->entry('pages')?->attachment?->child;
     $this->assertNotNull($pages);
     foreach (['lead', 'aside'] as $entry) {
       $definition = $pages->getDefinition($entry);

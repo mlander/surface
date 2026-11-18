@@ -12,7 +12,7 @@ use Drupal\surface\Attachment;
 use Drupal\surface\Collection;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
-use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entries;
 use Drupal\surface\Entry;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceInterface;
@@ -69,7 +69,7 @@ class ShellSchemaCompositionTest extends SurfaceKernelTestBase {
     'collection, sealed' => 30,
     'mount, refined' => 75,
     'mount, sealed' => 2,
-    // 978 and 96 until 2026-11-16: DefinitionMap::withVariantsResolved(),
+    // 978 and 96 until 2026-11-16: Entries::withVariantsResolved(),
     // deleted with no caller (part 32.8), added 163 and 16 entries.
     'variants, chosen, refined' => 815,
     'variants, none chosen, refined' => 80,
@@ -298,8 +298,8 @@ class ShellSchemaCompositionTest extends SurfaceKernelTestBase {
         catch (\InvalidArgumentException | \LogicException) {
           continue;
         }
-        foreach ($refined->getDefinitions()->entries() as $name => $entry) {
-          $sealed = $surface->getDefinitions()->entry((string) $name);
+        foreach ($refined->entries()->entries() as $name => $entry) {
+          $sealed = $surface->entries()->entry((string) $name);
           if ($sealed === NULL || !$entry->isShell() || $entry->list !== NULL || $entry->sameSource($sealed)) {
             continue;
           }
@@ -314,7 +314,7 @@ class ShellSchemaCompositionTest extends SurfaceKernelTestBase {
           }
           $how = match (TRUE) {
             $entry->isSchemaFirst() => 'composed',
-            !DefinitionMap::derivedClasses($entry->schema()) => 'with its definition, a class no schema derives',
+            !Entries::derivedClasses($entry->schema()) => 'with its definition, a class no schema derives',
             default => 'with its definition',
           };
           $before = $entry->isSchemaFirst() ? static::builtBefore($surface, $sealed, $values, $kind) : $entry->definition();
@@ -475,10 +475,10 @@ class ShellSchemaCompositionTest extends SurfaceKernelTestBase {
     // The surface with every kind of shell, from the builder's own shells.
     [$surface, $shells, $children] = static::everyShell();
     foreach ($shells as $key => $shell) {
-      $check("every shell $key", $surface->getDefinitions()->entry($key), static::oldSeal($surface, $key, $shell));
+      $check("every shell $key", $surface->entries()->entry($key), static::oldSeal($surface, $key, $shell));
     }
     foreach (['surface' => $surface] + $children as $at => $each) {
-      foreach ($each->getDefinitions()->entries() as $name => $entry) {
+      foreach ($each->entries()->entries() as $name => $entry) {
         if ($entry->isShell() && !($at === 'surface' && isset($shells[$name]))) {
           $check("every shell $at.$name", $entry, static::rebuilt($entry));
         }
@@ -558,7 +558,7 @@ class ShellSchemaCompositionTest extends SurfaceKernelTestBase {
   protected static function chosenOf(Entry $entry): ?string {
     $keys = array_keys(SchemaFacts::properties($entry->schema()));
     foreach ($entry->variants->variants as $id => $variant) {
-      if (array_map('strval', array_keys($variant->child->getDefinitions()->keys())) === array_map('strval', $keys)) {
+      if (array_map('strval', array_keys($variant->child->entries()->keys())) === array_map('strval', $keys)) {
         return (string) $id;
       }
     }
@@ -592,8 +592,8 @@ class ShellSchemaCompositionTest extends SurfaceKernelTestBase {
           continue;
         }
         $kept = [];
-        foreach ($refined->getDefinitions()->entries() as $name => $entry) {
-          $sealed = $surface->getDefinitions()->entry((string) $name);
+        foreach ($refined->entries()->entries() as $name => $entry) {
+          $sealed = $surface->entries()->entry((string) $name);
           if ($sealed !== NULL && $entry->isSchemaFirst() && $entry->isShell() && !$entry->sameSource($sealed)) {
             $kept[(string) $name] = static::keptSchemas($entry, $values);
           }
@@ -613,7 +613,7 @@ class ShellSchemaCompositionTest extends SurfaceKernelTestBase {
           }
         }
         foreach ($kept as $name => $before) {
-          $entry = $woken->getDefinitions()->entry($name);
+          $entry = $woken->entries()->entry($name);
           assert($entry !== NULL);
           $after = static::keptSchemas($entry, $values);
           $kind = $shells[$entry][0] ?? 'none';
@@ -636,9 +636,9 @@ class ShellSchemaCompositionTest extends SurfaceKernelTestBase {
     $surface = $resources->buildOperation(RegistrationStep3Resource::class, 'configure');
     $values = array_replace($surface->getDefaultValues(), ['capacity' => 400]);
     $refined = $surface->refine($values, SurfaceInterface::CODED);
-    $before = static::keptSchemas($refined->getDefinitions()->entry('third_party_settings'), $values);
+    $before = static::keptSchemas($refined->entries()->entry('third_party_settings'), $values);
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
-    $woken = unserialize(serialize($refined))->getDefinitions()->entry('third_party_settings');
+    $woken = unserialize(serialize($refined))->entries()->entry('third_party_settings');
     $this->assertNotNull($woken);
     $schema = $woken->schema();
     $this->assertTrue(DefinitionSchema::same($schema, DefinitionSchema::of($woken->definition())), 'The woken mount\'s schema is the schema its definition reads.');
@@ -672,7 +672,7 @@ class ShellSchemaCompositionTest extends SurfaceKernelTestBase {
     $kept = [];
     foreach ($frames as $path => $child) {
       $map = $path === '' ? $schema : DefinitionSchema::propertyOf($schema, (string) $path);
-      foreach ($child->getDefinitions()->entries() as $name => $child_entry) {
+      foreach ($child->entries()->entries() as $name => $child_entry) {
         $at = $path === '' ? (string) $name : "$path.$name";
         $kept[$at] = $map !== NULL && DefinitionSchema::propertyOf($map, (string) $name) === $child_entry->schema();
       }
@@ -706,7 +706,7 @@ class ShellSchemaCompositionTest extends SurfaceKernelTestBase {
     };
     foreach ($frames as $path => $child) {
       $map = $list ? DefinitionSchema::itemOf($schema) : ($path === '' ? $schema : DefinitionSchema::propertyOf($schema, (string) $path));
-      foreach ($child->getDefinitions()->entries() as $name => $child_entry) {
+      foreach ($child->entries()->entries() as $name => $child_entry) {
         if ($map === NULL || DefinitionSchema::propertyOf($map, (string) $name) !== $child_entry->schema()) {
           return FALSE;
         }
@@ -759,9 +759,9 @@ class ShellSchemaCompositionTest extends SurfaceKernelTestBase {
       return;
     }
     $seen[spl_object_id($surface)] = TRUE;
-    foreach ([$surface->getDefinitions(), $surface->getOutputDefinitions()] as $map) {
+    foreach ([$surface->entries(), $surface->outputEntries()] as $map) {
       foreach ($map->entries() as $name => $entry) {
-        static::add($entry, $shells, $where, $sealed?->getDefinitions()->entry((string) $name));
+        static::add($entry, $shells, $where, $sealed?->entries()->entry((string) $name));
         $children = [$entry->attachment?->settledChild(), $entry->list?->item->settledChild()];
         foreach ($entry->variants->variants ?? [] as $attachment) {
           $children[] = $attachment->settledChild();

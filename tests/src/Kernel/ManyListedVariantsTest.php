@@ -147,7 +147,7 @@ class ManyListedVariantsTest extends SurfaceKernelTestBase {
    */
   protected function settled(SurfaceInterface $built): array {
     $settled = [];
-    foreach ($built->getDefinitions()->entry('panels')->variants->variants as $value => $variant) {
+    foreach ($built->entries()->entry('panels')->variants->variants as $value => $variant) {
       if ($variant->isDeferred() && $variant->isSettled()) {
         $settled[] = (string) $value;
       }
@@ -174,7 +174,7 @@ class ManyListedVariantsTest extends SurfaceKernelTestBase {
   public function testOnlyTheChosenLayoutIsBuilt(): void {
     $this->listMany();
     $built = $this->poster();
-    $variants = $built->getDefinitions()->entry('panels')->variants;
+    $variants = $built->entries()->entry('panels')->variants;
     $this->assertCount(self::MANY + 3, $variants->variants);
     $this->assertTrue($variants->variant('shelf_7')->isDeferred());
     $this->assertSame([], $this->settled($built), 'The build builds no layout the site lists.');
@@ -201,7 +201,7 @@ class ManyListedVariantsTest extends SurfaceKernelTestBase {
   public function testLazyListReadsAnEntryWhenBuilt(): void {
     $this->listMany(lazy: TRUE);
     $built = $this->poster();
-    $this->assertCount(self::MANY + 3, $built->getDefinitions()->entry('panels')->variants->variants);
+    $this->assertCount(self::MANY + 3, $built->entries()->entry('panels')->variants->variants);
     $this->assertSame([], PosterLayouts::$read, 'Building reads no entry.');
 
     // Past the site's list limit, the full schema names the values alone.

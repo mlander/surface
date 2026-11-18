@@ -86,7 +86,7 @@ class SurfaceBuilderTest extends SurfaceKernelTestBase {
         $this->assertStringContainsString('sealed', $e->getMessage());
       }
       // The advertised data surface is what it was: nothing half-applied.
-      $this->assertSame(['casing', 'extras'], $surface->getDefinitions()->names());
+      $this->assertSame(['casing', 'extras'], $surface->entries()->names());
     }
   }
 
@@ -156,7 +156,7 @@ class SurfaceBuilderTest extends SurfaceKernelTestBase {
     // else's.
     $this->assertSame(
       ['casing' => ['other' => ['lowercase', 'sentence']]],
-      $surface->getDefinitions()->contributions(),
+      $surface->entries()->contributions(),
     );
   }
 
@@ -301,7 +301,7 @@ class SurfaceBuilderTest extends SurfaceKernelTestBase {
 
     $this->assertSame(
       ['bundle' => ['entity_type'], 'field' => ['entity_type', 'bundle']],
-      $builder->seal()->getDefinitions()->refinements(),
+      $builder->seal()->entries()->refinements(),
     );
   }
 

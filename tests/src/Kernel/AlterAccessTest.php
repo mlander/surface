@@ -213,19 +213,19 @@ class AlterAccessTest extends SurfaceKernelTestBase {
     // The owner's static lock, under an alter that answers open.
     $this->actAs('wall inspector');
     foreach ([FALSE, TRUE] as $alone) {
-      $map = $this->gallery($alone)->getDefinitions();
+      $map = $this->gallery($alone)->entries();
       $this->assertTrue($map->isLocked('north') && $map->isLocked('south'), 'The wall\'s own lock stands.');
     }
     // An earlier alter's static lock, under the same.
     $this->actAs('freezer');
     foreach ([FALSE, TRUE] as $alone) {
-      $map = $this->gallery($alone)->getDefinitions();
+      $map = $this->gallery($alone)->entries();
       $this->assertTrue($map->isLocked('north') && $map->isLocked('south'), 'The earlier alter\'s lock stands.');
     }
     // An earlier alter's runtime omission, under the same.
     $this->actAs('keeper');
     $this->flag(WallAlter::DOWN);
-    $this->assertSame(['name', 'caption', 'credit', 'medium', 'finish', 'rooms'], $this->gallery()->getDefinitions()->names());
+    $this->assertSame(['name', 'caption', 'credit', 'medium', 'finish', 'rooms'], $this->gallery()->entries()->names());
     // A locked wall keeps what is stored, whatever is posted.
     $this->flag(WallAlter::DOWN, FALSE);
     $this->actAs('freezer');
@@ -245,21 +245,21 @@ class AlterAccessTest extends SurfaceKernelTestBase {
     // The wall's static lock, beside the alter's runtime answer: applied
     // for the account alone, and the key marked for the runtime one.
     $this->actAs('wall inspector');
-    $alone = $this->gallery(TRUE)->getDefinitions();
+    $alone = $this->gallery(TRUE)->entries();
     $this->assertTrue($alone->isLocked('north'));
     $this->assertTrue($alone->isRuntimeAccess('north'), 'Locked by the account alone, and marked for what the alter decides once the walls are known.');
     // The alter's static lock decides alone: nothing set aside after it is
     // asked, since the alter answers static for this account.
     $this->actAs('freezer');
-    $alone = $this->gallery(TRUE)->getDefinitions();
+    $alone = $this->gallery(TRUE)->entries();
     $this->assertTrue($alone->isLocked('north'));
     $this->assertFalse($alone->isRuntimeAccess('north'));
     // The alter's runtime omission: applied by build(), set aside for the
     // account alone, the key there and marked.
     $this->actAs('keeper');
     $this->flag(WallAlter::DOWN);
-    $this->assertNull($this->gallery()->getDefinitions()->entry('north'));
-    $alone = $this->gallery(TRUE)->getDefinitions();
+    $this->assertNull($this->gallery()->entries()->entry('north'));
+    $alone = $this->gallery(TRUE)->entries();
     $this->assertFalse($alone->isLocked('north'));
     $this->assertTrue($alone->isRuntimeAccess('north') && $alone->isRuntimeAccess('south'));
     $this->assertFalse($alone->isRuntimeAccess('name'));
@@ -305,46 +305,46 @@ class AlterAccessTest extends SurfaceKernelTestBase {
     // A structure attached twice, and by a second container: the alter
     // answers at every site.
     $this->actAs('freezer');
-    $this->assertTrue($this->gallery()->getDefinitions()->isLocked('north'));
-    $this->assertTrue($this->gallery()->getDefinitions()->isLocked('south'));
-    $this->assertTrue($annex()->getDefinitions()->isLocked('wall'));
+    $this->assertTrue($this->gallery()->entries()->isLocked('north'));
+    $this->assertTrue($this->gallery()->entries()->isLocked('south'));
+    $this->assertTrue($annex()->entries()->isLocked('wall'));
     $this->actAs('keeper');
     $this->flag(WallAlter::DOWN);
-    $this->assertSame(['opening'], $annex()->getDefinitions()->names());
-    $this->assertTrue($annex(TRUE)->getDefinitions()->isRuntimeAccess('wall'));
+    $this->assertSame(['opening'], $annex()->entries()->names());
+    $this->assertTrue($annex(TRUE)->entries()->isRuntimeAccess('wall'));
     $this->flag(WallAlter::DOWN, FALSE);
 
     // A mixin's members, held in the owner's frame.
     $this->actAs('plaque hider');
     foreach ([FALSE, TRUE] as $alone) {
-      $this->assertSame(['name', 'north', 'south', 'medium', 'finish', 'rooms'], $this->gallery($alone)->getDefinitions()->names());
+      $this->assertSame(['name', 'north', 'south', 'medium', 'finish', 'rooms'], $this->gallery($alone)->entries()->names());
     }
     $this->actAs('keeper');
     $this->flag(PlaqueAlter::FIXED);
-    $map = $this->gallery()->getDefinitions();
+    $map = $this->gallery()->entries();
     $this->assertTrue($map->isHeld('caption') && $map->isHeld('credit'));
-    $alone = $this->gallery(TRUE)->getDefinitions();
+    $alone = $this->gallery(TRUE)->entries();
     $this->assertFalse($alone->isHeld('caption'));
     $this->assertTrue($alone->isRuntimeAccess('caption') && $alone->isRuntimeAccess('credit'));
     $this->flag(PlaqueAlter::FIXED, FALSE);
 
     // One variant, and not the other.
     $this->actAs('freezer');
-    $variants = $this->gallery()->getDefinitions()->entry('finish')->variants->variants;
+    $variants = $this->gallery()->entries()->entry('finish')->variants->variants;
     $this->assertNotNull($variants['oil']->child->lockedWhole(), 'Offered read only.');
     $this->assertNull($variants['print']->child->lockedWhole());
     $this->actAs('keeper');
     $this->flag(OilFinishAlter::BANNED);
-    $this->assertSame(['print'], array_keys($this->gallery()->getDefinitions()->entry('finish')->variants->variants));
-    $alone = $this->gallery(TRUE)->getDefinitions();
+    $this->assertSame(['print'], array_keys($this->gallery()->entries()->entry('finish')->variants->variants));
+    $alone = $this->gallery(TRUE)->entries();
     $this->assertSame(['oil', 'print'], array_keys($alone->entry('finish')->variants->variants));
     $this->assertTrue($alone->isRuntimeAccess('finish'));
     $this->flag(OilFinishAlter::BANNED, FALSE);
 
     // The structure at every entry of keys from the site.
     $this->flag(RoomAlter::DARK);
-    $this->assertTrue($this->gallery()->getDefinitions()->isLocked('rooms'));
-    $alone = $this->gallery(TRUE)->getDefinitions();
+    $this->assertTrue($this->gallery()->entries()->isLocked('rooms'));
+    $alone = $this->gallery(TRUE)->entries();
     $this->assertFalse($alone->isLocked('rooms'));
     $this->assertTrue($alone->isRuntimeAccess('rooms'));
     $this->flag(RoomAlter::DARK, FALSE);
@@ -359,7 +359,7 @@ class AlterAccessTest extends SurfaceKernelTestBase {
     $this->assertTrue($resources->access(GalleryResource::class, $resources->operation(GalleryResource::class, 'configure'))->isAllowed(), 'Only in the operation the alter names.');
     $alone = $this->gallery(TRUE, 'curate');
     $this->assertNull($alone->lockedWhole(), 'Built for the account alone, a runtime answer at the top is set aside.');
-    $marked = array_filter($alone->getDefinitions()->names(), [$alone->getDefinitions(), 'isRuntimeAccess']);
+    $marked = array_filter($alone->entries()->names(), [$alone->entries(), 'isRuntimeAccess']);
     $this->assertSame(self::KEYS, array_values($marked), 'And every key is marked.');
     $this->flag(GalleryAlter::CLOSED, FALSE);
     $this->actAs('gallery inspector');
@@ -377,8 +377,8 @@ class AlterAccessTest extends SurfaceKernelTestBase {
     $this->actAs('gallery inspector');
     $alone = $this->gallery(TRUE, 'curate');
     $this->assertNotNull($alone->lockedWhole());
-    $this->assertTrue($alone->getDefinitions()->isRuntimeAccess('north'));
-    $this->assertFalse($alone->getDefinitions()->isRuntimeAccess('name'), 'Static at the top: nothing set aside there.');
+    $this->assertTrue($alone->entries()->isRuntimeAccess('north'));
+    $this->assertFalse($alone->entries()->isRuntimeAccess('name'), 'Static at the top: nothing set aside there.');
     $full = $this->full('curate');
     $this->assertTrue($full['readOnly']);
     $this->assertTrue($full['properties']['north']['readOnly']);

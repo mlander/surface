@@ -80,7 +80,7 @@ final class Outbound {
    *   key is comes from its entry's schema.
    */
   public static function declared(SurfaceInterface $surface, array $values): array {
-    $definitions = $surface->getDefinitions();
+    $definitions = $surface->entries();
     $declared = [];
     foreach ($values as $name => $value) {
       $entry = $definitions->entry((string) $name);
@@ -145,7 +145,7 @@ final class Outbound {
       return $asked[$surface];
     }
     $secrets = [];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $found = static::secretsAt($entry, $walks);
       if ($found !== []) {
         $secrets[(string) $name] = $found;

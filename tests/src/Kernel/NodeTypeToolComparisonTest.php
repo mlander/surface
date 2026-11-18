@@ -196,7 +196,7 @@ class NodeTypeToolComparisonTest extends SurfaceKernelTestBase {
     ];
     $surface = $this->container->get('surface.resources')->buildOperation(NodeTypeResource::class, 'create');
     $keys = array_merge(
-      $surface->getDefinitions()->names(),
+      $surface->entries()->names(),
       [self::EXTRAS, NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::TAGS],
     );
     // 'name', 'type', 'description', 'help' and 'status' are ordinary

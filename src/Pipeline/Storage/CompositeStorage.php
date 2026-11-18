@@ -142,7 +142,7 @@ final class CompositeStorage implements SurfaceStorageInterface {
    *   When a key is claimed by no child, or by more than one.
    */
   protected function checkClaims(SurfaceInterface $surface): void {
-    $declared = $surface->getDefinitions()->names();
+    $declared = $surface->entries()->names();
     $claims = array_fill_keys($declared, 0);
     foreach ($this->children as [, $keys]) {
       foreach ($keys ?? $declared as $key) {

@@ -150,7 +150,7 @@ trait SurfaceFormatterTrait {
   public function settingsForm(array $form, FormStateInterface $form_state): array {
     $surface = $this->getSurface();
     $builder = $this->surfaceFormBuilder();
-    $stored = array_intersect_key($this->getSettings(), $surface->getDefinitions()->keys());
+    $stored = array_intersect_key($this->getSettings(), $surface->entries()->keys());
     $values = $this->surfaceFormValues($surface, $stored, $form_state);
     $field_name = $this->fieldDefinition->getName();
     $element = $builder->buildSurfaceForm(
@@ -320,7 +320,7 @@ trait SurfaceFormatterTrait {
    *   The values stored for it.
    */
   protected function appendFrameSummary(array &$summary, SurfaceInterface $surface, array $values): void {
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach ($surface->entries()->entries() as $name => $entry) {
       $value = $values[$name] ?? NULL;
       $schema = $entry->schema();
       $label = SchemaFacts::label($schema) ?? $name;
@@ -338,7 +338,7 @@ trait SurfaceFormatterTrait {
       elseif ($entry->variants !== NULL && SchemaFacts::dataType($schema) !== 'any') {
         // Variants chosen when the data surface was sealed (a locked
         // deciding key): the key is that variant's map.
-        $by = $surface->getDefinitions()->entry($entry->variants->by);
+        $by = $surface->entries()->entry($entry->variants->by);
         $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? ($by === NULL ? NULL : SchemaFacts::defaultOf($by->schema())));
         $child = $chosen === NULL ? NULL : $entry->variants->variant($chosen)->child;
       }

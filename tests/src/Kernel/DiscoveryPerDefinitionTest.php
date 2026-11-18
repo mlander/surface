@@ -108,7 +108,7 @@ class DiscoveryPerDefinitionTest extends SurfaceKernelTestBase {
    * Tests each definition's entry and the tags each carries.
    */
   public function testEachDefinitionCarriesWhatItWasReadFrom(): void {
-    $this->container->get('surface.resource_registry')->getDefinitions();
+    $this->container->get('surface.resource_registry')->entries();
 
     $this->assertEqualsCanonicalizing(
       ['config:field.field.node.page.field_description', 'config:field.storage.node.field_description'],
@@ -158,7 +158,7 @@ class DiscoveryPerDefinitionTest extends SurfaceKernelTestBase {
    * type's resource holds for it.
    */
   public function testOneFieldSavedLeavesTheRestCached(): void {
-    $this->container->get('surface.resource_registry')->getDefinitions();
+    $this->container->get('surface.resource_registry')->entries();
     $field = FieldConfig::loadByName('node', 'page', 'field_description');
     assert($field !== NULL);
     $field->set('label', 'Summary')->save();
@@ -195,7 +195,7 @@ class DiscoveryPerDefinitionTest extends SurfaceKernelTestBase {
       assert($display !== NULL);
       $display->setComponent('field_shared', ['weight' => 50])->save();
     }
-    $this->container->get('surface.resource_registry')->getDefinitions();
+    $this->container->get('surface.resource_registry')->entries();
     $this->assertTrue($this->cached('field.item:node.kitchen.field_shared'));
 
     $storage = FieldStorageConfig::loadByName('node', 'field_shared');
@@ -223,7 +223,7 @@ class DiscoveryPerDefinitionTest extends SurfaceKernelTestBase {
    * Tests that a request asking for one resource reads its entry alone.
    */
   public function testOneResourceReadsTheIndexAndItsEntry(): void {
-    $this->container->get('surface.resource_registry')->getDefinitions();
+    $this->container->get('surface.resource_registry')->entries();
     $next = $this->nextRequest();
     $this->assertSame('entity.content:node.page', $next->getDefinition('entity.content:node.page')->id);
     $this->assertTrue($next->hasDefinition('field.item:node.page.body'));

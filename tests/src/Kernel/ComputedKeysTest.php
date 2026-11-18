@@ -121,7 +121,7 @@ class ComputedKeysTest extends SurfaceKernelTestBase {
    */
   public function testBothDocumentsStateItReadOnlyAndComputed(): void {
     $built = $this->badge();
-    $this->assertSame(['first', 'last', 'code', 'handle', 'tag', 'color'], $built->getDefinitions()->names());
+    $this->assertSame(['first', 'last', 'code', 'handle', 'tag', 'color'], $built->entries()->names());
     $emitter = $this->container->get('surface.contract_emitter');
     $documents = [
       'full' => $emitter->emitFull($built, 'resource_test.badge', 'configure')->document['schema'],
@@ -179,7 +179,7 @@ class ComputedKeysTest extends SurfaceKernelTestBase {
     $this->assertSame('Handle', (string) $schema->get('title'));
     $this->assertSame(12, $schema->get('maxLength'));
     $this->assertSame(['string', 'null'], $schema->get('type'), 'Not required, so it may be NULL.');
-    $this->assertTrue(DefinitionSchema::same($this->badge()->getDefinitions()->entry('handle')->schema(), $schema), 'It is the handle\'s schema.');
+    $this->assertTrue(DefinitionSchema::same($this->badge()->entries()->entry('handle')->schema(), $schema), 'It is the handle\'s schema.');
   }
 
   /**

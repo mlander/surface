@@ -49,7 +49,7 @@ final class SettledCacheability {
    */
   protected static function gather(SurfaceInterface $surface, CacheableMetadata $cacheability, array &$seen): void {
     $children = [];
-    foreach ($surface->getDefinitions()->entries() as $entry) {
+    foreach ($surface->entries()->entries() as $entry) {
       array_push(
         $children,
         ...($entry->attachment === NULL ? [] : [$entry->attachment]),
@@ -58,7 +58,7 @@ final class SettledCacheability {
         ...($entry->list === NULL ? [] : [$entry->list->item]),
       );
     }
-    foreach ($surface->getDefinitions()->mixins() as $mixin) {
+    foreach ($surface->entries()->mixins() as $mixin) {
       $children[] = $mixin->structure;
     }
     foreach ($children as $attachment) {

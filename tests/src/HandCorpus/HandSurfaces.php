@@ -11,6 +11,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Attachment;
 use Drupal\surface\Collection;
 use Drupal\surface\Compute\MachineName;
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Computed;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Port;
@@ -441,7 +442,10 @@ final class HandSurfaces {
     $builder->addRefinement('t', ['gb']);
     $builder->addRefinement('q0', ['gf', 'gs']);
     $sealed = $builder->seal();
-    $ports = ['pl' => static::string('Port label'), 'pn' => DataDefinition::create('string')];
+    $ports = array_map(DefinitionSchema::of(...), [
+      'pl' => static::string('Port label'),
+      'pn' => DataDefinition::create('string'),
+    ]);
     $stored = [
       'c' => 'b',
       'cs' => 'b',
