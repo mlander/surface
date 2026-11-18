@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
@@ -20,6 +21,7 @@ use Drupal\surface\Pipeline\Coercion;
 use Drupal\surface\Pipeline\SurfacePipeline;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\ValueState;
+use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Refinement\WatchedValueCheck;
 use Drupal\surface\Surface;
 use PortableSchema\Builder\Schema;
@@ -315,13 +317,14 @@ final class KeyPaths {
     if (!$list && !$complex && ($schema === NULL ? $definition->getDataType() : SchemaFacts::dataType($schema)) === LeafTypes::ANY && !($schema === NULL ? LeafTypes::heldAsAny($definition) : DefinitionSchema::heldAsAny($schema)) && ValueState::isConfigured($raw)) {
       // No document is written for such a key, at inputs or here, so no
       // value can be held to it; validate() throws for it the same way.
-      throw $this->refusal('%s: "%s" on %s is of the any type, which no JSON Schema type is written for, so no value can be held to it.', $where['source'], $where['at'] . $path, $where['resource']);
+      // A place inside a list or a map is refused by violation().
+      throw $this->anyRefusal($where, $path);
     }
     $value = NULL;
     $problem = NULL;
     try {
       $value = $this->accepted($schema, $definition, $raw);
-      $problem = $this->violation($schema, $definition, $value);
+      $problem = $this->violation($schema, $definition, $value, $where, $path);
     }
     catch (\InvalidArgumentException $e) {
       $problem = $e->getMessage();
@@ -673,7 +676,9 @@ final class KeyPaths {
    * value itself is held: a scalar at a string key is not read as its
    * text here, so `TRUE` there is refused with `type`. A value that holds
    * nothing never reaches the validator: it is refused where the key is
-   * required, the module's own rule, and taken otherwise.
+   * required, the module's own rule, and taken otherwise. A value at a
+   * place of the `any` type, at any depth, is refused as held() refuses
+   * one at the key.
    *
    * @param \PortableSchema\Builder\Schema|null $schema
    *   The key's schema; NULL for a builder's definition, whose schema is
@@ -682,18 +687,25 @@ final class KeyPaths {
    *   The key's definition.
    * @param mixed $value
    *   The value, coerced.
+   * @param array{resource: string, at: string, source: string, noun: string, verb: string} $where
+   *   Where the value comes from, for the refusal of an `any` place.
+   * @param string $path
+   *   The place's path, for that refusal.
    *
    * @return string|null
    *   The first refusal's message, or NULL when the value fits.
+   *
+   * @throws \LogicException
+   *   When the value holds something at a place of the `any` type.
    */
-  protected function violation(?Schema $schema, DataDefinitionInterface $definition, mixed $value): ?string {
+  protected function violation(?Schema $schema, DataDefinitionInterface $definition, mixed $value, array $where, string $path): ?string {
     $properties = static::propertiesOf($schema, $definition);
     if ($properties !== [] && is_array($value)) {
       assert($definition instanceof ComplexDataDefinitionInterface);
       // A map is held key by key: what it leaves out starts from its
       // keys' own defaults.
       foreach ($value as $name => $held) {
-        $problem = $this->violation($properties[$name] ?: NULL, static::propertyOf($definition, (string) $name), $held);
+        $problem = $this->violation($properties[$name] ?: NULL, static::propertyOf($definition, (string) $name), $held, $where, $path . '.' . $name);
         if ($problem !== NULL) {
           return $problem;
         }
@@ -707,11 +719,68 @@ final class KeyPaths {
         : NULL;
     }
     $checked = $schema ?? DefinitionSchema::of($definition);
+    $any = static::anyPlace($checked, $value);
+    if ($any !== NULL) {
+      throw $this->anyRefusal($where, $path . ($any === '' ? '' : '.' . $any));
+    }
     foreach ($this->pipeline->conformOutput(Surface::holding($checked), ['value' => WatchedValueCheck::spelled($checked, $value)]) as $violation) {
       $at = $violation->path;
-      return ($at === '' ? '' : $at . ': ') . strip_tags((string) $violation->message);
+      $label = $violation->message instanceof TranslatableMarkup ? $violation->message->getArguments()['@label'] ?? NULL : NULL;
+      // A required property left out is said in the words of a value at a
+      // key, not those of an output that was not emitted.
+      $message = $violation->code === Violation::REQUIRED && $label !== NULL ? sprintf('%s is required.', $label) : strip_tags((string) $violation->message);
+      return ($at === '' ? '' : $at . ': ') . $message;
     }
     return NULL;
+  }
+
+  /**
+   * Finds the place of the `any` type a value holds something at.
+   *
+   * No document is written for such a place (one that marks no variants
+   * and is not held whole), so no value can be held to it.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The value's schema.
+   * @param mixed $value
+   *   The value, coerced.
+   *
+   * @return string|null
+   *   The place's dotted path below the value, '' for the value itself;
+   *   NULL where the value holds nothing at such a place.
+   */
+  protected static function anyPlace(Schema $schema, mixed $value): ?string {
+    if (!ValueState::isConfigured($value)) {
+      return NULL;
+    }
+    $item = DefinitionSchema::isList($schema) ? DefinitionSchema::itemOf($schema) : NULL;
+    $properties = SchemaFacts::properties($schema);
+    if ($item !== NULL || $properties !== []) {
+      foreach (is_array($value) ? $value : [] as $name => $one) {
+        $below = $item ?? $properties[$name] ?? NULL;
+        $at = $below === NULL ? NULL : static::anyPlace($below, $one);
+        if ($at !== NULL) {
+          return $at === '' ? (string) $name : $name . '.' . $at;
+        }
+      }
+      return NULL;
+    }
+    return !DefinitionSchema::isList($schema) && SchemaFacts::dataType($schema) === LeafTypes::ANY && !DefinitionSchema::heldAsAny($schema) ? '' : NULL;
+  }
+
+  /**
+   * Makes the refusal of a value at a place of the `any` type.
+   *
+   * @param array{resource: string, at: string, source: string, noun: string, verb: string} $where
+   *   Where the value comes from.
+   * @param string $path
+   *   The place's path.
+   *
+   * @return \LogicException
+   *   The refusal.
+   */
+  protected function anyRefusal(array $where, string $path): \LogicException {
+    return $this->refusal('%s: "%s" on %s is of the any type, which no JSON Schema type is written for, so no value can be held to it.', $where['source'], $where['at'] . $path, $where['resource']);
   }
 
   /**

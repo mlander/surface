@@ -95,9 +95,14 @@ final class Conforming {
     $errors = [];
     // The places an object was refused at, by full dotted path.
     $objects = [];
-    $data = [];
+    // The values as the validator reads them: every map an object, so a
+    // map whose names are numbers is not read as a list.
+    $held = new \stdClass();
     $document = $this->documents->of($surface);
     $arrayed = $document === NULL ? [] : Schemas::arrayed($document);
+    // An object of properties whose names are all numbers is written as a
+    // \stdClass (Schemas::dataObject()).
+    $written = is_array($arrayed) ? Schemas::data($arrayed['properties'] ?? NULL) ?? [] : [];
     foreach ($output as $name => $value) {
       $name = (string) $name;
       $entry = $outputs->entry($name);
@@ -105,8 +110,10 @@ final class Conforming {
         $errors[] = $this->unknown($name, '');
         continue;
       }
-      $data[$name] = $this->walked($entry->schema(), $value, $name, '', $arrayed['properties'][$name] ?? NULL, $errors, $objects);
+      $held->{$name} = $this->walked($entry->schema(), $value, $name, '', $written[$name] ?? NULL, $errors, $objects);
     }
+    $data = self::arrays($held);
+    assert(is_array($data));
     foreach ($outputs->entries() as $name => $entry) {
       $name = (string) $name;
       $schema = $entry->schema();
@@ -120,7 +127,7 @@ final class Conforming {
       return new ViolationSet($errors);
     }
     $provider = $this->validator->provider(new Surface($outputs), $data, $this->pipeline);
-    foreach ($this->validator->held($document, $data, $provider) as $found) {
+    foreach ($this->validator->held($document, $held, $provider) as $found) {
       $path = $found->path;
       if ($found->code === 'unknownProperty' || self::under($path, $objects)) {
         // Said where the key stands, or about what was refused as an object.
@@ -166,7 +173,7 @@ final class Conforming {
    *
    * @return mixed
    *   The value as the validator is handed it: an object as NULL, a key
-   *   nothing declares left out.
+   *   nothing declares left out, a map a \stdClass.
    */
   private function walked(?Schema $schema, mixed $value, string $key, string $path, mixed $written, array &$errors, array &$objects): mixed {
     if (is_object($value)) {
@@ -199,21 +206,44 @@ final class Conforming {
       return $walked;
     }
     $properties = $schema === NULL ? [] : SchemaFacts::properties($schema);
-    if ($properties === [] || ($value !== [] && array_is_list($value))) {
+    // A list for a map is one that names none of the map's properties: PHP
+    // holds the names "0" and "1" as the keys of a list, so whether the
+    // keys run from 0 says nothing of a map that names them.
+    $list = $value !== [] && array_is_list($value) && array_intersect_key($value, $properties) === [];
+    if ($properties === [] || $list) {
       // A value no keys describe, or a list for a map, which the validator
-      // says whole: only objects are looked for inside.
-      return $this->plain($value, $key, $path, $errors, $objects);
+      // says whole: only objects are looked for inside. A map that names
+      // no keys is still a map, unless it was given a list.
+      $plain = $this->plain($value, $key, $path, $errors, $objects);
+      return !$list && $schema !== NULL && DefinitionSchema::isComplex($schema) ? (object) $plain : $plain;
     }
-    $walked = [];
+    $walked = new \stdClass();
+    $written_properties = Schemas::data($written['properties'] ?? NULL) ?? [];
     foreach ($value as $name => $one) {
       $name = (string) $name;
       if (!isset($properties[$name])) {
         $errors[] = $this->unknown($key, Accepting::joinPath($path, $name));
         continue;
       }
-      $walked[$name] = $this->walked($properties[$name], $one, $key, Accepting::joinPath($path, $name), $written['properties'][$name] ?? NULL, $errors, $objects);
+      $walked->{$name} = $this->walked($properties[$name], $one, $key, Accepting::joinPath($path, $name), $written_properties[$name] ?? NULL, $errors, $objects);
     }
     return $walked;
+  }
+
+  /**
+   * Writes the values the validator reads as arrays, for the check provider.
+   *
+   * @param mixed $value
+   *   The values, each map a \stdClass (walked()).
+   *
+   * @return mixed
+   *   The same, each map an array, as the provider reads values.
+   */
+  private static function arrays(mixed $value): mixed {
+    if ($value instanceof \stdClass) {
+      $value = (array) $value;
+    }
+    return is_array($value) ? array_map(self::arrays(...), $value) : $value;
   }
 
   /**

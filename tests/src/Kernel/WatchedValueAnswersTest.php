@@ -4,14 +4,20 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Options\OptionSet;
+use Drupal\surface\Options\SurfaceOptionsResolverInterface;
+use Drupal\surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
 use Drupal\surface\Refinement\WatchedValueAnswers;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PortableSchema\Builder\Schema;
+use Symfony\Component\Validator\Constraint;
 
 /**
  * Tests what the watched-value check keeps for a request, and when not.
@@ -31,6 +37,21 @@ class WatchedValueAnswersTest extends SurfaceKernelTestBase {
    * @var string[]
    */
   protected static array $offered = ['system'];
+
+  /**
+   * What the per-account resolver offers, by account.
+   *
+   * @var array<int, string[]>
+   */
+  public static array $perAccount = [];
+
+  /**
+   * The account the per-account resolver answers for.
+   *
+   * A resolver may not read the current user (PipelineGuard), so the test
+   * says which account it stands for.
+   */
+  public static int $account = 0;
 
   /**
    * {@inheritdoc}
@@ -125,6 +146,66 @@ class WatchedValueAnswersTest extends SurfaceKernelTestBase {
       $this->assertTrue($this->check()->admits($schema, 'system'), $name);
       $this->assertSame([], $this->kept(), $name);
     }
+  }
+
+  /**
+   * Tests an option list read for one account keeps no answer.
+   *
+   * A resolver whose list varies by account says so with the `user` cache
+   * context. Its document may change inside the request, so nothing is
+   * answered from what was kept: the second account is answered by its
+   * own list.
+   */
+  public function testPerAccountOptionListKeepsNoAnswer(): void {
+    $options = $this->container->get('surface.options');
+    $resolvers = (new \ReflectionMethod($options, 'resolvers'))->invoke($options);
+    $resolvers['surface_test_per_account'] = new class() implements SurfaceOptionsResolverInterface {
+
+      /**
+       * {@inheritdoc}
+       */
+      public function applies(Constraint $constraint): bool {
+        return $constraint instanceof LabeledChoiceConstraint;
+      }
+
+      /**
+       * {@inheritdoc}
+       */
+      public function resolve(Constraint $constraint, Schema $schema): OptionSet {
+        return new OptionSet(array_fill_keys(WatchedValueAnswersTest::$perAccount[WatchedValueAnswersTest::$account], 'Plan'), [], (new CacheableMetadata())->addCacheContexts(['user']));
+      }
+
+    };
+    (new \ReflectionProperty($options, 'resolvers'))->setValue($options, $resolvers);
+    $first = $this->createUser();
+    $second = $this->createUser();
+    static::$perAccount = [(int) $first->id() => ['free'], (int) $second->id() => ['free', 'paid']];
+
+    $this->setCurrentUser($first);
+    static::$account = (int) $first->id();
+    $this->assertFalse($this->check()->admits(self::choice(), 'paid'));
+    $this->assertSame([], $this->kept());
+    $this->setCurrentUser($second);
+    static::$account = (int) $second->id();
+    $this->assertTrue($this->check()->admits(self::choice(), 'paid'));
+    $this->setCurrentUser($first);
+    static::$account = (int) $first->id();
+    $this->assertFalse($this->check()->admits(self::choice(), 'paid'));
+  }
+
+  /**
+   * Tests a float is held by the type of the key it is at.
+   *
+   * A float past PHP's integers at an integer key is not handed to a
+   * refiner typed for an integer; a float at a float key is, alone and in
+   * a list.
+   */
+  public function testFloatsAreHeldByTheirKeysType(): void {
+    $this->assertFalse($this->check()->admits(DefinitionSchema::of(DataDefinition::create('integer')), 1e20));
+    $this->assertFalse($this->check()->admits(DefinitionSchema::of(DataDefinition::create('timestamp')), 1e20));
+    $this->assertTrue($this->check()->admits(DefinitionSchema::of(DataDefinition::create('integer')), 3));
+    $this->assertTrue($this->check()->admits(DefinitionSchema::of(DataDefinition::create('float')), 1.5));
+    $this->assertTrue($this->check()->admits(DefinitionSchema::of(new ListDataDefinition([], DataDefinition::create('float'))), [1.5]));
   }
 
   /**
