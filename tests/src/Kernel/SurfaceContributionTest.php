@@ -21,7 +21,6 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Drupal\Tests\surface\Traits\RowsInOneKernelTrait;
 use Drupal\Tests\surface\DerivedDefinition;
 use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests refinement as the union of what each contribution narrowed to.
