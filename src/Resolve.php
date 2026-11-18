@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface;
 
 use Drupal\Component\Utility\NestedArray;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Pipeline\PipelineGuard;
@@ -45,19 +44,6 @@ final class Resolve {
     public readonly string $using,
     public readonly string $by,
   ) {
-  }
-
-  /**
-   * Reads what a key is resolved from, off its definition.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
-   *   The key's definition.
-   *
-   * @return static|null
-   *   What it is resolved from, or NULL for a key read as stored.
-   */
-  public static function of(?DataDefinitionInterface $definition): ?static {
-    return $definition === NULL ? NULL : DefinitionMetadata::resolveOf($definition);
   }
 
   /**

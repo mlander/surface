@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Traits;
 
-use Drupal\surface\Computed;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\ContractEmitter;
-use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
@@ -107,7 +106,7 @@ trait StaticAccessAgreementTrait {
       // unless sent is typed, or computed when left out.
       // Decision: see
       // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
-      $this->assertSame($locked || Computed::of(DefinitionFromSchema::forEntry($entry))?->takesSent() === FALSE, ($property['readOnly'] ?? FALSE) === TRUE, sprintf('%s: "%s" is read only exactly where it is locked or computed.', $label, $name));
+      $this->assertSame($locked || SchemaFacts::compute($entry->schema())?->takesSent() === FALSE, ($property['readOnly'] ?? FALSE) === TRUE, sprintf('%s: "%s" is read only exactly where it is locked or computed.', $label, $name));
       $this->assertSame($entry->runtimeAccess || $entry->isRefinedAtRuntime(), ($property['x-surface']['live'] ?? FALSE) === TRUE, sprintf('%s: "%s" is marked live exactly where its answer was set aside or a runtime refiner narrows it.', $label, $name));
       $compared++;
       if ($entry->attachment !== NULL) {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Element;
@@ -490,8 +491,8 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     // and which of them narrowed it is not.
     $status = new \ReflectionMethod(ContractPanel::class, 'status');
     $panel = $this->container->get('surface.contract_panel');
-    $declared = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['a', 'b']]);
-    $narrowed = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['a']]);
+    $declared = DefinitionSchema::of(DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['a', 'b']]));
+    $narrowed = DefinitionSchema::of(DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['a']]));
     $this->assertSame('narrowed, and checked at runtime', (string) $status->invoke($panel, $declared, $narrowed, FALSE, TRUE));
     $this->assertSame('as declared, checked at runtime', (string) $status->invoke($panel, $declared, $declared, FALSE, TRUE));
     $this->assertSame('narrowed', (string) $status->invoke($panel, $declared, $narrowed, FALSE, FALSE));

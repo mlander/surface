@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\surface;
 
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\surface\Contract\DefinitionSchema;
+use Drupal\surface\Contract\LeafTypes;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
+use Drupal\surface\Contract\ValueSchema;
 use Drupal\surface\Pipeline\ValueState;
 use PortableSchema\Builder\Schema;
 
@@ -63,31 +62,31 @@ final class Variants {
   public const FLAT = 'flat';
 
   /**
-   * The shell's own facts as a map's schema, read on the first ask.
-   *
-   * NULL until shellSchema() reads it, and never serialized (__sleep()): a
-   * Variants read back from a build cache row reads it again on the first
-   * ask. The shell is sealed and never written.
-   */
-  private ?Schema $shellSchema = NULL;
-
-  /**
    * Constructs a Variants.
+   *
+   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-schemas.
    *
    * @param string $by
    *   The sibling key whose value chooses the variant.
-   * @param \Drupal\Core\TypedData\MapDataDefinition $shell
-   *   The map describing the key the variants are attached at (label,
-   *   description, required flag), which every chosen variant wears. It
-   *   declares no properties: those are the variant's.
+   * @param \PortableSchema\Builder\Schema $shell
+   *   The schema of the key the variants are attached at, read as a map
+   *   (its label, description, required flag and settings), which every
+   *   chosen variant wears; its `properties` are empty, since those are
+   *   the variant's. A chosen variant's schema is composed of it around
+   *   the schemas of the variant's entries
+   *   (\Drupal\surface\Contract\DefinitionSchema::withProperties()).
    * @param array<string, \Drupal\surface\Attachment> $variants
    *   The variants, keyed by the value of the deciding key that chooses
    *   each, in declaration order.
+   * @param \PortableSchema\Builder\Schema $value
+   *   The same key read as one value, as a map with no properties is read:
+   *   what the key holds once a variant with no keys is chosen.
    */
   public function __construct(
     public readonly string $by,
-    public readonly MapDataDefinition $shell,
+    public readonly Schema $shell,
     public readonly array $variants,
+    private readonly Schema $value,
   ) {
   }
 
@@ -98,7 +97,7 @@ final class Variants {
    *   TRUE when the key's map says STORED_AS FLAT.
    */
   public function storedFlat(): bool {
-    return $this->shell->getSetting(self::STORED_AS) === self::FLAT;
+    return SchemaFacts::setting($this->shell, self::STORED_AS) === self::FLAT;
   }
 
   /**
@@ -148,48 +147,14 @@ final class Variants {
   /**
    * Gets the schema of a chosen variant that has no keys.
    *
-   * The shell alone, read as one value, as a map with no properties is
-   * read (DefinitionSchema::of()): what the key holds once a variant with
-   * no keys is chosen.
+   * The shell read as one value, as a map with no properties is read:
+   * what the key holds once a variant with no keys is chosen.
    *
    * @return \PortableSchema\Builder\Schema
    *   The schema.
    */
   public function valueSchema(): Schema {
-    return DefinitionSchema::of($this->shell);
-  }
-
-  /**
-   * Gets the schema of the shell's own facts, as the schema of a map.
-   *
-   * What a chosen variant's schema is composed of, around the schemas of the
-   * variant's entries (DefinitionSchema::withProperties()): read from the
-   * shell once (DefinitionSchema::shell()) on the first ask, and kept, so
-   * a refinement that chooses a variant reads nothing of the shell. With
-   * assertions on, each later ask reads the shell again and checks the
-   * two still say the same.
-   *
-   * Decision: see docs/decisions.md#a-refined-shell-is-composed-of-schemas.
-   *
-   * @return \PortableSchema\Builder\Schema
-   *   The schema, `properties` empty.
-   */
-  public function shellSchema(): Schema {
-    assert($this->shellSchema === NULL || DefinitionSchema::same($this->shellSchema, DefinitionSchema::shell($this->shell)), sprintf('The shell of the variants chosen by "%s" was written after its schema was read.', $this->by));
-    return $this->shellSchema ??= DefinitionSchema::shell($this->shell);
-  }
-
-  /**
-   * Names what a Variants serializes: every member but the shell's schema.
-   *
-   * So a build cache row is the same whether or not a refinement asked
-   * for the shell's schema, and the same as before the schema was kept.
-   *
-   * @return string[]
-   *   The constructor's members, in their order.
-   */
-  public function __sleep(): array {
-    return ['by', 'shell', 'variants'];
+    return $this->value;
   }
 
   /**
@@ -388,20 +353,22 @@ final class Variants {
    *
    * Typed `any`, because until the deciding key holds a value every
    * variant is possible and the only true statement about the type is
-   * "one of them". It says it is the variants' placeholder, and which key
-   * decides, through DefinitionMetadata; the variant table itself is on
-   * the entry.
+   * "one of them". It holds the shell's label, description and required
+   * flag, and says it is the variants' placeholder, and which key decides,
+   * in its `variantsBy` member; the variant table itself is on the entry.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The placeholder.
+   * @return \PortableSchema\Builder\Schema
+   *   The placeholder's schema.
    */
-  public function placeholder(): DataDefinitionInterface {
-    $placeholder = DataDefinition::create('any');
-    $placeholder->setLabel($this->shell->getLabel());
-    $placeholder->setDescription($this->shell->getDescription());
-    $placeholder->setRequired((bool) $this->shell->isRequired());
-    DefinitionMetadata::setVariantsBy($placeholder, $this->by);
-    return $placeholder;
+  public function placeholder(): Schema {
+    $shell = $this->shell;
+    return ValueSchema::value([
+      'type' => LeafTypes::ANY,
+      'label' => SchemaFacts::label($shell),
+      'description' => SchemaFacts::description($shell),
+      'required' => SchemaFacts::isRequired($shell),
+      'surface_variants_by' => $this->by,
+    ]);
   }
 
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\Resolve;
@@ -195,7 +197,7 @@ class ResolvedKeysTest extends SurfaceKernelTestBase {
     $refused(fn () => $inputs->resolve('token', ['vault_id'], DataDefinition::class), 'which implements no');
     $refused(fn () => $inputs->resolve('settings', ['vault_id'], VaultToken::class), 'names a map or a list');
     $inputs->resolve('token', ['vault_id'], VaultToken::class);
-    $this->assertEquals(new Resolve(['vault_id' => 'vault_id'], VaultToken::class, 'this blueprint'), Resolve::of($token));
+    $this->assertEquals(new Resolve(['vault_id' => 'vault_id'], VaultToken::class, 'this blueprint'), DefinitionMetadata::resolveOf($token));
     $refused(fn () => $inputs->resolve('token', ['vault_id'], VaultToken::class), 'resolve("token") in this blueprint names a key this blueprint resolves already. A key is resolved once');
   }
 
@@ -282,7 +284,7 @@ class ResolvedKeysTest extends SurfaceKernelTestBase {
       $this->assertStringContainsString('resolve("token") in the other alter is resolved from "vault_id", which is no key declared', $e->getMessage());
     }
     $vault->resolve('token', from: ['vault_id'], using: VaultToken::class);
-    $this->assertEquals(new Resolve(['vault_id' => 'third_party_settings.vault.vault_id'], VaultToken::class, 'the vault alter'), Resolve::of($builder->getDefinition('token')));
+    $this->assertEquals(new Resolve(['vault_id' => 'third_party_settings.vault.vault_id'], VaultToken::class, 'the vault alter'), SchemaFacts::resolve($builder->getSchema('token')));
     $built = $builder->seal();
     $declared = Resolve::declared($built);
     $this->assertSame(['token'], array_keys($declared));

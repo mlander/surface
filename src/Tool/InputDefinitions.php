@@ -881,7 +881,7 @@ final class InputDefinitions {
     $was = $this->at;
     $this->enter($entry->name);
     try {
-      $map = $this->fromVariants(new Variants($variants->by, $variants->shell, [$chosen => $variants->variant($chosen)]), $schema, $narrowing);
+      $map = $this->fromVariants(new Variants($variants->by, $variants->shell, [$chosen => $variants->variant($chosen)], $variants->valueSchema()), $schema, $narrowing);
     }
     finally {
       $this->at = $was;

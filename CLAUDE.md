@@ -750,7 +750,7 @@ the record of the rework that brought the module to the pattern.
   (`Surface::refineNested()`, `refineMounted()`) of the shell's own schema
   and the refined child's entries' schemas
   (`DefinitionSchema::withProperties()`; chosen variants over
-  `Variants::shellSchema()`, a mount's part put back by `withPropertyAt()`)
+  `Variants::$shell`, a mount's part put back by `withPropertyAt()`)
   and held to the narrowing check on its schemas
   (`Surface::assertShellNarrows()`), which refuses a refined surface
   refined again into what the first refinement narrowed. A key whose

@@ -9,16 +9,10 @@ use Drupal\Component\Utility\Html;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\ContractEmitter;
-use Drupal\surface\Contract\DefinitionFromSchema;
 use Drupal\surface\Contract\DefinitionSchema;
 use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
@@ -125,7 +119,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
     $rows = [];
     foreach ($refined->entries()->entries() as $name => $entry) {
       $declared_entry = $declared->entries()->entry((string) $name);
-      $this->entryRows($rows, (string) $name, $entry, NULL, $refined, $values, $declared_entry);
+      $this->entryRows($rows, (string) $name, $entry, $refined, $values, $declared_entry);
     }
     $resource_id = $this->registry->getDefinition($served->resource)->id;
     $tool_id = 'surface:' . $resource_id . ':' . $served->operation->id;
@@ -239,124 +233,105 @@ final class ContractPanel implements SurfaceFormPanelInterface {
   /**
    * Adds the rows for one key of a data surface, and its children's.
    *
+   * Every fact is read from a schema: the key's, refined and as declared
+   * (Entry::schema()), and each property's, the schemas a key that holds a
+   * child frame is composed of.
+   *
    * @param array $rows
    *   The rows so far.
    * @param string $path
    *   The key's path from the top of the data surface.
    * @param \Drupal\surface\Entry $entry
    *   The key, refined.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $declared
-   *   The key as declared; NULL to derive it from $declared_entry where a
-   *   row reads it.
    * @param \Drupal\surface\SurfaceInterface $refined
    *   The refined data surface the key belongs to.
    * @param array $values
    *   The values it was refined by.
    * @param \Drupal\surface\Entry|null $declared_entry
-   *   The key's entry as declared, or NULL: a key's own facts are read
-   *   from its schema and the refined key's (Entry::schema()), a key that
-   *   holds a child frame's too; the properties of such a key are read
-   *   from its definition, the only definitions asked.
+   *   The key's entry as declared, or NULL for a key not declared.
    */
-  protected function entryRows(array &$rows, string $path, Entry $entry, ?DataDefinitionInterface $declared, SurfaceInterface $refined, array $values, ?Entry $declared_entry = NULL): void {
+  protected function entryRows(array &$rows, string $path, Entry $entry, SurfaceInterface $refined, array $values, ?Entry $declared_entry = NULL): void {
     $depends = $refined->entries()->dependencies($entry->name);
     $schema = $entry->schema();
-    $declared_schema = $declared_entry?->schema();
-    if ($entry->variants === NULL && $entry->list === NULL && $entry->attachment === NULL && !(DefinitionSchema::isComplex($schema) && SchemaFacts::properties($schema) !== [])) {
-      // A plain key: its facts from its schema, the refined key's and the
-      // declared key's.
-      $rows[] = $this->row(
-        $path,
-        SchemaFacts::dataType($schema),
-        NULL,
-        $refined->getDefault($entry->name),
-        $this->allows($schema),
-        $depends,
-        $this->status(NULL, NULL, $entry->locked, $entry->isRefinedAtRuntime(), $declared_schema, $schema),
-        $schema,
-      );
-      return;
-    }
-    $definition = DefinitionFromSchema::forEntry($entry);
-    $declared ??= $declared_entry === NULL ? NULL : DefinitionFromSchema::forEntry($declared_entry);
+    $declared = $declared_entry?->schema();
     if ($entry->variants !== NULL) {
       $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? $refined->getDefault($entry->variants->by));
       $variants = [];
       foreach ($entry->variants->variants as $value => $variant) {
         $variants[] = $value . ' → ' . ($variant->source === NULL ? $this->t('derived') : $this->named($variant->source));
       }
-      $rows[] = $this->row($path, $this->t('variants'), $definition, $refined->getDefault($entry->name), $this->t('A part chosen by @by: @variants', [
+      $rows[] = $this->row($path, $this->t('variants'), $schema, $refined->getDefault($entry->name), $this->t('A part chosen by @by: @variants', [
         '@by' => $entry->variants->by,
         '@variants' => implode(', ', $variants),
       ]), [$entry->variants->by], $chosen === NULL
         ? $this->t('not chosen yet')
-        : $this->t('the @value variant', ['@value' => $chosen]), $entry->schema());
+        : $this->t('the @value variant', ['@value' => $chosen]));
       if ($chosen !== NULL) {
         $child = $entry->variants->variant($chosen)->child;
         $held = is_array($values[$entry->name] ?? NULL) ? $values[$entry->name] : [];
-        $this->propertyRows($rows, $path, static::mapOf($entry->variants->shell, $child->refine($held)), array_map(DefinitionFromSchema::forEntry(...), $child->entries()->entries()), []);
+        $this->propertyRows($rows, $path, static::schemasOf($child->refine($held)), static::schemasOf($child), []);
       }
       return;
     }
-    if ($entry->list !== NULL && $definition instanceof ListDataDefinitionInterface && $definition->getItemDefinition() instanceof ComplexDataDefinitionInterface) {
+    $item = DefinitionSchema::isList($schema) ? DefinitionSchema::itemOf($schema) : NULL;
+    if ($entry->list !== NULL && $item !== NULL && DefinitionSchema::isComplex($item)) {
       // A collection: the list is the parent's, each item the child's,
       // whose keys are listed once, under `*`.
       $source = $entry->list->item->source;
-      $count = $definition->getConstraints()['Count'] ?? NULL;
-      $rows[] = $this->row($path, $this->t('collection'), $definition, NULL, $this->t('A list of @child@count', [
+      $count = SchemaFacts::constraints($schema)['Count'] ?? NULL;
+      $rows[] = $this->row($path, $this->t('collection'), $schema, NULL, $this->t('A list of @child@count', [
         '@child' => $source === NULL ? $this->t('a sealed data surface') : $this->named($source),
         '@count' => is_array($count) ? ', ' . $this->bounds('Count', $count) : '',
-      ]), $depends, $this->status($declared, $definition, $entry->locked, $entry->isRefinedAtRuntime(), $declared_entry?->schema(), $entry->schema()), $entry->schema());
-      $declared_item = $declared instanceof ListDataDefinitionInterface ? $declared->getItemDefinition() : NULL;
-      $this->propertyRows($rows, $path . '.*', $definition->getItemDefinition(), $declared_item instanceof ComplexDataDefinitionInterface ? $declared_item->getPropertyDefinitions() : [], []);
+      ]), $depends, $this->status($declared, $schema, $entry->locked, $entry->isRefinedAtRuntime()));
+      $declared_item = $declared !== NULL && DefinitionSchema::isList($declared) ? DefinitionSchema::itemOf($declared) : NULL;
+      $this->propertyRows($rows, $path . '.*', SchemaFacts::properties($item), $declared_item === NULL ? [] : SchemaFacts::properties($declared_item), []);
       return;
     }
-    if ($entry->attachment !== NULL && $definition instanceof ComplexDataDefinitionInterface) {
+    $complex = DefinitionSchema::isComplex($schema);
+    $properties = SchemaFacts::properties($schema);
+    $declared_properties = $declared !== NULL && DefinitionSchema::isComplex($declared) ? SchemaFacts::properties($declared) : [];
+    if ($entry->attachment !== NULL && $complex) {
       $source = $entry->attachment->source;
-      $rows[] = $this->row($path, $this->t('part'), $definition, NULL, $this->t('A fixed part: @child', [
+      $rows[] = $this->row($path, $this->t('part'), $schema, NULL, $this->t('A fixed part: @child', [
         '@child' => $source === NULL ? $this->t('a sealed data surface') : $this->named($source),
-      ]), $depends, $this->t('as declared'), $entry->schema());
-      $this->propertyRows($rows, $path, $definition, $declared instanceof ComplexDataDefinitionInterface ? $declared->getPropertyDefinitions() : [], []);
+      ]), $depends, $this->t('as declared'));
+      $this->propertyRows($rows, $path, $properties, $declared_properties, []);
       return;
     }
-    if ($definition instanceof ComplexDataDefinitionInterface && $definition->getPropertyDefinitions() !== []) {
+    if ($complex && $properties !== []) {
       // A map of other modules' keys, each under its module's name: the
       // rows say whose they are, and what the map's refiners read.
-      $rows[] = $this->row($path, SchemaFacts::dataType($entry->schema()), $definition, NULL, $this->t('Keys other modules added'), $depends, $this->t('as declared'), $entry->schema());
-      $this->propertyRows($rows, $path, $definition, $declared instanceof ComplexDataDefinitionInterface ? $declared->getPropertyDefinitions() : [], $depends);
+      $rows[] = $this->row($path, SchemaFacts::dataType($schema), $schema, NULL, $this->t('Keys other modules added'), $depends, $this->t('as declared'));
+      $this->propertyRows($rows, $path, $properties, $declared_properties, $depends);
       return;
     }
-    // A key no branch above draws: its facts from its schema, as a plain
-    // key's.
+    // A plain key, and a key no branch above draws.
     $rows[] = $this->row(
       $path,
       SchemaFacts::dataType($schema),
-      $definition,
+      $schema,
       $refined->getDefault($entry->name),
       $this->allows($schema),
       $depends,
-      $this->status($declared, $definition, $entry->locked, $entry->isRefinedAtRuntime(), $declared_schema, $schema),
-      $schema,
+      $this->status($declared, $schema, $entry->locked, $entry->isRefinedAtRuntime()),
     );
   }
 
   /**
-   * Builds the map a chosen variant's keys fill, for its rows.
+   * Gets the schemas of a data surface's keys, by name, in their order.
    *
-   * @param \Drupal\Core\TypedData\MapDataDefinition $shell
-   *   The variants' shell.
-   * @param \Drupal\surface\SurfaceInterface $child
-   *   The variant, refined.
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The data surface: a chosen variant, refined or as declared.
    *
-   * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   A copy of the shell holding each of the variant's keys' definitions.
+   * @return array<string, \PortableSchema\Builder\Schema>
+   *   Each key's schema.
    */
-  protected static function mapOf(MapDataDefinition $shell, SurfaceInterface $child): MapDataDefinition {
-    $map = clone $shell;
-    foreach ($child->entries()->entries() as $name => $entry) {
-      $map->setPropertyDefinition((string) $name, DefinitionFromSchema::forEntry($entry));
+  protected static function schemasOf(SurfaceInterface $surface): array {
+    $schemas = [];
+    foreach ($surface->entries()->entries() as $name => $entry) {
+      $schemas[(string) $name] = $entry->schema();
     }
-    return $map;
+    return $schemas;
   }
 
   /**
@@ -366,26 +341,26 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    *   The rows so far.
    * @param string $path
    *   The map's path.
-   * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $map
-   *   The map, refined.
-   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $declared
-   *   Its properties as declared.
+   * @param array<string|int, \PortableSchema\Builder\Schema> $properties
+   *   The map's properties' schemas, refined.
+   * @param array<string|int, \PortableSchema\Builder\Schema> $declared
+   *   Its properties' schemas as declared.
    * @param string[] $depends
    *   What the map's own refiners read, which reach its properties.
    */
-  protected function propertyRows(array &$rows, string $path, ComplexDataDefinitionInterface $map, array $declared, array $depends): void {
-    foreach ($map->getPropertyDefinitions() as $name => $property) {
+  protected function propertyRows(array &$rows, string $path, array $properties, array $declared, array $depends): void {
+    foreach ($properties as $name => $property) {
       $child_path = $path . '.' . $name;
       $before = $declared[$name] ?? NULL;
-      if ($property instanceof ComplexDataDefinitionInterface && $property->getPropertyDefinitions() !== []) {
-        $this->propertyRows($rows, $child_path, $property, $before instanceof ComplexDataDefinitionInterface ? $before->getPropertyDefinitions() : [], $depends);
+      if (DefinitionSchema::isComplex($property) && SchemaFacts::properties($property) !== []) {
+        $this->propertyRows($rows, $child_path, SchemaFacts::properties($property), $before !== NULL && DefinitionSchema::isComplex($before) ? SchemaFacts::properties($before) : [], $depends);
         continue;
       }
       $rows[] = $this->row(
         $child_path,
-        $property->getDataType(),
+        SchemaFacts::dataType($property),
         $property,
-        DefinitionMetadata::hasDefaultValue($property) ? DefinitionMetadata::getDefaultValue($property) : NULL,
+        SchemaFacts::hasDefault($property) ? SchemaFacts::default($property) : NULL,
         $this->allows($property),
         $depends,
         $this->status($before, $property, FALSE),
@@ -400,8 +375,8 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    *   The key's path.
    * @param string|\Stringable $type
    *   What kind of key it is.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
-   *   The key, refined; NULL where its schema is given.
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The key's schema, refined, whose label and flag are read.
    * @param mixed $default
    *   Its default, or NULL for none.
    * @param string|\Stringable $allows
@@ -410,18 +385,13 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    *   The keys it depends on.
    * @param string|\Stringable $status
    *   Whether it is as declared right now.
-   * @param \PortableSchema\Builder\Schema|null $schema
-   *   The key's schema, refined, whose label and flag are read; NULL for a
-   *   property of a key that holds a child frame, read from its
-   *   definition.
    *
    * @return array
    *   The table row.
    */
-  protected function row(string $path, string|\Stringable $type, ?DataDefinitionInterface $definition, mixed $default, string|\Stringable $allows, array $depends, string|\Stringable $status, ?Schema $schema = NULL): array {
-    assert($schema !== NULL || $definition !== NULL);
-    $label = $schema === NULL ? $definition->getLabel() : SchemaFacts::label($schema);
-    $required = $schema === NULL ? $definition->isRequired() : SchemaFacts::isRequired($schema);
+  protected function row(string $path, string|\Stringable $type, Schema $schema, mixed $default, string|\Stringable $allows, array $depends, string|\Stringable $status): array {
+    $label = SchemaFacts::label($schema);
+    $required = SchemaFacts::isRequired($schema);
     return [
       'data' => [
         ['data' => ['#markup' => '<code>' . htmlspecialchars($path) . '</code>']],
@@ -441,15 +411,14 @@ final class ContractPanel implements SurfaceFormPanelInterface {
   /**
    * Says what a key allows, in words.
    *
-   * @param \PortableSchema\Builder\Schema|\Drupal\Core\TypedData\DataDefinitionInterface $key
-   *   The key's schema; or, for a property of a key that holds a child
-   *   frame, its definition. Its constraints are read from it, and the
-   *   options service is handed it.
+   * @param \PortableSchema\Builder\Schema $key
+   *   The key's schema. Its constraints are read from it, and the options
+   *   service is handed it.
    *
    * @return string
    *   One phrase per constraint, or "anything of its type".
    */
-  protected function allows(Schema|DataDefinitionInterface $key): string {
+  protected function allows(Schema $key): string {
     $phrases = [];
     $set = $this->options->resolve($key);
     if ($set !== NULL) {
@@ -457,7 +426,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
         '@values' => implode(', ', array_map('strval', $set->options)),
       ]);
     }
-    foreach ($key instanceof Schema ? SchemaFacts::constraints($key) : $key->getConstraints() as $name => $options) {
+    foreach (SchemaFacts::constraints($key) as $name => $options) {
       $listed = $set !== NULL && in_array($name, ['Choice', 'LabeledChoice', 'AllowedValues'], TRUE);
       if ($listed || in_array($name, self::SAID_ELSEWHERE, TRUE)) {
         continue;
@@ -532,33 +501,24 @@ final class ContractPanel implements SurfaceFormPanelInterface {
   /**
    * Says whether a key allows right now what it was declared to.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $declared
-   *   The key as declared; NULL where its schema is given, or for a key not
-   *   declared.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $refined
-   *   The key now; NULL where its schema is given.
+   * @param \PortableSchema\Builder\Schema|null $was
+   *   The key's schema as declared; NULL for a key not declared.
+   * @param \PortableSchema\Builder\Schema $now
+   *   The key's schema now.
    * @param bool $locked
    *   Whether the key is locked.
    * @param bool $runtime
    *   Whether a runtime refiner narrows it, which the table says because
    *   no schema does.
-   * @param \PortableSchema\Builder\Schema|null $declared_schema
-   *   The declared key's schema; NULL to read its definition.
-   * @param \PortableSchema\Builder\Schema|null $refined_schema
-   *   The refined key's schema; NULL to read its definition.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The status.
    */
-  protected function status(?DataDefinitionInterface $declared, ?DataDefinitionInterface $refined, bool $locked, bool $runtime = FALSE, ?Schema $declared_schema = NULL, ?Schema $refined_schema = NULL): TranslatableMarkup {
+  protected function status(?Schema $was, Schema $now, bool $locked, bool $runtime = FALSE): TranslatableMarkup {
     if ($locked) {
       return $this->t('locked');
     }
-    $now = $refined_schema ?? $refined;
-    assert($now !== NULL);
-    $was = $declared_schema ?? $declared;
-    $required = static fn (Schema|DataDefinitionInterface $key): bool => $key instanceof Schema ? SchemaFacts::isRequired($key) : (bool) $key->isRequired();
-    $narrowed = $was !== NULL && ($required($was) !== $required($now) || $this->allows($was) !== $this->allows($now));
+    $narrowed = $was !== NULL && (SchemaFacts::isRequired($was) !== SchemaFacts::isRequired($now) || $this->allows($was) !== $this->allows($now));
     return match (TRUE) {
       // Narrowed by whatever refines it, and a rule only the site applies
       // checks it too: which of them narrowed it is not known here.

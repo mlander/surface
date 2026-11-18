@@ -29,7 +29,6 @@ use Drupal\surface\Contract\SchemaFacts;
 use Drupal\surface\Contract\Secrets;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Entries;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
 use Drupal\surface\Reference\ReferenceStorageLayout;
 use Drupal\surface\Refinement\ChoiceSet;
@@ -687,7 +686,7 @@ final class ConfigSchemaGenerator {
     if ($at !== '' && isset($this->translated[$at])) {
       return $this->translated($this->translated[$at], $schema, $label, $at, $installed !== NULL && $held === NULL);
     }
-    $from = $entry->variants === NULL ? NULL : DefinitionMetadata::variantsFrom($entry->variants->shell);
+    $from = $entry->variants === NULL ? NULL : SchemaFacts::variantsFrom($entry->variants->shell);
     if ($from !== NULL && !is_subclass_of($from, ClosedSiteListInterface::class)) {
       // Variants from the site: which there are is the site's, not the
       // code's, so no schema written once can name them. The key is open
@@ -730,20 +729,19 @@ final class ConfigSchemaGenerator {
           ],
         ];
       }
-      $each_definition = DefinitionMetadata::eachOf($definition);
-      if ($each instanceof Schema && $each_definition instanceof DataDefinitionInterface) {
+      if ($each instanceof Schema) {
         // Each entry is a key of its own, which may hold nothing as one
         // would, and is stored as the storage says under `*`. What every
         // entry is was set on the key's definition, and no entry holds it
         // (the site's entries are keys of the child): its schema is the one
-        // the key's schema holds, and its definition is handed on for the
-        // PHP class its data type maps to.
+        // the key's schema holds, and the definition derived from it is
+        // handed on for the PHP class its data type maps to.
         return [
           'type' => 'sequence',
           'label' => $label,
           'sequence' => isset($this->translated[$at . '.*'])
             ? $this->translated($this->translated[$at . '.*'], $each, $label, $at . '.*')
-            : $this->definition($each, $each_definition, $label),
+            : $this->definition($each, DefinitionFromSchema::of($each), $label),
         ];
       }
       return $this->ownKeyed($entry->attachment->child->entries(), $path, $label, $owner, $entries, $existing, $at . '.', installed: is_array($held) ? $held : NULL) ?? [
@@ -785,7 +783,7 @@ final class ConfigSchemaGenerator {
    */
   protected function variantMaps(Entry $entry, ResourceDefinition $owner): array {
     $variants = [];
-    $from = DefinitionMetadata::variantsFrom($entry->variants->shell);
+    $from = SchemaFacts::variantsFrom($entry->variants->shell);
     if ($from !== NULL) {
       // A closed provider: every structure it may list, whichever this
       // site offers now.
@@ -975,7 +973,7 @@ final class ConfigSchemaGenerator {
    *   schema could leave open.
    */
   protected function assertClosed(Entry $entry, ResourceDefinition $owner): void {
-    $from = DefinitionMetadata::variantsFrom($entry->variants->shell);
+    $from = SchemaFacts::variantsFrom($entry->variants->shell);
     if ($from !== NULL && !is_subclass_of($from, ClosedSiteListInterface::class)) {
       throw new \LogicException(sprintf('The %s resource stores the variants at "%s" flat, and %s lists them from the site: which keys they have is the site\'s, so no schema written once names them, and stored flat they have no key of their own to leave open. Write that schema by hand; the build holds the resource to it.', $owner->id, $entry->name, $from));
     }
@@ -1063,7 +1061,7 @@ final class ConfigSchemaGenerator {
           'resource' => $owner->id,
           'schema' => [
             'type' => 'mapping',
-            'label' => static::label(DefinitionMetadata::ownLabel($part), (string) $module),
+            'label' => static::label(SchemaFacts::ownLabel(static::propertyOf($entry->schema(), (string) $module)), (string) $module),
             'constraints' => ['FullyValidatable' => NULL],
             'mapping' => $mapping,
           ],

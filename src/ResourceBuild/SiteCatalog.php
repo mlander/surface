@@ -636,7 +636,7 @@ final class SiteCatalog {
         'default' => static::plain($surface->getDefault($name)),
         // The two a type and a required key add are said by those.
         'constraints' => static::plain(array_diff_key(
-          $entry->variants === NULL ? SchemaFacts::constraints($schema) : $entry->variants->shell->getConstraints(),
+          $entry->variants === NULL ? SchemaFacts::constraints($schema) : SchemaFacts::constraints($entry->variants->shell),
           ['PrimitiveType' => TRUE, 'NotNull' => TRUE],
         )),
         'locked' => $entry->locked,

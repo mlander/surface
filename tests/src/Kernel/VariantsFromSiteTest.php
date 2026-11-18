@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\surface\Contract\SchemaFacts;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Cache\Cache;
 use Drupal\surface\DefinitionMetadata;
@@ -126,7 +127,7 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
     $entry = $poster->entries()->entry('panels');
     $this->assertNotNull($entry->variants);
     $this->assertSame(['banner', 'grid', 'strip'], array_keys($entry->variants->variants));
-    $this->assertSame(PosterLayouts::class, DefinitionMetadata::variantsFrom($entry->variants->shell));
+    $this->assertSame(PosterLayouts::class, SchemaFacts::variantsFrom($entry->variants->shell));
 
     // The deciding key offers each value under the provider's label, the
     // banner under its class's.

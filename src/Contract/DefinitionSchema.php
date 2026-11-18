@@ -12,7 +12,6 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\Validation\ConstraintManager;
-use Drupal\surface\Computed;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
@@ -1215,7 +1214,7 @@ final class DefinitionSchema {
    *   Whether the schema requires it.
    */
   public static function required(DataDefinitionInterface $definition): bool {
-    return $definition->isRequired() && !DefinitionMetadata::isSecret($definition) && Computed::of($definition) === NULL;
+    return $definition->isRequired() && !DefinitionMetadata::isSecret($definition) && DefinitionMetadata::computedOf($definition) === NULL;
   }
 
   /**

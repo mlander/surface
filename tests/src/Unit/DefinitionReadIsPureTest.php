@@ -93,9 +93,10 @@ class DefinitionReadIsPureTest extends UnitTestCase {
    * withPropertyAt(), shell(), the requiredOf() it shares with around(),
    * and holdsProperties()), part 32.8; 69 since type() reads a key's `widget`
    * setting where it asked DateWidget::draws(), which takes a schema now
-   * (part 32.9a).
+   * (part 32.9a); 68 since required() asks DefinitionMetadata::computedOf()
+   * where it asked Computed::of(), which is gone (slice 35).
    */
-  protected const REACHED = 69;
+  protected const REACHED = 68;
 
   /**
    * How many methods the schema readers reach, their entry points too.
@@ -229,7 +230,7 @@ class DefinitionReadIsPureTest extends UnitTestCase {
       'return [...$names];',
       'return \'%s\' . \'x\';',
       'return SurfaceDrupal::x();',
-      'return \\Drupal\\surface\\Computed::of($definition);',
+      'return \\Drupal\\surface\\Contract\\SchemaFacts::compute($schema);',
     ];
     foreach ($allowed as $body) {
       $this->assertSame([], static::refusals($body), $body);

@@ -2126,9 +2126,15 @@ final class ContractEmitter {
     $deciding = $values[$variants->by] ?? ($declaring && $declared->isLocked($variants->by) ? NULL : $declared->getDefault($variants->by));
     $chosen = $variants->chosen($deciding);
     $held = $values[$entry->name] ?? NULL;
-    // The shell is no entry's definition, so no schema is read of it.
-    $shell = $this->propertySchema->describe(DefinitionSchema::describe($variants->shell));
-    $property = $shell->with('type', DefinitionSchema::nullable('object', $variants->shell));
+    // The shell's title, description and type, as its schema holds them.
+    $described = Schema::any();
+    foreach (['title', 'description'] as $keyword) {
+      if ($variants->shell->has($keyword)) {
+        $described = $described->with($keyword, $variants->shell->get($keyword));
+      }
+    }
+    $shell = $this->propertySchema->describe($described);
+    $property = $shell->with('type', $variants->shell->get('type'));
     $depends = array_values(array_unique([$variants->by, ...$entry->dependencies]));
     if ($locked) {
       $property = $property->with('readOnly', TRUE);
