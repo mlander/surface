@@ -160,4 +160,20 @@ class AuthorSpellingRefusalsTest extends SurfaceKernelTestBase {
     $this->assertSame(['needed required'], $codes($this->pipeline()->validate($surface, ['objects' => [['a' => 'x']]])));
   }
 
+  /**
+   * Tests an author's `x-surface` is refused, naming `x-surface-settings`.
+   *
+   * `x-surface` is what a served document says of a key; an author's was
+   * dropped with no word. A setting no keyword says is
+   * `x-surface-settings`.
+   */
+  public function testAuthorsExtensionIsRefused(): void {
+    $this->assertRefused(fn () => $this->blueprint()->add('k', Schema::string()->annotation('x-surface', ['format' => 'color'])), ['add("k")', '/properties/k/x-surface', 'x-surface-settings'], \InvalidArgumentException::class);
+    $this->assertRefused(fn () => $this->blueprint()->add('where', Schema::object()->property('city', Schema::string()->annotation('x-surface', ['format' => 'color']))), ['/properties/where/properties/city/x-surface', 'x-surface-settings'], \InvalidArgumentException::class);
+
+    $builder = new SurfaceBuilder();
+    $this->blueprint($builder)->add('k', Schema::string()->annotation('x-surface-settings', ['format' => 'color']));
+    $this->assertTrue($builder->has('k'));
+  }
+
 }

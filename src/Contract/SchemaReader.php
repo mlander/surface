@@ -668,6 +668,7 @@ final class SchemaReader {
    */
   public static function authored(BlueprintAdditionsInterface $inputs, string $key, Schema $schema, ?bool $required = NULL, ?string $what = NULL): array {
     $what ??= sprintf('add("%s")', $key);
+    KeywordReader::refuseExtension($schema, $what, '/properties/' . str_replace(['~', '/'], ['~0', '~1'], $key));
     if (!$schema->isBoolean()) {
       $schema = static::shapeReferences($schema, $inputs);
     }

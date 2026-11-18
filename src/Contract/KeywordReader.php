@@ -342,6 +342,46 @@ final class KeywordReader {
   }
 
   /**
+   * Refuses an author's `x-surface`, at any depth.
+   *
+   * `x-surface` is what a served document says of a key, read back from a
+   * document; an author's says nothing the build reads. A setting no
+   * keyword says is SETTINGS.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The author's schema.
+   * @param string $what
+   *   Who was handed it, for the message.
+   * @param string $pointer
+   *   Its pointer.
+   *
+   * @throws \InvalidArgumentException
+   *   Where the schema holds `x-surface`.
+   */
+  public static function refuseExtension(Schema $schema, string $what, string $pointer): void {
+    if ($schema->isBoolean()) {
+      return;
+    }
+    foreach ($schema->all() as $keyword => $value) {
+      $keyword = (string) $keyword;
+      $at = static::below($pointer, $keyword);
+      if ($keyword === ContractEmitter::EXTENSION) {
+        throw new \InvalidArgumentException(sprintf('%s: %s is what a served document says of a key, which an author does not write. A setting no keyword says is %s, such as ->annotation(\'%s\', [\'format\' => \'color\']).', $what, $at, self::SETTINGS, self::SETTINGS));
+      }
+      $members = match (Keywords::TABLE[$keyword] ?? NULL) {
+        Keywords::SCHEMA => [$value],
+        Keywords::SCHEMA_MAP, Keywords::SCHEMA_LIST => is_array($value) ? $value : [],
+        default => [],
+      };
+      foreach ($members as $name => $member) {
+        if ($member instanceof Schema) {
+          static::refuseExtension($member, $what, Keywords::TABLE[$keyword] === Keywords::SCHEMA ? $at : static::below($at, (string) $name));
+        }
+      }
+    }
+  }
+
+  /**
    * Answers whether a schema says nothing preparing a document rewrites.
    *
    * At any depth: no draft spelling (PREPARED, a boolean
