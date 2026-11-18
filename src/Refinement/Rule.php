@@ -231,7 +231,8 @@ final class Rule {
       $keyword = (string) $keyword;
       if (isset($bounds[$keyword])) {
         [$name, $option] = $bounds[$keyword];
-        $read[$name][$option] = $value;
+        // A bound its check says too: the stricter stands.
+        $read[$name] = ConstraintKeywords::stricter($read[$name] ?? [], [$option => $value]);
         continue;
       }
       if ($keyword === 'pattern' && is_string($value)) {
@@ -257,7 +258,7 @@ final class Rule {
               $options = array_diff_key($options, $said) + ['message' => reset($said)];
             }
           }
-          $read[$name] = ($read[$name] ?? []) + $options;
+          $read[$name] = in_array($name, ['Range', 'Length', 'Count'], TRUE) ? ConstraintKeywords::stricter($read[$name] ?? [], $options) : ($read[$name] ?? []) + $options;
         }
         continue;
       }

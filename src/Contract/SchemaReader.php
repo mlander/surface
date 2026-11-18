@@ -668,6 +668,7 @@ final class SchemaReader {
    */
   public static function authored(BlueprintAdditionsInterface $inputs, string $key, Schema $schema, ?bool $required = NULL, ?string $what = NULL): array {
     $what ??= sprintf('add("%s")', $key);
+    KeywordReader::refuseExtension($schema, $what, '/properties/' . str_replace(['~', '/'], ['~0', '~1'], $key));
     if (!$schema->isBoolean()) {
       $schema = static::shapeReferences($schema, $inputs);
     }
@@ -3684,7 +3685,10 @@ final class SchemaReader {
     if ($required) {
       $list->setRequired(TRUE);
     }
-    if (!in_array('null', (array) ($property->get('type') ?? []), TRUE) && !$required) {
+    // An author's list is held as attachList() holds one: required()
+    // decides. A served document's non-nullable list is one its storage
+    // always holds.
+    if (!$this->authored && !in_array('null', (array) ($property->get('type') ?? []), TRUE) && !$required) {
       DefinitionMetadata::setAlwaysHeld($list);
     }
     foreach (array_diff_key($property->all(), array_flip(self::COLLECTION)) as $keyword => $value) {

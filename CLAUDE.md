@@ -40,14 +40,15 @@ the record of the rework that brought the module to the pattern.
   the catalog, and read back from a def's `title` and `description`
   (`docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for`).
 - **Shape**: a named type (Smithy's word), of three kinds: resources,
-  structures, and named scalar shapes. The third is `#[Shape(id)]` on a
-  class in `src/Shape/` whose static `schema()` returns the Portable
-  Schema of one scalar value (no default, not required, not locked, read
-  once per class by `Shapes::declared()` through
-  `SchemaReader::authored()`, each use a copy), used as
-  `$inputs->add('license', License::class, t('Event license'))`: the key
-  may only narrow it (checked at build), a port may read it
-  (`reads('code', Sku::class)`, wired only to a key of that shape), an
+  structures, and named scalar shapes. The third is `#[Document(id)]` on
+  a class in `src/Shape/` implementing `ShapeInterface`, whose static
+  `schema()` returns the Portable Schema of one scalar value (no default,
+  not required, not locked, read once per class by `Shapes::declared()`
+  through `SchemaReader::authored()`, each use a copy), used as
+  `$inputs->add('license', Schema::of(License::class)->title(t('Event
+  license')))`: the key may only narrow it (checked at build), a port may
+  read it (`reads('code', Schema::of(Sku::class))`, wired only to a key
+  of that shape), an
   `#[Alters(License::class)]` tightens it at every key with
   `narrow('<id>')` and `describe('<id>')`, and both documents write it
   once as `$defs.<id>`, each key `$ref` first with what it adds beside
@@ -960,7 +961,7 @@ the record of the rework that brought the module to the pattern.
 "Data surface" names the project, and the sealed object the build step
 makes (`SurfaceInterface`); it is not a third kind. "Shape" is the
 named type, of which resources, structures and named scalar shapes are
-the three kinds; in code `#[Shape]` names the third, and the word never
+the three kinds; in code `ShapeInterface` names the third, and the word never
 names the blueprint or the layout. A value that arrives of the wrong
 type is a `TypeMismatchException`. Product names
 and on-the-wire identifiers keep the word surface (module, namespaces,

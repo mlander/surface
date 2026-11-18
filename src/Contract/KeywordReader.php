@@ -342,6 +342,46 @@ final class KeywordReader {
   }
 
   /**
+   * Refuses an author's `x-surface`, at any depth.
+   *
+   * `x-surface` is what a served document says of a key, read back from a
+   * document; an author's says nothing the build reads. A setting no
+   * keyword says is SETTINGS.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The author's schema.
+   * @param string $what
+   *   Who was handed it, for the message.
+   * @param string $pointer
+   *   Its pointer.
+   *
+   * @throws \InvalidArgumentException
+   *   Where the schema holds `x-surface`.
+   */
+  public static function refuseExtension(Schema $schema, string $what, string $pointer): void {
+    if ($schema->isBoolean()) {
+      return;
+    }
+    foreach ($schema->all() as $keyword => $value) {
+      $keyword = (string) $keyword;
+      $at = static::below($pointer, $keyword);
+      if ($keyword === ContractEmitter::EXTENSION) {
+        throw new \InvalidArgumentException(sprintf('%s: %s is what a served document says of a key, which an author does not write. A setting no keyword says is %s, such as ->annotation(\'%s\', [\'format\' => \'color\']).', $what, $at, self::SETTINGS, self::SETTINGS));
+      }
+      $members = match (Keywords::TABLE[$keyword] ?? NULL) {
+        Keywords::SCHEMA => [$value],
+        Keywords::SCHEMA_MAP, Keywords::SCHEMA_LIST => is_array($value) ? $value : [],
+        default => [],
+      };
+      foreach ($members as $name => $member) {
+        if ($member instanceof Schema) {
+          static::refuseExtension($member, $what, Keywords::TABLE[$keyword] === Keywords::SCHEMA ? $at : static::below($at, (string) $name));
+        }
+      }
+    }
+  }
+
+  /**
    * Answers whether a schema says nothing preparing a document rewrites.
    *
    * At any depth: no draft spelling (PREPARED, a boolean
@@ -1456,6 +1496,12 @@ final class KeywordReader {
           return [];
         }
         $values[] = $choice->get('const');
+      }
+      if ($values !== [] && array_filter($values, 'is_int') === $values) {
+        // PHP turns a numeric-string array key into an integer, so
+        // Schema::options(['1' => ...]) offers the integer 1. Which the
+        // author meant is not known.
+        throw new \InvalidArgumentException(sprintf('%s: every option is a whole number and no type is stated. PHP turns an array key such as \'1\' into the integer 1, so Schema::options() cannot tell the text "1" from the number 1: state the type, ->type(\'string\') for text or ->type(\'integer\') for numbers.', $pointer));
       }
     }
     elseif (is_array($property->get('enum'))) {

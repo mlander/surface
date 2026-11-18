@@ -317,7 +317,8 @@ final class OperationContext {
       $keyword = (string) $keyword;
       if (isset($bounds[$keyword])) {
         [$name, $option] = $bounds[$keyword];
-        $read[$name][$option] = $value;
+        // A bound its check says too: the stricter stands.
+        $read[$name] = ConstraintKeywords::stricter($read[$name] ?? [], [$option => $value]);
       }
       elseif ($keyword === 'pattern' && is_string($value) && ($back = ConstraintKeywords::read(['pattern' => $value], ['string'])[0] ?? NULL)?->constraint === 'Regex') {
         $read['Regex'] = ['pattern' => $back->options['pattern']];
@@ -331,7 +332,7 @@ final class OperationContext {
             throw new \InvalidArgumentException(sprintf('withConstraint("%s") was given the check %s: a context narrows by a check of this site, %s<plugin id>.', $key, $id, PortableKeywords::PROVIDER));
           }
           $name = substr((string) $id, strlen(PortableKeywords::PROVIDER));
-          $read[$name] = ($read[$name] ?? []) + (array) $options;
+          $read[$name] = in_array($name, ['Range', 'Length', 'Count'], TRUE) ? ConstraintKeywords::stricter($read[$name] ?? [], (array) $options) : ($read[$name] ?? []) + (array) $options;
         }
       }
       else {

@@ -236,7 +236,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
       }
       catch (\LogicException $e) {
         $this->assertStringContainsString(sprintf('add("x", "%s") declares a key of the %s type, which JSON Schema has no type for', $type, $type), $e->getMessage());
-        $this->assertStringContainsString("an id of an entity is add('<key>', 'integer' or 'string', ...)", $e->getMessage());
+        $this->assertStringContainsString("an id of an entity is add('<key>', Schema::integer() or Schema::string(),", $e->getMessage());
       }
     }
   }

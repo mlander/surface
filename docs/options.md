@@ -94,12 +94,26 @@ $inputs->add('captcha', Schema::options([
   ->title(t('Captcha')));
 ```
 
+**Numeric strings** need `type('string')`. PHP turns an array key such
+as `'1'` into the integer `1`, so `Schema::options(['1' => t('One')])`
+alone offers the number 1. With `type('string')` the values are the
+strings `'1'` and `'2'`. Options whose every value is a whole number and
+that state no type are refused, naming both types:
+
+```php
+$inputs->add('size', Schema::options([
+  '1' => t('Small'),
+  '2' => t('Large'),
+])
+  ->type('string')
+  ->title(t('Size')));
+```
+
 **Values with no labels** are `Schema::enum([...])`, which the module
 checks with core's `Choice`.
 
-**A label set that covers only some values**, values that are numeric
-strings, which PHP would key as integers (`'1'` as `1`), and a value
-with a description of its own are the check form, with the
+**A label set that covers only some values** and a value with a
+description of its own are the check form, with the
 constraint's own options: `choices`, the list of values, `labels`, a
 label for some of them, `descriptions`, a description for some of them.
 A value with no label of its own is named by its value. It is also the

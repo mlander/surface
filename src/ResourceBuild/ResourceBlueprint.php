@@ -1113,7 +1113,12 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    */
   public function reads(string $port, Schema $schema): static {
     // The port's type as a schema: required where it is marked, a shape by
-    // its id (Schema::of(Shape::class)).
+    // its id (Schema::of(Shape::class)). Nothing else is read, so nothing
+    // else is taken: the key wired to the port holds its own rules.
+    $refused = array_values(array_diff(array_keys($schema->all()), ['type', '$ref']));
+    if ($refused !== []) {
+      throw new \LogicException(sprintf('reads("%s") takes the port\'s type, required() and a shape as Schema::of(<Shape>::class), and nothing else: it was handed "%s". A port reads the value of the key wired to it, and that key holds its own rules; declare them there.', $port, implode('", "', $refused)));
+    }
     $required = $schema->isRequired();
     $reference = $schema->get('$ref');
     $shape = is_string($reference) ? $this->shapeOf($reference) : NULL;

@@ -4776,9 +4776,9 @@ final class SponsorshipResource implements ResourceInterface {
 
 | Key | Declared as | What it builds |
 | --- | --- | --- |
-| `venue` | `add('venue', 'string', ...)` | a string, the venue's machine name, with `SurfaceValidReference` naming the entity type |
-| `contact` | `add('contact', 'integer', ...)` | an integer, a user's id, with the same constraint |
-| `page` | `add('page', 'integer', ...)`, `'bundles' => ['article']` | an integer, a node's id, the constraint naming the bundle too |
+| `venue` | `add('venue', Schema::string()...)` | a string, the venue's machine name, with `SurfaceValidReference` naming the entity type |
+| `contact` | `add('contact', Schema::integer()...)` | an integer, a user's id, with the same constraint |
+| `page` | `add('page', Schema::integer()...)`, `'bundles' => ['article']` | an integer, a node's id, the constraint naming the bundle too |
 | `thing` | `attach('thing', ThingStructure::class)`, content entities | a structure of two keys: `entity_type`, a choice of the content entity types the account may reference one of, and `id`, a string, which the structure's refiner narrows to the entity type chosen with the same constraint |
 | `setting` | `attach('setting', SettingStructure::class)`, config entities among three | the same two keys; of the three entity types it names, node is no config entity, so the venue and the role are offered |
 | `credit` | `attach('credit', CreditStructure::class)`, an article or a user | the same two keys; the bundle list narrows a node's id to articles |

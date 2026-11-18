@@ -332,7 +332,10 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  * is on the widget context, which is what makes one key render the same
  * way wherever it appears. \Drupal\surface\KeyFacts reads the key's type,
  * a setting, whether it holds a list and the schema of its items; every
- * other fact is a keyword of the schema.
+ * other fact is a keyword of the schema. A setting no keyword says is
+ * declared under `x-surface-settings`: the widget below draws a key
+ * declared as
+ * `Schema::string()->annotation('x-surface-settings', ['format' => 'color'])`.
  *
  * @code
  * #[SurfaceWidget(
@@ -344,7 +347,7 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  *
  *   public function drawsSchema(Schema $schema, WidgetChoice $choice): bool {
  *     return KeyFacts::type($schema) === 'portable:string'
- *       && KeyFacts::setting($schema, 'my_module_color') === TRUE;
+ *       && KeyFacts::setting($schema, 'format') === 'color';
  *   }
  *
  *   public function isApplicable(Schema $schema, WidgetContext $context): bool {

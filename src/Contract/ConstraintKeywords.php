@@ -216,6 +216,34 @@ final class ConstraintKeywords {
   }
 
   /**
+   * Lays a bound's options over those held, keeping the stricter bound.
+   *
+   * A bound given both as a keyword and as its check (`maximum(10)` and
+   * `drupal:Range` with `max: 5`) is one bound: of two minimums the larger
+   * stands, of two maximums the smaller, as the authored reader merges
+   * them (KeywordReader::besideKeywords()). Any other option given is
+   * laid over the one held.
+   *
+   * @param array $held
+   *   The options held: of Range, Length or Count.
+   * @param array $options
+   *   The options given.
+   *
+   * @return array
+   *   The options merged.
+   */
+  public static function stricter(array $held, array $options): array {
+    foreach ($options as $option => $value) {
+      $mine = $held[$option] ?? NULL;
+      if (in_array($option, ['min', 'max'], TRUE) && is_numeric($mine) && is_numeric($value)) {
+        $value = $option === 'min' ? max($mine, $value) : min($mine, $value);
+      }
+      $held[$option] = $value;
+    }
+    return $held;
+  }
+
+  /**
    * Writes one constraint as keywords.
    *
    * @param string $id

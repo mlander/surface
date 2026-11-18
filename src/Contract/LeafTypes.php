@@ -414,7 +414,7 @@ final class LeafTypes {
    */
   public static function meant(string $type): string {
     return match (TRUE) {
-      static::refersToEntity($type) => 'an id of an entity is add(\'<key>\', \'integer\' or \'string\', ...), the type the entity type keeps its id as, with the SurfaceValidReference constraint naming the entity type: ->addConstraint(\'SurfaceValidReference\', [\'entityTypeId\' => \'<entity type>\']).',
+      static::refersToEntity($type) => 'an id of an entity is add(\'<key>\', Schema::integer() or Schema::string(), the type the entity type keeps its id as, with the SurfaceValidReference check naming the entity type: ->check(\'drupal:SurfaceValidReference\', [\'entityTypeId\' => \'<entity type>\'])).',
       $type === 'map' => 'a group of keys is attach(\'<key>\', <structure>::class), or addMap() for keys only this one holds.',
       $type === 'list' => 'a list is add(\'<key>\', Schema::list(<item>)).',
       $type === self::ANY => 'a value whose shape depends on another key is variants, attachVariants().',

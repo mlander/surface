@@ -278,7 +278,7 @@ final class PropertyDeclaration {
       $blueprint->mixIn($mixin->structure, $mixin->reads);
     }
     foreach ($rules as [$key, $rule]) {
-      self::rule($blueprint->narrow($key), $rule);
+      self::rule($blueprint->narrow($key), $rule, $reflection->getName() . '::$' . $key);
     }
   }
 
@@ -894,8 +894,13 @@ final class PropertyDeclaration {
    *   The rule narrow() answered.
    * @param \Drupal\surface\Resource\Attribute\Rule $declared
    *   The attribute.
+   * @param string $property
+   *   The class and the property that carry it, for a refusal.
+   *
+   * @throws \InvalidArgumentException
+   *   For a `constrain:` that names no keyword.
    */
-  private static function rule(DeclaredRule $rule, Rule $declared): void {
+  private static function rule(DeclaredRule $rule, Rule $declared, string $property): void {
     $conditions = [];
     if ($declared->whenEquals !== NULL) {
       $conditions[] = Condition::equals($declared->whenEquals[0], $declared->whenEquals[1]);
@@ -922,11 +927,66 @@ final class PropertyDeclaration {
       if (array_is_list($declared->constrain)) {
         throw new \InvalidArgumentException('#[Rule] takes constrain: as keywords by name, constrain: [\'maximum\' => 5], not a constraint and its options.');
       }
-      $rule->constrain(Schema::keywords($declared->constrain));
+      $rule->constrain(self::constrained($declared->constrain, $property));
     }
     if ($declared->because !== NULL) {
       $rule->because(self::label($declared->because));
     }
+  }
+
+  /**
+   * Reads a rule's `constrain:` as a Schema, naming what to write if not.
+   *
+   * @param array $keywords
+   *   The keywords, by name.
+   * @param string $property
+   *   The class and the property, for the refusal.
+   *
+   * @return \PortableSchema\Builder\Schema
+   *   The schema the keywords say.
+   *
+   * @throws \InvalidArgumentException
+   *   For a name that is no keyword: a constraint the table writes as
+   *   keywords is named with them, `Length` with `max` as `maxLength`.
+   */
+  private static function constrained(array $keywords, string $property): Schema {
+    try {
+      return Schema::keywords($keywords);
+    }
+    catch (\InvalidArgumentException $e) {
+      foreach ($keywords as $name => $value) {
+        $name = (string) $name;
+        try {
+          Schema::keywords([$name => $value]);
+          continue;
+        }
+        catch (\InvalidArgumentException) {
+        }
+        $written = ConstraintKeywords::write($name, $value, ['string', 'integer', 'number', 'array']);
+        $spelling = $written !== NULL && $written->whole && $written->keywords !== []
+          ? sprintf('constrain: %s', self::spelled($written->keywords))
+          : 'constrain: [\'maxLength\' => 4], with the keywords minimum, maximum, minLength, maxLength, minItems, maxItems, pattern and enum, or a check under portable-check';
+        throw new \InvalidArgumentException(sprintf('%s carries #[Rule] whose constrain: names "%s", which is no keyword of the dialect. constrain: takes keywords by name; write %s.', $property, $name, $spelling), 0, $e);
+      }
+      throw $e;
+    }
+  }
+
+  /**
+   * Writes keywords as PHP writes an array of them, for a message.
+   *
+   * @param array $keywords
+   *   The keywords.
+   *
+   * @return string
+   *   `['maxLength' => 4]`.
+   */
+  private static function spelled(array $keywords): string {
+    $pairs = [];
+    foreach ($keywords as $name => $value) {
+      $pairs[] = sprintf("'%s' => %s", $name, var_export($value, TRUE));
+    }
+    return '[' . implode(', ', $pairs) . ']';
   }
 
   /**
