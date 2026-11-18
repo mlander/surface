@@ -187,6 +187,34 @@ class KeyPathsCoercionTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests the refusal of a value at an `any` key names it at every depth.
+   *
+   * A property of a map and an item of a list are refused as the key is,
+   * by the source, the place and the resource; a property that holds
+   * nothing is taken.
+   */
+  public function testAnyKeyRefusalNamesThePlaceAtEveryDepth(): void {
+    $map = MapDataDefinition::create()->setLabel('Map')
+      ->setPropertyDefinition('a', DataDefinition::create('any')->setLabel('A'));
+    $this->assertSame(['a' => NULL], $this->held($map, ['a' => NULL]));
+    $rows = [
+      'value.a' => [$map, ['a' => 5]],
+      'value.0' => [new ListDataDefinition([], DataDefinition::create('any')), [5]],
+      'value.0.a' => [new ListDataDefinition([], clone $map), [['a' => 5]]],
+    ];
+    foreach ($rows as $at => [$definition, $raw]) {
+      try {
+        $this->held($definition, $raw);
+        $this->fail(sprintf('A value at "%s" is refused.', $at));
+      }
+      catch (\LogicException $e) {
+        $this->assertNotInstanceOf(ValueNotAcceptedException::class, $e, $at);
+        $this->assertSame(sprintf('The route: "%s" on test is of the any type, which no JSON Schema type is written for, so no value can be held to it.', $at), $e->getMessage());
+      }
+    }
+  }
+
+  /**
    * Reads one value as a site default for a key.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
