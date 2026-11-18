@@ -10,7 +10,7 @@ use Drupal\surface\Resource\StructureInterface;
 use PortableSchema\Builder\Schema;
 
 /**
- * What OwnerLevelAttachAlter tries to attach to at the owner's level.
+ * What DeclaringClassLevelAttachAlter tries to attach at that level.
  */
 #[Structure('resource_test.broken.alter_attach_target')]
 final class AlterAttachTargetStructure implements StructureInterface {

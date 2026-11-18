@@ -314,7 +314,7 @@ abstract class ResourceTestBase extends SurfaceKernelTestBase {
     $this->assertDirectoryExists($directory, 'The baselines directory is there; ' . static::BASELINES_WRITE . '=1 makes it.');
     $failing = array_filter($baselines->compare($committed, $current), static fn (ContractChange $change): bool => $change->fails());
     $this->assertSame([], array_values(array_map(static fn (ContractChange $change): string => sprintf('%s %s: %s (%s)', $change->surface, $change->path, $change->change, $change->status), $failing)), sprintf(
-      'A breaking change raises its owner\'s version, or its baseline allows it with a reason; a declaration with no baseline is pinned with %s=1, and an accepted change with drush surface:contract-diff --write.',
+      'A breaking change raises its declaring class\'s version, or its baseline allows it with a reason; a declaration with no baseline is pinned with %s=1, and an accepted change with drush surface:contract-diff --write.',
       static::BASELINES_WRITE,
     ));
   }

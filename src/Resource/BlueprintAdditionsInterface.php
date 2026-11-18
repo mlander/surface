@@ -11,17 +11,17 @@ use PortableSchema\Builder\Schema;
 /**
  * What anyone may do to a blueprint: add to it.
  *
- * Handed to alterInputs(). The owner gets BlueprintInterface, which adds
- * attachVariants(), addEach(), attachEach(), mixIn(), reads(), compute()
+ * Handed to alterInputs(). The declaring class gets BlueprintInterface, which
+ * adds attachVariants(), addEach(), attachEach(), mixIn(), reads(), compute()
  * and addCacheableDependency().
  *
- * Neither the owner nor an alter may add a key twice: adding is never
- * replacing, so nothing an owner declared can be changed by adding. The
- * one change to an existing key anyone may make is describe(): its label
+ * Neither the declaring class nor an alter may add a key twice: adding is never
+ * replacing, so nothing a declaring class declared can be changed by adding.
+ * The one change to an existing key anyone may make is describe(): its label
  * and description, and for an alter's own mount where it is drawn, none
  * of which changes what is accepted or where it is stored. The one
  * widening an alter may make is extendChoices(): more values on a list
- * the owner declared, answered for by the alter.
+ * the declaring class declared, answered for by the alter.
  */
 interface BlueprintAdditionsInterface {
 
@@ -33,15 +33,15 @@ interface BlueprintAdditionsInterface {
    * arranged with describe(); what they start from is the
    * map's default. Both documents write the map inline, `type: object`
    * with its properties, and no def. The cost: no alter can address it,
-   * nothing else uses it, and its access is its owner's; anything two
+   * nothing else uses it, and its access is its declaring class's; anything two
    * resources share, or that has a rule, a child or access of its own, is
    * a structure, attach()ed.
    *
    * The callable may run more than once. When the map needs a frame (a
    * child attached, variants, a mixin, a rule, a resolve, a port), the
-   * build runs the owner's declaration again to fill the map's structure,
-   * and the callable with it: so it has no side effect and declares the
-   * same keys each time, which the build holds it to, the keys it
+   * build runs the declaring class's declaration again to fill the map's
+   * structure, and the callable with it: so it has no side effect and declares
+   * the same keys each time, which the build holds it to, the keys it
    * declared before it asked for the frame coming first again.
    *
    * @code
@@ -158,22 +158,22 @@ interface BlueprintAdditionsInterface {
   /**
    * Rewords or arranges a key anyone declared.
    *
-   * An owner words its own keys in their schemas and the verbs'
+   * A declaring class words its own keys in their schemas and the verbs'
    * arguments, and arranges them here, after declaring them. An alter
    * rewords and arranges a key it does not own here.
    *
    * Label, description, arrangement and, for a mount, placement: the one
    * change to an existing key an alter may make, because it changes
-   * nothing about what is accepted. Type, presence and width stay the owner's;
-   * tightening is a #[RefinesInput] method. Not a narrowing, so not
+   * nothing about what is accepted. Type, presence and width stay the declaring
+   * class's; tightening is a #[RefinesInput] method. Not a narrowing, so not
    * checked as one.
    *
    * The arrangement is how the key is drawn: its group, weight,
    * placeholder, prefix, suffix and help, the six arguments after $after.
-   * What they say is laid over what the key's owner arranged: what is
+   * What they say is laid over what the key's declaring class arranged: what is
    * given replaces, what is left NULL stays. An alter may place an
-   * owner's key and reword what the owner said, never take it away: a
-   * text emptied where the owner gave one is refused.
+   * declaring class's key and reword what the declaring class said, never take
+   * it away: a text emptied where the declaring class gave one is refused.
    *
    * @code
    * $inputs->addEach('punctuation', Schema::of(PunctuationAction::class), from: PunctuationCharacters::class, label: t('Punctuation'));
@@ -184,13 +184,13 @@ interface BlueprintAdditionsInterface {
    * `third_party_settings.<module>` of the module calling it. Its keys
    * are stored and posted under that path whatever is said here; $after
    * says where the fieldset holding them is drawn: directly after that
-   * key of the owner's blueprint, on a generated form and in a renderer of
-   * the served contract (`x-surface.after`), rather than last, among the
-   * other modules' fieldsets.
+   * key of the declaring class's blueprint, on a generated form and in a
+   * renderer of the served contract (`x-surface.after`), rather than last,
+   * among the other modules' fieldsets.
    *
    * @param string $key
-   *   The key: an owner's key by its name, this blueprint's own key by its
-   *   name, or another alter's key by its mounted path,
+   *   The key: a declaring class's key by its name, this blueprint's own key by
+   *   its name, or another alter's key by its mounted path,
    *   `third_party_settings.<module>.<key>`. A module's mount itself,
    *   the fieldset its keys are drawn in, is
    *   `third_party_settings.<module>`: titled with the module's name
@@ -201,8 +201,8 @@ interface BlueprintAdditionsInterface {
    *   The new description, or NULL to leave it.
    * @param string|null $after
    *   For the calling alter's own input mount only: a top-level key of
-   *   the owner's blueprint, a plain key or an attached part, to draw the
-   *   mount's fieldset directly after. NULL leaves it where it is.
+   *   the declaring class's blueprint, a plain key or an attached part, to draw
+   *   the mount's fieldset directly after. NULL leaves it where it is.
    * @param \Drupal\surface\Resource\ArrangementGroup|null $group
    *   The group the key is drawn in, or NULL to leave it.
    * @param int|null $weight
@@ -222,9 +222,9 @@ interface BlueprintAdditionsInterface {
    * @throws \LogicException
    *   When no declared key answers to that name; with $after, when the key
    *   is not the calling alter's own input mount, or $after names no
-   *   top-level key of the owner's blueprint; and with an arrangement,
-   *   when it would empty a text another contributor arranged, or the key
-   *   is an output, which is never drawn.
+   *   top-level key of the declaring class's blueprint; and with an
+   *   arrangement, when it would empty a text another contributor arranged, or
+   *   the key is an output, which is never drawn.
    *
    * @see \Drupal\surface\Resource\Arrangement
    * @see docs/decisions.md#arrangement-is-declared-once
@@ -249,13 +249,13 @@ interface BlueprintAdditionsInterface {
    * An alter attaches at its own mount, `third_party_settings.<module>`,
    * and only there: the mount's keys are then the structure's, stored
    * under the module's name as any key an alter mounts, and the alter is
-   * an adapter between the structure and one owner. It wires the ports to
-   * the owner's keys, and its own glue (a describe(), a rule or a refiner
-   * on an owner's key) may read the structure's keys by their names; what
-   * they allow stays the structure's.
+   * an adapter between the structure and one declaring class. It wires the
+   * ports to the declaring class's keys, and its own glue (a describe(), a rule
+   * or a refiner on a declaring class's key) may read the structure's keys by
+   * their names; what they allow stays the structure's.
    *
-   * The owner words the key with $label, $description and $required. The
-   * child fills its properties when it is built.
+   * The declaring class words the key with $label, $description and $required.
+   * The child fills its properties when it is built.
    *
    * @code
    * $inputs->attach('compliance', ComplianceStructure::class, t('Compliance'), reads: ['capacity' => 'seats']);
@@ -271,7 +271,7 @@ interface BlueprintAdditionsInterface {
    *   mount keeps the module's name).
    * @param array<string, string> $reads
    *   The child's ports, each mapped to the container's key it reads: an
-   *   owner's key by its name.
+   *   declaring class's key by its name.
    * @param string|\Stringable|null $description
    *   The key's description; NULL for none.
    * @param bool $required
@@ -311,7 +311,7 @@ interface BlueprintAdditionsInterface {
    * $max declare, is the parent's to narrow with a #[RefinesInput]
    * method on the key, and its value is a list of item maps, in order.
    *
-   * The owner words the key with $label, $description and $required.
+   * The declaring class words the key with $label, $description and $required.
    *
    * @param string $key
    *   The key the collection sits at.
@@ -342,24 +342,25 @@ interface BlueprintAdditionsInterface {
   /**
    * Offers more values on a key someone else declared, as an alter.
    *
-   * The one widening verb, and only of a key whose owner declared a fixed
-   * list of allowed values. Nothing removes: an alter cannot take a key
-   * or a value away from its owner. The values are added to that list
+   * The one widening verb, and only of a key whose declaring class declared a
+   * fixed list of allowed values. Nothing removes: an alter cannot take a key
+   * or a value away from its declaring class. The values are added to that list
    * under the alter's module, which answers for them. A #[RefinesInput]
    * method of the same alter on the same key narrows only what the alter
-   * added, never the owner's values, and the owner's methods never see
-   * the alter's. What a caller is offered is the union of both.
+   * added, never the declaring class's values, and the declaring class's
+   * methods never see the alter's. What a caller is offered is the union of
+   * both.
    *
    * @param string $key
-   *   The owner's input key.
+   *   The declaring class's input key.
    * @param array $choices
    *   The values to offer, as a list, or keyed by value with a label each.
    *
    * @return $this
    *
    * @throws \LogicException
-   *   For the owner's own blueprint, which lists its values in the key's
-   *   constraint, and for outputs, which nobody sends.
+   *   For the declaring class's own blueprint, which lists its values in the
+   *   key's constraint, and for outputs, which nobody sends.
    * @throws \InvalidArgumentException
    *   When the key declares no list of allowed values, or already offers
    *   one of the values.
@@ -382,15 +383,15 @@ interface BlueprintAdditionsInterface {
    * The rule is a static refiner, stated by the full schema as a JSON
    * Schema conditional without running anything, evaluated by the
    * pipeline, and held to the narrowing check: a rule that would widen
-   * what the key declares is refused when the resource is built. An owner
-   * narrows its own keys; an alter narrows the owner's keys and the ones
-   * it mounted, and its conditions read the same. A rule whose effect
+   * what the key declares is refused when the resource is built. A declaring
+   * class narrows its own keys; an alter narrows the declaring class's keys and
+   * the ones it mounted, and its conditions read the same. A rule whose effect
    * must be computed, or whose condition is runtime, is a
    * #[RefinesInput] method instead.
    *
    * @param string $key
-   *   The key to narrow: an owner's key by its name, or, for an alter, a
-   *   key it added by the name it added it under.
+   *   The key to narrow: a declaring class's key by its name, or, for an alter,
+   *   a key it added by the name it added it under.
    *
    * @return \Drupal\surface\Refinement\Rule
    *   The rule, to say when() and what.
@@ -413,8 +414,8 @@ interface BlueprintAdditionsInterface {
    * answers is never written back, and the contract does not carry it:
    * no document, tool, form or read states a resolve.
    *
-   * An alter that offers a key in place of an owner's says both halves,
-   * the asking and the use, each once:
+   * An alter that offers a key in place of a declaring class's says both
+   * halves, the asking and the use, each once:
    *
    * @code
    * $inputs->narrow('api_key')
@@ -424,8 +425,8 @@ interface BlueprintAdditionsInterface {
    * @endcode
    *
    * @param string $key
-   *   The key resolved: an owner's key by its name, or, for an alter, a
-   *   key it added by the name it added it under.
+   *   The key resolved: a declaring class's key by its name, or, for an alter,
+   *   a key it added by the name it added it under.
    * @param string[] $from
    *   The keys it is resolved from, at least one, named as $key is: for
    *   an alter, its own keys bare, as a condition names them.

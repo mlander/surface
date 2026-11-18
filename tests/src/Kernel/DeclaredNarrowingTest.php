@@ -34,8 +34,8 @@ use PortableSchema\Builder\Schema;
  *
  * The parcel declares every rule between its keys with narrow(): each
  * condition of the vocabulary and each effect at least once, and its
- * alter a customs code with rules on its own key and on the owner's. A
- * rule is a static refiner: bound in the key's chain, held to the
+ * alter a customs code with rules on its own key and on the declaring class's.
+ * A rule is a static refiner: bound in the key's chain, held to the
  * narrowing check, evaluated by the pipeline, and stated by the full
  * schema as written, as a conditional of its own.
  *
@@ -166,7 +166,7 @@ class DeclaredNarrowingTest extends SurfaceKernelTestBase {
     $this->assertSame([], $value->codedDependencies(), 'No coded refiner watches them.');
     $this->assertSame([], $value->gate(SurfaceInterface::EVERY), 'A rule waits for nothing.');
     $links = array_merge(...array_values($value->refiners));
-    $this->assertCount(2, $links, 'The owner\'s rules, then the alter\'s.');
+    $this->assertCount(2, $links, 'The declaring class\'s rules, then the alter\'s.');
     $this->assertContainsOnlyInstancesOf(DeclaredRefiner::class, $links);
 
     $note = $definitions->entry('note');
@@ -250,8 +250,8 @@ class DeclaredNarrowingTest extends SurfaceKernelTestBase {
     $this->assertNull($this->constraint(['reference' => 'R1', 'service' => 'standard'], 'tracking', 'Regex'));
     $this->assertNull($this->constraint(['service' => 'express'], 'tracking', 'Regex'));
 
-    // The alter's rules: on its own key, read by the owner's keys; on the
-    // owner's key, read by its own.
+    // The alter's rules: on its own key, read by the declaring class's keys; on
+    // the declaring class's key, read by its own.
     $this->assertTrue($this->refined(['service' => 'freight', 'weight' => 40], 'customs')->isRequired());
     $customs = $this->refined(['service' => 'freight', 'weight' => 1], 'customs');
     $this->assertTrue(DoesNotApply::marks($customs), 'Required, then ruled out: nothing is narrower.');
@@ -565,7 +565,7 @@ class DeclaredNarrowingTest extends SurfaceKernelTestBase {
          "then": {"properties": {"third_party_settings": {"properties": {"surface_resource_test": {
            "properties": {"customs": false}}}}}}}
         JSON,
-      'the owner\'s key, read by the alter\'s' => <<<'JSON'
+      'the declaring class\'s key, read by the alter\'s' => <<<'JSON'
         {"if": {"properties": {"third_party_settings": {
            "properties": {"surface_resource_test": {
              "properties": {"customs": {"not": {"type": "null"}}}, "required": ["customs"]}},

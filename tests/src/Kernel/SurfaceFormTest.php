@@ -228,7 +228,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
           'kind' => $kind,
           'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],
-        refiners: ['detail' => [SurfaceInterface::OWNER => [new CasingVariantRefiner()]]],
+        refiners: ['detail' => [SurfaceInterface::DECLARING_CLASS => [new CasingVariantRefiner()]]],
         refinements: ['detail' => ['kind']],
         locked: ['kind'],
       ),
@@ -430,7 +430,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
           'scope' => DataDefinition::create('string')->setLabel('Scope'),
           'mode' => $mode,
         ],
-        refiners: ['mode' => [SurfaceInterface::OWNER => [new ModeSubsetRefiner()]]],
+        refiners: ['mode' => [SurfaceInterface::DECLARING_CLASS => [new ModeSubsetRefiner()]]],
         refinements: ['mode' => ['scope']],
       ),
     );
@@ -625,7 +625,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
           'extras' => $map,
           'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],
-        refiners: ['detail' => [SurfaceInterface::OWNER => [new CasingVariantRefiner()]]],
+        refiners: ['detail' => [SurfaceInterface::DECLARING_CLASS => [new CasingVariantRefiner()]]],
         refinements: ['detail' => ['extras']],
       ),
     );
@@ -842,7 +842,7 @@ class SurfaceFormTest extends SurfaceKernelTestBase {
           'kind' => DataDefinition::create('string')->setLabel('Kind'),
           'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],
-        refiners: ['detail' => [SurfaceInterface::OWNER => [new CasingVariantRefiner()]]],
+        refiners: ['detail' => [SurfaceInterface::DECLARING_CLASS => [new CasingVariantRefiner()]]],
         refinements: ['detail' => ['kind']],
       ),
     );

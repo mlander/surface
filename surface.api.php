@@ -262,17 +262,18 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  * An alter may:
  * - add keys, which are mounted under its module's name, at
  *   third_party_settings.<module>.<key>, so they cannot collide with the
- *   owner's or anyone else's;
+ *   declaring class's or anyone else's;
  * - reword a label or a description with describe();
- * - offer more values on a key whose owner declared a fixed list, with
+ * - offer more values on a key whose declaring class declared a fixed list,
+ * with
  *   extendChoices(), the one widening verb; a value already offered by
  *   anyone is refused;
  * - narrow any key with #[RefinesInput] methods of its own: static, as an
- *   owner's are, or instance methods declaring runtime: TRUE, since an
- *   alter is a service. On a key it offered more values on, a method's
+ *   declaring class's are, or instance methods declaring runtime: TRUE, since
+ *   an alter is a service. On a key it offered more values on, a method's
  *   answer applies to this module's values alone, so it can neither
- *   narrow away a value the owner offers nor offer one it did not add;
- *   what is offered is the union.
+ *   narrow away a value the declaring class offers nor offer one it did not
+ *   add; what is offered is the union.
  * Nothing an alter does removes a key or a value.
  *
  * @code

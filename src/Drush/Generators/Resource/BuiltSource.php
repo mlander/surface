@@ -19,7 +19,7 @@ final class BuiltSource {
    *
    * @param \Drupal\surface\SurfaceInterface $built
    *   The keys, sealed as declared.
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $declaringClass
    *   The structure it was registered as: the resource's id and module.
    * @param string $source
    *   What it was read from, in words.
@@ -31,7 +31,7 @@ final class BuiltSource {
    */
   public function __construct(
     public readonly SurfaceInterface $built,
-    public readonly ResourceDefinition $owner,
+    public readonly ResourceDefinition $declaringClass,
     public readonly string $source,
     public readonly array $notes = [],
     public readonly array $left = [],

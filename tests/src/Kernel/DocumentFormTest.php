@@ -30,8 +30,8 @@ use PortableSchema\Builder\Schema;
  *
  * The drawer reads an envelope (its schema, `values` and `stale`) and
  * nothing else, by the rules the React app reads it by: the widget the
- * word names, required from the owner, the notes, the lock and what it
- * passes on, the empty option and a stale value, bounds, choices,
+ * word names, required from the declaring class, the notes, the lock and what
+ * it passes on, the empty option and a stale value, bounds, choices,
  * fieldsets and groups, lists and collections, variants, the autocomplete,
  * a key that does not apply, and the hints a widget publishes. Each rule
  * a shipped example exercises is held on the envelope that example
@@ -132,9 +132,9 @@ class DocumentFormTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Rules 1 and 2: the word names the widget; the owner says required.
+   * Rules 1 and 2: the word names the widget; the declaring class, required.
    */
-  public function testTheWordNamesTheWidgetAndTheOwnerRequires(): void {
+  public function testTheWordNamesTheWidgetAndTheDeclaringClassRequires(): void {
     $form = $this->draw(static::object([
       'title' => ['title' => 'Title', 'type' => 'string', 'x-portable-ui' => ['widget' => 'text']],
       'body' => ['title' => 'Body', 'type' => 'string', 'x-portable-ui' => ['widget' => 'textarea']],
@@ -165,7 +165,7 @@ class DocumentFormTest extends SurfaceKernelTestBase {
       'starts' => 'datetime',
       'color' => 'textfield',
     ], $types, 'The word names the widget; no word, or a word no widget answers to, the stock one for the shape.');
-    $this->assertTrue($form['title']['#required'], 'Required where its owner lists it.');
+    $this->assertTrue($form['title']['#required'], 'Required where its declaring class lists it.');
     $this->assertFalse($form['body']['#required']);
     $this->assertSame('/title', $form['title'][SurfaceFormBuilderInterface::PATH_KEY]);
     $this->assertSame('string', $form['title'][SurfaceFormBuilderInterface::WIDGET_KEY]);

@@ -91,8 +91,8 @@ class ExamplesReadmeTest extends UnitTestCase {
     $this->assertContains('../../src/Variants/ComponentProps.php', $quoted);
     $this->assertContains('../surface_examples_component_block/src/Structure/ComponentBlockStructure.php', $quoted);
     $this->assertContains('../surface_examples_component_block/src/Plugin/Block/ComponentBlock.php', $quoted);
-    // Example 14: the owner's way whole, and the alter's way, whose alter
-    // is the keys module's.
+    // Example 14: the declaring class's way whole, and the alter's way, whose
+    // alter is the keys module's.
     $extension = [
       'Resource/MailerResource',
       'Variants/CredentialSources',

@@ -276,19 +276,19 @@ class ResourceDiscoveryTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests that an alter naming an owner with a class by its id is refused.
+   * Tests an alter naming a declaring class by its id is refused.
    *
    * The id spelling is for a derived resource, which has no class, and a
    * deriver's base: ContentEntityAccessTest mounts an alter by the base id
    * `entity.content`. An id nothing claims is skipped, as a class that does
    * not load is.
    */
-  public function testAnAlterNamingAnOwnerByItsIdIsRefused(): void {
+  public function testAnAlterNamingTheDeclaringClassByItsIdIsRefused(): void {
     $cases = [
       RecipeByIdAlter::class => ['resource_test.recipe', RecipeResource::class],
       SkuByIdAlter::class => ['resource_test.sku', Sku::class],
     ];
-    foreach ($cases as $alter => [$id, $owner]) {
+    foreach ($cases as $alter => [$id, $declaring_class]) {
       $registry = new ResourceRegistry([
         'resources' => [RecipeResource::class => 'surface_resource_test'],
         'shapes' => [Sku::class => 'surface_resource_test'],
@@ -299,7 +299,7 @@ class ResourceDiscoveryTest extends SurfaceKernelTestBase {
         $this->fail(sprintf('%s was not refused.', $alter));
       }
       catch (\LogicException $e) {
-        $this->assertSame(sprintf("#[Alters('%s')] on %s names an id; name the owner by its class, %s::class. An id names only a derived resource, which has no class.", $id, $alter, $owner), $e->getMessage());
+        $this->assertSame(sprintf("#[Alters('%s')] on %s names an id; name the declaring class by its class, %s::class. An id names only a derived resource, which has no class.", $id, $alter, $declaring_class), $e->getMessage());
       }
     }
 
@@ -335,13 +335,13 @@ class ResourceDiscoveryTest extends SurfaceKernelTestBase {
       $surface->getDefaultValues()['third_party_settings'],
     );
 
-    // The limit is refined against the presentation, after the owner.
+    // The limit is refined against the presentation, after the declaring class.
     $this->assertSame(['limit' => ['presentation']], array_intersect_key($surface->entries()->refinements(), ['limit' => TRUE]));
     $range = static fn (array $values): array => DerivedDefinition::at($surface->refine($values), 'limit')->getConstraints()['Range'];
     $this->assertSame(['min' => 1, 'max' => ExampleBlockAlter::GRID_LIMIT], $range(['presentation' => 'grid']));
     $this->assertSame(['min' => 1, 'max' => 50], $range(['presentation' => 'list']));
 
-    // And it rewords the headline, the one change to an owner's key an
+    // And it rewords the headline, the one change to a declaring class's key an
     // alter may make: its help text, not its width.
     $headline = DerivedDefinition::at($surface, 'headline');
     $this->assertSame('Shown above the featured content, beside its badge.', (string) $headline->getDescription());

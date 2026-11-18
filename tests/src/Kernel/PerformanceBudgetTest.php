@@ -58,7 +58,7 @@ class PerformanceBudgetTest extends SurfaceKernelTestBase {
    *
    * One build per operation, shared by its tool's inputs and outputs; the
    * read the build adds shares its update's, being asked in the update's
-   * context, and a read an owner declares (the content entity
+   * context, and a read a declaring class declares (the content entity
    * resources') builds its own. And one more for the outputs of each
    * operation that needs nothing and creates, built in the bare context:
    * the two bundles' `create`, the entity type's and the stage's. Before

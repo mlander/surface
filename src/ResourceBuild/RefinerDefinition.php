@@ -28,8 +28,8 @@ final class RefinerDefinition {
    * @param string[] $parameters
    *   The names of the parameters after the first, in order.
    * @param bool $isStatic
-   *   Whether the method is static, as the owner's must be; an alter's
-   *   may be either. Not to be confused with the refiner's kind.
+   *   Whether the method is static, as the declaring class's must be; an
+   *   alter's may be either. Not to be confused with the refiner's kind.
    * @param bool $runtime
    *   Whether the attribute declares it a runtime refiner: one whose
    *   answer nothing may compute ahead of time.

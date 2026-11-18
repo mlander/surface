@@ -123,11 +123,11 @@ abstract class SurfaceKernelTestBase extends KernelTestBase {
     foreach ($defaults as $name => $value) {
       DefinitionMetadata::setDefaultValue($definitions[$name], $value);
     }
-    // The owner's refiner comes first in the owner's chain for the
-    // variant, and anything a test registers goes after it.
-    $refiners['variant'][SurfaceInterface::OWNER] = [
+    // The declaring class's refiner comes first in the declaring class's chain
+    // for the variant, and anything a test registers goes after it.
+    $refiners['variant'][SurfaceInterface::DECLARING_CLASS] = [
       new CasingVariantRefiner(),
-      ...($refiners['variant'][SurfaceInterface::OWNER] ?? []),
+      ...($refiners['variant'][SurfaceInterface::DECLARING_CLASS] ?? []),
     ];
     return new Surface(
       Entries::fromArrays(

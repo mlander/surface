@@ -23,7 +23,7 @@ use PortableSchema\Builder\Schema;
  * answer that would widen the key otherwise is refused. A link writes on
  * no schema of the key's: a `Schema` is a value.
  *
- * A refiner narrows one contribution. The owner gets the
+ * A refiner narrows one contribution. The declaring class gets the
  * values it declared itself; a module that contributed values with
  * extendChoices() gets those values and no others, so narrowing "its"
  * option away can never take a sibling module's option with it. What

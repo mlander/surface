@@ -10,7 +10,7 @@ use PortableSchema\Builder\Schema;
 use Drupal\surface\SurfaceRefinerInterface;
 
 /**
- * The owner's refiner in engine tests: variant choices depend on casing.
+ * The declaring class's refiner in engine tests: choices depend on casing.
  */
 final class CasingVariantRefiner implements SurfaceRefinerInterface {
 
@@ -32,7 +32,7 @@ final class CasingVariantRefiner implements SurfaceRefinerInterface {
     $declared = ChoiceSet::ofSchema($key, 'Choice');
     // Narrowed against what it was handed when the key advertises a
     // list, and a fresh list when it advertises none: either way the
-    // values are the owner's own.
+    // values are the declaring class's own.
     if ($declared === NULL) {
       return [Schema::any()->with(PortableKeywords::CHECK, ['drupal:Choice' => ['choices' => self::VARIANTS[$values['casing']]]])];
     }

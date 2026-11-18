@@ -130,7 +130,7 @@ abstract class ConfigObjectResourceStorage implements ResourceStorageInterface, 
    * commit() sets the path alone, so what the object holds around it is
    * kept; mayClear() and the build's check read the schema at the path.
    * The config schema generator writes no schema for such an object: it is
-   * one its owner wrote.
+   * one its declaring class wrote.
    *
    * @see docs/storage.md#a-key-stored-under-a-path
    */
@@ -447,12 +447,12 @@ abstract class ConfigObjectResourceStorage implements ResourceStorageInterface, 
   /**
    * Refuses mounted settings no config schema describes.
    *
-   * The owner declares third_party_settings as a sequence whose type is
-   * named by the module key, and each module that mounts there declares
+   * The declaring class declares third_party_settings as a sequence whose type
+   * is named by the module key, and each module that mounts there declares
    * its own part. A part nobody declared resolves to an undefined element,
    * which config validation passes without a word, so it is checked here.
-   * An owner that declares no third_party_settings at all is refused by
-   * the schema itself, under that key.
+   * A declaring class that declares no third_party_settings at all is refused
+   * by the schema itself, under that key.
    *
    * @param string $name
    *   The config object.

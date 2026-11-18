@@ -157,7 +157,7 @@ class BuildCacheTest extends SurfaceKernelTestBase {
         $documents = [$this->emitted($fresh, $definition->id, (string) $operation), $all($fresh)];
         // A later request: nothing built, and nothing a build read from a
         // schema registered, so each variant is built from what was stored
-        // and its structure registered again from its owner's list.
+        // and its structure registered again from its declaring class's list.
         $cached = $resources->buildCounts()['cached'];
         $resources->forgetBuilds();
         $read->setValue($registry, []);

@@ -23,7 +23,7 @@ use Drupal\surface\SurfaceInterface;
  *   what a deep step collects is what the document depends on;
  * - true of the frame being described, and replaced as the walk
  *   descends: its dotted path from the top with the trailing dot
- *   (`prefix`), the id it was built from (`owner`), the orphans of a
+ *   (`prefix`), the id it was built from (`declaringClass`), the orphans of a
  *   refinement (`standing`) and three flags: `declaring` (the frame is a
  *   def, described for no values), `frozen` (the frame is a child its
  *   access locked, or inside one) and `blank` (the frame stands for every
@@ -58,11 +58,11 @@ final readonly class Emission {
    * @param \ArrayObject $stale
    *   Collects the dotted paths of stale values. A step whose stale paths
    *   are not the document's takes a fresh one, withStale().
-   * @param string $owner
+   * @param string $declaringClass
    *   The id the frame was built from: the document's at the top, a
    *   child's own, or the key a child with no class is defined under. A
-   *   child with no class of its own is defined as `<owner>.<key>`, a
-   *   variant with none as `<owner>.<key>.<value>`.
+   *   child with no class of its own is defined as `<declaring-class>.<key>`, a
+   *   variant with none as `<declaring-class>.<key>.<value>`.
    * @param string $prefix
    *   The dotted path of the frame from the top, with its trailing dot.
    * @param array<string, mixed> $standing
@@ -89,7 +89,7 @@ final readonly class Emission {
     public Subschemas $subschemas,
     public CacheableMetadata $cacheability,
     public \ArrayObject $stale,
-    public string $owner,
+    public string $declaringClass,
     public string $prefix = '',
     public array $standing = [],
     public bool $declaring = FALSE,
@@ -186,14 +186,14 @@ final readonly class Emission {
   /**
    * Gets this, for a frame built from another id.
    *
-   * @param string $owner
+   * @param string $declaring_class
    *   The id.
    *
    * @return self
    *   The copy.
    */
-  public function withOwner(string $owner): self {
-    return $this->with(owner: $owner);
+  public function withDeclaringClass(string $declaring_class): self {
+    return $this->with(declaringClass: $declaring_class);
   }
 
   /**

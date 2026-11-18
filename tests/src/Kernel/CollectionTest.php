@@ -171,7 +171,7 @@ class CollectionTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the shape: attachList() returns the list, which the owner words.
+   * Tests attachList() returns the list, which the declaring class words.
    */
   public function testShape(): void {
     $edit = $this->edit();

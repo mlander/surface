@@ -1265,10 +1265,10 @@ final class Validating {
       $chosen = (string) $entry->variants->chosen($values[$entry->variants->by] ?? NULL);
       $reads = isset($entry->variants->variants[$chosen]) ? $entry->variants->variants[$chosen]->reads : [];
       $strangers = $entry->variants->strangers($chosen, $value);
-      $owners = $entry->variants->owners($strangers, $chosen);
+      $declaring_classes = $entry->variants->declaringVariants($strangers, $chosen);
       foreach ($strangers as $stranger) {
-        $errors[] = isset($owners[$stranger])
-          ? new Violation($name, $stranger, $this->accepting->variantMismatchMessage($name . '.' . $stranger, $entry->variants->by, $chosen, $owners[$stranger]), Violation::WRONG_VARIANT)
+        $errors[] = isset($declaring_classes[$stranger])
+          ? new Violation($name, $stranger, $this->accepting->variantMismatchMessage($name . '.' . $stranger, $entry->variants->by, $chosen, $declaring_classes[$stranger]), Violation::WRONG_VARIANT)
           : new Violation($name, $stranger, $this->t('Unknown key @key.', ['@key' => $name . '.' . $stranger]), Violation::UNKNOWN_KEY);
       }
       // Judged as the variant would judge it on its own: the keys it

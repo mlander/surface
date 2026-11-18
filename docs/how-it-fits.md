@@ -71,7 +71,7 @@ structures alone:
 ```
 build(FieldInstanceResource::class, $context):
 
-  1. the owner's blueprint, filled by the class: no instance is ever made
+  1. the declaring class's blueprint, filled by the class: no instance is ever made
        $class::defineInputs(new ResourceBlueprint($builder))          <- no context: the
        $class::defineOutputs(new ResourceBlueprint($builder, TRUE))      same everywhere
      ResourceBlueprint writes straight into a fresh SurfaceBuilder,
@@ -86,7 +86,7 @@ build(FieldInstanceResource::class, $context):
      ResourceBlueprintAdditions mounts what it adds at
      third_party_settings.<module>; a structure an alter attached there
      is built now, in its own frame, its keys the mount's and its ports
-     wired to the owner's keys (mountStructure)
+     wired to the declaring class's keys (mountStructure)
 
   3. the checks on the blueprint: every identity key is a declared input,
      no operation id is provided twice, no class is attached inside
@@ -97,14 +97,14 @@ build(FieldInstanceResource::class, $context):
        each constraint is added to its key, checked narrower
        each identity key it knows becomes that key's default, locked
 
-  5. the refiners (bindRefiners), owner's first, then each alter's:
+  5. the refiners (bindRefiners), declaring class's first, then each alter's:
        each #[RefinesInput] method checked against the declared keys and the wall,
-         the owner's checked static, and an alter's static unless it
+         the declaring class's checked static, and an alter's static unless it
          declares runtime
        the keys it watches become refinement edges; a key its alter
          mounted, refined or watched, by its dotted path in the mount
        its class becomes one RefinesInputRefiner link on each key it refines:
-         the owner's link holds its class name and calls static methods,
+         the declaring class's link holds its class name and calls static methods,
          an alter's holds the alter service, whose runtime refiners
          may be instance methods
        a method watching nothing runs now; its answer is applied, and
@@ -255,7 +255,7 @@ operation, and nothing known. The host supplies the storage (the
 plugin's configuration, or the field config Field UI is editing),
 because only it holds the instance, and asks access of the structure's
 access class alone. A plugin protocol that asks a class for its
-defaults statically gets `ResourcesInterface::defaults()`: the owner's
+defaults statically gets `ResourcesInterface::defaults()`: the declaring class's
 blueprint alone, with no alter and no context.
 
 ## Tools, derived
@@ -271,7 +271,7 @@ read off the signature for `values`; `ResourceOperationTool` refines
 `values` to the real context once the parameters arrive, asks
 `Resources::access()` decisively, and submits through the pipeline to
 the composed storage, stopping after prepare for a dry run. The read of
-one thing, the `read` an owner declares or the one the build adds
+one thing, the `read` a declaring class declares or the one the build adds
 beside the default update (`OperationDefinition::defaultRead()`), is a
 tool of the same deriver's, `ResourceOperationReadTool`, which takes the
 parameters, asks the read's access, and answers with what its storage

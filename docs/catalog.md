@@ -23,7 +23,7 @@ OpenAPI operation (`surface_openapi`), the tool
 `surface:<id>:<operation>` (the base module, with `tool` installed) and
 the React page (`surface_examples_react`).
 Every resource with a default update that can be asked on its own can
-be read: by a `read` its owner declares, or by the one the build adds,
+be read: by a `read` its declaring class declares, or by the one the build adds,
 provided by "default read of" the update it reads, asked as that update
 is (`docs/decisions.md#a-read-is-an-operation-of-the-resource`).
 A structure a plugin uses is configured through the plugin's host. Every

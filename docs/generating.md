@@ -140,7 +140,7 @@ JSON Schema of the same values would be.
 
 The storage names the object. When the object is another module's
 (`node.settings`), no schema entry or install file is written: its
-owner's schema describes it, and the build holds the resource to that
+declaring class's schema describes it, and the build holds the resource to that
 schema. For `node.settings`:
 
 ```php

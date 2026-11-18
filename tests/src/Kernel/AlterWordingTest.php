@@ -19,8 +19,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests two alters saying one fact about a key: the second is refused.
  *
- * The owner's words are what alters lay over. The first alter to set a
- * fact on a key it does not own sets it; a second setting the same fact
+ * The declaring class's words are what alters lay over. The first alter to set
+ * a fact on a key it does not own sets it; a second setting the same fact
  * on the same key is refused at build, naming the key, the fact and both
  * alters. Two alters setting different facts compose, and an alter
  * wording its own mount again is no collision.
@@ -80,7 +80,7 @@ class AlterWordingTest extends SurfaceKernelTestBase {
       $this->fail('Two alters labeling one key were not refused.');
     }
     catch (\LogicException $e) {
-      $this->assertSame('describe("token") in the south_wording alter sets its label, which the north_wording alter set already. A fact about a key is set by one alter: the owner\'s is what alters lay over, and two alters setting the same one have no right answer between them. One module words a key, or each sets another fact.', $e->getMessage());
+      $this->assertSame('describe("token") in the south_wording alter sets its label, which the north_wording alter set already. A fact about a key is set by one alter: the provider\'s is what alters lay over, and two alters setting the same one have no right answer between them. One module words a key, or each sets another fact.', $e->getMessage());
     }
   }
 

@@ -34,7 +34,7 @@ definition and no Typed Data
 (why: [decision](decisions.md#the-form-is-drawn-from-the-document)).
 Each key is drawn by the rules the React app reads it by: the widget its
 `x-portable-ui.widget` names ([Widgets](widgets.md#the-word-names-the-widget)),
-required where its owner's `required` lists it, its title, description
+required where its declaring class's `required` lists it, its title, description
 and help as plain text, a `readOnly` key disabled with the reason
 `x-surface.locked` gives, groups from its frame's `x-portable-ui.groups`,
 variants from its parent's conditionals, a collection one details per
@@ -266,10 +266,10 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   form only: the description is what the key means, which the tool
   listing says, and the help is for a person filling the form in.
 
-An alter arranges an owner's key with the same `describe()`, laid over
-what the owner said: it may place the key (a group, a weight)
+An alter arranges a declaring class's key with the same `describe()`, laid over
+what the declaring class said: it may place the key (a group, a weight)
 and reword its texts, and it may not take any of them away, so an empty
-text where the owner gave one is refused. Nothing in an arrangement is a
+text where the declaring class gave one is refused. Nothing in an arrangement is a
 rule: no default, no requiredness and no path moves, and both schemas
 are unchanged by it, less the hint below. The served contract states it
 in `x-portable-ui` only when a renderer asks for the widget hints: the
@@ -288,7 +288,7 @@ groups its resource declares into core's vertical tabs, reaching each by
 A structure asks for the widget that draws it as a whole with
 `#[Structure(widget:)]`, the one word a key's `ui(widget:)` uses
 (`ui(widget: 'radios')`): the build sets it on the key
-wherever the structure is attached, unless the owner set one there, and
+wherever the structure is attached, unless the declaring class set one there, and
 the hint `x-portable-ui.widget` says it. A shape's `schema()` states the
 word as its hint (`->ui(widget: 'radios')`), which every key of the shape starts
 from. A
@@ -1709,7 +1709,7 @@ Three cases, and the example module is the second one:
    itself. One operation drawn over several steps, ending in a
    confirmation that applies them, is a declared flow on the operation
    form's route ([Staging: Flows](staging.md#flows)).
-2. **The structure and the destination belong to different owners.**
+2. **The structure and the destination belong to different declaring classes.**
    `surface_examples_plugins` renders the example block's structure into a
    `StateStorage`, which is exactly the claim it exists to make: a
    structure is independent of where its values are stored. An operation

@@ -18,8 +18,8 @@ namespace Drupal\surface\Resource;
  * Nothing in it changes what is accepted: no rule, no default, no
  * requiredness, and no path moves.
  *
- * Nobody writes one. An owner and an alter alike arrange a key with the
- * blueprint's describe(), whose six arguments are this class's, after the
+ * Nobody writes one. A declaring class and an alter alike arrange a key with
+ * the blueprint's describe(), whose six arguments are this class's, after the
  * key is declared:
  *
  * @code
@@ -29,9 +29,9 @@ namespace Drupal\surface\Resource;
  * @endcode
  *
  * describe() lays what it is given over what the key has: an alter may
- * place an owner's key and reword what the owner said, never take any of
- * it away. This is the stored form the engine reads, kept in the key's
- * schema and read by SchemaFacts::arrangement().
+ * place a declaring class's key and reword what the declaring class said, never
+ * take any of it away. This is the stored form the engine reads, kept in the
+ * key's schema and read by SchemaFacts::arrangement().
  *
  * The placeholder is only ever this one: a declared example is no longer
  * drawn as a placeholder, since an empty field showing a value reads as

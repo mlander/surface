@@ -10,8 +10,8 @@ namespace Drupal\surface\Resource\Attribute;
  * The spelling of addMap(). The class the property is typed with, or
  * `of:`, carries no #[Structure]: its properties are the map's keys, read
  * the way this class's are. When the map needs a frame (a child, a rule,
- * a port), the build runs the owner's declaration again, and the reader
- * reads the same properties again, since it reads no value.
+ * a port), the build runs the declaring class's declaration again, and the
+ * reader reads the same properties again, since it reads no value.
  *
  * @code
  * #[Map('Coordinates')]

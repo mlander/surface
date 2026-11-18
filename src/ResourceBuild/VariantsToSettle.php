@@ -46,9 +46,9 @@ final class VariantsToSettle {
    *   The account it was for; NULL for no account.
    * @param array{own: string[], values: array<string, string>}|null $flat
    *   For variants stored flat beside their deciding key
-   *   (Variants::STORED_AS), the owner's keys at that level, which none of
-   *   them may declare, and each one's value, by name; NULL for variants
-   *   stored under the key.
+   *   (Variants::STORED_AS), the declaring class's keys at that level, which
+   *   none of them may declare, and each one's value, by name; NULL for
+   *   variants stored under the key.
    */
   public function __construct(
     private ?Resources $resources,

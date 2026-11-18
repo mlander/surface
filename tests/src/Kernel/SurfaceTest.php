@@ -65,8 +65,8 @@ class SurfaceTest extends SurfaceKernelTestBase {
   /**
    * Tests refinement, chains, and the narrowing contract.
    *
-   * The single-contribution case, which is nearly every case: one owner,
-   * one chain, and an answer identical to the one the plain chain gave
+   * The single-contribution case, which is nearly every case: one declaring
+   * class, one chain, and an answer identical to the one the plain chain gave
    * before contributions existed.
    */
   public function testRefinementContract(): void {
@@ -76,7 +76,8 @@ class SurfaceTest extends SurfaceKernelTestBase {
     $this->assertSame($surface, $surface->refine([]));
     $this->assertArrayNotHasKey('Choice', DerivedDefinition::at($surface, 'variant')->getConstraints());
 
-    // Refined: the owner narrows the open key to the casing's variants.
+    // Refined: the declaring class narrows the open key to the casing's
+    // variants.
     $refined = $surface->refine(['casing' => 'uppercase']);
     $this->assertSame(['bold', 'strong'], DerivedDefinition::at($refined, 'variant')->getConstraints()['Choice']['choices']);
     // The advertised data surface is untouched.
@@ -88,7 +89,7 @@ class SurfaceTest extends SurfaceKernelTestBase {
     $this->assertContains('variant', $errors->keys());
 
     // A refiner that changes the data type is refused.
-    $rogue = $this->surface(refiners: ['variant' => [SurfaceInterface::OWNER => [new RogueRefiner()]]]);
+    $rogue = $this->surface(refiners: ['variant' => [SurfaceInterface::DECLARING_CLASS => [new RogueRefiner()]]]);
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('the data type changed from string to integer');
     $rogue->refine(['casing' => 'uppercase']);
@@ -104,7 +105,7 @@ class SurfaceTest extends SurfaceKernelTestBase {
           'kind' => DataDefinition::create('string'),
           'value' => $value,
         ],
-        refiners: ['value' => [SurfaceInterface::OWNER => [new AnyToIntegerRefiner()]]],
+        refiners: ['value' => [SurfaceInterface::DECLARING_CLASS => [new AnyToIntegerRefiner()]]],
         refinements: ['value' => ['kind']],
       ),
     );

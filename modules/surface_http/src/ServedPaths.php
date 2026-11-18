@@ -33,8 +33,8 @@ use Symfony\Component\HttpFoundation\Request;
  *   default create: the envelope, what is stored and the schema for it
  *   (a create's: the declared defaults). Where an update is, the default
  *   read is the read of one thing, `read`, which the build adds where the
- *   owner declares none; that one stands for its update, so the envelope
- *   and the schema it serves are the update's. On the collection of a
+ *   declaring class declares none; that one stands for its update, so the
+ *   envelope and the schema it serves are the update's. On the collection of a
  *   resource with identity, a default read is a listing: `GET` runs it,
  *   its query string the values, and answers its outputs;
  * - `PATCH` the path's default update; the collection of a resource with

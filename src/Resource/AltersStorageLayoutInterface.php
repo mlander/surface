@@ -15,7 +15,7 @@ use Drupal\surface\Storage\StorageLayoutInterface;
  * the distance between the two is this storage layout, applied to the alter's
  * own mount, `third_party_settings.<module>`, and nothing else:
  * toStorage() before the storage writes, fromStorage() after it reads.
- * The owner's storage class never has to know the contributor exists.
+ * The declaring class's storage class never has to know the contributor exists.
  *
  * The storage layout must be pure, because it is applied wherever the altered
  * values are written: StorageLayoutInterface says why.

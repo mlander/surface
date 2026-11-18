@@ -585,7 +585,7 @@ final class SchemaReader {
     $blueprint = static::blueprintOf($inputs);
     $reader->frame(static::at($schema, $pointer), $pointer, $blueprint, $schema);
     if ($authored) {
-      $reader->refuseUnread(sprintf('The structure %s, of a schema handed to add(),', $blueprint->ownerId()));
+      $reader->refuseUnread(sprintf('The structure %s, of a schema handed to add(),', $blueprint->declaringClassId()));
     }
   }
 
@@ -1088,8 +1088,8 @@ final class SchemaReader {
    *
    * A child, variants, a port, a rule, a lock or what is said of an object
    * as a whole is a resource's or a structure's to declare. A map's keys
-   * stop at the first such part, and the map's owner attaches the map as
-   * a structure with no id (MapBlueprint); an alter's or a shape's
+   * stop at the first such part, and the map's declaring class attaches the map
+   * as a structure with no id (MapBlueprint); an alter's or a shape's
    * blueprint takes none.
    *
    * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
@@ -2378,7 +2378,7 @@ final class SchemaReader {
         }
         $said = [ContractEmitter::EXTENSION, ...PortableKeywords::KEYWORDS];
         if (Schemas::isObjectSchema($property) && array_diff(array_keys($property->all()), $said) !== []) {
-          $this->note($at, 'Not read: what an owner narrows of a member of a structure mixed in is said where the owner declares it.');
+          $this->note($at, 'Not read: what a declaring class narrows of a member of a structure mixed in is said where the declaring class declares it.');
         }
         continue;
       }
@@ -3053,7 +3053,7 @@ final class SchemaReader {
    */
   protected function variantsKey(string $name, Schema $property, array $found, bool $required, string $pointer, BlueprintAdditionsInterface $inputs, Schema $root, array $properties): void {
     $labels = static::labels($properties[$found['by']] ?? NULL);
-    $owner = $this->framing($inputs, 'variants')->ownerId();
+    $declaring_class = $this->framing($inputs, 'variants')->declaringClassId();
     $variants = [];
     foreach ($found['variants'] as $value => $variant) {
       if ($variant['pointer'] !== NULL) {
@@ -3062,7 +3062,7 @@ final class SchemaReader {
         $at = $variant['pointer'];
       }
       else {
-        $id = $owner . '.' . $name . '.' . $value;
+        $id = $declaring_class . '.' . $name . '.' . $value;
         $at = static::below('', 'allOf', (int) $variant['index'], 'then', 'properties', $name);
         $at = $this->located($root, $at) ?? $at;
       }
@@ -3279,7 +3279,7 @@ final class SchemaReader {
         $this->describeShell($inputs, $property, $name, $required);
         return;
       }
-      $inputs->attach($name, $this->structureAt($inputs, $this->framing($inputs, 'a structure')->ownerId() . '.' . $name, $this->document, $pointer), static::title($property));
+      $inputs->attach($name, $this->structureAt($inputs, $this->framing($inputs, 'a structure')->declaringClassId() . '.' . $name, $this->document, $pointer), static::title($property));
       $this->describeShell($inputs, $property, $name, $required);
       return;
     }
@@ -3537,7 +3537,7 @@ final class SchemaReader {
         return [];
       }
       if (!in_array($key, $keys, TRUE)) {
-        $this->note($pointer, 'Not read: a port wired to a key outside the object holding the child, as an alter\'s mount reads its owner\'s keys, has nothing here to read.');
+        $this->note($pointer, 'Not read: a port wired to a key outside the object holding the child, as an alter\'s mount reads its declaring class\'s keys, has nothing here to read.');
         return [];
       }
       $wired[(string) $port] = $key;
@@ -3648,7 +3648,7 @@ final class SchemaReader {
       $child = $this->libraryStructure($library['id'], $inputs);
     }
     else {
-      $child = $this->structureAt($inputs, $this->framing($inputs, 'a collection')->ownerId() . '.' . $name, $this->document, static::below($pointer, 'items'));
+      $child = $this->structureAt($inputs, $this->framing($inputs, 'a collection')->declaringClassId() . '.' . $name, $this->document, static::below($pointer, 'items'));
     }
     // How many items, and whether they differ: the table's Count and
     // UniqueItems rows, on an array. A collection holds no JsonSchema

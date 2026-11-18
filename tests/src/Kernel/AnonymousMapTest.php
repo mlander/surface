@@ -230,19 +230,19 @@ class AnonymousMapTest extends SurfaceKernelTestBase {
   /**
    * Tests a map's callable that declares other keys when it runs again.
    *
-   * A map that needs a frame is filled by running its owner's declaration
-   * again, and the callable with it, so the keys it declared before it
-   * asked for the frame are held to come first again.
+   * A map that needs a frame is filled by running its declaring class's
+   * declaration again, and the callable with it, so the keys it declared before
+   * it asked for the frame are held to come first again.
    */
   public function testCallableDeclaringOtherKeysAgainIsRefused(): void {
     $module = 'surface_resource_test';
     $classes = [ChangingMapStructure::class => $module, BenchStructure::class => $module];
     $registry = new ResourceRegistry(['resources' => $classes], $this->container->get('cache.discovery'));
     $typed = $this->container->get('typed_data_manager');
-    $owner = $registry->getDefinition(ChangingMapStructure::class)->name();
+    $declaring_class = $registry->getDefinition(ChangingMapStructure::class)->name();
     ChangingMapStructure::$runs = 0;
-    $outer = new ResourceBlueprint(new SurfaceBuilder(), $typed, FALSE, $registry, $owner);
-    $registry->declareInputs($registry->getDefinition($owner), $outer);
+    $outer = new ResourceBlueprint(new SurfaceBuilder(), $typed, FALSE, $registry, $declaring_class);
+    $registry->declareInputs($registry->getDefinition($declaring_class), $outer);
     $map = $outer->attachments()['kit'];
     $this->assertTrue(ResourceRegistry::isMap($map));
     try {

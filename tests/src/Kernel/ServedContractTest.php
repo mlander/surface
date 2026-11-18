@@ -1076,9 +1076,9 @@ class ServedContractTest extends SurfaceKernelTestBase {
    * the site knows when asked, so its refiner is a runtime one. Nothing
    * closed, nothing changes: the schema for these answers is the same
    * document as with a closed room no venue here has. The room is
-   * `enumerated` for the owner's refiner and `runtime` for the alter's in
-   * both documents. With the East room closed, the full schema is the
-   * same document byte for byte and still lists it under Riverside, while
+   * `enumerated` for the declaring class's refiner and `runtime` for the
+   * alter's in both documents. With the East room closed, the full schema is
+   * the same document byte for byte and still lists it under Riverside, while
    * the schema for these answers leaves it out and says why. The model
    * case of the invariant: a validator holding the full schema accepts
    * the East room, wider than the runtime by design, and the pipeline,

@@ -65,7 +65,7 @@ use PortableSchema\Builder\Schema;
  * value: only the types, the initializers and the attributes are read,
  * so reading a class twice calls the same verbs with the same arguments.
  * addMap() relies on it: a map that needs a frame is filled by running
- * the owner's declaration again, and this reader with it.
+ * the declaring class's declaration again, and this reader with it.
  *
  * The properties read are those that are not static and are public or
  * carry an attribute of the Attribute namespace or of the Portable Schema

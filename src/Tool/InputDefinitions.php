@@ -1142,13 +1142,13 @@ final class InputDefinitions {
    */
   public function fromVariants(Variants $variants, Schema $placeholder, ?string $narrowing = NULL): MapInputDefinition {
     $at = $this->at;
-    $owners = [];
+    $declaring_classes = [];
     $entries = [];
     $table = [];
     foreach ($variants->variants as $id => $variant) {
       $keys = [];
       foreach ($variant->child->entries()->entries() as $name => $entry) {
-        $owners[$name][] = (string) $id;
+        $declaring_classes[$name][] = (string) $id;
         $entries[$name] ??= $entry;
         $keys[] = $name;
       }
@@ -1162,7 +1162,7 @@ final class InputDefinitions {
       if ($this->deferred($entry)) {
         // A key inside the variant whose entries the listing leaves out, at
         // its own level, reached through the first variant that holds it.
-        $this->at = ['steps' => [...$at['steps'], [$at['pointer'], $owners[$name][0]]]] + $at;
+        $this->at = ['steps' => [...$at['steps'], [$at['pointer'], $declaring_classes[$name][0]]]] + $at;
         try {
           $properties[$name] = $this->leftOut($entry, $entry->schema(), $narrowing);
         }
@@ -1177,7 +1177,7 @@ final class InputDefinitions {
       // variant's own key is read, nothing is copied or written.
       $note = $this->t('Only when @by is @values.', [
         '@by' => $variants->by,
-        '@values' => implode(', ', $owners[$name]),
+        '@values' => implode(', ', $declaring_classes[$name]),
       ]);
       $properties[$name] = $this->fromSchema($entry->schema(), $note);
     }

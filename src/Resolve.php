@@ -37,7 +37,7 @@ final class Resolve {
    * @param class-string<\Drupal\surface\Resource\ComputesValueInterface> $using
    *   The class that resolves it.
    * @param string $by
-   *   What declared it, the owner or an alter, as a refusal names it.
+   *   What declared it, the declaring class or an alter, as a refusal names it.
    */
   public function __construct(
     public readonly array $from,
@@ -78,8 +78,8 @@ final class Resolve {
    * collection, each entry of a map of keys from the site, and the variant
    * its deciding key chose. A child's resolve reads and writes the child's
    * own values, so its paths are the child's, under the key it is held
-   * at; a mixed-in structure's are the owner's, as its members are. Each
-   * class is handed what is stored, never another resolve's answer, and
+   * at; a mixed-in structure's are the declaring class's, as its members are.
+   * Each class is handed what is stored, never another resolve's answer, and
    * runs on the operation's behalf: with assertions on, its own code may
    * not ask for a door-specific service.
    *

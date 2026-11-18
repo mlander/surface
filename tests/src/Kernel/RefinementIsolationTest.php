@@ -29,9 +29,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Example 3 with the compliance alter, asked twice in one process with
  * values that narrow differently, in both orders: each call gets the
  * verdict its own values call for. Three keys are asked about: the
- * stewards the alter mounted and narrows by the capacity, the owner's
- * capacity the alter narrows without a license, and the owner's
- * capacity the owner narrows by the room. The first was held to the
+ * stewards the alter mounted and narrows by the capacity, the declaring class's
+ * capacity the alter narrows without a license, and the declaring class's
+ * capacity the declaring class narrows by the room. The first was held to the
  * first call's minimum by every later call in the process, through
  * core's typed data prototypes; the other two are top-level keys and
  * pin that they stay right. Each order runs in a process of its own,
@@ -90,11 +90,11 @@ class RefinementIsolationTest extends SurfaceKernelTestBase {
       'narrow' => [['capacity' => 80, 'third_party_settings' => [self::MODULE => ['stewards' => 1]]], [self::STEWARDS]],
       'wide' => ['capacity' => 50, 'third_party_settings' => [self::MODULE => ['stewards' => 1]]],
     ],
-    'the alter narrows the owner\'s key' => [
+    'the alter narrows the declaring class\'s key' => [
       'narrow' => [['capacity' => 150, 'third_party_settings' => [self::MODULE => ['stewards' => 3]]], ['capacity']],
       'wide' => ['capacity' => 150, 'third_party_settings' => [self::MODULE => ['license' => '2048', 'stewards' => 3]]],
     ],
-    'the owner narrows its own key' => [
+    'the declaring class narrows its own key' => [
       'narrow' => [
         [
           'venue' => 'library',

@@ -79,7 +79,7 @@ the emitter wrote reads back as what it was written from
 | any of these on a type it does not say anything of (`minLength` on an integer) | kept ([below](#what-is-kept)) |
 | `readOnly` | the key locked, at its `const` |
 | `writeOnly` | a secret |
-| an object with properties | a map, each property a definition of its own; where it holds more than a map can (a reference, a rule or variants its `allOf` states), an anonymous map with a frame of its own, `addMap()`, written inline again; closed otherwise, or saying what a map does not write, a structure attached at the key, `<owner>.<key>` |
+| an object with properties | a map, each property a definition of its own; where it holds more than a map can (a reference, a rule or variants its `allOf` states), an anonymous map with a frame of its own, `addMap()`, written inline again; closed otherwise, or saying what a map does not write, a structure attached at the key, `<declaring-class>.<key>` |
 | an object with no properties | a value of type `any`, held whole to its schema |
 | `$ref` to an object under `$defs` | a structure attached at the key, its id the def's key: one structure wherever it is used |
 | `$ref` to a scalar under `$defs` | the shape of that id, where the site has one, and what the property says beside it; otherwise the def read in place, noted |
@@ -375,7 +375,7 @@ to, or differs otherwise:
 | A rule on a port, a structure alone | 5 | Stated where a container wires the port; emitted alone, nothing states it, and only the key's markers say it. |
 | A rule that narrows nothing new | 1 | No conditional states it, so only the key's `dependsOn` says it, which nothing reads back. |
 | Access | 12 | A lock, a whole locked or a key a runtime access answer marks `live` is the access class's, not the structure's. |
-| An alter's mount | 4 | Its keys, its rules and what it attaches are the alter's: read back, the mount is a map or a child of the owner's, its rules a JsonSchema constraint on the frame. |
+| An alter's mount | 4 | Its keys, its rules and what it attaches are the alter's: read back, the mount is a map or a child of the declaring class's, its rules a JsonSchema constraint on the frame. |
 | Keys from the site | 2 | An entry a provider locks, and the port each entry reads, are the provider's: read back, the rules on those ports are a JsonSchema constraint on the frame. |
 | A computed key | 2 | What computes it is a class no document names: read back, it is a key nobody types that holds what is stored, `readOnly`, with no `x-surface.computed`. |
 
@@ -552,7 +552,7 @@ name; a type that matches none is refused
 (`type: views.argument.date`, which is `type: views_argument`, as
 `views.argument.*` is) holds `views.argument.date`'s keys and its own,
 less those of `views.argument.*`. A `#[Variant]`
-declared for the owner at the key wins over both, as for any provider
+declared for the declaring class at the key wins over both, as for any provider
 (why: [decision](decisions.md#a-placed-block-is-a-resource)).
 
 ## The decision

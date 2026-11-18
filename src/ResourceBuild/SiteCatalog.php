@@ -599,10 +599,10 @@ final class SiteCatalog {
   protected function keys(SurfaceInterface $surface, ?string $source, string $prefix, ?string $within = NULL): array {
     $refiners = [];
     if ($source !== NULL && $this->registry->hasDefinition($source)) {
-      $owner = $this->registry->getDefinition($source);
+      $declaring_class = $this->registry->getDefinition($source);
       $lists = [
-        $owner->refiners,
-        ...array_map(static fn (AlterDefinition $alter): array => $alter->refiners, $owner->alters),
+        $declaring_class->refiners,
+        ...array_map(static fn (AlterDefinition $alter): array => $alter->refiners, $declaring_class->alters),
       ];
       foreach ($lists as $list) {
         foreach ($list as $refiner) {
@@ -650,7 +650,7 @@ final class SiteCatalog {
         'rules' => $entry->declaredDependencies(),
         'watches' => array_values(array_map('strval', $entry->dependencies)),
         'runtime' => $entry->isRefinedAtRuntime(),
-        'contributor' => $entry->contributor === SurfaceInterface::OWNER ? NULL : $entry->contributor,
+        'contributor' => $entry->contributor === SurfaceInterface::DECLARING_CLASS ? NULL : $entry->contributor,
         'child' => $entry->attachment->id ?? $entry->attachment?->source,
         'variants' => $entry->variants === NULL ? NULL : [
           'by' => $entry->variants->by,

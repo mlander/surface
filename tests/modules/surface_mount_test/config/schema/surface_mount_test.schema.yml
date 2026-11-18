@@ -1,4 +1,4 @@
-# Written by hand, as the owner's is: what this module mounts on the alias
+# Written by hand, as the provider's is: what this module mounts on the alias
 # settings, the reviewer by uuid and the delay as stored, a duration.
 surface_schema_test.aliases.third_party.surface_mount_test:
   type: mapping

@@ -12,11 +12,11 @@ use Drupal\surface_resource_test\Structure\Pack\PocketStructure;
 use PortableSchema\Builder\Schema;
 
 /**
- * A harness, mixed in: its straps, and three children of the owner's.
+ * A harness, mixed in: its straps, and three children of the declaring class's.
  *
  * Its hip belt at a fixed key, its pockets a collection of two at most,
  * and its rain cover a map holding a pouch, a structure with no id:
- * each is the owner's child at its key where the harness is mixed in.
+ * each is the declaring class's child at its key where the harness is mixed in.
  */
 #[Structure('resource_test.harness')]
 final class HarnessStructure implements StructureInterface {

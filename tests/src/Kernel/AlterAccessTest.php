@@ -31,7 +31,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PortableSchema\Builder\Schema;
 
 /**
- * An alter may answer access: after the owner's, the stricter standing.
+ * An alter may answer access after the declaring class; the stricter stands.
  *
  * The gallery names no access class; its alters answer for it, for the
  * plaque it mixes in, for the wall it attaches twice (and the annex once),
@@ -179,14 +179,14 @@ class AlterAccessTest extends SurfaceKernelTestBase {
     $refuse = new \ReflectionMethod(ResourceRegistry::class, 'assertAccessClass');
     $refuse->invoke(NULL, GalleryResource::class, WallAccess::class);
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage(GalleryResource::class . ' names ' . GalleryAlter::class . ' on access:, which carries #[Alters]. An alter that answers access is asked as an alter, after the owner\'s answer; an access class is the owner\'s own.');
+    $this->expectExceptionMessage(GalleryResource::class . ' names ' . GalleryAlter::class . ' on access:, which carries #[Alters]. An alter that answers access is asked as an alter, after the declaring class\'s answer; an access class is the declaring class\'s own.');
     $refuse->invoke(NULL, GalleryResource::class, GalleryAlter::class);
   }
 
   /**
-   * Tests the owner's answer is asked first, then each alter in order.
+   * Tests the declaring class's answer is asked first, then each alter's.
    */
-  public function testTheOwnerFirstThenEachAlterInOrder(): void {
+  public function testTheDeclaringClassFirstThenEachAlterInOrder(): void {
     $alters = array_map(static fn ($alter): string => $alter->class, $this->container->get('surface.resource_registry')->getAlters(WallStructure::class));
     $this->assertSame([WallAlter::class, WallOpeningAlter::class], $alters, 'Discovery order.');
     $this->assertTrue($this->container->get('surface.resource_registry')->getDefinition(GalleryResource::class)->answersAccess(), 'An alter answering is an answer, with no access class.');
@@ -201,16 +201,16 @@ class AlterAccessTest extends SurfaceKernelTestBase {
     $this->assertNull($this->gallery()->lockedWhole(), 'Only in the operation the alter names.');
 
     // Combined, the earlier of two answers as narrow keeps its reason.
-    $owner = AccessAnswer::locked('The owner')->addCacheContexts(['user.permissions']);
+    $declaring_class = AccessAnswer::locked('The declaring class')->addCacheContexts(['user.permissions']);
     $alter = AccessAnswer::locked('The alter')->addCacheContexts(['user.permissions']);
-    $this->assertSame('The owner', $owner->andIf($alter)->getReason());
+    $this->assertSame('The declaring class', $declaring_class->andIf($alter)->getReason());
   }
 
   /**
-   * Tests an alter cannot open what the owner or an earlier alter closed.
+   * Tests an alter cannot open what the declaring class or an alter closed.
    */
   public function testAnAlterCannotWiden(): void {
-    // The owner's static lock, under an alter that answers open.
+    // The declaring class's static lock, under an alter that answers open.
     $this->actAs('wall inspector');
     foreach ([FALSE, TRUE] as $alone) {
       $map = $this->gallery($alone)->entries();
@@ -314,7 +314,7 @@ class AlterAccessTest extends SurfaceKernelTestBase {
     $this->assertTrue($annex(TRUE)->entries()->isRuntimeAccess('wall'));
     $this->flag(WallAlter::DOWN, FALSE);
 
-    // A mixin's members, held in the owner's frame.
+    // A mixin's members, held in the declaring class's frame.
     $this->actAs('plaque hider');
     foreach ([FALSE, TRUE] as $alone) {
       $this->assertSame(['name', 'north', 'south', 'medium', 'finish', 'rooms'], $this->gallery($alone)->entries()->names());
@@ -423,7 +423,7 @@ class AlterAccessTest extends SurfaceKernelTestBase {
   public function testTheToolsAreTheAccounts(): void {
     $tools = $this->container->get('plugin.manager.tool');
     $id = 'surface:resource_test.gallery:configure';
-    $this->assertSame('keep a gallery', $tools->getDefinition($id)->getPermission(), 'The operation\'s permission stays the owner\'s.');
+    $this->assertSame('keep a gallery', $tools->getDefinition($id)->getPermission(), 'The operation\'s permission stays the declaring class\'s.');
 
     $this->actAs('freezer');
     $values = $tools->createInstance($id)->getInputDefinition(OperationInputs::VALUES);

@@ -248,7 +248,7 @@ class PortsTest extends SurfaceKernelTestBase {
       PortsInCollectionStructure::class => 'resource_test.seating fills the "seatings" collection of resource_test.broken.ports_in_collection and requires the "layout" port, which nothing wires: a port is wired by attach(), and a collection\'s item is wired by nothing yet.',
       PortClashStructure::class => '"layout" is already declared in this blueprint, as a key, so it cannot be read as a port too: a port has a name of its own.',
       RefinesPortStructure::class => 'Drupal\surface_resource_test\Structure\Broken\RefinesPortStructure::narrowsTheLayout() refines "layout", a port resource_test.broken.refines_port reads. A port is its container\'s key, read under a name of the structure\'s own: it is watched, never refined.',
-      AlterAttachTargetStructure::class => 'The surface_resource_test alter attaches Drupal\surface_resource_test\Structure\Seating\SeatingStructure at "seating". An alter attaches under its own mount, and only at the mount itself, third_party_settings.surface_resource_test: at the owner\'s level the structure\'s keys would be the owner\'s, and a structure at a key inside the mount is not built.',
+      AlterAttachTargetStructure::class => 'The surface_resource_test alter attaches Drupal\surface_resource_test\Structure\Seating\SeatingStructure at "seating". An alter attaches under its own mount, and only at the mount itself, third_party_settings.surface_resource_test: at the declaring class\'s level the structure\'s keys would be the declaring class\'s, and a structure at a key inside the mount is not built.',
     ];
     $resources = $this->container->get('surface.resources');
     foreach ($refusals as $class => $message) {

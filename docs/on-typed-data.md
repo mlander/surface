@@ -33,7 +33,7 @@ Core 11's Typed Data API, in `core/lib/Drupal/Core/TypedData/`:
 A form, a tool, an HTTP endpoint and its OpenAPI document each read the
 keys of one thing. To read the same ones, they need:
 
-- **One group, written by several parties, then fixed.** The owner's
+- **One group, written by several parties, then fixed.** The declaring class's
   class, other modules, the site's defaults, what the operation knows,
   and access for the account asking each write into the same group.
   Core has no object that holds the group while they write, puts them
@@ -110,10 +110,10 @@ public function build(string $resource, OperationContext $context): SurfaceInter
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 `Resources::buildResource()` fills one `SurfaceBuilder`, the module's
-internal mutable stage, in a fixed order: the owner's blueprint, each
+internal mutable stage, in a fixed order: the declaring class's blueprint, each
 alter's additions, the site's defaults, the context's defaults,
 constraints and locks, the refiners and the declared rules between
-keys (the owner's first), the children, each built the same way, and
+keys (the declaring class's first), the children, each built the same way, and
 the access answer for the account. A constraint the context adds is
 checked narrower than what the key had (`src/Refinement/Narrowing.php`),
 and a refiner's answer only adds to the key, so of two rules the

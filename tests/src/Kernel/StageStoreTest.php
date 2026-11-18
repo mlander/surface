@@ -260,7 +260,7 @@ class StageStoreTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests no owner's operation may know a key the stage reserves.
+   * Tests no declaring class's operation may know a key the stage reserves.
    *
    * The stage's storage reads the position of a staged create and the
    * lifetime of a new stage from the context's known keys, so

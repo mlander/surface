@@ -329,7 +329,7 @@ final class Series {
         'decision' => 'an-extension-is-a-variant-the-site-adds-or-an-alter',
         'routes' => ['surface_examples.step14', 'surface_examples.step14_webhook'],
         'files' => [
-          self::MODULE . 'src/Resource/MailerResource.php' => t("the owner's way: a sender, a mail service, and a credential whose source a provider lists"),
+          self::MODULE . 'src/Resource/MailerResource.php' => t("the declaring class's way: a sender, a mail service, and a credential whose source a provider lists"),
           self::MODULE . 'src/Variants/CredentialSources.php' => t('the provider: the pasted source always, the managed source while the keys module is on, both named for storage'),
           self::MODULE . 'src/Structure/PastedCredentialStructure.php' => t('the pasted source: a key, a secret'),
           self::MODULE . 'src/Structure/ManagedCredentialStructure.php' => t('the managed source: the name of a key the site manages'),
@@ -425,7 +425,7 @@ final class Series {
       ],
       17 => [
         'title' => t('retitle in bulk, access borrowed'),
-        'concept' => t("a gate: access another thing's owner decides, asked per node, never copied"),
+        'concept' => t("a gate: access another thing's provider decides, asked per node, never copied"),
         'docs' => 'docs/resources.md#a-gate-borrowed-from-another-thing',
         'decision' => 'a-gate-is-borrowed-never-copied',
         'routes' => ['surface_examples.step17'],

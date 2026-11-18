@@ -202,19 +202,20 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests refiner dispatch: by parameter name, owner first, then alters.
+   * Tests refiner dispatch: by parameter name, declaring class, then alters.
    */
   public function testRefinerDispatch(): void {
     $surface = $this->resources()->build(RecipeResource::class, RecipeResource::create('main'));
     $choices = static fn (SurfaceInterface $refined): array => DerivedDefinition::at($refined, 'dish')->getConstraints()['Choice']['choices'];
 
-    // The dish is refined by the owner (watching course, by name) and by
-    // the alter (watching vegetarian). The engine gates per key, so it
+    // The dish is refined by the declaring class (watching course, by name) and
+    // by the alter (watching vegetarian). The engine gates per key, so it
     // runs once both have values; until then it is as advertised.
     $this->assertSame(['dish' => ['course', 'vegetarian'], 'servings' => ['course', 'vegetarian']], $surface->entries()->refinements());
     $this->assertCount(5, $choices($surface->refine(['course' => 'main'])));
     $this->assertSame(['fish', 'risotto'], $choices($surface->refine(['course' => 'main', 'vegetarian' => FALSE])));
-    // The owner narrows to the course, then the alter takes the fish out.
+    // The declaring class narrows to the course, then the alter takes the fish
+    // out.
     $this->assertSame(['risotto'], $choices($surface->refine(['course' => 'main', 'vegetarian' => TRUE])));
 
     // Two watched siblings, in parameter order, each arriving as the type
@@ -314,7 +315,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
         KitListByStructure::class,
         'The variants at "gear" are chosen by "kind", which is a list: a deciding key holds one value.',
       ],
-      'an owner refiner that is an instance method' => [
+      'a declaring class refiner that is an instance method' => [
         InstanceRefinerStructure::class,
         InstanceRefinerStructure::class . '::nameOfKind() is a #[RefinesInput] method of resource_test.broken.instance_refiner and is not static.',
       ],
@@ -333,8 +334,8 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
    * Tests an alter watches the keys it mounted, and no other module's.
    *
    * Its own kind, read at its path inside the mount and handed as it
-   * stands, narrows its own detail and the owner's size; the same kind,
-   * watched by an alter of another module, is refused.
+   * stands, narrows its own detail and the declaring class's size; the same
+   * kind, watched by an alter of another module, is refused.
    */
   public function testAnAlterWatchesOnlyTheKeysItMounted(): void {
     $kind = 'third_party_settings.surface_resource_test.kind';
@@ -353,7 +354,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
 
     $this->enableModules(['surface_test']);
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage(ForeignMountWatcherAlter::class . '::noteOfKind() watches "kind", a key the surface_resource_test module mounted on resource_test.mount_watcher. An alter may watch the keys it mounted itself and the owner\'s, never another module\'s.');
+    $this->expectExceptionMessage(ForeignMountWatcherAlter::class . '::noteOfKind() watches "kind", a key the surface_resource_test module mounted on resource_test.mount_watcher. An alter may watch the keys it mounted itself and the provider\'s, never another module\'s.');
     $this->container->get('surface.resources')->build(MountWatcherStructure::class, new OperationContext('configure'));
   }
 

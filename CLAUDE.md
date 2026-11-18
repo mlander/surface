@@ -56,7 +56,7 @@ the record of the rework that brought the module to the pattern.
 - **Operation**: a way a resource is asked for, `#[Operation]`, its
   static facts on the attribute: id, label, `description:` (the tool's
   first sentence and both documents' top `description`), permission and
-  `creates:`, and `gate:`, access borrowed from another thing's owner
+  `creates:`, and `gate:`, access borrowed from another thing's provider
   (another resource's operation, or core's `entity:<type>:<op>` and
   `field:<type>.<field>:<op>`), asked after the permission about the
   entity the context knows or per item of a collection, the access class
@@ -110,7 +110,7 @@ the record of the rework that brought the module to the pattern.
   and is asked in the update's context (`contextId()`;
   `ResourcesInterface::operation()` builds the update's), so nothing
   loosens; the catalog lists it as "default read of" the update. An
-  owner that declares `read` replaces it and answers access for reading
+  declaring class that declares `read` replaces it and answers access for reading
   (the content entity example asks core's view access)
   (`docs/decisions.md#a-read-is-an-operation-of-the-resource`).
   One about the things together names the structure whose keys it
@@ -157,12 +157,12 @@ the record of the rework that brought the module to the pattern.
   `addDefinition()` takes one value and refuses a map or a list
   (`docs/decisions.md#a-blueprint-takes-no-complex-data-types`).
 - **Anonymous map**: `addMap($key, $label, fn (BlueprintInterface $map)
-  => ...)`, an object only its owner holds, written inline with no def,
+  => ...)`, an object only its declaring class holds, written inline with no def,
   the one way to declare a map of plain keys (the schema reader and the
   generator write it too);
   plain keys make a map definition, a callable that attaches, mixes in,
   narrows or resolves makes a structure with no id
-  (`ResourceRegistry::defineMap()`, whose inputs run the owner's
+  (`ResourceRegistry::defineMap()`, whose inputs run the declaring class's
   declaration again to the key, so the callable may run more than once
   and is held to the keys it declared first), still written inline; an alter's and
   an output's hold plain keys alone (`docs/decisions.md#an-anonymous-map`).
@@ -179,7 +179,7 @@ the record of the rework that brought the module to the pattern.
 - **Alter**: another module's class that adds keys to a resource or
   structure and narrows it, `#[Alters]` in `src/Alter/`; one that
   implements `OperationAccessInterface`, the access class's interface,
-  answers access for it too, after the owner, the stricter standing (an
+  answers access for it too, after the declaring class, the stricter standing (an
   access class named on `access:` that carries `#[Alters]` is refused).
   It adds no outputs: what a call answers is its operation's, and a
   reaction to a save is ECA's; one with `alterOutputs()` is refused
@@ -190,11 +190,11 @@ the record of the rework that brought the module to the pattern.
   a name of its own with `$inputs->reads('capacity', Schema::integer())` and
   wired by the container with `attach(..., reads: ['capacity' =>
   'seats'])`; a live sibling value, never stored by the structure.
-- **Mixin**: a structure whose members are merged into the owner's own
+- **Mixin**: a structure whose members are merged into the declaring class's own
   keys, `$inputs->mixIn(TimestampsStructure::class, reads: [...])`:
-  stored flat, refined in the owner's frame, emitted as `allOf` of its
-  def and the owner's properties; the owner's only, never an alter's. A
-  child it attaches at a fixed key or in a collection is the owner's
+  stored flat, refined in the declaring class's frame, emitted as `allOf` of its
+  def and the declaring class's properties; the declaring class's only, never an alter's. A
+  child it attaches at a fixed key or in a collection is the declaring class's
   child at that key, nothing wiring its ports.
   Nest for a thing of its own, mix in for shared members that are part
   of this thing (`docs/resources.md#mixins`).
@@ -215,14 +215,14 @@ the record of the rework that brought the module to the pattern.
 - **Variants from the site**: variants a provider lists rather than
   classes declare, `attachVariants($key, by: $sibling, from:
   Provider::class)`; the provider is the one keys from the site name, a
-  `SiteListInterface` (one listing for several owners a
+  `SiteListInterface` (one listing for several declaring classes a
   `BoundSiteListInterface`, handed `arguments:` and asked `listFor()`),
   whose `list()` answers a `SiteList` (per value,
   its label and the JSON Schema of what it chooses, `schema:`, a
   `PortableSchema\Builder\Schema`, or a
   structure class, `structure:`; a start or a lock refused), asked at
   every build and refused uncacheable or varying by the account. Each variant is a structure read
-  from its schema, id `<owner>.<key>.<value>`; a `#[Variant]` wins for a
+  from its schema, id `<declaring-class>.<key>.<value>`; a `#[Variant]` wins for a
   value both name; stored open (`type: ignore` in the config schema),
   unless the provider is closed (`ClosedSiteListInterface`, a static
   `structures()` naming every structure it may list, its list naming
@@ -379,7 +379,7 @@ the record of the rework that brought the module to the pattern.
   `docs/decisions.md#a-machine-name-is-a-computed-identity`).
   A key **resolved** at use is asked and stored as declared, and read
   otherwise by the code that uses the resource: `$inputs->resolve('api_key',
-  from: ['key_id'], using: ManagedKeyValue::class)` (owner or alter, an
+  from: ['key_id'], using: ManagedKeyValue::class)` (declaring class or alter, an
   alter's own keys bare, recorded by stored path in a `Resolve` on the
   key's definition) and `Resources::resolved($resource, $operation)`, the
   PHP door that loads the stored values and puts the class's answer at
@@ -1123,10 +1123,10 @@ fills it: optional on `attach()`, `attachList()`, `attachVariants()`
 and `attachEach()`, NULL leaving the structure's own, required on
 `addEach()`, whose values have none to borrow
 (`docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for`).
-Each returns the blueprint; the owner words the key with the verb's
+Each returns the blueprint; the declaring class words the key with the verb's
 `description:` and `required:` arguments; `describe()` rewords a key for an alter that does not own it,
 and arranges a key (group, weight, placeholder, prefix, suffix, help)
-for its owner or an alter, after the key is declared; a second alter
+for its declaring class or an alter, after the key is declared; a second alter
 setting a fact another alter set on the key is refused at build.
 A child may be a resource with storage of its own, an attached resource
 (the field's storage, `FieldStorageResource`). A provider named by
@@ -1139,8 +1139,8 @@ through a port it declares, `reads()`, which `attach(..., reads:)` wires
 to a key of the container's; what depends on a port is stated at the
 site, on the container's `allOf`, never in the structure's def
 (`docs/resources.md#ports`). `mixIn()` mixes a structure in: its
-members are the owner's own keys, its refiners and rules bound in the
-owner's frame on its members and its ports, its access locking or
+members are the declaring class's own keys, its refiners and rules bound in the
+declaring class's frame on its members and its ports, its access locking or
 omitting its members (`docs/resources.md#mixins`). `attachList()` is a
 collection: a list of child instances, the list (its Count) the
 parent's, each item the child's, its entry a `Collection`

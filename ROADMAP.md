@@ -265,7 +265,7 @@ which serves the real contract.
      `src/OptionsAlter/` changing one list of allowed values everywhere
      it is used, not per resource or structure.
    - **Remove-only policy** (later concept, beside options alters): a
-     site hiding an owner's key, and an options alter removing an entry
+     site hiding a declaring class's key, and an options alter removing an entry
      stored values use; both need the stale rule (item 11).
 9. **A closed vocabulary of dependent effects** (the Laravel negative
    result made policy). Landed 2026-10-18 as declared rules (Next,
@@ -330,7 +330,7 @@ which serves the real contract.
     classifies each difference between a committed full schema and
     today's (narrows, widens, adds an optional key, replaces, notes;
     inputs and outputs judged the opposite ways round; a keyword it does
-    not read is breaking), a breaking one passing only with its owner's
+    not read is breaking), a breaking one passing only with its declaring class's
     version raised or an allowance with a reason in the baseline;
     baselines in `tests/fixtures/contracts/<id>.json` of the module that
     keeps them; `ContractBaselineTest` pins the examples and
@@ -423,7 +423,7 @@ to.
 3. **Options**: options sources, the `OptionsList` constraint naming
    one, and options alters changing a list everywhere it is used;
    naming undecided.
-4. **Remove-only policy**: a site hiding an owner's key, and an options
+4. **Remove-only policy**: a site hiding a declaring class's key, and an options
    alter removing an entry; already recorded under item 8.
 5. **Per-method refinement gating**, if a case needs it: today a key's
    refiners wait for the union of what they watch.
@@ -590,9 +590,9 @@ renames sit in A because they are cheapest before new code exists.
    structure at a key inside a mount, a collection under a mount, and a
    mounted structure with children of its own or access other than open.
    As planned: the wall says a child never names a parent's key, and structures
-   obey it; an alter may watch the owner's keys by name, and the
+   obey it; an alter may watch the declaring class's keys by name, and the
    compliance example does (its stewards rule watches `capacity`),
-   which binds the reusable piece to one owner's key names. Instead a
+   which binds the reusable piece to one declaring class's key names. Instead a
    structure declares a port under a name of its own
    (`$inputs->reads('capacity', 'integer')`) and its refiners watch the
    port; the container wires each port to one of its keys when it
@@ -606,8 +606,8 @@ renames sit in A because they are cheapest before new code exists.
    child's `dependsOn` is translated to the parent's path at the site;
    identity handed through `withChild(known:)` is documented as a port
    of a fixed kind, a port being a live sibling value. Rewording an
-   owner's label or tightening an owner's key directly stays an
-   alter's own business, as glue for one owner.
+   declaring class's label or tightening a declaring class's key directly stays an
+   alter's own business, as glue for one declaring class.
    Reuse from another module follows: the reusing module attaches the
    structure and wires its ports; the structure brings its refiners,
    access class and operations and keeps its def id in the contract;
@@ -622,14 +622,14 @@ renames sit in A because they are cheapest before new code exists.
 5. **Mixins: a structure merged flat.** DONE 2026-10-18
    (`docs/decisions.md#a-mixin-is-merged-flat`, `docs/resources.md#mixins`):
    `$inputs->mixIn(TimestampsStructure::class, reads: [...])` on the
-   owner's blueprint, refused on an alter's; an ordinary `#[Structure]`,
-   no marker; stored flat, the owner's config schema listing the members;
+   declaring class's blueprint, refused on an alter's; an ordinary `#[Structure]`,
+   no marker; stored flat, the declaring class's config schema listing the members;
    clashes, cycles, a child, a resource, outputs refused at build; emitted
-   as `allOf` of the def's `$ref` and the owner's properties under
+   as `allOf` of the def's `$ref` and the declaring class's properties under
    `unevaluatedProperties: false`, each member in its place (`true`, what
    differs, `false`), the def open in a document that mixes it in and
-   closed where it is attached; refiners and rules in the owner's frame
-   on the structure's members and ports, every port wired; the owner's
+   closed where it is attached; refiners and rules in the declaring class's frame
+   on the structure's members and ports, every port wired; the declaring class's
    refiners may read and narrow members, not rule one out nor name one
    whose structure has an access class; the structure's access locks
    (held to what is stored) or omits (kept in storage) its members, the
@@ -641,12 +641,12 @@ renames sit in A because they are cheapest before new code exists.
    of a structure's alters. As planned: Today composition only nests
    (attach, with its frame and wall; an alter's mount under its module's
    name). A mixin, Smithy's word, merges a structure's members into the
-   owner's own keys: declared by the owner only (`with: [Timestamps::class]`),
+   declaring class's own keys: declared by the declaring class only (`with: [Timestamps::class]`),
    never by an alter, since an alter's keys must live under its own name;
-   stored flat and described by the owner's config schema; emitted as
-   `allOf` of the mixin's `$ref` and the owner's properties with
+   stored flat and described by the declaring class's config schema; emitted as
+   `allOf` of the mixin's `$ref` and the declaring class's properties with
    `unevaluatedProperties`, so the def stays reusable; its refiners run
-   in the owner's frame but watch only the mixin's own members and
+   in the declaring class's frame but watch only the mixin's own members and
    ports; its access locks or omits its members. Nest for a thing of its
    own inside this one (a contact, a ticket); mix in for shared members
    that are part of this thing (timestamps, ownership, publishing
@@ -987,10 +987,10 @@ renames sit in A because they are cheapest before new code exists.
       (`docs/decisions.md#keys-that-come-from-the-site`). Still open: a
       plain list of choices (a `list` of `string` with a Choice, as
       pathauto's entity types are), where an option is a value, not a key.
-    - **An alter adding entries to a map the owner stores**: pathauto's
+    - **An alter adding entries to a map the declaring class stores**: pathauto's
       punctuation hook; alters mount only at their own key. (Adopters.)
       For keys from the site the provider is where a module adds one
-      (pathauto's hook stays inside it); a fixed map an owner declares
+      (pathauto's hook stays inside it); a fixed map a declaring class declares
       is still open.
     - **A default from a sibling key**: pathauto's punctuation rows start
       from the separator, in storage `load()` today. (Adopters.)
@@ -1025,12 +1025,12 @@ renames sit in A because they are cheapest before new code exists.
       own unless that resource was a content entity. (Found by the user,
       2026-10-19.) DONE 2026-10-20: an alter implementing
       `AltersAccessInterface` answers access for what it alters, after
-      the owner, the stricter standing, each answer's kind its own, in
+      the declaring class, the stricter standing, each answer's kind its own, in
       every frame the thing is built in; a runtime answer set aside at
       the top marks every key; example 10's workflow module is the case
       on a site
       (`docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands`).
-      Open: an answer for one key of an owner; a structure at a mount
+      Open: an answer for one key of a declaring class; a structure at a mount
       an alter locks.
 
     From the reviews (2026-10-20), the fix-now list of
@@ -1285,36 +1285,36 @@ renames sit in A because they are cheapest before new code exists.
     otherwise than designed below
     (`docs/decisions.md#a-key-may-stand-for-another-at-use`): the alter
     declares `resolve('api_key', from: ['key_id'], using:
-    ManagedKeyValue::class)`, and the owner's code reads its values
+    ManagedKeyValue::class)`, and the declaring class's code reads its values
     through `Resources::resolved()`, a PHP door; nothing enters the
     built resource's frame, no door and no document states it, and the
     write path is unchanged. The design as it stood: Found by example 14 (DONE 2026-10-23,
     `docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter`:
     a credential pasted as a secret or a key the site manages, once as
-    the owner's variants from a closed provider, once as another
+    the declaring class's variants from a closed provider, once as another
     module's alter, at `/surface-examples/14`). The alter's way leaves
-    a gap the owner's way does not: the alter rules the pasted key out
-    once a managed key is chosen, and the owner's code, which reads
+    a gap the declaring class's way does not: the alter rules the pasted key out
+    once a managed key is chosen, and the declaring class's code, which reads
     `api_key`, gets no key, since it never names the alter's `key_id`.
     - **The design.** An alter that rules a key out
       (`narrow('api_key')->when(Condition::present('key_id'))->doesNotApply()`)
       may supply that key's value at load, from what it mounted: the
       key service's value for the stored `key_id`, with the cacheability
-      of what it read. The owner's frame then holds the resolved value at
-      `api_key`, as the owner's code reads it, and storage never does:
+      of what it read. The declaring class's frame then holds the resolved value at
+      `api_key`, as the declaring class's code reads it, and storage never does:
       the write path treats a supplied key as a key that does not apply,
       keeping what is stored under it and writing nothing new.
     - **Why it needs a decision of its own.** It is the first thing to
-      enter the owner's frame from outside after the seal. Today an
-      alter adds keys under its own mount, narrows the owner's keys and
-      answers access; nothing it reads crosses into the owner's values.
-      A supplied value does, so the owner's code would run on a value
+      enter the declaring class's frame from outside after the seal. Today an
+      alter adds keys under its own mount, narrows the declaring class's keys and
+      answers access; nothing it reads crosses into the declaring class's values.
+      A supplied value does, so the declaring class's code would run on a value
       no caller sent and no storage holds.
     - **What to weigh.** Secrets never stored: a supplied secret is
       never written and is answered by no door, as a stored secret is
       not, and the write path must not mistake it for one sent.
       Cacheability of the supplied value: a key service's answer may be
-      tagged or per request, and the owner's code must not cache past it,
+      tagged or per request, and the declaring class's code must not cache past it,
       so it travels with the built resource, as a provider's list does.
       The read tool's view: it answers stored values less secrets, and a
       supplied value is neither stored nor sent, so whether the read
@@ -1323,7 +1323,7 @@ renames sit in A because they are cheapest before new code exists.
       `api_key` ruled out where `key_id` is present, and a supplied
       value needs a mark naming who supplies it, so a client does not
       read "does not apply" as "holds nothing".
-    - Until then, an owner that needs a managed key's value integrates
+    - Until then, a declaring class that needs a managed key's value integrates
       the key module itself, as the mailer does.
 
 19. **A listing and a reorder.** DONE 2026-10-23
@@ -1454,13 +1454,13 @@ renames sit in A because they are cheapest before new code exists.
 27. **Access borrowed from another thing.** DONE 2026-10-25
     (`docs/decisions.md#a-gate-is-borrowed-never-copied`,
     `docs/resources.md#a-gate-borrowed-from-another-thing`).
-    `#[Operation(gate:)]` names access another thing's owner decides:
+    `#[Operation(gate:)]` names access another thing's provider decides:
     another resource's operation by id, answered whole, or core's access
     on an entity or a field, `entity:node:update` and
     `field:node.title:edit`. Asked after the operation's permission and
     before its access class, which narrows only, about the entity the
     context knows, or per item of a collection whose item refers to one,
-    a refusal filed on that item's key with the owner's reason and the
+    a refusal filed on that item's key with the declaring class's reason and the
     storage never handed the item; a gate naming what the site lacks is
     refused at discovery. A dry run answers the outputs prepare
     rehearsed. Example 17 at `/surface-examples/17`, in
@@ -1521,7 +1521,7 @@ renames sit in A because they are cheapest before new code exists.
     component's defs, about 42 KB each (a provider answering one def by
     name, and read names hashed per def, would read only what the entry
     reaches); a refusal naming the variants that declare a stray key
-    builds every variant (`Variants::owners()`).
+    builds every variant (`Variants::declaringVariants()`).
 
 31. **A route seeds the operation it serves.** DONE 2026-10-29
     (`docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for`,

@@ -210,7 +210,7 @@ final class SchemaResolver {
    * nothing; `false`, not applying here, leaves it out, as a flat frame
    * does); the def's `required` joins the frame's, in the frame's order,
    * and its conditionals come first, as its rules and refiners run before
-   * the owner's. The groups the def declares for its keys join the
+   * the declaring class's. The groups the def declares for its keys join the
    * frame's, the frame's word standing for a group both declare. What else
    * the def says of itself as a whole (the ports it reads) is the
    * structure's, not the frame's.

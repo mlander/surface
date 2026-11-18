@@ -16,13 +16,13 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * A module's widget claims every key of a kind, and the owner's word wins.
+ * A module's widget claims every key of a kind, and the provider's word wins.
  *
  * The test module's color picker claims every string key whose `format`
  * setting is color, at priority 10; its swatch claims the same at 5. The
  * accent is drawn by the color picker on the form, named by its word in
- * the served contract and in the catalog; the trim, whose owner asks for
- * radios, is radios everywhere; the caption is the stock text field.
+ * the served contract and in the catalog; the trim, whose declaring class asks
+ * for radios, is radios everywhere; the caption is the stock text field.
  *
  * @see docs/widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind
  * @see docs/decisions.md#a-widget-is-chosen-from-the-definition
@@ -52,24 +52,24 @@ class WidgetClaimTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * The highest claim serves the key on the form; the owner's word wins.
+   * The highest claim serves the key on the form; the declaring class wins.
    */
-  public function testClaimServesTheKeyAndLosesToTheOwnersSetting(): void {
+  public function testClaimServesTheKeyAndLosesToTheDeclaringClassSetting(): void {
     $swatch = $this->swatch();
     $widgets = $this->container->get('surface.widget_choice');
     $this->assertInstanceOf(ColorPickerWidget::class, $widgets->forSchema($swatch->entries()->entry('accent')->schema()), 'The higher priority of two claims serves the key.');
-    $this->assertNull($widgets->claimed($swatch->entries()->entry('trim')->schema()), 'A key whose owner asks for a widget is claimed by none.');
+    $this->assertNull($widgets->claimed($swatch->entries()->entry('trim')->schema()), 'A key whose declaring class asks for a widget is claimed by none.');
     $this->assertNull($widgets->claimed($swatch->entries()->entry('caption')->schema()), 'A key no claim matches is claimed by none.');
 
     $form = $this->formBuilder()->buildSurfaceForm($swatch, $swatch->getDefaultValues(), new FormState());
     $this->assertSame('color', $form['accent']['#type']);
     $this->assertSame('#336699', $form['accent']['#default_value']);
-    $this->assertSame('radios', $form['trim']['#type'], 'The owner asked for radios, and radios they are.');
+    $this->assertSame('radios', $form['trim']['#type'], 'The declaring class asked for radios, and radios they are.');
     $this->assertSame('textfield', $form['caption']['#type'], 'A widget that claims is asked for no key it does not claim.');
   }
 
   /**
-   * Both documents name the claimed widget by its word, and the owner's.
+   * Both documents name the claimed widget, and the declaring class's ask.
    */
   public function testTheContractSaysTheChosenWord(): void {
     $swatch = $this->swatch();

@@ -120,7 +120,7 @@ check can run it. The second writes them; commit what it writes. Without
 `--module` it names every installed module owning a resource stored in
 a simple config object, or writing an entry for one. An object another
 module provides (its name's first part is that module) keeps its
-owner's schema, which the resource is held to, and no entry is written
+declaring class's schema, which the resource is held to, and no entry is written
 for it (why: [decision](decisions.md#the-generator-writes-what-the-first-page-shows)).
 
 A module named need not be installed. Its resources, structures, shapes
@@ -130,7 +130,7 @@ container would build them; nothing is installed and nothing is cached.
 So the order for a new module is: write the classes, write the files,
 install once, and the install reads the schema and the install file it
 needs. A module that mounts keys on another is named with it, and one
-run writes both modules' files, the owner's schema typing the mount,
+run writes both modules' files, the provider's schema typing the mount,
 with nothing printed between them:
 
 ```bash
@@ -149,7 +149,7 @@ resource the command writes:
   declaration order.
 - **Each key** typed from its definition (`string`, `email`, `integer`,
   `float`, `boolean`, `uri`, `timestamp`, or the primitive its typed
-  data class holds), labeled with the label its owner gave it, whatever
+  data class holds), labeled with the label its declaring class gave it, whatever
   an alter reworded. A key the storage keeps otherwise than it is asked
   for is written as stored: what the storage layout says of it, or
   `uuid` for a key that refers to a content entity
@@ -378,7 +378,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **The config schema generator writes no schema** for such an object:
   it writes each key at its own name, so it refuses a storage with
   `STORED_AT` by name rather than write a wrong one. A key kept under a
-  path belongs to a schema its owner wrote, which the build holds the
+  path belongs to a schema its declaring class wrote, which the build holds the
   resource to.
 
 `surface_examples_performance` is the shipped case: three settings of
@@ -474,8 +474,8 @@ The values a dry run reports are the storage's, so they show the uuid.
 
 An alter's keys are mounted under `third_party_settings.<module>`
 ([Alters](resources.md#alters)), and on a simple config object core
-describes no such key: the owner declares it, and each module that
-mounts there describes its own part. Generated, the owner's schema gains
+describes no such key: the provider declares it, and each module that
+mounts there describes its own part. Generated, the declaring class's schema gains
 `third_party_settings` when a module mounting there is installed, or
 named in the same run, while it is written, a sequence whose type is
 named by the module key, and the mounting module's schema gains its
@@ -483,13 +483,13 @@ part, fully validatable, each key free to be absent, since a mounted key
 is stored only once it is sent holding something other than its default
 (a form posts every key it draws, and one left at its default is not
 written). Name both modules in one run
-(`--module=my_module,my_module_extras`): run for the owner alone while
+(`--module=my_module,my_module_extras`): run for the declaring class alone while
 the mounting module is installed and its part is not written yet, and
-the owner advertises a mount no schema describes until the second run.
+the declaring class advertises a mount no schema describes until the second run.
 Example 3's, from the compliance module:
 
 ```yaml
-# The owner, surface_examples.registration_step3:
+# The provider, surface_examples.registration_step3:
 third_party_settings:
   type: sequence
   label: 'Third party settings'
@@ -526,7 +526,7 @@ A schema written by hand follows the same convention. Config validation
 lets data no schema describes through without a word, so
 `ConfigObjectResourceStorage` checks the mounts itself: a module whose settings
 resolve to no type is refused under `third_party_settings`, naming the
-module; an owner that declares no `third_party_settings` at all is
+module; a provider that declares no `third_party_settings` at all is
 refused by the schema under that key. A structure an alter attaches at
 its mount is written the same way, its keys the mount's
 ([Reusing a structure](resources.md#reusing-a-structure-from-another-module)).
@@ -658,15 +658,15 @@ in one `commit()`
 ### Keys a mixed-in structure brings
 
 A structure [mixed in](resources.md#mixins) stores nothing itself
-either, and its members are the owner's keys, stored flat beside the
-owner's own, so the owner's schema lists them among its own, as any key
+either, and its members are the declaring class's keys, stored flat beside the
+declaring class's own, so the declaring class's schema lists them among its own, as any key
 it declares, and the generator writes them so. A schema written by hand
 cannot inherit a mapping of them (a simple config object's mapping
 extends `config_object` already, and a mapping takes one parent), so it
 repeats the members.
 
 A member the structure's access omits for the account writing is kept
-as stored, at the owner's level or inside a child the owner stores.
+as stored, at the declaring class's level or inside a child the declaring class stores.
 
 ### Variants stored flat
 
@@ -731,7 +731,7 @@ surface_resource_test.kit:
 Inside a mapping (an item of a collection, a child at a key, an entry
 of keys from the site), the generator writes core's own-key form,
 `<type>.[<key>]`: the level is typed by the deciding key it holds, the
-owner's keys at that level are a mapping type of their own, and each
+declaring class's keys at that level are a mapping type of their own, and each
 variant's type extends it with the variant's keys. The test module's
 campsite types each pitch by its kind:
 
@@ -1116,7 +1116,7 @@ key it names, and the generator writes its schema for them
 ([A key stored otherwise than it is asked
 for](#a-key-stored-otherwise-than-it-is-asked-for)). It sits beside
 `StorageLayoutInterface` rather than on it, since a field type's storage layout
-and an alter's are stored under a schema their owner writes, which no
+and an alter's are stored under a schema their declaring class writes, which no
 generator reads.
 
 It exists because storage layouts are frequently not the layout a person

@@ -79,8 +79,8 @@ final class Entry {
    * @param \PortableSchema\Builder\Schema $schema
    *   What the key accepts, as a built schema.
    * @param string $contributor
-   *   Who introduced the key: the owner for everything the resource or
-   *   structure declares itself, and a module name for a mounted key.
+   *   Who introduced the key: the declaring class for everything the resource
+   *   or structure declares itself, and a module name for a mounted key.
    * @param bool $locked
    *   Whether the key's value is fixed to what storage holds, or to the
    *   declared default when storage holds nothing.
@@ -89,12 +89,12 @@ final class Entry {
    *   order. Empty for a key that never refines. A key an alter mounted
    *   is named by its dotted path, `third_party_settings.<module>.<key>`.
    * @param array<string, array<\Drupal\surface\SurfaceRefinerInterface>> $refiners
-   *   Refiner chains keyed by contributor, the owner's own under
-   *   SurfaceInterface::OWNER. Always empty on an output's entry:
+   *   Refiner chains keyed by contributor, the declaring class's own under
+   *   SurfaceInterface::DECLARING_CLASS. Always empty on an output's entry:
    *   outputs are never refined.
    * @param array<string, array> $contributions
    *   The values contributed to this key at build time, keyed by the
-   *   provider that added them. What is not here is the owner's.
+   *   provider that added them. What is not here is the declaring class's.
    * @param \Drupal\surface\Attachment|null $attachment
    *   The child fixed at this key, when the key holds an attached
    *   structure: its schema then holds the child's keys as its properties.
@@ -147,7 +147,7 @@ final class Entry {
   public function __construct(
     public readonly string $name,
     Schema $schema,
-    public readonly string $contributor = SurfaceInterface::OWNER,
+    public readonly string $contributor = SurfaceInterface::DECLARING_CLASS,
     public readonly bool $locked = FALSE,
     public readonly array $dependencies = [],
     public readonly array $refiners = [],
@@ -217,7 +217,7 @@ final class Entry {
   public static function ofHost(
     string $name,
     DataDefinitionInterface $host,
-    string $contributor = SurfaceInterface::OWNER,
+    string $contributor = SurfaceInterface::DECLARING_CLASS,
     bool $locked = FALSE,
     array $dependencies = [],
     array $refiners = [],
@@ -729,7 +729,7 @@ final class Entry {
    * mean something different if that provider went away.
    *
    * @param string $contributor
-   *   The provider id, or SurfaceInterface::OWNER.
+   *   The provider id, or SurfaceInterface::DECLARING_CLASS.
    *
    * @return bool
    *   TRUE when the provider touched this key.

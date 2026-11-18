@@ -288,7 +288,7 @@ final class IntroductionDocsTest extends UnitTestCase {
       'variants' => '11',
       'door' => '12',
       'alter' => '13',
-      'owner' => '13',
+      'declaring class' => '13',
       'site default' => '14',
       'seed' => '14',
       'access' => '15',

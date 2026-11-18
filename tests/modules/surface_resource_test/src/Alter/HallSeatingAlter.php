@@ -17,7 +17,7 @@ use PortableSchema\Builder\Schema;
  *
  * Its ports read the hall's style and guests, other keys than the hall's
  * own chairs read; a rule on the hall's guests reads the structure's
- * aisle, glue for this one owner.
+ * aisle, glue for this one declaring class.
  */
 #[Alters(HallResource::class)]
 final class HallSeatingAlter implements AltersInputsInterface {

@@ -69,8 +69,8 @@ final class Attachment {
    *   derived variant, or a child handed over already sealed.
    * @param array<string, string> $reads
    *   The child's ports its container wired, each mapped to the dotted
-   *   path in the container's frame of the key it reads: an owner's key
-   *   by its name. A port left out is unwired, and holds nothing.
+   *   path in the container's frame of the key it reads: a declaring class's
+   *   key by its name. A port left out is unwired, and holds nothing.
    * @param array<string, \PortableSchema\Builder\Schema> $wired
    *   The schema of the container's key each wired port reads, as
    *   declared, by port: what a refusal in the child names when it

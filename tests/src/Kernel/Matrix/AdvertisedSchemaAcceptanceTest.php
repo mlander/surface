@@ -53,7 +53,7 @@ use PortableSchema\Builder\Schema;
  * gallery, keys that come from the site on the workshop, variants chosen
  * by a plugin and a region by a theme on a placed block, and on example
  * 14 a source with one value and then two, a secret in a variant, and an
- * alter's key ruling the owner's out, on example 15 a venue added, a
+ * alter's key ruling the declaring class's out, on example 15 a venue added, a
  * listing's query and a reorder's list, on example 16 references
  * listed, past the limit and of any type, and variants and keys from the
  * site past the site list limit),
@@ -474,8 +474,8 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
    * The parcel: every rule between its keys declared as data.
    *
    * Each condition and each effect of the vocabulary, the alter's rules on
-   * its own key and on the owner's among them. A declared rule is stated
-   * exactly, so both documents hold each document to what the pipeline
+   * its own key and on the declaring class's among them. A declared rule is
+   * stated exactly, so both documents hold each document to what the pipeline
    * holds it to, both ways: nothing here is `dynamic`.
    */
   public function testParcel(): void {
@@ -610,8 +610,8 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
    *
    * A bench structure, a light and a stock code per bench; one bench
    * locked by its provider, the bench's declared rule at every bench, and
-   * the owner's rule ruling the lights out while the workshop is closed. A
-   * locked entry posted with another value is kept as stored, so its
+   * the declaring class's rule ruling the lights out while the workshop is
+   * closed. A locked entry posted with another value is kept as stored, so its
    * document is accepted by both; a bench the site does not list is an
    * unknown key, refused by both.
    *
@@ -1094,8 +1094,8 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
    * The gallery: a key under each kind of an alter's access answer, posted.
    *
    * The same as the exhibit, with every answer an alter's, asked after the
-   * owner's: a wall the wall's alter locks keeps what is stored though a
-   * later alter answers open, and a plaque its alter leaves out is an
+   * declaring class's: a wall the wall's alter locks keeps what is stored
+   * though a later alter answers open, and a plaque its alter leaves out is an
    * unknown key, refused by both where the omission is static; where it
    * is runtime the full schema has the key, marked, and accepts it.
    *

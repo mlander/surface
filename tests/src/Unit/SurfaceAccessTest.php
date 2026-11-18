@@ -124,7 +124,7 @@ class SurfaceAccessTest extends UnitTestCase {
   }
 
   /**
-   * Tests that the owner of an operation has no third state to offer.
+   * Tests that the declaring class of an operation has no third state to offer.
    *
    * Core's permission and entity helpers answer neutral when the answer
    * is no, because another checker might still allow it. A route reads

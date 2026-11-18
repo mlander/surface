@@ -11,11 +11,11 @@ use Drupal\surface_resource_test\Variants\KitVariants;
 use PortableSchema\Builder\Schema;
 
 /**
- * A camp: a second owner of the hut, its covering's variants too.
+ * A camp: a second declaring class of the hut, its covering's variants too.
  *
  * The camp's site chooses the hut, listed by KitVariants, at "camp". The
  * hut's covering holds the same variants here as in the shelter: the
- * #[Variant] classes of the hut, whichever owner holds it.
+ * #[Variant] classes of the hut, whichever declaring class holds it.
  */
 #[Structure('resource_test.camp')]
 final class CampStructure implements StructureInterface {

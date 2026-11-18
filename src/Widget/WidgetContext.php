@@ -10,8 +10,8 @@ use PortableSchema\Builder\Schema;
  * Where a schema is drawn, and what the host answers about it.
  *
  * What a schema does not say of itself: its JSON Pointer in the values,
- * whether the object that holds it requires it (the owner's `required`),
- * whether the value shown stands for a stale one (the envelope's
+ * whether the object that holds it requires it (the declaring class's
+ * `required`), whether the value shown stands for a stale one (the envelope's
  * `stale`), and whether an element around it is locked, which it then
  * inherits, and whether it is drawn inside a collection's item, whose
  * items' schema every item shares, so what that schema answers for one

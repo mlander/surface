@@ -551,7 +551,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * Holds each own constraint given an empty array of options as given none.
    *
    * Run once the author is done with the definitions the verbs returned
-   * (after the owner's declaration and after each alter's), so a
+   * (after the declaring class's declaration and after each alter's), so a
    * constraint added with `[]` (`addConstraint('Country', [])`) is held
    * as one added with no options, NULL, as the reader holds
    * `check('drupal:Country', [])`, which the builder writes as it writes
@@ -893,12 +893,12 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    *
-   * The owner's blueprint lists its own values in the key's constraint, so
-   * only an alter's blueprint offers more.
+   * The declaring class's blueprint lists its own values in the key's
+   * constraint, so only an alter's blueprint offers more.
    */
   public function extendChoices(string $key, array $choices): static {
     throw new \LogicException(sprintf(
-      'extendChoices() was asked to widen "%s" from the owner\'s own blueprint. An owner lists its own values in the key\'s constraint; extendChoices() is how an alter offers more.',
+      'extendChoices() was asked to widen "%s" from the declaring class\'s own blueprint. A declaring class lists its own values in the key\'s constraint; extendChoices() is how an alter offers more.',
       $key,
     ));
   }
@@ -933,7 +933,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * path its value is stored at in the frame declaring it, so
    * Resources::resolved() reads it from what storage loads with nothing
    * more to look up. A structure's paths are its own, applied where the
-   * structure is held; a mixed-in structure's are its owner's.
+   * structure is held; a mixed-in structure's are its declaring class's.
    *
    * Decision: see docs/decisions.md#a-key-may-stand-for-another-at-use.
    */
@@ -951,7 +951,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     $path = $this->storedPath($key);
     $definition = $path === NULL ? NULL : $this->find($key);
     if ($path === NULL || $definition === NULL) {
-      throw $refuse('names a key nothing has declared: it resolves the owner\'s key by its name, or a key this blueprint added, once declared.');
+      throw $refuse('names a key nothing has declared: it resolves the declaring class\'s key by its name, or a key this blueprint added, once declared.');
     }
     if ($definition instanceof ComplexDataDefinitionInterface || $definition instanceof ListDataDefinitionInterface) {
       throw $refuse('names a map or a list: a resolved key holds one value.');
@@ -959,13 +959,13 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     $resolved = DefinitionMetadata::resolveOf($definition);
     if ($resolved !== NULL) {
       // Decision: see docs/decisions.md#a-key-may-stand-for-another-at-use.
-      throw $refuse(sprintf('names a key %s resolves already. A key is resolved once: while both resolves\' sources held a value there would be no right answer, and each alter rules out the owner\'s key alone, never another alter\'s. One module stands in for a key.', $resolved->by));
+      throw $refuse(sprintf('names a key %s resolves already. A key is resolved once: while both resolves\' sources held a value there would be no right answer, and each alter rules out the provider\'s key alone, never another alter\'s. One module stands in for a key.', $resolved->by));
     }
     $paths = [];
     foreach ($from as $source) {
       $at = $source === $key ? NULL : $this->storedPath($source);
       if ($at === NULL) {
-        throw $refuse(sprintf('is resolved from "%s", which is %s.', $source, $source === $key ? 'the key itself: a key is resolved from others' : 'no key declared: the owner\'s key by its name, or a key this blueprint added'));
+        throw $refuse(sprintf('is resolved from "%s", which is %s.', $source, $source === $key ? 'the key itself: a key is resolved from others' : 'no key declared: the declaring class\'s key by its name, or a key this blueprint added'));
       }
       $paths[$source] = $at;
     }
@@ -991,7 +991,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * Names the declaration this blueprint fills, for a message.
    *
    * @return string
-   *   The owner, or the alter.
+   *   The declaring class, or the alter.
    */
   protected function who(): string {
     return 'this blueprint';
@@ -1023,8 +1023,8 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     if ($definition === NULL) {
       throw new \LogicException(sprintf(
         $this->outputs
-          ? 'describe() was asked to reword the output "%s", which nothing has declared. An output is described by its name, as its owner declared it.'
-          : 'describe() was asked to reword the input "%s", which nothing has declared. A key is described by its name when its owner declared it or this blueprint added it, and by its mounted path, third_party_settings.<module>.<key>, when another alter did; a module\'s mount is third_party_settings.<module>, once the module has added a key.',
+          ? 'describe() was asked to reword the output "%s", which nothing has declared. An output is described by its name, as its declaring class declared it.'
+          : 'describe() was asked to reword the input "%s", which nothing has declared. A key is described by its name when its provider declared it or this blueprint added it, and by its mounted path, third_party_settings.<module>.<key>, when another alter did; a module\'s mount is third_party_settings.<module>, once the module has added a key.',
         $key,
       ));
     }
@@ -1085,8 +1085,8 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *
    * A placement says where one module's fieldset is drawn, so it is the
    * module's own to make, of its own input mount, and it names a key the
-   * fieldset can be drawn beside: a top-level key of the owner's blueprint.
-   * Outputs are never drawn, so they have nowhere to be placed.
+   * fieldset can be drawn beside: a top-level key of the declaring class's
+   * blueprint. Outputs are never drawn, so they have nowhere to be placed.
    *
    * @param string $key
    *   The key describe() was given.
@@ -1095,7 +1095,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *
    * @throws \LogicException
    *   When the key is not this blueprint's own input mount, or $after is not
-   *   a top-level key of the owner's blueprint.
+   *   a top-level key of the declaring class's blueprint.
    */
   protected function assertPlaceable(string $key, string $after): void {
     $mount = $this->ownMount();
@@ -1106,14 +1106,14 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
         $after,
         match (TRUE) {
           $this->outputs => 'outputs are never drawn, so they have nowhere to be placed.',
-          $mount === NULL => 'an owner orders its own keys by declaring them in order.',
+          $mount === NULL => 'a declaring class orders its own keys by declaring them in order.',
           default => sprintf('this alter\'s is %s.', $mount),
         },
       ));
     }
     if ($after === 'third_party_settings' || $this->builder->getDefinition($after) === NULL) {
       throw new \LogicException(sprintf(
-        'describe() was asked to place %s after "%s", which is no top-level key of the owner\'s blueprint. A mount is drawn after a plain key or an attached part the owner declared.',
+        'describe() was asked to place %s after "%s", which is no top-level key of the declaring class\'s blueprint. A mount is drawn after a plain key or an attached part the declaring class declared.',
         $key,
         $after,
       ));
@@ -1125,7 +1125,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *
    * @return string|null
    *   `third_party_settings.<module>` for an alter's blueprint, NULL for the
-   *   owner's, which mounts nothing.
+   *   declaring class's, which mounts nothing.
    */
   protected function ownMount(): ?string {
     return NULL;
@@ -1135,7 +1135,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * Gets the plain keys added through this blueprint, in order.
    *
    * Keys holding a child are not among them: they are attachments(), and
-   * the keys the owner's blueprint attaches variants at.
+   * the keys the declaring class's blueprint attaches variants at.
    *
    * @return string[]
    *   The keys.
@@ -1181,7 +1181,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * The child is built after the context is applied, so the key is
    * declared now as an empty map: that keeps it where defineInputs()
    * put it, labeled with what the verb was given, and is what attach()
-   * and attachVariants() hand back for the owner to describe with the
+   * and attachVariants() hand back for the declaring class to describe with the
    * core setters. The engine keeps that same map as the shell the child
    * is advertised in.
    *

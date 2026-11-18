@@ -13,7 +13,7 @@ use Drupal\surface_resource_test\Structure\Seating\SeatingStructure;
 use PortableSchema\Builder\Schema;
 
 /**
- * Wires the seating's guests to the owner's size, which reads the rows.
+ * Wires the seating's guests to the declaring class's size, read from the rows.
  *
  * The rows read the guests port, wired to the size, and a rule on the
  * size reads the rows: a cycle through the port, which the build refuses.

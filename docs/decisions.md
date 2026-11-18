@@ -6,7 +6,7 @@
 an operation, storage and an access class are. Building it meant
 deciding points the pattern did not cover. Each is here, once, grouped
 by topic: what was decided, in one or two sentences, and why. They are
-written for the module's owner to accept or change; changing one is a
+written for the module's provider to accept or change; changing one is a
 code change at the place its entry names.
 
 A point that comes up undecided while working on the module is added
@@ -365,7 +365,7 @@ interfaces (23 before; 20 until 2026-10-28, when
 schema when a door reads it, [The static build is cached, the rest is
 per request](#the-static-build-is-cached-the-rest-is-per-request); 21
 until 2026-10-31, when `BoundSiteListInterface` was added, a provider
-that lists for what its owner binds, [Two entity resources from one
+that lists for what its declaring class binds, [Two entity resources from one
 deriver](#two-entity-resources-from-one-deriver-static-per-bundle-runtime-per-entity-type)). It
 is the concept budget for the code, as
 [Your first resource](first-resource.md) is for the docs.
@@ -564,7 +564,7 @@ hands it, which would need identity on a structure.
 
 What `defineInputs()`, `defineOutputs()` and `alterInputs()` are handed
 (and `alterOutputs()`, until 2026-10-24: [The surface was counted and cut](#the-surface-was-counted-and-cut)) is a **blueprint**: `BlueprintInterface` for
-the owner, `BlueprintAdditionsInterface`, add-only, for an alter. It is
+the declaring class, `BlueprintAdditionsInterface`, add-only, for an alter. It is
 the thing a resource or structure declares its members into, as a
 migration declares a table's columns into the table's blueprint. It was
 called a shape, but in Smithy a shape is a named type, and the builder
@@ -619,7 +619,7 @@ case, the test module's stock code the fixture. Each choice, and why:
 - **Additions at the key narrow only.** The key starts from a copy of
   the shape as its alters left it and adds what any key adds: its label,
   required, a default, a constraint, a description of its own. Once its
-  owner and every alter have declared, the build holds each such key to
+  declaring class and every alter have declared, the build holds each such key to
   the narrowing check a refiner's answer is held to, against the shape,
   and refuses one that widens (a higher maximum, a second pattern, a
   bound dropped), naming the key, the shape and what widened. Core's
@@ -764,7 +764,7 @@ construct.
   per filter: a structure is a static declaration, and nothing in a
   parent names a key inside its child, so the entity types are the
   structure's to say. A config storage keeps the id where the attached
-  map says `References::STORED_AS`, the owner's word on its storage.
+  map says `References::STORED_AS`, the declaring class's word on its storage.
 - **What waits.** Entity data types and other complex data types in
   authoring, and a reference to a resource rather than an entity, are
   set aside for now, open.
@@ -838,7 +838,7 @@ and `paid`, in the form and both documents.
   merged into it.
 - **The order is discovery's.** A derived list offers the variants in
   the order discovery found them, as `Variants` always held them; an
-  owner wanting another order declares the list.
+  declaring class wanting another order declares the list.
 
 (`Resource\Attribute\Variant::$label`, `SurfaceBuilder::attachVariants()`,
 `Attaching::assertListNarrowsVariants()`)
@@ -907,11 +907,11 @@ and static enforces that by the language rather than by a docblock. It
 also lets a plugin class be its own structure without anything
 constructing the plugin to ask (see [A plugin that is its own
 structure](#a-plugin-that-is-its-own-structure)), and it keeps an object
-out of every cached form: the owner's link in the refiner chain holds
+out of every cached form: the declaring class's link in the refiner chain holds
 the class name, where an instance carrying `StringTranslationTrait` was
 measured at about 721 bytes more per cached form. `RefinesInputRefiner`
 dispatches a static and an instance method alike, but **a static
-refiner is a static method, an owner's and an alter's alike**: an
+refiner is a static method, a declaring class's and an alter's alike**: an
 alter is an autowired service and may hold configuration a refiner
 reads, a site's shipping zones, say, and a refiner that reads it is a
 runtime refiner, the one kind that may be an instance method (see
@@ -1023,7 +1023,7 @@ use `DeclaresByProperties`, which supplies `defineInputs()` and
 and its twin with calls, `CateringByMethodResource`, example 18)
 
 *Amended 2026-11-06:* `#[Variants]` is `#[AttachVariants]`, by the rule
-the attributes now follow: an attribute for the owner's own keys names
+the attributes now follow: an attribute for the declaring class's own keys names
 the kind of member (`Input`, `Output`, `Map`, `Each`, `Computed`,
 `Port`); an attribute for a composition restates the verb (`Attach`,
 `AttachList`, `AttachEach`, `AttachVariants`, `MixIn`). `Variants` was
@@ -1189,9 +1189,9 @@ mention is the constant: `add(self::VENUE, ...)`,
   key it watches by name, `string $venue`, so the name is spelled there
   and must match the constant's value; the refiners on the second page
   and in example 2 each say so in a docblock. The generator writes no
-  refiner. Another module's alter names the owner's keys by
-  string too, or by the owner's constant where it chooses to import the
-  class; a rename in the owner is a breaking change for it either way,
+  refiner. Another module's alter names the provider's keys by
+  string too, or by the declaring class's constant where it chooses to import the
+  class; a rename in the declaring class is a breaking change for it either way,
   which the contract diff reports. Nothing on the wire changes: the
   constant's value is the key.
 - **Who carries it.** The generator writes it in every mode, for the
@@ -1477,7 +1477,7 @@ too ([A route may fill or fix what an operation asks for](#a-route-may-fill-or-f
 
 Decided 2026-10-24, from the alter-pattern survey, which found contrib
 alters setting `#default_value` on forms throughout. Here an alter may
-not change an owner's default, and `withDefaults()` is gone, so a site
+not change a declaring class's default, and `withDefaults()` is gone, so a site
 that wants a key to start from another value had no way to say so. It
 says so in configuration: `surface.defaults`, a list of entries,
 each a resource id, a key path and a value.
@@ -1862,7 +1862,7 @@ parent knows, and read by the stage's storage, and by the read and write
 tools to tell a thing a stage creates from a create
 ([A stage decides the context of a thing it creates](#a-stage-decides-the-context-of-a-thing-it-creates)).
 The key name is reserved for the stage: `Resources::operation()` throws a
-`LogicException` naming the resource and the key when an owner's
+`LogicException` naming the resource and the key when a declaring class's
 context knows it.
 
 ### An entity parameter given as an id
@@ -1883,7 +1883,7 @@ objects](#an-operation-is-handed-values-never-objects)).
 
 ### A parameter is identity the caller knows
 
-Decided 2026-10-28, the owner's rule: a parameter is identity the caller
+Decided 2026-10-28, the declaring class's rule: a parameter is identity the caller
 already knows before the call, and the body is what the call decides. An
 add names the parent it adds to and leaves the keys it chooses open in
 the body; an edit names the whole identity. Every identity key is named
@@ -2153,11 +2153,11 @@ whole.
   flag, so they are asked of the object and not held.
 - **`ResourceBuild\Build`** holds what one build of a resource or
   structure needs: the builder, the definition, the context, the
-  ancestry and the owner's frame, how its keys divide (inputs, outputs,
+  ancestry and the declaring class's frame, how its keys divide (inputs, outputs,
   children, collections, ports), and the contributor whose refiners and
   rules are bound now (an alter's module, the keys it extended and
   mounted, every key any alter mounted, the keys of a structure at its
-  mount, the ports of a mixed-in structure mapped to the owner's keys).
+  mount, the ports of a mixed-in structure mapped to the declaring class's keys).
   A structure mixed in is built by `forMixin()`, a contributor by
   `forContributor()`.
 
@@ -2185,7 +2185,7 @@ already has:
   constraints and known identity, and the context a child is invoked in.
 - **`Mixing`** answers what the thing takes in as its own keys:
   each structure mixed in, built by itself for its def and its access,
-  its members settled in the owner's frame, and what of the owner's
+  its members settled in the declaring class's frame, and what of the declaring class's
   names a member it may not depend on refused.
 - **`Attaching`** answers what the thing holds: each child, collection,
   variant, map of keys from the site and structure at an alter's mount,
@@ -2193,7 +2193,7 @@ already has:
   ports wired to the parent's keys.
 - **`Binding`** answers what each contributor says about its keys: the
   `#[RefinesInput]` methods and the rules declared as data, bound into
-  the builder, the owner's before any alter's.
+  the builder, the declaring class's before any alter's.
 - **`Gating`** answers who may ask and what they may see: the
   permission, the gates an operation borrows, the access classes and the
   alters that answer access, at the top and at each child. It alone holds
@@ -2292,21 +2292,21 @@ the rule was handed, and not the value sent (decided 2026-10-20, B11;
 (`Surface::refine()`, `Surface::refusedWatchedValues()`,
 `Surface::withheldValues()`, `Resources::buildResource()`)
 
-### Alters' refiners in the owner's chain
+### Alters' refiners in the declaring class's chain
 
-An alter's `#[RefinesInput]` method on an owner's key runs in the
-owner's chain, after the owner's own methods. On a key the alter offered
+An alter's `#[RefinesInput]` method on a declaring class's key runs in the
+declaring class's chain, after the declaring class's own methods. On a key the alter offered
 more values on with `extendChoices()`, it is that contribution's
 refiner instead, handed the alter's values only. The engine keeps one
-chain per contribution, so an alter can tighten the owner's values
+chain per contribution, so an alter can tighten the declaring class's values
 without ever being able to take another module's away.
 (`Binding::bindRefiners()`)
 
 ### Cacheability on the blueprint
 
-`BlueprintInterface::addCacheableDependency()` lets the owner's blueprint say
+`BlueprintInterface::addCacheableDependency()` lets the declaring class's blueprint say
 what site state it read; the data surface carries it. An alter cannot,
-because what it adds reaches no further than the owner's keys, and a
+because what it adds reaches no further than the declaring class's keys, and a
 static refiner cannot, because it calls no service. A runtime refiner
 does read site state, and says nothing of what: its link is max-age 0
 (see [Static by default, runtime by declaration](#static-by-default-runtime-by-declaration)).
@@ -5638,7 +5638,7 @@ condition is runtime. Each choice, and why:
 
 - **One concept: a declared rule is a refiner, static by construction.**
   One contributor's rules are one link, `Refinement\DeclaredRefiner`, in
-  the owner's chain of each key they narrow, and the keys a condition
+  the declaring class's chain of each key they narrow, and the keys a condition
   reads are refinement edges, so they are `dependsOn`, rebuild a form
   over AJAX, are held to the cycle check and to "a refiner never sees an
   invalid sibling", and name themselves in a refusal, as a coded
@@ -5687,7 +5687,7 @@ condition is runtime. Each choice, and why:
   context's, settled at build on its entry, and a lock that depended on
   values would change at refinement what accept() takes from storage and
   what both documents say is `readOnly`; nothing cheap carries it.
-- **Each contributor's coded refiners, then its rules.** The owner's
+- **Each contributor's coded refiners, then its rules.** The declaring class's
   before an alter's, as for coded refiners; within one contributor, its
   rules after its methods, in declaration order. A coded refiner writes
   a bound as it likes and would be refused for widening a tighter one
@@ -5696,10 +5696,10 @@ condition is runtime. Each choice, and why:
   writes last is the one shown, as its conditional comes after the
   enumerated ones in the schema.
 - **Where it is spelled: the blueprint, one spelling.** A rule is part of
-  what a key is, so it is said where keys are said: the owner in
+  what a key is, so it is said where keys are said: the declaring class in
   `defineInputs()`, an alter in `alterInputs()` through
-  `BlueprintAdditionsInterface`, on the owner's keys and its own mounted
-  ones, read by the owner's keys and its own, under the rule that an
+  `BlueprintAdditionsInterface`, on the declaring class's keys and its own mounted
+  ones, read by the declaring class's keys and its own, under the rule that an
   alter narrows and never widens. An attribute was weighed and rejected:
   it needs a method to sit on and a rule has no code; attribute
   arguments take no static call, so conditions would be nested `new`s
@@ -5789,10 +5789,10 @@ of the roadmap (dependent effects as data) is this, but `locked`.
 ### Where an alter's keys live
 
 An alter's key is mounted at `third_party_settings.<module>.<key>`, not
-beside the owner's. (An alter's outputs were mounted at
+beside the declaring class's. (An alter's outputs were mounted at
 `third_party_outputs.<module>.<key>` until 2026-10-24, when alters
 stopped adding outputs: what a call answers is its operation's, and a
-reaction to a save belongs to ECA; [The surface was counted and cut](#the-surface-was-counted-and-cut).) The owner's storage and schema then never have to know a
+reaction to a save belongs to ECA; [The surface was counted and cut](#the-surface-was-counted-and-cut).) The declaring class's storage and schema then never have to know a
 contributor's keys, which is how core keeps third-party settings.
 (`ResourceBlueprintAdditions`)
 
@@ -5803,7 +5803,7 @@ An alter may `attach()` a structure at its own mount,
 then the structure's, stored, posted and described by config schema
 under the module's name exactly as keys the alter added would be, and
 the alter adds no key of its own beside them. It still cannot attach at
-the owner's level, where the structure's keys would be the owner's, and
+the declaring class's level, where the structure's keys would be the declaring class's, and
 `attachList()` on an alter is still refused, as is a structure at a key
 inside the mount: neither is built. The structure is built in its own
 frame, as any child is, and its answer for the values at the mount is
@@ -5811,7 +5811,7 @@ written there (`Entry::$mounted`), so the form, the pipeline, storage
 and the tool bridge read the mount as the plain map they always read.
 That is what lets an alter be an adapter
 ([ports](#a-port-is-a-live-sibling-value)) with no
-change to the owner's storage or to anything that reads it. The
+change to the declaring class's storage or to anything that reads it. The
 alter's glue may read the structure's keys by their names, as it reads
 any key it mounted, and may not narrow them: what they allow is the
 structure's. A resource or a structure with children of its own, or
@@ -5827,20 +5827,20 @@ being built.*
 A `#[RefinesInput]` method on an alter may name a key that alter added,
 by the name it added it under; it is bound to the mount,
 `third_party_settings`, and refines only its own module's property
-inside it, so the method reads as it would on an owner's key and the
+inside it, so the method reads as it would on a declaring class's key and the
 engine's narrowing check applies to the mount unchanged. Its edge is
 recorded by the key's dotted path, `third_party_settings.<module>.<key>`,
 so the form rebuilds and the discard cascade drops that one key rather
 than the whole mount; the mount itself is gated on the union of what
 its keys watch. *Changed for example 4 of the examples, which needed a
-key the alter adds to tighten with the owner's capacity; until then
+key the alter adds to tighten with the declaring class's capacity; until then
 such a method was refused.* (`Binding::bindRefiners()`,
 `RefinesInputRefiner::refineMounted()`, `DefinitionMap::refinementPaths()`)
 
 ### An alter watches its own mounted key
 
 An alter's method may watch the keys that alter mounted, named as the
-alter added them, whether it refines the owner's key or one of its own.
+alter added them, whether it refines the declaring class's key or one of its own.
 The watch is resolved inside the alter's own namespace and recorded by
 the dotted path, so the engine's edge, the form's AJAX trigger, the
 discard cascade and the served contract's `dependsOn` all name
@@ -5851,8 +5851,8 @@ mounted is that module's. A mounted watch never gates: the value is
 handed as it stands, NULL while unanswered, and the parameter receiving
 it has to accept NULL (refused at build otherwise). Gating is per key,
 so an unanswered optional key of the alter's would otherwise suspend
-the owner's own refiners of the same key, and the alter would have
-widened what the owner narrowed: the compliance alter's license, empty,
+the declaring class's own refiners of the same key, and the alter would have
+widened what the declaring class narrowed: the compliance alter's license, empty,
 would have lifted the room's limit along with its own hundred. The
 cycle check follows each path's own edges, so a capacity watching the
 license while the stewards beside it watch the capacity is no cycle.
@@ -5887,7 +5887,7 @@ mounted key an alter made required would otherwise never be refused.
 
 Where an alter's fieldset is drawn is said once, by the alter, on its
 own mount: `describe('third_party_settings.<module>', after: '<key>')`,
-naming a top-level key of the owner's blueprint. It is recorded on the
+naming a top-level key of the declaring class's blueprint. It is recorded on the
 mount's definition (`DefinitionMetadata::setPlacedAfter()`), so every
 door reads the same declaration: the generated form draws the details
 there, the served contract says `x-surface.after` and the React app
@@ -5896,31 +5896,31 @@ nowhere else. The value path does not move: the keys are stored,
 posted, validated, advertised to the Tool API and described by the
 config schema at `third_party_settings.<module>.<key>` as before, and
 the contract's properties keep their nesting and order, because the
-mount is what lets the owner's storage hold a contribution without
+mount is what lets the declaring class's storage hold a contribution without
 knowing it ([Where an alter's keys live](#where-an-alters-keys-live)).
 The form moves the details at render time (`#pre_render`), after Form
 API is done with the array, so no walk by path changes. Only the
 calling alter's own input mount may be placed; an output mount is never
 drawn, and `after:` on it is refused rather than ignored, so a mistake
-shows. A key the owner put in an [arrangement
+shows. A key the declaring class put in an [arrangement
 group](#arrangement-is-declared-once) is followed into it: the details
 are drawn in the group, right after the key. Decided 2026-10-21, from
 the fourth fresh-eyes log (entry 28): the form looked for the key in
 the frame, where a gathered group no longer held it, and drew the
 details last, while the React app, which draws a placed fieldset as
 part of the key it follows, drew them in the group. Honoring the
-placement was chosen over refusing it at build: the owner groups and
+placement was chosen over refusing it at build: the declaring class groups and
 the alter places, neither knowing the other, so a refusal would make an
-owner's arrangement break another module's alter.
+provider's arrangement break another module's alter.
 (`BlueprintAdapterBase::assertPlaceable()`,
 `Form\Drawing::placeMounts()`, `Form\Drawing::holding()`)
 
 ### Adding a key twice
 
-Declaring a key that is already declared is refused, for owner and
+Declaring a key that is already declared is refused, for declaring class and
 alter alike, and `add()` with a NULL default means "no default", not a
 declared NULL. A second `add()` silently replacing the first would be
-an alter changing the owner's key. (`BlueprintAdapterBase::add()`)
+an alter changing the declaring class's key. (`BlueprintAdapterBase::add()`)
 
 ### An extension is a variant the site adds, or an alter
 
@@ -5930,7 +5930,7 @@ is on (the Key module), offers a key the site manages in its place and
 draws no secret beside it. There are two ways to build it, and the
 examples ship both, each for the case it fits.
 
-- **The owner integrates: a variant the site adds.** When the module
+- **The provider integrates: a variant the site adds.** When the module
   that needs the credential knows the key module, its resource declares
   both sources, each a structure of its own, and a provider lists them:
   `attachVariants('credential', by: 'source', from:
@@ -5938,11 +5938,11 @@ examples ship both, each for the case it fits.
   one only while the key module is on, cacheable by `config:core.extension`
   and the keys' configuration. Installing the key module is a second
   source at the next request, with no cache rebuild, in the form, both
-  documents and the tool. The owner's code reads its own variant,
+  documents and the tool. The declaring class's code reads its own variant,
   `credential.api_key` or `credential.key_id`, and asks the key service
   for the value of the second.
 - **A closed provider: storage knows both.** The two sources are
-  structures the owner's code names, so the provider implements
+  structures the declaring class's code names, so the provider implements
   `ClosedSiteListInterface` (`ClosedVariantsInterface` until 2026-10-24)
   and names them in a static `structures()`, the only place each is
   named: its list names a value and a label.
@@ -6010,7 +6010,7 @@ examples ship both, each for the case it fits.
   (`Variants::heldFor()`, read by `Accepting::acceptKey()`,
   `SurfacePipeline::kept()` and the form's `Extracting::settle()`;
   `SpotlightFormTest::testNewComponentSentAloneStartsFromItsDefaults()`).
-- **The owner does not integrate: an alter.** The webhook declares a
+- **The declaring class does not integrate: an alter.** The webhook declares a
   pasted key and nothing else. The key module's alter mounts `key_id` at
   its own mount, offering the keys the site manages through a constraint
   and its resolver, and declares
@@ -6049,20 +6049,20 @@ the credential it chose is not built until the source is offered again.
 ### A key may stand for another at use
 
 Decided 2026-10-27, with example 14's webhook. An alter that offers a
-managed key in place of an owner's pasted one rules the pasted key out
-once a managed key is chosen, and the owner's code still reads `api_key`.
+managed key in place of a declaring class's pasted one rules the pasted key out
+once a managed key is chosen, and the declaring class's code still reads `api_key`.
 The alter now also says what that code reads there:
 `$inputs->resolve('api_key', from: ['key_id'], using: ManagedKeyValue::class)`.
 `Resources::resolved()` builds the operation, loads what storage holds,
 and puts at `api_key` what the class answers for the stored `key_id`,
-while `key_id` holds a value; the owner's code calls it and names no
+while `key_id` holds a value; the declaring class's code calls it and names no
 managed key.
 
 - **Why.** The Key module asks with `key_select` and answers with
   `getKeyValue()`, one declaration for both. Here the alter owns both
   halves of its swap, the rule for what is asked and the resolve for
   what is answered, so the consumer is unchanged. Nothing is copied into
-  the owner's storage: the managed key's value is read at each call and
+  the declaring class's storage: the managed key's value is read at each call and
   never written back, and the pasted key stays stored as it was.
   Uninstall the key module and its mount goes with it, so `resolved()`
   answers the pasted key again.
@@ -6075,10 +6075,10 @@ managed key.
   knows no value for, a key the site stopped managing, resolves to NULL:
   the pasted key does not stand in, since it was ruled out, and the
   signer refuses to sign with no key.
-- **One resolve per key.** A second resolve of a key, by the owner or
+- **One resolve per key.** A second resolve of a key, by the declaring class or
   another alter, is refused at build naming both. Two cannot compose:
   while both sources held a value there would be no right answer, and
-  each alter rules out the owner's key alone, never the other alter's.
+  each alter rules out the declaring class's key alone, never the other alter's.
   Core's form alters overwrite one another silently, by weight; the Key
   module avoids that by being the one abstraction, so two modules that
   both stand in for one credential would layer at the key, and the
@@ -6090,7 +6090,7 @@ managed key.
   keys' service); it never reads the request or the account.
 
 Two alternatives were turned down. A new output carrying the value would
-move the consumer onto a name the owner never asked for, and outputs are
+move the consumer onto a name the declaring class never asked for, and outputs are
 never refined or altered. Deriving the rule that rules the pasted key out
 from the resolve would join two facts, what is asked and what is
 answered, into one call; they stay two lines.
@@ -6102,13 +6102,13 @@ answered, into one call; they stay two lines.
   its own. `Resources::resolved()` applies it wherever the structure is
   held: under the key it is attached at, in each item of a collection,
   in each entry of a map of keys from the site, in the variant its
-  deciding key chose, and in the owner's frame where it is mixed in,
+  deciding key chose, and in the declaring class's frame where it is mixed in,
   whose keys its members are (a mixin resolves among the members it
   brought). Still refused: a resolve in an alter of a mixed-in
   structure, and in a shape, which has no keys. A plugin's own
   structure, built by its host, has no `resolved()` door: what it
   declares applies only where a resource holds it.
-- **Two alters setting one fact on a key are refused.** The owner's
+- **Two alters setting one fact on a key are refused.** The declaring class's
   values are what alters lay over. The first alter to set a fact on a
   key it does not own (label, description, group, weight, placeholder,
   prefix, suffix, help) sets it; a second alter setting the same fact on
@@ -6142,7 +6142,7 @@ settings variants and the storage's. A declared variant always wins.
 
 *Changed 2026-10-24, by the owner:* these came through a second
 mechanism, a `DerivedVariantsInterface` service tagged
-`surface.derived_variants` that named the owner's class and key
+`surface.derived_variants` that named the declaring class and key
 from outside and sealed plain definitions into a child, counted by no
 budget. They come through the one provider now: `FieldInstanceResource`
 attaches its `settings` with `attachVariants('settings', by:
@@ -6167,7 +6167,7 @@ field tools are deferred and each has a narrowing tool beside it
 each, at the limit, so its field tools state every field type's
 settings, as before. Why: one idea, a
 list the site decides, had two mechanisms, one named from outside its
-owner and outside the budget ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+declaring class and outside the budget ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
 (`FieldSettingsSchemaVariants`, `Attaching::variantKeysOf()`)
 
 ### A parent watching a child
@@ -6203,7 +6203,7 @@ first case. Each choice, and why:
   named by the child and chosen by the container. A copy into the
   child's values would be a key the child stores, and a path into the
   parent would be the child naming its parent's key, which binds the
-  reusable piece to one owner.
+  reusable piece to one declaring class.
 - **The wiring is the site's.** Which key a port reads is said where the
   structure is attached, because the structure is reused by containers
   whose keys it cannot know (a capacity, a number of seats, the guests).
@@ -6232,11 +6232,11 @@ first case. Each choice, and why:
   its values, so the site narrows the def by composition, as before.
 - **An alter is an adapter.** An alter that attaches a reusable
   structure at its own mount ([revised](#an-alter-attaches-at-its-own-mount))
-  wires the structure to one owner, and what stays its own is glue for
-  that owner: rewording or placing the owner's keys, a declared rule or
-  a coded refiner on an owner's key, `extendChoices()`. The glue may read
+  wires the structure to one declaring class, and what stays its own is glue for
+  that declaring class: rewording or placing the declaring class's keys, a declared rule or
+  a coded refiner on a declaring class's key, `extendChoices()`. The glue may read
   the structure's keys at its mount, because a relation between an
-  owner's key and the structure's answer (the compliance capacity
+  declaring class's key and the structure's answer (the compliance capacity
   without a license) is the one thing neither side can say alone, and
   reading changes nothing the def says. A resource's own refiners still
   do not read an attached child's keys: the wall is unchanged, and what
@@ -6260,7 +6260,7 @@ collection's item, which nothing wires yet. (`Port`, `BlueprintInterface::reads(
 
 Composition nested only (attach, behind the wall; an alter's mount under
 its module's name) until a structure could be mixed in: its members
-merged into the owner's own keys, `$inputs->mixIn(TimestampsStructure::class)`,
+merged into the declaring class's own keys, `$inputs->mixIn(TimestampsStructure::class)`,
 or with its ports wired, `$inputs->mixIn(OwnershipStructure::class, reads:
 ['audience' => 'visibility'])`. Nest for a thing of its own inside this
 one (a contact, a ticket); mix in for shared members that are part of
@@ -6276,46 +6276,46 @@ journal is the first case. Each choice, and why:
   catalog could list it without filling a blueprint; it does not list
   mixins yet (open), and the contract names each one, as a reference.
 - **An ordinary `#[Structure]`, no marker.** The same class is mixed in
-  by one owner and attached by another (the journal mixes the
+  by one declaring class and attached by another (the journal mixes the
   timestamps in, the ledger attaches them), and which composition fits
-  is the owner's choice about its own keys, not a property of the
+  is the declaring class's choice about its own keys, not a property of the
   structure. The one thing that differs by use is whether the def is
   closed, which the emitter reads off the document (below).
-- **Declared by the owner only.** An alter's keys live under its own
+- **Declared by the declaring class only.** An alter's keys live under its own
   module's name, so a structure an alter mixed in would put its members
-  at the owner's level, which is what the mount exists to prevent. An
+  at the declaring class's level, which is what the mount exists to prevent. An
   alter attaches at its own mount instead. Since 2026-11-06 `mixIn()` is
-  declared on the owner's `BlueprintInterface`, so an alter's blueprint
+  declared on the declaring class's `BlueprintInterface`, so an alter's blueprint
   has no such verb; it was declared on `BlueprintAdditionsInterface` and
   refused at run time.
-- **Stored flat, described by the owner's config schema.** The members
-  are the owner's keys, so storage holds them beside the owner's own
-  and the owner's config schema lists them. A mapping of the members
+- **Stored flat, described by the declaring class's config schema.** The members
+  are the declaring class's keys, so storage holds them beside the declaring class's own
+  and the declaring class's config schema lists them. A mapping of the members
   cannot be inherited, since a config object's mapping already extends
-  `config_object`, so the owner repeats them; whatever attaches the
+  `config_object`, so the declaring class repeats them; whatever attaches the
   same structure uses one mapping type of them
   ([Storage](storage.md#keys-a-mixed-in-structure-brings)).
-- **Refused at build.** A member that is a key the owner, or another
-  structure mixed in, declares (named both ways: the owner first, the
+- **Refused at build.** A member that is a key the declaring class, or another
+  structure mixed in, declares (named both ways: the declaring class first, the
   structure first, two structures), since one name is declared once; a
   structure mixed into itself, directly or through another; a structure
-  holding variants at a key or keys from the site, which the owner's
+  holding variants at a key or keys from the site, which the declaring class's
   frame does not find, or wiring the ports of a child it attaches (a
-  child at a fixed key or in a collection is the owner's child at that
+  child at a fixed key or in a collection is the declaring class's child at that
   key); a resource, which stores itself; one with outputs, which are not
   merged. A structure may mix another in.
   A member declared with `add()` is held as one declared with
   `add()`: the clash is refused with the same message, and the key is
-  one of the owner's (decided 2026-11-17).
+  one of the declaring class's (decided 2026-11-17).
 - **Emitted as a composition, so the def stays reusable.** The frame is
   `allOf` of a reference to each structure's def and its own
   `properties`, closed with `unevaluatedProperties: false`. Each member
   keeps its place in `properties`: `true` where the def says all there
-  is, only what differs where the owner narrows it here (a lock, a
-  context, these values, a port read at the owner's key), `false` where
+  is, only what differs where the declaring class narrows it here (a lock, a
+  context, these values, a port read at the declaring class's key), `false` where
   it does not apply to these values. What the def requires and the
   conditionals it states are not said again. A def is closed with
-  `additionalProperties`, which would refuse the owner's keys beside it,
+  `additionalProperties`, which would refuse the declaring class's keys beside it,
   so in a document that mixes a structure in its def is written open,
   and every other place that uses it closes it with
   `unevaluatedProperties: false` beside the reference; in a document
@@ -6326,52 +6326,52 @@ journal is the first case. Each choice, and why:
   frame over each def and close it with `additionalProperties`, so a
   reader that resolves the references sees the flat frame the pipeline
   reads.
-- **Refined in the owner's frame.** A structure's coded refiners and
-  declared rules are bound in the owner's chain, before the owner's
+- **Refined in the declaring class's frame.** A structure's coded refiners and
+  declared rules are bound in the declaring class's chain, before the declaring class's
   own, and still narrow only its own members and watch or read only its
-  members and its ports; each port is read at the owner's key it is
+  members and its ports; each port is read at the declaring class's key it is
   wired to, which is the edge, the AJAX trigger, the `dependsOn` and
   the name in a refusal. Every port is wired, required or not: in the
-  owner's frame an unwired port has no key to be read as (open: an
-  optional port left unwired). The owner's refiners and rules, and its
-  alters', may watch and narrow the members: they are the owner's keys
+  declaring class's frame an unwired port has no key to be read as (open: an
+  optional port left unwired). The declaring class's refiners and rules, and its
+  alters', may watch and narrow the members: they are the declaring class's keys
   now, declared into its blueprint and refined in its frame, so there is
   no frame between them and nothing to breach. The wall is the boundary
   between frames, and what keeps the def reusable is kept: the
-  structure's own refiners never see the owner's keys, and whatever
-  the owner adds is stated on its own frame, beside the reference, never
+  structure's own refiners never see the declaring class's keys, and whatever
+  the declaring class adds is stated on its own frame, beside the reference, never
   in the def. Two exceptions: whether a member applies is the
-  structure's to say (its def, shared by every owner, says where it is
-  required), so the owner may not rule one out; and nothing of the
-  owner's may name a member of a structure that has an access class,
+  structure's to say (its def, shared by every declaring class, says where it is
+  required), so the declaring class may not rule one out; and nothing of the
+  declaring class's may name a member of a structure that has an access class,
   since what that access takes away for one account nothing may depend
   on for every account.
-- **Alters.** An owner's alters see the members as the owner's keys. A
+- **Alters.** A declaring class's alters see the members as the declaring class's keys. A
   structure's alters apply wherever it is mixed in, as wherever it is
   attached: they reword, narrow and offer more values on its members,
   through a blueprint that names its members alone; one that mounts a
-  key would mount it on the owner, and is refused there (open). A
+  key would mount it on the declaring class, and is refused there (open). A
   container cannot opt out of a structure's alters, as for ports (open).
-- **Access.** The structure is built by itself in the owner's context,
+- **Access.** The structure is built by itself in the declaring class's context,
   for its def and its access class. Locked holds its members to what is
   stored (`Entry::$held`: shown and fixed, `readOnly` in both documents,
   `const` of what is stored in the schema for these answers and none in
-  the full schema); omitted takes them back out of the owner's keys and
+  the full schema); omitted takes them back out of the declaring class's keys and
   storage keeps what it holds under them, by path inside a child the
-  owner stores, which an omitted child inside a stored child now gets
-  too. The owner's access answers for the rest, and where both answer
-  for the same keys the stricter stands: an owner left out takes the
-  members it mixed in with it, an owner locked locks them, whatever the
+  declaring class stores, which an omitted child inside a stored child now gets
+  too. The declaring class's access answers for the rest, and where both answer
+  for the same keys the stricter stands: a declaring class left out takes the
+  members it mixed in with it, a declaring class locked locks them, whatever the
   structure answered. An alter of the structure that answers access
   answers for its members too, after the structure's own, in the
-  owner's frame ([An alter may answer
+  declaring class's frame ([An alter may answer
   access](#an-alter-may-answer-access-and-the-stricter-stands)).
 - **The tool flattens by reading the data surface.** The tool bridge
-  converts the built data surface, where the members are the owner's
+  converts the built data surface, where the members are the declaring class's
   keys, so `values` is flat; the Tool API's normalizer writes from typed
   definitions and has no `allOf` to carry.
 
-Open: listing mixins in the catalog; an optional port a mixin's owner
+Open: listing mixins in the catalog; an optional port a mixin's declaring class
 leaves unwired; a mixed-in structure's alter that mounts; a container
 opting out of a structure's alters. Found on the way and left: the React page narrows an attached
 child whose def states conditionals of its own to the instance (its
@@ -6384,25 +6384,25 @@ journal leaves the child's step out for it.
 `SchemaResolver::mixIn()`, `mixIn()` in `app/src/contract.ts`)
 
 *Amended 2026-11-05:* a mixin may be chosen by a sibling key: the
-variants that key chooses mixed in, each variant's members the owner's
+variants that key chooses mixed in, each variant's members the declaring class's
 keys, flat, where the call stands
 ([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key)).
 What this entry says of a structure mixed in holds for each variant:
-built by itself for its def, refined in the owner's frame on its own
+built by itself for its def, refined in the declaring class's frame on its own
 members, its access locking or omitting them, its def written open.
 
 *Amended 2026-11-05, later:* a structure mixed in may hold a child at a
 fixed key or in a collection, an anonymous map with a frame among them,
 lifted from the refusals above, since a child the structure brings is
-the owner's child at that key, built with the owner's children, its
+the declaring class's child at that key, built with the declaring class's children, its
 access its own, nothing wiring its ports; variants at a key and keys
 from the site stay refused. (`ResourceBlueprint::attachments()`,
 `ResourceBlueprint::lists()`, `MixinsTest::testMixedInStructureHoldsChildren()`)
 
 *Amended 2026-11-05, step 3:* a variant mixed in may hold variants at a
 key, since the nested variants are declared statically under the key
-like any member and narrowed by the owner's frame, chosen by a member
-that is the owner's key; a structure mixed in with `mixIn()` still
+like any member and narrowed by the declaring class's frame, chosen by a member
+that is the declaring class's key; a structure mixed in with `mixIn()` still
 refuses them, as it refuses keys from the site.
 ([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key))
 
@@ -6502,7 +6502,7 @@ core's own-key form into it. Each choice, and why:
   ([A storage layout is the storage's one word on its shape](#a-storage-layout-is-the-storages-one-word-on-its-shape)),
   and a verb for it put a storage fact into the blueprint, which the
   module keeps out of it everywhere else. A variant does not know how
-  its owner stores it, and two owners may store one variant each its
+  its declaring class stores it, and two declaring classes may store one variant each its
   own way.
 - **One union form.** A tagged union has one blueprint form and one
   contract form: `attachVariants()` at a key, stated as `anyOf` of the
@@ -6519,9 +6519,9 @@ core's own-key form into it. Each choice, and why:
   hand, in both directions, in `BlockPlacementResourceStorage` until 2026-11-06
   ([A placed block is a resource](#a-placed-block-is-a-resource)); the
   storage layout does it for every config storage, at any depth the sealed
-  surface holds, with no transform an owner writes.
+  surface holds, with no transform a declaring class writes.
 - **Read back by exclusion, the chosen variant alone.** On read, every
-  stored key at the level that is not one of the owner's own there is
+  stored key at the level that is not one of the declaring class's own there is
   gathered under the key, which needs no settled variant and no schema,
   as `BlockPlacementResourceStorage::fromEntity()` gathered a condition's
   settings by hand until the block example took the setting. Of what is
@@ -6544,10 +6544,10 @@ core's own-key form into it. Each choice, and why:
   level nothing is kept for a variant not chosen, since an item's
   position may hold another item on the next write.
 - **Four refusals, at build.** One flat key per level: read back,
-  every key that is not the owner's is gathered under the one flat key,
+  every key that is not the declaring class's is gathered under the one flat key,
   so with two nothing could tell which keys each left behind
   (`Attaching::assertOneFlatKey()`). A variant may not declare a key the
-  owner declares at that level, a member of a structure the owner mixes
+  declaring class declares at that level, a member of a structure the declaring class mixes
   in among them: stored flat, the two would be one key. A variant stored
   flat may not store variants flat of its own: its keys land at the same
   level, the first refusal again (both `Attaching::assertFlatVariantFits()`).
@@ -6556,7 +6556,7 @@ core's own-key form into it. Each choice, and why:
   (`Attaching::assertFlatFits()`).
 - **Checked when settled.** A variant the site lists is built when a
   door reads it, so it is checked then: `VariantsToSettle` carries the
-  owner's keys at the level when the key is stored flat, and
+  declaring class's keys at the level when the key is stored flat, and
   `Resources::settleVariant()` holds the variant it builds to
   `Attaching::assertFlatVariantFits()`.
 - **The schema follows the level.** The storage layout tells the generator to
@@ -6567,7 +6567,7 @@ core's own-key form into it. Each choice, and why:
   `TypedConfigManager::createFromNameAndData()` merges the root's
   definition with no replacements, so a `[<key>]` in a root's `type:`
   never resolves. Inside a mapping it is core's own-key form,
-  `<type>.[<key>]`, the owner's keys at the level a mapping type that
+  `<type>.[<key>]`, the declaring class's keys at the level a mapping type that
   each variant's type extends.
 - **The reader.** `ConfigSchemaReader` reads core's own-key form,
   `condition.plugin.[id]` or `views.sort.[plugin_id]`, as the fallback's
@@ -6619,7 +6619,7 @@ class and an id where naming buys nothing.
   structure with no id, registered for the key
   (`ResourceRegistry::defineMap()`), attached there and still written
   inline, a structure inside it a reference to that structure's def. Its
-  inputs run the owner's declaration again to the map's key and hand
+  inputs run the declaring class's declaration again to the map's key and hand
   the callable its blueprint (`MapBlueprint::fill()`), so the callable
   is a pure function, as `defineInputs()` is. *Amended 2026-11-01:* the
   callable may run more than once, at once and at each fill, so it has
@@ -6630,13 +6630,13 @@ class and an id where naming buys nothing.
   an alter reaches a structure by its own id, never by the path it sits
   at, and an inline object may hold a `$ref`.
 - **The cost.** No alter addresses the map itself, nothing else uses
-  it, and its access is its owner's. Anything two resources share, or
+  it, and its access is its declaring class's. Anything two resources share, or
   that an alter should reach, is a structure.
 - **Where it holds plain keys alone.** An alter's map and an output's:
   an alter attaches a structure at its own mount alone, and outputs
   hold no attached structures. A call that needs a frame there is
   refused naming why. *Amended 2026-11-05:* a structure mixed in may
-  hold one, the owner's child at that key
+  hold one, the declaring class's child at that key
   ([A mixin is merged flat](#a-mixin-is-merged-flat)).
 - **Read back.** `SchemaReader` reads an inline object that holds a
   structure as `addMap()`, so the document reads back to itself.
@@ -6646,7 +6646,7 @@ class and an id where naming buys nothing.
   ([A blueprint takes no complex data types](#a-blueprint-takes-no-complex-data-types)).
   *Amended 2026-11-05:* an inline object whose `allOf` states its rules
   is read as `addMap()` too; it was read as a structure attached at
-  `<owner>.<key>`, so a map framed by a rule alone wrote a def where it
+  `<declaring-class>.<key>`, so a map framed by a rule alone wrote a def where it
   had been inline and did not read back to itself (`SchemaReader`, the
   awning in `SchemaRoundTripTest`).
 
@@ -6827,7 +6827,7 @@ format core is asked to replace with data definitions
   which the rule holds only where it applies; no list of values, since a
   stored value a list no longer offers is kept as stale, and a `Choice`
   in the schema would refuse every later write to the object over it;
-  the owner's labels, not an alter's rewording.
+  the declaring class's labels, not an alter's rewording.
 - **Which keys are always held is the storage's to say.** Whether a key
   may hold nothing is a fact of where it is stored ([A key its storage
   always holds](#a-key-its-storage-always-holds)), so the storage
@@ -6863,19 +6863,19 @@ format core is asked to replace with data definitions
   Decided 2026-10-21, from the fourth fresh-eyes log (entries 13 and
   14): the command read only installed modules, so a module was
   installed without its config object and installed again after the
-  files were written, and an owner and the module mounting keys on it
+  files were written, and a provider and the module mounting keys on it
   were written in two runs, the tool deriver warning in between that
-  the owner advertised a mount no schema described. Requiring the
+  the declaring class advertised a mount no schema described. Requiring the
   module installed and creating its object from the file just written
   was weighed and turned down: it keeps the install that reads no
   install file, and an install file is read once, at install.
-- **Mounted keys** follow the existing convention: the owner's
+- **Mounted keys** follow the existing convention: the declaring class's
   `third_party_settings` is written when a module mounting there is
   installed, or named in the same run, as it is generated, and each
   mounting module's entry
   `<config>.third_party.<module>` in its own file. Open: whether every
   generated object should declare `third_party_settings` whatever is on,
-  as core does for config entities, so an alter from a module the owner
+  as core does for config entities, so an alter from a module the provider
   never generated with is not refused under that key.
 - **A schema the module did not generate is held to.** Core's
   `node.type.*` or an adopter's written by hand: a storage implementing
@@ -6897,7 +6897,7 @@ format core is asked to replace with data definitions
   `ALWAYS_HELD` on the storage says which optional keys are never null.
   No install file is written: what a module ships of an entity type is
   things, which no resource describes. An entity type of core or of
-  another module keeps the schema its owner writes, held to as above
+  another module keeps the schema its provider writes, held to as above
   ([A listing is a read-only operation with outputs](#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
 
 (`Storage\ConfigSchemaGenerator`, `Drush\Commands\ConfigSchemaCommand`,
@@ -6943,7 +6943,7 @@ entry and install file, from an interview or from one of two sources,
   by its resource](#a-config-object-is-described-by-its-resource) turned
   down seeding the class from the schema as the lasting description. The
   generator seeds once: after it, the class is the description. For
-  another module's object (`node.settings`) the owner's schema stays
+  another module's object (`node.settings`) the provider's schema stays
   that object's description and the resource is held to it
   (`HeldToConfigSchemaInterface`), so the config schema generator writes
   no entry for an object whose name another module provides (core's
@@ -7186,7 +7186,7 @@ Decided 2026-10-23, with example 15's slug: a key of the resource whose
 value nobody types, computed from other keys and read by callers. The
 spelling is `$inputs->compute('slug', 'string', t('Slug'), from:
 ['label'], using: Slugify::class, when: Compute::ON_CREATE)` on the
-owner's blueprint, returning the definition as `add()` does; the class
+declaring class's blueprint, returning the definition as `add()` does; the class
 implements `ComputesValueInterface`, whose `compute(array $from): mixed` is
 static. The pipeline computes it in `accept()`, once every other key of
 its level is accepted, from their accepted values; `validate()` judges
@@ -7258,9 +7258,9 @@ no document names.
 *Open:* a computed key whose class may read the clock or a service, declared
 runtime, never run ahead and marked in both documents; a computed key in
 a structure, or one an alter declares under its own mount from the
-owner's keys it may read (refused for now: what a structure's level is
+declaring class's keys it may read (refused for now: what a structure's level is
 computed from would need the structure's own read and listing, and an
-alter's from the owner's keys crosses the wall the alter reads only at
+alter's from the declaring class's keys crosses the wall the alter reads only at
 its mount); computing again on demand, an operation that recomputes a
 stored value its sources no longer give; the React page computing the
 value locally, which needs the class in a language the page runs.
@@ -7446,7 +7446,7 @@ match, and such a module kept its schema written by hand.
   could answer the question: `AddressStorageLayout` its countries as a
   sequence, `ReviewDeadlineStorageLayout` its seconds as an integer. But a field
   type's settings and an alter's mount are stored under a schema their
-  owner writes, which nothing here generates, so the answer would have
+  declaring class writes, which nothing here generates, so the answer would have
   no reader, and adding a method to the interface breaks every storage layout an
   adopter wrote. An optional interface costs a storage layout nothing until it
   is read. It is in `src/Storage/`, which the counted surface does not
@@ -7514,7 +7514,7 @@ resource's.
   `mapping`, for `STORED_AT` and for `configSchemaPaths()` alike, so the
   resource cannot offer a value the schema refuses and a refusal names
   the key.
-- **No schema is generated for it.** The object's schema is its owner's;
+- **No schema is generated for it.** The object's schema is its declaring class's;
   the generator writes each key at its own name, so it refuses a storage
   with `STORED_AT` by name rather than write a wrong one.
 
@@ -7675,7 +7675,7 @@ its owner, and only the owner may use the stage, which the access class
 answers from the record, never cached. An anonymous account may not open
 one: it keeps nothing between requests but a session cookie.
 
-- **Not the private temp store.** It reads the owner from the current
+- **Not the private temp store.** It reads the declaring class from the current
   user and the session, which nothing an operation runs may read
   ([Nothing an operation runs reads the request](#nothing-an-operation-runs-reads-the-request)).
 - **What a stage can hold.** Creates, updates and deletes to a
@@ -7830,7 +7830,7 @@ to a new thing.
   one.
 - **Apply rehearses it as a create.** The context is built again from
   the recorded operation with no arguments, create access is asked for
-  the owner, no token is compared, and the whole values are sent, so a
+  the declaring class, no token is compared, and the whole values are sent, so a
   name stored by another path since staging is refused at
   `/writes/<position>/<key>`, code `taken`. The commit reads the id
   storage gave and `applied` answers it as text.
@@ -7906,7 +7906,7 @@ sees whole creates, and never a write over an id that does not exist.
   of the record, `next` unchanged. Nothing of it is left in `changes`,
   and there is nothing to undo. After that its address names nothing, as
   without the stage: no create matches it, so its context is built as
-  with no stage and the owner refuses the id, the tool's call with
+  with no stage and the declaring class refuses the id, the tool's call with
   `not_found`, the Tool API runner and HTTP, for an account that holds
   no operation permission (the entity resources declare none), with
   their fixed refusals. A
@@ -7986,7 +7986,7 @@ only for it.
   for an update, a read or a delete (an operation that does not create
   and takes no structure) whose arguments name a create the stage holds
   is that create's own context again, from the operation and arguments
-  the stage recorded, so what the owner put on it stands (a known empty
+  the stage recorded, so what the declaring class put on it stands (a known empty
   id, `createAny()`'s `SurfaceCreatableBundle`); then `withId()` the
   asked operation's id, `creates` still TRUE, `withKnown()` the
   position, and for each name the caller gave a Choice of that one name
@@ -8014,11 +8014,11 @@ only for it.
   thing it creates, and only the position rides on what the context
   knows. Any other call, a create through a stage that names no
   position, or a call whose arguments name no create of the stage,
-  builds as with no stage, the owner's method answering a local id with
+  builds as with no stage, the declaring class's method answering a local id with
   `NamesNothingException`.
 
 Why: a write to a new thing has to be rehearsed as a create, and the
-owner's create context is the one that says what a create of it is;
+declaring class's create context is the one that says what a create of it is;
 building it anywhere but `operation()` would give every door its own
 copy.
 
@@ -8715,7 +8715,7 @@ wizard finished in one sitting, or `long`, the temp store expiry
   (`Staging\StageRecord`, public since it is the one thing every store
   shares, with `address()` and the create lookups any store reuses),
   positions and tokens, the two-pass apply, sealing, the
-  owner check. `VERSION` stays 1: a record from before `keep` has none
+  declaring class check. `VERSION` stays 1: a record from before `keep` has none
   and keeps the store's default, so no open stage is lost.
 - **The lifetime travels as a known key, not an input.** The stage's
   `create` declares `id` and `label`; a `keep` input would join the
@@ -8725,10 +8725,10 @@ wizard finished in one sitting, or `long`, the temp store expiry
   context knows it. The tool and HTTP `create` open long-lived stages.
 - **Listing is optional.** `Staging\ListsStagesInterface::openStages()`
   is a store's to offer; the shipped store declines, since its
-  collection has no query by owner and a listing would read every
+  collection has no query by declaring class and a listing would read every
   record. When a store lists, a flow's first step offers to resume the
   account's newest open stage whose first write is the same operation
-  for the same thing, and checks the owner itself.
+  for the same thing, and checks the declaring class itself.
 - **Costs stated, not built.** No permanent store ships. For whoever
   builds one: tokens of stored things go stale over months, so apply
   refuses more writes as conflicts; secrets are sealed with a key
@@ -8769,7 +8769,7 @@ also says which of two kinds the answer is, static (the account alone
 decides it) or runtime (the subject or site state does), which decides
 where it is stated: [Access is static or runtime, read from its
 cacheability](#access-is-static-or-runtime-read-from-its-cacheability).
-Another module's alter may answer as well, after the owner, the stricter
+Another module's alter may answer as well, after the provider, the stricter
 standing: [An alter may answer access, and the stricter
 stands](#an-alter-may-answer-access-and-the-stricter-stands).
 (`AccessAnswer`, `Gating::childAccess()`)
@@ -8908,8 +8908,8 @@ is known. Decided 2026-10-18, point by point.
   kind.
 - **Children, variants, mixins and ports.** An attached structure's
   access answers in its own frame, its kind with it. A mixed-in
-  structure's access answers for its members in the owner's frame, the
-  stricter of the owner's and its own standing ([A mixin is merged
+  structure's access answers for its members in the declaring class's frame, the
+  stricter of the declaring class's and its own standing ([A mixin is merged
   flat](#a-mixin-is-merged-flat)); set aside, each member is marked, and
   a mark from a structure it mixes in itself is carried through. A
   variant whose answer is runtime is offered in the build for the
@@ -8972,7 +8972,7 @@ closing that gap (found 2026-10-19), point by point.
 - **The spelling.** An `#[Alters]` class implements
   `OperationAccessInterface`, the access class's own interface (*changed
   2026-10-24:* it was `AltersAccessInterface`, the same method under a
-  second name; the role, owner or alter, is what `#[Alters]` on the class
+  second name; the role, declaring class or alter, is what `#[Alters]` on the class
   says, and an access class named on `access:` that carries `#[Alters]`
   is refused at discovery, since it would answer in both roles; [The surface was counted and cut](#the-surface-was-counted-and-cut)),
   whose `access(OperationContext $context,
@@ -8996,31 +8996,31 @@ closing that gap (found 2026-10-19), point by point.
   caller; as an attached child; as a variant, offered, offered
   read only or not offered, and refusing its parent as a chosen variant
   may ([A chosen variant may refuse](#a-chosen-variant-may-refuse)); a
-  mixed-in structure's members, held in the owner's frame; a
+  mixed-in structure's members, held in the declaring class's frame; a
   collection's item, once for the list; every entry of keys from the
   site. A structure attached twice, or by two resources, gets the
   alter's answer at each site. It applies in the operations its
   `#[Alters]` names, as the rest of the alter does.
 - **Composition: the stricter stands.** The operation's permission,
-  then the owner's access class, then each alter's answer in discovery
+  then the declaring class's access class, then each alter's answer in discovery
   order, combined with `AccessAnswer::andIf()`. Two reasons. Two answers
   about the same keys already combine this way: a child's operation
   permission and its access class, a mixed-in structure's access and its
-  owner's ([A mixin is merged flat](#a-mixin-is-merged-flat)). And an
+  declaring class's ([A mixin is merged flat](#a-mixin-is-merged-flat)). And an
   answer applies wherever the thing appears, the field permissions
   rationale: access to a field is the field's, on every entity form and
   through every door it is reached by, so a module answering for a
   structure answers for it at every site. So an alter can lock or leave
   out the keys of what it alters (its own mounted keys and a structure
   it attached at its mount among them), and can never open what the
-  owner or an earlier alter locked or left out: an alter answering open,
+  declaring class or an earlier alter locked or left out: an alter answering open,
   or core's neutral, changes nothing (the narrowing invariant). At the
   top an alter's answer is read as a child's is, neutral as open, then
   as one asked on its own, omitted as a refusal, and combined with
   core's `andIf()`, which keeps a refusal. The order matters only for
   the reason a combined answer carries: of two answers as narrow, the
   earlier one's.
-- **The operation's permission stays the owner's.** The tool declares
+- **The operation's permission stays the declaring class's.** The tool declares
   it and the schema route asks it, as before. An alter that wants a
   further permission answers locked or omitted for an account without
   it, with the `user.permissions` context, which reads static: stated in
@@ -9028,7 +9028,7 @@ closing that gap (found 2026-10-19), point by point.
 - **Each answer keeps its kind.** Built for the account alone
   (`buildStatic()`), each answer is applied or set aside by its own
   cacheability: the static ones combine and apply, and each runtime one
-  is set aside and the key marked. A static lock from the owner beside a
+  is set aside and the key marked. A static lock from the declaring class beside a
   runtime answer from an alter leaves the key locked and marked, where
   the two combined first and read once would have been runtime and set
   aside whole, taking the static lock with them. A static omission
@@ -9048,7 +9048,7 @@ closing that gap (found 2026-10-19), point by point.
 - **Read by the wall.** Like any access answer, an alter's is the
   site's, never the def's: the def stays the widest reading of the
   child ([The wall is the reference
-  boundary](#the-wall-is-the-reference-boundary)). Nothing of an owner's
+  boundary](#the-wall-is-the-reference-boundary)). Nothing of a declaring class's
   may name a member of a mixed-in structure an alter answers for, as for
   one with an access class: what the answer takes away for one account
   nothing may depend on for every account.
@@ -9060,7 +9060,7 @@ annex once, the oil finish one of its variants is, and the room
 at every entry of its keys from the site; one more alter tries to open
 the wall (`AlterAccessTest`, `AlterAccessFormTest`). The first case on
 a site is example 10's workflow module, `surface_examples_workflow`.
-*Open:* an alter cannot answer for one key of its owner, since an answer
+*Open:* an alter cannot answer for one key of its declaring class, since an answer
 is about a resource or structure, and a key that needs an answer of its
 own is a structure, as a field is; a structure at a mount that an
 alter answers locked or left out is refused, as one whose access class
@@ -9073,9 +9073,9 @@ a reason an alter gives at a child is not shown, as no child's is.
 
 ### A gate is borrowed, never copied
 
-Decided 2026-10-25, from the owner's case: a module ships a resource of
+Decided 2026-10-25, from the provider's case: a module ships a resource of
 its own, with its own keys, storage and permission, that acts on things
-another module owns and must respect the access their owner and every
+another module owns and must respect the access their provider and every
 other module decide, without naming them. A bulk retitle may retitle
 only the nodes the account may update and whose title it may edit.
 `gate:` on `#[Operation]` names that access, and the module asks it.
@@ -9087,7 +9087,7 @@ only the nodes the account may update and whose title it may edit.
   A resource that copied the check ("has edit any page content") would
   agree with that answer only until one of those modules is enabled or
   changes, and would then let through what the node's own form refuses.
-  A gate asks the owner each time, so it holds whatever the site adds.
+  A gate asks the declaring class each time, so it holds whatever the site adds.
 - **Two forms.** Another resource's operation by id,
   `entity.content:node.page:update`, answered as that operation is when
   it is asked on its own: its permission, its gates, its access class
@@ -9360,7 +9360,7 @@ moves with the site's language and its alters.
   person at React, which a person reads as a form, labels alone, as the
   form says it. The paths and the codes are the same at every door, so
   an agent calling React still has the machine's facts in `path` and
-  `code` (decided 2026-10-20, the owner's follow-up: the renderer is
+  `code` (decided 2026-10-20, the declaring class's follow-up: the renderer is
   the door's choice, `SurfaceResult::document(machine:)`, not the
   sentence's).
 - **A code on every violation.** `Violation::$code`, required by its
@@ -9786,7 +9786,7 @@ does for a resource holding a variant that may refuse.
   refused after the write). *Amended 2026-11-10:* the HTTP door's re-read
   after a committed write is a second prepare, which asks the
   permission and the access again; a write can close them (an access
-  class that reads a status or an owner the write changed), or change
+  class that reads a status or a declaring class the write changed), or change
   what the parameters name. A refused re-read never fails the response:
   the committed write is answered with the status it would have had
   (200, or 201 with `Location` for a create), its `outputs` and
@@ -10556,7 +10556,7 @@ resource's own operation, provided by "default read of" the update, as
 update's own context (`OperationDefinition::contextId()`,
 `ResourcesInterface::operation()`), so its access, its alters and the
 operations its children are invoked through are the update's: an
-account reads exactly what it may change, and nothing loosens. An owner
+account reads exactly what it may change, and nothing loosens. A declaring class
 that declares `read` replaces it and answers access for reading: the
 content entity example asks core's view access for the entity and view
 field access for each field, so an account that may view a page and not
@@ -10567,7 +10567,7 @@ Every door serves it. The tool door derives `surface:<resource>:read`
 output `values`. HTTP `GET .../{id}` serves the read; the one the build
 adds is served as the update it reads (`ServedOperations::resolve()`),
 so its envelope, its schema and every existing `GET` are byte for byte
-what they were, while a read an owner declares serves its own envelope
+what they were, while a read a declaring class declares serves its own envelope
 and schema, and its update's are at `.../{id}:update`. The OpenAPI
 document describes `GET` from the read and the update by its run. The
 form still opens with the update's stored values, through the update:
@@ -10588,7 +10588,7 @@ it is the update's door.
 - **Rejected: keep deriving a read per door.** Three derivations of one
   idea, each its own rule for which operations read, and still no place
   for view access.
-- **Rejected: every owner declares its read.** Every resource would
+- **Rejected: every declaring class declares its read.** Every resource would
   restate what its update already says, and one that forgot would have
   no read at all.
 - **What went with it.** The read derived beside every update that
@@ -10626,7 +10626,7 @@ entry left open. The narrowing tool, `:schema`, is a read beside the
 write tool for another reason, a key the listing states open
 ([A budget for what the site decides](#a-budget-for-what-the-site-decides)).
 *Amended 2026-10-31:* no operation has a read beside it any more; the
-read is an operation of the resource, the one its owner declares or the
+read is an operation of the resource, the one its declaring class declares or the
 one the build adds beside its default update, and `ResourceCatalog::reads()`
 is gone ([A read is an operation of the
 resource](#a-read-is-an-operation-of-the-resource)). The narrowing tool
@@ -10782,7 +10782,7 @@ either. *Open:* a read permission of its own.
 (`ResourceOperationToolBase::checkAccess()`)
 *Amended 2026-10-31:* a read is an operation, `read`, with access of its
 own: the one the build adds asks its update's, so this entry still holds
-for it, and an owner that declares `read` answers access for reading,
+for it, and a declaring class that declares `read` answers access for reading,
 as the content entity example does with core's view access. The open
 point is closed ([A read is an operation of the
 resource](#a-read-is-an-operation-of-the-resource)).
@@ -11065,16 +11065,16 @@ only when asked for. *Superseded 2026-11-10:* the hint is
 may claim every key of a kind on the site,
 `#[SurfaceWidget(claims:, priority:)]`. A contrib module that ships
 a color picker serves every color key on a site; here only a key's
-owner could ask for a widget, by name. A claim is a data type
+declaring class could ask for a widget, by name. A claim is a data type
 (`['type' => 'string']`), a data type and the key's `format` setting
 (`['type' => 'string', 'format' => 'color']`), or a shape id
 (`['shape' => 'event.license']`): what a definition says its value is,
-so a claim needs nothing from the owner. A list or a map is drawn by
+so a claim needs nothing from the declaring class. A list or a map is drawn by
 what it holds, and a claim of one is refused at discovery. The manager
 asks the claims before the stock rule, the highest priority first, then
 by plugin ID; the first whose claim matches and whose `isApplicable()`
 says yes draws the key. A key whose `widget` setting names a widget is
-its owner's choice, and no claim is asked, so the owner wins. A widget
+its declaring class's choice, and no claim is asked, so the declaring class wins. A widget
 that claims is asked for no key it does not claim, unless a key names
 it. `x-surface.widget` says the claimed widget's word in both documents
 (the OpenAPI document carries no widget hints); the React page draws a
@@ -11102,7 +11102,7 @@ Regex is still the rule. (`DateWidget::draws()`, `PropertySchema::type()`,
 Decided 2026-11-01. `#[Structure(widget:)]` names the widget that draws
 the structure as a whole, by the one word a key's `widget` setting
 uses; the build sets it on the key wherever the structure is attached,
-unless the owner set one there. A shape's `define()` already sets the
+unless the declaring class set one there. A shape's `define()` already sets the
 setting on its definition. *Changed 2026-11-12:* a shape declares
 `schema()`, whose `x-portable-ui` sets it ([A shape is a Schema; secrecy
 is read from a schema](#a-shape-is-a-schema-secrecy-is-read-from-a-schema)). A module's claim on a structure by its
@@ -11234,7 +11234,7 @@ once, and read by every door (decided 2026-10-20, from the Form API
 review's second change and section 3.4 of the reviews' synthesis): a
 group (a fieldset or a details, with its label and whether it starts
 collapsed), a weight, a placeholder, a prefix, a suffix and a help text,
-in a `Resource\Arrangement` that an owner sets in `defineInputs()` with
+in a `Resource\Arrangement` that a declaring class sets in `defineInputs()` with
 `DefinitionMetadata::setArrangement()`. Why: one place to describe a
 form, read by the operation form, every plugin host (a block, a
 formatter, a condition, a field type, which had no seam short of
@@ -11252,10 +11252,10 @@ page never saw the content type's groups, and a block had none to give.
   alike; the build refuses two that differ. A weight orders a key in its
   frame, or in its group.
 - **An alter places and rewords, never removes.** `describe($key,
-  arrangement:)` lays an alter's arrangement over the owner's, under the
+  arrangement:)` lays an alter's arrangement over the declaring class's, under the
   rule for everything an alter says of a key it does not own: it may put
   the key in a group, weigh it and reword its texts, and a text it would
-  empty where the owner gave one is refused. A shape is a value and
+  empty where the declaring class gave one is refused. A shape is a value and
   takes none; an output is never drawn and takes none.
 - **Stated as a widget hint.** The served contract writes it under
   `x-surface.arrangement` only when a renderer asks for the widget hints,
@@ -11280,10 +11280,10 @@ page never saw the content type's groups, and a block had none to give.
   cosmetic layer. A group of several keys, or of one key that is not a
   map, draws as before, so no shipped form's markup moved. The React app
   still draws the map's fieldset inside the group's details.
-- **One spelling, `describe()`** (*amended 2026-10-27*, from [the adopter log of 2026-10-26](adopters-2026-10-26.md), where the owner's
+- **One spelling, `describe()`** (*amended 2026-10-27*, from [the adopter log of 2026-10-26](adopters-2026-10-26.md), where the declaring class's
   `DefinitionMetadata::setArrangement($definition, new Arrangement(...))`
   beside each key read worse than the Form API form it replaced). An
-  owner and an alter arrange a key the same way, `$inputs->describe('key',
+  declaring class and an alter arrange a key the same way, `$inputs->describe('key',
   group: ..., weight: ..., placeholder: ..., prefix: ..., suffix: ...,
   help: ...)`, after the key is declared; the six arguments are
   `Arrangement`'s, and the `arrangement:` argument is gone. `Arrangement`
@@ -11603,7 +11603,7 @@ the numbers). Four choices, and why:
   data. Core's map definitions drop the properties they were given when
   serialized, so a data surface stores each map with its properties
   beside it and gives them back when it wakes (`SerializedMaps`). A
-  structure read from a schema is registered by building its owner, so
+  structure read from a schema is registered by building its declaring class, so
   a kept build stores the definitions of those it built, and a request
   that reads it registers them again. One that holds what cannot be
   stored (a closure, an object of an anonymous class, the container a
@@ -11616,7 +11616,7 @@ the numbers). Four choices, and why:
   time something reads it, then kept (`VariantToSettle`). Kept with a
   build for no account it is stored as what builds it, so the cache
   holds what the documents state and not every component of a theme;
-  the structures its owner's list reads are registered again from that
+  the structures its declaring class's list reads are registered again from that
   list when one is built. What each door builds: the full schema and
   the tool listing the variants they state (all of them within the
   site's list limit, none past it); the schema for chosen values and
@@ -11625,9 +11625,9 @@ the numbers). Four choices, and why:
   that key; the catalog all of them, so a refusal inside one is listed
   under the operation that holds it, as before. A variant a class
   declares, an attached child, a collection's item and a structure
-  mixed in are built with their owner: they are the owner's own
+  mixed in are built with their declaring class: they are the declaring class's own
   definitions (an attached child's map is the parent's, a mixin's
-  members are the owner's keys), and a refusal in code is found by the
+  members are the declaring class's keys), and a refusal in code is found by the
   build. Lazy equals eager: the never-stricter, every-door and round
   trip tests run on it unchanged, and every example's documents and
   tool definitions, and the site's catalog, are byte for byte what the
@@ -11710,7 +11710,7 @@ spotlight's schema at 132 MB and its React page at 114 MB. Five choices:
   provider rather than from the whole document. Each entry still costs
   the build a read definition, an attachment and a holder, about 2 KB per
   component. A refusal naming the variants that declare a stray key
-  (`Variants::owners()`) builds every variant.
+  (`Variants::declaringVariants()`) builds every variant.
 
 After, the same pages: example 12 at 92 to 96 MB, example 13 at 88 MB, the
 spotlight's schema at 60 MB (88 MB for `?choose=/slots=`, which reads the
@@ -12079,7 +12079,7 @@ value, label, and schema or structure) and refusing the rest when the
 resource is built, in the words each used; an id holding a dot or a
 colon, which no key can be, is refused there, since a variant's value
 may hold either ([The surface was counted and cut](#the-surface-was-counted-and-cut)). The build step asks it and declares one key per entry in a
-child sealed at the key, which the owner stores: of the type or shape for
+child sealed at the key, which the declaring class stores: of the type or shape for
 `addEach()`, holding the structure for `attachEach()`. Each choice, and
 why:
 
@@ -12095,7 +12095,7 @@ why:
   costs a class, an id and an attach by that id, and keeps the keys in
   the discovery cache, apart from the build that reads them; and a
   `#[StructureEach(from:)]` attribute on a structure, which leaves the
-  owner attaching it by an id nobody wrote down and cannot say one value
+  declaring class attaching it by an id nobody wrote down and cannot say one value
   per thing, which both adopters needed.
 - **Two verbs, as there are two for one key.** `addEach()` is `add()`
   per entry, a typed data type or a shape: one value per thing, as
@@ -12107,7 +12107,7 @@ why:
   static](#a-resource-or-structure-is-static) holds: the build declares
   the keys once, from what the class says and what the provider lists,
   and both are cacheable. The keys are ordinary keys: the full schema
-  states every one, the map is a def of the owner's, `<owner>.<key>`, and
+  states every one, the map is a def of the declaring class's, `<declaring-class>.<key>`, and
   a structure at the entries is one def every entry refers to.
 - **Cacheability travels.** The list's cacheability is the built
   resource's, so the form, both documents and the schema route are kept
@@ -12135,12 +12135,12 @@ why:
   lock is per key. An entry may say what it starts from, over the
   blueprint's `default:`; an entry holding a structure may not, since it
   starts from the structure's own defaults.
-- **Composition.** The map is the owner's key: a rule of the owner's may
+- **Composition.** The map is the declaring class's key: a rule of the declaring class's may
   rule it out, as honeypot's `#states` port does
   (`narrow('form_settings')->when(...)->doesNotApply()`), and names
   nothing inside it, as for an attached child. A rule on every entry is
   the structure's own, declared once and bound in each entry's frame. No
-  wildcard path (`narrow('punctuation.*')`) is added here: an owner's rule
+  wildcard path (`narrow('punctuation.*')`) is added here: a declaring class's rule
   reaching into the entries is the dotted path grammar of Phase C, item
   12, and a value per entry has no rule of its own yet. A shape's alters
   apply at every entry, and a structure's at every entry as wherever it
@@ -12149,7 +12149,7 @@ why:
   where the provider reads (pathauto's alter hook stays inside its
   provider). The structure at the entries is built once for the map, so
   its access answers once, as a collection's item's does; it may name no
-  storage or identity, its owner storing it. Neither verb is offered to
+  storage or identity, its declaring class storing it. Neither verb is offered to
   an alter, or inside a structure mixed in, which holds no keys from the
   site (*amended 2026-11-05:* it may hold a child at a fixed key or in a
   collection, [A mixin is merged flat](#a-mixin-is-merged-flat)).
@@ -12162,14 +12162,14 @@ why:
   and a rule on a port may rule the structure's keys out, entry by
   entry. Example 9 is the case: a ticket type's limits do not apply
   while the type is off sale. The wiring names a map, not a path into
-  it, because the entries are the provider's: the owner cannot name one
+  it, because the entries are the provider's: the declaring class cannot name one
   entry, and the same provider makes the ids match. The build refuses a
   sibling that is no map of keys from the site, holds structures, lists
   its keys from another provider, has no entry for an id, or holds
   another type, and an unwired required port, as attach() refuses a
-  wiring. What depends on the port is stated per entry on the owner's
+  wiring. What depends on the port is stated per entry on the declaring class's
   `allOf`, an `if` on the sibling's entry and a `then` reaching into the
-  map at the entry, since only the owner knows both; a locked entry's
+  map at the entry, since only the declaring class knows both; a locked entry's
   rules are stated too, so both documents leave out what does not apply
   to it. Inside, the map reads the sibling through a port of its own,
   `:<sibling>` (`Port::$through`), and binds each entry's port when it
@@ -12177,7 +12177,7 @@ why:
   entry for its child hands it the sibling's entry; no document lists
   that port. Rejected: one port per entry on the map, named by the id,
   which an id could collide with; and a path per entry written by the
-  owner, which names entries the code cannot list.
+  declaring class, which names entries the code cannot list.
 - **The cost.** Ported again, pathauto's punctuation is a shape (20 code
   lines, the original's select options) and a `keys()` method on the
   service that lists the characters (9), where the deriver was 44; with
@@ -12189,8 +12189,8 @@ why:
   now kept by the cache tags of the forms it lists.
 
 Open: a per-option lock in a plain list of choices; a rule of the
-owner's naming one entry by its id, which waits for a decision from the
-owner, since the code cannot list the ids. Closed: ports on an entry
+declaring class's naming one entry by its id, which waits for a decision from the
+declaring class, since the code cannot list the ids. Closed: ports on an entry
 (above). (`SiteListInterface`, `SiteList`,
 `BlueprintInterface::addEach()`, `BlueprintInterface::attachEach()`,
 `Attaching::buildEach()`, `Attaching::keysFrom()`,
@@ -12239,7 +12239,7 @@ component chosen and saved at once is refused for the props it requires
 ### Static defaults
 
 A plugin protocol that asks a class for its defaults statically
-(`defaultSettings()`, `defaultFieldSettings()`) gets the owner's blueprint
+(`defaultSettings()`, `defaultFieldSettings()`) gets the declaring class's blueprint
 alone, sealed on the spot: no alter, no context. There is no instance
 and no context to build with, and alters' keys are mounted where those
 protocols do not look. (`ResourcesInterface::defaults()`)
@@ -12283,7 +12283,7 @@ structure of two keys, example 12's two lines under the block's id,
   module needs nothing new for it, since the component plugin manager is
   core's. One class means the two declarations list the same components
   with the same schemas, and both documents write the same defs under
-  each owner's id. Rejected: a copy in the submodule, two places that
+  each declaring class's id. Rejected: a copy in the submodule, two places that
   decide which prop types are stored; the provider in the submodule,
   which would make the examples depend on the block module.
 - **The component is not required**, where example 12's is. The block
@@ -12349,7 +12349,7 @@ how strictly to apply them to a display builder. Each choice, and why:
   component holding both was weighed first, so that one `anyOf` would
   state both. It would move the props every placed block and example 12
   store one key down, a breaking change to every stored value, and the
-  engine has no variants whose keys are the owner's own. Two keys leave
+  engine has no variants whose keys are the declaring class's own. Two keys leave
   the stored props where they are and add `slots` beside them; the
   contract states each as `anyOf` of its defs, with one conditional per
   component and key. A component with no slot is a variant with no
@@ -12596,7 +12596,7 @@ by its own key mixes in, lists a plugin whose class names its settings
 with `#[UsesStructure]` as that structure where the deciding key's
 values are a plugin manager's (a `PluginExists` constraint), read from
 the plugin definition with no plugin built, and reads every other value
-from its schema; a `#[Variant]` declared for the owner still wins. Why:
+from its schema; a `#[Variant]` declared for the declaring class still wins. Why:
 the plugin's declared structure is what its host builds, and a schema
 read back would lose its refiners, children and defaults. Values from a
 `Choice` or from the schema names have no plugin definition, and are
@@ -12935,7 +12935,7 @@ $inputs->add('page', 'integer', t('Announcement'))
   key. `handler` and `handlerSettings` name another selection handler,
   as a reference field's key does.
 - **The author names the id's type, and the build checks it.** Once the
-  owner and every alter have declared, `Declaring::settleReferences()`
+  declaring class and every alter have declared, `Declaring::settleReferences()`
   hands each key to `References::settle()`, at any depth of a map or a
   list: the constraint names an entity type the site has, the key is
   typed as that entity type's id (`References::idType()`), and a key of
@@ -13412,7 +13412,7 @@ knows](#a-parameter-is-identity-the-caller-knows)).
 
 ### A list left out for size is deferred, not refined
 
-Decided 2026-10-24, from the owner's finding: the budget marked a list
+Decided 2026-10-24, from the declaring class's finding: the budget marked a list
 left out for its size `refine`, which tells an invoker "ask with values
 each time". The rule is better than that: static, cacheable and
 fetchable on its own; it was only too long to write out. So it has a
@@ -14236,7 +14236,7 @@ published yet. (`ContractEmitter::CONTRACT`, `DocumentHead::settled()`,
 which kept every path, method and status below and cut the `x-surface`
 keywords that said nothing or said it twice; nothing answers 410 for it.*
 
-Decided 2026-10-22, from the owner's finding: on HTTP each named
+Decided 2026-10-22, from the declaring class's finding: on HTTP each named
 operation had grown five endpoints (`.../configure`, `/schema`,
 `/refine`, `/validate`, `/submit`), so the operation did not act like
 one, and `configure/submit` was a verb on a verb. The tool door already
@@ -15488,7 +15488,7 @@ app draws it, and reads nothing else to draw.
   draws by the rules the React app reads the document by, one method
   each, named as React names them where the names fit
   (`resolveVariants()`, `arranged()`, `OptionsWidget::emptyOption()`):
-  the widget the word names; required from the owner's `required`;
+  the widget the word names; required from the declaring class's `required`;
   title, description, help and the lock's note as plain text; a
   `readOnly` key disabled, and what is inside it with it; a select's
   empty option and its stale value; groups from the frame's
@@ -15844,7 +15844,7 @@ they served.
   both as `{}`, so the reader holds both as a constraint given no
   options (NULL). A constraint an author adds with `[]` to what a verb
   returns (`addConstraint('Country', [])` on what `addMap()` or
-  `addDefinition()` declares) is held the same way once the owner's
+  `addDefinition()` declares) is held the same way once the declaring class's
   declaration and each alter's are done
   (`BlueprintAdapterBase::settleOptions()`). Core's constraint manager
   makes the same constraint of NULL and `[]`, so no value is checked
@@ -16379,8 +16379,8 @@ and was removed on 2026-10-24; [The surface was counted and cut](#the-surface-wa
   document holds as a structure (a def, an object a map cannot hold, a
   variant) is registered by `ResourceRegistry::defineRead()` under
   `schema:<id>:<hash>`, listed by no catalog, baseline or tool, and built
-  by name as any structure is. Its id is the def's key, `<owner>.<key>`
-  for an inline object and `<owner>.<key>.<value>` for a variant a
+  by name as any structure is. Its id is the def's key, `<declaring-class>.<key>`
+  for an inline object and `<declaring-class>.<key>.<value>` for a variant a
   provider lists: the names the emitter gives a child with no class, so
   a document read back writes the same defs.
 - **Rules at a site belong to the child.** A rule the container states
@@ -16445,7 +16445,7 @@ was accepted. The table, change by change, is [Evolving a resource](evolution.md
 - **A required key added with no default is judged by the operation's
   kind** (decided 2026-10-20, from the Smithy review and section 3.2 of
   the reviews' synthesis, amending "compatible, with a note", decided
-  2026-10-19). The two sides each had a reason. The owner's, from the
+  2026-10-19). The two sides each had a reason. The declaring class's, from the
   entity case: no value stored and no document sent before held the
   key, so nothing said before changes meaning; a thing stored before has
   nothing there, its next write must supply the key, the pipeline asks
@@ -16496,7 +16496,7 @@ was accepted. The table, change by change, is [Evolving a resource](evolution.md
   layout (the roadmap's ports item said so), and only its own
   declaration knows its keys. Its version and its migrations are its
   own, run wherever it sits: at an attached key, in each item of a
-  collection, at a mount, and as a mixin's members in the owner's map. A
+  collection, at a mount, and as a mixin's members in the declaring class's map. A
   container's version never answers for a structure it holds.
 - **Migrations are pure up-steps on the declaration; the ledger is the
   storage's.** One static step per version, `migrate(array $stored, int
@@ -16526,7 +16526,7 @@ was accepted. The table, change by change, is [Evolving a resource](evolution.md
   that keeps it, and `Contract\ContractDiff` classifies every difference
   from it by the table: narrows, widens, adds a key that may be left
   out, replaces, or notes. A breaking one passes when the version of its
-  owner was raised (the document's id, or the structure whose def the
+  declaring class was raised (the document's id, or the structure whose def the
   path is inside) or when the baseline allows its path with a reason,
   and fails otherwise. A keyword it does not read is breaking, so the
   lint is never more lenient than it can show. `ContractBaselineTest`

@@ -48,7 +48,7 @@ abstract class SurfaceWidgetBase extends PluginBase implements SurfaceWidgetInte
    * @param \PortableSchema\Builder\Schema $schema
    *   The schema.
    * @param \Drupal\surface\Widget\WidgetContext $context
-   *   Where it is drawn: its owner's `required` says whether it is.
+   *   Where it is drawn: its declaring class's `required` says whether it is.
    *
    * @return array
    *   The common element properties.

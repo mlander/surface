@@ -262,7 +262,7 @@ by a method that is one JSON Schema construct:
 | --- | --- |
 | `attach()`, `attachList()` | a `$ref` to the structure's def; an array of them |
 | `addMap()` | an inline `type: object` with its properties |
-| `mixIn()` | `allOf` of the structure's def and the owner's properties |
+| `mixIn()` | `allOf` of the structure's def and the declaring class's properties |
 | `attachVariants()` | `allOf` of `if`/`then`, one per value of the deciding key |
 | `addEach()`, `attachEach()` | an object with one property per thing the site has |
 | `add()` with `Schema::list()` | `type: array` of one value's items |
@@ -368,7 +368,7 @@ $inputs->add('license', Schema::of(License::class)
   schema adds what any key adds: `required()`, a `default()`, a rule, a
   description of its own. A rule the key states holds beside the
   shape's, so `minLength(4)` over a shape allowing at most twelve
-  characters allows four to twelve. When its owner is built, the key is
+  characters allows four to twelve. When its declaring class is built, the key is
   held to the shape by the check a refiner's answer is held to; a key
   that widens it (a higher maximum, a second pattern) is refused,
   naming the key and the shape.
@@ -565,7 +565,7 @@ whether it must be given. The attributes say the rest:
 | `mixIn(ReviewStructure::class, reads: [...])` | `#[MixIn(ReviewStructure::class, reads: [...])]` on the class |
 | `defineOutputs()` | `#[Output(...)]`, which says what `#[Input]` says, on the class implementing `DefinesOutputsInterface` |
 
-An attribute for the owner's own keys names the kind of member
+An attribute for the declaring class's own keys names the kind of member
 (`Input`, `Output`, `Map`, `Each`, `Computed`, `Port`); an attribute for
 a composition restates the verb (`Attach`, `AttachList`, `AttachEach`,
 `AttachVariants`, `MixIn`).
@@ -1163,14 +1163,14 @@ Every blueprint method works inside the callable: `add()`,
 rule, a resolve) is a structure with no id, attached at the key and
 still written inline, the structures it holds as references to their
 defs. The callable may run more than once: at once, and again each
-time that structure is built, when the build runs the owner's
+time that structure is built, when the build runs the declaring class's
 declaration again to fill it. So it has no side effect and declares the
 same keys each time, as `defineInputs()` does; the build refuses a
 callable that declares other keys the second time, comparing the keys it
 declared before it asked for the frame.
 
 The cost of no id: no alter addresses the map itself, nothing else
-uses it, and its access is its owner's. Anything two resources share,
+uses it, and its access is its declaring class's. Anything two resources share,
 or anything an alter should reach, is a structure, `attach()`ed. An
 alter's map, and an output, hold plain keys alone: an alter attaches a
 structure at its own mount, and outputs hold no attached structures
@@ -1226,7 +1226,7 @@ list rather than falling back to its default. Both rules, and why, are in
 
 A declared default is the module's. A site that wants a key to start
 from another value sets it in configuration, `surface.defaults`,
-not in an alter: an alter may not change an owner's default. Each entry
+not in an alter: an alter may not change a declaring class's default. Each entry
 names the resource (or a plugin's structure, by the id the catalog
 lists), a key path from it, and the value as a form posts it:
 
@@ -1422,7 +1422,7 @@ below, which may ask for core's `transliteration` service.
   (why: [decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)).
 
 A computed key is a resource's own key, at its top: `compute()` is on the
-owner's blueprint only, and refused in a structure, a structure mixed in
+declaring class's blueprint only, and refused in a structure, a structure mixed in
 and outputs.
 
 ### A title and its machine name

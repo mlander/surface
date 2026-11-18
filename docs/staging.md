@@ -31,7 +31,7 @@ it when it is opened.
 
 **The record.** Each stage is one row of the expirable key-value
 collection `surface.stage` (`Staging\StageStore`, the service
-`surface.stages`): its owner, its label, its status (`open` or
+`surface.stages`): its declaring class, its label, its status (`open` or
 `applied`), its lifetime (`keep`), and its writes in the order they
 were first staged. It is kept for its lifetime after its last write,
 then it expires and names nothing. The lifetime is long, the site's
@@ -365,7 +365,7 @@ request's lock, and tries again. A store answers `created()` and
 `createdAt()` from its `read()` through `StageRecord::created()` and
 `StageRecord::createdAt()`, which also read a create staged before
 creates carried an address (`StageRecord::address()`). Positions,
-tokens, the two-pass apply, sealing and the owner check live in the
+tokens, the two-pass apply, sealing and the declaring class check live in the
 stage's storage, not the store.
 
 **What a store may change.** Where records live; how long they live
@@ -386,7 +386,7 @@ apply are refused, never sent with something else in place.
 **Listing.** A store that also implements
 `Staging\ListsStagesInterface` answers `openStages($owner)`, the ids of
 an account's open stages, newest first. The shipped store does not: its
-collection has no query by owner, so it would read every record. When
+collection has no query by declaring class, so it would read every record. When
 the store lists, the first step of a flow with no stage in the query
 says "You have an open stage for this: resume it or start again." for
 the account's newest open stage whose first write is the route's
@@ -815,7 +815,7 @@ drush tool:run surface:entity.content:node.page:create --uid=1 --json \
   resource the create was staged through. `-1` without the stage names
   nothing. A rename of a caller-named create is refused, as above.
 - **Apply** rehearses each create as a real one from its whole merged
-  document, create access asked again for the owner, and creates it
+  document, create access asked again for the declaring class, and creates it
   once, in its place in position order. A rollback leaves nothing
   created.
 
@@ -1399,7 +1399,7 @@ Apply runs in two passes, as every write does: `prepare()` rehearses,
 
 1. **Prepare**, with no lock and no side effect. For each write, in
    position order: the operation is built again from its recorded
-   arguments, its access is asked again for the owner, what is stored
+   arguments, its access is asked again for the declaring class, what is stored
    now is compared with the token, and the pipeline runs dry over the
    keys the stage moved (a create, which has no token, over its whole
    merged document). Every refusal is filed under
@@ -1443,7 +1443,7 @@ record expires at the end of its lifetime, as any record does, or
 **Applying from elsewhere.** `Resources::build()` builds for the current
 user, so apply builds each write's data surface for the current user
 while it writes as the owner; the stage's access refuses every account
-but the owner, so the two agree at the tool and HTTP doors. Code that
+but the declaring class, so the two agree at the tool and HTTP doors. Code that
 applies a stage for its owner from elsewhere, a queue worker, sets the
 owner as the current user first, with core's account switcher, and
 switches back after

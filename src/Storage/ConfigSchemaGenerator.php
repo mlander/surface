@@ -51,13 +51,13 @@ use Symfony\Component\Yaml\Yaml;
  * schema and the values it is installed with are derived from it, until
  * core can read a data definition as the schema. For every resource whose
  * storage is a ConfigObjectResourceStorage of an object its own module provides
- * (another module's object keeps its owner's schema, which the resource is
+ * (another module's object keeps its provider's schema, which the resource is
  * held to), sealed as declared:
  *
  * - `config/schema/<module>.schema.yml` gains the object's entry, a
  *   `config_object` that is fully validatable, its mapping in declaration
  *   order: each key's type from its definition (a multi-line string is
- *   still a `string`), its owner's label, `nullable: true` where null
+ *   still a `string`), its declaring class's label, `nullable: true` where null
  *   clears it by the three-way rule (an optional key that is no secret and
  *   that the storage class does not name in ALWAYS_HELD, or a required one
  *   installed holding nothing), the bounds and patterns a schema can carry
@@ -70,8 +70,8 @@ use Symfony\Component\Yaml\Yaml;
  *   flat (Variants::STORED_AS) type their level by its own deciding key,
  *   `<type>.[<key>]`, each variant's type extending `<type>`; at the root,
  *   which core types by its name alone, every variant's keys are listed
- *   flat beside the owner's, each nullable.
- * - Keys another module mounts are the owner's `third_party_settings`, a
+ *   flat beside the declaring class's, each nullable.
+ * - Keys another module mounts are the provider's `third_party_settings`, a
  *   sequence typed `<config>.third_party.[%key]`, and the mounting
  *   module's own `<config>.third_party.<module>` entry, every key of it
  *   `requiredKey: false`, since a mounted key is stored only once sent.
@@ -204,7 +204,7 @@ final class ConfigSchemaGenerator {
    * would build them (AutowiringClassResolver), and the entity types it
    * declares are read from its code, so a key that refers to one is built
    * as it will be once the module is installed (References::knowing()).
-   * Nothing is installed and no cache is written. An owner and a module
+   * Nothing is installed and no cache is written. A provider and a module
    * mounting keys on it are named together, so one run writes both, each
    * seeing the other.
    *
@@ -297,7 +297,7 @@ final class ConfigSchemaGenerator {
         continue;
       }
       if (is_subclass_of($definition->storage, ConfigObjectResourceStorage::class) && !static::owns($definition->module, (string) constant($definition->storage . '::CONFIG'))) {
-        // Another module's object: its owner's schema describes it, and the
+        // Another module's object: its provider's schema describes it, and the
         // resource is held to that schema (HeldToConfigSchemaInterface).
         // Decision: see
         // docs/decisions.md#the-generator-writes-what-the-first-page-shows.
@@ -448,7 +448,7 @@ final class ConfigSchemaGenerator {
    *
    * @param \Drupal\surface\SurfaceInterface $built
    *   The resource, sealed as declared.
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $declaring_class
    *   What it was built from: its id names the entry, its module the file.
    * @param string $config
    *   The config object.
@@ -469,19 +469,19 @@ final class ConfigSchemaGenerator {
    *   The object's name, each schema entry with the module it is written
    *   in, and the values it is installed with.
    */
-  public function describeBuilt(SurfaceInterface $built, ResourceDefinition $owner, string $config, array $always_held, array $schema, array $install, ?array $translated = NULL): array {
+  public function describeBuilt(SurfaceInterface $built, ResourceDefinition $declaring_class, string $config, array $always_held, array $schema, array $install, ?array $translated = NULL): array {
     $this->alwaysHeld = $always_held;
     $this->translated = $translated ?? ReferenceStorageLayout::storedSchemaOf($built) + FlatVariantsStorageLayout::storedSchemaOf($built);
     $entries = [];
     $installed = $this->install($built, $install);
-    $mapping = $this->mapping($built->entries(), $config, $owner, $entries, $schema, TRUE, installed: $installed);
+    $mapping = $this->mapping($built->entries(), $config, $declaring_class, $entries, $schema, TRUE, installed: $installed);
     array_unshift($entries, [
-      'module' => $owner->module,
+      'module' => $declaring_class->module,
       'name' => $config,
-      'resource' => $owner->id,
+      'resource' => $declaring_class->id,
       'schema' => [
         'type' => 'config_object',
-        'label' => $schema[$config]['label'] ?? $owner->id,
+        'label' => $schema[$config]['label'] ?? $declaring_class->id,
         'constraints' => ['FullyValidatable' => NULL],
         'mapping' => $mapping,
       ],
@@ -586,7 +586,7 @@ final class ConfigSchemaGenerator {
    *   The keys.
    * @param string $prefix
    *   The schema type every named type below starts with.
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $declaring_class
    *   The resource.
    * @param array $entries
    *   The named types written for other parts, added to.
@@ -617,28 +617,28 @@ final class ConfigSchemaGenerator {
    *   For a key whose variants are stored flat at a level this writes no
    *   own-key type for: inside variants at a key, or in a mount.
    */
-  protected function mapping(Entries $map, string $prefix, ResourceDefinition $owner, array &$entries, array $existing, bool $top = FALSE, bool $absent = FALSE, ?array $installed = NULL, array $ruledOut = [], string $at = '', bool $ownKeyed = FALSE): array {
+  protected function mapping(Entries $map, string $prefix, ResourceDefinition $declaring_class, array &$entries, array $existing, bool $top = FALSE, bool $absent = FALSE, ?array $installed = NULL, array $ruledOut = [], string $at = '', bool $ownKeyed = FALSE): array {
     $mapping = [];
     foreach ($map->entries() as $name => $entry) {
       $name = (string) $name;
       if ($top && $name === ConfigObjectResourceStorage::THIRD_PARTY) {
-        $mapping[$name] = $this->thirdParty($entry, $prefix, $owner, $entries, $existing);
+        $mapping[$name] = $this->thirdParty($entry, $prefix, $declaring_class, $entries, $existing);
         continue;
       }
       if ($this->spreads($at . $name)) {
         if ($at === '') {
           // At the root, which core types by its name alone, with no own
-          // key: every variant's keys, flat beside the owner's.
-          $mapping += $this->union($entry, $prefix, $owner, $entries, $existing);
+          // key: every variant's keys, flat beside the declaring class's.
+          $mapping += $this->union($entry, $prefix, $declaring_class, $entries, $existing);
           continue;
         }
         if (!$ownKeyed) {
-          throw new \LogicException(sprintf('The %s resource stores the variants at "%s" flat, inside variants at a key or a mount, where this writes no type named by the deciding key. Write that schema by hand; the build holds the resource to it.', $owner->id, $at . $name));
+          throw new \LogicException(sprintf('The %s resource stores the variants at "%s" flat, inside variants at a key or a mount, where this writes no type named by the deciding key. Write that schema by hand; the build holds the resource to it.', $declaring_class->id, $at . $name));
         }
         // Written by the level's own-key type and its variants'.
         continue;
       }
-      $property = $this->entry($entry, $prefix . '.' . $name, $owner, $entries, $existing, $entry->variants === NULL ? NULL : $map->entry($entry->variants->by)?->schema(), $installed, $at . $name);
+      $property = $this->entry($entry, $prefix . '.' . $name, $declaring_class, $entries, $existing, $entry->variants === NULL ? NULL : $map->entry($entry->variants->by)?->schema(), $installed, $at . $name);
       if (in_array($name, $ruledOut, TRUE) || in_array('', $entry->mayNotApply(), TRUE)) {
         // A rule holds only where the key applies; where it does not, the
         // key keeps what it holds, or what it was installed with.
@@ -660,7 +660,7 @@ final class ConfigSchemaGenerator {
    *   The key.
    * @param string $path
    *   The schema type a named part of it is called.
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $declaring_class
    *   The resource.
    * @param array $entries
    *   The named types written for other parts, added to.
@@ -676,7 +676,7 @@ final class ConfigSchemaGenerator {
    * @return array
    *   The key's schema.
    */
-  protected function entry(Entry $entry, string $path, ResourceDefinition $owner, array &$entries, array $existing, ?Schema $deciding = NULL, ?array $installed = NULL, string $at = ''): array {
+  protected function entry(Entry $entry, string $path, ResourceDefinition $declaring_class, array &$entries, array $existing, ?Schema $deciding = NULL, ?array $installed = NULL, string $at = ''): array {
     $held = $installed === NULL ? NULL : ($installed[$entry->name] ?? NULL);
     $definition = DefinitionFromSchema::forEntry($entry);
     // A key's facts are read from its schema, a key that holds a child
@@ -697,7 +697,7 @@ final class ConfigSchemaGenerator {
       return ['type' => 'ignore', 'label' => $label];
     }
     if ($entry->variants !== NULL) {
-      $this->variantEntries($entry, $path, $owner, $entries, $existing, $deciding, $held, $installed[$entry->variants->by] ?? NULL, $at . '.');
+      $this->variantEntries($entry, $path, $declaring_class, $entries, $existing, $deciding, $held, $installed[$entry->variants->by] ?? NULL, $at . '.');
       return ['type' => $path . '.[%parent.' . $entry->variants->by . ']', 'label' => $label];
     }
     if ($entry->list !== NULL) {
@@ -705,27 +705,27 @@ final class ConfigSchemaGenerator {
         'type' => 'sequence',
         'label' => $label,
       ] + ($this->clearable($schema, $at) ? ['nullable' => TRUE] : []) + static::constraints($schema) + [
-        'sequence' => $this->ownKeyed($entry->list->child()->entries(), $path, $label, $owner, $entries, $existing, $at . '.') ?? [
+        'sequence' => $this->ownKeyed($entry->list->child()->entries(), $path, $label, $declaring_class, $entries, $existing, $at . '.') ?? [
           'type' => 'mapping',
           'label' => $label,
-          'mapping' => $this->mapping($entry->list->child()->entries(), $path, $owner, $entries, $existing, at: $at . '.'),
+          'mapping' => $this->mapping($entry->list->child()->entries(), $path, $declaring_class, $entries, $existing, at: $at . '.'),
         ],
       ];
     }
     if ($entry->attachment !== NULL) {
       $each = SchemaFacts::each($schema);
       if (is_string($each)) {
-        $child = $this->resources->declaration($each, $this->context($owner));
+        $child = $this->resources->declaration($each, $this->context($declaring_class));
         return [
           'type' => 'sequence',
           'label' => $label,
           // An entry is stored as it was accepted, so a key of it may be
           // absent. Which entries there are is the site's: a key the
           // storage keeps otherwise is named under `*`.
-          'sequence' => $this->ownKeyed($child->entries(), $path, $label, $owner, $entries, $existing, $at . '.*.', absent: TRUE) ?? [
+          'sequence' => $this->ownKeyed($child->entries(), $path, $label, $declaring_class, $entries, $existing, $at . '.*.', absent: TRUE) ?? [
             'type' => 'mapping',
             'label' => $label,
-            'mapping' => $this->mapping($child->entries(), $path, $owner, $entries, $existing, absent: TRUE, at: $at . '.*.'),
+            'mapping' => $this->mapping($child->entries(), $path, $declaring_class, $entries, $existing, absent: TRUE, at: $at . '.*.'),
           ],
         ];
       }
@@ -744,10 +744,10 @@ final class ConfigSchemaGenerator {
             : $this->definition($each, DefinitionFromSchema::of($each), $label),
         ];
       }
-      return $this->ownKeyed($entry->attachment->child->entries(), $path, $label, $owner, $entries, $existing, $at . '.', installed: is_array($held) ? $held : NULL) ?? [
+      return $this->ownKeyed($entry->attachment->child->entries(), $path, $label, $declaring_class, $entries, $existing, $at . '.', installed: is_array($held) ? $held : NULL) ?? [
         'type' => 'mapping',
         'label' => $label,
-        'mapping' => $this->mapping($entry->attachment->child->entries(), $path, $owner, $entries, $existing, installed: is_array($held) ? $held : NULL, at: $at . '.'),
+        'mapping' => $this->mapping($entry->attachment->child->entries(), $path, $declaring_class, $entries, $existing, installed: is_array($held) ? $held : NULL, at: $at . '.'),
       ];
     }
     // Of the keys that hold a child frame only a mount gets here (the
@@ -774,14 +774,14 @@ final class ConfigSchemaGenerator {
    *
    * @param \Drupal\surface\Entry $entry
    *   The key with variants.
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $declaring_class
    *   The resource.
    *
    * @return array<string, array{0: \Drupal\surface\Entries, 1: \Drupal\surface\ResourceBuild\ResourceDefinition|null}>
    *   Each variant's keys and its definition, by value, in the variants'
    *   order.
    */
-  protected function variantMaps(Entry $entry, ResourceDefinition $owner): array {
+  protected function variantMaps(Entry $entry, ResourceDefinition $declaring_class): array {
     $variants = [];
     $from = SchemaFacts::variantsFrom($entry->variants->shell);
     if ($from !== NULL) {
@@ -791,7 +791,7 @@ final class ConfigSchemaGenerator {
       // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
       foreach ($from::structures() as $value => $class) {
         $source = $this->registry->getDefinition($class);
-        $declared = $this->resources->declaration($source->name(), $this->context($owner));
+        $declared = $this->resources->declaration($source->name(), $this->context($declaring_class));
         $variants[(string) $value] = [$declared->entries(), $source];
       }
       return $variants;
@@ -810,7 +810,7 @@ final class ConfigSchemaGenerator {
    *   The key with variants.
    * @param string $base
    *   What each variant's type is named after: `<base>.<value>`.
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $declaring_class
    *   The resource.
    * @param array $entries
    *   The named types written for other parts, added to.
@@ -831,19 +831,19 @@ final class ConfigSchemaGenerator {
    * @param bool $absent
    *   TRUE where each key may be absent, as in an entry from the site.
    */
-  protected function variantEntries(Entry $entry, string $base, ResourceDefinition $owner, array &$entries, array $existing, ?Schema $deciding, mixed $held, mixed $decided, string $at, ?string $extends = NULL, bool $absent = FALSE): void {
+  protected function variantEntries(Entry $entry, string $base, ResourceDefinition $declaring_class, array &$entries, array $existing, ?Schema $deciding, mixed $held, mixed $decided, string $at, ?string $extends = NULL, bool $absent = FALSE): void {
     $labels = [];
     foreach ($deciding === NULL ? [] : (ChoiceSet::fromConstraints(SchemaFacts::constraints($deciding))->labels ?? []) as $value => $choice) {
       $labels[(string) $value] = $choice instanceof TranslatableMarkup ? strtr($choice->getUntranslatedString(), array_map('strval', $choice->getArguments())) : (string) $choice;
     }
-    $variants = $this->variantMaps($entry, $owner);
+    $variants = $this->variantMaps($entry, $declaring_class);
     foreach ($variants as $value => [$map, $source]) {
       $name = $base . '.' . $value;
-      $mapping = $this->mapping($map, $name, $owner, $entries, $existing, absent: $absent, installed: is_array($held) && $entry->variants->chosen($decided) === $value ? $held : NULL, at: $at) + $this->keptSecrets($value, $variants);
+      $mapping = $this->mapping($map, $name, $declaring_class, $entries, $existing, absent: $absent, installed: is_array($held) && $entry->variants->chosen($decided) === $value ? $held : NULL, at: $at) + $this->keptSecrets($value, $variants);
       $entries[] = [
-        'module' => $source->module ?? $owner->module,
+        'module' => $source->module ?? $declaring_class->module,
         'name' => $name,
-        'resource' => $owner->id,
+        'resource' => $declaring_class->id,
         'schema' => $extends === NULL ? [
           'type' => 'mapping',
           'label' => $labels[$value] ?? $existing[$name]['label'] ?? $value,
@@ -864,7 +864,7 @@ final class ConfigSchemaGenerator {
    * Core types a config object's root by its name alone: a `[<key>]` in
    * the root's type is never resolved (TypedConfigManager merges the root
    * with no replacements). So the root lists every variant's keys beside
-   * the owner's, in the variants' order, a key two declare once, each
+   * the declaring class's, in the variants' order, a key two declare once, each
    * nullable and with no constraint, since it may belong to a variant not
    * chosen, which keeps what it holds.
    *
@@ -872,7 +872,7 @@ final class ConfigSchemaGenerator {
    *   The flat key.
    * @param string $prefix
    *   The schema type every named type below starts with.
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $declaring_class
    *   The resource.
    * @param array $entries
    *   The named types written for other parts, added to.
@@ -882,16 +882,16 @@ final class ConfigSchemaGenerator {
    * @return array
    *   The variants' keys, as the root's mapping writes them.
    */
-  protected function union(Entry $entry, string $prefix, ResourceDefinition $owner, array &$entries, array $existing): array {
-    $this->assertClosed($entry, $owner);
+  protected function union(Entry $entry, string $prefix, ResourceDefinition $declaring_class, array &$entries, array $existing): array {
+    $this->assertClosed($entry, $declaring_class);
     $union = [];
-    foreach ($this->variantMaps($entry, $owner) as [$map]) {
+    foreach ($this->variantMaps($entry, $declaring_class) as [$map]) {
       foreach ($map->entries() as $name => $one) {
         $name = (string) $name;
         if (isset($union[$name])) {
           continue;
         }
-        $property = $this->entry($one, $prefix . '.' . $name, $owner, $entries, $existing, $one->variants === NULL ? NULL : $map->entry($one->variants->by)?->schema(), at: $entry->name . '.' . $name);
+        $property = $this->entry($one, $prefix . '.' . $name, $declaring_class, $entries, $existing, $one->variants === NULL ? NULL : $map->entry($one->variants->by)?->schema(), at: $entry->name . '.' . $name);
         unset($property['constraints']);
         $union[$name] = isset($property['nullable']) ? $property : static::after($property, 'label', ['nullable' => TRUE]);
       }
@@ -904,8 +904,8 @@ final class ConfigSchemaGenerator {
    *
    * Core's own form for keys a sibling chooses stored beside it
    * (`condition.plugin.[id]`): the level is `<path>.[<deciding key>]`,
-   * `<path>` holding the owner's own keys there and `<path>.<value>` each
-   * variant's, extending it, written in the module declaring the variant
+   * `<path>` holding the declaring class's own keys there and `<path>.<value>`
+   * each variant's, extending it, written in the module declaring the variant
    * with the secrets the other variants keep, as variants under a key are.
    *
    * @param \Drupal\surface\Entries $map
@@ -914,7 +914,7 @@ final class ConfigSchemaGenerator {
    *   The level's type.
    * @param string $label
    *   Its label.
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $declaring_class
    *   The resource.
    * @param array $entries
    *   The named types written for other parts, added to.
@@ -931,7 +931,7 @@ final class ConfigSchemaGenerator {
    *   The level's schema, its type named by its deciding key; NULL when
    *   no key of it is stored flat.
    */
-  protected function ownKeyed(Entries $map, string $path, string $label, ResourceDefinition $owner, array &$entries, array $existing, string $at, bool $absent = FALSE, ?array $installed = NULL): ?array {
+  protected function ownKeyed(Entries $map, string $path, string $label, ResourceDefinition $declaring_class, array &$entries, array $existing, string $at, bool $absent = FALSE, ?array $installed = NULL): ?array {
     $flat = NULL;
     foreach ($map->entries() as $name => $one) {
       if ($this->spreads($at . $name)) {
@@ -942,20 +942,20 @@ final class ConfigSchemaGenerator {
     if ($flat === NULL || $flat->variants === NULL) {
       return NULL;
     }
-    $this->assertClosed($flat, $owner);
+    $this->assertClosed($flat, $declaring_class);
     $by = $flat->variants->by;
     $entries[] = [
-      'module' => $owner->module,
+      'module' => $declaring_class->module,
       'name' => $path,
-      'resource' => $owner->id,
+      'resource' => $declaring_class->id,
       'schema' => [
         'type' => 'mapping',
         'label' => $label,
         'constraints' => ['FullyValidatable' => NULL],
-        'mapping' => $this->mapping($map, $path, $owner, $entries, $existing, absent: $absent, installed: $installed, at: $at, ownKeyed: TRUE),
+        'mapping' => $this->mapping($map, $path, $declaring_class, $entries, $existing, absent: $absent, installed: $installed, at: $at, ownKeyed: TRUE),
       ],
     ];
-    $this->variantEntries($flat, $path, $owner, $entries, $existing, $map->entry($by)?->schema(), $installed, $installed[$by] ?? NULL, $at . $flat->name . '.', $path, $absent);
+    $this->variantEntries($flat, $path, $declaring_class, $entries, $existing, $map->entry($by)?->schema(), $installed, $installed[$by] ?? NULL, $at . $flat->name . '.', $path, $absent);
     return ['type' => $path . '.[' . $by . ']', 'label' => $label];
   }
 
@@ -964,7 +964,7 @@ final class ConfigSchemaGenerator {
    *
    * @param \Drupal\surface\Entry $entry
    *   The flat key.
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $declaring_class
    *   The resource.
    *
    * @throws \LogicException
@@ -972,10 +972,10 @@ final class ConfigSchemaGenerator {
    *   are the site's, and a key stored flat is no key of its own that a
    *   schema could leave open.
    */
-  protected function assertClosed(Entry $entry, ResourceDefinition $owner): void {
+  protected function assertClosed(Entry $entry, ResourceDefinition $declaring_class): void {
     $from = SchemaFacts::variantsFrom($entry->variants->shell);
     if ($from !== NULL && !is_subclass_of($from, ClosedSiteListInterface::class)) {
-      throw new \LogicException(sprintf('The %s resource stores the variants at "%s" flat, and %s lists them from the site: which keys they have is the site\'s, so no schema written once names them, and stored flat they have no key of their own to leave open. Write that schema by hand; the build holds the resource to it.', $owner->id, $entry->name, $from));
+      throw new \LogicException(sprintf('The %s resource stores the variants at "%s" flat, and %s lists them from the site: which keys they have is the site\'s, so no schema written once names them, and stored flat they have no key of their own to leave open. Write that schema by hand; the build holds the resource to it.', $declaring_class->id, $entry->name, $from));
     }
   }
 
@@ -1023,13 +1023,13 @@ final class ConfigSchemaGenerator {
   }
 
   /**
-   * Writes the owner's map of mounted keys, and each module's entry.
+   * Writes the provider's map of mounted keys, and each module's entry.
    *
    * @param \Drupal\surface\Entry $entry
    *   The third_party_settings key.
    * @param string $config
    *   The config object.
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $declaring_class
    *   The resource.
    * @param array $entries
    *   The named types written for other parts, added to.
@@ -1037,9 +1037,9 @@ final class ConfigSchemaGenerator {
    *   The entries the files already hold, by name.
    *
    * @return array
-   *   The owner's sequence.
+   *   The declaring class's sequence.
    */
-  protected function thirdParty(Entry $entry, string $config, ResourceDefinition $owner, array &$entries, array $existing): array {
+  protected function thirdParty(Entry $entry, string $config, ResourceDefinition $declaring_class, array &$entries, array $existing): array {
     $definition = DefinitionFromSchema::forEntry($entry);
     $ruled = [];
     foreach ($entry->mayNotApply() as $path) {
@@ -1053,12 +1053,12 @@ final class ConfigSchemaGenerator {
         $name = $config . '.third_party.' . $module;
         $mounted = $entry->mounted[(string) $module] ?? NULL;
         $mapping = $mounted !== NULL
-          ? $this->mapping($mounted->child->entries(), $name, $owner, $entries, $existing, absent: TRUE, ruledOut: $ruled[(string) $module] ?? [], at: ConfigObjectResourceStorage::THIRD_PARTY . '.' . $module . '.')
+          ? $this->mapping($mounted->child->entries(), $name, $declaring_class, $entries, $existing, absent: TRUE, ruledOut: $ruled[(string) $module] ?? [], at: ConfigObjectResourceStorage::THIRD_PARTY . '.' . $module . '.')
           : $this->plainMapping(static::propertyOf($entry->schema(), (string) $module), $part, TRUE, ConfigObjectResourceStorage::THIRD_PARTY . '.' . $module);
         $entries[] = [
           'module' => (string) $module,
           'name' => $name,
-          'resource' => $owner->id,
+          'resource' => $declaring_class->id,
           'schema' => [
             'type' => 'mapping',
             'label' => static::label(SchemaFacts::ownLabel(static::propertyOf($entry->schema(), (string) $module)), (string) $module),
@@ -1333,7 +1333,7 @@ final class ConfigSchemaGenerator {
       $name = (string) $name;
       if ($this->spreads($at . $name)) {
         // Stored beside the deciding key: where the key stands, what the
-        // file gives the level that is none of the owner's keys.
+        // file gives the level that is none of the declaring class's keys.
         $values += $this->installSpread($entry, $map, $existing, $values[$entry->variants->by] ?? $surface->getDefault($entry->variants->by), $at . $name . '.');
         continue;
       }
@@ -1385,7 +1385,7 @@ final class ConfigSchemaGenerator {
    * file gives the level, and what it gives for another variant's keys,
    * which a variant not chosen keeps: each in the order the variants list
    * their keys, a key two declare once. A key no variant declares is not
-   * written, as installMap() writes none the owner does not declare.
+   * written, as installMap() writes none the declaring class does not declare.
    *
    * @param \Drupal\surface\Entry $entry
    *   The flat key.
@@ -1662,8 +1662,8 @@ final class ConfigSchemaGenerator {
    * Gives a definition's label as plain text, in the language it is written.
    *
    * @param string|\Stringable|null $label
-   *   The label its owner gave it, else its label (ownLabel()); NULL for
-   *   none.
+   *   The label its declaring class gave it, else its label (ownLabel()); NULL
+   *   for none.
    * @param string $fallback
    *   What to call it when it has none.
    *

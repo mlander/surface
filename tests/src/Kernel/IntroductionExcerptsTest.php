@@ -396,7 +396,7 @@ class IntroductionExcerptsTest extends SurfaceKernelTestBase {
     $badged = ['headline' => 'Latest', 'limit' => 30, 'third_party_settings' => ['my_badges' => ['badge' => 'New']]];
     $this->assertSame(['limit'], $this->pipeline()->validate($surface, $this->pipeline()->accept($surface, $badged))->keys(), 'A limit above 20 is refused while a badge is set.');
     $plain = ['headline' => 'Latest', 'limit' => 30];
-    $this->assertTrue($this->pipeline()->validate($surface, $this->pipeline()->accept($surface, $plain))->isEmpty(), 'Without a badge the owner\'s 1 to 50 stands.');
+    $this->assertTrue($this->pipeline()->validate($surface, $this->pipeline()->accept($surface, $plain))->isEmpty(), 'Without a badge the declaring class\'s 1 to 50 stands.');
 
     try {
       $built(LooseningBadgeAlter::class);

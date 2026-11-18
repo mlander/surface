@@ -170,7 +170,7 @@ class ResolvedKeysTest extends SurfaceKernelTestBase {
   public function testTheBlueprintRefusesWhatIsNoResolve(): void {
     $typed = $this->container->get('typed_data_manager');
     $registry = $this->container->get('surface.resource_registry');
-    $blueprint = static fn (bool $outputs = FALSE, ?string $owner = NULL): ResourceBlueprint => new ResourceBlueprint(new SurfaceBuilder(), $typed, $outputs, $registry, $owner);
+    $blueprint = static fn (bool $outputs = FALSE, ?string $declaring_class = NULL): ResourceBlueprint => new ResourceBlueprint(new SurfaceBuilder(), $typed, $outputs, $registry, $declaring_class);
     $refused = function (callable $declare, string $message): void {
       try {
         $declare();
@@ -182,7 +182,7 @@ class ResolvedKeysTest extends SurfaceKernelTestBase {
     };
     $refused(fn () => $blueprint(TRUE)->resolve('token', ['vault_id'], VaultToken::class), 'resolves an output');
     // A structure resolves among its own keys, as a resource does.
-    $structure = $blueprint(owner: ThresholdStructure::class);
+    $structure = $blueprint(declaring_class: ThresholdStructure::class);
     $structure->add('token', Schema::string()->title('Token'));
     $structure->add('vault_id', Schema::string()->title('Vault entry'));
     $structure->resolve('token', ['vault_id'], VaultToken::class);
@@ -248,8 +248,8 @@ class ResolvedKeysTest extends SurfaceKernelTestBase {
    * Tests two alters resolving one key are refused, naming both.
    *
    * Two resolves cannot compose: while both entries held a value there
-   * would be no right answer, and each alter rules out the owner's key
-   * alone, never the other alter's.
+   * would be no right answer, and each alter rules out the declaring class's
+   * key alone, never the other alter's.
    */
   public function testTwoAltersResolvingOneKeyAreRefused(): void {
     $registry = new ResourceRegistry([
@@ -263,7 +263,7 @@ class ResolvedKeysTest extends SurfaceKernelTestBase {
       $this->fail('Two alters resolving one key were not refused.');
     }
     catch (\LogicException $e) {
-      $this->assertSame('resolve("token") in the south_vault alter names a key the north_vault alter resolves already. A key is resolved once: while both resolves\' sources held a value there would be no right answer, and each alter rules out the owner\'s key alone, never another alter\'s. One module stands in for a key.', $e->getMessage());
+      $this->assertSame('resolve("token") in the south_vault alter names a key the north_vault alter resolves already. A key is resolved once: while both resolves\' sources held a value there would be no right answer, and each alter rules out the provider\'s key alone, never another alter\'s. One module stands in for a key.', $e->getMessage());
     }
   }
 

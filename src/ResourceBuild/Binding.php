@@ -30,10 +30,10 @@ use Drupal\surface\Resource\ResourceStorageInterface;
  *
  * Step 6 of Resources: each contributor's #[RefinesInput] methods, checked
  * against the shape and bound as the engine's refinement edges and
- * links, and each rule it declared as data, the owner's before any
- * alter's; a structure mixed in is bound in the owner's frame first.
- * With the storage that says which of the owner's keys it always holds
- * (heldBy(), markAlwaysHeld()). It asks no account and builds no child.
+ * links, and each rule it declared as data, the declaring class's before any
+ * alter's; a structure mixed in is bound in the declaring class's frame first.
+ * With the storage that says which of the declaring class's keys it always
+ * holds (heldBy(), markAlwaysHeld()). It asks no account and builds no child.
  *
  * Decision: see docs/decisions.md#the-build-is-read-by-phase.
  *
@@ -126,17 +126,17 @@ final class Binding {
   }
 
   /**
-   * Binds what each contributor says about the owner's keys.
+   * Binds what each contributor says about the declaring class's keys.
    *
    * Step 6 of the build. The keys a coded or runtime refiner may rule
    * out, which a declared rule may then not require; each structure mixed
-   * in, in the owner's frame; then each contributor's coded refiners and
-   * the rules it declared, the owner's before any alter's.
+   * in, in the declaring class's frame; then each contributor's coded refiners
+   * and the rules it declared, the declaring class's before any alter's.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build, its frame and its input keys resolved.
+   *   The declaring class's build, its frame and its input keys resolved.
    * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
-   *   The owner's inputs blueprint.
+   *   The declaring class's inputs blueprint.
    * @param array<int, array{0: object|string, 1: \Drupal\surface\ResourceBuild\RefinerDefinition[], 2: string|null}> $links
    *   The refiner links, as declareShape() answered them.
    * @param array<string, \Drupal\surface\ResourceBuild\ResourceBlueprintAdditions> $additions
@@ -154,8 +154,8 @@ final class Binding {
   public function bind(Build $build, ResourceBlueprint $inputs, array $links, array $additions, array $mixins, array $readable, array $mounted_by): Build {
     $input_keys = $build->inputKeys;
     // What a coded or runtime refiner may rule out, which a declared rule
-    // may then not require: the owner's keys by name, an alter's own by
-    // `<module>.<key>`.
+    // may then not require: the declaring class's keys by name, an alter's own
+    // by `<module>.<key>`.
     $ruling = $mixins['ruling'];
     foreach ($links as [, $refiners, $module]) {
       foreach ($refiners as $refiner) {
@@ -165,15 +165,15 @@ final class Binding {
       }
     }
     $build = $build->withRuling($ruling);
-    // Each structure mixed in first, in the owner's frame: its coded
+    // Each structure mixed in first, in the declaring class's frame: its coded
     // refiners, its rules and its alters', on its own members, its ports
-    // read at the owner's keys they are wired to.
+    // read at the declaring class's keys they are wired to.
     // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
     foreach ($mixins['bind'] as $mixin) {
       $this->bindMixin($build, $mixin);
     }
     // Each contributor's coded refiners, then the rules it declared, the
-    // owner's before any alter's.
+    // declaring class's before any alter's.
     // Decision: see docs/decisions.md#a-rule-declared-as-data.
     $contributors = ['' => NULL];
     foreach ($links as [, , $module]) {
@@ -198,20 +198,20 @@ final class Binding {
   }
 
   /**
-   * Binds one mixed-in structure's refiners and rules in its owner's frame.
+   * Binds a mixed-in structure's refiners and rules where it is mixed in.
    *
    * Its coded refiners, its declared rules, then each of its alters' that
    * applies in the context: refining and narrowing only the structure's
    * own members, watching and reading only those and its ports, each port
-   * read at the owner's key it is wired to. What the alter rewords or
+   * read at the declaring class's key it is wired to. What the alter rewords or
    * offers is said through a blueprint that names the structure's members
    * alone and mounts nothing.
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build: its builder, the owner, and its context, which
-   *   says which alters apply.
+   *   The declaring class's build: its builder, the declaring class, and its
+   *   context, which says which alters apply.
    * @param array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[], attached?: string[], lists?: string[]} $mixin
    *   The structure, as mixIn() lists it: its plain members, and those
    *   holding a child at a fixed key or a collection, which its refiners
@@ -265,18 +265,19 @@ final class Binding {
    *   - the ports it reads, which a method may watch by name, never
    *     refine;
    *   - the parent this one is attached inside, or none;
-   *   - for an alter, its module (none for the owner itself), the owner's
+   *   - for an alter, its module (none for the provider itself), the provider's
    *     keys it offered more values on with extendChoices(), whose
    *     methods narrow its own values; the keys it added, which its
-   *     methods may refine and watch too; every key any alter of the owner
-   *     mounted, mapped to the modules that mounted it; and, for one that
+   *     methods may refine and watch too; every key any alter of the declaring
+   *     class mounted, mapped to the modules that mounted it; and, for one that
    *     attached a structure at its mount, the structure's keys, which its
    *     methods may watch and refine none;
-   *   - for a structure mixed into an owner, each of its ports mapped to
-   *     the owner's key it is wired to: a method watching the port is
+   *   - for a structure mixed into a declaring class, each of its ports mapped
+   *   to
+   *     the declaring class's key it is wired to: a method watching the port is
    *     handed that key's value, and the edge is the key's.
    * @param object|class-string $instance
-   *   The owner's class, whose methods are static, or the alter instance
+   *   The declaring class, whose methods are static, or the alter instance
    *   the methods are called on.
    * @param \Drupal\surface\ResourceBuild\RefinerDefinition[] $refiners
    *   Its #[RefinesInput] methods.
@@ -411,8 +412,8 @@ final class Binding {
    * Each rule is a static refiner of its key: its condition's keys become
    * refinement edges that gate nothing (Entry::declaredDependencies()),
    * and the contributor's rules one Refinement\DeclaredRefiner link in the
-   * owner's chain of each key they narrow, after the contributor's coded
-   * refiners. An alter's rule on a key it mounted is bound under the
+   * declaring class's chain of each key they narrow, after the contributor's
+   * coded refiners. An alter's rule on a key it mounted is bound under the
    * mount, as its coded refiners are.
    *
    * Decision: see docs/decisions.md#a-rule-declared-as-data.
@@ -426,13 +427,14 @@ final class Binding {
    *     by `<module>.<key>`;
    *   - the ports it reads, which a condition may name, and no rule
    *     narrows;
-   *   - for an alter, its module (none for the owner itself), the owner's
+   *   - for an alter, its module (none for the provider itself), the provider's
    *     keys it offered more values on, the keys it added, every key any
    *     alter mounted mapped to the modules that did, and, for one that
    *     attached a structure at its mount, the structure's keys: a
    *     condition may name them, and no rule of the alter's narrows them;
-   *   - for a structure mixed into an owner, each of its ports mapped to
-   *     the owner's key it is wired to, where a condition on the port
+   *   - for a structure mixed into a declaring class, each of its ports mapped
+   *   to
+   *     the declaring class's key it is wired to, where a condition on the port
    *     reads.
    * @param \Drupal\surface\Refinement\Rule[] $rules
    *   The rules the contributor declared, in order.
@@ -479,7 +481,7 @@ final class Binding {
         ));
       }
       if (!$own && !$nested && !$list && !in_array($rule->key, $input_keys, TRUE)) {
-        throw new \LogicException(sprintf('%s narrows "%s", which %s does not declare as an input%s.', $name, $rule->key, $definition->id, isset($mountedBy[$rule->key]) ? sprintf(' (the %s module mounted it, and an alter narrows only the keys it mounted itself and the owner\'s)', implode(', ', $mountedBy[$rule->key])) : ''));
+        throw new \LogicException(sprintf('%s narrows "%s", which %s does not declare as an input%s.', $name, $rule->key, $definition->id, isset($mountedBy[$rule->key]) ? sprintf(' (the %s module mounted it, and an alter narrows only the keys it mounted itself and the provider\'s)', implode(', ', $mountedBy[$rule->key])) : ''));
       }
       if (!$own && in_array($rule->key, $extended, TRUE)) {
         throw new \LogicException(sprintf('%s narrows "%s", a key the alter offered more values on. What it offered is narrowed by a #[RefinesInput] method on the key, handed those values alone; a declared rule of them is not built.', $name, $rule->key));
@@ -510,7 +512,7 @@ final class Binding {
           in_array($key, $attached, TRUE) => 'a key holding a child, whose values are the child\'s',
           in_array($key, $lists, TRUE) => 'a collection, whose items are each a child',
           !$mine && !$port && !in_array($key, $input_keys, TRUE) => isset($mountedBy[$key])
-            ? sprintf('a key the %s module mounted: an alter reads the keys it mounted itself and the owner\'s', implode(', ', $mountedBy[$key]))
+            ? sprintf('a key the %s module mounted: an alter reads the keys it mounted itself and the provider\'s', implode(', ', $mountedBy[$key]))
             : sprintf('no input of %s', $definition->id),
           default => NULL,
         };
@@ -627,7 +629,7 @@ final class Binding {
   }
 
   /**
-   * Refuses an owner's #[RefinesInput] method that is not static.
+   * Refuses a declaring class's #[RefinesInput] method that is not static.
    *
    * A resource or structure is never instantiated, so its refiner has no
    * instance to run on; an alter's may be either, since an alter is a
@@ -638,7 +640,7 @@ final class Binding {
    * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
    *   The method.
    * @param string|null $module
-   *   The module of an alter, or NULL for the owner itself.
+   *   The module of an alter, or NULL for the provider itself.
    *
    * @throws \LogicException
    *   Naming the method.
@@ -671,7 +673,7 @@ final class Binding {
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
    * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
-   *   The method, an alter's: an owner's that is not static is refused
+   *   The method, an alter's: a declaring class's that is not static is refused
    *   before this, by assertStaticOnResource().
    *
    * @throws \LogicException
@@ -709,12 +711,12 @@ final class Binding {
    * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
    *   The method.
    * @param string[] $input_keys
-   *   The owner's input keys.
+   *   The declaring class's input keys.
    * @param string[] $mounted
    *   The keys the method's alter added.
    * @param array<string, string[]> $mountedBy
    *   Every mounted key, mapped to the modules that mounted it; empty
-   *   for the owner's own methods.
+   *   for the declaring class's own methods.
    *
    * @throws \LogicException
    *   Naming the method, the key and the module that mounted it.
@@ -723,7 +725,7 @@ final class Binding {
     foreach ($refiner->watched() as $watched) {
       if (isset($mountedBy[$watched]) && !in_array($watched, $input_keys, TRUE) && !in_array($watched, $mounted, TRUE)) {
         throw new \LogicException(sprintf(
-          '%s watches "%s", a key the %s module mounted on %s. An alter may watch the keys it mounted itself and the owner\'s, never another module\'s.',
+          '%s watches "%s", a key the %s module mounted on %s. An alter may watch the keys it mounted itself and the provider\'s, never another module\'s.',
           $refiner->describe(),
           $watched,
           implode(', ', $mountedBy[$watched]),
@@ -746,9 +748,10 @@ final class Binding {
    * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
    *   The method.
    * @param string[] $input_keys
-   *   The owner's input keys, which win over a mounted key of one name.
+   *   The declaring class's input keys, which win over a mounted key of one
+   *   name.
    * @param string|null $module
-   *   The module of an alter, or NULL for the owner itself.
+   *   The module of an alter, or NULL for the provider itself.
    * @param string[] $mounted
    *   The keys that alter added.
    *
@@ -856,9 +859,9 @@ final class Binding {
    * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
    *   The method.
    * @param string[] $input_keys
-   *   The owner's input keys.
+   *   The declaring class's input keys.
    * @param string[] $output_keys
-   *   The owner's output keys.
+   *   The declaring class's output keys.
    * @param string[]|null $watchable
    *   The keys the method may watch, when more than the input keys: an
    *   alter's adds the keys it mounted.

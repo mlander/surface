@@ -193,7 +193,7 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
    * Tests the Compliance fieldset is drawn after the capacity, and stays.
    *
    * The alter places its fieldset after the capacity its license lifts:
-   * below the capacity and above the pricing, the next key the owner
+   * below the capacity and above the pricing, the next key the declaring class
    * declared. A license typed there still lifts the capacity, and the
    * refresh replaces the capacity and the stewards it moves, never the
    * fieldset, which is where it was afterwards.

@@ -39,7 +39,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PortableSchema\Builder\Schema;
 
 /**
- * Mixins: a structure's members merged into its owner's keys, flat.
+ * Mixins: a structure's members merged into its declaring class's keys, flat.
  *
  * The journal mixes in the ownership (whose port reads the journal's
  * visibility, and whose access class locks or omits its members) and the
@@ -198,13 +198,13 @@ class MixinsTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the members are the owner's keys, where mixIn() stands, stored flat.
+   * Tests the members are the declaring class's keys, stored flat, in place.
    */
-  public function testMembersAreTheOwnersKeys(): void {
+  public function testMembersAreTheDeclaringClassKeys(): void {
     $journal = $this->built(JournalResource::class);
     $map = $journal->entries();
     $this->assertSame(self::KEYS, $map->names());
-    $this->assertSame([], $map->ports(), 'A mixed-in structure\'s port is no port of its owner\'s.');
+    $this->assertSame([], $map->ports(), 'A mixed-in structure\'s port is no port of its declaring class\'s.');
     $mixins = $map->mixins();
     $this->assertCount(2, $mixins);
     $this->assertSame('resource_test.ownership', $mixins[0]->structure->id);
@@ -220,7 +220,7 @@ class MixinsTest extends SurfaceKernelTestBase {
       'created' => ['published'],
       'changed' => ['created'],
       'revision' => ['created'],
-    ], $map->refinementPaths(), 'Each port read at the owner\'s key it is wired to; the owner\'s rules read and narrow members.');
+    ], $map->refinementPaths(), 'Each port read at the declaring class\'s key it is wired to; the declaring class\'s rules read and narrow members.');
     $this->assertSame(['shelf', 'circle', 'owner', 'shared', 'stamps'], $map->entry('archive')->attachment->child->entries()->names(), 'The archive mixes the ownership in, in its own frame.');
 
     $this->assertSame([
@@ -233,11 +233,11 @@ class MixinsTest extends SurfaceKernelTestBase {
       'revision' => 1,
       'published' => FALSE,
       'archive' => NULL,
-    ], $this->container->get('surface.resources')->defaults(JournalResource::class), 'The members\' declared defaults are the owner\'s.');
+    ], $this->container->get('surface.resources')->defaults(JournalResource::class), 'The members\' declared defaults are the declaring class\'s.');
     $this->assertSame('Seconds since the epoch.', (string) DerivedDefinition::at($journal, 'created')->getDescription(), 'The timestamps\' alter applies where they are mixed in.');
     $this->assertSame('Seconds since the epoch.', (string) self::at($this->built(LedgerResource::class), 'stamps.created')->getDescription(), 'And where they are attached.');
 
-    // Stored flat: the members beside the owner's own keys.
+    // Stored flat: the members beside the declaring class's own keys.
     $resources = $this->container->get('surface.resources');
     $context = $resources->operation(JournalResource::class, 'configure');
     $storage = $resources->storage(JournalResource::class, $context, $journal);
@@ -255,17 +255,17 @@ class MixinsTest extends SurfaceKernelTestBase {
    */
   public function testEachRefusal(): void {
     $refusals = [
-      MixinClashStructure::class => 'resource_test.timestamps, mixed into resource_test.broken.mixin_clash, declares "created", which resource_test.broken.mixin_clash declares too. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.',
-      MixinClashLateStructure::class => 'resource_test.broken.mixin_clash_late declares "changed", which resource_test.timestamps, mixed in, declares already. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.',
-      TwoMixinsClashStructure::class => 'resource_test.broken.created_only, mixed into resource_test.broken.two_mixins_clash, declares "created", which resource_test.timestamps, also mixed in, declares too. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once.',
+      MixinClashStructure::class => 'resource_test.timestamps, mixed into resource_test.broken.mixin_clash, declares "created", which resource_test.broken.mixin_clash declares too. A mixed-in structure\'s members are the declaring class\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.',
+      MixinClashLateStructure::class => 'resource_test.broken.mixin_clash_late declares "changed", which resource_test.timestamps, mixed in, declares already. A mixed-in structure\'s members are the declaring class\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.',
+      TwoMixinsClashStructure::class => 'resource_test.broken.created_only, mixed into resource_test.broken.two_mixins_clash, declares "created", which resource_test.timestamps, also mixed in, declares too. A mixed-in structure\'s members are the declaring class\'s keys, so a name is declared once.',
       MixinWithChildStructure::class => 'resource_test.notice, mixed into resource_test.broken.mixin_with_child, attaches variants at "schedule". A mixed-in structure holds keys, maps and children at a fixed key or in a collection, not variants at a key or keys from the site, for now: attach resource_test.notice under a key of its own instead.',
-      MixinWiresChildStructure::class => 'resource_test.broken.pack.wired_ownership, mixed into resource_test.broken.mixin_wires_child, attaches resource_test.ownership at "owned" and wires its "audience" port. A child a mixed-in structure attaches is the owner\'s child at that key, and nothing wires its ports, for now: attach it with no reads:, or attach resource_test.broken.pack.wired_ownership under a key of its own.',
+      MixinWiresChildStructure::class => 'resource_test.broken.pack.wired_ownership, mixed into resource_test.broken.mixin_wires_child, attaches resource_test.ownership at "owned" and wires its "audience" port. A child a mixed-in structure attaches is the declaring class\'s child at that key, and nothing wires its ports, for now: attach it with no reads:, or attach resource_test.broken.pack.wired_ownership under a key of its own.',
       MixinCycleStructure::class => 'resource_test.broken.mixin_cycle_loop mixes resource_test.broken.mixin_cycle in, through resource_test.broken.mixin_cycle -> resource_test.broken.mixin_cycle_loop -> resource_test.broken.mixin_cycle: a structure cannot be mixed into itself, directly or through another.',
-      MixinUnwiredStructure::class => 'resource_test.broken.mixin_unwired mixes resource_test.ownership in without wiring its "audience" port: mixIn(..., reads: [\'audience\' => \'<key>\']) names the key of resource_test.broken.mixin_unwired it reads. A mixed-in structure\'s refiners read each port as the owner\'s key it is wired to, so every port is wired, required or not.',
-      MixinWiresMemberStructure::class => 'resource_test.broken.mixin_wires_member wires the "audience" port of resource_test.ownership, mixed in, to "owner", which resource_test.ownership brought itself: a port reads a key of the owner it is mixed into, and its members are its own.',
-      MixinGuardStructure::class => 'Drupal\surface_resource_test\Structure\Broken\MixinGuardStructure::noteOfTheOwner() names "owner", a member of resource_test.ownership, which is mixed into resource_test.broken.mixin_guard and has an access class. What that access may take away for one account, nothing of the owner\'s may depend on: read it inside resource_test.ownership, or drop the access class.',
-      MixinRulesOutStructure::class => 'narrow("changed") in resource_test.broken.mixin_rules_out may answer that "changed", a member of resource_test.timestamps mixed into resource_test.broken.mixin_rules_out, does not apply. Whether a mixed-in structure\'s member applies is the structure\'s to say: its def, which every owner shares, says where it is required.',
-      MixinResourceStructure::class => 'resource_test.broken.mixin_resource mixes resource_test.ledger in, which names storage of its own. A mixed-in structure\'s members are the owner\'s keys, stored by the owner: mix in a structure, or attach a resource under a key of its own.',
+      MixinUnwiredStructure::class => 'resource_test.broken.mixin_unwired mixes resource_test.ownership in without wiring its "audience" port: mixIn(..., reads: [\'audience\' => \'<key>\']) names the key of resource_test.broken.mixin_unwired it reads. A mixed-in structure\'s refiners read each port as the declaring class\'s key it is wired to, so every port is wired, required or not.',
+      MixinWiresMemberStructure::class => 'resource_test.broken.mixin_wires_member wires the "audience" port of resource_test.ownership, mixed in, to "owner", which resource_test.ownership brought itself: a port reads a key of the declaring class it is mixed into, and its members are its own.',
+      MixinGuardStructure::class => 'Drupal\surface_resource_test\Structure\Broken\MixinGuardStructure::noteOfTheOwner() names "owner", a member of resource_test.ownership, which is mixed into resource_test.broken.mixin_guard and has an access class. What that access may take away for one account, nothing of the declaring class\'s may depend on: read it inside resource_test.ownership, or drop the access class.',
+      MixinRulesOutStructure::class => 'narrow("changed") in resource_test.broken.mixin_rules_out may answer that "changed", a member of resource_test.timestamps mixed into resource_test.broken.mixin_rules_out, does not apply. Whether a mixed-in structure\'s member applies is the structure\'s to say: its def, which every declaring class shares, says where it is required.',
+      MixinResourceStructure::class => 'resource_test.broken.mixin_resource mixes resource_test.ledger in, which names storage of its own. A mixed-in structure\'s members are the declaring class\'s keys, stored by the declaring class: mix in a structure, or attach a resource under a key of its own.',
       MixesMountingStructure::class => 'The surface_resource_test alter of resource_test.broken.mounting_mixin adds "color", and resource_test.broken.mounting_mixin is mixed into resource_test.broken.mixes_mounting. An alter of a mixed-in structure narrows and rewords its members where it is mixed in; what it mounts would be mounted on resource_test.broken.mixes_mounting, which is not built.',
     ];
     $resources = $this->container->get('surface.resources');
@@ -278,16 +278,16 @@ class MixinsTest extends SurfaceKernelTestBase {
         $this->assertSame($message, $e->getMessage(), $class);
       }
     }
-    // Only an owner mixes in: an alter's blueprint has no mixIn(), so an
-    // alter's call fails where it is written, before any build.
+    // Only a declaring class mixes in: an alter's blueprint has no mixIn(), so
+    // an alter's call fails where it is written, before any build.
     $this->assertTrue((new \ReflectionClass(BlueprintInterface::class))->hasMethod('mixIn'));
     $this->assertFalse((new \ReflectionClass(BlueprintAdditionsInterface::class))->hasMethod('mixIn'));
   }
 
   /**
-   * Tests the members refine in the owner's frame, their ports its keys.
+   * Tests the members refine in the declaring class's frame, ports its keys.
    */
-  public function testRefinementInTheOwnersFrame(): void {
+  public function testRefinementInTheDeclaringClassFrame(): void {
     $journal = $this->built(JournalResource::class);
     // The ownership's coded refiner reads its port at the visibility.
     $this->assertTrue(DoesNotApply::marks(DerivedDefinition::at($journal->refine(['visibility' => 'public']), 'shared')));
@@ -299,11 +299,11 @@ class MixinsTest extends SurfaceKernelTestBase {
     $this->assertSame(1700000000, DerivedDefinition::at($journal->refine(['created' => 1700000000]), 'changed')->getConstraints()['Range']['min']);
     $this->assertTrue(DerivedDefinition::at($journal->refine(['created' => 5]), 'changed')->isRequired());
     $this->assertFalse(DerivedDefinition::at($journal->refine([]), 'changed')->isRequired());
-    // The owner's rule reads a member, as one of its own keys.
+    // The declaring class's rule reads a member, as one of its own keys.
     $this->assertSame(1, DerivedDefinition::at($journal->refine(['created' => NULL]), 'revision')->getConstraints()['Range']['max']);
     $this->assertSame(1, DerivedDefinition::at($journal->refine([]), 'revision')->getConstraints()['Range']['max'] ?? NULL);
     $this->assertArrayNotHasKey('max', DerivedDefinition::at($journal->refine(['created' => 5]), 'revision')->getConstraints()['Range']);
-    // The owner's rule narrows a member, as one of its own keys.
+    // The declaring class's rule narrows a member, as one of its own keys.
     $this->assertTrue(DerivedDefinition::at($journal->refine(['published' => TRUE]), 'created')->isRequired());
     $this->assertFalse(DerivedDefinition::at($journal->refine(['published' => FALSE]), 'created')->isRequired());
 
@@ -311,12 +311,12 @@ class MixinsTest extends SurfaceKernelTestBase {
     $this->assertSame(
       ['changed' => 'This value should be 1700000000 or more. This applies when Created is 1700000000.'],
       $this->refusals($journal, ['changed' => 1600000000]),
-      'Changed before created, refused in the owner\'s frame, naming the member it depends on.',
+      'Changed before created, refused in the declaring class\'s frame, naming the member it depends on.',
     );
     $this->assertSame(
       ['owner' => 'This value is too long. It should have 32 characters or less. This applies when Visibility is Staff.'],
       $this->refusals($journal, ['owner' => str_repeat('a', 40)]),
-      'A refusal the port caused names the owner\'s key it reads.',
+      'A refusal the port caused names the declaring class\'s key it reads.',
     );
     $this->assertSame([], $this->refusals($journal, ['visibility' => 'public', 'owner' => str_repeat('a', 40)]));
     $this->assertSame(
@@ -331,7 +331,7 @@ class MixinsTest extends SurfaceKernelTestBase {
     $this->assertSame(
       ['revision' => 'This value should be between 1 and 1. This applies when Created is empty.'],
       $this->refusals($journal, ['published' => FALSE, 'created' => NULL, 'changed' => NULL]),
-      'The owner\'s rule on a member: never created, the first revision.',
+      'The declaring class\'s rule on a member: never created, the first revision.',
     );
     $this->assertSame(
       [
@@ -339,14 +339,14 @@ class MixinsTest extends SurfaceKernelTestBase {
         'revision' => 'This value should be between 1 and 1. This applies when Created is empty.',
       ],
       $this->refusals($journal, ['created' => NULL, 'changed' => NULL]),
-      'The owner\'s rules on a member: a published journal says when it was created, and one never created is on its first revision.',
+      'The declaring class\'s rules on a member: a published journal says when it was created, and one never created is on its first revision.',
     );
     // Inside the archive the ownership reads the archive's circle.
     $this->assertTrue(DoesNotApply::marks(self::at($journal->refine(['archive' => ['circle' => 'public']]), 'archive.shared')));
   }
 
   /**
-   * Tests the mixin's access locks or omits its members, the owner's the rest.
+   * Tests the mixin's access locks or omits its members alone.
    *
    * The two answers compose as any two do: the stricter stands. The
    * ownership locked inside an archive its own access left open is locked;
@@ -407,17 +407,17 @@ class MixinsTest extends SurfaceKernelTestBase {
     // Decision: see docs/decisions.md#contract-2.
     $full = Schemas::decoded(SchemaResolver::restored(Schema::from($full)));
     $this->assertSame(['resource_test.timestamps', 'resource_test.ownership', 'resource_test.archive'], array_keys($full['$defs']), 'The archive\'s stamps first, then what it mixes in.');
-    $this->assertSame(self::KEYS, array_keys($full['properties']), 'Every member keeps its place among the owner\'s keys.');
+    $this->assertSame(self::KEYS, array_keys($full['properties']), 'Every member keeps its place among the declaring class\'s keys.');
     $this->assertTrue($full['properties']['changed'], 'The def says all there is.');
     // Its declared rule's conditional is one the frame's rules name, marked
     // there (below); the key carries no marker.
-    $this->assertSame(['x-surface' => ['dependsOn' => ['published']]], $full['properties']['created'], 'The owner narrows it: said beside the def.');
+    $this->assertSame(['x-surface' => ['dependsOn' => ['published']]], $full['properties']['created'], 'The declaring class narrows it: said beside the def.');
     $this->assertFalse($full['unevaluatedProperties']);
     $this->assertArrayNotHasKey('additionalProperties', $full);
     $this->assertSame(['title', 'visibility'], $full['required'], 'What the defs require, they say.');
     $this->assertSame(['$ref' => '#/$defs/resource_test.ownership'], $full['allOf'][0]);
     $this->assertSame(['$ref' => '#/$defs/resource_test.timestamps'], $full['allOf'][1]);
-    // The defs are open: an owner composes them with keys of its own.
+    // The defs are open: a declaring class composes them with keys of its own.
     $this->assertArrayNotHasKey('additionalProperties', $full['$defs']['resource_test.timestamps']);
     $this->assertArrayNotHasKey('additionalProperties', $full['$defs']['resource_test.ownership']);
     // The archive's own stamps refer to the same def, closed at the site.
@@ -464,7 +464,7 @@ class MixinsTest extends SurfaceKernelTestBase {
       JSON, TRUE);
     $this->assertSame($expected['resource_test.timestamps'], $full['$defs']['resource_test.timestamps']);
     $this->assertSame($expected['resource_test.ownership'], $full['$defs']['resource_test.ownership']);
-    // What reads the port is stated on the owner, at its key.
+    // What reads the port is stated on the declaring class, at its key.
     $this->assertSame(['x-surface' => ['dependsOn' => ['visibility']]], $full['properties']['owner']);
     $this->assertSame(['x-surface' => ['dependsOn' => ['visibility'], 'enumerated' => TRUE]], $full['properties']['shared']);
     // Less the declared type each narrowing states beside a keyword one
@@ -474,7 +474,7 @@ class MixinsTest extends SurfaceKernelTestBase {
     $this->assertContains(self::untyped(json_decode('{"if": {"properties": {"visibility": {"const": "staff"}}, "required": ["visibility"]}, "then": {"properties": {"owner": {"type": "string", "description": "Up to 32 characters for a staff audience.", "maxLength": 32}}}, "x-surface": {"declared": true}}', TRUE)), $stated);
     $this->assertContains(self::untyped(json_decode('{"if": {"properties": {"created": {"type": "null"}}}, "then": {"properties": {"revision": {"type": "integer", "description": "A journal never created is on its first revision.", "maximum": 1}}}, "x-surface": {"declared": true}}', TRUE)), $stated);
     $this->assertContains(self::untyped(json_decode('{"if": {"properties": {"published": {"const": true}}, "required": ["published"]}, "then": {"properties": {"created": {"description": "A published journal says when it was created.", "type": "integer"}}, "required": ["created"]}, "x-surface": {"declared": true}}', TRUE)), $stated);
-    $this->assertCount(6, $full['allOf'], 'Two references and four conditionals: the owner\'s two rules, and what reads the port.');
+    $this->assertCount(6, $full['allOf'], 'Two references and four conditionals: the declaring class\'s two rules, and what reads the port.');
 
     // A standard validator holds the composed document as the pipeline.
     $this->assertTrue($this->validates($full, self::JOURNAL));
@@ -543,12 +543,12 @@ class MixinsTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a child a structure mixed in attaches is the owner's at its key.
+   * Tests a child a structure mixed in attaches is the declaring class's.
    *
    * The harness brings its hip belt (a child at a fixed key), its pockets
    * (a collection) and its rain cover (a map holding a pouch, a structure with
-   * no id): each is the owner's child where the call stands, built as the
-   * owner's own children are, and the def says each by reference.
+   * no id): each is the declaring class's child where the call stands, built as
+   * the declaring class's own children are, and the def says each by reference.
    */
   public function testMixedInStructureHoldsChildren(): void {
     $harnessed = $this->container->get('surface.resources')->build(HarnessedStructure::class, new OperationContext('configure'));

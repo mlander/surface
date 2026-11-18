@@ -49,8 +49,8 @@ final class ResourceCatalog {
    *   anything; `unresolvable` lists its permission's placeholders no
    *   parameter can supply; `standalone` says whether it can be asked on
    *   its own, as a route or a tool; `default` names, for the read the
-   *   build adds, the update it reads (NULL for every operation an owner
-   *   declares). Operations are a list in
+   *   build adds, the update it reads (NULL for every operation a declaring
+   *   class declares). Operations are a list in
    *   discovery order, so two providers of one id are both listed, as
    *   they are both refused when it is built. `variants` are the declared
    *   ones, each value's #[Variant] class keyed by the variants' key;

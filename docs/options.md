@@ -189,10 +189,10 @@ $inputs->add('variant', Schema::options(ExampleVariant::choices())
 schema, and an alter widens it at build time with
 `extendChoices()`: `surface_examples_extras` contributes `ribbon`, which
 is deliberately not a case in the example's enum. A contributor answers for
-its own value, and the owner's enum is not where that value lives: that
+its own value, and the declaring class's enum is not where that value lives: that
 is what a contribution *is*. So code acting on a stored value takes the
 string it was handed rather than `ExampleVariant::from()`-ing it, and only
-the owner's own half of the vocabulary is enumerated. An enum used as a
+the declaring class's own half of the vocabulary is enumerated. An enum used as a
 gate turns every contribution into a fatal.
 
 **When the plain array is enough.** Most vocabularies are named once, in

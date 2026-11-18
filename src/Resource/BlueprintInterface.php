@@ -8,7 +8,7 @@ use Drupal\Core\Cache\CacheableDependencyInterface;
 use PortableSchema\Builder\Schema;
 
 /**
- * What only the owner may do, on top of adding.
+ * What only the declaring class may do, on top of adding.
  *
  * Handed to defineInputs() and defineOutputs(). Outputs may not be
  * refined, which the framework refuses when sealing rather than with a
@@ -43,8 +43,8 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * every #[Variant] at the key; a declared variant wins for a value both
    * name. Each entry's label is what $by offers its value as; an entry
    * that says a start or a lock is refused, since a variant reads
-   * neither. A provider that lists for several owners (the bundles of
-   * whichever entity type) is handed the arguments that say which list,
+   * neither. A provider that lists for several declaring classes (the bundles
+   * of whichever entity type) is handed the arguments that say which list,
    * `arguments:`, and implements BoundSiteListInterface.
    *
    * `storedAs: Variants::FLAT` has a config storage keep the chosen
@@ -115,8 +115,9 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   ->check('drupal:SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['page']]), from: Slots::class, label: t('Pages'));
    * @endcode
    *
-   * The map is the owner's key: a rule of the owner's may say it does not
-   * apply, and names nothing inside it, as for an attached child.
+   * The map is the declaring class's key: a rule of the declaring class's may
+   * say it does not apply, and names nothing inside it, as for an attached
+   * child.
    *
    * @param string $key
    *   The key the map sits at.
@@ -185,23 +186,23 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * Mixes a structure in: its members become this blueprint's own keys.
    *
    * Where attach() nests a structure under a key, behind the wall, this
-   * merges its members into the owner's keys at this point of the
-   * declaration: stored flat, described by the owner's config schema,
-   * refined in the owner's frame, drawn and accepted as the owner's own.
-   * The structure keeps what makes it reusable: its coded refiners and
-   * declared rules (which narrow only its own members and read only its
+   * merges its members into the declaring class's keys at this point of the
+   * declaration: stored flat, described by the declaring class's config schema,
+   * refined in the declaring class's frame, drawn and accepted as the declaring
+   * class's own. The structure keeps what makes it reusable: its coded refiners
+   * and declared rules (which narrow only its own members and read only its
    * members and its ports), its alters, its access class (which locks or
-   * omits its members) and its def, one id however many owners mix it in.
-   * What it reads of the owner it declares as ports (reads()), which
-   * $reads wires to the owner's keys, as attach() wires them; every port
-   * is wired. A child it attaches at a fixed key or in a collection is the
-   * owner's child at that key, nothing wiring its ports.
+   * omits its members) and its def, one id however many declaring classes mix
+   * it in. What it reads of the declaring class it declares as ports (reads()),
+   * which $reads wires to the declaring class's keys, as attach() wires them;
+   * every port is wired. A child it attaches at a fixed key or in a collection
+   * is the declaring class's child at that key, nothing wiring its ports.
    *
    * Nest for a thing of its own inside this one (a contact, a ticket);
    * mix in for shared members that are part of this thing (timestamps,
    * ownership, publishing flags).
    *
-   * Owner only: an alter's keys live under its own module's name, so the
+   * Provider only: an alter's keys live under its own module's name, so the
    * alter's blueprint, BlueprintAdditionsInterface, has no mixIn(); an
    * alter attaches a structure at its own mount instead.
    *
@@ -215,7 +216,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   and children at a fixed key or in a collection, no variants at a
    *   key and no keys from the site.
    * @param array<string, string> $reads
-   *   Its ports, each mapped to the owner's key it reads, by name.
+   *   Its ports, each mapped to the declaring class's key it reads, by name.
    *
    * @return $this
    *
@@ -225,8 +226,8 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   holding variants at a key, keys from the site or a child whose ports
    *   it wires, and when one of its members is a key this
    *   blueprint, or another structure mixed in, declares already.
-   *   The structure, its access and the wiring are checked when the owner
-   *   is built: see docs/resources.md#mixins.
+   *   The structure, its access and the wiring are checked when the declaring
+   *   class is built: see docs/resources.md#mixins.
    *
    * @see docs/decisions.md#a-mixin-is-merged-flat
    */

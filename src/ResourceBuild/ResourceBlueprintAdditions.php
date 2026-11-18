@@ -17,10 +17,10 @@ use Drupal\surface\Reference\References;
 /**
  * An alter's blueprint: keys are mounted under the alter's module.
  *
- * The pattern draws an alter's key beside the owner's. The engine keeps
- * every contribution in the contributor's own namespace instead
+ * The pattern draws an alter's key beside the declaring class's. The engine
+ * keeps every contribution in the contributor's own namespace instead
  * (third_party_settings.<module>.<key>), and that is the spelling kept
- * here, because it is what lets the owner's storage and
+ * here, because it is what lets the declaring class's storage and
  * config schema store a contribution without knowing its keys, and what
  * lets two modules add a key of the same name without colliding.
  *
@@ -31,7 +31,7 @@ use Drupal\surface\Reference\References;
  * mount's keys are then the structure's, which the build step builds in
  * its own frame and fixes there (SurfaceBuilder::
  * mountStructure()). The alter is then an adapter: it wires the
- * structure's ports to the owner's keys, and adds no key of its own.
+ * structure's ports to the declaring class's keys, and adds no key of its own.
  *
  * @internal
  */
@@ -47,9 +47,10 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    * @param string $provider
    *   The module the alter is in, which its keys are mounted under.
    * @param array{0: string, 1: string, 2: string[]}|null $mixedIn
-   *   For an alter of a structure mixed into an owner, the structure's
-   *   id, the owner's id and the members the structure brought, which are
-   *   all this alter may name there; NULL for an alter of the owner.
+   *   For an alter of a structure mixed into a declaring class, the structure's
+   *   id, the declaring class's id and the members the structure brought, which
+   *   are all this alter may name there; NULL for an alter of the declaring
+   *   class.
    * @param \ArrayObject<string, string>|null $described
    *   The facts the alters of one build set on keys they do not own, each
    *   by the module that set it, keyed by the key and the fact; shared by
@@ -67,12 +68,12 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
   }
 
   /**
-   * Refuses what an alter of a mixed-in structure cannot do in its owner.
+   * Refuses what an alter of a mixed-in structure cannot do in its container.
    *
    * Its alters apply wherever the structure is mixed in, on the
-   * structure's members, which are the owner's keys there. A key it would
-   * mount would be the owner's mount, and a key it names beyond the
-   * structure's members would be the owner's own: neither is the
+   * structure's members, which are the declaring class's keys there. A key it
+   * would mount would be the declaring class's mount, and a key it names beyond
+   * the structure's members would be the declaring class's own: neither is the
    * structure's.
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
@@ -89,10 +90,10 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
     if ($this->mixedIn === NULL || ($key !== NULL && in_array($key, $this->mixedIn[2], TRUE))) {
       return;
     }
-    [$structure, $owner] = $this->mixedIn;
+    [$structure, $declaring_class] = $this->mixedIn;
     throw new \LogicException($key === NULL
-      ? sprintf('The %s alter of %s %s, and %s is mixed into %s. An alter of a mixed-in structure narrows and rewords its members where it is mixed in; what it mounts would be mounted on %s, which is not built.', $this->provider, $structure, $verb, $structure, $owner, $owner)
-      : sprintf('The %s alter of %s %s "%s", which %s does not declare. Mixed into %s, it names the structure\'s members alone.', $this->provider, $structure, $verb, $key, $structure, $owner));
+      ? sprintf('The %s alter of %s %s, and %s is mixed into %s. An alter of a mixed-in structure narrows and rewords its members where it is mixed in; what it mounts would be mounted on %s, which is not built.', $this->provider, $structure, $verb, $structure, $declaring_class, $declaring_class)
+      : sprintf('The %s alter of %s %s "%s", which %s does not declare. Mixed into %s, it names the structure\'s members alone.', $this->provider, $structure, $verb, $key, $structure, $declaring_class));
   }
 
   /**
@@ -100,8 +101,8 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    */
   public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?ArrangementGroup $group = NULL, ?int $weight = NULL, string|\Stringable|null $placeholder = NULL, string|\Stringable|null $prefix = NULL, string|\Stringable|null $suffix = NULL, string|\Stringable|null $help = NULL): static {
     $this->assertWithinMixin('rewords', $key);
-    // The owner's own words are kept, for what describes the owner's
-    // storage whichever modules are on (its config schema).
+    // The declaring class's own words are kept, for what describes the
+    // declaring class's storage whichever modules are on (its config schema).
     $owned = $label === NULL || str_starts_with($key, 'third_party_settings.') ? NULL : $this->find($key);
     if ($owned !== NULL) {
       DefinitionMetadata::keepOwnLabel($owned);
@@ -128,7 +129,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
       // does not own: it places and rewords, never takes away.
       // Decision: see docs/decisions.md#arrangement-is-declared-once.
       throw new \LogicException(sprintf(
-        'The %s alter arranges "%s" with an empty %s, which would take away what its owner arranged. An alter places a key it does not own and rewords what was said of it, never removes it; leave it NULL to keep it.',
+        'The %s alter arranges "%s" with an empty %s, which would take away what its declaring class arranged. An alter places a key it does not own and rewords what was said of it, never removes it; leave it NULL to keep it.',
         $this->provider,
         $key,
         implode(' and ', $removed),
@@ -140,8 +141,8 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
   /**
    * Refuses a fact about a key another alter has set already.
    *
-   * The owner's words and arrangement are what alters lay over. The first
-   * alter to set a fact on a key it does not own sets it; a second alter
+   * The declaring class's words and arrangement are what alters lay over. The
+   * first alter to set a fact on a key it does not own sets it; a second alter
    * setting the same fact on the same key has no right answer beside the
    * first, so it is refused, naming both. Two alters setting different
    * facts on one key compose, and a module may say one fact again.
@@ -165,7 +166,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
       $by = $this->described[$key . ' ' . $fact] ?? NULL;
       if ($by !== NULL && $by !== $this->provider) {
         throw new \LogicException(sprintf(
-          'describe("%s") in %s sets its %s, which the %s alter set already. A fact about a key is set by one alter: the owner\'s is what alters lay over, and two alters setting the same one have no right answer between them. One module words a key, or each sets another fact.',
+          'describe("%s") in %s sets its %s, which the %s alter set already. A fact about a key is set by one alter: the provider\'s is what alters lay over, and two alters setting the same one have no right answer between them. One module words a key, or each sets another fact.',
           $key,
           $this->who(),
           $fact,
@@ -194,7 +195,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
     $mount = 'third_party_settings.' . $this->provider;
     if ($key !== $mount) {
       throw new \LogicException(sprintf(
-        'The %s alter attaches %s at "%s". An alter attaches under its own mount, and only at the mount itself, %s: at the owner\'s level the structure\'s keys would be the owner\'s, and a structure at a key inside the mount is not built.',
+        'The %s alter attaches %s at "%s". An alter attaches under its own mount, and only at the mount itself, %s: at the declaring class\'s level the structure\'s keys would be the declaring class\'s, and a structure at a key inside the mount is not built.',
         $this->provider,
         $structure,
         $key,
@@ -234,7 +235,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
   }
 
   /**
-   * The owner's keys this module offered more values on, in order.
+   * The provider's keys this module offered more values on, in order.
    *
    * @var string[]
    */
@@ -245,12 +246,12 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    *
    * Through the engine's own contribution, recorded under this module,
    * so the values are advertised as this module's and refined apart from
-   * the owner's.
+   * the declaring class's.
    */
   public function extendChoices(string $key, array $choices): static {
     $this->assertWithinMixin('offers more values on', $key);
     if ($this->builder->getDefinition($key) === NULL) {
-      throw new \LogicException(sprintf('The %s alter offers more values on "%s", which the owner does not declare as an input.', $this->provider, $key));
+      throw new \LogicException(sprintf('The %s alter offers more values on "%s", which the declaring class does not declare as an input.', $this->provider, $key));
     }
     $this->builder->extendChoices($key, $choices, $this->provider);
     if (!in_array($key, $this->extended, TRUE)) {
@@ -260,7 +261,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
   }
 
   /**
-   * Gets the owner's keys this module offered more values on.
+   * Gets the provider's keys this module offered more values on.
    *
    * @return string[]
    *   The keys, in the order they were extended.
@@ -279,8 +280,8 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    */
   public function resolve(string $key, array $from, string $using): static {
     if ($this->mixedIn !== NULL) {
-      [$structure, $owner] = $this->mixedIn;
-      throw new \LogicException(sprintf('The %s alter of %s resolves "%s", and %s is mixed into %s. A resolve is a resource\'s own, read from its storage: an alter of a mixed-in structure declares none, for now.', $this->provider, $structure, $key, $structure, $owner));
+      [$structure, $declaring_class] = $this->mixedIn;
+      throw new \LogicException(sprintf('The %s alter of %s resolves "%s", and %s is mixed into %s. A resolve is a resource\'s own, read from its storage: an alter of a mixed-in structure declares none, for now.', $this->provider, $structure, $key, $structure, $declaring_class));
     }
     return parent::resolve($key, $from, $using);
   }
@@ -350,14 +351,14 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    * {@inheritdoc}
    */
   public function addEachTyped(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition {
-    throw new \LogicException(sprintf('addEach("%s") declares keys from the site, which only an owner\'s own blueprint holds.', $key));
+    throw new \LogicException(sprintf('addEach("%s") declares keys from the site, which only a declaring class\'s own blueprint holds.', $key));
   }
 
   /**
    * {@inheritdoc}
    */
   public function computeTyped(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition {
-    throw new \LogicException(sprintf('compute("%s") declares a computed key, which only an owner\'s own blueprint holds.', $key));
+    throw new \LogicException(sprintf('compute("%s") declares a computed key, which only a declaring class\'s own blueprint holds.', $key));
   }
 
 }

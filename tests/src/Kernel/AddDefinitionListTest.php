@@ -41,7 +41,7 @@ class AddDefinitionListTest extends SurfaceKernelTestBase {
   ];
 
   /**
-   * Gets a fresh owner's blueprint over a fresh builder.
+   * Gets a fresh declaring class's blueprint over a fresh builder.
    *
    * @return \Drupal\surface\ResourceBuild\ResourceBlueprint
    *   The blueprint.

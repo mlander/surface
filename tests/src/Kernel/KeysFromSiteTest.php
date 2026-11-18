@@ -143,7 +143,7 @@ class KeysFromSiteTest extends SurfaceKernelTestBase {
     // The benches: the bench structure at every entry, built once.
     $benches = $map->entry('benches')->attachment;
     $this->assertNotNull($benches);
-    $this->assertNull($benches->source, 'The map is its owner\'s, of no class.');
+    $this->assertNull($benches->source, 'The map is its declaring class\'s, of no class.');
     $entries = $benches->child->entries();
     $this->assertSame(['lathe', 'press', 'saw'], array_keys($entries->toArray()));
     $this->assertSame(['Lathe', 'Drill press', 'Band saw'], array_map(static fn ($definition): string => (string) $definition->getLabel(), array_values(DerivedDefinition::all($entries))));
@@ -245,8 +245,8 @@ class KeysFromSiteTest extends SurfaceKernelTestBase {
     $violations = $this->pipeline()->validate($workshop, $this->pipeline()->accept($workshop, $input, $stored), $stored);
     $this->assertSame(['benches.lathe.hours'], array_values(array_unique(array_map(static fn ($violation): string => $violation->fullPath(), iterator_to_array($violations)))));
 
-    // The owner's rule rules out the whole map, as for an attached child:
-    // what it holds says nothing, a change is refused by name.
+    // The declaring class's rule rules out the whole map, as for an attached
+    // child: what it holds says nothing, a change is refused by name.
     $accepted = $this->pipeline()->accept($workshop, ['closed' => TRUE], $stored);
     $this->assertArrayNotHasKey('lights', $accepted);
     $this->assertTrue($this->pipeline()->validate($workshop, $accepted, $stored)->isEmpty());

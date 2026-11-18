@@ -116,8 +116,8 @@ use PortableSchema\Builder\Schema;
  * (CheckboxesWidget::drawsList(), RadiosWidget::drawsOne()); a list with
  * no option list is `list`, rows to add and remove. A key a module's
  * widget claims (WidgetChoice::claimed()) is that widget's
- * word, ahead of the stock rule, unless its owner asked for one with the
- * `widget` setting. One hint has no
+ * word, ahead of the stock rule, unless its declaring class asked for one with
+ * the `widget` setting. One hint has no
  * Form API counterpart here: `variants`, for a key with variants, whose
  * shape a sibling chooses. Beside the widget, `x-portable-ui` carries a
  * key's arrangement (`group`, `weight`, its texts as `options`, each
@@ -610,7 +610,7 @@ final class ContractEmitter {
   protected function frame(SurfaceInterface $declared, array $values, Emission $emission): array {
     $full = $emission->full();
     $prefix = $emission->prefix;
-    $owner = $emission->owner;
+    $declaring_class = $emission->declaringClass;
     $cacheability = $emission->cacheability;
     $subschemas = $emission->subschemas;
     $standing = $emission->standing;
@@ -725,7 +725,7 @@ final class ContractEmitter {
         $pointer = $this->site['pointer'] . '/' . Choices::escape($name);
         $picked = $this->choices?->entries($entry->attachment->child, $pointer) ?? [];
         if ($picked !== []) {
-          [$stated, $requiring] = $this->entriesChosen($name, $entry->attachment, $owner . '.' . $name, $picked, $emission);
+          [$stated, $requiring] = $this->entriesChosen($name, $entry->attachment, $declaring_class . '.' . $name, $picked, $emission);
           $properties[$name] = $properties[$name]->with('properties', $stated);
           if ($requiring !== []) {
             $properties[$name] = $properties[$name]->with('required', $requiring);
@@ -760,7 +760,7 @@ final class ContractEmitter {
         $inside = $declaring || $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
         $around = $this->enter($name);
         try {
-          [$instance, $shown[$name]] = $this->frame($child, $inside, $emission->withPrefix($prefix . $name . '.')->withOwner($attachment->id ?? $owner . '.' . $name)->withFrozen($locked));
+          [$instance, $shown[$name]] = $this->frame($child, $inside, $emission->withPrefix($prefix . $name . '.')->withDeclaringClass($attachment->id ?? $declaring_class . '.' . $name)->withFrozen($locked));
         }
         finally {
           $this->site = $around;
@@ -781,7 +781,7 @@ final class ContractEmitter {
       }
       elseif ($entry->attachment !== NULL) {
         $attachment = $entry->attachment;
-        $fallback = $owner . '.' . $name;
+        $fallback = $declaring_class . '.' . $name;
         $around = $this->enter($name);
         try {
           $key = $this->define($attachment, $fallback, $emission);
@@ -798,7 +798,7 @@ final class ContractEmitter {
             $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
             // A child its access locked is described locked through and
             // through: every key inside it fixed to what it holds.
-            [$instance, $shown[$name]] = $this->instance($child, $key, $inside, $emission->withPrefix($prefix . $name . '.')->withOwner($attachment->id ?? $fallback)->withFrozen($locked));
+            [$instance, $shown[$name]] = $this->instance($child, $key, $inside, $emission->withPrefix($prefix . $name . '.')->withDeclaringClass($attachment->id ?? $fallback)->withFrozen($locked));
             $reference = $this->propertySchema->reference($key, $instance, $subschemas);
           }
         }
@@ -1045,8 +1045,8 @@ final class ContractEmitter {
    * def and its own `properties`, closed with `unevaluatedProperties`, so
    * the def stays reusable with one id. A member keeps its place in the
    * frame's `properties`: `true` where the def says all there is, what
-   * differs where the owner narrows it here (a lock, a context, the
-   * values of this document, a port read at the owner's key), and
+   * differs where the declaring class narrows it here (a lock, a context, the
+   * values of this document, a port read at the declaring class's key), and
    * `false` where it does not apply to these values. What the def
    * requires and the conditionals it states are said there, not again.
    *
@@ -1057,13 +1057,14 @@ final class ContractEmitter {
    * @param \PortableSchema\Builder\Schema $schema
    *   The frame, described flat.
    * @param \Drupal\surface\Contract\Emission $emission
-   *   The walk, at the frame: its owner is the id the frame was built from.
+   *   The walk, at the frame: its declaring class is the id the frame was built
+   *   from.
    *
    * @return \PortableSchema\Builder\Schema
    *   The frame, composed.
    */
   protected function composed(Entries $advertised, Schema $schema, Emission $emission): Schema {
-    $owner = $emission->owner;
+    $declaring_class = $emission->declaringClass;
     $subschemas = $emission->subschemas;
     $flat = $schema->get('properties') ?? [];
     $required = $schema->get('required') ?? [];
@@ -1071,7 +1072,7 @@ final class ContractEmitter {
     $references = [];
     $members = [];
     foreach ($advertised->mixins() as $mixin) {
-      $key = $this->define($mixin->structure, $owner . '.' . $mixin->structure->source, $emission);
+      $key = $this->define($mixin->structure, $declaring_class . '.' . $mixin->structure->source, $emission);
       // Read flat: a structure it mixes in itself says its members there.
       $def = SchemaResolver::inline($subschemas->get($key) ?? Schema::any(), Schema::any()->with('$defs', $subschemas->all()));
       $references[] = Schema::any()->with('$ref', self::DEFS . self::pointer($key));
@@ -1116,10 +1117,10 @@ final class ContractEmitter {
   /**
    * Answers whether a member holding a child is here what its def says.
    *
-   * A child a mixin brings is the owner's child at the key, the same
+   * A child a mixin brings is the declaring class's child at the key, the same
    * child the mixin's own build holds, and variants it holds at a key are
-   * the owner's there, the same variants; so the owner's frame and the
-   * def each name them by reference. The def is
+   * the declaring class's there, the same variants; so the declaring class's
+   * frame and the def each name them by reference. The def is
    * read flat, its references followed, so the member is followed too
    * before the two are compared: the same, it says nothing the def does
    * not.
@@ -1335,7 +1336,7 @@ final class ContractEmitter {
       // The rules, on the key as its holder holds it: the holder's schema
       // states the base, and a rule is applied to its definition
       // (Conditionals::rules()).
-      $pseudo = new Entry($entry->name, $holder->schema(), refiners: [SurfaceInterface::OWNER => $links]);
+      $pseudo = new Entry($entry->name, $holder->schema(), refiners: [SurfaceInterface::DECLARING_CLASS => $links]);
       [, $stated] = $this->conditionals->rules($pseudo, $base, [], FALSE, $emission, holder: $holder);
       array_push($branches, ...$stated);
     }
@@ -1360,7 +1361,7 @@ final class ContractEmitter {
    *
    * An entry of a map of keys from the site reads a sibling map's entry
    * through the map's own port: what depends on it is stated where the
-   * map's port is wired, in the owner's frame, never in the map's.
+   * map's port is wired, in the declaring class's frame, never in the map's.
    *
    * @param \Drupal\surface\Attachment $attachment
    *   The child, wired.
@@ -1464,8 +1465,8 @@ final class ContractEmitter {
    *
    * The module's property inside `third_party_settings` refers to the
    * structure's def, narrowed where this document's values refine it, and
-   * says which of the owner's keys each port reads; what the structure
-   * answers for a port that holds nothing is stated on this frame.
+   * says which of the declaring class's keys each port reads; what the
+   * structure answers for a port that holds nothing is stated on this frame.
    *
    * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    *
@@ -1510,11 +1511,11 @@ final class ContractEmitter {
       }
       $around = $this->enter($entry->name, $module);
       try {
-        $key = $this->define($attachment, $emission->owner . '.' . $entry->name . '.' . $module, $emission);
+        $key = $this->define($attachment, $emission->declaringClass . '.' . $entry->name . '.' . $module, $emission);
         $child = $attachment->bound($values);
         $held = NestedArray::getValue($values, [$entry->name, $module]);
         $inside = $emission->full() || $emission->blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
-        [$instance] = $this->instance($child, $key, $inside, $emission->withPrefix($path . '.' . $module . '.')->withOwner($attachment->id ?? $key)->withFrozen($locked)->withoutStale());
+        [$instance] = $this->instance($child, $key, $inside, $emission->withPrefix($path . '.' . $module . '.')->withDeclaringClass($attachment->id ?? $key)->withFrozen($locked)->withoutStale());
       }
       finally {
         $this->site = $around;
@@ -1592,7 +1593,7 @@ final class ContractEmitter {
    * @param string[] $depends
    *   The siblings the parent's refiners of the list watch.
    * @param \Drupal\surface\Contract\Emission $emission
-   *   The walk, at the collection's frame: its owner is the id of the
+   *   The walk, at the collection's frame: its declaring class is the id of the
    *   resource or structure it belongs to, a stale value inside an item
    *   is listed under its delta, and a def (declaring) has its items as a
    *   bare reference.
@@ -1603,11 +1604,11 @@ final class ContractEmitter {
    */
   protected function collection(SurfaceInterface $declared, Collection $list, Entry $current, Entry $entry, array $values, bool $locked, array $depends, Emission $emission): array {
     $path = $emission->at($entry->name);
-    $owner = $emission->owner;
+    $declaring_class = $emission->declaringClass;
     $declaring = $emission->declaring;
     $subschemas = $emission->subschemas;
     $child = $list->child();
-    $fallback = $owner . '.' . $entry->name;
+    $fallback = $declaring_class . '.' . $entry->name;
     // Every item is one structure: a key inside one is named by the
     // first item's index.
     $around = $this->enter($entry->name, '0');
@@ -1617,7 +1618,7 @@ final class ContractEmitter {
         $items = $this->propertySchema->reference($key, NULL, $subschemas);
       }
       else {
-        [$instance] = $this->instance($child, $key, $this->known($child), $emission->withPrefix($path . '.*.')->withOwner($list->item->id ?? $fallback)->withStanding([])->withFrozen($locked)->withBlank(TRUE)->withoutStale());
+        [$instance] = $this->instance($child, $key, $this->known($child), $emission->withPrefix($path . '.*.')->withDeclaringClass($list->item->id ?? $fallback)->withStanding([])->withFrozen($locked)->withBlank(TRUE)->withoutStale());
         $items = $this->propertySchema->reference($key, $instance, $subschemas);
       }
     }
@@ -1653,7 +1654,7 @@ final class ContractEmitter {
       $shown = [];
       foreach (array_values($held) as $delta => $item) {
         $inside = array_replace($child->getDefaultValues(), is_array($item) ? $item : []);
-        [, $shown[]] = $this->frame($child, $inside, $emission->withPrefix($path . '.' . $delta . '.')->withOwner($list->item->id ?? $fallback)->withFrozen($locked)->withBlank(FALSE));
+        [, $shown[]] = $this->frame($child, $inside, $emission->withPrefix($path . '.' . $delta . '.')->withDeclaringClass($list->item->id ?? $fallback)->withFrozen($locked)->withBlank(FALSE));
       }
     }
     return [$schema, $shown];
@@ -1698,8 +1699,9 @@ final class ContractEmitter {
     $subschemas->begin($id, $child);
     [$def] = $this->frame($child, [], $emission->forDef($id));
     if ($subschemas->isOpen($id)) {
-      // Mixed in somewhere in this document: open, so an owner composes it
-      // with keys of its own, and closed by every other place it is used.
+      // Mixed in somewhere in this document: open, so a declaring class
+      // composes it with keys of its own, and closed by every other place it is
+      // used.
       // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
       $def = $def->without('additionalProperties')->without('unevaluatedProperties');
     }
@@ -2097,7 +2099,7 @@ final class ContractEmitter {
    *   Whether the key is locked, or inside a child locked whole: every
    *   variant is then described locked.
    * @param \Drupal\surface\Contract\Emission $emission
-   *   The walk, at the variants' frame. Its owner is the id of the
+   *   The walk, at the variants' frame. Its declaring class is the id of the
    *   resource or structure the variants belong to; only the chosen
    *   variant's orphans of its standing are its own; in the full schema
    *   every variant is described from its own locked keys, none as the
@@ -2113,7 +2115,7 @@ final class ContractEmitter {
   protected function variants(SurfaceInterface $declared, Entry $entry, array $values, bool $locked, Emission $emission): array {
     $full = $emission->full();
     $path = $emission->at($entry->name);
-    $owner = $emission->owner;
+    $declaring_class = $emission->declaringClass;
     $cacheability = $emission->cacheability;
     $subschemas = $emission->subschemas;
     $declaring = $emission->declaring;
@@ -2201,7 +2203,7 @@ final class ContractEmitter {
         // now, before its def is written.
         $subschemas->openAlso($this->mixedIn($child));
       }
-      $fallback = $owner . '.' . $entry->name . '.' . $id;
+      $fallback = $declaring_class . '.' . $entry->name . '.' . $id;
       $is_chosen = !$full && !$declaring && !$blank && $id === $chosen;
       // Below a variant, a key is reached through the choice of it.
       $around = $this->enter($entry->name, NULL, $id);
@@ -2214,7 +2216,7 @@ final class ContractEmitter {
           $own = $is_chosen ? ($variants->held($id, $held) ?? []) : [];
           $variant_stale = new \ArrayObject();
           $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), $own);
-          [$instance, $variant_values] = $this->instance($child, $key, $inside, $emission->withPrefix($path . '.')->withOwner($variant->id ?? $fallback)->withStanding($is_chosen ? $emission->standing : [])->withFrozen($locked)->withStale($variant_stale));
+          [$instance, $variant_values] = $this->instance($child, $key, $inside, $emission->withPrefix($path . '.')->withDeclaringClass($variant->id ?? $fallback)->withStanding($is_chosen ? $emission->standing : [])->withFrozen($locked)->withStale($variant_stale));
           if ($is_chosen) {
             $shown = $variant_values;
             $emission->markStale(...$variant_stale);

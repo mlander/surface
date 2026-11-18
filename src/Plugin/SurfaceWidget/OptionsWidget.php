@@ -239,7 +239,7 @@ final class OptionsWidget extends ChoiceWidgetBase implements SchemaWidgetInterf
    * @param \PortableSchema\Builder\Schema $schema
    *   The schema.
    * @param bool $required
-   *   Whether its owner requires it.
+   *   Whether its declaring class requires it.
    * @param bool $chosen
    *   Whether a valid choice is selected.
    * @param bool $own

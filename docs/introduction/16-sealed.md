@@ -10,11 +10,11 @@ because several parties write into one group of keys, and nothing in
 core puts them in order or fixes the result
 ([Typed Data at the edges](../on-typed-data.md)).
 
-![Six bands stacked inside one sealed data surface, in order: the owner, other modules, the site, the operation, the page, access; a lock on the frame marks the seal, and an arrow leads from the data surface to every door](images/16-sealed.svg)
+![Six bands stacked inside one sealed data surface, in order: the declaring class, other modules, the site, the operation, the page, access; a lock on the frame marks the seal, and an arrow leads from the data surface to every door](images/16-sealed.svg)
 
 ## Who has a say, in order
 
-1. **The owner declares** its keys, their rules and its refiners,
+1. **The declaring class declares** its keys, their rules and its refiners,
    without knowing the door, the site or the account.
 2. **Other modules alter.** The build refuses an alter that loosens a
    rule.

@@ -387,8 +387,8 @@ final class Declaring {
   /**
    * Lists what the build left out, which the parent stores.
    *
-   * The keys the owner's blueprint attaches a child or a collection at, or
-   * a structure it mixes in brought, that the built resource does not
+   * The keys the declaring class's blueprint attaches a child or a collection
+   * at, or a structure it mixes in brought, that the built resource does not
    * carry: only access omits a key. Inside a child with no storage of its
    * own, which this storage stores, the same, by dotted path. The storage
    * keeps what it holds under each, since the caller could not see it.
@@ -642,11 +642,11 @@ final class Declaring {
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
    *   The build: the builder holding the shape, the resource or
-   *   structure, the context, the owner's input keys, its keys holding an
-   *   attached child or variants, and its collection keys, which a context
-   *   may narrow.
+   *   structure, the context, the declaring class's input keys, its keys
+   *   holding an attached child or variants, and its collection keys, which a
+   *   context may narrow.
    * @param array<string, string> $kinds
-   *   The owner's keys that hold no plain value (KeyPaths::kinds()).
+   *   The declaring class's keys that hold no plain value (KeyPaths::kinds()).
    *
    * @throws \LogicException
    *   When the context names a key the shape does not declare, widens a
@@ -831,8 +831,8 @@ final class Declaring {
    * Refuses a key that widens the shape it was declared with.
    *
    * What a key adds to a shape (required, a default, a constraint, a
-   * description) is checked once its owner and every alter have declared,
-   * by the narrowing check a refiner's answer is held to, against the
+   * description) is checked once its declaring class and every alter have
+   * declared, by the narrowing check a refiner's answer is held to, against the
    * shape as its alters left it.
    *
    * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
@@ -870,7 +870,7 @@ final class Declaring {
   }
 
   /**
-   * Declares the owner's shape and its alters' additions into a builder.
+   * Declares the declaring class's shape and its alters' additions.
    *
    * Steps 1 and 2 of the build: defineInputs() and defineOutputs() over
    * a fresh builder, then each alter that applies in this context, its
@@ -884,8 +884,8 @@ final class Declaring {
    *
    * @return array{0: \Drupal\surface\SurfaceBuilder, 1: \Drupal\surface\ResourceBuild\ResourceBlueprint, 2: \Drupal\surface\ResourceBuild\ResourceBlueprint, 3: array<int, array{0: object|string, 1: \Drupal\surface\ResourceBuild\RefinerDefinition[], 2: string|null}>, 4: array<string, \Drupal\surface\ResourceBuild\ResourceBlueprintAdditions>}
    *   The builder; the inputs and the outputs blueprints; the refiner
-   *   links, the owner's first, each its class or alter, its refiners and
-   *   its module (NULL for the owner); and each alter's additions, by
+   *   links, the declaring class's first, each its class or alter, its refiners
+   *   and its module (NULL for the provider); and each alter's additions, by
    *   module.
    */
   public function declareShape(ResourceDefinition $definition, OperationContext $context): array {
@@ -894,8 +894,8 @@ final class Declaring {
     $outputs = $this->blueprint($builder, $definition, TRUE);
     $this->fillBlueprints($definition, $inputs, $outputs);
 
-    // The owner's own refiners first, one link per class they are on:
-    // the owner's class itself, or the classes a deriver named.
+    // The declaring class's own refiners first, one link per class they are on:
+    // the declaring class itself, or the classes a deriver named.
     $links = [];
     foreach ($definition->refiners as $refiner) {
       $links[$refiner->class] ??= [$refiner->class, [], NULL];
@@ -935,8 +935,8 @@ final class Declaring {
    * Checks the reference keys blueprints declared, once they are done.
    *
    * An author adds a reference key's constraint after declaring the key,
-   * so it is read here, after the owner and every alter: each names an
-   * entity type the site has and is typed as its id, and one that refers
+   * so it is read here, after the declaring class and every alter: each names
+   * an entity type the site has and is typed as its id, and one that refers
    * to a content entity type is marked for the storage that keeps a uuid.
    * The definition an addEach() entry is copied from is checked as a key
    * is, before the build copies it for every entry the site lists.
@@ -994,10 +994,10 @@ final class Declaring {
       return;
     }
     // Decision: see docs/decisions.md#a-resource-or-structure-is-static.
-    $owner = static::resourceClass($definition);
-    $owner::defineInputs($inputs);
-    if ($outputs !== NULL && is_subclass_of($owner, DefinesOutputsInterface::class)) {
-      $owner::defineOutputs($outputs);
+    $declaring_class = static::resourceClass($definition);
+    $declaring_class::defineInputs($inputs);
+    if ($outputs !== NULL && is_subclass_of($declaring_class, DefinesOutputsInterface::class)) {
+      $declaring_class::defineOutputs($outputs);
     }
     $inputs->settleOptions();
     $outputs?->settleOptions();

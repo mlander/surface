@@ -37,7 +37,7 @@ use PortableSchema\Builder\Schema;
  *
  * - the widget is the one `x-portable-ui.widget` names, else the stock
  *   one for the schema's shape (SurfaceWidgetManager::widgetFor());
- * - a key is required where its owner's `required` lists it;
+ * - a key is required where its declaring class's `required` lists it;
  * - its title, description and `options.help`, and the note of a lock
  *   (`x-surface.locked`, or "Fixed for this operation."), are its label
  *   and description, plain text;

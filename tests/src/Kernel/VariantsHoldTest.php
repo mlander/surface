@@ -453,7 +453,7 @@ class VariantsHoldTest extends SurfaceKernelTestBase {
    *
    * The hut's def holds the covering's variants as any def holds variants
    * at a key, so a covering removed is the roof's choice removed, and one
-   * added a choice added, whatever owner holds the hut.
+   * added a choice added, whatever declaring class holds the hut.
    */
   public function testTheDiffJudgesTheNestedVariants(): void {
     $baseline = ['schema' => $this->shelterSchema()];
@@ -525,17 +525,17 @@ class VariantsHoldTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests one variant held by two owners holds the same variants in both.
+   * Tests a variant held by two declaring classes holds the same in both.
    *
    * The camp lists the hut the shelter holds, from a provider; its
    * covering is the hut's thatch and slate there too, the same structures
    * by the same ids.
    */
-  public function testOneVariantHeldByTwoOwners(): void {
+  public function testOneVariantHeldByTwoDeclaringClasses(): void {
     $resources = $this->container->get('surface.resources');
     $camp = $resources->build(CampStructure::class, new OperationContext('configure'));
     $this->assertSame(['site', 'camp'], $camp->entries()->names());
-    $ids = static fn (SurfaceInterface $owner, string $key): array => array_values(array_map(static fn ($variant): ?string => $variant->id, $owner->entries()->entry($key)->variants->variant('hut')->child->entries()->entry('covering')->variants->variants));
+    $ids = static fn (SurfaceInterface $declaring_class, string $key): array => array_values(array_map(static fn ($variant): ?string => $variant->id, $declaring_class->entries()->entry($key)->variants->variant('hut')->child->entries()->entry('covering')->variants->variants));
     $this->assertSame($ids($this->shelter(), 'shelter'), $ids($camp, 'camp'));
     $slate = ['roof' => 'slate', 'covering' => ['tiles' => 2]];
     $accepted = $this->pipeline()->accept($camp, ['site' => 'hut', 'camp' => $slate], []);

@@ -96,8 +96,8 @@ class ConfigSchemaDriftTest extends SurfaceKernelTestBase {
    *
    * A collection with no default starts as an empty list in a new object's
    * install file, and an attached key an alter reworded is labeled with
-   * its owner's label: both read from the key's schema, composed of the
-   * child's entries' schemas.
+   * its declaring class's label: both read from the key's schema, composed of
+   * the child's entries' schemas.
    */
   public function testShellsInTheSchemaAndTheInstallFile(): void {
     $person = (new SurfaceBuilder())->setDefinition('name', DataDefinition::create('string')->setLabel('Name'))->seal();
@@ -110,10 +110,10 @@ class ConfigSchemaDriftTest extends SurfaceKernelTestBase {
       ->setDefinition('volunteers', (new ListDataDefinition([], MapDataDefinition::create()))->setLabel('Volunteers'))
       ->attachList('volunteers', new Collection(new Attachment($person)))
       ->seal();
-    $owner = new ResourceDefinition(NULL, 'hand.drift', 'surface', [], NULL, NULL, []);
-    $described = $this->container->get('surface.config_schema')->describeBuilt($built, $owner, 'hand.drift', [], [], []);
+    $declaring_class = new ResourceDefinition(NULL, 'hand.drift', 'surface', [], NULL, NULL, []);
+    $described = $this->container->get('surface.config_schema')->describeBuilt($built, $declaring_class, 'hand.drift', [], [], []);
     $this->assertSame([], $described['install']['volunteers'] ?? NULL, 'A collection with no default starts as an empty list.');
-    $this->assertSame('Lead', $described['entries'][0]['schema']['mapping']['lead']['label'] ?? NULL, 'An attached key is labeled with its owner\'s label.');
+    $this->assertSame('Lead', $described['entries'][0]['schema']['mapping']['lead']['label'] ?? NULL, 'An attached key is labeled with its declaring class\'s label.');
   }
 
   /**

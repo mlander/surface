@@ -11,8 +11,8 @@ namespace Drupal\surface\Resource\Attribute;
  * still says it is one with #[Variant], `of:` this class and `at:` this
  * property's name, or a provider named by `from:` lists them.
  *
- * An attribute for the owner's own keys names the kind of member (Input,
- * Output, Map, Each, Computed, Port); an attribute for a composition
+ * An attribute for the declaring class's own keys names the kind of member
+ * (Input, Output, Map, Each, Computed, Port); an attribute for a composition
  * restates the verb (Attach, AttachList, AttachEach, AttachVariants,
  * MixIn).
  *

@@ -54,8 +54,8 @@ interface SurfaceWidgetInterface {
    * @param mixed $value
    *   The value shown, from the envelope's `values`, or NULL.
    * @param \Drupal\surface\Widget\WidgetContext $context
-   *   Where the schema is drawn: whether its owner requires it, whether its
-   *   value is stale, and the host's answers.
+   *   Where the schema is drawn: whether its declaring class requires it,
+   *   whether its value is stale, and the host's answers.
    *
    * @return array
    *   A render element: an input element, or a container whose children

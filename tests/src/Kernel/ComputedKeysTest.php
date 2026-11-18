@@ -335,7 +335,7 @@ class ComputedKeysTest extends SurfaceKernelTestBase {
   public function testTheBlueprintRefusesWhatIsNoComputedKey(): void {
     $typed = $this->container->get('typed_data_manager');
     $registry = $this->container->get('surface.resource_registry');
-    $blueprint = static fn (bool $outputs = FALSE, ?string $owner = NULL): ResourceBlueprint => new ResourceBlueprint(new SurfaceBuilder(), $typed, $outputs, $registry, $owner);
+    $blueprint = static fn (bool $outputs = FALSE, ?string $declaring_class = NULL): ResourceBlueprint => new ResourceBlueprint(new SurfaceBuilder(), $typed, $outputs, $registry, $declaring_class);
     $refused = function (callable $declare, string $message): void {
       try {
         $declare();
@@ -346,7 +346,7 @@ class ComputedKeysTest extends SurfaceKernelTestBase {
       }
     };
     $refused(fn () => $blueprint(TRUE)->compute('code', Schema::string()->title('Code'), ['first'], BadgeCode::class), 'declares a computed output');
-    $refused(fn () => $blueprint(owner: ThresholdStructure::class)->compute('code', Schema::string()->title('Code'), ['first'], BadgeCode::class), 'is in a structure');
+    $refused(fn () => $blueprint(declaring_class: ThresholdStructure::class)->compute('code', Schema::string()->title('Code'), ['first'], BadgeCode::class), 'is in a structure');
     $builder = new SurfaceBuilder();
     $inputs = new ResourceBlueprint($builder, $typed, FALSE, $registry);
     $inputs->add('first', Schema::string()->title('First name'));

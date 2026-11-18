@@ -23,8 +23,8 @@ use PortableSchema\Builder\Schema;
  * comes from an alter in src/Alter, of the gallery itself (when it is
  * curated), of the plaque it mixes in, of the wall it attaches twice, of
  * the oil finish one of its variants is, and of the room at every
- * entry of its keys from the site. Each alter is asked after the owner's
- * own answer, the stricter standing.
+ * entry of its keys from the site. Each alter is asked after the declaring
+ * class's own answer, the stricter standing.
  *
  * @see docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands
  */

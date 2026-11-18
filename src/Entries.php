@@ -207,7 +207,7 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
     array $schemas,
     array $refinements = [],
     array $locked = [],
-    string $contributor = SurfaceInterface::OWNER,
+    string $contributor = SurfaceInterface::DECLARING_CLASS,
     array $refiners = [],
     array $contributions = [],
     array $attachments = [],
@@ -458,7 +458,7 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
    * The map refinements() returns, with a key refined one property at a
    * time (the mount, where an alter refines the keys it added) split
    * into those properties' dotted paths, each with what it refines
-   * against. What a form rebuilds is this: a change to the owner's
+   * against. What a form rebuilds is this: a change to the declaring class's
    * capacity moves the one mounted key that watches it, not every key the
    * mount holds.
    *
@@ -503,9 +503,9 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
   /**
    * Gets the values contributed at build time, and by whom.
    *
-   * What the owner declared is not here: the owner's contribution is
-   * everything else. This is what refinement divides the option space
-   * by and what storage reports as the providers a stored value
+   * What the declaring class declared is not here: the declaring class's
+   * contribution is everything else. This is what refinement divides the option
+   * space by and what storage reports as the providers a stored value
    * depends on.
    *
    * @return array<string, array<string, array>>
@@ -525,7 +525,7 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
    * Gets the entries one provider had a hand in.
    *
    * @param string $contributor
-   *   The provider id, or SurfaceInterface::OWNER.
+   *   The provider id, or SurfaceInterface::DECLARING_CLASS.
    *
    * @return array<string, \Drupal\surface\Entry>
    *   The entries that provider introduced, contributed values to, or
@@ -596,7 +596,7 @@ final class Entries implements \IteratorAggregate, \ArrayAccess, \Countable {
    *
    * Their members are entries of this map like any other key; this says
    * which structure brought which, for the contract, which states each
-   * structure once as a def the owner composes.
+   * structure once as a def the declaring class composes.
    *
    * @return \Drupal\surface\Mixin[]
    *   The mixed-in structures, in the order they were mixed in.

@@ -23,8 +23,8 @@ use PortableSchema\Builder\Schema;
  *   build mounts under this module's name, at
  *   third_party_settings.surface_examples_extras.badge, so the block's
  *   configuration and schema hold it without the example module knowing.
- * - It tightens an owner's key against a sibling. A grid stays short.
- * - It rewords an owner's key with describe(), the one change to an
+ * - It tightens a declaring class's key against a sibling. A grid stays short.
+ * - It rewords a declaring class's key with describe(), the one change to an
  *   existing key an alter may make: the headline's help text mentions
  *   the badge this module renders beside it.
  *

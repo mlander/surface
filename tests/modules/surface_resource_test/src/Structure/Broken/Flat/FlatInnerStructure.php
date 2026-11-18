@@ -12,7 +12,7 @@ use Drupal\surface\Variants;
 use PortableSchema\Builder\Schema;
 
 /**
- * The flat nested owner's variant for "a", its own variants stored flat.
+ * The flat nested declaring class's variant for "a", its variants stored flat.
  */
 #[Structure('resource_test.broken.flat.inner')]
 #[Variant(of: FlatNestedStructure::class, at: 'gear', for: 'a')]

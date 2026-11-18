@@ -13,8 +13,8 @@ use Drupal\surface\Mixin;
  * Step 5 of Resources: each structure mixed in, its ports' wiring
  * checked, built by itself for its def and asked its access, which holds
  * its members to what is stored or takes them back out; then what of the
- * owner's names a member it may not depend on is refused. What it
- * answers is bound in the owner's frame by the binding phase
+ * declaring class's names a member it may not depend on is refused. What it
+ * answers is bound in the declaring class's frame by the binding phase
  * (Binding::bindMixin()).
  *
  * A structure mixed in is built by itself through the whole sequence
@@ -49,30 +49,30 @@ final class Mixing {
   /**
    * Builds each structure mixed in by itself, and settles its members.
    *
-   * A mixed-in structure's members are the owner's keys already, declared
-   * through its blueprint where mixIn() stands. Here each is checked (its
-   * ports wired to the owner's keys), built by itself in the owner's
-   * context for its def and asked its access: omitted takes its members
-   * back out, locked holds them to what is stored, and what a structure
-   * it mixes in itself answered inside it is read off its own build. A
-   * member that holds a child is the owner's child at its key, built with
-   * the owner's children (Attaching::attachChildren(),
+   * A mixed-in structure's members are the declaring class's keys already,
+   * declared through its blueprint where mixIn() stands. Here each is checked
+   * (its ports wired to the declaring class's keys), built by itself in the
+   * declaring class's context for its def and asked its access: omitted takes
+   * its members back out, locked holds them to what is stored, and what a
+   * structure it mixes in itself answered inside it is read off its own build.
+   * A member that holds a child is the declaring class's child at its key,
+   * built with the declaring class's children (Attaching::attachChildren(),
    * Attaching::attachLists()): omitted, it goes with the other members;
    * locked, it is locked.
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build: its builder, the owner, its context, its frame
-   *   (with the permission its operation asks), and its input keys, every
-   *   structure's members among them, the keys holding a child or
-   *   variants, and its collection keys.
+   *   The declaring class's build: its builder, the declaring class, its
+   *   context, its frame (with the permission its operation asks), and its
+   *   input keys, every structure's members among them, the keys holding a
+   *   child or variants, and its collection keys.
    * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
-   *   The owner's input blueprint.
+   *   The declaring class's input blueprint.
    *
    * @return array{bind: array<int, array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[], attached: string[], lists: string[]}>, members: array<string, string>, guarded: array<string, string>, answeredBy: array<string, string>, ruling: string[]}
-   *   What to bind in the owner's frame, innermost first, each with the
-   *   members still there; every member, and every member of a structure
+   *   What to bind in the declaring class's frame, innermost first, each with
+   *   the members still there; every member, and every member of a structure
    *   with an access answer (an access class, or an alter's), each mapped
    *   to its structure's id, with what answers for each such structure;
    *   and the members a structure's coded refiner may rule out.
@@ -87,7 +87,8 @@ final class Mixing {
       $this->assertMixinWiring($build, $structure, $blueprint, $reads);
       $mixed = static::mixedMembers($mixed, $blueprint, $structure, fn (string $name): ResourceDefinition => $this->registry->getDefinition($name));
       // By itself, as if on its own: what its def is written from, in the
-      // context its owner's hands it, and what its access answers there.
+      // context its declaring class's hands it, and what its access answers
+      // there.
       $child_context = Resources::childContext($context, $structure->id);
       [$access, $runtime] = $this->gating->childAccess($structure, NULL, $child_context, $this->gating->account(), $frame['permission'] ?? NULL);
       if ($access !== NULL) {
@@ -106,8 +107,8 @@ final class Mixing {
       $present = [];
       foreach ($blueprint->declarationOrder() as $key) {
         if (in_array($key, $children, TRUE)) {
-          // The owner's child, asked its own access where the owner
-          // builds it; locked with the structure.
+          // The declaring class's child, asked its own access where the
+          // declaring class builds it; locked with the structure.
           if ($locked) {
             $builder->lock($key, $access->getReason());
           }
@@ -175,14 +176,14 @@ final class Mixing {
   }
 
   /**
-   * Lists what to bind in the owner's frame for one structure mixed in.
+   * Lists what to bind in the declaring class's frame for a structure mixed in.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $structure
    *   The structure.
    * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $blueprint
    *   The blueprint it was declared through.
    * @param array<string, string> $reads
-   *   Its ports, wired to the owner's keys.
+   *   Its ports, wired to the declaring class's keys.
    * @param string[] $present
    *   The members still there.
    *
@@ -199,7 +200,7 @@ final class Mixing {
         continue;
       }
       // Its ports are wired to keys of the structure mixing it in, which
-      // are the owner's keys now, under the same names.
+      // are the declaring class's keys now, under the same names.
       array_push($bindings, ...$this->mixinBindings($this->registry->getDefinition($class), $inner, $inner_reads, $present));
     }
     $holding = [...array_keys($blueprint->attachments()), ...array_keys($blueprint->variants())];
@@ -217,18 +218,19 @@ final class Mixing {
   }
 
   /**
-   * Refuses a wiring of a mixed-in structure's ports its owner cannot honor.
+   * Refuses a wiring of a mixed-in structure's ports that cannot be honored.
    *
-   * Every port is wired, to a plain input of the owner's of the port's
-   * type that the structure did not bring itself: in the owner's frame a
-   * port is read as the key it is wired to, so one left unwired would
-   * have nothing to be read as.
+   * Every port is wired, to a plain input of the declaring class's of the
+   * port's type that the structure did not bring itself: in the declaring
+   * class's frame a port is read as the key it is wired to, so one left unwired
+   * would have nothing to be read as.
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build: its builder, the owner, its plain input keys,
-   *   the keys holding a child or variants, and its collection keys.
+   *   The declaring class's build: its builder, the declaring class, its plain
+   *   input keys, the keys holding a child or variants, and its collection
+   *   keys.
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $structure
    *   The structure.
    * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $blueprint
@@ -237,7 +239,7 @@ final class Mixing {
    *   The wiring.
    *
    * @throws \LogicException
-   *   Naming the owner, the port and what is wrong with the wiring.
+   *   Naming the declaring class, the port and what is wrong with the wiring.
    */
   protected function assertMixinWiring(Build $build, ResourceDefinition $structure, ResourceBlueprint $blueprint, array $reads): void {
     $builder = $build->builder;
@@ -251,9 +253,9 @@ final class Mixing {
         throw new \LogicException(sprintf('%s wires the "%s" port of %s, mixed in, which %s does not read; it reads %s.', $definition->id, $port, $structure->id, $structure->id, $ports === [] ? 'no port' : implode(', ', array_keys($ports))));
       }
       $problem = match (TRUE) {
-        in_array($wired, $blueprint->keys(), TRUE) => sprintf('which %s brought itself: a port reads a key of the owner it is mixed into, and its members are its own', $structure->id),
+        in_array($wired, $blueprint->keys(), TRUE) => sprintf('which %s brought itself: a port reads a key of the declaring class it is mixed into, and its members are its own', $structure->id),
         in_array($wired, $attached, TRUE), in_array($wired, $lists, TRUE) => 'which holds a child: a port reads one value',
-        !in_array($wired, $input_keys, TRUE) => sprintf('which %s does not declare as an input: a port reads a key of its owner, by name', $definition->id),
+        !in_array($wired, $input_keys, TRUE) => sprintf('which %s does not declare as an input: a port reads a key of its declaring class, by name', $definition->id),
         default => NULL,
       };
       if ($problem !== NULL) {
@@ -271,7 +273,7 @@ final class Mixing {
     foreach ($ports as $port) {
       if (!isset($reads[$port->name])) {
         throw new \LogicException(sprintf(
-          '%s mixes %s in without wiring its "%s" port: mixIn(..., reads: [\'%s\' => \'<key>\']) names the key of %s it reads. A mixed-in structure\'s refiners read each port as the owner\'s key it is wired to, so every port is wired, required or not.',
+          '%s mixes %s in without wiring its "%s" port: mixIn(..., reads: [\'%s\' => \'<key>\']) names the key of %s it reads. A mixed-in structure\'s refiners read each port as the declaring class\'s key it is wired to, so every port is wired, required or not.',
           $definition->id,
           $structure->id,
           $port->name,
@@ -283,28 +285,28 @@ final class Mixing {
   }
 
   /**
-   * Refuses what of the owner's names a member it may not depend on.
+   * Refuses what of the declaring class's names a member it may not depend on.
    *
-   * A mixed-in structure's members are the owner's keys, so the owner's
-   * refiners and rules, and its alters', may watch them and narrow them
-   * as their own, with two exceptions. Whether a member applies is the
-   * structure's to say: its def, which every owner shares, says where it
-   * is required. And nothing of the owner's may name a member of a
-   * structure that has an access class: what that access may take away
-   * for one account, nothing may depend on for every account.
+   * A mixed-in structure's members are the declaring class's keys, so the
+   * declaring class's refiners and rules, and its alters', may watch them and
+   * narrow them as their own, with two exceptions. Whether a member applies is
+   * the structure's to say: its def, which every declaring class shares, says
+   * where it is required. And nothing of the declaring class's may name a
+   * member of a structure that has an access class: what that access may take
+   * away for one account, nothing may depend on for every account.
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
-   *   The owner.
+   *   The declaring class.
    * @param array $mixins
    *   What mixIn() answered.
    * @param array<int, array{0: object|string, 1: \Drupal\surface\ResourceBuild\RefinerDefinition[], 2: string|null}> $links
-   *   The owner's refiners and its alters'.
+   *   The declaring class's refiners and its alters'.
    * @param \Drupal\surface\Refinement\Rule[] $rules
-   *   The owner's rules and its alters'.
+   *   The declaring class's rules and its alters'.
    * @param array<string, array<string, string>> $wirings
-   *   The ports of each child the owner or an alter attached, wired.
+   *   The ports of each child the declaring class or an alter attached, wired.
    *
    * @throws \LogicException
    *   Naming what names the member, and the structure.
@@ -312,7 +314,7 @@ final class Mixing {
   public function assertMixinsUnnamed(ResourceDefinition $definition, array $mixins, array $links, array $rules, array $wirings): void {
     $guarded = $mixins['guarded'];
     $guard = static fn (string $what, string $key): \LogicException => new \LogicException(sprintf(
-      '%s names "%s", a member of %s, which is mixed into %s and has %s. What that access may take away for one account, nothing of the owner\'s may depend on: read it inside %s, or drop %s.',
+      '%s names "%s", a member of %s, which is mixed into %s and has %s. What that access may take away for one account, nothing of the declaring class\'s may depend on: read it inside %s, or drop %s.',
       $what,
       $key,
       $guarded[$key],
@@ -322,7 +324,7 @@ final class Mixing {
       ($mixins['answeredBy'][$guarded[$key]] ?? 'an access class') === 'an access class' ? 'the access class' : 'the alter\'s access',
     ));
     $ruled = static fn (string $what, string $key): \LogicException => new \LogicException(sprintf(
-      '%s may answer that "%s", a member of %s mixed into %s, does not apply. Whether a mixed-in structure\'s member applies is the structure\'s to say: its def, which every owner shares, says where it is required.',
+      '%s may answer that "%s", a member of %s mixed into %s, does not apply. Whether a mixed-in structure\'s member applies is the structure\'s to say: its def, which every declaring class shares, says where it is required.',
       $what,
       $key,
       $mixins['members'][$key],

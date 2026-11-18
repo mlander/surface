@@ -55,7 +55,7 @@ final class Structure {
    *   default, for the fieldset its keys are drawn in. A widget that
    *   cannot draw a map is refused when the parent is built. A widget
    *   draws; it never decides what is accepted, which stays the
-   *   structure's keys'. An owner's own `widget` setting on the key it
+   *   structure's keys'. A declaring class's own `widget` setting on the key it
    *   attaches it at wins.
    *   Decision: see
    *   docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates.

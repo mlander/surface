@@ -21,7 +21,7 @@ use Drupal\surface\Resource\BlueprintInterface;
  * A reader is pure. It reads definitions and never values, so reading
  * the same source twice calls the same verbs with the same arguments:
  * addMap() relies on it, since a map that needs a frame is filled by
- * running the owner's declaration again, and the reader with it.
+ * running the declaring class's declaration again, and the reader with it.
  *
  * Whether what is read is a structure or a resource is not the reader's:
  * the deriver that names the source decides, from what the source is (a

@@ -16,8 +16,8 @@ use Drupal\surface\Contract\PatternTranslation;
 /**
  * A rule between keys, declared as data: a condition and its effects.
  *
- * What a blueprint's narrow() hands back, for the owner or an alter to
- * say, in defineInputs() or alterInputs(), how one key narrows when its
+ * What a blueprint's narrow() hands back, for the declaring class or an alter
+ * to say, in defineInputs() or alterInputs(), how one key narrows when its
  * siblings hold certain values:
  *
  * @code

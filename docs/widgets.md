@@ -393,7 +393,7 @@ Every other fact is a keyword of the schema, read with `$schema->get()`
 (`title`, `maxLength`, `format`). `isApplicable()` is the drawer's, asked only of a schema whose word
 names no widget that draws it. `baseElement()` supplies what every
 element wants from a schema (`#title` from `title`, `#description` from
-`description`, `#required` from the owner's `required`), so a widget
+`description`, `#required` from the declaring class's `required`), so a widget
 only adds the part that is its own. `#required` draws the marker and the
 browser's `required` attribute and is never checked by core: the form
 builder keeps that check off, so a required key left empty is refused in
@@ -429,9 +429,9 @@ the document the same way, as `options.size` and `options.rows`.
 
 ## A module serves a widget to every key of a kind
 
-The example above draws a key whose owner asked for it. A module that
+The example above draws a key whose provider asked for it. A module that
 ships a color picker wants every color key on the site, on resources it
-did not write, and their owners cannot each ask. The widget claims them
+did not write, and their declaring classes cannot each ask. The widget claims them
 instead:
 
 ```php
@@ -473,8 +473,8 @@ and a map is a fieldset of its keys.
 
 How the emitter chooses (`WidgetChoice::claimed()`):
 
-1. **A key whose owner asks for a widget**, `ui(widget: ...)`,
-   is drawn by that widget, and no claim is asked. The owner wins.
+1. **A key whose declaring class asks for a widget**, `ui(widget: ...)`,
+   is drawn by that widget, and no claim is asked. The declaring class wins.
 2. **The claims**, the highest `priority` first, then by plugin ID. The
    first widget whose claim matches the key and whose
    `drawsSchema()` says yes draws it. A claimed widget may still decline a key, as the

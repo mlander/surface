@@ -153,8 +153,8 @@ class NestedSecretsTest extends SurfaceKernelTestBase {
    * Tests the `values` input of an update holds no stored secret.
    */
   public function testToolValuesInput(): void {
-    $owner = new ResourceDefinition(NULL, 'nested.secrets', 'surface', [], NULL, NULL, []);
-    $values = $this->container->get('surface.operation_inputs')->values($owner, static::surface(), new OperationContext('update', FALSE), new HandStorage(self::STORED));
+    $declaring_class = new ResourceDefinition(NULL, 'nested.secrets', 'surface', [], NULL, NULL, []);
+    $values = $this->container->get('surface.operation_inputs')->values($declaring_class, static::surface(), new OperationContext('update', FALSE), new HandStorage(self::STORED));
     $this->assertSame('shown name', $values->getPropertyDefinition('name')?->getDefaultValue());
     $this->assertSame(['a' => 'shown a'], $values->getPropertyDefinition('map')?->getDefaultValue());
     $this->assertNoSecret(DoorCorpusRecorder::tree($values));
@@ -164,9 +164,9 @@ class NestedSecretsTest extends SurfaceKernelTestBase {
    * Tests the read and every door's projection leave every secret out.
    */
   public function testReadAndProjection(): void {
-    $owner = new ResourceDefinition(NULL, 'nested.secrets', 'surface', [], NULL, NULL, []);
+    $declaring_class = new ResourceDefinition(NULL, 'nested.secrets', 'surface', [], NULL, NULL, []);
     $surface = static::surface();
-    $read = $this->container->get('surface.operation_inputs')->stored($owner, $surface, new OperationContext('update', FALSE), new HandStorage(self::STORED));
+    $read = $this->container->get('surface.operation_inputs')->stored($declaring_class, $surface, new OperationContext('update', FALSE), new HandStorage(self::STORED));
     $this->assertSame(self::READ, $read);
     $this->assertSame(self::READ, $this->pipeline()->outbound($surface, self::STORED));
   }

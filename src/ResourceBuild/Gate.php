@@ -7,7 +7,7 @@ namespace Drupal\surface\ResourceBuild;
 /**
  * One gate an operation borrows, as discovery read it.
  *
- * Access another thing's owner decides, named on `#[Operation(gate:)]` in
+ * Access another thing's provider decides, named on `#[Operation(gate:)]` in
  * one of three spellings:
  *
  * - `<resource id>:<operation>`, another resource's operation, answered as

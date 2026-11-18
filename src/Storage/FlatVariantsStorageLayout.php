@@ -31,8 +31,8 @@ use Drupal\surface\Variants;
  *   in every item of a collection, and every entry of a map of keys from
  *   the site.
  * - fromStorage(): at each such level, every stored key that is not one
- *   of the owner's own keys there is gathered under the key, by exclusion,
- *   which needs no settled variant and no schema.
+ *   of the declaring class's own keys there is gathered under the key, by
+ *   exclusion, which needs no settled variant and no schema.
  *   Of what is gathered, the chosen variant's keys, the variant settled
  *   to read them where the site lists it, and the secrets the other
  *   variants keep (Variants::keptSecrets()) are read under the key;
@@ -67,8 +67,8 @@ final class FlatVariantsStorageLayout implements StoredSchemaInterface {
    *
    * @param list<array{steps: list<array{key: string, each: bool, variants: \Drupal\surface\Variants|null, variant: string|null}>, key: string, own: string[], before: string[], variants: \Drupal\surface\Variants}> $marks
    *   Each flat key, outermost first: the steps from the top to its level,
-   *   its name, the owner's own keys at that level, those declared before
-   *   it, and its variants.
+   *   its name, the declaring class's own keys at that level, those declared
+   *   before it, and its variants.
    * @param array<string, array> $schema
    *   StoredSchemaInterface::SPREAD, by each flat key's dotted path.
    */
@@ -394,8 +394,8 @@ final class FlatVariantsStorageLayout implements StoredSchemaInterface {
         $stored[$name] = $value;
         continue;
       }
-      // The build refuses a variant's key the owner declares at the
-      // level, so none replaces the owner's.
+      // The build refuses a variant's key the declaring class declares at the
+      // level, so none replaces the declaring class's.
       foreach ($chosen as $inner => $held) {
         if (!array_key_exists($inner, $level)) {
           $stored[$inner] = $held;
@@ -406,7 +406,7 @@ final class FlatVariantsStorageLayout implements StoredSchemaInterface {
   }
 
   /**
-   * Gathers a level's keys that are not the owner's under its flat key.
+   * Gathers a level's keys not the declaring class's under the flat key.
    *
    * A chosen variant is read as an empty map when nothing of it is
    * stored, as variants under a key are: the pipeline writes a chosen
@@ -420,8 +420,8 @@ final class FlatVariantsStorageLayout implements StoredSchemaInterface {
    *   The flat key.
    *
    * @return array
-   *   The level as asked for: the owner's keys, and the chosen variant's
-   *   under the key.
+   *   The level as asked for: the declaring class's keys, and the chosen
+   *   variant's under the key.
    */
   protected static function gather(array $level, array $mark): array {
     $gathered = array_diff_key($level, array_flip($mark['own']));
@@ -437,8 +437,8 @@ final class FlatVariantsStorageLayout implements StoredSchemaInterface {
     // pipeline keeps beside the chosen keys.
     $held = $child === NULL ? $gathered : array_intersect_key($gathered, $child->entries()->keys() + $variants->keptSecrets((string) $chosen, $gathered));
     // The key stands where the first key gathered under it stood, or,
-    // with nothing of it stored, after the owner's keys declared before
-    // it.
+    // with nothing of it stored, after the declaring class's keys declared
+    // before it.
     $asked = [];
     $before = array_flip($mark['before']);
     foreach ($level as $name => $value) {

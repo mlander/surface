@@ -573,8 +573,8 @@ declares a `third_party_settings` sequence typed
 `theme_settings.third_party.[%key]`
 (`core/config/schema/core.data_types.schema.yml`).
 
-**Here today.** An alter's keys are stored inside the owner's config
-object, under `third_party_settings.<module>`; the owner's schema
+**Here today.** An alter's keys are stored inside the declaring class's config
+object, under `third_party_settings.<module>`; the declaring class's schema
 declares that sequence, typed by module name, and the module that adds
 keys describes its own part. The storage refuses a module's keys that no
 schema describes (`ConfigObjectResourceStorageTest::testMountedSettingsNeedTheirOwnSchema`;
@@ -595,7 +595,7 @@ the sequence.
 **Alone, it gives.** Another module's setting stored with the object it
 configures: exported with it and validated by its schema, with no
 change to forms; until step 5 the form alter that draws it stays. Not
-covered: a module that adds entries to a list or map the owner itself
+covered: a module that adds entries to a list or map the provider itself
 stores (pathauto's punctuation hook), which a place under the module's
 own name does not answer (open, below).
 
@@ -744,7 +744,7 @@ cannot disagree with the API because both read one declaration.
   listed from site state cost 107 lines against the original's loop of
   about 20; one checkbox in a list shown checked and disabled while the
   others stay editable cannot be said; and a hook that adds entries to
-  the owner's list has no equivalent.
+  the declaring class's list has no equivalent.
 - **The entity side is paused.** A resource is derived for each content
   entity bundle, and a basic page is added and edited through it
   ([Content entities](entities.md)). Multi-value fields, references,
@@ -759,7 +759,7 @@ cannot disagree with the API because both read one declaration.
   fourteen others.
 - **Open.** Not built, each found by the runs above (`ROADMAP.md`, item
   14): a fixed state per option in a list; an alter adding entries to a
-  map the owner stores; a default read from a sibling key; a time-of-day
+  map the declaring class stores; a default read from a sibling key; a time-of-day
   type (the widget exists, the type does not); keys listed from site
   state costing a class of their own; and, through the tool, required
   keys sent again on every edit, a decision still pending. Stored-value

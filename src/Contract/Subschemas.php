@@ -70,8 +70,8 @@ final class Subschemas {
    *   nothing.
    * @param string[] $open
    *   The ids of the structures the document mixes in somewhere: each
-   *   one's def is written open, so an owner can compose it with keys of
-   *   its own, and every other place it is used closes it.
+   *   one's def is written open, so a declaring class can compose it with keys
+   *   of its own, and every other place it is used closes it.
    * @param string[] $ui
    *   The `x-portable-ui` members and options the document strips once it
    *   is written: the empty option, in the full schema, and the widget
@@ -179,7 +179,7 @@ final class Subschemas {
   }
 
   /**
-   * Answers whether a def is written open, for an owner to mix it in.
+   * Answers whether a def is written open, for a declaring class to mix it in.
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *

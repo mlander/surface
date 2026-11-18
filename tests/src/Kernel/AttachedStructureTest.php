@@ -155,7 +155,8 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
     $this->assertSame(TinResource::class, $entry->variants->variant('tin')->source);
 
     // Unresolved, it is a placeholder that says it holds variants, and which
-    // key decides; its label and description are the owner's describe().
+    // key decides; its label and description are the declaring class's
+    // describe().
     $placeholder = DerivedDefinition::at($surface, 'kind_settings');
     $this->assertSame('any', $placeholder->getDataType());
     $this->assertSame('kind', DefinitionMetadata::variantsBy($placeholder));
@@ -287,7 +288,7 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
     $first->add('badge', Schema::string()->title('Badge'));
     $second = new ResourceBlueprintAdditions($builder, $typed_data, 'second_module');
 
-    // An owner's key, by name: wording only.
+    // A declaring class's key, by name: wording only.
     $second->describe('limit', label: 'How many', description: 'At most five.');
     $limit = $builder->getDefinition('limit');
     $this->assertSame('How many', (string) $limit->getLabel());
@@ -351,14 +352,15 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
    *
    * Placement says where one module's fieldset is drawn, so only that
    * module's alter says it, of its own input mount, after a top-level
-   * key of the owner's blueprint. Every other use is refused, naming why.
+   * key of the declaring class's blueprint. Every other use is refused, naming
+   * why.
    */
   public function testDescribePlacesOnlyItsOwnMount(): void {
     $typed_data = $this->container->get('typed_data_manager');
     $builder = new SurfaceBuilder();
-    $owner = new ResourceBlueprint($builder, $typed_data);
-    $owner->add('title', Schema::string()->title('Title'));
-    $owner->add('capacity', Schema::integer()->title('Capacity'));
+    $declaring_class = new ResourceBlueprint($builder, $typed_data);
+    $declaring_class->add('title', Schema::string()->title('Title'));
+    $declaring_class->add('capacity', Schema::integer()->title('Capacity'));
     $first = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
     $second = new ResourceBlueprintAdditions($builder, $typed_data, 'second_module');
     $outputs = new ResourceBlueprint(new SurfaceBuilder(), $typed_data, outputs: TRUE);
@@ -386,18 +388,18 @@ class AttachedStructureTest extends SurfaceKernelTestBase {
       // A key, not a mount.
       [$first, 'badge', 'title', 'describe() was asked to place "badge" after "title".'],
       [$first, 'title', 'capacity', 'describe() was asked to place "title" after "capacity".'],
-      // The owner orders its own keys.
-      [$owner, 'title', 'capacity', 'an owner orders its own keys by declaring them in order.'],
+      // The declaring class orders its own keys.
+      [$declaring_class, 'title', 'capacity', 'a declaring class orders its own keys by declaring them in order.'],
       // An output is never drawn.
       [
         $outputs, 'shown', 'title',
         'outputs are never drawn, so they have nowhere to be placed.',
       ],
-      // After nothing the owner declared, after the mounts themselves,
-      // or after another alter's key.
+      // After nothing the declaring class declared, after the mounts
+      // themselves, or after another alter's key.
       [
         $first, 'third_party_settings.first_module', 'missing',
-        'describe() was asked to place third_party_settings.first_module after "missing", which is no top-level key of the owner\'s blueprint.',
+        'describe() was asked to place third_party_settings.first_module after "missing", which is no top-level key of the declaring class\'s blueprint.',
       ],
       [
         $first, 'third_party_settings.first_module', 'third_party_settings',

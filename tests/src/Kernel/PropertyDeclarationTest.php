@@ -142,8 +142,8 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
    *
    * The booking map attaches a child, so the build stops the map's first
    * reading at the child and fills the map's structure by running the
-   * owner's declaration again, holding it to the keys it declared first.
-   * The reader reads no value, so both readings call the same verbs.
+   * declaring class's declaration again, holding it to the keys it declared
+   * first. The reader reads no value, so both readings call the same verbs.
    */
   public function testMapNeedingFrameIsReadAgainTheSame(): void {
     $built = $this->container->get('surface.resources')->buildStatic('property_test.maps' . self::SUFFIX, new OperationContext('configure'));

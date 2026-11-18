@@ -63,8 +63,8 @@ final class JournalResource implements ResourceInterface {
       ->title(t('Published'))
       ->default(FALSE));
     $inputs->attach('archive', ArchiveStructure::class, t('Archive'));
-    // The owner's rules read and narrow members the timestamps brought:
-    // they are the journal's own keys now.
+    // The declaring class's rules read and narrow members the timestamps
+    // brought: they are the journal's own keys now.
     $inputs->narrow('revision')
       ->when(Condition::absent('created'))
       ->constrain(Schema::any()->maximum(1))

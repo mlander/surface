@@ -768,9 +768,9 @@ final class Accepting {
       throw new TypeMismatchException($path, 'map', get_debug_type($input), SchemaFacts::isNullable($entry->schema()));
     }
     if ($entry->variants !== NULL && $chosen !== NULL) {
-      $owners = $entry->variants->owners($entry->variants->strangers($chosen, $input), $chosen);
-      if ($owners !== []) {
-        throw new VariantMismatchException($path, $entry->variants->by, $chosen, $owners);
+      $declaring_classes = $entry->variants->declaringVariants($entry->variants->strangers($chosen, $input), $chosen);
+      if ($declaring_classes !== []) {
+        throw new VariantMismatchException($path, $entry->variants->by, $chosen, $declaring_classes);
       }
     }
     return $this->acceptLevel($child, $input, is_array($fallback) ? $fallback : [], $path);
@@ -1129,11 +1129,11 @@ final class Accepting {
     $segments = explode('.', $exception->getPath());
     $name = (string) array_shift($segments);
     $violations = [];
-    foreach ($exception->getOwners() as $key => $owners) {
+    foreach ($exception->getOwners() as $key => $declaring_classes) {
       $violations[] = new Violation(
         $name,
         implode('.', [...$segments, $key]),
-        $this->variantMismatchMessage($exception->getPath() . '.' . $key, $exception->getBy(), $exception->getChosen(), $owners),
+        $this->variantMismatchMessage($exception->getPath() . '.' . $key, $exception->getBy(), $exception->getChosen(), $declaring_classes),
         Violation::WRONG_VARIANT,
       );
     }
@@ -1194,16 +1194,16 @@ final class Accepting {
    *   The deciding key.
    * @param string $chosen
    *   The variant it chose.
-   * @param string[] $owners
+   * @param string[] $declaring_classes
    *   The variants that do declare the key.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The message.
    */
-  public function variantMismatchMessage(string $path, string $by, string $chosen, array $owners): TranslatableMarkup {
+  public function variantMismatchMessage(string $path, string $by, string $chosen, array $declaring_classes): TranslatableMarkup {
     return $this->t('@path belongs to the @owners variant, but @by chose @chosen.', [
       '@path' => $path,
-      '@owners' => implode(', ', $owners),
+      '@owners' => implode(', ', $declaring_classes),
       '@by' => $by,
       '@chosen' => $chosen,
     ]);

@@ -98,8 +98,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * The read of one thing, `<resource id>:read`, is a tool of the class
  * ResourceOperationReadTool (OperationDefinition::readsOne()): its
  * parameters as inputs, the stored values as its output. It is an
- * operation of the resource like any other, the one an owner declares or
- * the one the build adds beside the default update, so nothing here
+ * operation of the resource like any other, the one a declaring class declares
+ * or the one the build adds beside the default update, so nothing here
  * decides which resources can be read.
  *
  * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.

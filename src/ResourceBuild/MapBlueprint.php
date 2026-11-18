@@ -20,12 +20,12 @@ use PortableSchema\Builder\Schema;
  * What addMap() hands its callable first: keys that land in a plain map.
  *
  * A map whose keys are plain values (add(), addDefinition(), a
- * map inside, describe()) is a map definition at its owner's key. One
+ * map inside, describe()) is a map definition at its declaring class's key. One
  * whose callable asks for a frame of its own (a child, a rule, a resolve,
  * a port) is a structure with no id of its own instead: the first such
- * call stops the callable here (NeedsFrame), and the owner's blueprint
- * attaches the map as that structure, which runs the callable again in
- * its own blueprint (ResourceBlueprint::addMap(), fill()). Where no
+ * call stops the callable here (NeedsFrame), and the declaring class's
+ * blueprint attaches the map as that structure, which runs the callable again
+ * in its own blueprint (ResourceBlueprint::addMap(), fill()). Where no
  * structure can be
  * attached (an alter's keys, outputs, a structure mixed in) the call is
  * refused, naming why.
@@ -49,23 +49,24 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
    * @param \Drupal\Core\TypedData\MapDataDefinition $map
    *   The map the keys land in.
    * @param string $path
-   *   The map's key in its owner, for messages.
-   * @param \Drupal\surface\ResourceBuild\BlueprintAdapterBase $owner
+   *   The map's key in its declaring class, for messages.
+   * @param \Drupal\surface\ResourceBuild\BlueprintAdapterBase $declaringClass
    *   The blueprint the map is declared through.
    * @param \Drupal\surface\SurfaceBuilder $builder
-   *   The owner's builder, which this blueprint declares nothing into.
+   *   The declaring class's builder, which this blueprint declares nothing
+   *   into.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager.
    * @param bool $outputs
    *   TRUE when the map is an output.
    * @param string|null $unframed
-   *   Why the owner cannot attach the map as a structure, for the refusal
-   *   of a call that needs one; NULL when it can.
+   *   Why the declaring class cannot attach the map as a structure, for the
+   *   refusal of a call that needs one; NULL when it can.
    */
   public function __construct(
     protected readonly MapDataDefinition $map,
     protected readonly string $path,
-    protected readonly BlueprintAdapterBase $owner,
+    protected readonly BlueprintAdapterBase $declaringClass,
     SurfaceBuilder $builder,
     TypedDataManagerInterface $typedDataManager,
     bool $outputs = FALSE,
@@ -85,7 +86,7 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
   }
 
   /**
-   * Gets why the owner cannot attach a map inside this one as a structure.
+   * Gets why the declaring class cannot attach an inner map as a structure.
    *
    * @return string|null
    *   The reason, or NULL when it can.
@@ -201,17 +202,17 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
    * {@inheritdoc}
    */
   public function extendChoices(string $key, array $choices): static {
-    throw new \LogicException(sprintf('extendChoices("%s") inside the map "%s", declared with addMap(): a map\'s keys are its declaration\'s own, which lists their values in each key\'s constraint; extendChoices() is how an alter offers more on an owner\'s key.', $key, $this->path));
+    throw new \LogicException(sprintf('extendChoices("%s") inside the map "%s", declared with addMap(): a map\'s keys are its declaration\'s own, which lists their values in each key\'s constraint; extendChoices() is how an alter offers more on a declaring class\'s key.', $key, $this->path));
   }
 
   /**
    * {@inheritdoc}
    */
   public function addCacheableDependency(CacheableDependencyInterface $dependency): static {
-    if (!$this->owner instanceof BlueprintInterface) {
+    if (!$this->declaringClass instanceof BlueprintInterface) {
       throw new \LogicException(sprintf('addCacheableDependency() inside the map "%s", declared with addMap() by an alter: an alter\'s declaration depends on nothing of its own.', $this->path));
     }
-    $this->owner->addCacheableDependency($dependency);
+    $this->declaringClass->addCacheableDependency($dependency);
     return $this;
   }
 
@@ -274,24 +275,24 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
    * Declares the keys an anonymous map's callable declares: its inputs.
    *
    * The structure a map with a frame of its own is has no class: its
-   * inputs are its owner's declaration, run again, whose addMap() at the
-   * key hands its callable this blueprint (ResourceBlueprint::replay()).
+   * inputs are its declaring class's declaration, run again, whose addMap() at
+   * the key hands its callable this blueprint (ResourceBlueprint::replay()).
    * A declaration is a pure function, so it declares the same again,
    * which the keys it declared the first time are held to.
    *
    * @param \Drupal\surface\Resource\BlueprintInterface $inputs
    *   The structure's blueprint.
-   * @param string $owner
-   *   The owner, by the name the registry knows it by.
+   * @param string $declaring_class
+   *   The declaring class, by the name the registry knows it by.
    * @param string $key
-   *   The key the owner declares the map at.
+   *   The key the declaring class declares the map at.
    * @param string[] $declared
    *   The keys the callable declared the first time, before it asked for
    *   the frame.
    */
-  public static function fill(BlueprintInterface $inputs, string $owner, string $key, array $declared = []): void {
+  public static function fill(BlueprintInterface $inputs, string $declaring_class, string $key, array $declared = []): void {
     assert($inputs instanceof ResourceBlueprint);
-    $inputs->replay($owner, $key, $declared);
+    $inputs->replay($declaring_class, $key, $declared);
   }
 
 }

@@ -8,7 +8,7 @@ use Drupal\surface\Resource\BoundSiteListInterface;
 use Drupal\surface\Resource\SiteList;
 
 /**
- * Lists the structures its owner names, one variant per value.
+ * Lists the structures its declaring class names, one variant per value.
  *
  * Bound to pairs, each a value and the structure class it chooses, so a
  * fixture names its variants without a #[Variant] of its own.

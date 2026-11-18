@@ -43,7 +43,7 @@ use Drupal\surface\Storage\ConfigObjectResourceStorage;
  * In order, for one resource or structure and one context (both kinds
  * are built alike; only the storage step tells them apart):
  *
- * 1. The owner's shape. defineInputs() and, for a class with outputs,
+ * 1. The declaring class's shape. defineInputs() and, for a class with outputs,
  *    defineOutputs(), called on the class, each over a ResourceBlueprint that
  *    writes straight into a fresh SurfaceBuilder. Neither kind is
  *    ever instantiated: its declarations and its refiners are static, so
@@ -55,7 +55,7 @@ use Drupal\surface\Storage\ConfigObjectResourceStorage;
  *    alterInputs() over a ResourceBlueprintAdditions,
  *    which mounts what they add under the alter's module. A structure an
  *    alter attached at its own mount is built here, in its own frame, its
- *    keys the mount's and its ports wired to the owner's keys
+ *    keys the mount's and its ports wired to the declaring class's keys
  *    (Attaching::mountStructure()), before anything is bound, since the
  *    alter's glue reads its keys.
  * 3. The seal-time checks on the shape: every identity key is a declared
@@ -68,16 +68,17 @@ use Drupal\surface\Storage\ConfigObjectResourceStorage;
  * 5. Each structure mixed in (Mixing::mixIn()): its ports' wiring
  *    checked, built by itself for its def and its access, which holds its
  *    members to what is stored or takes them back out; then what of the
- *    owner's names its members is checked
+ *    declaring class's names its members is checked
  *    (Mixing::assertMixinsUnnamed()), and its refiners, rules and
- *    alters are bound in the owner's frame first (Binding::bindMixin()).
+ *    alters are bound in the declaring class's frame first
+ *    (Binding::bindMixin()).
  * 6. The refiners. Every #[RefinesInput] method is checked against the
  *    shape, then bound: the keys it watches become the engine's
  *    refinement edges with addRefinement(), and its class becomes one
- *    RefinesInputRefiner link in the owner's chain of that key, the
- *    owner's links before any alter's. The owner's link holds its
- *    class name, its refiners being static; an alter's holds the alter,
- *    an autowired service. An alter's method may refine and watch the
+ *    RefinesInputRefiner link in the declaring class's chain of that key, the
+ *    declaring class's links before any alter's. The declaring class's link
+ *    holds its class name, its refiners being static; an alter's holds the
+ *    alter, an autowired service. An alter's method may refine and watch the
  *    keys that alter mounted, each bound by its dotted path inside the
  *    mount. A method that watches nothing runs once, here, and is held
  *    to the narrowing check. A runtime method (`runtime: TRUE`) is bound
@@ -128,7 +129,7 @@ use Drupal\surface\Storage\ConfigObjectResourceStorage;
  *   alters, the site's defaults and the context, and the context a child
  *   is invoked in.
  * - Mixing: step 5, each structure mixed in, built by itself, its
- *   members settled, and what of the owner's names them checked.
+ *   members settled, and what of the declaring class's names them checked.
  * - Attaching: steps 2 and 7, each child, collection, variant, map of keys
  *   from the site and structure at an alter's mount, each built through
  *   this class again in its own frame.
@@ -659,10 +660,10 @@ final class Resources implements ResourcesInterface {
    *
    * Every child built at every depth, by the name it was built by; those
    * read from a schema or made for a reference key are what a request
-   * that did not build their owner cannot name. Not a variant held
+   * that did not build their declaring class cannot name. Not a variant held
    * unsettled: the request that builds it registers it again from its
-   * owner's list (settleVariant()), so the document the site's list read
-   * (a theme's components, every one a def of it) is not stored with
+   * declaring class's list (settleVariant()), so the document the site's list
+   * read (a theme's components, every one a def of it) is not stored with
    * every build that holds them.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
@@ -989,8 +990,8 @@ final class Resources implements ResourcesInterface {
     $build = $build->withFrame($frame);
     // Each structure mixed in, built by itself for its def and its access,
     // which locks its members or takes them back out; then nothing of the
-    // owner's may name what that access may take away, or rule a member
-    // out.
+    // declaring class's may name what that access may take away, or rule a
+    // member out.
     // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
     $mixins = $this->mixing->mixIn($build, $inputs);
     $owned_rules = [$inputs->rules()];
@@ -1012,7 +1013,8 @@ final class Resources implements ResourcesInterface {
     // Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
     [$readable, $mounted_by] = $this->attaching->mountAlters($build, $additions);
     // Each structure mixed in first, then each contributor's coded
-    // refiners and the rules it declared, the owner's before any alter's.
+    // refiners and the rules it declared, the declaring class's before any
+    // alter's.
     $build = $this->binding->bind($build, $inputs, $links, $additions, $mixins, $readable, $mounted_by);
 
     // The children, each through this same build step in its own frame:
@@ -1114,8 +1116,8 @@ final class Resources implements ResourcesInterface {
    * or with every answer, for the account that build was for, and held to
    * its config schema as that build was; what the variant's own build
    * refuses is refused here, its wiring among it, and, for variants
-   * stored flat, a key the owner holds at their level or variants stored
-   * flat of its own (Attaching::assertFlatVariantFits()).
+   * stored flat, a key the declaring class holds at their level or variants
+   * stored flat of its own (Attaching::assertFlatVariantFits()).
    *
    * Decision: see
    * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
@@ -1149,7 +1151,7 @@ final class Resources implements ResourcesInterface {
     $parent = $ancestry[count($ancestry) - 1];
     if (!$this->registry->hasDefinition($name)) {
       // Kept with a build read from the build cache: a structure the
-      // owner's list reads from a schema is registered by listing it.
+      // declaring class's list reads from a schema is registered by listing it.
       $this->attaching->registerVariantsOf($parent['class']);
     }
     $was = [
@@ -1189,8 +1191,8 @@ final class Resources implements ResourcesInterface {
    *
    * Read from the document the variant is read from, an entry a provider
    * lists without its schema asking the provider for that entry alone; a
-   * build read from the build cache registers its owner's list first, as
-   * settleVariant() does.
+   * build read from the build cache registers its declaring class's list first,
+   * as settleVariant() does.
    *
    * Decision: see
    * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
@@ -1322,8 +1324,8 @@ final class Resources implements ResourcesInterface {
       ));
     }
     // The stage's storage reads these keys, one to tell a thing a stage
-    // creates and one for a new stage's lifetime, so no owner's context
-    // may know them.
+    // creates and one for a new stage's lifetime, so no declaring class's
+    // context may know them.
     // Decision: see docs/decisions.md#known-keys-that-are-not-identity.
     if (array_key_exists(StagedStorage::POSITION, $context->known)) {
       throw new \LogicException(sprintf(
@@ -1348,9 +1350,9 @@ final class Resources implements ResourcesInterface {
   /**
    * Builds the context of a thing a stage creates, for a later operation.
    *
-   * The owner's own create context, from the operation and the arguments
-   * the stage recorded, so what it holds stands (a creatable bundle, a
-   * known empty id), under the asked operation's id and still creating,
+   * The declaring class's own create context, from the operation and the
+   * arguments the stage recorded, so what it holds stands (a creatable bundle,
+   * a known empty id), under the asked operation's id and still creating,
    * knowing the create's position, and fixing each name the caller gave.
    * Not stamped: OperationDefinition::stamp() would refuse a context that
    * creates under an operation that does not. The asked id stays, because

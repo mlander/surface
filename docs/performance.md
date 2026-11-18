@@ -98,7 +98,7 @@ Stored with it are the structures it built that were read from a schema
 or made for a reference key, so a request that reads it can name them. A
 variant the site lists is stored as what builds it: the variant's name,
 its context, and once per key the frames around it and the build it was
-held in. A request that builds one registers the structures its owner's
+held in. A request that builds one registers the structures its declaring class's
 list reads again, from that list.
 
 The OpenAPI document is kept in the same bin under

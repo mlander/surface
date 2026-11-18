@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 378">
-  <title>Who has a say, in order: six bands inside one sealed data surface, the owner, other modules, the site, the operation, the page and access, with a lock on the frame for the seal; an arrow leads to every door</title>
+  <title>Who has a say, in order: six bands inside one sealed data surface, the declaring class, other modules, the site, the operation, the page and access, with a lock on the frame for the seal; an arrow leads to every door</title>
   <style>
     .bg { fill: #F6F8FA; }
     .ink { fill: #1F2328; }
@@ -53,7 +53,7 @@
   <text class="t b ink" x="44" y="54">data surface</text>
   <path class="lock-line" d="M 447 46 v -3 a 5 5 0 0 1 10 0 v 3"/><rect class="lock-fill" x="444" y="46" width="16" height="12" rx="2"/>
   <rect class="owner" x="44" y="70" width="412" height="36" rx="8"/>
-  <text class="t ink" x="60" y="93"><tspan class="b">1</tspan>  the owner declares keys and rules</text>
+  <text class="t ink" x="60" y="93"><tspan class="b">1</tspan>  the declaring class declares keys and rules</text>
   <rect class="alter" x="44" y="114" width="412" height="36" rx="8"/>
   <text class="t ink" x="60" y="137"><tspan class="b">2</tspan>  other modules alter: add keys, tighten rules</text>
   <rect class="site" x="44" y="158" width="412" height="36" rx="8"/>

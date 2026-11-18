@@ -13,8 +13,8 @@ use PortableSchema\Builder\Schema;
  * Three keys: two colors and a caption.
  *
  * The accent is a string whose format is color, which the color picker
- * claims. The trim is one too, and its owner asks for radios, which win
- * over the claim. The caption is a plain string, which the stock rule
+ * claims. The trim is one too, and its declaring class asks for radios, which
+ * win over the claim. The caption is a plain string, which the stock rule
  * draws.
  */
 #[Structure('widget_test.swatch')]

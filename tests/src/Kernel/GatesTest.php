@@ -28,7 +28,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests gates: access an operation borrows from another thing's owner.
+ * Tests gates: access an operation borrows from another thing's provider.
  *
  * Both spellings parse, and a gate naming what the site lacks is refused
  * at discovery; a gate is asked about the node the context knows, after

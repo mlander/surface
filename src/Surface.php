@@ -431,8 +431,8 @@ final class Surface implements SurfaceInterface {
    * so its own attached structures answer for themselves. A key with
    * variants starts from the defaults of the variant its deciding key's
    * default chooses, and from nothing when that chooses none. A collection
-   * starts from what its list declares, which is no items unless the owner
-   * said otherwise. Any other key's default is read from its schema
+   * starts from what its list declares, which is no items unless the declaring
+   * class said otherwise. Any other key's default is read from its schema
    * (SchemaFacts::defaultOf()), a map's properties' defaults under it.
    *
    * Decision: see
@@ -1213,8 +1213,8 @@ final class Surface implements SurfaceInterface {
    * read at its dotted path and never holds the target back: it is
    * handed as it stands, NULL when empty. The engine gates per key, so
    * an unanswered optional key of the alter's would otherwise suspend
-   * the owner's own refiners of the target as well, and the alter would
-   * have widened what the owner narrowed.
+   * the declaring class's own refiners of the target as well, and the alter
+   * would have widened what the declaring class narrowed.
    *
    * @param string[] $dependencies
    *   The keys the target refines against.
@@ -1245,7 +1245,8 @@ final class Surface implements SurfaceInterface {
   /**
    * Collects one target's refiner chains, keyed by contributor.
    *
-   * The owner's chain comes first. A chain left with no link is left out.
+   * The declaring class's chain comes first. A chain left with no link is left
+   * out.
    *
    * @param \Drupal\surface\Entry $entry
    *   The key being refined.
@@ -1276,10 +1277,10 @@ final class Surface implements SurfaceInterface {
         $registered[$contributor] = $kept;
       }
     }
-    $owner = $registered[self::OWNER] ?? [];
-    $chains = $owner === [] ? [] : [self::OWNER => $owner];
+    $declaring_class = $registered[self::DECLARING_CLASS] ?? [];
+    $chains = $declaring_class === [] ? [] : [self::DECLARING_CLASS => $declaring_class];
     foreach ($registered as $contributor => $links) {
-      if ($contributor !== self::OWNER) {
+      if ($contributor !== self::DECLARING_CLASS) {
         $chains[(string) $contributor] = $links;
       }
     }
@@ -1289,10 +1290,10 @@ final class Surface implements SurfaceInterface {
   /**
    * Refines one target as the union of its contributions.
    *
-   * The owner's refiners run over the owner's own option space — the
-   * advertised values minus everything contributed — and each
+   * The declaring class's refiners run over the declaring class's own option
+   * space — the advertised values minus everything contributed — and each
    * contributor's refiners over the values that contributor added. The
-   * refined schema is the owner's, with its list of allowed values
+   * refined schema is the declaring class's, with its list of allowed values
    * replaced by the union of every narrowed list: nobody can narrow away
    * what somebody else contributed, and nobody can hand back a value
    * they were not given. Each list is written on the schema once
@@ -1319,27 +1320,27 @@ final class Surface implements SurfaceInterface {
     $contributed = $entry->contributions;
     $advertised_set = ChoiceSet::ofSchema($advertised);
 
-    // The owner's space is what nobody else contributed.
-    $owner = $advertised;
+    // The declaring class's space is what nobody else contributed.
+    $declaring_class = $advertised;
     if ($advertised_set !== NULL) {
       $contributed_values = $contributed === [] ? [] : array_merge(...array_values($contributed));
-      $owner = Answer::withChoices($advertised, $advertised_set->withValues(array_diff($advertised_set->values, $contributed_values)));
+      $declaring_class = Answer::withChoices($advertised, $advertised_set->withValues(array_diff($advertised_set->values, $contributed_values)));
     }
-    if (isset($chains[self::OWNER])) {
-      $owner = $this->runChain($target, self::OWNER, $chains[self::OWNER], $owner, $values, $cacheability);
+    if (isset($chains[self::DECLARING_CLASS])) {
+      $declaring_class = $this->runChain($target, self::DECLARING_CLASS, $chains[self::DECLARING_CLASS], $declaring_class, $values, $cacheability);
     }
-    if ($advertised_set === NULL || SchemaFacts::doesNotApply($owner)) {
-      // Whether the key applies is the owner's to say, as everything but
-      // its values is: ruled out, no contribution brings it back.
+    if ($advertised_set === NULL || SchemaFacts::doesNotApply($declaring_class)) {
+      // Whether the key applies is the declaring class's to say, as everything
+      // but its values is: ruled out, no contribution brings it back.
       // A key that advertises no list of values has no space to divide,
-      // so it cannot be contributed to and the owner's answer stands.
-      return $owner;
+      // so it cannot be contributed to and the declaring class's answer stands.
+      return $declaring_class;
     }
 
-    $union = ChoiceSet::ofSchema($owner, $advertised_set->constraint);
+    $union = ChoiceSet::ofSchema($declaring_class, $advertised_set->constraint);
     $values_union = $union === NULL ? [] : $union->values;
     $labels = $union === NULL ? [] : $union->labels;
-    foreach (array_keys($contributed + array_diff_key($chains, [self::OWNER => TRUE])) as $contributor) {
+    foreach (array_keys($contributed + array_diff_key($chains, [self::DECLARING_CLASS => TRUE])) as $contributor) {
       $contributor = (string) $contributor;
       $schema = Answer::withChoices($advertised, $advertised_set->withValues($contributed[$contributor] ?? []));
       if (isset($chains[$contributor])) {
@@ -1352,7 +1353,7 @@ final class Surface implements SurfaceInterface {
         $labels += $narrowed->labels;
       }
     }
-    return Answer::withChoices($owner, ($union ?? $advertised_set)
+    return Answer::withChoices($declaring_class, ($union ?? $advertised_set)
       ->withValues(array_values(array_unique($values_union)), $labels + $advertised_set->labels));
   }
 
@@ -1385,7 +1386,7 @@ final class Surface implements SurfaceInterface {
    *   When an answer would widen the key.
    */
   protected function runChain(string $target, string $contributor, array $chain, Schema $schema, array $values, CacheableMetadata $cacheability): Schema {
-    $who = $contributor === self::OWNER
+    $who = $contributor === self::DECLARING_CLASS
       ? 'the declaring class'
       : sprintf('the %s contribution', $contributor);
     foreach ($chain as $link) {

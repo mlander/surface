@@ -20,7 +20,7 @@ use PortableSchema\Builder\Schema;
  *
  * One operation knows the position key of a staged create, one the
  * lifetime key of a new stage. Resources::operation() refuses each, since
- * the stage's storage reads those keys and no owner's context may set
+ * the stage's storage reads those keys and no declaring class's context may set
  * them.
  */
 #[Resource('reserved_test.thing', storage: ReservedKeysStorage::class)]

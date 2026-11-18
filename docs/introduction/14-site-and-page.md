@@ -34,7 +34,7 @@ what a key with nothing stored starts from.
 
 The site default is checked against the key. A path that names no key,
 or a value the key's rules refuse, is refused with a message that names
-the key. An alter may not change an owner's default, so this
+the key. An alter may not change a declaring class's default, so this
 configuration is the one place a site changes it.
 
 ## A page's seeds
@@ -70,7 +70,7 @@ operation's permission still decides who may open the page.
 A key's starting value comes from four places, each laid over the one
 before it:
 
-1. the default the owner declares;
+1. the default the declaring class declares;
 2. the site default;
 3. values the operation's own code sets ([Operations](09-operations.md));
 4. the route's `_surface_defaults`.

@@ -108,15 +108,15 @@ method.
 
 | | Blueprint | Values |
 | --- | --- | --- |
-| **Owner** | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
+| **Declaring class** | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
 | **Another module** | `alterInputs($inputs)` | `#[RefinesInput('key')]` methods |
 
 - **`defineInputs()` and `alterInputs()` get a blueprint to fill, and nothing else**: no
   values, no context, no services. On a resource or structure they are
   static, so the language holds them to that: the build step calls them
-  on the class and never makes an instance. The owner gets
+  on the class and never makes an instance. The declaring class gets
   `BlueprintInterface`; an alter gets `BlueprintAdditionsInterface`, which
-  the owner's extends with seven methods an alter does not have
+  the declaring class's extends with seven methods an alter does not have
   (`attachVariants()`, `addEach()`, `attachEach()`, `mixIn()`,
   `reads()`, `compute()` and `addCacheableDependency()`), and whose
   `attach()` places a structure at the alter's own mount and nowhere
@@ -144,7 +144,7 @@ method.
   (`runtime: TRUE`): a rule no schema can state, such as a lookup or
   uniqueness, which nothing runs ahead of time
   ([refinement](refinement.md#static-and-runtime-refiners)). **A static
-  refiner is a static method**, the owner's and an alter's alike, so it
+  refiner is a static method**, the declaring class's and an alter's alike, so it
   holds no service; an alter's runtime refiner may be an instance
   method, because an alter is a service that may hold what it reads.
 - **Labels are `t('...')`.** A static method has no instance for the
@@ -368,7 +368,7 @@ not which keys there are. It is how much is already known.
   $bundle, string $field_name)` the field, and every door names them
   alike, in the path in identity order
   ([decision](decisions.md#a-parameter-is-identity-the-caller-knows)).
-- **On the owner's class only.** An operation stands on its
+- **On the declaring class only.** An operation stands on its
   resource's or structure's own class, found the way a hook method is,
   no interface needed; one on any other class is refused at discovery.
 
@@ -470,7 +470,7 @@ final class ExampleBlockAlter implements AltersInputsInterface {
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 - What an alter adds is mounted under its module,
-  `third_party_settings.<module>.<key>`, so the owner's storage and
+  `third_party_settings.<module>.<key>`, so the declaring class's storage and
   schema never have to know it. Its `#[RefinesInput]` methods may
   refine and watch those keys by the names it added them under, and
   never another module's; a watched one is handed as it stands, NULL
@@ -478,15 +478,15 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - `describe()` rewords and arranges a key anyone declared: label,
   description and arrangement only, because that changes nothing about
   what is accepted.
-- `extendChoices()` offers more values on a key whose owner declared a
+- `extendChoices()` offers more values on a key whose declaring class declared a
   fixed list. The alter's `#[RefinesInput]` method on that key says what
   its own values mean and is handed only them, so it can never take the
-  owner's away (`ExampleFormatterAlter`).
+  declaring class's away (`ExampleFormatterAlter`).
 - An alter that only tightens implements no interface: the attribute is
   what makes it an alter.
 - An alter may answer access, implementing `OperationAccessInterface`,
   the access class's interface, its role read from `#[Alters]`: it
-  is asked after the owner's answer and the stricter stands, so it locks
+  is asked after the declaring class's answer and the stricter stands, so it locks
   or leaves out and never opens
   (why: [decision](decisions.md#an-alter-may-answer-access-and-the-stricter-stands)).
 
@@ -639,7 +639,7 @@ resolver, as above. Two points are recorded for when it is built: an
 options alter may remove an entry, under the stale rule the module
 already has (a stored value no longer offered renders as no longer
 available, is kept on an untouched save, and is refused as a new
-value); and a site policy that hides an owner's key is the same later
+value); and a site policy that hides a declaring class's key is the same later
 concept. The naming of sources and resolvers is undecided.
 
 ## Questions the pattern settled

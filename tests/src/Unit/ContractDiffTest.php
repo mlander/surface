@@ -598,12 +598,12 @@ class ContractDiffTest extends UnitTestCase {
    * The document's for its own keys, a structure's for the keys of its
    * def, and an allowance for its exact path.
    */
-  public function testTheOwnersVersionOrAnAllowanceAnswers(): void {
+  public function testTheDeclaringClassVersionOrAnAllowanceAnswers(): void {
     $diff = new ContractDiff();
     $current = self::BASELINE;
     $current['schema']['properties']['capacity']['maximum'] = 500;
     unset($current['schema']['$defs']['event.contact']['properties']['email']);
-    $verdicts = static fn (array $changes): array => array_map(static fn (ContractChange $change): string => $change->owner . ' ' . $change->change . ': ' . $change->status, $changes);
+    $verdicts = static fn (array $changes): array => array_map(static fn (ContractChange $change): string => $change->declaringClass . ' ' . $change->change . ': ' . $change->status, $changes);
 
     $this->assertSame([
       'event maximum lowered from 1000 to 500: breaking',

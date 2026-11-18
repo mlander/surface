@@ -272,14 +272,14 @@ final class RecordingBlueprint extends BlueprintAdapterBase implements Blueprint
    * {@inheritdoc}
    */
   public function addEachTyped(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition {
-    throw new \LogicException(sprintf('addEach("%s") declares keys from the site, which only an owner\'s own blueprint holds.', $key));
+    throw new \LogicException(sprintf('addEach("%s") declares keys from the site, which only a declaring class\'s own blueprint holds.', $key));
   }
 
   /**
    * {@inheritdoc}
    */
   public function computeTyped(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition {
-    throw new \LogicException(sprintf('compute("%s") declares a computed key, which only an owner\'s own blueprint holds.', $key));
+    throw new \LogicException(sprintf('compute("%s") declares a computed key, which only a declaring class\'s own blueprint holds.', $key));
   }
 
 }

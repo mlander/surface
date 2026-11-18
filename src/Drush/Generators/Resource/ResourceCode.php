@@ -197,7 +197,7 @@ final class ResourceCode {
     $keys = [];
     foreach ($map->entries() as $name => $entry) {
       $keys[] = $this->key($surface, $entry, $path);
-      foreach ($entry->refiners[SurfaceInterface::OWNER] ?? [] as $refiner) {
+      foreach ($entry->refiners[SurfaceInterface::DECLARING_CLASS] ?? [] as $refiner) {
         if ($refiner instanceof DeclaredRefiner && $refiner->module === NULL && $refiner->at === NULL) {
           foreach ($refiner->rules[(string) $name] ?? [] as $rule) {
             $rules[spl_object_id($rule)] = $rule;
@@ -923,7 +923,8 @@ final class ResourceCode {
    * Gives a definition's label, or its key's name for one with none.
    *
    * @param mixed $label
-   *   The label its owner gave it, else its label, as held; NULL for none.
+   *   The label its declaring class gave it, else its label, as held; NULL for
+   *   none.
    * @param string $name
    *   The key.
    *

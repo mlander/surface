@@ -218,7 +218,7 @@ final class WidgetChoice {
    * key's `format` setting, or a shape. The claims are asked by priority,
    * the highest first, then by plugin ID; the first widget whose claim
    * matches and that draws the key serves it. A key whose `widget` setting
-   * asks for a widget is its owner's choice, and no claim is asked.
+   * asks for a widget is its declaring class's choice, and no claim is asked.
    *
    * Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
    *

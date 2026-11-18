@@ -28,7 +28,7 @@ final class RecipeAlter implements AltersInputsInterface {
   }
 
   /**
-   * No fish in a vegetarian recipe. Runs after the owner's dish refiner.
+   * No fish in a vegetarian recipe. Runs after the declaring class's dish rule.
    */
   #[RefinesInput('dish')]
   public static function noFishForVegetarians(Schema $dish, bool $vegetarian): Schema {

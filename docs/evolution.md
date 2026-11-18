@@ -211,7 +211,7 @@ version is fetched again, as one of another resource version is.
 **What the lint does.** The contract diff compares only documents of one
 contract version. A baseline written in another is not compared keyword
 by keyword, since every keyword may be spelled anew: the run reports it
-once, as one change, "contract version 3 to 4", its document and owner
+once, as one change, "contract version 3 to 4", its document and declaring class
 `*`, of its own class, `contract`. It fails, as an unpinned declaration
 does, and it is no breaking change, since no resource broke its promise:
 `--write` re-pins every such baseline in today's version with no
@@ -255,8 +255,8 @@ What the runner will do:
   destination's ledger records to the one declared, one step at a time,
   never skipping. Each child converts its own map wherever it sits: an
   attached key, each item of a collection, a module's mount, a mixed-in
-  structure's members inside its owner's map (the step handed the
-  owner's map and allowed to change only its members).
+  structure's members inside its declaring class's map (the step handed the
+  declaring class's map and allowed to change only its members).
 - **The ledger is the storage's.** A storage owns the storage layout, so it
   says where the stamp lives, and stamps the declared versions at
   commit. `ConfigObjectResourceStorage` keeps `_surface.versions`, keyed by
@@ -402,7 +402,7 @@ resources and structures in contract 2, emitted for user 1 (admin):
   super user policy off may want a role's account instead.
 - **`--format=json`** prints the same for a program: `modules`,
   `directory`, `uid`, `contract`, `declarations`, `changes` (each
-  `resource`, `owner`, `path`, `change`, `effect`, `status`, `fails`;
+  `resource`, `declaring_class`, `path`, `change`, `effect`, `status`, `fails`;
   `surface` before contract 2), `failing`,
   `passed`, and with `--write`, `written` and `removed`; a refusal
   before comparing answers `error` beside them. The exit code is the

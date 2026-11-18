@@ -24,11 +24,11 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
  * constraint, and a contributing module widens it at build time with a
  * value of its own: `surface_examples_extras` contributes `ribbon`,
  * which is deliberately not a case here. A contributor answers for its
- * own value, and the owner's enum is not where that value lives — that
- * is the point of a contribution, not an oversight. So code acting on a
+ * own value, and the declaring class's enum is not where that value lives —
+ * that is the point of a contribution, not an oversight. So code acting on a
  * stored variant takes the string it was handed rather than
- * `ExampleVariant::from()`-ing it, and only the owner's own half of the
- * vocabulary is enumerated.
+ * `ExampleVariant::from()`-ing it, and only the declaring class's own half of
+ * the vocabulary is enumerated.
  *
  * @see \Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter
  * @see \Drupal\surface_examples_extras\Alter\ExampleFormatterAlter

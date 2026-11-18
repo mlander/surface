@@ -24,8 +24,8 @@ use PortableSchema\Builder\Schema;
 /**
  * The mutable stage a data surface passes through before it is sealed.
  *
- * The engine under the build step. Resources writes an owner's shape, its
- * alters' additions, the context and the bound #[RefinesInput] methods
+ * The engine under the build step. Resources writes a declaring class's shape,
+ * its alters' additions, the context and the bound #[RefinesInput] methods
  * into one of these, then seals it; nothing an author writes holds one.
  * BlueprintInterface and BlueprintAdditionsInterface are the author's view of
  * it, and each of their verbs lands on a method here.
@@ -39,7 +39,7 @@ use PortableSchema\Builder\Schema;
  * made it, which is what lets refinement be shared: a contributor's
  * refiners narrow the values that contributor added and nothing else,
  * and the refined data surface is the union of what each contribution
- * narrowed to. The owner is the first contributor.
+ * narrowed to. The declaring class is the first contributor.
  *
  * A builder is single use. seal() is idempotent, and every mutator
  * throws once it has run.
@@ -246,12 +246,12 @@ final class SurfaceBuilder {
    * Constructs a SurfaceBuilder.
    *
    * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface|\PortableSchema\Builder\Schema> $definitions
-   *   The owner's own keys, keyed by definition key: a definition, or the
-   *   key's schema (setSchema()).
+   *   The declaring class's own keys, keyed by definition key: a definition, or
+   *   the key's schema (setSchema()).
    * @param array<string, string[]> $refinements
    *   Refinement dependencies: target => dependency names.
    * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $outputs
-   *   The owner's own output definitions, keyed by output key.
+   *   The declaring class's own output definitions, keyed by output key.
    */
   public function __construct(
     protected array $definitions = [],
@@ -389,7 +389,7 @@ final class SurfaceBuilder {
   /**
    * Adds or replaces a definition.
    *
-   * The owner's verb: an alter adding keys mounts them under its
+   * The declaring class's verb: an alter adding keys mounts them under its
    * module with setThirdPartyDefinition() instead.
    *
    * @param string $name
@@ -602,9 +602,9 @@ final class SurfaceBuilder {
    * Takes a mixed-in structure's member back out, before anything binds it.
    *
    * What a mixed-in structure's access answers when the account may not
-   * see it: its members leave the owner's keys, as an omitted child's key
-   * does, and storage keeps what it holds under them. Nothing of the
-   * owner's may name a member of a structure with an access class, so
+   * see it: its members leave the declaring class's keys, as an omitted child's
+   * key does, and storage keeps what it holds under them. Nothing of the
+   * declaring class's may name a member of a structure with an access class, so
    * nothing is left reading it.
    *
    * @param string $name
@@ -678,9 +678,9 @@ final class SurfaceBuilder {
   /**
    * Records a structure mixed in: which of the keys it brought.
    *
-   * Its members are declared as the owner's keys already, through the
+   * Its members are declared as the declaring class's keys already, through the
    * blueprint; this is what the contract needs to state the structure
-   * once, as a def the owner composes with its own keys.
+   * once, as a def the declaring class composes with its own keys.
    *
    * @param \Drupal\surface\Mixin $mixin
    *   The structure, built in its own frame, and the keys it brought.
@@ -742,10 +742,10 @@ final class SurfaceBuilder {
    * The added values go after the existing ones, and an existing value
    * keeps the label it already had.
    *
-   * One value has one owner: contributing a value the key already
+   * One value has one provider: contributing a value the key already
    * allows is refused, naming whoever already has it. A key that
    * declares no list of allowed values cannot be extended at all,
-   * because giving it one would narrow what its owner left open.
+   * because giving it one would narrow what its declaring class left open.
    *
    * @param string $name
    *   The definition key.
@@ -770,7 +770,7 @@ final class SurfaceBuilder {
     $set = ChoiceSet::fromConstraints($definition->getConstraints());
     if ($set === NULL) {
       throw new \InvalidArgumentException(sprintf(
-        'The "%s" definition declares no list of allowed values, so there is nothing to extend: giving it one would narrow what its owner deliberately left open.',
+        'The "%s" definition declares no list of allowed values, so there is nothing to extend: giving it one would narrow what its declaring class deliberately left open.',
         $name,
       ));
     }
@@ -780,7 +780,7 @@ final class SurfaceBuilder {
       // choice list is compared the way the validator compares it.
       if (in_array($value, $set->values)) {
         throw new \LogicException(sprintf(
-          'The "%s" value of "%s" was already contributed by %s, so %s cannot contribute it too: one value has one owner, and that owner answers for how it behaves.',
+          'The "%s" value of "%s" was already contributed by %s, so %s cannot contribute it too: one value has one provider, and that provider answers for how it behaves.',
           static::describe($value),
           $name,
           $this->contributorOf($name, $value),
@@ -801,8 +801,8 @@ final class SurfaceBuilder {
    *
    * A contributor may ask a caller for a value in one layout and store it
    * in another: a duration asked for as an amount and a unit and stored
-   * as a number of seconds. The owner's storage cannot know that, and the
-   * contributor does not build the storage, so the translation travels on
+   * as a number of seconds. The declaring class's storage cannot know that, and
+   * the contributor does not build the storage, so the translation travels on
    * the data surface: storage that writes third-party settings applies the
    * provider's storage layout to that provider's namespace, toStorage() on the
    * way in and fromStorage() on the way out, and to nothing else.
@@ -1108,10 +1108,10 @@ final class SurfaceBuilder {
    * Adds or replaces an output definition.
    *
    * What the host's execution emits, declared in the same vocabulary as
-   * what it accepts. The owner's verb alone: what a call answers is the
-   * operation's, and no alter adds to it (a reaction to a save belongs to
-   * ECA), so a consumer reading the owner's output schema keeps reading
-   * true.
+   * what it accepts. The declaring class's verb alone: what a call answers is
+   * the operation's, and no alter adds to it (a reaction to a save belongs to
+   * ECA), so a consumer reading the declaring class's output schema keeps
+   * reading true.
    *
    * Two differences from an input definition, both enforced:
    * - An output carries no default. A default is what a value starts
@@ -1349,9 +1349,9 @@ final class SurfaceBuilder {
    * Appends a refiner to one contribution's chain for a target.
    *
    * A chain narrows one contribution's own slice of the storage: the
-   * owner's refiners are handed the values the owner declared, and a
-   * contributor's are handed the values that contributor added with
-   * extendChoices(). Links run in registration order, each receiving the
+   * declaring class's refiners are handed the values the declaring class
+   * declared, and a contributor's are handed the values that contributor added
+   * with extendChoices(). Links run in registration order, each receiving the
    * previous link's output, and every link is held to the narrowing
    * contract against what it was handed — so a contributor can neither
    * narrow away somebody else's value nor hand back one of its own that
@@ -1367,7 +1367,7 @@ final class SurfaceBuilder {
    *   The refiner to append.
    * @param string|null $contributor
    *   The provider whose contribution this refiner speaks for, or NULL
-   *   for the owner.
+   *   for the declaring class.
    *
    * @return $this
    *
@@ -1376,7 +1376,7 @@ final class SurfaceBuilder {
    */
   public function addRefiner(string $target, SurfaceRefinerInterface $refiner, ?string $contributor = NULL): static {
     $this->assertMutable();
-    $this->refiners[$target][$contributor ?? SurfaceInterface::OWNER][] = $refiner;
+    $this->refiners[$target][$contributor ?? SurfaceInterface::DECLARING_CLASS][] = $refiner;
     return $this;
   }
 
@@ -1425,7 +1425,7 @@ final class SurfaceBuilder {
    * order, and checked once for the rest of its shape.
    *
    * The outputs become a second map of the same type, holding whatever
-   * the owner and its alters declared it emits. Its entries carry no
+   * the declaring class and its alters declared it emits. Its entries carry no
    * locked flag, no contributed values and no refiners: outputs are
    * never refined.
    *
@@ -1849,7 +1849,7 @@ final class SurfaceBuilder {
    *
    * Two refusals, and both are about a promise nothing could keep: the
    * reserved name, which belongs to whoever mounts under it rather than
-   * to the owner, and a declared default, which is a value nobody can
+   * to the declaring class, and a declared default, which is a value nobody can
    * ever receive.
    *
    * A secret is refused too, at any depth: an output is served to whoever
@@ -2129,7 +2129,7 @@ final class SurfaceBuilder {
    *   The value somebody is trying to contribute a second time.
    *
    * @return string
-   *   The provider that contributed it, or the owner, in words.
+   *   The provider that contributed it, or the declaring class, in words.
    */
   protected function contributorOf(string $name, mixed $value): string {
     foreach ($this->contributions[$name] ?? [] as $contributor => $values) {

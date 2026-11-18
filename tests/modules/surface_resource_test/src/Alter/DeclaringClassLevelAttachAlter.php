@@ -11,12 +11,12 @@ use Drupal\surface_resource_test\Structure\Broken\AlterAttachTargetStructure;
 use Drupal\surface_resource_test\Structure\Seating\SeatingStructure;
 
 /**
- * Attaches the seating structure at the owner's level, which is refused.
+ * Attaches the seating structure at the declaring class's level: refused.
  *
  * An alter attaches at its own mount and only there.
  */
 #[Alters(AlterAttachTargetStructure::class)]
-final class OwnerLevelAttachAlter implements AltersInputsInterface {
+final class DeclaringClassLevelAttachAlter implements AltersInputsInterface {
 
   /**
    * {@inheritdoc}

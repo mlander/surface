@@ -220,7 +220,7 @@ final class ExamplesController extends ControllerBase {
       }
       if ($number === 14) {
         $steps['extension'] = [
-          '#markup' => '<h2>' . $this->t('An optional extension') . '</h2><p>' . $this->t("Example 14 is the Key module's pattern: a credential pasted as a secret, or a key the site manages once a module that manages keys is on, which a submodule of the examples stands in for. Its page says how to enable that module, and shows the two ways to reach the same form, the owner declaring both sources or another module's alter, with the module off and on.") . '</p>',
+          '#markup' => '<h2>' . $this->t('An optional extension') . '</h2><p>' . $this->t("Example 14 is the Key module's pattern: a credential pasted as a secret, or a key the site manages once a module that manages keys is on, which a submodule of the examples stands in for. Its page says how to enable that module, and shows the two ways to reach the same form, the provider declaring both sources or another module's alter, with the module off and on.") . '</p>',
         ];
       }
       if ($number === 13) {

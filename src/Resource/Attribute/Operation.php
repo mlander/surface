@@ -107,7 +107,7 @@ final class Operation {
    *   resource's keys. Refused on an operation that creates or deletes,
    *   which is about the thing's own keys.
    * @param string|string[] $gate
-   *   Access another thing's owner decides, borrowed rather than copied:
+   *   Access another thing's provider decides, borrowed rather than copied:
    *   one gate or a list of them, each asked for the thing a call is
    *   about after the permission and before the access class, the
    *   stricter standing. A gate is another resource's operation by id,

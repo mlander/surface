@@ -48,8 +48,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * settings with #[UsesStructure] is that structure, built as declared, and
  * its schema is not read: the plugin's definition carries the class
  * (UsesStructure::DEFINITION_KEY), so no plugin is instantiated. Any other
- * value is read from its schema. A #[Variant] declared for the owner wins
- * over both, as for any provider. Values from a Choice or from the schema
+ * value is read from its schema. A #[Variant] declared for the declaring class
+ * wins over both, as for any provider. Values from a Choice or from the schema
  * names have no plugin definition, and are read from the schema alone.
  *
  * A `by` argument, optional, restates the deciding key: listFor() is
@@ -93,7 +93,7 @@ final class ConfigSchemaTypes implements BoundSiteListInterface {
    * {@inheritdoc}
    *
    * @param array $arguments
-   *   By name, checked here since an owner may bind any array: `type`,
+   *   By name, checked here since a declaring class may bind any array: `type`,
    *   the schema type, or an own-key expression as written; `path`, the
    *   dotted path of the value in it, absent or empty for an expression;
    *   `by`, the key that decides it, absent for no check.

@@ -18,9 +18,9 @@ namespace Drupal\surface\Storage;
  *
  * Optional, beside StorageLayoutInterface rather than on it: a field
  * type's storage layout (AddressStorageLayout) is stored under a schema its
- * owner writes, which no generator reads. An alter's storage layout of its
- * mount may implement it too: the check and the generator then read each key it
- * names at `third_party_settings.<module>.<key>`.
+ * declaring class writes, which no generator reads. An alter's storage layout
+ * of its mount may implement it too: the check and the generator then read each
+ * key it names at `third_party_settings.<module>.<key>`.
  *
  * Decision: see
  * docs/decisions.md#a-storage-layout-is-the-storages-one-word-on-its-shape.

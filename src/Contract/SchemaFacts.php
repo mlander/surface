@@ -188,7 +188,7 @@ final class SchemaFacts {
   }
 
   /**
-   * Gets the label a key's owner gave it.
+   * Gets the label a key's declaring class gave it.
    *
    * Stands for the metadata getter ownLabel(): the `ownLabel` member where
    * the definition stores one (NULL for a value that is no text), else
@@ -198,7 +198,7 @@ final class SchemaFacts {
    *   A built schema.
    *
    * @return string|\Stringable|null
-   *   The owner's label; the label it has, when none was kept.
+   *   The declaring class's label; the label it has, when none was kept.
    */
   public static function ownLabel(Schema $schema): string|\Stringable|null {
     $model = DefinitionSchema::model($schema);

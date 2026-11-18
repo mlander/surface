@@ -174,7 +174,7 @@ class ConfigObjectResourceStorageTest extends SurfaceKernelTestBase {
       'limit' => 3,
       'third_party_settings' => ['surface_storage_test' => ['note' => 'Lost']],
     ]);
-    $this->assertSame(['third_party_settings'], array_keys($refusals), 'An owner that declares no third party settings refuses every mount, under that key.');
+    $this->assertSame(['third_party_settings'], array_keys($refusals), 'A declaring class that declares no third party settings refuses every mount, under that key.');
   }
 
   /**

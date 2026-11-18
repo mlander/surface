@@ -40,12 +40,12 @@ each role has exactly one permission.
 | **Contributor** | Build time: an alter's `alterInputs()` | Add keys, mounted under its own module's name; offer more values on a fixed list with `extendChoices()`; reword a label or description with `describe()` | Add bare top-level keys, take anything away, change a key's type, contribute a value somebody already owns |
 | **Refiner** | Refinement, per request: a rule declared with `narrow()`, or a `#[RefinesInput]` method | Narrow one key, reading the siblings it watches | Touch a value its class did not contribute, allow a value the key did not |
 
-The **owner** of a resource or structure, the `#[Resource]` or
+The **declaring class** of a resource or structure, the `#[Resource]` or
 `#[Structure]` class that declares it, is simply the first contributor.
 Its keys and its `#[RefinesInput]` methods are contribution number one, and they are held to the same rules
 as everybody who arrives later.
 
-Nothing removes. A site that must hide an owner's key or value by
+Nothing removes. A site that must hide a declaring class's key or value by
 policy is a later concept, not a role here.
 
 ### Contributing
@@ -88,13 +88,13 @@ same value.
 
 Two refusals fall out of this, both at build time:
 
-- **One value has one owner.** Contributing a value the key already
+- **One value has one provider.** Contributing a value the key already
   allows throws, naming who has it. Two modules contributing `ribbon`
   are two modules each believing they answer for how `ribbon` behaves,
   and only one of them can be right.
 - **A key that allows anything cannot be contributed to.** If a key
   declares no list of allowed values, giving it one would *narrow* the
-  contract its owner deliberately left open, which is not a
+  contract its declaring class deliberately left open, which is not a
   contribution.
 
 A key an alter adds lands at `third_party_settings.<module>.<key>`:
@@ -188,7 +188,7 @@ After-hours access is on." The documents state the bound, `minItems`,
 as they state a key's own, and carry no bound's message.
 
 A condition names keys of the frame the narrowed key sits in, by their
-names: the owner's keys, and an alter's own mounted keys by the names it
+names: the declaring class's keys, and an alter's own mounted keys by the names it
 added them under (the mount around it is written into the `if`). A value
 it compares with is of the key's type. The condition is a test of values
 as the pipeline accepts them: a key holding nothing is `null` there, and
@@ -198,7 +198,7 @@ both tables.
 
 A declared rule is a refiner, static by construction: one link per
 contributor in the key's chain, after that contributor's coded refiners,
-the owner's before an alter's; held to the narrowing check, watched for a
+the declaring class's before an alter's; held to the narrowing check, watched for a
 form's AJAX rebuild, and never handed a value its own key refuses. Two
 things set it apart:
 
@@ -227,18 +227,18 @@ set of values evaluates it, as the pipeline does
 Refinement runs per request, whenever the values a key depends on are
 known. In four lines:
 
-1. Divide the key's list of allowed values into the owner's (everything
+1. Divide the key's list of allowed values into the declaring class's (everything
    nobody contributed) and one slice per contributor.
-2. Apply each of the owner's refiners' answers to the owner's slice.
+2. Apply each of the declaring class's refiners' answers to the declaring class's slice.
 3. Apply each contributor's refiners' answers to that contributor's
    slice.
-4. The refined key is the owner's, with its list of allowed values
+4. The refined key is the declaring class's, with its list of allowed values
    replaced by the **union** of every narrowed slice.
 
 A `#[RefinesInput]` method of an alter on a key the alter offered more
 values on is that contribution's refiner: its answer applies to the
 alter's values only. A method of an alter on any other key of the
-owner's runs in the owner's chain, after the owner's own methods.
+declaring class's runs in the declaring class's chain, after the declaring class's own methods.
 
 The union is the whole point. A refiner narrowing "its" option can never
 take a sibling module's option with it, and can never put back an option
@@ -247,8 +247,8 @@ Where a key has a single contribution (nearly every key), the algorithm
 reduces to a plain chain of answers applied to the whole key.
 
 Only the values are merged this way. Everything else about the refined
-key (its other rules, its description, its default) is the owner's,
-because the owner is the one who answers for the key.
+key (its other rules, its description, its default) is the declaring class's,
+because the declaring class is the one who answers for the key.
 
 #### One method, one rule
 
@@ -345,7 +345,7 @@ narrowing check. Two differences follow from the kind:
   the full schema, which never run it, keep their own cacheability.
 
 On one key, a class's static methods run before its runtime ones; the
-owner's run before an alter's, as before. A key with both kinds is
+declaring class's run before an alter's, as before. A key with both kinds is
 `enumerated` or `refine` for its static refiners, over the siblings
 those watch, and `live` besides.
 
@@ -370,7 +370,7 @@ trust; three layers hold a static refiner to it
    container. So an instance method is always runtime, and a static
    method is static unless it says otherwise. An alter's static refiner
    that only needs translation calls `t()`, or constructs
-   `PluralTranslatableMarkup` for a plural, as the owner's does.
+   `PluralTranslatableMarkup` for a plural, as the declaring class's does.
 2. **Observational, in development and tests: the container is
    guarded.** With assertions on (`zend.assertions = 1`, as in ddev
    and the test suite, never in production, where `assert()` is not
@@ -663,14 +663,14 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 The method refines a key the alter offered more values on, so it is
 bound as the `surface_examples_extras` contribution's refiner, not in
-the owner's chain. It is a static method, as every static refiner is,
+the declaring class's chain. It is a static method, as every static refiner is,
 though its class is a service: only a runtime refiner may be an
 instance method.
 
 The advertised key now allows five values, and the data surface records
 that one of them belongs to the extras module. At refinement time:
 
-| Casing | Owner's slice → narrowed to | Extras' slice → narrowed to | Union |
+| Casing | Declaring class's slice → narrowed to | Extras' slice → narrowed to | Union |
 | --- | --- | --- | --- |
 | `none` | bold, strong, quiet, muted → all four | ribbon → none | bold, strong, quiet, muted |
 | `uppercase` | bold, strong, quiet, muted → bold, strong | ribbon → ribbon | bold, strong, **ribbon** |
@@ -693,7 +693,7 @@ contract all see the same five values, narrowed the same way.
   where that lands.
 - **An alter watches only the keys it mounted.** An alter's
   `#[RefinesInput]` method may refine and watch the keys it mounted, by
-  their own names, beside the owner's
+  their own names, beside the declaring class's
   (why: [decision](decisions.md#an-alter-watches-its-own-mounted-key));
   the compliance alter of the examples caps the capacity at a hundred
   until the license is given, by a declared rule reading the license of

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 280" role="img" aria-labelledby="t">
-  <title id="t">The teaser block's structure from its owner, with headline and limit, the limit allowing 1 to 50; another module's alter adds a badge key and tightens the limit to at most 20 when a badge is set</title>
+  <title id="t">The teaser block's structure from its provider, with headline and limit, the limit allowing 1 to 50; another module's alter adds a badge key and tightens the limit to at most 20 when a badge is set</title>
   <style>
     .bg { fill: #F6F8FA; }
     .ink { fill: #1F2328; }
@@ -30,12 +30,12 @@
   </style>
   <rect class="bg" x="0" y="0" width="720" height="280" rx="12"/>
 
-  <!-- The owner's structure -->
+  <!-- The declaring class's structure -->
   <rect class="structure" x="24" y="20" width="672" height="240" rx="10"/>
   <text class="structure-label bold code" x="42" y="46" font-size="15">block.my_teaser</text>
-  <text class="muted small" x="560" y="46">from the owner</text>
+  <text class="muted small" x="560" y="46">from the provider</text>
 
-  <!-- The owner's keys -->
+  <!-- The declaring class's keys -->
   <rect class="key" x="42" y="62" width="230" height="26" rx="13"/>
   <text class="ink code" x="56" y="80">headline</text>
   <text class="muted small" x="140" y="80">string</text>
@@ -44,7 +44,7 @@
   <text class="ink code" x="56" y="120">limit</text>
   <text class="muted small" x="140" y="120">integer</text>
 
-  <!-- The owner's rule on limit -->
+  <!-- The declaring class's rule on limit -->
   <rect class="rule" x="282" y="104" width="78" height="22" rx="4"/>
   <text class="rule-label small" x="294" y="120">1 to 50</text>
 

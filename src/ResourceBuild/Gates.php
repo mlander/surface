@@ -187,7 +187,7 @@ final class Gates implements ContainerInjectionInterface {
   /**
    * Says why a gate refused, in the sentence a caller is shown.
    *
-   * What it may not do to what, and the reason the owner gave when it
+   * What it may not do to what, and the reason the declaring class gave when it
    * gave one: core's "The 'edit any page content' permission is
    * required." Untranslated, as every access reason is.
    *

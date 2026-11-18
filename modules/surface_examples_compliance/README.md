@@ -33,7 +33,7 @@ so the license and the stewards are stored under this module's name at
 this module's own config schema (written from the resource by `drush
 surface:config-schema --module=surface_examples_compliance
 --write`), exactly where the alter's own keys were before the structure
-existed. The rest is glue for this one owner. It
+existed. The rest is glue for this one declaring class. It
 rewords example 3's title label with `describe()`, titles the fieldset
 and places it right after the capacity the license lifts:
 

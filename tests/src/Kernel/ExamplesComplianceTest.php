@@ -31,10 +31,11 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * With the module on, step 3 gains an event license and a stewards count
  * under the module's name, and its title is relabelled. Without a
- * license the owner's capacity stops at a hundred: the alter's method on
- * the owner's key, watching the key the alter mounted itself. The
+ * license the declaring class's capacity stops at a hundred: the alter's method
+ * on the declaring class's key, watching the key the alter mounted itself. The
  * stewards' minimum follows the capacity: the alter's method on its own
- * key, watching the owner's. Step 3 does not change and does not know.
+ * key, watching the declaring class's. Step 3 does not change and does not
+ * know.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -186,8 +187,8 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
     $this->assertTrue($this->mounted($surface, 'stewards')->isRequired());
     $this->assertSame([self::MODULE => ['stewards' => 1]], $surface->getDefault('third_party_settings'));
 
-    // The capacity watches the owner's room and the alter's own license,
-    // by its path; the mount watches the capacity, for the stewards.
+    // The capacity watches the declaring class's room and the alter's own
+    // license, by its path; the mount watches the capacity, for the stewards.
     $definitions = $surface->entries();
     $this->assertSame(['room', self::LICENSE], $definitions->dependencies('capacity'));
     $this->assertSame(['capacity'], $definitions->dependencies('third_party_settings'));
@@ -250,7 +251,7 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
    * form keeps the fieldset where its values are posted, inside the
    * grouping container, for everything Form API does with it, and the
    * container draws it after the capacity: between the capacity and the
-   * pricing, the next key the owner declared. The grouping container,
+   * pricing, the next key the declaring class declared. The grouping container,
    * left with nothing to draw, draws nothing.
    */
   public function testTheComplianceFieldsetIsDrawnAfterTheCapacity(): void {
@@ -318,7 +319,7 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
 
     // A room that seats fewer than a hundred keeps its own limit, the
     // lower one: a rule only tightens, and says why only where it did, so
-    // the room keeps its owner's words, license or not.
+    // the room keeps its declaring class's words, license or not.
     $small = ['room' => 'library_reading', 'venue' => 'library'] + self::EVENT;
     $capacity = DerivedDefinition::at($surface->refine($small), 'capacity');
     $this->assertSame(60, $capacity->getConstraints()['Range']['max']);

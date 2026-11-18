@@ -231,8 +231,9 @@ final class ContractBaselines {
    *   no longer emitted breaks; one with no baseline yet fails, unpinned,
    *   until writing the baselines pins it. Baselines written in another
    *   version of the contract are not compared: one change says so, once
-   *   for each version they move from, its document and owner `*` (every
-   *   such baseline), and fails until writing the baselines re-pins them.
+   *   for each version they move from, its document and declaring class `*`
+   *   (every such baseline), and fails until writing the baselines re-pins
+   *   them.
    */
   public function compare(array $baselines, array $current): array {
     $diff = new ContractDiff();

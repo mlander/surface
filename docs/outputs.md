@@ -247,8 +247,8 @@ never served (why: [decision](decisions.md#every-door-projects-what-the-read-too
 
 ## No alter adds an output
 
-What a call answers is its operation's: the owner declares it, and a
-consumer reading the owner's output schema reads all of it. Another
+What a call answers is its operation's: the declaring class declares it, and a
+consumer reading the declaring class's output schema reads all of it. Another
 module adds no output at build time; a reaction to a save (a message
 sent, a record written elsewhere) belongs to ECA. Until 2026-10-24 an
 alter could, through `AltersOutputsInterface` and a `third_party_outputs`

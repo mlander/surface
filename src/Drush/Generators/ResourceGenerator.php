@@ -345,7 +345,7 @@ final class ResourceGenerator extends BaseGenerator {
     $entries = is_file($schema_file) ? (array) Yaml::decode((string) file_get_contents($schema_file)) : [];
     $entries[$config]['label'] = $label;
     $installed = is_file($install_file) ? (array) Yaml::decode((string) file_get_contents($install_file)) : [];
-    $described = $this->schemas->describeBuilt($source->built, $source->owner, $config, $code['always_held'], $entries, $installed + $install);
+    $described = $this->schemas->describeBuilt($source->built, $source->declaringClass, $config, $code['always_held'], $entries, $installed + $install);
     $by_name = [];
     foreach ($described['entries'] as $entry) {
       if ($entry['module'] === $module) {

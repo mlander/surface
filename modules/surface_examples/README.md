@@ -19,7 +19,7 @@ own, placed through the general placement resource of another
 ([below](#example-13-a-block-that-embeds-a-component)). Example 14 is an
 optional extension: a credential pasted as a secret, or a key the site
 manages once a submodule standing in for the Key module is on, built
-once by the owner and once by that submodule's alter
+once by the declaring class and once by that submodule's alter
 ([below](#example-14-an-optional-extension)). Example 15 is a config
 entity type of the module's own, a venue, with a resource over it from
 the start: one venue added, edited and removed, the venues listed a
@@ -1007,8 +1007,8 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
    *
    * A runtime refiner: what it answers is read from State when the
    * values are held to it, so no schema can state it ahead of time. It
-   * watches the venue so it narrows the venue's rooms, which the owner's
-   * refiner has already listed; the full schema still offers every room
+   * watches the venue so it narrows the venue's rooms, which the declaring
+   * class's refiner has already listed; the full schema still offers every room
    * per venue, and the pipeline refuses a closed one. The one refiner
    * here that is an instance method, which only a runtime refiner may
    * be: it reads the State this alter was built with.
@@ -1048,12 +1048,12 @@ its own title beside the reference. Example 3 ships at Riverside Hall's main hal
 seats 400. The capacity stops at 100, and its help text says why: "Up
 to 100 without an event license." The
 license asks for the four digits after EV- only. Type `2048` and the
-capacity goes back to the owner's "Up to 400 for the Main hall."; type
+capacity goes back to the declaring class's "Up to 400 for the Main hall."; type
 `204` or `EV-2048` and the license is refused, in the structure's words,
 under the field, and the capacity stops at 100 again: a rule never
 sees a value its own key refuses, so a license in the wrong format is no
 license. In a room that seats 100 or fewer the license changes nothing:
-the room's own ceiling is the lower one, and the owner's help text
+the room's own ceiling is the lower one, and the declaring class's help text
 stands, since a rule says why only where it tightened. The help text says the format before
 anything is typed, and the box shows
 `2048` as its placeholder: a pattern explains nothing to a person, so
@@ -1062,7 +1062,7 @@ Under the stewards it says "At least 1 steward for 50 attendees."; set
 the capacity to 150 and it asks for "At least 3 stewards for 150
 attendees." In the panel, the capacity's row now depends on `room` and
 on the license's path. An alter can add and tighten. It can never take
-away what the owner declared.
+away what the declaring class declared.
 
 ### Files
 
@@ -3079,11 +3079,11 @@ ddev drush pm:install surface_examples_keys
 
 Each page shows both resources as they are now, says whether the module
 is on, and makes the calls below that the module allows. Two ways reach
-the same form, each for the case it fits: the owner declares both
+the same form, each for the case it fits: the declaring class declares both
 sources, or another module's alter offers the managed key
 (why: [decision](../../docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 
-### The owner's way: a variant the site adds
+### The declaring class's way: a variant the site adds
 
 The mailer knows the module that manages keys. It declares a source and
 a credential whose variants the source chooses, listed by a provider:
@@ -3651,7 +3651,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/MailerResource.php`](src/Resource/MailerResource.php) | the owner's way: a sender, a mail service, and a credential whose source a provider lists | 23 |
+| [`modules/surface_examples/src/Resource/MailerResource.php`](src/Resource/MailerResource.php) | the declaring class's way: a sender, a mail service, and a credential whose source a provider lists | 23 |
 | [`modules/surface_examples/src/Variants/CredentialSources.php`](src/Variants/CredentialSources.php) | the provider: the pasted source always, the managed source while the keys module is on, both named for storage | 28 |
 | [`modules/surface_examples/src/Structure/PastedCredentialStructure.php`](src/Structure/PastedCredentialStructure.php) | the pasted source: a key, a secret | 13 |
 | [`modules/surface_examples/src/Structure/ManagedCredentialStructure.php`](src/Structure/ManagedCredentialStructure.php) | the managed source: the name of a key the site manages | 13 |
@@ -5017,7 +5017,7 @@ may be retitled is settled per node, once the list is sent: the full
 schema marks `items` `x-surface.live`, and the tool listing says on it
 that it is decided once the thing it belongs to is known. A refusal
 lands on the node's own item, `/items/0/node`, with what may not be done
-to which node and the owner's reason, and the other items carry none.
+to which node and the declaring class's reason, and the other items carry none.
 The gates are asked before the storage's `prepare()`, so the storage
 only ever sees items every gate allowed.
 

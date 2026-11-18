@@ -743,7 +743,7 @@ may answer that its keys are shown and fixed, or not there at all.
   the caller could not have seen it), inside a child the parent stores
   too, by its path.
 - **A mixed-in structure's members** are locked or omitted by its access
-  the same way, one key at a time, since they are the owner's keys: a
+  the same way, one key at a time, since they are the declaring class's keys: a
   locked member holds what is stored, shown and fixed, `readOnly`, with
   a `const` of what is stored only in the schema for these answers; an
   omitted member is gone, and storage keeps it

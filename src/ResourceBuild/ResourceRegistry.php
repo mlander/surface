@@ -629,7 +629,7 @@ final class ResourceRegistry {
    * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
    *
    * @param string $id
-   *   The id it has in the document: a def's key, or `<owner>.<key>`.
+   *   The id it has in the document: a def's key, or `<declaring-class>.<key>`.
    * @param string $module
    *   The module of what reads it, which it is reported under.
    * @param \Drupal\surface\Resource\ResourceCallable $inputs
@@ -694,10 +694,10 @@ final class ResourceRegistry {
    *
    * A build the build cache answers names, at its keys, structures read
    * from a schema document or for an anonymous map, which a request
-   * registers only by building their owner: the cache stores them with
-   * the build (exportRead()) and registers them again when it answers it
+   * registers only by building their declaring class: the cache stores them
+   * with the build (exportRead()) and registers them again when it answers it
    * (rememberRead()), so every door can build and name them as if this
-   * request had built the owner. A document many structures are read
+   * request had built the declaring class. A document many structures are read
    * from (a theme's components, each one a def of it) is written once.
    *
    * Decision: see
@@ -788,20 +788,20 @@ final class ResourceRegistry {
    * Registers an anonymous map whose keys need a frame: a structure, no id.
    *
    * Like a structure read from a schema, listed by nothing and built by
-   * name: its inputs MapBlueprint::fill(), which runs its owner's
-   * declaration again to the map's key. Its id is its owner's and the
+   * name: its inputs MapBlueprint::fill(), which runs its declaring class's
+   * declaration again to the map's key. Its id is its declaring class's and the
    * key, for messages; no alter names it, since an alter names a class.
    *
    * Decision: see docs/decisions.md#an-anonymous-map.
    *
    * @param string $id
-   *   Its id: the owner's, then the key.
+   *   Its id: the declaring class's, then the key.
    * @param string $module
-   *   The owner's module.
-   * @param string $owner
-   *   The owner, by the name it is built by.
+   *   The provider.
+   * @param string $declaring_class
+   *   The declaring class, by the name it is built by.
    * @param string $key
-   *   The key the owner declares it at.
+   *   The key the declaring class declares it at.
    * @param string[] $declared
    *   The keys the map's callable declared before it asked for the frame,
    *   which each fill holds it to.
@@ -809,8 +809,8 @@ final class ResourceRegistry {
    * @return string
    *   The name it is attached and built by.
    */
-  public function defineMap(string $id, string $module, string $owner, string $key, array $declared = []): string {
-    $name = self::MAP . $owner . ':' . $key;
+  public function defineMap(string $id, string $module, string $declaring_class, string $key, array $declared = []): string {
+    $name = self::MAP . $declaring_class . ':' . $key;
     $this->read[$name] ??= new ResourceDefinition(
       class: NULL,
       id: $id,
@@ -819,7 +819,7 @@ final class ResourceRegistry {
       storage: NULL,
       access: NULL,
       refiners: [],
-      inputs: new ResourceCallable(MapBlueprint::class, 'fill', [$owner, $key, $declared]),
+      inputs: new ResourceCallable(MapBlueprint::class, 'fill', [$declaring_class, $key, $declared]),
       kind: ResourceDefinition::STRUCTURE,
       readAs: $name,
     );
@@ -848,7 +848,7 @@ final class ResourceRegistry {
    *   The blueprint.
    *
    * @internal
-   *   For an anonymous map's structure, which runs its owner's
+   *   For an anonymous map's structure, which runs its declaring class's
    *   declaration again (ResourceBlueprint::replay()).
    */
   public function declareInputs(ResourceDefinition $definition, BlueprintInterface $inputs): void {
@@ -1232,7 +1232,7 @@ final class ResourceRegistry {
         $where = sprintf('#[Operation(\'%s\')] on %s', self::idOf($attribute), $class);
         self::assertNoRemovedArgument($attribute, $where);
         $operation = $attribute->newInstance();
-        $of = self::operationOwner($class, $resources, $where);
+        $of = self::operationDeclaringClass($class, $resources, $where);
         $operations[$of][] = self::operationDefinition($operation, $of, $class, '', $module, [], $operation->description);
       }
       foreach ($reflection->getMethods() as $method) {
@@ -1240,7 +1240,7 @@ final class ResourceRegistry {
           $where = sprintf('#[Operation(\'%s\')] on %s::%s()', self::idOf($attribute), $class, $method->getName());
           self::assertNoRemovedArgument($attribute, $where);
           $operation = $attribute->newInstance();
-          $of = self::operationOwner($class, $resources, $where);
+          $of = self::operationDeclaringClass($class, $resources, $where);
           if (!$method->isStatic()) {
             throw new \LogicException(sprintf(
               '#[Operation(\'%s\')] on %s::%s() is not static: an operation builds a context before anything is built to ask.',
@@ -1514,7 +1514,7 @@ final class ResourceRegistry {
    * @throws \LogicException
    *   When the class is no resource or structure.
    */
-  protected static function operationOwner(string $class, array $resources, string $where): string {
+  protected static function operationDeclaringClass(string $class, array $resources, string $where): string {
     if (!isset($resources[$class])) {
       throw new \LogicException(sprintf(
         '%s stands on a class that is no resource or structure. An operation stands on its resource\'s or structure\'s own class.',
@@ -1528,9 +1528,9 @@ final class ResourceRegistry {
    * Refuses an access class that is an alter.
    *
    * An alter that answers access implements OperationAccessInterface, as
-   * an access class does, and is read in its own role: after the owner's
-   * answer, its neutral open. Named on `access:` as well, it would answer
-   * twice, once in each role.
+   * an access class does, and is read in its own role: after the declaring
+   * class's answer, its neutral open. Named on `access:` as well, it would
+   * answer twice, once in each role.
    *
    * Decision: see
    * docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands.
@@ -1546,7 +1546,7 @@ final class ResourceRegistry {
   protected static function assertAccessClass(string $class, ?string $access): void {
     if ($access !== NULL && class_exists($access) && (new \ReflectionClass($access))->getAttributes(Alters::class) !== []) {
       throw new \LogicException(sprintf(
-        '%s names %s on access:, which carries #[Alters]. An alter that answers access is asked as an alter, after the owner\'s answer; an access class is the owner\'s own. Name a class that carries no #[Alters], or leave the alter to answer as one.',
+        '%s names %s on access:, which carries #[Alters]. An alter that answers access is asked as an alter, after the declaring class\'s answer; an access class is the declaring class\'s own. Name a class that carries no #[Alters], or leave the alter to answer as one.',
         $class,
         $access,
       ));
@@ -1579,7 +1579,7 @@ final class ResourceRegistry {
   }
 
   /**
-   * Refuses an alter that names a class's owner by its id.
+   * Refuses an alter that names a class's declaring class by its id.
    *
    * A resource, structure or shape with a class is named by its class; an
    * id names only a derived resource, which has none, or a deriver's base.
@@ -1609,7 +1609,7 @@ final class ResourceRegistry {
       return;
     }
     throw new \LogicException(sprintf(
-      '#[Alters(\'%s\')] on %s names an id; name the owner by its class, %s::class. An id names only a derived resource, which has no class.',
+      '#[Alters(\'%s\')] on %s names an id; name the declaring class by its class, %s::class. An id names only a derived resource, which has no class.',
       $of,
       $alter,
       $ids[$of],

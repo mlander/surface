@@ -138,7 +138,7 @@ class EntriesTest extends UnitTestCase {
     $entry = $map->entry('detail');
     $this->assertInstanceOf(Entry::class, $entry);
     $this->assertSame('detail', $entry->name);
-    $this->assertSame(SurfaceInterface::OWNER, $entry->contributor);
+    $this->assertSame(SurfaceInterface::DECLARING_CLASS, $entry->contributor);
     $this->assertFalse($entry->locked);
     $this->assertNull($map->entry('nothing'));
   }
@@ -178,7 +178,7 @@ class EntriesTest extends UnitTestCase {
       ['extended', 'mounted'],
       array_keys($map->byContributor('other_module')),
     );
-    $this->assertSame(['owned', 'extended'], array_keys($map->byContributor(SurfaceInterface::OWNER)));
+    $this->assertSame(['owned', 'extended'], array_keys($map->byContributor(SurfaceInterface::DECLARING_CLASS)));
     $this->assertSame(
       ['extended' => ['other_module' => ['ribbon']]],
       $map->contributions(),

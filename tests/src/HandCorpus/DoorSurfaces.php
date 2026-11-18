@@ -127,7 +127,7 @@ final class DoorSurfaces {
       ->setPropertyDefinition('a', static::withDefault(static::labeled('string', 'A'), 'pa')), ['a' => NULL]));
     $b->setDefinition('rd', static::withDefault(static::labeled('integer', 'Required default')->setRequired(TRUE), 3));
     $b->setDefinition('empty_map', MapDataDefinition::create()->setLabel('Empty map'));
-    // A key another module reworded after its owner labeled it.
+    // A key another module reworded after its provider labeled it.
     $reworded = static::labeled('string', 'Owner label');
     DefinitionMetadata::keepOwnLabel($reworded);
     $b->setDefinition('reworded', $reworded->setLabel('Reworded label'));

@@ -182,28 +182,28 @@ final class ContractDiff {
 
     $before = $this->versions($baseline);
     $after = $this->versions($current);
-    foreach ($after + $before as $owner => $ignored) {
-      $was = $before[$owner] ?? 1;
-      $is = $after[$owner] ?? 1;
-      $at = $prefix . $this->ownerPath($owner, $surface);
+    foreach ($after + $before as $declaring_class => $ignored) {
+      $was = $before[$declaring_class] ?? 1;
+      $is = $after[$declaring_class] ?? 1;
+      $at = $prefix . $this->declaringClassPath($declaring_class, $surface);
       if ($is < $was) {
-        $found[] = [$owner, $at, sprintf('version lowered from %d to %d', $was, $is), self::BREAKS, FALSE];
+        $found[] = [$declaring_class, $at, sprintf('version lowered from %d to %d', $was, $is), self::BREAKS, FALSE];
       }
       elseif ($is > $was) {
-        $found[] = [$owner, $at, sprintf('version raised from %d to %d', $was, $is), self::NOTE, FALSE];
+        $found[] = [$declaring_class, $at, sprintf('version raised from %d to %d', $was, $is), self::NOTE, FALSE];
       }
     }
 
     $changes = [];
-    foreach ($found as [$owner, $path, $change, $effect, $reading]) {
+    foreach ($found as [$declaring_class, $path, $change, $effect, $reading]) {
       $breaking = $effect === self::BREAKS || $effect === ($reading ? self::WIDENS : self::NARROWS);
       $status = match (TRUE) {
         !$breaking => ContractChange::COMPATIBLE,
-        ($after[$owner] ?? 1) > ($before[$owner] ?? 1) => ContractChange::VERSIONED,
+        ($after[$declaring_class] ?? 1) > ($before[$declaring_class] ?? 1) => ContractChange::VERSIONED,
         isset($allowed[$path]) => ContractChange::ALLOWED,
         default => ContractChange::BREAKING,
       };
-      $changes[] = new ContractChange($surface, $owner, $path, $change, $effect, $status);
+      $changes[] = new ContractChange($surface, $declaring_class, $path, $change, $effect, $status);
     }
     return $changes;
   }
@@ -224,7 +224,7 @@ final class ContractDiff {
     $versions = [(string) self::idOf($document) => (int) ($schema['x-surface']['version'] ?? 1)];
     foreach ($schema['$defs'] ?? [] as $key => $def) {
       if ($this->isFrame($def)) {
-        $versions[$this->owner((string) $key)] = (int) ($def['x-surface']['version'] ?? 1);
+        $versions[$this->declaringClass((string) $key)] = (int) ($def['x-surface']['version'] ?? 1);
       }
     }
     return $versions;
@@ -298,19 +298,19 @@ final class ContractDiff {
    *   Today's.
    * @param string $path
    *   The path.
-   * @param string $owner
+   * @param string $declaring_class
    *   The id whose version answers for it.
    * @param bool $reading
    *   Whether it describes what a client reads (outputs).
    *
    * @return list<array{0: string, 1: string, 2: string, 3: string, 4: bool}>
-   *   Each difference: owner, path, change, effect, reading.
+   *   Each difference: declaring class, path, change, effect, reading.
    */
-  protected function subschema(mixed $old, mixed $new, string $path, string $owner, bool $reading): array {
+  protected function subschema(mixed $old, mixed $new, string $path, string $declaring_class, bool $reading): array {
     if ($old === $new) {
       return [];
     }
-    $one = static fn (string $change, string $effect): array => [[$owner, $path, $change, $effect, $reading]];
+    $one = static fn (string $change, string $effect): array => [[$declaring_class, $path, $change, $effect, $reading]];
     if ($old === FALSE) {
       return $one('allows a value where none was', self::WIDENS);
     }
@@ -334,7 +334,7 @@ final class ContractDiff {
       if ($in_old && $in_new && $old[$keyword] === $new[$keyword]) {
         continue;
       }
-      array_push($found, ...$this->keyword($keyword, $old, $new, $path . '/' . $keyword, $owner, $reading));
+      array_push($found, ...$this->keyword($keyword, $old, $new, $path . '/' . $keyword, $declaring_class, $reading));
     }
     return $found;
   }
@@ -350,7 +350,7 @@ final class ContractDiff {
    *   Today's.
    * @param string $path
    *   The keyword's path.
-   * @param string $owner
+   * @param string $declaring_class
    *   The id whose version answers for it.
    * @param bool $reading
    *   Whether it describes what a client reads.
@@ -358,12 +358,12 @@ final class ContractDiff {
    * @return list<array{0: string, 1: string, 2: string, 3: string, 4: bool}>
    *   Each difference.
    */
-  protected function keyword(string $keyword, array $old, array $new, string $path, string $owner, bool $reading): array {
+  protected function keyword(string $keyword, array $old, array $new, string $path, string $declaring_class, bool $reading): array {
     $in_old = array_key_exists($keyword, $old);
     $in_new = array_key_exists($keyword, $new);
     $a = $old[$keyword] ?? NULL;
     $b = $new[$keyword] ?? NULL;
-    $one = static fn (string $change, string $effect): array => [[$owner, $path, $change, $effect, $reading]];
+    $one = static fn (string $change, string $effect): array => [[$declaring_class, $path, $change, $effect, $reading]];
     $by_presence = static fn (string $what): array => $one(
       $what . ($in_old ? ($in_new ? ' changed' : ' removed') : ' added'),
       $in_old ? ($in_new ? self::BREAKS : self::WIDENS) : self::NARROWS,
@@ -390,9 +390,9 @@ final class ContractDiff {
     }
 
     return match ($keyword) {
-      '$defs' => $this->defs((array) $a, (array) $b, $path, $owner, $reading),
-      'x-surface' => $this->extension((array) $a, (array) $b, $path, $owner, $reading),
-      PortableKeywords::CHECK => $this->checks((array) $a, (array) $b, $path, $owner, $reading, $old['format'] ?? NULL, $new['format'] ?? NULL),
+      '$defs' => $this->defs((array) $a, (array) $b, $path, $declaring_class, $reading),
+      'x-surface' => $this->extension((array) $a, (array) $b, $path, $declaring_class, $reading),
+      PortableKeywords::CHECK => $this->checks((array) $a, (array) $b, $path, $declaring_class, $reading, $old['format'] ?? NULL, $new['format'] ?? NULL),
       PortableKeywords::MESSAGES => $one('the messages changed', self::NOTE),
       // The widget hints: how a key is drawn, never what it accepts.
       PortableKeywords::UI => $one(PortableKeywords::UI . ' changed', self::NOTE),
@@ -401,13 +401,13 @@ final class ContractDiff {
       PortableKeywords::LINKS => $one(PortableKeywords::LINKS . ' changed', self::NOTE),
       'readOnly' => $one($b === TRUE ? 'read only now' : 'no longer read only', $b === TRUE ? self::NARROWS : self::WIDENS),
       'type' => $this->type($in_old ? (array) $a : NULL, $in_new ? (array) $b : NULL, $one),
-      'enum' => $this->choices(array_map(static fn ($value): array => ['const' => $value], (array) $a), array_map(static fn ($value): array => ['const' => $value], (array) $b), $path, $owner, $reading),
-      'oneOf', 'anyOf' => $this->alternatives((array) $a, (array) $b, $path, $owner, $reading),
-      'properties' => $this->properties((array) $a, (array) $b, (array) ($new['required'] ?? []), $path, $owner, $reading),
-      'required' => $this->required((array) $a, (array) $b, (array) ($old['properties'] ?? []), (array) ($new['properties'] ?? []), $path, $owner, $reading),
-      'additionalProperties', 'unevaluatedProperties' => $this->subschema($in_old ? $a : TRUE, $in_new ? $b : TRUE, $path, $owner, $reading),
-      'items', 'then', 'else' => $this->subschema($in_old ? $a : TRUE, $in_new ? $b : TRUE, $path, $owner, $reading),
-      'allOf' => $this->allOf((array) $a, (array) $b, $old, $new, $path, $owner, $reading),
+      'enum' => $this->choices(array_map(static fn ($value): array => ['const' => $value], (array) $a), array_map(static fn ($value): array => ['const' => $value], (array) $b), $path, $declaring_class, $reading),
+      'oneOf', 'anyOf' => $this->alternatives((array) $a, (array) $b, $path, $declaring_class, $reading),
+      'properties' => $this->properties((array) $a, (array) $b, (array) ($new['required'] ?? []), $path, $declaring_class, $reading),
+      'required' => $this->required((array) $a, (array) $b, (array) ($old['properties'] ?? []), (array) ($new['properties'] ?? []), $path, $declaring_class, $reading),
+      'additionalProperties', 'unevaluatedProperties' => $this->subschema($in_old ? $a : TRUE, $in_new ? $b : TRUE, $path, $declaring_class, $reading),
+      'items', 'then', 'else' => $this->subschema($in_old ? $a : TRUE, $in_new ? $b : TRUE, $path, $declaring_class, $reading),
+      'allOf' => $this->allOf((array) $a, (array) $b, $old, $new, $path, $declaring_class, $reading),
       '$ref' => $one(sprintf('refers to %s where it referred to %s', $b ?? 'nothing', $a ?? 'nothing'), self::BREAKS),
       default => $one($keyword . ' changed, which the lint does not read', self::BREAKS),
     };
@@ -439,16 +439,16 @@ final class ContractDiff {
     $found = [];
     foreach (array_unique([...array_keys($old), ...array_keys($new)]) as $key) {
       $key = (string) $key;
-      $owner = $this->isFrame($new[$key] ?? $old[$key]) ? $this->owner($key) : $surface;
+      $declaring_class = $this->isFrame($new[$key] ?? $old[$key]) ? $this->declaringClass($key) : $surface;
       $at = $path . '/' . $key;
       if (!array_key_exists($key, $new)) {
-        $found[] = [$owner, $at, 'def no longer used', self::NOTE, $reading];
+        $found[] = [$declaring_class, $at, 'def no longer used', self::NOTE, $reading];
       }
       elseif (!array_key_exists($key, $old)) {
-        $found[] = [$owner, $at, 'def added', self::NOTE, $reading];
+        $found[] = [$declaring_class, $at, 'def added', self::NOTE, $reading];
       }
       else {
-        array_push($found, ...$this->subschema($old[$key], $new[$key], $at, $owner, $reading));
+        array_push($found, ...$this->subschema($old[$key], $new[$key], $at, $declaring_class, $reading));
       }
     }
     return $found;
@@ -467,7 +467,7 @@ final class ContractDiff {
    *   Today's.
    * @param string $path
    *   Its path.
-   * @param string $owner
+   * @param string $declaring_class
    *   The id whose version answers for it.
    * @param bool $reading
    *   Whether it describes what a client reads.
@@ -475,10 +475,10 @@ final class ContractDiff {
    * @return list<array{0: string, 1: string, 2: string, 3: string, 4: bool}>
    *   Each difference.
    */
-  protected function extension(array $old, array $new, string $path, string $owner, bool $reading): array {
+  protected function extension(array $old, array $new, string $path, string $declaring_class, bool $reading): array {
     $found = [];
-    $add = static function (string $at, string $change, string $effect) use (&$found, $owner, $reading): void {
-      $found[] = [$owner, $at, $change, $effect, $reading];
+    $add = static function (string $at, string $change, string $effect) use (&$found, $declaring_class, $reading): void {
+      $found[] = [$declaring_class, $at, $change, $effect, $reading];
     };
     foreach (array_unique([...array_keys($old), ...array_keys($new)]) as $name) {
       $name = (string) $name;
@@ -538,7 +538,7 @@ final class ContractDiff {
    *   Today's.
    * @param string $path
    *   Its path.
-   * @param string $owner
+   * @param string $declaring_class
    *   The id whose version answers for it.
    * @param bool $reading
    *   Whether it describes what a client reads.
@@ -550,7 +550,7 @@ final class ContractDiff {
    * @return list<array{0: string, 1: string, 2: string, 3: string, 4: bool}>
    *   Each difference.
    */
-  protected function checks(array $old, array $new, string $path, string $owner, bool $reading, mixed $was = NULL, mixed $is = NULL): array {
+  protected function checks(array $old, array $new, string $path, string $declaring_class, bool $reading, mixed $was = NULL, mixed $is = NULL): array {
     $found = [];
     // By their JSON, decoded alike: `1` and `"1"` in a check's schema
     // differ, an empty object and an empty array do not.
@@ -570,7 +570,7 @@ final class ContractDiff {
         default => [sprintf('the options of the check %s changed', $name), self::NOTE],
       };
       if ($change !== NULL) {
-        $found[] = [$owner, $at, $change, $effect, $reading];
+        $found[] = [$declaring_class, $at, $change, $effect, $reading];
       }
     }
     return $found;
@@ -609,7 +609,7 @@ final class ContractDiff {
    *   Today's.
    * @param string $path
    *   Their path.
-   * @param string $owner
+   * @param string $declaring_class
    *   The id whose version answers for them.
    * @param bool $reading
    *   Whether they describe what a client reads.
@@ -617,16 +617,16 @@ final class ContractDiff {
    * @return list<array{0: string, 1: string, 2: string, 3: string, 4: bool}>
    *   Each difference.
    */
-  protected function alternatives(array $old, array $new, string $path, string $owner, bool $reading): array {
+  protected function alternatives(array $old, array $new, string $path, string $declaring_class, bool $reading): array {
     if ($this->isChoices($old) && $this->isChoices($new)) {
-      return $this->choices($old, $new, $path, $owner, $reading);
+      return $this->choices($old, $new, $path, $declaring_class, $reading);
     }
     if (count($old) !== count($new)) {
-      return [[$owner, $path, 'alternatives changed, which the lint does not read', self::BREAKS, $reading]];
+      return [[$declaring_class, $path, 'alternatives changed, which the lint does not read', self::BREAKS, $reading]];
     }
     $found = [];
     foreach ($old as $i => $alternative) {
-      array_push($found, ...$this->subschema($alternative, $new[$i], $path . '/' . $i, $owner, $reading));
+      array_push($found, ...$this->subschema($alternative, $new[$i], $path . '/' . $i, $declaring_class, $reading));
     }
     return $found;
   }
@@ -658,7 +658,7 @@ final class ContractDiff {
    *   Today's.
    * @param string $path
    *   Their path.
-   * @param string $owner
+   * @param string $declaring_class
    *   The id whose version answers for them.
    * @param bool $reading
    *   Whether they describe what a client reads.
@@ -666,7 +666,7 @@ final class ContractDiff {
    * @return list<array{0: string, 1: string, 2: string, 3: string, 4: bool}>
    *   One difference per value removed, added or relabeled.
    */
-  protected function choices(array $old, array $new, string $path, string $owner, bool $reading): array {
+  protected function choices(array $old, array $new, string $path, string $declaring_class, bool $reading): array {
     $keyed = static function (array $choices): array {
       $keyed = [];
       foreach ($choices as $choice) {
@@ -678,14 +678,14 @@ final class ContractDiff {
     $new = $keyed($new);
     $found = [];
     foreach (array_diff_key($old, $new) as $value => $ignored) {
-      $found[] = [$owner, $path, sprintf('choice %s removed', $value), self::NARROWS, $reading];
+      $found[] = [$declaring_class, $path, sprintf('choice %s removed', $value), self::NARROWS, $reading];
     }
     foreach (array_diff_key($new, $old) as $value => $ignored) {
-      $found[] = [$owner, $path, sprintf('choice %s added', $value), self::WIDENS, $reading];
+      $found[] = [$declaring_class, $path, sprintf('choice %s added', $value), self::WIDENS, $reading];
     }
     foreach (array_intersect_key($old, $new) as $value => $choice) {
       if ($choice !== $new[$value]) {
-        $found[] = [$owner, $path, sprintf('choice %s relabeled', $value), self::NOTE, $reading];
+        $found[] = [$declaring_class, $path, sprintf('choice %s relabeled', $value), self::NOTE, $reading];
       }
     }
     return $found;
@@ -702,7 +702,7 @@ final class ContractDiff {
    *   Today's required keys.
    * @param string $path
    *   The path of `properties`.
-   * @param string $owner
+   * @param string $declaring_class
    *   The id whose version answers for them.
    * @param bool $reading
    *   Whether they describe what a client reads.
@@ -710,13 +710,13 @@ final class ContractDiff {
    * @return list<array{0: string, 1: string, 2: string, 3: string, 4: bool}>
    *   Each difference.
    */
-  protected function properties(array $old, array $new, array $required, string $path, string $owner, bool $reading): array {
+  protected function properties(array $old, array $new, array $required, string $path, string $declaring_class, bool $reading): array {
     $found = [];
     foreach (array_unique([...array_keys($old), ...array_keys($new)]) as $key) {
       $key = (string) $key;
       $at = $path . '/' . $key;
       if (!array_key_exists($key, $new)) {
-        $found[] = [$owner, $at, 'key removed', self::BREAKS, $reading];
+        $found[] = [$declaring_class, $at, 'key removed', self::BREAKS, $reading];
       }
       elseif (!array_key_exists($key, $old)) {
         // Judged by the operation's kind. Nothing stored or sent before
@@ -750,10 +750,10 @@ final class ContractDiff {
             self::NARROWS,
           ],
         };
-        $found[] = [$owner, $at, $change, $effect, $reading];
+        $found[] = [$declaring_class, $at, $change, $effect, $reading];
       }
       else {
-        array_push($found, ...$this->subschema($old[$key], $new[$key], $at, $owner, $reading));
+        array_push($found, ...$this->subschema($old[$key], $new[$key], $at, $declaring_class, $reading));
       }
     }
     return $found;
@@ -774,7 +774,7 @@ final class ContractDiff {
    *   Today's.
    * @param string $path
    *   The path of `required`.
-   * @param string $owner
+   * @param string $declaring_class
    *   The id whose version answers for them.
    * @param bool $reading
    *   Whether they describe what a client reads.
@@ -782,16 +782,16 @@ final class ContractDiff {
    * @return list<array{0: string, 1: string, 2: string, 3: string, 4: bool}>
    *   Each difference.
    */
-  protected function required(array $old, array $new, array $was, array $is, string $path, string $owner, bool $reading): array {
+  protected function required(array $old, array $new, array $was, array $is, string $path, string $declaring_class, bool $reading): array {
     $found = [];
     foreach (array_diff($new, $old) as $key) {
       if (array_key_exists($key, $was)) {
-        $found[] = [$owner, $path, sprintf('%s made required', $key), self::NARROWS, $reading];
+        $found[] = [$declaring_class, $path, sprintf('%s made required', $key), self::NARROWS, $reading];
       }
     }
     foreach (array_diff($old, $new) as $key) {
       if (array_key_exists($key, $is)) {
-        $found[] = [$owner, $path, sprintf('%s made optional', $key), self::WIDENS, $reading];
+        $found[] = [$declaring_class, $path, sprintf('%s made optional', $key), self::WIDENS, $reading];
       }
     }
     return $found;
@@ -819,7 +819,7 @@ final class ContractDiff {
    *   Today's.
    * @param string $path
    *   The path of `allOf`.
-   * @param string $owner
+   * @param string $declaring_class
    *   The id whose version answers for them.
    * @param bool $reading
    *   Whether they describe what a client reads.
@@ -827,7 +827,7 @@ final class ContractDiff {
    * @return list<array{0: string, 1: string, 2: string, 3: string, 4: bool}>
    *   Each difference.
    */
-  protected function allOf(array $old, array $new, array $frame, array $now, string $path, string $owner, bool $reading): array {
+  protected function allOf(array $old, array $new, array $frame, array $now, string $path, string $declaring_class, bool $reading): array {
     $old = $this->conjuncts($old, (array) ($frame['x-surface']['rules'] ?? []));
     $new = $this->conjuncts($new, (array) ($now['x-surface']['rules'] ?? []));
     $found = [];
@@ -835,22 +835,28 @@ final class ContractDiff {
       if (!isset($new[$key])) {
         $composition = str_starts_with($key, 'ref:');
         $found[] = $composition
-          ? [$owner, $path . '/' . $i, 'composition removed', self::NOTE, $reading]
-          : [$owner, $path . '/' . $i, 'rule removed', self::WIDENS, $reading];
+          ? [$declaring_class, $path . '/' . $i, 'composition removed', self::NOTE, $reading]
+          : [$declaring_class, $path . '/' . $i, 'rule removed', self::WIDENS, $reading];
       }
     }
     foreach ($new as $key => [$i, $entry]) {
       if (isset($old[$key])) {
-        array_push($found, ...$this->subschema($old[$key][1], $entry, $path . '/' . $i, $owner, $reading));
+        array_push($found, ...$this->subschema($old[$key][1], $entry, $path . '/' . $i, $declaring_class, $reading));
       }
       elseif (str_starts_with($key, 'ref:')) {
-        $found[] = [$owner, $path . '/' . $i, 'composition added', self::NOTE, $reading];
+        $found[] = [$declaring_class, $path . '/' . $i, 'composition added', self::NOTE, $reading];
       }
       elseif (is_array($entry) && is_array($entry['if'] ?? NULL) && $this->unmet($entry['if'], $frame)) {
-        $found[] = [$owner, $path . '/' . $i, 'rule added for a value the baseline did not allow', self::NOTE, $reading];
+        $found[] = [
+          $declaring_class,
+          $path . '/' . $i,
+          'rule added for a value the baseline did not allow',
+          self::NOTE,
+          $reading,
+        ];
       }
       else {
-        $found[] = [$owner, $path . '/' . $i, 'rule added', self::NARROWS, $reading];
+        $found[] = [$declaring_class, $path . '/' . $i, 'rule added', self::NARROWS, $reading];
       }
     }
     return $found;
@@ -959,14 +965,14 @@ final class ContractDiff {
    * @return string
    *   The id.
    */
-  protected function owner(string $key): string {
+  protected function declaringClass(string $key): string {
     return preg_replace('/@\d+$/', '', $key) ?? $key;
   }
 
   /**
    * Gives the path a version change is reported at.
    *
-   * @param string $owner
+   * @param string $declaring_class
    *   The id.
    * @param string $surface
    *   The document's id.
@@ -974,8 +980,8 @@ final class ContractDiff {
    * @return string
    *   The pointer to where its version is stated.
    */
-  protected function ownerPath(string $owner, string $surface): string {
-    return $owner === $surface ? '/x-surface/version' : '/$defs/' . $owner . '/x-surface/version';
+  protected function declaringClassPath(string $declaring_class, string $surface): string {
+    return $declaring_class === $surface ? '/x-surface/version' : '/$defs/' . $declaring_class . '/x-surface/version';
   }
 
 }

@@ -62,16 +62,16 @@ use PortableSchema\Builder\Schema;
 interface SurfaceInterface extends CacheableDependencyInterface {
 
   /**
-   * The contributor id standing for the owner.
+   * The contributor id standing for the declaring class.
    *
-   * The owner is the resource or structure that declared the shape, and
-   * the first contributor: its definitions, its refinement map and its
+   * The declaring class is the resource or structure that declared the shape,
+   * and the first contributor: its definitions, its refinement map and its
    * #[RefinesInput] methods are contribution number one, and it is held
    * to the same rules as everybody who arrives later. The id
    * is spelled so that no module can claim it, because a module name
    * never contains a '#'.
    */
-  const OWNER = '#owner';
+  const DECLARING_CLASS = '#owner';
 
   /**
    * The coded refiners: the #[RefinesInput] methods not declared runtime.
@@ -345,11 +345,12 @@ interface SurfaceInterface extends CacheableDependencyInterface {
    *
    * What refinement does with those values, in four lines:
    * 1. Deep-clone the advertised definition and divide its list of
-   *    allowed values into the owner's (everything nobody contributed)
-   *    and one slice per contributor.
-   * 2. Run the owner's refiners over the owner's slice.
+   *    allowed values into the declaring class's (everything nobody
+   *    contributed) and one slice per contributor.
+   * 2. Run the declaring class's refiners over the declaring class's slice.
    * 3. Run each contributor's refiners over that contributor's slice.
-   * 4. The refined definition is the owner's, with its list of allowed
+   * 4. The refined definition is the declaring class's, with its list of
+   * allowed
    *    values replaced by the union of every narrowed slice.
    *
    * Every link is held to the narrowing contract

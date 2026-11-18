@@ -11,7 +11,7 @@ use Drupal\surface_resource_test\Structure\Broken\MountingMixinStructure;
 use PortableSchema\Builder\Schema;
 
 /**
- * Mounts a key on a structure, which some owner then mixes in.
+ * Mounts a key on a structure, which some declaring class then mixes in.
  */
 #[Alters(MountingMixinStructure::class)]
 final class MountingMixinAlter implements AltersInputsInterface {

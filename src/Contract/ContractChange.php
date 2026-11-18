@@ -22,7 +22,7 @@ final class ContractChange {
   public const COMPATIBLE = 'compatible';
 
   /**
-   * Breaking, and the owner's version was raised for it.
+   * Breaking, and the declaring class's version was raised for it.
    */
   public const VERSIONED = 'versioned';
 
@@ -63,7 +63,7 @@ final class ContractChange {
    * @param string $surface
    *   The resource or structure whose document it was found in, and whose
    *   baseline records an allowance for it.
-   * @param string $owner
+   * @param string $declaringClass
    *   The id whose version answers for it: the document's resource or
    *   structure, or the def the path is inside.
    * @param string $path
@@ -81,7 +81,7 @@ final class ContractChange {
    */
   public function __construct(
     public readonly string $surface,
-    public readonly string $owner,
+    public readonly string $declaringClass,
     public readonly string $path,
     public readonly string $change,
     public readonly string $effect,

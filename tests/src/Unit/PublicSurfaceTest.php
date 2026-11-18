@@ -25,7 +25,7 @@ use PHPUnit\Framework\Attributes\Group;
  * The counts were taken on 2026-10-24, when the surface was counted and
  * cut: 9 attributes, 33 arguments to 30, 17 blueprint methods to 15, 23
  * interfaces to 20. Grown on 2026-10-25 by one argument,
- * `#[Operation(gate:)]`, access borrowed from another thing's owner
+ * `#[Operation(gate:)]`, access borrowed from another thing's provider
  * (docs/decisions.md#a-gate-is-borrowed-never-copied): 31 arguments.
  * Grown on 2026-10-27 by one blueprint method, `resolve()`, a key read
  * otherwise at use than it is stored

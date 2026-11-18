@@ -16,7 +16,7 @@ use Drupal\surface\Resource\OperationContext;
  * The four answers access can give, two of each kind.
  *
  * Named by the exhibit's provenance, which it mixes in, and by its loan,
- * which it attaches, so the same class answers for an owner's keys and
+ * which it attaches, so the same class answers for a declaring class's keys and
  * for a child. What each answer reads is what its cacheability says, and
  * that is what makes it static or runtime:
  *

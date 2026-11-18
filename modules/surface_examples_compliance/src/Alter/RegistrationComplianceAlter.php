@@ -24,11 +24,11 @@ use PortableSchema\Builder\Schema;
  * attaches the compliance structure at its own mount, so the license and
  * the stewards are stored under this module's name, and wires the
  * structure's capacity port to example 3's capacity. The rest is glue for
- * this one owner: it titles the fieldset and draws it right after the
- * capacity its license lifts, rewords one of the owner's labels, stops the
- * owner's capacity at a hundred without a license, a rule declared as
- * data, and leaves out a room the site has closed, which only the site
- * knows when it is asked. Example 3 is not changed and does not know this
+ * this one declaring class: it titles the fieldset and draws it right after the
+ * capacity its license lifts, rewords one of the declaring class's labels,
+ * stops the declaring class's capacity at a hundred without a license, a rule
+ * declared as data, and leaves out a room the site has closed, which only the
+ * site knows when it is asked. Example 3 is not changed and does not know this
  * module exists.
  */
 #[Alters(RegistrationStep3Resource::class)]
@@ -76,8 +76,8 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
    *
    * A runtime refiner: what it answers is read from State when the
    * values are held to it, so no schema can state it ahead of time. It
-   * watches the venue so it narrows the venue's rooms, which the owner's
-   * refiner has already listed; the full schema still offers every room
+   * watches the venue so it narrows the venue's rooms, which the declaring
+   * class's refiner has already listed; the full schema still offers every room
    * per venue, and the pipeline refuses a closed one. The one refiner
    * here that is an instance method, which only a runtime refiner may
    * be: it reads the State this alter was built with.

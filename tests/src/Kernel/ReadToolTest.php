@@ -29,8 +29,8 @@ use Symfony\Component\Routing\Route;
  * Tests the read of one thing, an operation of the resource.
  *
  * Every resource that can be asked on its own and has a default update
- * has one, `surface:<resource>:read`: the one its owner declares, or the
- * one the build adds beside the default update. Its inputs are the
+ * has one, `surface:<resource>:read`: the one its declaring class declares, or
+ * the one the build adds beside the default update. Its inputs are the
  * operation's parameters, its one output `values`, what the storage
  * loads, in the shape the update takes, less every secret. The read the
  * build adds asks the update's access.

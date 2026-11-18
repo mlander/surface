@@ -52,8 +52,8 @@ use Drupal\tool\TypedData\OutputDefinition;
  *   from defineOutputs().
  *
  * And the read of one thing (OperationDefinition::readsOne()), the one an
- * owner declares or the one the build adds beside the default update: its
- * parameters, nothing else, and one output, `values`, the same map as the
+ * declaring class declares or the one the build adds beside the default update:
+ * its parameters, nothing else, and one output, `values`, the same map as the
  * update's input, holding what is stored now, less every secret.
  *
  * The static definition has to be written before any caller has said
@@ -822,7 +822,7 @@ final class OperationInputs {
       $this->t('@resource values', ['@resource' => $resource->id]),
       $this->t('The values, as the @resource resource describes them: every key it takes that the operation does not already know, including those other modules add, with its label, its meaning and the values it allows.', ['@resource' => $resource->id]),
       runtimeAccessSaidOnce: $operation !== NULL && $this->runtimeAccessWhole($resource, $operation),
-      // A read an owner declares has no narrowing tool of its own; the
+      // A read a declaring class declares has no narrowing tool of its own; the
       // one the build adds names its update's.
       narrowing: $operation === NULL || ($operation->readsOne() && !$operation->isDefaultRead()) ? NULL : static::narrowingTool($resource, $operation),
       schema: $operation === NULL || $this->servedPaths === NULL ? NULL : $this->servedPaths->schemaPath($resource->id, $operation->id),

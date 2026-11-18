@@ -25,9 +25,9 @@ use PortableSchema\Builder\Schema;
 /**
  * Tests the single answer a data surface gives about one of its keys.
  *
- * The entry exists so that a key's schema, its owner, its locked state,
- * its refinement edges, its contributed values and its refiner chains can
- * never disagree with one another. Refinement is the only thing that
+ * The entry exists so that a key's schema, its declaring class, its locked
+ * state, its refinement edges, its contributed values and its refiner chains
+ * can never disagree with one another. Refinement is the only thing that
  * changes an entry, and it changes exactly one of those seven things.
  *
  * An entry holds its key's schema. An entry of a definition no schema
@@ -52,7 +52,7 @@ class EntryTest extends UnitTestCase {
     $this->assertSame('title', $entry->name);
     $this->assertSame($schema, $entry->schema());
     $this->assertNull($entry->host());
-    $this->assertSame(SurfaceInterface::OWNER, $entry->contributor);
+    $this->assertSame(SurfaceInterface::DECLARING_CLASS, $entry->contributor);
     $this->assertFalse($entry->locked);
     $this->assertSame([], $entry->dependencies);
     $this->assertSame([], $entry->refiners);
@@ -70,7 +70,7 @@ class EntryTest extends UnitTestCase {
       contributor: 'other_module',
       locked: TRUE,
       dependencies: ['casing'],
-      refiners: [SurfaceInterface::OWNER => [$refiner]],
+      refiners: [SurfaceInterface::DECLARING_CLASS => [$refiner]],
       contributions: ['other_module' => ['ribbon']],
     );
     $narrowed = Schema::string()->title('Narrowed');
@@ -83,7 +83,7 @@ class EntryTest extends UnitTestCase {
     $this->assertSame('other_module', $next->contributor);
     $this->assertTrue($next->locked);
     $this->assertSame(['casing'], $next->dependencies);
-    $this->assertSame([SurfaceInterface::OWNER => [$refiner]], $next->refiners);
+    $this->assertSame([SurfaceInterface::DECLARING_CLASS => [$refiner]], $next->refiners);
     $this->assertSame(['other_module' => ['ribbon']], $next->contributions);
     // The entry it came from is untouched.
     $this->assertNotSame($narrowed, $entry->schema());
@@ -94,7 +94,7 @@ class EntryTest extends UnitTestCase {
    */
   public function testTouchedBy(): void {
     $owned = new Entry('owned', Schema::string());
-    $this->assertTrue($owned->touchedBy(SurfaceInterface::OWNER));
+    $this->assertTrue($owned->touchedBy(SurfaceInterface::DECLARING_CLASS));
     $this->assertFalse($owned->touchedBy('other_module'));
 
     $mounted = new Entry('mounted', Schema::string(), contributor: 'other_module');

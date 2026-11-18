@@ -603,7 +603,7 @@ A grouped key and its frame, with the widget hints:
 | `within` | On an object owning an applicator (a site, a frame, a def): what a schema below the applicator says under `x-surface`, as a map from its JSON pointer, relative to the object, to that `x-surface`. On the compliance mount, in the schema for these answers, whose narrowing refines the stewards: `{"/allOf/1/properties/stewards": {"dependsOn": ["capacity"], "refined": true}}`. Nothing below an applicator carries `x-surface` ([Contract 2](#contract-2)); `SchemaResolver::restored()` and the app's `inlineSchema()` put each entry back where it points. |
 | `ports` | On an object, a def's or the top's, when the structure reads ports: each port's typed data `type`, whether it is `required`, and the `shape` it reads, when it reads one. A port is no property: its value is a key of the container, which the site names ([below](#a-port-is-stated-at-its-site)). |
 | `reads` | On a site, the property where a child that reads ports is used: each port, mapped to the key of the parent's frame it reads. On a map of keys from the site whose entries read ports, each port mapped to the sibling map whose entry of the same id it reads. |
-| `live` | Only when `true` (`runtime` in contract 1): the key is settled per request, by the server alone ([markers](#markers)). Either a runtime refiner narrows it, by a rule no schema can state, or, in [the full schema](#two-documents) only, an access answer that waits for the subject (it read a stored value, State, the `user` context) was set aside for this account, so the key is as the account's static answers leave it and may be locked or left out once the subject is known (`access: "live"` in contract 3). Never in a conditional. In the full schema the key keeps the width its static refiners and static access give it; the schema for these answers is refined by the runtime refiner for its values and applies the access answer, marking nothing for it. The access answer may be the owner's access class's or an alter's, each read by itself, so a key the account's static answers lock is `readOnly` and marked too; on every key of the document when the answer set aside is the resource's own at the top, which may lock it whole; on a key with variants, a variant offered may be withheld. Written beside `enumerated` or `refine` when the key has static refiners as well. A client asks the narrowing whenever the key is reached and never caches its answer. |
+| `live` | Only when `true` (`runtime` in contract 1): the key is settled per request, by the server alone ([markers](#markers)). Either a runtime refiner narrows it, by a rule no schema can state, or, in [the full schema](#two-documents) only, an access answer that waits for the subject (it read a stored value, State, the `user` context) was set aside for this account, so the key is as the account's static answers leave it and may be locked or left out once the subject is known (`access: "live"` in contract 3). Never in a conditional. In the full schema the key keeps the width its static refiners and static access give it; the schema for these answers is refined by the runtime refiner for its values and applies the access answer, marking nothing for it. The access answer may be the declaring class's access class's or an alter's, each read by itself, so a key the account's static answers lock is `readOnly` and marked too; on every key of the document when the answer set aside is the resource's own at the top, which may lock it whole; on a key with variants, a variant offered may be withheld. Written beside `enumerated` or `refine` when the key has static refiners as well. A client asks the narrowing whenever the key is reached and never caches its answer. |
 | `operation` | At the top only, after `contract`: how the operation behaves, `{id, label, description?, kind, creates, destructive, idempotent}` ([above](#the-schema)). Contract 1 also carried `readOnly`, which `kind: "read"` says. |
 | `version` | At the top always, after `operation`; on a def only above 1, absent reading as 1: which version of its stored values the resource or structure describes, counting the breaking changes made to them. A compatible change never moves it; a client compares it before trusting a cached document ([Evolving a resource](evolution.md#the-version)). |
 | `doesNotApply` | On an object, the top or a child's frame, never on a property: the keys of it a refiner answered [do not apply](refinement.md#when-a-key-does-not-apply) to these values, each with the keys it depends on, `{"send_day": ["frequency"]}`. They are no properties of it; a client refines when one of those changes. |
@@ -971,10 +971,10 @@ the capacity.
 
 A structure at every entry of a map of keys from the site reads its
 ports per entry ([Ports on an entry](resources.md#ports-on-an-entry)),
-so its site is each entry: on the owner's `allOf`, an `if` on the
+so its site is each entry: on the declaring class's `allOf`, an `if` on the
 sibling map's entry and a `then` reaching into the map at the entry,
 once per entry, a locked one's too. The map's property says `reads` as
-the owner wired it, each port by the sibling map, and its `dependsOn`
+the declaring class wired it, each port by the sibling map, and its `dependsOn`
 names every sibling entry. The map's own def lists no port. Example 9's
 student tickets, one of the two rules:
 
@@ -990,17 +990,17 @@ that does not apply is `false` in the entry's narrowing, and the entry's
 ### A mixed-in structure is composed
 
 A structure [mixed in](resources.md#mixins) is written once, as a def,
-like any child, from the structure built by itself, and the owner's
+like any child, from the structure built by itself, and the declaring class's
 frame composes it with its own keys: `allOf` of a reference to each
 structure's def and the frame's own `properties`, closed with
 `unevaluatedProperties: false` in place of `additionalProperties`. Each
-member keeps its place among the owner's properties, so the order is
+member keeps its place among the declaring class's properties, so the order is
 the declaration's: `true` where the def says all there is, only what
-differs where the owner narrows it here (a lock, a context, the values
-of this document, what reads a port at the owner's key), and `false`
+differs where the declaring class narrows it here (a lock, a context, the values
+of this document, what reads a port at the declaring class's key), and `false`
 where it does not apply to these values. What the def requires and the
 conditionals it states are said there, not again; what depends on a port
-is stated on the owner's `allOf`, as at a site. The journal's full
+is stated on the declaring class's `allOf`, as at a site. The journal's full
 schema, abbreviated:
 
 ```json
@@ -1042,7 +1042,7 @@ schema, abbreviated:
   other's def and its own properties, its members `true` where that def
   says all there is.
 - **A def mixed in is open.** A closed def (`additionalProperties:
-  false`) would refuse the owner's keys beside it, so in a document that
+  false`) would refuse the declaring class's keys beside it, so in a document that
   mixes a structure in anywhere its def carries neither keyword, and
   every other place that uses it closes it, `{"$ref": ...,
   "unevaluatedProperties": false}`: the archive attaches the timestamps
@@ -1056,7 +1056,7 @@ schema, abbreviated:
   and close it with `additionalProperties: false`: what the pipeline
   reads, and what the page draws and narrows from.
 - **The tool lists it flat.** The tool bridge converts the built data
-  surface, where the members are the owner's keys, so `values` is flat;
+  surface, where the members are the declaring class's keys, so `values` is flat;
   the Tool API writes its schema from typed definitions and has no
   `allOf` to carry.
 - **Access.** A member its structure's access locked is `readOnly`, with
@@ -1330,7 +1330,7 @@ the hint's words: `radios`, `checkboxes`, `select`, `time`.
 
 | Definition | Form API element | `x-portable-ui.widget` | React component |
 | --- | --- | --- | --- |
-| a key a module's widget claims, unless its owner asks for a widget | that widget's element | its plugin ID | the stock field for the key's JSON type (`stockWidget()`) |
+| a key a module's widget claims, unless its provider asks for a widget | that widget's element | its plugin ID | the stock field for the key's JSON type (`stockWidget()`) |
 | any key whose constraints resolve to a list, an empty one included | `select`, empty option by the rule | `select` | `SelectField` |
 | such a key that asks for radios, `ui(widget: 'radios')` | `radios`, a `- None -` radio only where the key may be cleared | `radios` | `RadiosField` |
 | a deciding key that holds a value and whose variants offer one value, or a key its operation's context fixes to one (fixing makes it hold a value), while what is stored is that value or nothing | `item`: the value's label, the value posted, no AJAX trigger | `fixed` | `FixedField` |
@@ -1379,7 +1379,7 @@ route, `surface.api`, answers every path below;
 | `PATCH /surface-api/{resource}` | A singleton's default update. A collection has none. |
 | `POST /surface-api/{resource}` | The default create, on the collection of a resource with identity. |
 | `GET` and `POST /surface-api/{resource}/{parent}` | A create that names the parent it adds to, its envelope and a run of it: `POST /surface-api/field.instance/node/article` adds a field to the article bundle. |
-| `GET /surface-api/{resource}/{id}` | One thing's envelope: its read's. The read the build adds is served as the update it reads, so its envelope and schema are the update's; a read the owner declares serves its own, and the update's envelope is then its custom method's. |
+| `GET /surface-api/{resource}/{id}` | One thing's envelope: its read's. The read the build adds is served as the update it reads, so its envelope and schema are the update's; a read the declaring class declares serves its own, and the update's envelope is then its custom method's. |
 | `PATCH /surface-api/{resource}/{id}` | One thing's default update. |
 | `DELETE /surface-api/{resource}/{id}` | One thing's default delete: removes it, with no body. |
 | `GET .../schema` | The full schema of the operation `GET` serves at that path, `application/schema+json`. |
@@ -1421,7 +1421,7 @@ a kind with neither named so leaves the kind with no default
 An id `add`, `edit`, `remove` or `get` is refused at discovery, naming
 the standard id. Where an update is, the default read is `read`, the
 read of one thing, which every resource with a default update has: the
-one its owner declares, or the one the build adds
+one its declaring class declares, or the one the build adds
 (why: [decision](decisions.md#a-read-is-an-operation-of-the-resource)).
 The collection of a resource with
 identity has no default update: `PATCH` there would change every thing,
@@ -2044,7 +2044,7 @@ so a site grants them to the roles it chooses. The document is open.
   `<resource>:read:read`, its schema `<resource>:read:schema`: the read
   the build adds is described from the update it reads, sharing its
   component, and the update is described by its run alone; a read an
-  owner declares is described from its own build, and its update's
+  declaring class declares is described from its own build, and its update's
   envelope is its custom method's, `.../{id}:update`. The read has no
   run: it takes no values. A
   listing is `get` on the collection's path item, `/surface-api/event.venue`,

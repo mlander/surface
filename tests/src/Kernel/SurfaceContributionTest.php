@@ -45,7 +45,7 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
   protected static $modules = ['system', 'surface', 'surface_test'];
 
   /**
-   * The values the owner declares for the variant key.
+   * The values the declaring class declares for the variant key.
    */
   protected const OWNED = ['bold', 'strong', 'quiet', 'muted'];
 
@@ -61,7 +61,7 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
   protected function surface(array $refiners = []): SurfaceInterface {
     $builder = $this->builder();
     foreach ($refiners as $contributor => $refiner) {
-      $builder->addRefiner('variant', $refiner, $contributor === SurfaceInterface::OWNER ? NULL : (string) $contributor);
+      $builder->addRefiner('variant', $refiner, $contributor === SurfaceInterface::DECLARING_CLASS ? NULL : (string) $contributor);
     }
     return $builder->seal();
   }
@@ -108,7 +108,7 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
     // Each refiner answers with exactly what it was handed, so what each
     // one saw is readable in the union.
     $surface = $this->surface([
-      SurfaceInterface::OWNER => new ConstraintRewritingRefiner(),
+      SurfaceInterface::DECLARING_CLASS => new ConstraintRewritingRefiner(),
       'other' => new ConstraintRewritingRefiner(),
     ]);
 
@@ -117,10 +117,10 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
       $this->variants($surface->refine(['casing' => 'uppercase'])),
     );
 
-    // The owner is handed its own values only: told to keep just the
+    // The declaring class is handed its own values only: told to keep just the
     // first two, it cannot take the contributed value with it.
     $surface = $this->surface([
-      SurfaceInterface::OWNER => new ConstraintRewritingRefiner([
+      SurfaceInterface::DECLARING_CLASS => new ConstraintRewritingRefiner([
         'LabeledChoice' => ['choices' => ['bold', 'strong'], 'labels' => []],
       ]),
       'other' => new ConstraintRewritingRefiner(),
@@ -152,8 +152,8 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
   /**
    * Tests that a data surface with one contribution behaves as a plain chain.
    *
-   * The overwhelmingly common case: no contributions at all, one owner
-   * chain, and an answer identical to the one the chain gave before any
+   * The overwhelmingly common case: no contributions at all, one declaring
+   * class chain, and an answer identical to the one the chain gave before any
    * of this existed.
    */
   public function testSingleContributionIsThePlainChain(): void {

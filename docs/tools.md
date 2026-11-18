@@ -206,7 +206,7 @@ operation of its own, `read`, whose tool is `surface:<resource>:read`
   standard id `read`, that takes no structure's keys
   (`OperationDefinition::readsOne()`). The catalog lists it beside the
   resource's other operations.
-- **Added where the owner declares none.** Where a resource with storage
+- **Added where the declaring class declares none.** Where a resource with storage
   has a default update that can be asked on its own (`update`, or
   `configure` on a singleton, else its only update) and declares no
   `read`, the build adds one, labeled "Current values:" and the
@@ -218,7 +218,7 @@ operation of its own, `read`, whose tool is `surface:<resource>:read`
   `field.instance:reuse` create, and a resource with only those would
   have no read. A resource has one read: an update beside the default,
   such as the venues' `reorder`, has none of its own.
-- **Declared by an owner to set view access.** An owner that declares
+- **Declared by a declaring class to set view access.** A declaring class that declares
   `read`, `#[Operation('read', readOnly: TRUE)]` on a method that takes
   what names the thing, replaces the default and answers access for
   reading through its access class, which sees the context's id `read`.

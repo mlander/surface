@@ -21,9 +21,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * The additive-diff lint, as a test any module can copy: every resource
  * and structure the five modules declare has its full schema committed
  * under tests/fixtures/contracts/, and today's emission may differ from
- * it only compatibly, or by a breaking change with its owner's version
- * raised or an allowance recorded. Any other breaking change fails here;
- * `drush surface:contract-diff --write` pins a change once it is
+ * it only compatibly, or by a breaking change with its declaring class's
+ * version raised or an allowance recorded. Any other breaking change fails
+ * here; `drush surface:contract-diff --write` pins a change once it is
  * accepted. Run with SURFACE_CONTRACT_WRITE=1, this test writes the
  * baselines instead, from the modules it installs alone: how a
  * declaration whose variants come from the site (example 12's
@@ -178,7 +178,7 @@ class ContractBaselineTest extends SurfaceKernelTestBase {
     $this->assertSame(array_column($current, 'module', 'resource'), array_column($committed, 'module', 'resource'), 'Each baseline records the module declaring it.');
 
     $failing = array_filter($baselines->compare($committed, $current), static fn (ContractChange $change): bool => $change->fails());
-    $this->assertSame([], array_map(static fn (ContractChange $change): string => sprintf('%s %s: %s', $change->surface, $change->path, $change->change), array_values($failing)), 'A breaking change raises its owner\'s version, or its baseline allows it.');
+    $this->assertSame([], array_map(static fn (ContractChange $change): string => sprintf('%s %s: %s', $change->surface, $change->path, $change->change), array_values($failing)), 'A breaking change raises its declaring class\'s version, or its baseline allows it.');
   }
 
   /**
@@ -217,11 +217,11 @@ class ContractBaselineTest extends SurfaceKernelTestBase {
     $contact = &$removed['registration.step3']['documents'][0]['schema']['$defs']['registration.contact'];
     unset($contact['properties']['phone']);
     $removed['registration.step3']['documents'][0]['schema']['x-surface']['version'] = 2;
-    [$change] = array_values(array_filter($this->changes($baselines->compare($committed, $removed)), static fn (ContractChange $change): bool => $change->owner === 'registration.contact'));
+    [$change] = array_values(array_filter($this->changes($baselines->compare($committed, $removed)), static fn (ContractChange $change): bool => $change->declaringClass === 'registration.contact'));
     $this->assertSame('configure#/$defs/registration.contact/properties/phone', $change->path);
     $this->assertSame(ContractChange::BREAKING, $change->status, 'The container\'s version does not answer for a structure it holds.');
     $contact['x-surface'] = ['version' => 2];
-    [$change] = array_values(array_filter($this->changes($baselines->compare($committed, $removed)), static fn (ContractChange $change): bool => $change->owner === 'registration.contact' && $change->effect !== 'note'));
+    [$change] = array_values(array_filter($this->changes($baselines->compare($committed, $removed)), static fn (ContractChange $change): bool => $change->declaringClass === 'registration.contact' && $change->effect !== 'note'));
     $this->assertSame(ContractChange::VERSIONED, $change->status);
   }
 

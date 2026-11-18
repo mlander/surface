@@ -102,7 +102,7 @@ surface_resource_test.exhibit:
     _surface_operation: 'configure'
 
 # The gallery's one operation, served by the generic form: access answered
-# by alters, after the owner's.
+# by alters, after the declaring class's.
 surface_resource_test.gallery:
   path: '/surface-test/gallery'
   defaults:

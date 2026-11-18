@@ -177,8 +177,8 @@ final class PropertySchema {
    */
   public function reference(string $key, ?Schema $instance = NULL, ?Subschemas $subschemas = NULL): Schema {
     $reference = Schema::any()->with('$ref', ContractEmitter::DEFS . ContractEmitter::pointer($key));
-    // A def written open, for an owner to mix it in, is closed where it is
-    // used whole. Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+    // A def written open, for a declaring class to mix it in, is closed where
+    // it is used whole. Decision: see docs/decisions.md#a-mixin-is-merged-flat.
     $closed = $subschemas !== NULL && $subschemas->isOpen($key) ? ['unevaluatedProperties' => FALSE] : [];
     $def = $subschemas?->get($key);
     if ($instance === NULL || $def === NULL) {
@@ -527,7 +527,7 @@ final class PropertySchema {
       // A reference with too many candidates to list is looked up.
       // Decision: see
       // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
-      // A module's widget that claims the key, unless its owner asked for
+      // A module's widget that claims the key, unless its provider asked for
       // one by name: the word it answers to.
       // Decision: see docs/decisions.md#a-widget-is-chosen-by-the-keys-schema.
       $claimed = $this->widgets?->module($schema);
@@ -771,7 +771,7 @@ final class PropertySchema {
   /**
    * Gets the widget a map asks to be drawn with, by its word.
    *
-   * A map's `widget` setting, which an owner sets on the key or a
+   * A map's `widget` setting, which a declaring class sets on the key or a
    * structure asks for with #[Structure(widget:)]: a hint, as every
    * widget word is.
    *
@@ -1075,8 +1075,8 @@ final class PropertySchema {
   public function anyRefined(Schema $schema): bool {
     $properties = $schema->get('properties');
     foreach (is_array($properties) ? $properties : [] as $property) {
-      // A mixed-in structure's member the owner says nothing more of is
-      // `true`, and one ruled out `false`, which say nothing.
+      // A mixed-in structure's member the declaring class says nothing more of
+      // is `true`, and one ruled out `false`, which say nothing.
       $extension = $property->get(self::EXTENSION);
       if (is_array($extension) && !empty($extension['refined'])) {
         return TRUE;

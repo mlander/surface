@@ -123,7 +123,7 @@ class RuntimeRefinementTest extends SurfaceKernelTestBase {
     $this->assertSame(['aisle'], $shelf->dependencies);
     $this->assertSame(['aisle'], $shelf->staticDependencies());
     $this->assertTrue($shelf->isRefinedAtRuntime());
-    $links = $shelf->refiners[SurfaceInterface::OWNER];
+    $links = $shelf->refiners[SurfaceInterface::DECLARING_CLASS];
     $this->assertCount(2, $links, 'One link per kind.');
     $this->assertNotInstanceOf(RuntimeRefiner::class, $links[0]);
     $this->assertInstanceOf(RuntimeRefiner::class, $links[1]);
@@ -132,7 +132,7 @@ class RuntimeRefinementTest extends SurfaceKernelTestBase {
     $tag = $definitions->entry('tag');
     $this->assertSame([], $tag->dependencies, 'A runtime refiner that watches nothing waits for nothing.');
     $this->assertTrue($tag->isRefinedAtRuntime());
-    $ungated = $tag->refiners[SurfaceInterface::OWNER][0];
+    $ungated = $tag->refiners[SurfaceInterface::DECLARING_CLASS][0];
     $this->assertInstanceOf(RuntimeRefiner::class, $ungated);
     $this->assertFalse($ungated->gated);
     $this->assertFalse($definitions->entry('aisle')->isRefinedAtRuntime());

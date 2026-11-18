@@ -40,14 +40,14 @@ class AuthorSpellingRefusalsTest extends SurfaceKernelTestBase {
    *
    * @param \Drupal\surface\SurfaceBuilder|null $builder
    *   The builder, or NULL for a new one.
-   * @param string|null $owner
+   * @param string|null $declaring_class
    *   The declaring id, or NULL for none.
    *
    * @return \Drupal\surface\ResourceBuild\ResourceBlueprint
    *   The blueprint.
    */
-  protected function blueprint(?SurfaceBuilder $builder = NULL, ?string $owner = NULL): ResourceBlueprint {
-    return new ResourceBlueprint($builder ?? new SurfaceBuilder(), $this->container->get('typed_data_manager'), FALSE, $this->container->get('surface.resource_registry'), $owner);
+  protected function blueprint(?SurfaceBuilder $builder = NULL, ?string $declaring_class = NULL): ResourceBlueprint {
+    return new ResourceBlueprint($builder ?? new SurfaceBuilder(), $this->container->get('typed_data_manager'), FALSE, $this->container->get('surface.resource_registry'), $declaring_class);
   }
 
   /**

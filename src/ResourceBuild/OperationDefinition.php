@@ -131,7 +131,7 @@ final class OperationDefinition {
    * @param string|null $reads
    *   For the read the build adds (defaultRead()), the id of the update it
    *   reads, whose context it is asked in; NULL for every operation an
-   *   owner declares.
+   *   declaring class declares.
    *
    * @throws \LogicException
    *   When the id is a retired one (RETIRED_IDS), or the facts contradict
@@ -213,8 +213,8 @@ final class OperationDefinition {
    * context (contextId(), ResourcesInterface::operation()), so its access,
    * its alters and the operations its children are invoked through are
    * the update's: an account reads exactly what it may change, and the
-   * keys answered are the keys the update takes. An owner that declares
-   * `read` itself replaces it, and may then answer access for reading.
+   * keys answered are the keys the update takes. A declaring class that
+   * declares `read` itself replaces it, and may then answer access for reading.
    *
    * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
    *

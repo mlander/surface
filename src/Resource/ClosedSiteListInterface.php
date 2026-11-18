@@ -11,9 +11,9 @@ namespace Drupal\surface\Resource;
  * build, as for any provider, and may list fewer (one a module that is off
  * cannot back). What it may ever list is named here, statically, by the
  * value that chooses each, so what describes storage ahead of time
- * describes all of them: the config schema written from the owner gives
- * each its own type, as it gives a #[Variant] class, where the variants of
- * an open provider are an open map. Each structure is named once, here:
+ * describes all of them: the config schema written from the declaring class
+ * gives each its own type, as it gives a #[Variant] class, where the variants
+ * of an open provider are an open map. Each structure is named once, here:
  * an entry of list() names a value and its label, and the build reads the
  * structure from structures(). It refuses an entry these do not name, and
  * one that names a schema or a structure of its own.

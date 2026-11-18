@@ -175,15 +175,15 @@ interface ResourcesInterface {
    * With a stage, an operation that does not create and takes no
    * structure (an update, a read or a delete) may name a thing the stage
    * creates, by the address its create was given: a local id (`-3`) or
-   * the name its caller gave. Its context is then the owner's create
+   * the name its caller gave. Its context is then the declaring class's create
    * context again, built from what the stage recorded, under this
    * operation's id, with `creates` still TRUE, so storage rehearses a
    * create and access answers for one, and knowing the create's position
    * in the stage, which the stage's storage reads, and which the read and
    * write tools read to tell a thing a stage creates from a create; a
    * name its caller gave is fixed, so a write cannot rename the thing.
-   * The position's key is reserved for the stage: an owner's context that
-   * knows it is refused with a \LogicException. It is the one
+   * The position's key is reserved for the stage: a declaring class's context
+   * that knows it is refused with a \LogicException. It is the one
    * context whose `creates` differs from its operation's, and it is not
    * stamped. A create builds that context too when the stage says the
    * position of the create it writes into (Stage::creating()), which a
@@ -300,8 +300,8 @@ interface ResourcesInterface {
    *
    * For the static half of a plugin host's protocol, a formatter's
    * defaultSettings() or a field type's defaultFieldSettings(), which is
-   * asked of a class with no instance and no context. Only the owner's
-   * defineInputs() runs: no alter, no context, no refiner, so what an
+   * asked of a class with no instance and no context. Only the declaring
+   * class's defineInputs() runs: no alter, no context, no refiner, so what an
    * alter mounts is not here, and a key holding a child holds an empty
    * map.
    *

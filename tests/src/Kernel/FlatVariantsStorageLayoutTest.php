@@ -316,8 +316,8 @@ class FlatVariantsStorageLayoutTest extends SurfaceKernelTestBase {
    * declares no keys, and a nested storage reads that map back. Stored
    * flat, an empty map writes no key, so the storage layout reads the chosen
    * variant as an empty map where the level holds the deciding key and
-   * the owner's keys alone (FlatVariantsStorageLayout::gather()). With nothing
-   * chosen, nothing is read under the key.
+   * the declaring class's keys alone (FlatVariantsStorageLayout::gather()).
+   * With nothing chosen, nothing is read under the key.
    */
   public function testNothingOfTheChosenVariantReadsAsAnEmptyMap(): void {
     $layout = FlatVariantsStorageLayout::forSurface($this->kit());
@@ -649,7 +649,7 @@ class FlatVariantsStorageLayoutTest extends SurfaceKernelTestBase {
       FlatOwnerClashStructure::class => 'resource_test.broken.flat_owner_clash stores the variants at "gear" flat beside its own keys (Variants::STORED_AS), and the variant for "a", resource_test.broken.flat.weight, declares "weight", which resource_test.broken.flat_owner_clash declares too. Stored flat, the two would be one key: rename one, or store the variants under "gear".',
       FlatMixinClashStructure::class => 'resource_test.broken.flat_mixin_clash stores the variants at "gear" flat beside its own keys (Variants::STORED_AS), and the variant for "a", resource_test.broken.flat.mixed_weight, declares "weight", which resource_test.broken.flat_mixin_clash declares too. Stored flat, the two would be one key: rename one, or store the variants under "gear".',
       FlatTwoKeysStructure::class => 'resource_test.broken.flat_two_keys stores the variants at "gear" and at "spare" flat at one level (Variants::STORED_AS). Read back, every key that is not its own is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.',
-      FlatNestedStructure::class => 'resource_test.broken.flat_nested stores the variants at "gear" flat (Variants::STORED_AS), and the variant for "a", resource_test.broken.flat.inner, stores the variants at "inner" flat too, at the same level. Read back, every key that is not the owner\'s is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.',
+      FlatNestedStructure::class => 'resource_test.broken.flat_nested stores the variants at "gear" flat (Variants::STORED_AS), and the variant for "a", resource_test.broken.flat.inner, stores the variants at "inner" flat too, at the same level. Read back, every key that is not the declaring class\'s is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.',
       FlatStateResource::class => 'resource_test.broken.flat_state stores the variants at "gear" flat (Variants::STORED_AS), and Drupal\surface_resource_test\Storage\PinnedNoteStorage, which stores it, is no config storage: the storage layout that stores them beside their deciding key is applied to ConfigObjectResourceStorage and ConfigEntityResourceStorage alone. Store them under the key, or lay them out in the storage itself.',
     ];
     $refused = [];
@@ -668,8 +668,9 @@ class FlatVariantsStorageLayoutTest extends SurfaceKernelTestBase {
   /**
    * Tests a variant the site lists is refused stored flat when a door reads it.
    *
-   * It is built when read, not with its owner, so the owner builds; the
-   * key it shares with the owner is refused when it is settled.
+   * It is built when read, not with its declaring class, so the declaring class
+   * builds; the key it shares with the declaring class is refused when it is
+   * settled.
    */
   public function testListedVariantIsRefusedWhenSettled(): void {
     $built = $this->container->get('surface.resources')->build(FlatListedClashStructure::class, new OperationContext('configure'));
@@ -683,23 +684,23 @@ class FlatVariantsStorageLayoutTest extends SurfaceKernelTestBase {
   /**
    * Tests a listed variant storing variants flat itself is refused when read.
    *
-   * Its variants would land at its owner's level, beside the owner's flat
-   * key, which the owner's build cannot see: the variant is built when a
-   * door reads it.
+   * Its variants would land at its declaring class's level, beside the
+   * declaring class's flat key, which the declaring class's build cannot see:
+   * the variant is built when a door reads it.
    */
   public function testListedVariantStoringFlatIsRefusedWhenSettled(): void {
     $built = $this->container->get('surface.resources')->build(FlatListedNestedStructure::class, new OperationContext('configure'));
     $variant = $built->entries()->entry('gear')->variants->variant('a');
     $this->assertFalse($variant->isSettled(), 'Held unsettled until a door reads it.');
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('resource_test.broken.flat_listed_nested stores the variants at "gear" flat (Variants::STORED_AS), and the variant for "a", resource_test.broken.flat.listed_inner, stores the variants at "inner" flat too, at the same level. Read back, every key that is not the owner\'s is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.');
+    $this->expectExceptionMessage('resource_test.broken.flat_listed_nested stores the variants at "gear" flat (Variants::STORED_AS), and the variant for "a", resource_test.broken.flat.listed_inner, stores the variants at "inner" flat too, at the same level. Read back, every key that is not the declaring class\'s is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.');
     $variant->child->entries();
   }
 
   /**
    * Tests a listed variant is refused when settled from a build in the cache.
    *
-   * The owner's keys at the level are stored with the build
+   * The declaring class's keys at the level are stored with the build
    * (VariantsToSettle), and the variant is stored as what builds it, so the
    * request that reads the build back settles it. The refusal fires only
    * when those keys came back with it: the variant, a weight alone,

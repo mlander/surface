@@ -10,13 +10,13 @@ namespace Drupal\surface\Resource;
  * What makes a class an alter is #[Alters] on it. This interface
  * is for one that adds inputs; #[RefinesInput] methods for one that
  * tightens; OperationAccessInterface for one that answers access. A class
- * may do any of the three. Never change or remove what the owner declared,
- * and add no outputs: what a call answers is its operation's.
+ * may do any of the three. Never change or remove what the declaring class
+ * declared, and add no outputs: what a call answers is its operation's.
  *
  * What an alter adds is mounted under the alter's own module name, at
  * third_party_settings.<module>.<key>, which is where the engine keeps
- * every contribution so that the owner's storage and schema never have to
- * know a contributor's keys.
+ * every contribution so that the declaring class's storage and schema never
+ * have to know a contributor's keys.
  */
 interface AltersInputsInterface {
 

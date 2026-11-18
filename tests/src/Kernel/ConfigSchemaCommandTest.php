@@ -16,7 +16,7 @@ use Symfony\Component\Console\Tester\CommandTester;
  * fails when one does; with it, it writes them, and a run after passes.
  * A module that writes nothing is refused by name. A module that is not
  * installed is read from its code, so its files are written before it is
- * installed, an owner and a module mounting keys on it in one run.
+ * installed, a provider and a module mounting keys on it in one run.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -94,7 +94,7 @@ class ConfigSchemaCommandTest extends SurfaceKernelTestBase {
    *
    * The examples own the registration's third step, and the compliance
    * module mounts keys on it; neither is installed here. Named together,
-   * both modules' files come out as they ship, the owner's schema typing
+   * both modules' files come out as they ship, the provider's schema typing
    * the compliance module's mount, with nothing said between them.
    */
   public function testModulesNotInstalledAreWrittenInOneRun(): void {
@@ -128,7 +128,7 @@ class ConfigSchemaCommandTest extends SurfaceKernelTestBase {
     [$status, $display] = $this->command(['--module' => implode(',', $modules)]);
     $this->assertSame(0, $status, $display);
 
-    // The owner alone writes no mount: the module mounting keys is
+    // The provider alone writes no mount: the module mounting keys is
     // neither installed nor named.
     $alone = $this->container->get('surface.config_schema')->including(['surface_examples'])->files(['surface_examples']);
     $this->assertStringNotContainsString('third_party', $alone[$files[0]]);

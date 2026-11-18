@@ -145,11 +145,11 @@ final class DefinitionMetadata {
   protected const FIXED_KEY = 'surface_fixed';
 
   /**
-   * The definition array key holding the label the owner gave a key.
+   * The definition array key holding the label the declaring class gave a key.
    *
    * Written when an alter rewords a key it does not own, so what
-   * describes the owner's own storage (its config schema) reads the
-   * owner's words, not those of whichever modules were on.
+   * describes the declaring class's own storage (its config schema) reads the
+   * provider's words, not those of whichever modules were on.
    */
   protected const OWN_LABEL_KEY = 'surface_own_label';
 
@@ -878,10 +878,10 @@ final class DefinitionMetadata {
   }
 
   /**
-   * Keeps the label a key's owner gave it, before another module rewords it.
+   * Keeps the label a key's provider gave it, before another module rewords it.
    *
-   * The first call wins: an owner's label is kept once, whichever alter
-   * rewords it after.
+   * The first call wins: a declaring class's label is kept once, whichever
+   * alter rewords it after.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key's definition.
@@ -894,13 +894,13 @@ final class DefinitionMetadata {
   }
 
   /**
-   * Reads the label a key's owner gave it.
+   * Reads the label a key's declaring class gave it.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to read.
    *
    * @return string|\Stringable|null
-   *   The owner's label, which another module has since reworded; the
+   *   The provider's label, which another module has since reworded; the
    *   label it has, when none has.
    */
   public static function ownLabel(DataDefinitionInterface $definition): string|\Stringable|null {
@@ -915,7 +915,7 @@ final class DefinitionMetadata {
    * Declares how a key is arranged where it is drawn.
    *
    * Replaces whatever arrangement the key had. The engine's seam: an
-   * owner or an alter arranges a key with the blueprint's describe(),
+   * declaring class or an alter arranges a key with the blueprint's describe(),
    * which lays what it is given over what the key has. Read by the
    * generated form for every host, and stated by the served contract in
    * `x-portable-ui` when a renderer asks for widget hints. Nothing

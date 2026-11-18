@@ -10,7 +10,7 @@ use Drupal\surface\Resource\StructureInterface;
 use PortableSchema\Builder\Schema;
 
 /**
- * The owner PortCycleAlter adapts into a cycle through a port.
+ * The declaring class PortCycleAlter adapts into a cycle through a port.
  */
 #[Structure('resource_test.broken.port_cycle')]
 final class PortCycleStructure implements StructureInterface {

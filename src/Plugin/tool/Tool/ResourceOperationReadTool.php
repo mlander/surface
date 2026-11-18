@@ -17,7 +17,7 @@ use Drupal\tool\FailureCategory;
  * The tool of the read of one thing, `surface:<resource>:read`
  * (OperationDefinition::readsOne()), so a caller (Drush, ECA, an agent
  * over MCP) can see what is stored before it changes it. The operation is
- * the one the owner declares, or the one the build adds beside the
+ * the one the declaring class declares, or the one the build adds beside the
  * default update (OperationDefinition::defaultRead()). It carries no
  * #[Tool] of its own: ResourceOperationToolDeriver derives it under the
  * base plugin id and names this class on the derivative, so one deriver
@@ -29,7 +29,7 @@ use Drupal\tool\FailureCategory;
  *   gate: its permission, the stage, then the resource's access class.
  *   The read the build adds is asked in its update's context, so a
  *   caller who may not change the thing may not read it either; an
- *   owner that declares its read answers access for reading (the
+ *   declaring class that declares its read answers access for reading (the
  *   content entity example asks core's view access).
  * - **Execution**: the runner prepares the operation (run() with no
  *   values), as the current user: the sequence again, the context built

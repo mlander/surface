@@ -12,7 +12,7 @@ use Drupal\surface_resource_test\Structure\MountWatcherStructure;
 use PortableSchema\Builder\Schema;
 
 /**
- * Refines a key it mounted, and the owner's, by watching a key it mounted.
+ * Refines a key it mounted and the declaring class's, watching its own key.
  *
  * Both are allowed: the kind is read at its path inside the mount, and
  * handed as it stands, NULL while it is unanswered.

@@ -416,7 +416,7 @@ final class TypedDataReader implements DeclarationReaderInterface {
       $inputs->lockRead($key);
       return;
     }
-    $reading->leave($here, 'Read only: no verb an owner calls locks a key, so it is locked only in a build (ResourceBlueprint::lockRead()).');
+    $reading->leave($here, 'Read only: no verb a declaring class calls locks a key, so it is locked only in a build (ResourceBlueprint::lockRead()).');
   }
 
 }

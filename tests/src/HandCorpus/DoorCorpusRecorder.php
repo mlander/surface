@@ -149,7 +149,7 @@ final class DoorCorpusRecorder {
   /**
    * The resource the config schema and the tool values are written for.
    */
-  protected readonly ResourceDefinition $owner;
+  protected readonly ResourceDefinition $declaringClass;
 
   /**
    * Constructs a recorder.
@@ -178,7 +178,7 @@ final class DoorCorpusRecorder {
     protected readonly ContractPanel $panel,
     protected readonly HeldToSchemaProbe $probe,
   ) {
-    $this->owner = new ResourceDefinition(NULL, 'hand.corpus', 'surface', [], NULL, NULL, []);
+    $this->declaringClass = new ResourceDefinition(NULL, 'hand.corpus', 'surface', [], NULL, NULL, []);
   }
 
   /**
@@ -239,19 +239,19 @@ final class DoorCorpusRecorder {
     $door += [
       'secrets' => static::attempt(fn (): mixed => static::plain($defs->secrets($surface))),
       'outputs' => static::attempt(fn (): mixed => array_map(static fn (mixed $output): mixed => static::tree($output), $defs->outputsFromSurface($surface))),
-      'values update' => static::attempt(fn (): mixed => static::tree($this->operationInputs->values($this->owner, $surface, new OperationContext('update', FALSE), $storage))),
-      'values create' => static::attempt(fn (): mixed => static::tree($this->operationInputs->values($this->owner, $surface, new OperationContext('create', TRUE), $storage))),
-      'stored' => static::attempt(fn (): mixed => static::plain($this->operationInputs->stored($this->owner, $surface, new OperationContext('update', FALSE), $storage))),
+      'values update' => static::attempt(fn (): mixed => static::tree($this->operationInputs->values($this->declaringClass, $surface, new OperationContext('update', FALSE), $storage))),
+      'values create' => static::attempt(fn (): mixed => static::tree($this->operationInputs->values($this->declaringClass, $surface, new OperationContext('create', TRUE), $storage))),
+      'stored' => static::attempt(fn (): mixed => static::plain($this->operationInputs->stored($this->declaringClass, $surface, new OperationContext('update', FALSE), $storage))),
       'secretKeys' => static::attempt(fn (): mixed => EncryptedStorageLayout::secretKeys($surface)),
     ];
     $keys = array_keys($surface->entries()->toArray());
     $kept_otherwise = ['type' => 'string', 'label' => 'T'];
-    $config_schema = static::attempt(fn (): mixed => $this->configSchema->describeBuilt($surface, $this->owner, 'hand.settings', [], [], []));
+    $config_schema = static::attempt(fn (): mixed => $this->configSchema->describeBuilt($surface, $this->declaringClass, 'hand.settings', [], [], []));
     $door += [
       'config schema' => static::plain($config_schema),
-      'config schema held+install' => static::attempt(fn (): mixed => static::plain($this->configSchema->describeBuilt($surface, $this->owner, 'hand.settings', array_slice($keys, 0, 6), ['hand.settings' => ['label' => 'Hand']], $stored))),
-      'config schema installed empty' => static::attempt(fn (): mixed => static::plain($this->configSchema->describeBuilt($surface, $this->owner, 'hand.settings', [], [], array_fill_keys($keys, NULL)))),
-      'config schema translated' => static::attempt(fn (): mixed => static::plain($this->configSchema->describeBuilt($surface, $this->owner, 'hand.settings', [], [], [], array_fill_keys($keys, $kept_otherwise)))),
+      'config schema held+install' => static::attempt(fn (): mixed => static::plain($this->configSchema->describeBuilt($surface, $this->declaringClass, 'hand.settings', array_slice($keys, 0, 6), ['hand.settings' => ['label' => 'Hand']], $stored))),
+      'config schema installed empty' => static::attempt(fn (): mixed => static::plain($this->configSchema->describeBuilt($surface, $this->declaringClass, 'hand.settings', [], [], array_fill_keys($keys, NULL)))),
+      'config schema translated' => static::attempt(fn (): mixed => static::plain($this->configSchema->describeBuilt($surface, $this->declaringClass, 'hand.settings', [], [], [], array_fill_keys($keys, $kept_otherwise)))),
     ];
     if (is_array($config_schema)) {
       $door['wider generated'] = static::attempt(function () use ($surface, $config_schema): mixed {

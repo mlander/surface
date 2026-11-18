@@ -13,7 +13,7 @@ use Drupal\surface_resource_test\Structure\Mixin\TimestampsStructure;
  * Rewords the timestamps' created time, wherever the structure is used.
  *
  * Attached or mixed in alike: an alter of a structure applies wherever
- * the structure is, its members being the owner's keys where it is
+ * the structure is, its members being the declaring class's keys where it is
  * mixed in.
  */
 #[Alters(TimestampsStructure::class)]

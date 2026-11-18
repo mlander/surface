@@ -428,7 +428,7 @@ surface_examples.spotlight:
       type: ignore
       label: 'Slots'
 
-# Example 14, the owner's way: the credential is a variant its source chooses,
+# Example 14, the declaring class's way: the credential is a variant its source chooses,
 # and both sources are written here, whichever the site offers.
 # Generated from the event.mailer resource by drush surface:config-schema.
 surface_examples.mailer:

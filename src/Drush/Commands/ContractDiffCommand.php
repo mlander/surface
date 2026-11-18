@@ -28,7 +28,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * verdicts), compares each with its baseline in the first module's
  * `tests/fixtures/contracts/` or `--baselines` (`--dir` before), and
  * classifies each
- * difference. A breaking change fails unless its owner's version was
+ * difference. A breaking change fails unless its declaring class's version was
  * raised or the baseline allows its path. It fails closed: a directory
  * that is not there fails, and a declaration with no baseline fails
  * until `--write` pins it. `--write` pins today's emission, and refuses
@@ -160,7 +160,7 @@ final class ContractDiffCommand extends Command {
     $report['declarations'] = count($current);
     $report['changes'] = array_map(static fn (ContractChange $change): array => [
       'resource' => $change->surface,
-      'owner' => $change->owner,
+      'declaring_class' => $change->declaringClass,
       'path' => $change->path,
       'change' => $change->change,
       'effect' => $change->effect,
@@ -231,10 +231,10 @@ final class ContractDiffCommand extends Command {
   protected function table(DrushStyle $io, array $changes): void {
     $rows = [];
     foreach ($changes as $change) {
-      $rows[] = [$change->surface, $change->owner, $change->path, $change->change, $change->status];
+      $rows[] = [$change->surface, $change->declaringClass, $change->path, $change->change, $change->status];
     }
     if ($rows !== []) {
-      $io->table(['Document', 'Owner', 'Path', 'Change', 'Verdict'], $rows);
+      $io->table(['Document', 'Declaring class', 'Path', 'Change', 'Verdict'], $rows);
     }
   }
 

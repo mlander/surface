@@ -39,7 +39,7 @@ use PortableSchema\Builder\Schema;
  * refiner.
  *
  * A condition names keys of the frame the rule's key sits in, by their
- * own names: the owner's keys, and an alter's own mounted keys by the
+ * own names: the declaring class's keys, and an alter's own mounted keys by the
  * names it added them under. The build step resolves each name to where
  * the value is read (a port, once ports land, would resolve there too).
  *

@@ -11,9 +11,10 @@ use Drupal\surface\Variants;
 use PortableSchema\Builder\Schema;
 
 /**
- * The flat listed nested owner's variant for "a", listed by the site.
+ * The flat listed nested declaring class's variant for "a", listed by the site.
  *
- * Its own variants are stored flat, which lands them at its owner's level.
+ * Its own variants are stored flat, which lands them at its declaring class's
+ * level.
  */
 #[Structure('resource_test.broken.flat.listed_inner')]
 final class FlatListedInnerStructure implements StructureInterface {

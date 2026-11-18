@@ -13,7 +13,7 @@ use PortableSchema\Builder\Schema;
  * A plain structure MountingMixinAlter mounts a key on.
  *
  * Fine by itself, or attached; mixed in, the key its alter mounts would
- * be mounted on the owner.
+ * be mounted on the declaring class.
  */
 #[Structure('resource_test.broken.mounting_mixin')]
 final class MountingMixinStructure implements StructureInterface {

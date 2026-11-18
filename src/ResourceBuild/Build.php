@@ -19,19 +19,19 @@ use Drupal\surface\Resource\OperationContext;
  *   steps write to it and the Build only points at it;
  * - what is asked: the definition being built, the context it is
  *   invoked in, the parents it is inside (`ancestry`, outermost first)
- *   and the owner as a child is built under it (`frame`: its class, id,
- *   input keys, the permission its operation asks, and the storage that
+ *   and the declaring class as a child is built under it (`frame`: its class,
+ *   id, input keys, the permission its operation asks, and the storage that
  *   holds them);
- * - how the owner's keys divide: its plain inputs, its outputs, the
+ * - how the declaring class's keys divide: its plain inputs, its outputs, the
  *   keys holding an attached child or variants, its collections, and the
  *   ports it reads;
  * - the contributor being bound, once the steps bind refiners and rules:
- *   the module of an alter (NULL for the owner itself), the keys that
+ *   the module of an alter (NULL for the provider itself), the keys that
  *   alter offered more values on, the keys it mounted, every key any alter
  *   mounted and by whom, the keys of a structure it attached at its
- *   mount, and, for a structure mixed into an owner, each of its ports
- *   mapped to the owner's key it is wired to. `ruling` lists the keys a
- *   coded or runtime refiner may rule out, which a declared rule may not
+ *   mount, and, for a structure mixed into a declaring class, each of its ports
+ *   mapped to the declaring class's key it is wired to. `ruling` lists the keys
+ *   a coded or runtime refiner may rule out, which a declared rule may not
  *   require.
  *
  * The object is immutable: each `with…()` and `for…()` method answers a
@@ -54,46 +54,47 @@ final readonly class Build {
    * @param \Drupal\surface\SurfaceBuilder $builder
    *   The builder the shape is written into.
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
-   *   The resource or structure, or the owner of the keys a step reads.
+   *   The resource or structure, or the declaring class of the keys a step
+   *   reads.
    * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it is invoked in.
    * @param array<int, array{class: string, id: string, key: string, inputs: string[], held?: array|null}> $ancestry
    *   The parents it is built inside, outermost first; empty for one asked
    *   for on its own.
    * @param string[] $inputKeys
-   *   The owner's plain input keys.
+   *   The declaring class's plain input keys.
    * @param string[] $outputKeys
-   *   The owner's output keys.
+   *   The declaring class's output keys.
    * @param string[] $attached
-   *   The owner's keys holding an attached child or variants.
+   *   The declaring class's keys holding an attached child or variants.
    * @param string[] $lists
-   *   The owner's collection keys.
+   *   The declaring class's collection keys.
    * @param array<string, \Drupal\surface\Port> $ports
-   *   The ports the owner reads.
+   *   The ports the declaring class reads.
    * @param array<string, mixed> $frame
-   *   The owner, as a child is built under it (buildChild()): its `class`,
-   *   `id`, `key`, `inputs` and, once the build has resolved it, the
+   *   The declaring class, as a child is built under it (buildChild()): its
+   *   `class`, `id`, `key`, `inputs` and, once the build has resolved it, the
    *   `permission` its operation asks and the storage that `held` its
    *   keys. Empty until then.
    * @param string[] $ruling
    *   The keys a coded or runtime refiner may rule out, an alter's own by
    *   `<module>.<key>`.
    * @param string|null $module
-   *   The module of the alter being bound, or NULL for the owner itself.
+   *   The module of the alter being bound, or NULL for the provider itself.
    * @param string[] $extended
-   *   The owner's keys that alter offered more values on with
+   *   The declaring class's keys that alter offered more values on with
    *   extendChoices().
    * @param string[] $mounted
    *   The keys that alter added.
    * @param array<string, string[]> $mountedBy
-   *   For an alter, every key any alter of the owner mounted, mapped to
-   *   the modules that mounted it; empty for the owner itself.
+   *   For an alter, every key any alter of the declaring class mounted, mapped
+   *   to the modules that mounted it; empty for the provider itself.
    * @param string[] $readable
    *   For an alter that attached a structure at its mount, the
    *   structure's keys.
    * @param array<string, string> $translated
-   *   For a structure mixed into an owner, each of its ports mapped to the
-   *   owner's key it is wired to.
+   *   For a structure mixed into a declaring class, each of its ports mapped to
+   *   the declaring class's key it is wired to.
    */
   public function __construct(
     public SurfaceBuilder $builder,
@@ -127,7 +128,7 @@ final readonly class Build {
   }
 
   /**
-   * Gets this, with the owner as a child is built under it.
+   * Gets this, with the declaring class as a child is built under it.
    *
    * @param array $frame
    *   The frame.
@@ -169,9 +170,9 @@ final readonly class Build {
    * Gets this, as the contributor whose refiners and rules are bound next.
    *
    * @param string|null $module
-   *   The alter's module, or NULL for the owner itself.
+   *   The alter's module, or NULL for the provider itself.
    * @param string[] $extended
-   *   The owner's keys the alter offered more values on.
+   *   The declaring class's keys the alter offered more values on.
    * @param string[] $mounted
    *   The keys the alter added.
    * @param array<string, string[]> $mountedBy
@@ -189,10 +190,10 @@ final readonly class Build {
   /**
    * Gets the build of a structure mixed into this one, in this one's frame.
    *
-   * The structure's members are the owner's keys already, so it writes to
-   * the owner's builder; it is its own definition, with its members as
-   * input keys, no outputs, no children and no parents, and reads its
-   * ports as the owner's keys they are wired to.
+   * The structure's members are the declaring class's keys already, so it
+   * writes to the declaring class's builder; it is its own definition, with its
+   * members as input keys, no outputs, no children and no parents, and reads
+   * its ports as the declaring class's keys they are wired to.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $structure
    *   The structure.
@@ -201,11 +202,12 @@ final readonly class Build {
    * @param array<string, \Drupal\surface\Port> $ports
    *   The ports it reads.
    * @param array<string, string> $translated
-   *   Each port mapped to the owner's key it is wired to.
+   *   Each port mapped to the declaring class's key it is wired to.
    * @param string[] $ruling
    *   The members a coded refiner of the structure may rule out.
    * @param string[] $attached
-   *   Its members holding a child at a fixed key, the owner's children.
+   *   Its members holding a child at a fixed key, the declaring class's
+   *   children.
    * @param string[] $lists
    *   Its members holding a collection.
    *

@@ -9,7 +9,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 
 /**
- * Holds the pair twice: as it asks, and with the owner's own ask.
+ * Holds the pair twice: as it asks, and with the declaring class's own ask.
  */
 #[Structure('widget_test.pairs')]
 final class PairsStructure implements StructureInterface {
@@ -19,7 +19,7 @@ final class PairsStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->attach('asked', PairStructure::class, t('As it asks'));
-    $inputs->attach('owned', PairStructure::class, t('As its owner asks'), widget: 'fieldset');
+    $inputs->attach('owned', PairStructure::class, t('As its declaring class asks'), widget: 'fieldset');
   }
 
 }

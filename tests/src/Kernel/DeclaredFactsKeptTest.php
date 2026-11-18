@@ -48,14 +48,14 @@ class DeclaredFactsKeptTest extends SurfaceKernelTestBase {
    *
    * @param \Drupal\surface\SurfaceBuilder $builder
    *   The builder.
-   * @param string|null $owner
+   * @param string|null $declaring_class
    *   The declaring id, or NULL for none.
    *
    * @return \Drupal\surface\ResourceBuild\ResourceBlueprint
    *   The blueprint.
    */
-  protected function blueprint(SurfaceBuilder $builder, ?string $owner = NULL): ResourceBlueprint {
-    return new ResourceBlueprint($builder, $this->container->get('typed_data_manager'), FALSE, $this->container->get('surface.resource_registry'), $owner);
+  protected function blueprint(SurfaceBuilder $builder, ?string $declaring_class = NULL): ResourceBlueprint {
+    return new ResourceBlueprint($builder, $this->container->get('typed_data_manager'), FALSE, $this->container->get('surface.resource_registry'), $declaring_class);
   }
 
   /**

@@ -320,19 +320,19 @@ final class Variants {
    *   The variant ids declaring each key, keyed by key; a key no variant
    *   declares is absent.
    */
-  public function owners(array $keys, string $chosen): array {
-    $owners = [];
+  public function declaringVariants(array $keys, string $chosen): array {
+    $declaring_classes = [];
     foreach ($this->variants as $id => $variant) {
       if ((string) $id === $chosen) {
         continue;
       }
       foreach ($keys as $key) {
         if ($variant->child->entries()->has($key)) {
-          $owners[$key][] = (string) $id;
+          $declaring_classes[$key][] = (string) $id;
         }
       }
     }
-    return $owners;
+    return $declaring_classes;
   }
 
   /**

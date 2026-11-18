@@ -30,7 +30,7 @@ use PortableSchema\Builder\Schema;
  * Schema), then each alter of the shape in discovery order, each only
  * tightening, a definition in and a definition out; the result is
  * copied for the key and marked with the shape, so the key's own
- * additions are checked against it when its owner is built and the
+ * additions are checked against it when its declaring class is built and the
  * served contract writes the shape once, as a def.
  *
  * A shape is read once per class in a process (declared()): its reading

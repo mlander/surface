@@ -16,8 +16,8 @@ use PortableSchema\Builder\Schema;
  *
  * Freight needs a customs code, a parcel under 2 kilograms has none, and
  * a parcel with a code declares a value of at least 1: rules on the
- * alter's own key, read by the owner's keys, and on the owner's key, read
- * by its own.
+ * alter's own key, read by the declaring class's keys, and on the declaring
+ * class's key, read by its own.
  */
 #[Alters(ParcelResource::class)]
 final class ParcelAlter implements AltersInputsInterface {

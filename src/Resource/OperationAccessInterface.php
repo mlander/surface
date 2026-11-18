@@ -18,17 +18,17 @@ use Drupal\Core\Session\AccountInterface;
  *
  * Another module's alter answers as well when it implements this: what
  * makes a class an alter is #[Alters] on it, and the role is read from
- * that. An alter's answer is asked after the owner's own (its operation's
- * permission, then its access class), in the frame where the thing is
- * built, wherever it appears: at the top, as a child, as a variant, mixed
+ * that. An alter's answer is asked after the declaring class's own (its
+ * operation's permission, then its access class), in the frame where the thing
+ * is built, wherever it appears: at the top, as a child, as a variant, mixed
  * in, at every entry of keys from the site. The answers combine with
  * AccessAnswer::andIf(), the stricter standing, so an alter may lock or
  * omit the keys of what it alters, its own mounted keys among them, and
- * never opens what the owner or an earlier alter locked or omitted. Core's
- * result is read for an alter as a child reads it, wherever it answers:
+ * never opens what the declaring class or an earlier alter locked or omitted.
+ * Core's result is read for an alter as a child reads it, wherever it answers:
  * allowed and neutral are open, since an alter only narrows, and
- * forbidden is omitted. The operation's permission stays the owner's; an
- * alter that wants a further permission answers locked or omitted for an
+ * forbidden is omitted. The operation's permission stays the declaring class's;
+ * an alter that wants a further permission answers locked or omitted for an
  * account without it, with the `user.permissions` context. A class named
  * on `access:` that carries #[Alters] is refused at discovery.
  *

@@ -14,10 +14,11 @@ use PortableSchema\Builder\Schema;
  * Arranges two of the studio's keys it does not own, and adds a fee.
  *
  * Gives the name a placeholder and a help text, and weighs the deposit
- * before the rate inside the owner's pricing group: an alter places and
- * rewords an owner's key, never takes what the owner arranged away. Its
- * booking fee is placed after the deposit, a key the pricing group holds,
- * so every door draws it inside that group, right after the deposit.
+ * before the rate inside the declaring class's pricing group: an alter places
+ * and rewords a declaring class's key, never takes what the declaring class
+ * arranged away. Its booking fee is placed after the deposit, a key the pricing
+ * group holds, so every door draws it inside that group, right after the
+ * deposit.
  */
 #[Alters(StudioResource::class)]
 final class StudioAlter implements AltersInputsInterface {

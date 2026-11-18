@@ -33,7 +33,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * exactly that: the option resolver, which answers what a form offers;
  * `Narrowing` and the `ChoiceSet` it reads through, which answer whether
  * a refinement is legal; and `SurfaceBuilder::extendChoices()`,
- * which merges a contribution into what the owner declared. Each is
+ * which merges a contribution into what the declaring class declared. Each is
  * asked the same question in every spelling and has to give the same
  * answer.
  *
@@ -231,8 +231,8 @@ class ChoiceSpellingParityTest extends SurfaceKernelTestBase {
   /**
    * Tests that a contribution is refused the same way for every spelling.
    *
-   * One value has one owner, and who owns it is read out of whichever
-   * spelling the owner declared.
+   * One value has one declaring class, and who owns it is read out of whichever
+   * spelling the declaring class declared.
    */
   public function testExtendChoicesRefusesAnOwnedValueInEverySpelling(): void {
     $messages = [];
@@ -299,8 +299,8 @@ class ChoiceSpellingParityTest extends SurfaceKernelTestBase {
    * Contributes one value and reads the merged constraint back.
    *
    * @param array $options
-   *   The constraint options the owner declared, in one spelling or the
-   *   other.
+   *   The constraint options the declaring class declared, in one spelling or
+   *   the other.
    *
    * @return array
    *   The merged constraint's options.

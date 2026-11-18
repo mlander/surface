@@ -30,8 +30,8 @@ use PortableSchema\Builder\Schema;
  * weighs the deposit. The build carries both onto the sealed keys, the
  * served contract states them only when a renderer asks for widget hints,
  * and the form builder draws them. An alter may place and reword an
- * owner's key, never take what the owner arranged away, and keys of one
- * frame naming one group must draw it alike.
+ * declaring class's key, never take what the declaring class arranged away, and
+ * keys of one frame naming one group must draw it alike.
  *
  * @see docs/decisions.md#arrangement-is-declared-once
  */
@@ -90,9 +90,9 @@ class ArrangementTest extends SurfaceKernelTestBase {
     $this->assertSame(['group' => ['id' => 'hours', 'label' => 'Opening hours', 'as' => 'fieldset'], 'weight' => 1], DefinitionMetadata::arrangementOf(DerivedDefinition::at($studio, 'closes'))->toArray());
     $this->assertSame(['weight' => -10], DefinitionMetadata::arrangementOf(DerivedDefinition::at($studio, 'notes'))->toArray());
 
-    // The alter's words over the owner's: it gave the name, which the
-    // owner did not arrange, a placeholder and a help text, and weighed
-    // the deposit inside the owner's group, which stays.
+    // The alter's words over the declaring class's: it gave the name, which the
+    // declaring class did not arrange, a placeholder and a help text, and
+    // weighed the deposit inside the declaring class's group, which stays.
     $this->assertSame(['placeholder' => 'Riverside studio', 'help' => 'Shown on the door.'], DefinitionMetadata::arrangementOf(DerivedDefinition::at($studio, 'name'))->toArray());
     $this->assertSame([
       'group' => ['id' => 'pricing', 'label' => 'Pricing', 'as' => 'details', 'collapsed' => TRUE],
@@ -192,20 +192,21 @@ class ArrangementTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests an alter may place and reword an owner's key, never take away.
+   * Tests an alter may place and reword a declaring class's key, not take it.
    */
   public function testAnAlterThatWouldRemoveIsRefused(): void {
     $typed_data = $this->container->get('typed_data_manager');
     $builder = new SurfaceBuilder();
-    $owner = new ResourceBlueprint($builder, $typed_data);
-    $title = $owner->addTyped('title', 'string', 'Title');
-    // The owner arranges its own key, found by its name once declared.
-    $owner->describe('title', placeholder: 'A short title', help: 'Shown in lists.');
+    $declaring_class = new ResourceBlueprint($builder, $typed_data);
+    $title = $declaring_class->addTyped('title', 'string', 'Title');
+    // The declaring class arranges its own key, found by its name once
+    // declared.
+    $declaring_class->describe('title', placeholder: 'A short title', help: 'Shown in lists.');
     $this->assertSame(['placeholder' => 'A short title', 'help' => 'Shown in lists.'], DefinitionMetadata::arrangementOf($title)->toArray());
     $alter = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
     $alter->add('badge', Schema::string()->title('Badge'));
 
-    // Reworded and placed: allowed, over what the owner said.
+    // Reworded and placed: allowed, over what the declaring class said.
     $alter->describe('title', group: ArrangementGroup::fieldset('basics', 'Basics'), help: 'Shown in every list.');
     $this->assertSame([
       'group' => ['id' => 'basics', 'label' => 'Basics', 'as' => 'fieldset'],
@@ -216,10 +217,10 @@ class ArrangementTest extends SurfaceKernelTestBase {
     // Emptied: refused, naming what it would take away.
     try {
       $alter->describe('title', placeholder: '', help: '');
-      $this->fail('An alter that empties what the owner arranged is refused.');
+      $this->fail('An alter that empties what the declaring class arranged is refused.');
     }
     catch (\LogicException $e) {
-      $this->assertStringContainsString('The first_module alter arranges "title" with an empty placeholder and help, which would take away what its owner arranged.', $e->getMessage());
+      $this->assertStringContainsString('The first_module alter arranges "title" with an empty placeholder and help, which would take away what its declaring class arranged.', $e->getMessage());
     }
     $this->assertSame('A short title', (string) DefinitionMetadata::arrangementOf($title)->placeholder, 'Nothing was taken.');
 
@@ -270,11 +271,11 @@ class ArrangementTest extends SurfaceKernelTestBase {
   public function testOneGroupIsDrawnOneWay(): void {
     $typed_data = $this->container->get('typed_data_manager');
     $builder = new SurfaceBuilder();
-    $owner = new ResourceBlueprint($builder, $typed_data);
-    $owner->add('opens', Schema::string()->title('Opens'));
-    $owner->describe('opens', group: ArrangementGroup::fieldset('hours', 'Hours'));
-    $owner->add('closes', Schema::string()->title('Closes'));
-    $owner->describe('closes', group: ArrangementGroup::details('hours', 'Hours'));
+    $declaring_class = new ResourceBlueprint($builder, $typed_data);
+    $declaring_class->add('opens', Schema::string()->title('Opens'));
+    $declaring_class->describe('opens', group: ArrangementGroup::fieldset('hours', 'Hours'));
+    $declaring_class->add('closes', Schema::string()->title('Closes'));
+    $declaring_class->describe('closes', group: ArrangementGroup::details('hours', 'Hours'));
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('The keys opens and closes name the group "hours" and draw it differently');
     $builder->seal();

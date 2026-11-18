@@ -14,8 +14,8 @@ use PortableSchema\Builder\Schema;
 /**
  * The engine's refiner for the rules one contributor declared as data.
  *
- * One of these per contributor that declared a rule (the owner, then
- * each alter's module), bound in the owner's chain of every key a rule
+ * One of these per contributor that declared a rule (the declaring class, then
+ * each alter's module), bound in the provider's chain of every key a rule
  * narrows, after that contributor's coded refiners. Asked to refine one
  * key, it evaluates each rule's condition on the values it reads and
  * applies the effects of each that holds, in declaration order; once one
@@ -53,7 +53,7 @@ final class DeclaredRefiner implements SurfaceRefinerInterface, ApplicabilityInt
    *   mounted keys under RefinesInputRefiner::MOUNT.
    * @param string|null $module
    *   The alter's module, whose property inside the mount the rules bound
-   *   under the mount narrow; NULL for the owner's.
+   *   under the mount narrow; NULL for the declaring class's.
    * @param array<string, string> $paths
    *   The condition keys the alter mounted, each mapped to the dotted path
    *   its value is read at.

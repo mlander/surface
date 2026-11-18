@@ -204,7 +204,7 @@ operation's permission and then the resource's access class, and the
 pipeline consults that answer before it reads or writes anything, so a
 form, a tool and the agent or Drush command calling it resolve one gate
 rather than several. A resource that can be changed has a `read` too,
-read only: the one its owner declares, or the one the build adds beside
+read only: the one its declaring class declares, or the one the build adds beside
 the default update, asked as that update is
 ([decision](decisions.md#a-read-is-an-operation-of-the-resource)).
 
@@ -281,14 +281,14 @@ Introduced in [Doors](introduction/12-doors.md). Reference:
 
 An alter is another module's class that adds keys to a resource it does
 not own, or tightens its rules. It may tighten, never loosen, so what
-the owner promised still holds.
+the declaring class promised still holds.
 
 Precisely: another module's class in its `src/Alter/`, carrying
 `#[Alters]`. It adds keys to a resource or structure (mounted under
 `third_party_settings.<module>`), rewords a label with `describe()`,
 offers more values on a fixed list with `extendChoices()`, and narrows
-with `#[RefinesInput]` methods, on the owner's keys or its own, and may
-answer access after the owner (`OperationAccessInterface`, the access
+with `#[RefinesInput]` methods, on the declaring class's keys or its own, and may
+answer access after the declaring class (`OperationAccessInterface`, the access
 class's interface), locking or leaving out and never opening. It never
 removes a key or a value from the declaration, never retypes, adds no
 output (what a call answers is its operation's), and attaches a
@@ -298,13 +298,13 @@ Introduced in [Other modules](introduction/13-other-modules.md).
 Reference: [Alters](resources.md#alters),
 [A whole alter](resources.md#a-whole-alter).
 
-### Owner
+### Declaring class
 
-The owner is the class that declares a resource or structure, in the
-module that ships it.
+The declaring class is the class that declares a resource or structure, in the
+module that ships it, its provider.
 
 Precisely: the `#[Resource]` or `#[Structure]` class that declares it,
-or a plugin that is its own structure. The owner is the first
+or a plugin that is its own structure. The declaring class is the first
 contributor: its keys and its `#[RefinesInput]` methods are
 contribution number one, and they are held to the same rules as
 everybody who arrives later.
@@ -320,7 +320,7 @@ the class declares.
 Precisely: a declared default is the module's. A site that wants a key
 to start from another value sets it in configuration,
 `surface.defaults`, not in an alter: an alter may not change an
-owner's default. Each entry names the resource (or a plugin's
+declaring class's default. Each entry names the resource (or a plugin's
 structure, by the id the catalog lists), a key path from it, and the
 value as a form posts it.
 
@@ -367,7 +367,7 @@ Introduced in [Access](introduction/15-access.md). Reference:
 ### Data surface
 
 A data surface is the fixed result for one resource or structure: every
-key and every rule, after the owner, other modules, the site, the page
+key and every rule, after the provider, other modules, the site, the page
 and access have each had their say.
 
 Precisely: what the build step seals from a resource or structure in a
@@ -574,10 +574,10 @@ Reference: [Collections](resources.md#collections).
 A mixin is a structure whose keys are added to another's own keys, not
 held under a key of their own.
 
-Precisely: a structure whose members are merged into the owner's own
+Precisely: a structure whose members are merged into the declaring class's own
 keys, `$inputs->mixIn(Structure::class, reads: [...])`: stored flat,
-refined in the owner's frame, and emitted as `allOf` of its def and the
-owner's properties. Nest for a thing of its own, mix in for shared
+refined in the declaring class's frame, and emitted as `allOf` of its def and the
+declaring class's properties. Nest for a thing of its own, mix in for shared
 members that are part of this thing.
 
 Named in [Resources made of structures](introduction/11-resources-made-of-structures.md).

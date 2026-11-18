@@ -46,7 +46,7 @@ trait SchemaRoundTripTrait {
       'port' => 'A rule on a port, of a structure emitted alone: it is stated where a container wires the port, and alone there is none, so only the key\'s markers say it.',
       'rule' => 'A declared rule that narrows nothing the key does not already say: no conditional states it, so only the key\'s `dependsOn` says it, and nothing is read back from that.',
       'access' => 'An access answer (a lock, a whole locked, a key a runtime answer marks `live`) is the access class\'s, not the structure\'s.',
-      'alter' => 'An alter\'s mount: its keys, the rules reading them and the structures it attaches there are the alter\'s; read back, the mount is a map or a child of the owner\'s, its rules a JsonSchema constraint on the frame.',
+      'alter' => 'An alter\'s mount: its keys, the rules reading them and the structures it attaches there are the alter\'s; read back, the mount is a map or a child of the declaring class\'s, its rules a JsonSchema constraint on the frame.',
       'site' => 'Keys from the site: the entries are a provider\'s, so an entry it locks, and the ports each entry reads, are not the document\'s to say; read back, the rules on those ports are a JsonSchema constraint on the frame.',
       'server' => 'A constraint no keyword states (a composite, or one of a module that is not on), which only the server checks: the document names it under `portable-check`, and a name is no constraint the reader can declare.',
       'computed' => 'A computed key: what computes it is a class, which no document names, so read back it is a key nobody types that holds what is stored, `readOnly`, with no `x-surface.computed`.',

@@ -199,13 +199,13 @@ class SurfaceBuilderTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests that one value has one owner.
+   * Tests that one value has one provider.
    *
    * Two modules contributing the same value is not a merge to be
    * resolved: it is two modules each believing they answer for how that
    * value behaves, and only one of them can be right.
    */
-  public function testExtendChoicesRefusesTwoOwnersForOneValue(): void {
+  public function testExtendChoicesRefusesTwoProvidersForOneValue(): void {
     $builder = new SurfaceBuilder([
       'mode' => DataDefinition::create('string')
         ->addConstraint('LabeledChoice', ['choices' => ['on' => 'On']]),
@@ -223,7 +223,7 @@ class SurfaceBuilderTest extends SurfaceKernelTestBase {
     }
     try {
       $builder->extendChoices('mode', ['on' => 'Switched on'], 'second');
-      $this->fail('A contributor took over one of the owner\'s values.');
+      $this->fail('A contributor took over one of the declaring class\'s values.');
     }
     catch (\LogicException $e) {
       $this->assertStringContainsString('already contributed by the declaring class', $e->getMessage());

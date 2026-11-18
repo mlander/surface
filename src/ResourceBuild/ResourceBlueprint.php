@@ -36,7 +36,7 @@ use Drupal\surface\Variants;
 use Drupal\surface\Reference\References;
 
 /**
- * The owner's blueprint: keys land at the top of the data surface.
+ * The declaring class's blueprint: keys land at the top of the data surface.
  *
  * An input goes through setDefinition() and its default through
  * setDefault(); an output goes through setOutputDefinition(), and a
@@ -44,12 +44,12 @@ use Drupal\surface\Reference\References;
  * in its own words rather than this class guessing at them.
  *
  * A structure mixed in with mixIn() is declared through a blueprint of
- * its own over the same builder, so its members land among the owner's
- * keys where the call stands, in order. That blueprint keeps what is the
- * structure's apart (its ports, which only its own refiners read, and its
+ * its own over the same builder, so its members land among the declaring
+ * class's keys where the call stands, in order. That blueprint keeps what is
+ * the structure's apart (its ports, which only its own refiners read, and its
  * rules, which the build step binds as the structure's). A child it
- * attaches at a fixed key or in a collection is the owner's child at that
- * key (attachments(), lists()); it refuses variants at a key and keys
+ * attaches at a fixed key or in a collection is the declaring class's child at
+ * that key (attachments(), lists()); it refuses variants at a key and keys
  * from the site.
  *
  * @internal
@@ -122,7 +122,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   protected array $order = [];
 
   /**
-   * The structure that brought each key mixed in, by key, at the owner's.
+   * The structure that brought each key mixed in, by the key's name.
    *
    * @var array<string, string>
    */
@@ -155,19 +155,19 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @param \Drupal\surface\ResourceBuild\ResourceRegistry|null $registry
    *   What discovery found, which names a structure mixed in and says
    *   whether it may be; NULL to name it by its class and check nothing.
-   * @param string|null $owner
+   * @param string|null $declaringClass
    *   The resource or structure declaring through this blueprint, by
    *   name, for messages and the cycle check.
    * @param \Drupal\surface\ResourceBuild\ResourceBlueprint|null $into
    *   For a structure being mixed in, the blueprint it is mixed into;
-   *   NULL for the owner's own.
+   *   NULL for the declaring class's own.
    */
   public function __construct(
     SurfaceBuilder $builder,
     TypedDataManagerInterface $typedDataManager,
     bool $outputs = FALSE,
     protected readonly ?ResourceRegistry $registry = NULL,
-    protected readonly ?string $owner = NULL,
+    protected readonly ?string $declaringClass = NULL,
     protected readonly ?ResourceBlueprint $into = NULL,
   ) {
     parent::__construct($builder, $typedDataManager, $outputs);
@@ -179,7 +179,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    */
   public function mixIn(string $structure, array $reads = []): static {
-    $who = $this->name($this->owner);
+    $who = $this->name($this->declaringClass);
     if ($this->outputs) {
       throw new \LogicException(sprintf('%s mixes %s into its outputs. A structure is mixed into what is sent; outputs hold no structures yet.', $who, $structure));
     }
@@ -202,7 +202,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     $definition = $this->registry?->getDefinition($structure);
     if ($definition !== NULL && ($definition->storage !== NULL || $definition->identity !== [])) {
       throw new \LogicException(sprintf(
-        '%s mixes %s in, which names %s. A mixed-in structure\'s members are the owner\'s keys, stored by the owner: mix in a structure, or attach a resource under a key of its own.',
+        '%s mixes %s in, which names %s. A mixed-in structure\'s members are the declaring class\'s keys, stored by the declaring class: mix in a structure, or attach a resource under a key of its own.',
         $who,
         $definition->id,
         $definition->storage !== NULL ? 'storage of its own' : 'identity keys',
@@ -233,7 +233,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    *
-   * A child a structure mixed in attaches is the owner's child at its
+   * A child a structure mixed in attaches is the declaring class's child at its
    * key, nothing wiring its ports.
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
@@ -249,8 +249,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    *
-   * A collection a structure mixed in attaches is the owner's collection
-   * at its key.
+   * A collection a structure mixed in attaches is the declaring class's
+   * collection at its key.
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    */
@@ -268,7 +268,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @param string $structure
    *   The structure being mixed in.
    * @param string $who
-   *   The owner, for the message.
+   *   The declaring class, for the message.
    * @param array $reads
    *   The wiring, as handed over.
    *
@@ -310,8 +310,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    *
-   * A structure's members mixed in are the owner's keys, so are its keys
-   * declared with a shape.
+   * A structure's members mixed in are the declaring class's keys, so are its
+   * keys declared with a shape.
    */
   public function shapedKeys(): array {
     $shaped = parent::shapedKeys();
@@ -353,21 +353,21 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   }
 
   /**
-   * Lists the owner and every structure being mixed in on the way here.
+   * Lists the declaring class and every structure mixed in on the way here.
    *
    * @return string[]
    *   The outermost first.
    */
   protected function chain(): array {
     $chain = $this->into?->chain() ?? [];
-    if ($this->owner !== NULL) {
-      $chain[] = $this->owner;
+    if ($this->declaringClass !== NULL) {
+      $chain[] = $this->declaringClass;
     }
     return $chain;
   }
 
   /**
-   * Gets the owner's blueprint, which every structure mixed in fills.
+   * Gets the declaring class's blueprint, which every structure mixed in fills.
    *
    * @return \Drupal\surface\ResourceBuild\ResourceBlueprint
    *   The outermost blueprint.
@@ -396,15 +396,15 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    *
-   * A key is declared once among the owner's and every structure mixed
-   * in, since a structure's members are the owner's keys: a clash is
-   * refused naming both who declared it.
+   * A key is declared once among the declaring class's and every structure
+   * mixed in, since a structure's members are the declaring class's keys: a
+   * clash is refused naming both who declared it.
    */
   protected function addKey(string $key, DataDefinitionInterface $definition, mixed $default = NULL, string $verb = 'addDefinition'): DataDefinitionInterface {
     $this->assertNoMixinClash($key);
     parent::addKey($key, $definition, $default, $verb);
     if ($this->into !== NULL) {
-      $this->into->adopt($key, (string) $this->owner);
+      $this->into->adopt($key, (string) $this->declaringClass);
     }
     return $definition;
   }
@@ -414,34 +414,35 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * A key read from an author's schema is held as addKey() holds one: the
    * mixin clash is refused first, and a key a structure mixed in declares
-   * is the owner's.
+   * is the declaring class's.
    */
   public function declareRead(string $key, Schema $schema): void {
     $this->assertNoMixinClash($key);
     parent::declareRead($key, $schema);
     if ($this->into !== NULL && $this->holdsSchemas()) {
-      $this->into->adopt($key, (string) $this->owner);
+      $this->into->adopt($key, (string) $this->declaringClass);
     }
   }
 
   /**
-   * Refuses a key the owner and a structure mixed in both declare.
+   * Refuses a key the declaring class and a structure mixed in both declare.
    *
    * @param string $key
    *   The key.
    *
    * @throws \LogicException
-   *   When the key is declared already among the owner's and its mixins'.
+   *   When the key is declared already among the declaring class's and its
+   *   mixins'.
    */
   protected function assertNoMixinClash(string $key): void {
     $root = $this->root();
     if (!$this->outputs && ($this->into !== NULL || isset($root->origins[$key])) && $root->isDeclared($key)) {
       $before = $root->origins[$key] ?? NULL;
-      $owner = $this->name($root->owner);
+      $declaring_class = $this->name($root->declaringClass);
       throw new \LogicException(match (TRUE) {
-        $this->into === NULL => sprintf('%s declares "%s", which %s, mixed in, declares already. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.', $owner, $key, $this->name($before)),
-        $before === NULL => sprintf('%s, mixed into %s, declares "%s", which %s declares too. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.', $this->name($this->owner), $owner, $key, $owner),
-        default => sprintf('%s, mixed into %s, declares "%s", which %s, also mixed in, declares too. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once.', $this->name($this->owner), $owner, $key, $this->name($before)),
+        $this->into === NULL => sprintf('%s declares "%s", which %s, mixed in, declares already. A mixed-in structure\'s members are the declaring class\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.', $declaring_class, $key, $this->name($before)),
+        $before === NULL => sprintf('%s, mixed into %s, declares "%s", which %s declares too. A mixed-in structure\'s members are the declaring class\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.', $this->name($this->declaringClass), $declaring_class, $key, $declaring_class),
+        default => sprintf('%s, mixed into %s, declares "%s", which %s, also mixed in, declares too. A mixed-in structure\'s members are the declaring class\'s keys, so a name is declared once.', $this->name($this->declaringClass), $declaring_class, $key, $this->name($before)),
       });
     }
   }
@@ -449,7 +450,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    *
-   * A structure's members mixed in are the owner's keys, so are their
+   * A structure's members mixed in are the declaring class's keys, so are their
    * definitions.
    */
   public function definitions(): array {
@@ -494,7 +495,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       $level->order[] = $key;
     }
     if ($this->into !== NULL) {
-      $this->root()->origins[$key] ??= (string) $this->owner;
+      $this->root()->origins[$key] ??= (string) $this->declaringClass;
     }
     $this->builder->setSchema($key, $schema);
   }
@@ -542,14 +543,14 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       return parent::addMap($key, $label, $define);
     }
     catch (NeedsFrame $frame) {
-      assert($this->registry !== NULL && $this->owner !== NULL);
+      assert($this->registry !== NULL && $this->declaringClass !== NULL);
       $shell = $this->reserveChild('addMap', $key);
       $shell->setLabel($label);
-      $owner = $this->registry->getDefinition($this->owner);
+      $declaring_class = $this->registry->getDefinition($this->declaringClass);
       // What the callable declared before it asked for the frame, which it
       // declares first again each time the structure is filled.
       $declared = $frame->path === $key ? $frame->declared : [];
-      $this->attachments[$key] = $this->registry->defineMap($owner->id . '.' . $key, $owner->module, $this->owner, $key, $declared);
+      $this->attachments[$key] = $this->registry->defineMap($declaring_class->id . '.' . $key, $declaring_class->module, $this->declaringClass, $key, $declared);
       $this->wirings[$key] = [];
       return $this;
     }
@@ -561,20 +562,20 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   protected function unframed(): ?string {
     return match (TRUE) {
       $this->outputs => 'outputs hold no attached structures yet.',
-      $this->registry === NULL || $this->owner === NULL => 'this blueprint has no registry and no owner to attach one by.',
+      $this->registry === NULL || $this->declaringClass === NULL => 'this blueprint has no registry and no declaring class to attach one by.',
       default => NULL,
     };
   }
 
   /**
-   * Declares a map's keys: its owner's declaration, run again to the map.
+   * Declares a map's keys: its declaring class's declaration, run again.
    *
-   * The owner declares into a blueprint of its own, which declares
+   * The declaring class declares into a blueprint of its own, which declares
    * nothing anywhere that is kept; its addMap() at the key hands the
    * callable this blueprint instead of a map's.
    *
-   * @param string $owner
-   *   The owner, by the name the registry knows it by.
+   * @param string $declaring_class
+   *   The declaring class, by the name the registry knows it by.
    * @param string $key
    *   The key it declares the map at.
    * @param string[] $declared
@@ -588,21 +589,21 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @internal
    *   For MapBlueprint::fill() alone.
    */
-  public function replay(string $owner, string $key, array $declared = []): void {
+  public function replay(string $declaring_class, string $key, array $declared = []): void {
     assert($this->registry !== NULL);
-    $capture = (new static(new SurfaceBuilder(), $this->typedDataManager, FALSE, $this->registry, $owner))
+    $capture = (new static(new SurfaceBuilder(), $this->typedDataManager, FALSE, $this->registry, $declaring_class))
       ->useShapes($this->shapes);
     $capture->capture = [$key, $this];
-    $this->registry->declareInputs($this->registry->getDefinition($owner), $capture);
+    $this->registry->declareInputs($this->registry->getDefinition($declaring_class), $capture);
     if (!$capture->captured) {
-      throw new \LogicException(sprintf('%s declared a map at "%s" with addMap() once, and not when its declaration ran again: a declaration declares the same each time it runs.', $this->name($owner), $key));
+      throw new \LogicException(sprintf('%s declared a map at "%s" with addMap() once, and not when its declaration ran again: a declaration declares the same each time it runs.', $this->name($declaring_class), $key));
     }
     // Decision: see docs/decisions.md#an-anonymous-map.
     $again = array_slice($this->keys(), 0, count($declared));
     if ($again !== $declared) {
       throw new \LogicException(sprintf(
         '%s declared %s in the map at "%s" with addMap() the first time its callable ran, and %s when its declaration ran again to fill the map\'s structure. The callable runs more than once, so it has no side effect and declares the same keys each time.',
-        $this->name($owner),
+        $this->name($declaring_class),
         $declared === [] ? 'no key' : implode(', ', $declared),
         $key,
         $again === [] ? 'no key' : implode(', ', $again),
@@ -626,7 +627,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       // Decision: see
       // docs/decisions.md#two-entity-resources-from-one-deriver-static-per-bundle-runtime-per-entity-type.
       if ($from === NULL || !is_subclass_of($from, BoundSiteListInterface::class)) {
-        throw new \LogicException(sprintf('attachVariants("%s") hands arguments to %s, which does not implement %s: only a provider that lists for what its owner binds takes them, with listFor().', $key, $from ?? 'no provider', BoundSiteListInterface::class));
+        throw new \LogicException(sprintf('attachVariants("%s") hands arguments to %s, which does not implement %s: only a provider that lists for what its declaring class binds takes them, with listFor().', $key, $from ?? 'no provider', BoundSiteListInterface::class));
       }
       if (is_subclass_of($from, EntrySchemasInterface::class)) {
         throw new \LogicException(sprintf('attachVariants("%s") hands arguments to %s, which answers an entry\'s schema when it is read: that is asked by value alone, so such a provider takes no arguments.', $key, $from));
@@ -692,9 +693,9 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    */
   public function readStructure(string $id, array $root, string $pointer, ?string $hash = NULL, bool $authored = FALSE): string {
     if ($this->registry === NULL) {
-      throw new \LogicException(sprintf('The document read into %s holds a structure at %s, and this blueprint has no registry to build one by.', $this->name($this->owner), $pointer === '' ? 'its root' : $pointer));
+      throw new \LogicException(sprintf('The document read into %s holds a structure at %s, and this blueprint has no registry to build one by.', $this->name($this->declaringClass), $pointer === '' ? 'its root' : $pointer));
     }
-    $owner = $this->owner === NULL ? NULL : $this->registry->getDefinition($this->owner);
+    $declaring_class = $this->declaringClass === NULL ? NULL : $this->registry->getDefinition($this->declaringClass);
     // A document is read a frame at a time, each naming the structures it
     // holds: its hash is taken once and handed on with it.
     $hash ??= static::documentHash($root);
@@ -708,7 +709,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     }
     return $this->registry->defineRead(
       $id,
-      $owner->module ?? 'surface',
+      $declaring_class->module ?? 'surface',
       new ResourceCallable(SchemaReader::class, 'fill', $arguments),
       hash('xxh128', serialize($identity)),
     );
@@ -726,7 +727,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
    *
    * @param string $id
-   *   Its id: the owner's, the key, then the entry's.
+   *   Its id: the declaring class's, the key, then the entry's.
    * @param class-string<\Drupal\surface\Resource\EntrySchemasInterface> $from
    *   The provider.
    * @param string $value
@@ -740,12 +741,12 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    */
   public function readListed(string $id, string $from, string $value): string {
     if ($this->registry === NULL) {
-      throw new \LogicException(sprintf('The variants %s lists for %s are read from a schema, and this blueprint has no registry to build one by.', $from, $this->name($this->owner)));
+      throw new \LogicException(sprintf('The variants %s lists for %s are read from a schema, and this blueprint has no registry to build one by.', $from, $this->name($this->declaringClass)));
     }
-    $owner = $this->owner === NULL ? NULL : $this->registry->getDefinition($this->owner);
+    $declaring_class = $this->declaringClass === NULL ? NULL : $this->registry->getDefinition($this->declaringClass);
     return $this->registry->defineRead(
       $id,
-      $owner->module ?? 'surface',
+      $declaring_class->module ?? 'surface',
       new ResourceCallable(SiteEntries::class, 'fill', [$from, $value]),
       hash('xxh128', serialize([$id, $from, $value])),
     );
@@ -777,8 +778,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @internal
    *   For SchemaReader alone.
    */
-  public function ownerId(): string {
-    return $this->name($this->owner);
+  public function declaringClassId(): string {
+    return $this->name($this->declaringClass);
   }
 
   /**
@@ -790,12 +791,12 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @internal
    *   For the build step alone.
    */
-  public function ownerName(): ?string {
-    return $this->owner;
+  public function declaringClassName(): ?string {
+    return $this->declaringClass;
   }
 
   /**
-   * Gets a key declared through this blueprint, or its owner's.
+   * Gets a key declared through this blueprint, or its declaring class's.
    *
    * @param string $key
    *   The key.
@@ -1036,10 +1037,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Refuses variants at a key and keys from the site in a structure mixed in.
    *
-   * A child at a fixed key or a collection is the owner's child at that
-   * key; variants at a key are found by the owner the #[Variant] names,
-   * and keys from the site by a provider the owner's frame asks, neither
-   * of which a structure mixed in is.
+   * A child at a fixed key or a collection is the declaring class's child at
+   * that key; variants at a key are found by the declaring class the #[Variant]
+   * names, and keys from the site by a provider the declaring class's frame
+   * asks, neither of which a structure mixed in is.
    *
    * @param string $verb
    *   What it did, for the message.
@@ -1055,18 +1056,18 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     }
     throw new \LogicException(sprintf(
       '%s, mixed into %s, %s at "%s". A mixed-in structure holds keys, maps and children at a fixed key or in a collection, not variants at a key or keys from the site, for now: attach %s under a key of its own instead.',
-      $this->name($this->owner),
-      $this->name($this->root()->owner),
+      $this->name($this->declaringClass),
+      $this->name($this->root()->declaringClass),
       $verb,
       $key,
-      $this->name($this->owner),
+      $this->name($this->declaringClass),
     ));
   }
 
   /**
    * Refuses a wiring of a child a structure mixed in attaches.
    *
-   * The child is the owner's child at the key, and nothing wires its
+   * The child is the declaring class's child at the key, and nothing wires its
    * ports, as nothing wires a collection's item or a variant's.
    *
    * @param string $child
@@ -1084,13 +1085,13 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       return;
     }
     throw new \LogicException(sprintf(
-      '%s, mixed into %s, attaches %s at "%s" and wires its "%s" port. A child a mixed-in structure attaches is the owner\'s child at that key, and nothing wires its ports, for now: attach it with no reads:, or attach %s under a key of its own.',
-      $this->name($this->owner),
-      $this->name($this->root()->owner),
+      '%s, mixed into %s, attaches %s at "%s" and wires its "%s" port. A child a mixed-in structure attaches is the declaring class\'s child at that key, and nothing wires its ports, for now: attach it with no reads:, or attach %s under a key of its own.',
+      $this->name($this->declaringClass),
+      $this->name($this->root()->declaringClass),
       $this->name($child),
       $key,
       (string) array_key_first($reads),
-      $this->name($this->owner),
+      $this->name($this->declaringClass),
     ));
   }
 
@@ -1101,7 +1102,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    */
   public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?ArrangementGroup $group = NULL, ?int $weight = NULL, string|\Stringable|null $placeholder = NULL, string|\Stringable|null $prefix = NULL, string|\Stringable|null $suffix = NULL, string|\Stringable|null $help = NULL): static {
     if ($this->into !== NULL && !in_array($key, $this->keys, TRUE)) {
-      throw new \LogicException(sprintf('%s, mixed into %s, rewords "%s", which it does not declare: a mixed-in structure names its own members.', $this->name($this->owner), $this->name($this->root()->owner), $key));
+      throw new \LogicException(sprintf('%s, mixed into %s, rewords "%s", which it does not declare: a mixed-in structure names its own members.', $this->name($this->declaringClass), $this->name($this->root()->declaringClass), $key));
     }
     return parent::describe($key, $label, $description, $after, $group, $weight, $placeholder, $prefix, $suffix, $help);
   }
@@ -1127,7 +1128,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       throw new \LogicException(sprintf('reads() was asked to read "%s" into outputs. An output is emitted, never refined, so it has nothing to read.', $port));
     }
     // A structure being mixed in reads its ports under names of its own,
-    // which may well be the owner's keys it is wired to.
+    // which may well be the declaring class's keys it is wired to.
     if (isset($this->ports[$port]) || in_array($port, $this->declared(), TRUE) || ($this->into === NULL && $this->isDeclared($port))) {
       throw new \LogicException(sprintf('"%s" is already declared in this blueprint, as %s, so it cannot be read as a port too: a port has a name of its own.', $port, isset($this->ports[$port]) ? 'a port' : 'a key'));
     }
@@ -1146,9 +1147,9 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     }
     $this->ports[$port] = new Port($port, $type, $required, $shape);
     if ($this->into === NULL) {
-      // A mixed-in structure's ports are no ports of its owner's: the owner
-      // wires them to its own keys, and only the structure's refiners read
-      // them, under these names.
+      // A mixed-in structure's ports are no ports of its declaring class's: the
+      // declaring class wires them to its own keys, and only the structure's
+      // refiners read them, under these names.
       $this->builder->addPort($this->ports[$port]);
     }
     return $this;
@@ -1222,14 +1223,14 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   none compute() takes.
    */
   protected function computed(string $key, array $from, string $using, string $when): Computed {
-    $refuse = fn (string $why): \LogicException => new \LogicException(sprintf('compute("%s") on %s %s', $key, $this->name($this->owner), $why));
+    $refuse = fn (string $why): \LogicException => new \LogicException(sprintf('compute("%s") on %s %s', $key, $this->name($this->declaringClass), $why));
     if ($this->outputs) {
       throw $refuse('declares a computed output: an output is emitted, never stored, so it has nothing to compute; a computed key is an input the caller does not type.');
     }
     if ($this->into !== NULL) {
-      throw $refuse(sprintf('is inside %s, mixed in: a computed key is a resource\'s own key, for now.', $this->name($this->root()->owner)));
+      throw $refuse(sprintf('is inside %s, mixed in: a computed key is a resource\'s own key, for now.', $this->name($this->root()->declaringClass)));
     }
-    if ($this->owner !== NULL && $this->registry?->hasDefinition($this->owner) && !$this->registry->getDefinition($this->owner)->isResource()) {
+    if ($this->declaringClass !== NULL && $this->registry?->hasDefinition($this->declaringClass) && !$this->registry->getDefinition($this->declaringClass)->isResource()) {
       throw $refuse('is in a structure: a computed key is a resource\'s own key, at its top, for now. Declare it on the resource that holds the structure.');
     }
     if (!is_subclass_of($using, ComputesValueInterface::class)) {
@@ -1308,7 +1309,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * {@inheritdoc}
    */
   protected function who(): string {
-    return $this->owner === NULL ? parent::who() : $this->name($this->owner);
+    return $this->declaringClass === NULL ? parent::who() : $this->name($this->declaringClass);
   }
 
   /**
@@ -1350,12 +1351,12 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       return;
     }
     // In order at every level, and, for a structure mixed in, the key's
-    // origin at the owner's, a child's among them.
+    // origin at the declaring class's, a child's among them.
     for ($level = $this; $level !== NULL; $level = $level->into) {
       $level->order[] = $key;
     }
     if ($this->into !== NULL) {
-      $this->root()->origins[$key] ??= (string) $this->owner;
+      $this->root()->origins[$key] ??= (string) $this->declaringClass;
     }
     $this->builder->setDefinition($key, $definition);
     if ($default !== NULL) {

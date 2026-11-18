@@ -14,7 +14,7 @@ use Drupal\surface_examples\Variants\CredentialSources;
 use PortableSchema\Builder\Schema;
 
 /**
- * Example 14, the owner's way: a credential pasted, or a key the site manages.
+ * Example 14, the declaring class's way: a pasted credential or a site's key.
  *
  * The mail service is called with a credential, and where it comes from
  * is the source: a key pasted here, always, or a key the site manages,

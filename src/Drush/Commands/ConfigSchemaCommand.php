@@ -27,7 +27,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * owning such a resource, or writing an entry for one, is named. A named
  * module need not be installed: its resources are read from its src/
  * (ConfigSchemaGenerator::including()), so the files are written before
- * it is installed once, and an owner named with a module mounting keys on
+ * it is installed once, and a provider named with a module mounting keys on
  * it is written with that module's keys in the same run.
  *
  * Decision: see docs/decisions.md#a-config-object-is-described-by-its-resource.
@@ -65,7 +65,7 @@ final class ConfigSchemaCommand extends Command {
    * {@inheritdoc}
    */
   protected function configure(): void {
-    $this->addOption('module', NULL, InputOption::VALUE_REQUIRED, 'The modules whose files are written, separated by commas, installed or not; by default every installed module owning a resource stored in a simple config object, or writing an entry for one. Name an owner and a module mounting keys on it together.');
+    $this->addOption('module', NULL, InputOption::VALUE_REQUIRED, 'The modules whose files are written, separated by commas, installed or not; by default every installed module owning a resource stored in a simple config object, or writing an entry for one. Name a provider and a module mounting keys on it together.');
     $this->addOption('write', NULL, InputOption::VALUE_NONE, 'Write the files; without it, print how each differs and write nothing.');
   }
 

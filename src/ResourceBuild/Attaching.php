@@ -79,7 +79,7 @@ final class Attaching {
    *   site creates.
    * @param \Drupal\surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
    *   What a watched value passes before a refiner is handed it, sealed
-   *   into every map and every owner read again.
+   *   into every map and every declaring class read again.
    * @param \Drupal\surface\ResourceBuild\Declaring $declaring
    *   The declaring phase.
    * @param \Drupal\surface\ResourceBuild\Binding $binding
@@ -228,12 +228,12 @@ final class Attaching {
   }
 
   /**
-   * Attaches the owner's fixed children, each built at its key.
+   * Attaches the declaring class's fixed children, each built at its key.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build.
+   *   The declaring class's build.
    * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
-   *   The owner's inputs blueprint.
+   *   The declaring class's inputs blueprint.
    * @param array<string, array{resource: string, at: string, values: array<string, mixed>}> $childDefaults
    *   The defaults the site sets on each child's keys, by key
    *   (writeSiteDefaults()).
@@ -266,8 +266,8 @@ final class Attaching {
         continue;
       }
       $attachment = $attachment->withReads($reads, static::wiredKeys($builder, $reads));
-      // The widget the structure asks to be drawn with, unless its owner
-      // asked for one at the key.
+      // The widget the structure asks to be drawn with, unless its declaring
+      // class asked for one at the key.
       // Decision: see
       // docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates.
       $asked = $this->registry->getDefinition((string) $child)->widget;
@@ -287,18 +287,18 @@ final class Attaching {
   }
 
   /**
-   * Registers the structures an owner's variants are read from, by listing.
+   * Registers by listing where a declaring class's variants are read from.
    *
-   * What building the owner registers (variantKeysOf()), for a request
-   * that read the owner from the build cache and builds one of its
-   * variants now. The lists are the ones the kept build was made from:
+   * What building the declaring class registers (variantKeysOf()), for a
+   * request that read the declaring class from the build cache and builds one
+   * of its variants now. The lists are the ones the kept build was made from:
    * a change to one is a tag that dropped it.
    *
-   * @param string $owner
-   *   The owner, by name.
+   * @param string $declaring_class
+   *   The declaring class, by name.
    */
-  public function registerVariantsOf(string $owner): void {
-    $definition = $this->registry->getDefinition($owner);
+  public function registerVariantsOf(string $declaring_class): void {
+    $definition = $this->registry->getDefinition($declaring_class);
     $builder = (new SurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
     $inputs = $this->declaring->blueprint($builder, $definition);
     $this->declaring->fillBlueprints($definition, $inputs);
@@ -319,15 +319,15 @@ final class Attaching {
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build: its builder, the owner, its context, and the
-   *   frame and ancestry its children are built under.
+   *   The declaring class's build: its builder, the declaring class, its
+   *   context, and the frame and ancestry its children are built under.
    * @param string $key
    *   The key the map sits at.
    * @param array{each: string|\Drupal\Core\TypedData\DataDefinitionInterface, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>} $each
    *   What the blueprint recorded for it.
    * @param array<string, array> $maps
-   *   Every map of keys from the site the owner declared, by key, as the
-   *   blueprint recorded them: what a port on an entry may read.
+   *   Every map of keys from the site the declaring class declared, by key, as
+   *   the blueprint recorded them: what a port on an entry may read.
    * @param array<string, \Drupal\surface\SurfaceInterface|null> $listed
    *   The maps built so far, by key: the sealed map, or NULL for one left
    *   out.
@@ -361,7 +361,7 @@ final class Attaching {
     if ($each['child']) {
       $structure = $this->registry->getDefinition($each['each']);
       if ($structure->storage !== NULL || $structure->identity !== []) {
-        throw new \LogicException(sprintf('%s attaches %s at every entry of "%s", which names %s: an entry is stored by its owner, under the key, so it is a structure.', $definition->id, $structure->id, $key, $structure->storage !== NULL ? 'storage of its own' : 'identity keys'));
+        throw new \LogicException(sprintf('%s attaches %s at every entry of "%s", which names %s: an entry is stored by its declaring class, under the key, so it is a structure.', $definition->id, $structure->id, $key, $structure->storage !== NULL ? 'storage of its own' : 'identity keys'));
       }
       // Each port is wired per entry, to the entry of the same id of a
       // sibling map from the same provider.
@@ -389,8 +389,8 @@ final class Attaching {
         $at = $attachment;
         if ($each['reads'] !== []) {
           // In the map, the entry reads the sibling's entry through the
-          // map's own port; in the owner, the edges run from the sibling's
-          // entry to what the entry's keys read it for.
+          // map's own port; in the declaring class, the edges run from the
+          // sibling's entry to what the entry's keys read it for.
           $through = [];
           $owned = [];
           foreach ($each['reads'] as $port => $sibling) {
@@ -436,12 +436,12 @@ final class Attaching {
   }
 
   /**
-   * Attaches the owner's maps of keys from the site.
+   * Attaches the declaring class's maps of keys from the site.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build.
+   *   The declaring class's build.
    * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
-   *   The owner's inputs blueprint.
+   *   The declaring class's inputs blueprint.
    */
   public function attachMaps(Build $build, ResourceBlueprint $inputs): void {
     // Each map of keys from the site, its entries listed by its provider
@@ -471,7 +471,7 @@ final class Attaching {
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
-   *   The owner.
+   *   The declaring class.
    * @param string $key
    *   The key the map sits at.
    * @param array $each
@@ -479,7 +479,7 @@ final class Attaching {
    * @param array<string, array> $entries
    *   What its provider listed, by id.
    * @param array<string, array> $maps
-   *   Every map of keys from the site the owner declared, by key.
+   *   Every map of keys from the site the declaring class declared, by key.
    * @param array<string, \Drupal\surface\SurfaceInterface|null> $listed
    *   The maps built so far, by key.
    *
@@ -488,7 +488,7 @@ final class Attaching {
    *   as declared, by port: what a refusal in the entry names.
    *
    * @throws \LogicException
-   *   Naming the owner, the port and what is wrong with the wiring.
+   *   Naming the declaring class, the port and what is wrong with the wiring.
    */
   protected function assertEachWiring(ResourceDefinition $definition, string $key, array $each, array $entries, array $maps, array $listed): array {
     [$ports] = $this->portsOf($each['each']);
@@ -542,7 +542,7 @@ final class Attaching {
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
-   *   The owner, for the messages.
+   *   The declaring class, for the messages.
    * @param string $key
    *   The key the map sits at, for the messages.
    * @param class-string<\Drupal\surface\Resource\SiteListInterface> $from
@@ -583,8 +583,8 @@ final class Attaching {
    * @param class-string<\Drupal\surface\Resource\SiteListInterface> $from
    *   The provider's class.
    * @param array $arguments
-   *   What its owner bound it to, for a BoundSiteListInterface; none for
-   *   its list(). The shape is the provider's.
+   *   What its declaring class bound it to, for a BoundSiteListInterface; none
+   *   for its list(). The shape is the provider's.
    *
    * @return \Drupal\surface\Resource\SiteList
    *   What it listed.
@@ -615,16 +615,17 @@ final class Attaching {
    *
    * The alter is an adapter: the structure's keys are its mount's, stored
    * under its module's name as any key an alter mounts, and the structure
-   * refines them there in its own frame, its ports reading the owner's
-   * keys the alter wired them to. Built before any refiner or rule is
+   * refines them there in its own frame, its ports reading the declaring
+   * class's keys the alter wired them to. Built before any refiner or rule is
    * bound, because the alter's glue may read the structure's keys.
    *
    * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build: its builder, the owner, its context, the frame
-   *   and ancestry the structure is built under, and its input keys, the
-   *   keys holding a child or variants, and its collection keys.
+   *   The declaring class's build: its builder, the declaring class, its
+   *   context, the frame and ancestry the structure is built under, and its
+   *   input keys, the keys holding a child or variants, and its collection
+   *   keys.
    * @param string $module
    *   The alter's module.
    * @param string $key
@@ -632,15 +633,15 @@ final class Attaching {
    * @param string $child
    *   The structure, by name.
    * @param array<string, string> $reads
-   *   Its ports, each wired to an owner's key.
+   *   Its ports, each wired to a declaring class's key.
    *
    * @return string[]
    *   The structure's keys, which the alter's glue may read.
    *
    * @throws \LogicException
    *   For a resource with storage or identity, a structure holding a
-   *   child, a wiring the owner cannot honor, or an access answer other
-   *   than open.
+   *   child, a wiring the declaring class cannot honor, or an access answer
+   *   other than open.
    */
   protected function mountStructure(Build $build, string $module, string $key, string $child, array $reads): array {
     $builder = $build->builder;
@@ -648,7 +649,7 @@ final class Attaching {
     $structure = $this->registry->getDefinition($child);
     if ($structure->storage !== NULL || $structure->identity !== []) {
       throw new \LogicException(sprintf(
-        'The %s alter of %s attaches %s at its mount, %s, and %s names %s. A mount holds a structure, which the owner\'s storage stores under the module\'s name.',
+        'The %s alter of %s attaches %s at its mount, %s, and %s names %s. A mount holds a structure, which the provider\'s storage stores under the module\'s name.',
         $module,
         $definition->id,
         $structure->id,
@@ -697,7 +698,7 @@ final class Attaching {
    * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build.
+   *   The declaring class's build.
    * @param array<string, \Drupal\surface\ResourceBuild\ResourceBlueprintAdditions> $additions
    *   Each alter's additions, by module.
    *
@@ -728,7 +729,7 @@ final class Attaching {
    * Refuses a wiring of a child's ports that its container cannot honor.
    *
    * Each port wired is one the child reads, to a key of the container's
-   * own (an owner's plain input, by name) outside the child, of the
+   * own (a declaring class's plain input, by name) outside the child, of the
    * port's type; every port the child requires is wired. A variant and a
    * collection's item are wired by nothing yet, so neither may
    * require a port.
@@ -737,10 +738,11 @@ final class Attaching {
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
    *   The container's build: its builder, holding its keys, the container
-   *   (the owner, or the owner an alter adapts), its plain input keys,
-   *   the keys holding a child or variants, and its collection keys.
+   *   (the declaring class, or the declaring class an alter adapts), its plain
+   *   input keys, the keys holding a child or variants, and its collection
+   *   keys.
    * @param string|null $module
-   *   The alter's module, or NULL for the owner itself.
+   *   The alter's module, or NULL for the provider itself.
    * @param string $key
    *   The key the child sits at.
    * @param string $child
@@ -959,11 +961,12 @@ final class Attaching {
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure with the variants.
    * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
-   *   The owner's input blueprint.
+   *   The declaring class's input blueprint.
    * @param string[] $input_keys
-   *   The owner's plain input keys.
+   *   The declaring class's plain input keys.
    * @param \Drupal\surface\SurfaceBuilder $builder
-   *   The owner's builder, which what a provider of variants read reaches.
+   *   The declaring class's builder, which what a provider of variants read
+   *   reaches.
    *
    * @return array<string, array{by: string, children: array<string, string>, labels: array<string, string|\Stringable>, site: array<string, true>}>
    *   The variants at each key, filled from discovery's #[Variant]
@@ -974,8 +977,8 @@ final class Attaching {
    *   than a class, which are built when read.
    *
    * @throws \LogicException
-   *   When a deciding key is not a plain input of the owner, or a provider
-   *   of variants answers what cannot be kept.
+   *   When a deciding key is not a plain input of the declaring class, or a
+   *   provider of variants answers what cannot be kept.
    */
   public function variantKeysOf(ResourceDefinition $definition, ResourceBlueprint $inputs, array $input_keys, SurfaceBuilder $builder): array {
     $variantKeys = [];
@@ -1002,19 +1005,19 @@ final class Attaching {
   /**
    * Finds the variants at one key.
    *
-   * Discovery's #[Variant] classes for the owner and the key, then what a
-   * schema read into the blueprint states, then what a provider of
+   * Discovery's #[Variant] classes for the declaring class and the key, then
+   * what a schema read into the blueprint states, then what a provider of
    * variants from the site lists, each of those a read structure by name.
    *
    * Decision: see docs/decisions.md#variants-nothing-declares.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
-   *   The owner, whose #[Variant] classes they are and whose id a listed
-   *   one's starts with.
+   *   The declaring class, whose #[Variant] classes they are and whose id a
+   *   listed one's starts with.
    * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
-   *   The owner's input blueprint, which registers what is read.
+   *   The declaring class's input blueprint, which registers what is read.
    * @param \Drupal\surface\SurfaceBuilder $builder
-   *   The owner's builder, which what a provider read reaches.
+   *   The declaring class's builder, which what a provider read reaches.
    * @param string $key
    *   The key the variants sit at, which a #[Variant] names with `at`.
    * @param array<string, array{name: string, label: string|null}> $read
@@ -1091,13 +1094,13 @@ final class Attaching {
   }
 
   /**
-   * Attaches the owner's variants at each key that has them.
+   * Attaches the declaring class's variants at each key that has them.
    *
    * A variant the site lists is held unsettled, built when a door reads
    * it (VariantsToSettle); any other is built now.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build.
+   *   The declaring class's build.
    * @param array<string, array{by: string, children: array<string, string>, labels: array<string, string|\Stringable>, site: array<string, true>}> $variantKeys
    *   What variantKeysOf() answered.
    */
@@ -1173,7 +1176,7 @@ final class Attaching {
    * Answers whether the variants at a key are stored flat.
    *
    * @param \Drupal\surface\SurfaceBuilder $builder
-   *   The owner's builder, which holds the key's map.
+   *   The declaring class's builder, which holds the key's map.
    * @param string $key
    *   The key.
    *
@@ -1187,12 +1190,12 @@ final class Attaching {
   /**
    * Refuses two keys whose variants are stored flat at one level.
    *
-   * Read back, every stored key that is not the owner's is gathered under
-   * the flat key (FlatVariantsStorageLayout::fromStorage()), so with two of
-   * them nothing could tell which keys each left behind.
+   * Read back, every stored key that is not the declaring class's is gathered
+   * under the flat key (FlatVariantsStorageLayout::fromStorage()), so with two
+   * of them nothing could tell which keys each left behind.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build.
+   *   The declaring class's build.
    * @param string[] $keys
    *   The keys with variants.
    *
@@ -1207,19 +1210,19 @@ final class Attaching {
   }
 
   /**
-   * Refuses variants stored flat that cannot be stored beside the owner.
+   * Refuses variants stored flat that cannot sit beside the declaring class.
    *
-   * The variants' keys are stored among the owner's at its level, so a
-   * variant may declare no key the owner holds there, a member a structure
-   * it mixes in brought among them, and hold no variants stored flat of
-   * its own, which would land at the same level too; and the storage layout
+   * The variants' keys are stored among the declaring class's at its level, so
+   * a variant may declare no key the declaring class holds there, a member a
+   * structure it mixes in brought among them, and hold no variants stored flat
+   * of its own, which would land at the same level too; and the storage layout
    * that stores them so is a config storage's (StorageAdapter), so the storage
-   * that stores the owner is one. That storage is the owner's own, or that
-   * of the nearest parent with one; a structure built on its own names
-   * none, and its host's storage says what it does with the key.
+   * that stores the declaring class is one. That storage is the declaring
+   * class's own, or that of the nearest parent with one; a structure built on
+   * its own names none, and its host's storage says what it does with the key.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build.
+   *   The declaring class's build.
    * @param string $key
    *   The flat key.
    * @param array<string, \Drupal\surface\Attachment> $variants
@@ -1251,10 +1254,10 @@ final class Attaching {
   }
 
   /**
-   * Lists the owner's keys a variant stored flat beside them may not declare.
+   * Lists the declaring class's keys a flat-stored variant may not declare.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build.
+   *   The declaring class's build.
    * @param string $key
    *   The flat key.
    *
@@ -1272,14 +1275,14 @@ final class Attaching {
   }
 
   /**
-   * Refuses one variant stored flat that cannot be stored beside the owner.
+   * Refuses a variant stored flat that cannot sit beside the declaring class.
    *
-   * A variant the build holds is checked when the owner is built
+   * A variant the build holds is checked when the declaring class is built
    * (assertFlatFits()); one the site lists, when a door reads it
    * (Resources::settleVariant()).
    *
-   * @param string $owner
-   *   The owner's id.
+   * @param string $declaring_class
+   *   The declaring class's id.
    * @param string $key
    *   The flat key.
    * @param string $value
@@ -1289,19 +1292,20 @@ final class Attaching {
    * @param \Drupal\surface\SurfaceInterface $child
    *   The variant, built.
    * @param string[] $own
-   *   The owner's keys at the level (ownBesideFlat()).
+   *   The declaring class's keys at the level (ownBesideFlat()).
    *
    * @throws \LogicException
-   *   For a key the owner holds there, or variants stored flat of its own.
+   *   For a key the declaring class holds there, or variants stored flat of its
+   *   own.
    */
-  public static function assertFlatVariantFits(string $owner, string $key, string $value, string $variant, SurfaceInterface $child, array $own): void {
+  public static function assertFlatVariantFits(string $declaring_class, string $key, string $value, string $variant, SurfaceInterface $child, array $own): void {
     $shared = array_values(array_intersect($child->entries()->names(), $own));
     if ($shared !== []) {
-      throw new \LogicException(sprintf('%s stores the variants at "%s" flat beside its own keys (Variants::STORED_AS), and the variant for "%s", %s, declares "%s", which %s declares too. Stored flat, the two would be one key: rename one, or store the variants under "%s".', $owner, $key, $value, $variant, $shared[0], $owner, $key));
+      throw new \LogicException(sprintf('%s stores the variants at "%s" flat beside its own keys (Variants::STORED_AS), and the variant for "%s", %s, declares "%s", which %s declares too. Stored flat, the two would be one key: rename one, or store the variants under "%s".', $declaring_class, $key, $value, $variant, $shared[0], $declaring_class, $key));
     }
     foreach ($child->entries()->entries() as $name => $entry) {
       if ($entry->variants?->storedFlat()) {
-        throw new \LogicException(sprintf('%s stores the variants at "%s" flat (Variants::STORED_AS), and the variant for "%s", %s, stores the variants at "%s" flat too, at the same level. Read back, every key that is not the owner\'s is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.', $owner, $key, $value, $variant, $name));
+        throw new \LogicException(sprintf('%s stores the variants at "%s" flat (Variants::STORED_AS), and the variant for "%s", %s, stores the variants at "%s" flat too, at the same level. Read back, every key that is not the declaring class\'s is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.', $declaring_class, $key, $value, $variant, $name));
       }
     }
   }
@@ -1310,9 +1314,9 @@ final class Attaching {
    * Attaches each collection's child, built once for the list.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build.
+   *   The declaring class's build.
    * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
-   *   The owner's inputs blueprint.
+   *   The declaring class's inputs blueprint.
    * @param array<string, true> $gated_lists
    *   The collections a gate asks about per item, which are marked
    *   (Gating::itemGatedLists()).
@@ -1356,14 +1360,14 @@ final class Attaching {
    * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
-   *   The owner, for the messages.
+   *   The declaring class, for the messages.
    * @param string $key
    *   The key the variants sit at, for the messages.
    * @param class-string<\Drupal\surface\Resource\SiteListInterface> $from
    *   The provider's class.
    * @param array $arguments
-   *   What the owner bound the provider to, if anything. The shape is the
-   *   provider's.
+   *   What the declaring class bound the provider to, if anything. The shape is
+   *   the provider's.
    *
    * @return \Drupal\surface\Resource\SiteList
    *   What it listed, each entry of a closed provider naming the structure

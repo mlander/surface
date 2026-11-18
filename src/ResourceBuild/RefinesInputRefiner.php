@@ -21,11 +21,11 @@ use PortableSchema\Builder\Schema;
  * The engine's refiner, spoken by one class's #[RefinesInput] methods.
  *
  * One of these per class that refines (the resource or structure, then
- * each alter), registered in the owner's chain of every key it refines,
- * in that order. So the engine runs the owner's methods first and the
- * alters' after and applies each answer (Answer::apply()); nothing about
- * refinement, its cacheability or the form's AJAX and discard machinery
- * knows a method is behind the link.
+ * each alter), registered in the declaring class's chain of every key it
+ * refines, in that order. So the engine runs the declaring class's methods
+ * first and the alters' after and applies each answer (Answer::apply());
+ * nothing about refinement, its cacheability or the form's AJAX and discard
+ * machinery knows a method is behind the link.
  *
  * Asked to refine one key, it calls that key's methods on its class in
  * declaration order, each with the sibling values it watches, by
@@ -48,8 +48,8 @@ use PortableSchema\Builder\Schema;
  * TRUE and 5, rather than a TypeError from this file's strict types.
  *
  * It rides inside the sealed data surface, so inside cached forms. The
- * owner's link holds the owner's class name, because a resource's or
- * structure's refiners are static and neither is ever instantiated; an
+ * declaring class's link holds the declaring class name, because a resource's
+ * or structure's refiners are static and neither is ever instantiated; an
  * alter's link holds the alter, an autowired service whose runtime
  * refiners may be instance methods, and the dependency serialization
  * trait stores a service by its id, so a serialized data surface carries
@@ -69,7 +69,7 @@ use PortableSchema\Builder\Schema;
  * mount, `third_party_settings`, the one key the engine knows the
  * alter's keys by. Asked to refine the mount, the link refines only its
  * own module's property inside it, each method's answer placed at that
- * property, so the method reads exactly as it would on an owner's key.
+ * property, so the method reads exactly as it would on a declaring class's key.
  * A method watching a key its alter added is handed that key's value
  * the same way, read at its dotted path, `third_party_settings.<module>.
  * <key>`, which is the name the engine knows the dependency by.
@@ -101,7 +101,7 @@ final class RefinesInputRefiner implements SurfaceRefinerInterface, Applicabilit
    *   on its own mounted keys under self::MOUNT.
    * @param string|null $module
    *   The alter's module, whose property inside the mount the methods
-   *   bound under self::MOUNT refine; NULL for the owner's own link.
+   *   bound under self::MOUNT refine; NULL for the declaring class's own link.
    * @param array<string, string> $paths
    *   The keys the alter mounted that its methods watch, each mapped to
    *   the dotted path its value is handed under.

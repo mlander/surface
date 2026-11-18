@@ -22,9 +22,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests a structure may ask for its widget, and the guards around widgets.
  *
  * The pair asks for a widget of its own, which draws it wherever it is
- * attached, unless its owner asks for another at the key. A widget word no
- * widget answers to, or one that cannot draw what asks for it, is refused
- * when the resource is built; a widget whose code validates its element
+ * attached, unless its declaring class asks for another at the key. A widget
+ * word no widget answers to, or one that cannot draw what asks for it, is
+ * refused when the resource is built; a widget whose code validates its element
  * is refused when the widgets are discovered.
  *
  * @see docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates
@@ -68,14 +68,14 @@ class WidgetAskTest extends SurfaceKernelTestBase {
   public function testTheStructureAsksForItsWidget(): void {
     $built = $this->built(PairsStructure::class);
     $this->assertSame('widget_test_pair', DerivedDefinition::at($built, 'asked')->getSetting('widget'));
-    $this->assertSame('fieldset', DerivedDefinition::at($built, 'owned')->getSetting('widget'), 'The owner\'s ask at the key wins.');
+    $this->assertSame('fieldset', DerivedDefinition::at($built, 'owned')->getSetting('widget'), 'The declaring class\'s ask at the key wins.');
     $manager = $this->container->get('surface.widget_choice');
     $this->assertInstanceOf(PairWidget::class, $manager->forSchema($built->entries()->entry('asked')->schema()));
 
     $form = $this->formBuilder()->buildSurfaceForm($built, ['asked' => ['left' => 'L', 'right' => 'R']], new FormState());
     $this->assertSame(['widget-test-pair'], $form['asked']['#attributes']['class']);
     $this->assertSame('R', $form['asked']['right']['#default_value']);
-    $this->assertNotSame(['widget-test-pair'], $form['owned']['#attributes']['class'] ?? NULL, 'The owner\'s fieldset, drawn as any map.');
+    $this->assertNotSame(['widget-test-pair'], $form['owned']['#attributes']['class'] ?? NULL, 'The declaring class\'s fieldset, drawn as any map.');
 
     $emitter = $this->container->get('surface.contract_emitter');
     $hinted = $emitter->emitFull($built, 'widget_test.pairs', widgets: TRUE)->document['schema']['properties'];

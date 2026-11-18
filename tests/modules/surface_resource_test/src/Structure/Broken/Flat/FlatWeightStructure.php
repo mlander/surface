@@ -11,7 +11,7 @@ use Drupal\surface\Resource\StructureInterface;
 use PortableSchema\Builder\Schema;
 
 /**
- * The flat owner clash's variant for "a": a weight, which its owner has.
+ * The flat owner clash's variant for "a": a weight its declaring class has.
  */
 #[Structure('resource_test.broken.flat.weight')]
 #[Variant(of: FlatOwnerClashStructure::class, at: 'gear', for: 'a')]

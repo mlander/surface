@@ -16,7 +16,7 @@ use PortableSchema\Builder\Schema;
  * A hut: the shelter's variant for "hut", holding variants of its own.
  *
  * Its roof chooses the covering: thatch or slate, each a #[Variant] of
- * this class at "covering", whichever owner holds the hut. The camp
+ * this class at "covering", whichever declaring class holds the hut. The camp
  * lists it too.
  */
 #[Structure('resource_test.shelter.hut')]

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Drupal\surface\Resource;
 
 /**
- * A provider of variants whose list depends on what its owner binds.
+ * A provider of variants whose list depends on what its declaring class binds.
  *
- * One class lists for several owners: the bundles of whichever entity
- * type a derived resource is for. The owner names it with the arguments
- * that say which list, as a derived resource's inputs are a class, a
+ * One class lists for several declaring classes: the bundles of whichever
+ * entity type a derived resource is for. The declaring class names it with the
+ * arguments that say which list, as a derived resource's inputs are a class, a
  * method and the arguments bound to them:
  *
  * @code
@@ -27,11 +27,11 @@ namespace Drupal\surface\Resource;
 interface BoundSiteListInterface extends SiteListInterface {
 
   /**
-   * Lists the things for the arguments an owner bound, one entry each.
+   * Lists the things for the arguments a declaring class bound, one entry each.
    *
    * @param array $arguments
-   *   What the owner bound. The shape is the provider's: a list read by
-   *   position, or keys read by name.
+   *   What the declaring class bound. The shape is the provider's: a list read
+   *   by position, or keys read by name.
    *
    * @return \Drupal\surface\Resource\SiteList
    *   The entries, in order, with the cacheability of what they were read

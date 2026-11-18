@@ -69,7 +69,7 @@ class PlainTextDocumentsTest extends SurfaceKernelTestBase {
             ],
           ]),
       ],
-      refiners: ['mode' => [SurfaceInterface::OWNER => [new ModeSubsetRefiner()]]],
+      refiners: ['mode' => [SurfaceInterface::DECLARING_CLASS => [new ModeSubsetRefiner()]]],
       refinements: ['mode' => ['scope']],
     ));
   }

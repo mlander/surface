@@ -1,6 +1,6 @@
 name: 'Surface API widget test'
 type: module
-description: 'A widget that claims every string key whose format is color, a structure with keys it serves and one whose owner asks for another, and three components: one a switch from the examples card posts the wrong shape to, one with props only the JSON widget draws, and one of several scalar types and lists of objects.'
+description: 'A widget that claims every string key whose format is color, a structure with keys it serves and one whose declaring class asks for another, and three components: one a switch from the examples card posts the wrong shape to, one with props only the JSON widget draws, and one of several scalar types and lists of objects.'
 package: Testing
 version: VERSION
 core_version_requirement: ^11.3 || ^12

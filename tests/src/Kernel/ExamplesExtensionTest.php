@@ -22,10 +22,10 @@ use Symfony\Component\HttpFoundation\Request;
 /**
  * Tests example 14, an optional extension, the keys module off and on.
  *
- * The mailer is the owner's way: its credential's sources are variants a
- * closed provider lists, the managed one only while the module is on. The
- * webhook is the alter's way: it declares a pasted key, and the module's
- * alter mounts a managed key and rules the pasted key out once one is
+ * The mailer is the declaring class's way: its credential's sources are
+ * variants a closed provider lists, the managed one only while the module is
+ * on. The webhook is the alter's way: it declares a pasted key, and the
+ * module's alter mounts a managed key and rules the pasted key out once one is
  * chosen. Both resources' full schemas are pinned whole in both states;
  * then what each state draws and refuses, a pasted key kept across a
  * switch and back, the read tool, and the README quoting what it shows.
