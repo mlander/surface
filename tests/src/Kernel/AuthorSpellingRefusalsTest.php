@@ -94,4 +94,24 @@ class AuthorSpellingRefusalsTest extends SurfaceKernelTestBase {
     $this->assertSame('Code', $builder->heldSchema('code')?->get('title'));
   }
 
+  /**
+   * Tests reads() refuses every keyword but the type, required() and a $ref.
+   *
+   * A port is read by its type alone; a bound, an option list, a title or a
+   * default handed with it was dropped. The key wired to the port holds
+   * its own rules.
+   */
+  public function testReadsRefusesKeywordsBesideTheType(): void {
+    $this->assertRefused(fn () => $this->blueprint()->reads('cap', Schema::integer()->minimum(3)->maximum(5)->required()), ['reads("cap")', '"minimum"', '"maximum"']);
+    $this->assertRefused(fn () => $this->blueprint()->reads('p', Schema::enum(['a', 'b'])), ['reads("p")', '"enum"']);
+    $this->assertRefused(fn () => $this->blueprint()->reads('p', Schema::string()->title('T')->default('x')), ['"title"', '"default"']);
+
+    $inputs = $this->blueprint();
+    $inputs->reads('cap', Schema::integer()->required());
+    $inputs->reads('stamp', Schema::of('portable:timestamp'));
+    $inputs->reads('any', Schema::any());
+    $this->assertSame(['cap', 'stamp', 'any'], array_keys($inputs->ports()));
+    $this->assertTrue($inputs->ports()['cap']->required);
+  }
+
 }

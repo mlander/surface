@@ -263,12 +263,14 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   is marked required(): every container attaching the structure must
    *   then wire it. An optional port left unwired holds nothing: a
    *   refiner watching it never runs, and a rule reads it as absent.
+   *   Nothing else is read: a bound, an option list, a title or a default
+   *   is refused, since the wired key holds its own rules.
    *
    * @return $this
    *
    * @throws \LogicException
    *   For outputs, which read nothing; when the name is a key, or a port,
-   *   already declared.
+   *   already declared; when the schema says more than its type.
    * @throws \InvalidArgumentException
    *   When the schema is no schema of one value and no shape.
    *
